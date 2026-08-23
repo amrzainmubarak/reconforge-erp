@@ -185,6 +185,7 @@ def submit_run(
             message="New reconciliation runs require the current record identity policy.",
         )
     rule["record_identity_policy"] = RECORD_IDENTITY_POLICY
+    rule["policy_amount"] = None if policy_amount is None else format(policy_amount, "f")
     try:
         amount_tolerance = parse_exact_amount(rule.get("amount_tolerance", "0"))
     except InvalidAmountError as exc:

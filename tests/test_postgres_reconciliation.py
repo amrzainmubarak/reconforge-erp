@@ -7,6 +7,7 @@ import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from decimal import Decimal
 from threading import Event, Lock
 from typing import Any
 from uuid import uuid4
@@ -559,6 +560,37 @@ def test_postgres_reconciliation_worker_policy_allows_scoped_service_identity() 
     summary = worker.process_once()
     assert summary.completed == 1
     assert connection.run is not None and connection.run["execution_status"] == "Complete"
+
+
+def test_postgres_reconciliation_worker_passes_persisted_policy_amount_to_claim_rechecks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import reconforge.workers.postgres_reconciliation as worker_module
+
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    assert connection.run is not None
+    connection.run["rule_json"] = {"policy_amount": "20.00", "amount_tolerance": "0"}
+    policy_amounts: list[Decimal | None] = []
+    monkeypatch.setattr(
+        worker_module,
+        "require_service_worker_policy",
+        lambda **values: policy_amounts.append(values["amount"]),
+    )
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(worker_id="amount-worker", poll_interval_seconds=0),
+    )
+
+    summary = worker.process_once()
+
+    assert summary.completed == 1
+    assert policy_amounts[0] is None
+    assert policy_amounts[1:] == [Decimal("20.00"), Decimal("20.00")]
 
 
 def test_postgres_reconciliation_worker_rechecks_policy_before_claim() -> None:

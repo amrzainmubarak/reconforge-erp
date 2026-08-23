@@ -251,6 +251,7 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
         == "canonical-multiset-occurrence-v1"
     )
     assert repository.submitted_run["rule"]["amount_tolerance"] == "0"
+    assert repository.submitted_run["rule"]["policy_amount"] == "20.00"
     assert len(repository.submitted_inputs) == 2
     assert repository.submitted_inputs[0]["amount"] == "10.00"
     assert runs.json()["runs"][0]["id"] == "run-a"

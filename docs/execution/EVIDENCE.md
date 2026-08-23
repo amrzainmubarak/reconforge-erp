@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-843: Propagate reconciliation exposure into worker policy rechecks (2026-08-23)
+
+- The API stores `policy_amount` as an exact decimal string in the durable rule
+  metadata. The worker decodes and validates it, then supplies the same Decimal
+  to the tenant and pre-claim scoped service-account policy checks.
+- Focused command: `python -m pytest tests/test_api_server_reconciliation.py
+  tests/test_postgres_reconciliation.py tests/test_governed_worker_policy.py
+  -ra` -> 32 passed, 1 skipped (live PostgreSQL unavailable). Ruff, Mypy, and
+  `git diff --check` pass.
+- Full `python -m pytest -q` completed with exit code 0 after this slice; the
+  current collection remains 3,119 tests, with the same declared skips and
+  warnings.
+- Boundary: direct worker claim/recheck contract is proven; the initial tenant
+  discovery lane still has no per-run amount before listing runs, and live fleet,
+  provider, posting, and production IAM evidence remain future work.
+
 ## E-842: Bind reconciliation run submission to amount-bounded ABAC (2026-08-23)
 
 - Reconciliation canonical input amounts are parsed as exact Decimal values;

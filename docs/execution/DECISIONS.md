@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-943: Persist and recheck reconciliation exposure in the worker
+
+- **Date**: 2026-08-23
+- **Context**: API submission supplied amount context, but a later worker claim
+  could lose that context and re-evaluate only tenant/scope permissions.
+- **Decision**: Adopt ADR 0557. Store the exact gross exposure as `policy_amount`
+  inside the immutable reconciliation rule metadata and pass it into both the
+  worker tenant and pre-claim scoped policy checks. Missing legacy metadata
+  remains `None` and is never inferred as zero.
+- **Rationale**: The worker must authorize the same financial object that the
+  API accepted; rule metadata already participates in the durable run contract,
+  so no parallel mutable column or migration is required.
+- **Reversibility**: Source-only metadata and optional worker argument; revert
+  removes propagation without changing existing schemas.
+
 ### D-942: Pass canonical reconciliation exposure into server policy
 
 - **Date**: 2026-08-23

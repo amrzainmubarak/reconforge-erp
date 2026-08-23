@@ -2,6 +2,16 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-843 reconciliation worker amount-policy propagation (2026-08-23)
+
+- Worker claim authorization reuses the immutable submission exposure and fails
+  closed for invalid stored metadata; legacy rows with no metadata remain
+  amount-unknown rather than zero.
+- Focused API/worker/policy tests pass 32/32 with one declared live PostgreSQL
+  skip. Full `python -m pytest -q` exits 0 over the 3,119-test collection.
+  Discovery-lane policy and production IAM effectiveness remain outside the
+  evidence.
+
 ## E-842 reconciliation submission amount ABAC control (2026-08-23)
 
 - Canonical reconciliation inputs contribute exact gross exposure to server

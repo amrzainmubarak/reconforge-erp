@@ -7,6 +7,7 @@ import json
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from threading import Event, Lock
 from typing import Any, Protocol, cast
 
@@ -764,6 +765,7 @@ class PostgresReconciliationWorker:
         workspace_id: str | None = None,
         entity_id: str | None = None,
         request_id: str = "",
+        amount: Decimal | None = None,
         error_factory: Callable[[str], Exception] = PostgresReconciliationWorkerError,
     ) -> None:
         """Require a central service-account decision for one exact lane."""
@@ -780,12 +782,31 @@ class PostgresReconciliationWorker:
             surface="postgres-reconciliation.worker.claim",
             error_factory=error_factory,
             request_id=request_id,
+            amount=amount,
         )
 
-    def _authorize_tenant(self, tenant_id: str, *, request_id: str = "") -> None:
+    def _authorize_tenant(
+        self, tenant_id: str, *, request_id: str = "", amount: Decimal | None = None
+    ) -> None:
         """Backward-compatible tenant-lane policy entry point."""
 
-        self._authorize_scope(tenant_id, request_id=request_id)
+        self._authorize_scope(tenant_id, request_id=request_id, amount=amount)
+
+    @staticmethod
+    def _policy_amount_from_run(run: Mapping[str, Any]) -> Decimal | None:
+        """Decode the immutable submission exposure without inferring zero."""
+
+        rule = PostgresReconciliationWorker._rule_mapping(run)
+        raw = rule.get("policy_amount")
+        if raw is None or (isinstance(raw, str) and not raw.strip()):
+            return None
+        try:
+            amount = Decimal(str(raw))
+        except (InvalidOperation, ValueError) as exc:
+            raise PostgresReconciliationWorkerError("Stored reconciliation policy amount is invalid.") from exc
+        if not amount.is_finite() or amount < 0:
+            raise PostgresReconciliationWorkerError("Stored reconciliation policy amount is invalid.")
+        return amount
 
     def _transaction(self) -> PostgresTenantBoundary:
         return PostgresTenantBoundary(self.connection_factory)
@@ -1016,10 +1037,11 @@ class PostgresReconciliationWorker:
         entity_id: str | None = None,
         organization_id: str | None = None,
         request_id: str = "",
+        policy_amount: Decimal | None = None,
     ) -> ReconciliationProcessResult:
         """Claim and execute one run using fresh connections for each phase."""
 
-        self._authorize_tenant(tenant_id, request_id=request_id)
+        self._authorize_tenant(tenant_id, request_id=request_id, amount=policy_amount)
         requested_workspace = str(workspace_id).strip() if workspace_id is not None else None
         requested_workspace = requested_workspace or None
         requested_entity = str(entity_id).strip() if entity_id is not None else None
@@ -1054,6 +1076,7 @@ class PostgresReconciliationWorker:
                     workspace_id=workspace_scope,
                     entity_id=entity_scope,
                     request_id=request_id,
+                    amount=policy_amount,
                     error_factory=PostgresReconciliationPolicyDenied,
                 )
                 repository = PostgresReconciliationRepository(connection)
@@ -1220,6 +1243,7 @@ class PostgresReconciliationWorker:
             discovered += len(runs)
             for run in runs:
                 try:
+                    policy_amount = self._policy_amount_from_run(run)
                     outcomes.append(
                         self.process_run(
                             tenant_id=tenant_id,
@@ -1242,6 +1266,7 @@ class PostgresReconciliationWorker:
                                 else None
                             ),
                             request_id=request_id,
+                            policy_amount=policy_amount,
                         )
                     )
                 except PostgresReconciliationBusyError:

@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-843
+    priority: P0
+    area: identity-governance
+    title: Propagate reconciliation exposure into worker policy rechecks
+    status: completed
+    depends_on: [E-842]
+    exit_evidence: >-
+      Reconciliation submission persists policy_amount in the immutable rule
+      metadata and worker process_run passes the exact Decimal exposure through
+      tenant and pre-claim scoped policy checks. Focused API/worker/policy tests
+      pass 32/32 with one live-PostgreSQL skip; discovery-lane universal policy
+      and production IAM evidence remain open.
   - id: E-842
     priority: P0
     area: identity-governance

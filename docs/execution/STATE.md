@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-843 — Propagate reconciliation exposure into worker policy rechecks (2026-08-23)
+
+- The API persists exact `policy_amount` rule metadata; worker tenant and
+  pre-claim scoped checks receive the same Decimal exposure before execution.
+- Focused API/worker/policy tests pass 32/32 with one declared live PostgreSQL
+  skip. Full `python -m pytest -q` exits 0 over the 3,119-test collection.
+  Discovery-lane universal policy and production IAM remain unproven.
+
 ## E-842 — Bind reconciliation run submission to amount-bounded ABAC (2026-08-23)
 
 - Canonical input amounts are parsed exactly and their gross absolute sum is

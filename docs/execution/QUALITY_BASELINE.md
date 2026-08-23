@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-843 reconciliation worker amount-policy propagation (2026-08-23)
+
+The worker now receives the persisted exact exposure from run rule metadata and
+passes it through tenant and pre-claim scoped policy checks. Focused API/worker/
+policy tests pass 32/32 with one live-PostgreSQL skip; Ruff, Mypy, and
+whitespace checks pass. Full `python -m pytest -q` also exits 0 over the
+3,119-test collection. Discovery-lane universal coverage remains open.
+
 ## E-842 reconciliation submission amount ABAC (2026-08-23)
 
 Reconciliation run submission now passes the gross absolute exact Decimal sum

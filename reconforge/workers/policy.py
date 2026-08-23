@@ -9,6 +9,8 @@ opened.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
+from decimal import Decimal
 
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext, audit_policy_decision
 
@@ -34,6 +36,7 @@ def require_service_worker_policy(
     error_factory: Callable[[str], Exception],
     policy: CentralPolicyEngine | None = None,
     request_id: str = "",
+    amount: Decimal | None = None,
 ) -> None:
     """Require a non-human central-policy decision for an exact worker scope.
 
@@ -68,6 +71,11 @@ def require_service_worker_policy(
             context = policy_context_supplier(tenant_id)
     except Exception as exc:  # noqa: BLE001 - worker boundary must fail closed.
         raise error_factory("Unable to resolve worker policy context safely.") from exc
+    if amount is not None:
+        try:
+            context = replace(context, amount=amount)
+        except (TypeError, ValueError) as exc:
+            raise error_factory("Worker policy amount is invalid.") from exc
     if context.principal_type != "service_account":
         raise error_factory("Hosted workers require a service-account principal.")
     normalized_actor = actor_id.strip() or worker_id.strip()

@@ -66,3 +66,11 @@ def test_python_test_matrix_fetches_history_for_retained_evidence() -> None:
     with_values = checkout["with"]
     assert isinstance(with_values, dict)
     assert with_values["fetch-depth"] == 0
+
+
+def test_long_running_ci_jobs_have_finite_timeouts() -> None:
+    workflow = _workflow(".github/workflows/ci.yml")
+    jobs = workflow["jobs"]
+    assert isinstance(jobs, dict)
+    assert jobs["test"]["timeout-minutes"] == 45
+    assert jobs["postgres-ha-dr"]["timeout-minutes"] == 30

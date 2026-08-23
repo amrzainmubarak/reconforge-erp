@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-903: Finite CI timeouts for long-running gates (2026-08-23)
+
+- `.github/workflows/ci.yml` sets `test.timeout-minutes: 45` and
+  `postgres-ha-dr.timeout-minutes: 30`.
+- Workflow/HA-DR focused command: 8 passed; Ruff and `git diff --check` passed.
+- This bounds runner consumption and does not prove the timed jobs' underlying
+  test or recovery claims.
+
 ## E-902: Runtime strategy ID slug parity (2026-08-23)
 
 - `MatchingStrategyManifest` now applies the same lowercase bounded slug

@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-903
+    priority: P0
+    area: release_operations
+    title: Bound long-running CI and HA/DR jobs
+    status: completed
+    depends_on: [E-902]
+    exit_evidence: >-
+      CI test and PostgreSQL HA/DR jobs have finite 45/30 minute timeouts,
+      enforced by workflow contract tests. Eight focused tests pass; timeout
+      remains a failure signal, not evidence of success.
   - id: E-902
     priority: P0
     area: reconciliation

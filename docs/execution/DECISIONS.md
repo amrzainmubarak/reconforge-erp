@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-962: Bound hosted CI jobs that can stall
+
+E-903 makes the Python test matrix and PostgreSQL HA/DR job finite while
+retaining failure semantics. A timeout cannot be treated as evidence of
+success.
+
 ### D-961: Keep runtime strategy IDs schema-valid
 
 E-902 prevents registry admission from accepting IDs that the published JSON

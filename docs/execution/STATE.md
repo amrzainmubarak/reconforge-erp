@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-903 — Finite CI timeouts for long-running gates (2026-08-23)
+
+- CI `test` now has a 45-minute timeout and `postgres-ha-dr` a 30-minute
+  timeout. Workflow contract tests enforce both bounds.
+- Focused workflow/HA-DR tests: 8 passed, with Ruff and diff checks. A timeout
+  remains a failure requiring triage; it is not counted as a pass.
+
 ## E-902 — Runtime strategy ID slug parity (2026-08-23)
 
 - Runtime manifest construction now enforces the published lowercase slug

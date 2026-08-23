@@ -1,5 +1,10 @@
 # Quality Baseline
 
+## E-852 managed-key custody evidence (2026-08-23)
+
+Key/deployment/inventory tests pass 44/44; Ruff, Mypy, and whitespace checks
+pass. Secret-material absence and strict contract refusal are covered.
+
 ## E-851 profile digest binding (2026-08-23)
 
 Runtime/readiness tests pass 12/12; Ruff, Mypy, and whitespace checks pass.

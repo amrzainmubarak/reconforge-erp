@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-852 — Add provider-neutral managed-key custody evidence (2026-08-23)
+
+- Added a closed non-secret key custody manifest and
+  `deployment verify-key-manifest` for provider/key identity, active status,
+  customer ownership, AES-256-GCM purpose, scope, and rotation bounds.
+- Focused key/deployment/inventory tests pass 44/44, Ruff and Mypy pass. No KMS,
+  HSM, secret, key-byte, or provider-runtime claim is made.
+
 ## E-1006 progress audit (2026-08-23)
 
 - E-1006 is now explicitly `in_progress` rather than `planned`; E-849 through

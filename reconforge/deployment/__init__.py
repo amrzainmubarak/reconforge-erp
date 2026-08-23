@@ -1,5 +1,10 @@
 """Deployment-profile contracts for truthful mode selection."""
 
+from reconforge.deployment.key_custody import (
+    ManagedKeyManifest,
+    ManagedKeyManifestError,
+    verify_managed_key_manifest,
+)
 from reconforge.deployment.profiles import (
     DeploymentEdition,
     DeploymentProfile,
@@ -42,4 +47,7 @@ __all__ = [
     "DeploymentReadinessError",
     "DeploymentReadinessMatrix",
     "load_deployment_readiness_matrix",
+    "ManagedKeyManifest",
+    "ManagedKeyManifestError",
+    "verify_managed_key_manifest",
 ]

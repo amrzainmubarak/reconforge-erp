@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-852: Managed-key custody evidence (2026-08-23)
+
+- `deployment verify-key-manifest` verifies non-secret key custody metadata and
+  prints a deterministic digest without external calls or key material.
+- Focused key/deployment/inventory suite: 44 passed; Ruff and Mypy pass.
+- KMS/HSM existence, access, rotation, destruction, and production custody are
+  explicitly unproven.
+
 ## E-851: Profile-digest-bound runtime evidence (2026-08-23)
 
 - Runtime manifests now carry the selected profile digest and fail closed on

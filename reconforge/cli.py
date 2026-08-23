@@ -95,11 +95,13 @@ from reconforge.deployment import (
     DeploymentProfileError,
     DeploymentReadinessError,
     DeploymentRuntimeEvidenceError,
+    ManagedKeyManifestError,
     WorkerPermissionManifestError,
     deployment_profile,
     list_deployment_profiles,
     load_deployment_readiness_matrix,
     verify_deployment_runtime_evidence,
+    verify_managed_key_manifest,
     verify_worker_permission_manifest,
 )
 from reconforge.domain.consolidation import ConsolidationError
@@ -5960,6 +5962,28 @@ def deployment_readiness_command(
                 "external_calls": False,
             },
         )
+
+
+@deployment_app.command("verify-key-manifest")
+def deployment_verify_key_manifest_command(
+    manifest_path: Annotated[Path, typer.Argument(help="Closed non-secret managed-key custody manifest to verify.")],
+) -> None:
+    """Verify managed-key custody metadata without contacting a KMS or HSM."""
+
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = verify_managed_key_manifest(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, ManagedKeyManifestError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Managed Key Custody Evidence",
+        {
+            **manifest.to_dict(),
+            "digest": manifest.digest,
+            "external_calls": False,
+            "secret_material_present": False,
+        },
+    )
 
 
 @deployment_app.command("release-check")

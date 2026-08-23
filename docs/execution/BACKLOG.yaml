@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-852
+    priority: P0
+    area: security-and-deployment-governance
+    title: Add provider-neutral managed-key custody evidence
+    status: completed
+    depends_on: [E-851]
+    exit_evidence: >-
+      A strict non-secret managed-key manifest verifies provider/key identity,
+      active status, customer ownership, AES-256-GCM purpose, scope, and bounded
+      rotation interval; CLI verification is offline and digest-bound. Focused
+      key/deployment/inventory tests pass 44/44, Ruff and Mypy pass. This is a
+      custody metadata contract only and does not prove KMS/HSM runtime control.
   - id: E-851
     priority: P0
     area: deployment-governance

@@ -1,5 +1,12 @@
 # Security Baseline
 
+## E-852 managed-key custody evidence (2026-08-23)
+
+- The key manifest contains identifiers and lifecycle metadata only; key bytes
+  and secret references are not accepted or emitted.
+- Provider, active-status, customer-ownership, purpose, scope, and rotation
+  bounds fail closed, but KMS/HSM runtime custody remains open.
+
 ## E-851 profile digest binding (2026-08-23)
 
 - Runtime evidence is rejected unless its profile digest matches the selected

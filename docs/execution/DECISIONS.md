@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-952: Separate managed-key custody metadata from KMS/HSM runtime proof
+
+E-852 adds a non-secret manifest and offline verifier, while explicitly keeping
+provider execution, key lifecycle, rotation, destruction, and hardware-backed
+custody outside the claim boundary.
+
 ### D-951: Bind runtime evidence to the selected profile digest
 
 E-851 prevents stale or retargeted runtime facts from being treated as evidence

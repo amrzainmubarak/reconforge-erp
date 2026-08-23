@@ -2,6 +2,18 @@
 
 Updated: 2026-08-23
 
+## E-881 — Current Docker image parity and runtime smoke (2026-08-23)
+
+- `docker build -t reconforge:current .` completed successfully; the local
+  image manifest digest was `sha256:e86d4871981ce2e466c257428b906a9d3e9929bce61fb1224f67cd3fc90ffb6e`.
+- Container smoke commands passed: `reconforge doctor`,
+  `reconforge validate examples/sample_data`, and
+  `reconforge rules validate --pack control-packs/audit-basic`.
+- Doctor reported zero errors and ten warnings; validation reported the same
+  declared synthetic sample-data warnings. No warning was converted to zero or
+  hidden. This is one local Docker runtime, not a hosted image/provenance or
+  production deployment claim.
+
 ## E-880 — Package membership after release-governance additions (2026-08-23)
 
 - `python -m build --no-isolation` completed successfully after the latest CI,

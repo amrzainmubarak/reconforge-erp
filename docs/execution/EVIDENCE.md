@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-881: Current Docker image parity and runtime smoke (2026-08-23)
+
+- `docker build -t reconforge:current .` passed using the pinned Dockerfile
+  inputs. The local manifest list digest was
+  `sha256:e86d4871981ce2e466c257428b906a9d3e9929bce61fb1224f67cd3fc90ffb6e`.
+- The built container returned exit code 0 for `reconforge doctor`,
+  `reconforge validate examples/sample_data`, and
+  `reconforge rules validate --pack control-packs/audit-basic`.
+- Doctor showed `0 errors, 10 warnings`; validation showed zero errors and ten
+  visible synthetic sample-data warnings (duplicate references, invalid cost,
+  and missing references). Warnings were preserved as warnings. This is local
+  image/runtime parity evidence only; no registry signature, hosted provenance,
+  or production operation is claimed.
+
 ## E-880: Package membership after release-governance additions (2026-08-23)
 
 - `python -m build --no-isolation` succeeded after the latest workflow/ADR and

@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-881
+    priority: P1
+    area: deployment
+    title: Refresh current Docker image parity and runtime smoke evidence
+    status: completed
+    depends_on: [E-880]
+    exit_evidence: >-
+      The current Docker image builds successfully and runs doctor, sample-data
+      validation, and audit-basic control-pack validation with exit code zero.
+      Doctor reports zero errors and ten known synthetic sample warnings;
+      warnings remain visible and are not treated as silently clean data.
   - id: E-880
     priority: P1
     area: release_operations

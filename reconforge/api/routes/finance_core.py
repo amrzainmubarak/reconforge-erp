@@ -935,8 +935,8 @@ def create_entry(
     current_user: FinanceManage,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
-    policy_amount = _entry_policy_amount(payload)
     if server_finance_core_enabled(request) and payload.entity_code.strip() and payload.period_id.strip() and payload.journal_code.strip():
+        policy_amount = _entry_policy_amount(payload)
         scoped_workspace = _server_finance_workspace(
             request,
             payload.workspace,
@@ -954,6 +954,7 @@ def create_entry(
             )
         }
     if server_ledger_enabled(request):
+        policy_amount = _entry_policy_amount(payload)
         scope = request_execution_scope(request)
         enforce_server_scoped_permission(
             request,

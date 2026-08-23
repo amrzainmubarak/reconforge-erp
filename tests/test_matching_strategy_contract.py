@@ -13,9 +13,11 @@ from typer.testing import CliRunner
 from reconforge.application.matching_strategies import (
     GroupedMatchBudget,
     MatchingStrategyContractError,
+    MatchingStrategyManifest,
     MatchingStrategyRegistry,
     MatchingStrategyRequest,
     MatchingStrategyResult,
+    StrategyLimits,
     canonical_payload,
     replay_result_envelope,
     replay_strategy_result,
@@ -69,6 +71,36 @@ def _request(*, reverse: bool = False, mode: str = "one-to-one") -> MatchingStra
         date_window_days=0,
         mode=mode,
     )
+
+
+def _manifest(**overrides: object) -> MatchingStrategyManifest:
+    values: dict[str, object] = {
+        "id": "test-strategy",
+        "version": "1.0.0",
+        "maturity": "experimental",
+        "algorithm": "deterministic test algorithm",
+        "supported_modes": ("one-to-one",),
+        "deterministic_tie_break": "stable source id ascending",
+        "explanation_schema": "matching-explanation.v1",
+        "limits": StrategyLimits(
+            max_left_records=10,
+            max_right_records=10,
+            max_candidates_per_record=10,
+            max_total_candidate_evaluations=100,
+            max_date_window_days=10,
+        ),
+    }
+    values.update(overrides)
+    return MatchingStrategyManifest(**values)
+
+
+def test_strategy_manifest_requires_reviewable_declarations() -> None:
+    with pytest.raises(MatchingStrategyContractError, match="tie-break and explanation"):
+        _manifest(deterministic_tie_break=" ")
+    with pytest.raises(MatchingStrategyContractError, match="tie-break and explanation"):
+        _manifest(explanation_schema="")
+    with pytest.raises(MatchingStrategyContractError, match="maturity"):
+        _manifest(maturity="draft")
 
 
 def test_indexed_strategy_manifest_is_versioned_bounded_and_registry_addressable(tmp_path: Path) -> None:

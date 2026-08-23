@@ -5,6 +5,13 @@
 
 ## Decisions
 
+### D-954: Fail closed on incomplete matching strategy declarations
+
+E-894 makes strategy maturity, deterministic tie-break, and explanation schema
+mandatory at manifest construction. This preserves registry/digest integrity
+without claiming that declaration alone proves algorithmic or financial
+correctness.
+
 ### D-953: Require composite regulated admission prerequisites
 
 E-853 prevents a regulated evidence envelope from combining unresolved runtime

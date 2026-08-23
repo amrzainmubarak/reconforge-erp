@@ -117,6 +117,12 @@ class MatchingStrategyManifest:
     def __post_init__(self) -> None:
         if not self.id or not self.version or not self.algorithm or not self.supported_modes:
             raise MatchingStrategyContractError("Strategy manifest is incomplete.")
+        if self.maturity not in {"experimental", "beta", "stable"}:
+            raise MatchingStrategyContractError("Strategy maturity is not supported.")
+        if not self.deterministic_tie_break.strip() or not self.explanation_schema.strip():
+            raise MatchingStrategyContractError(
+                "Strategy manifest must declare a deterministic tie-break and explanation schema."
+            )
         if tuple(sorted(set(self.supported_modes))) != self.supported_modes:
             raise MatchingStrategyContractError("Strategy modes must be unique and canonically sorted.")
 

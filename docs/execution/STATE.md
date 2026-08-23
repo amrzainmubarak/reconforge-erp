@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-894 — Fail-closed matching strategy declarations (2026-08-23)
+
+- `MatchingStrategyManifest` now rejects unsupported maturity values and blank
+  deterministic tie-break or explanation-schema declarations before registry
+  admission/digesting.
+- Focused matching contract, budget, and ambiguity tests pass (38 tests), plus
+  Ruff and diff checks. This closes a contract-integrity gap; it does not add
+  missing strategy families or establish financial correctness.
+
 ## E-461 — Hosted PostgreSQL native-tool bootstrap (2026-08-23)
 
 - Hosted CI `32645427870` completed `server-boundaries` successfully after

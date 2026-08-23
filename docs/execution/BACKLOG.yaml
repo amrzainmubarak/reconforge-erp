@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-894
+    priority: P0
+    area: reconciliation
+    title: Fail closed on incomplete matching strategy declarations
+    status: completed
+    depends_on: [E-860]
+    exit_evidence: >-
+      MatchingStrategyManifest rejects unsupported maturity and blank
+      deterministic tie-break/explanation-schema declarations. Focused matching
+      contract, budget, and ambiguity tests pass with Ruff and diff checks.
   - id: E-893
     priority: P0
     area: database_migrations

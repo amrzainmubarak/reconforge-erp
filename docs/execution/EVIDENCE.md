@@ -2,6 +2,16 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-894: Fail-closed matching strategy declarations (2026-08-23)
+
+- `MatchingStrategyManifest` rejects unsupported maturity values and blank
+  deterministic tie-break or explanation-schema declarations at construction.
+- `python -m pytest -q tests/test_matching_strategy_contract.py tests/test_matching_candidate_budgets.py tests/test_matching_ambiguity.py`:
+  38 passed. Ruff and `git diff --check` passed. The unrelated user-modified
+  `docs/execution/P3_ENT_013_EXIT_AUDIT.yaml` remains outside this slice.
+- The evidence is contract-level only; it does not claim complete strategy
+  family coverage, domain correctness, performance, or production readiness.
+
 ## E-461: Hosted PostgreSQL native-tool bootstrap (2026-08-23)
 
 - CI `32645427870` passed the complete `server-boundaries` job, including the

@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-885 — Docker Scout base-layer scan (2026-08-23)
+
+- `docker scout cves local://reconforge:current --only-base --format packages`
+  returned exit code 0 and reported `0C 0H 0M 0L` for the current base-layer
+  view.
+- The result supports retaining the current Python 3.11 Alpine digest while a
+  future Python 3.12 upgrade is evaluated through the required compatibility
+  matrix; no urgent base vulnerability remediation is claimed.
+
 ## E-884 — Python base-image upgrade remains gated (2026-08-23)
 
 - Docker Scout recommends a smaller Python 3.12 Alpine alternative, while the

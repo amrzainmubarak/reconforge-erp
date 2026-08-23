@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-885
+    priority: P1
+    area: security
+    title: Refresh Docker Scout base-layer scan boundary
+    status: completed
+    depends_on: [E-884]
+    exit_evidence: >-
+      Docker Scout base-only scan of the explicit local image indexes the
+      current base layer and reports zero critical/high/medium/low findings with
+      exit code zero. The Python 3.12 alternative remains an optional
+      compatibility upgrade, not an urgent vulnerability remediation.
   - id: E-884
     priority: P1
     area: deployment

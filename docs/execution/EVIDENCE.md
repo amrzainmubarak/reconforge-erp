@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-885: Docker Scout base-layer scan (2026-08-23)
+
+- `docker scout cves local://reconforge:current --only-base --format packages
+  --output output/docker-scout-current-base.txt` indexed the local image and
+  returned exit code 0 with `0C 0H 0M 0L`.
+- This separates current base-layer evidence from the optional Python 3.12
+  compatibility recommendation. It does not prove hosted scanner parity,
+  registry provenance/signing, malware/license analysis, or production security.
+
 ## E-884: Python base-image upgrade decision (2026-08-23)
 
 - `docker scout recommendations local://reconforge:current` exited 0 and

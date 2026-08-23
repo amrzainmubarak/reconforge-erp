@@ -9,6 +9,12 @@
 - Vulnerabilities reported: `0C 0H 0M 0L`.
 - Exit code: 0.
 
+A separate base-layer-only run also returned exit code 0 with `0C 0H 0M 0L`:
+
+```text
+docker scout cves local://reconforge:current --only-base --format packages --output output/docker-scout-current-base.txt
+```
+
 Verification command:
 
 ```text

@@ -1202,6 +1202,10 @@ tasks:
         fixture inventory, JSON envelope verification, permutation replay, and
         a stable profile digest. PostgreSQL parity, hosted execution, and
         production-scale evidence remain open.
+      - E-910 adds an in-process PostgreSQL worker projection parity profile
+        over five grouped and three sequential modes; all eight lineage
+        digests equal direct strategy digests. Live PostgreSQL runtime,
+        crash recovery, and scale evidence remain open.
   - id: E-1004
     priority: P0
     area: connectors

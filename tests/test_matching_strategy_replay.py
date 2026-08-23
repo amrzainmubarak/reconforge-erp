@@ -5,6 +5,7 @@ from pathlib import Path
 from reconforge.benchmark.matching_strategy_replay import (
     MatchingStrategyReplayProfile,
     run_matching_strategy_replay_profile,
+    run_postgres_worker_matching_parity_profile,
 )
 from reconforge.db import connect, run_migrations
 from reconforge.platform.matching import MatchingService
@@ -39,3 +40,11 @@ def test_registry_replay_profile_is_repeatable(tmp_path: Path) -> None:
         finally:
             connection.close()
     assert profiles[0].to_payload() == profiles[1].to_payload()
+
+
+def test_postgres_worker_projection_matches_direct_strategy_digests() -> None:
+    profile = run_postgres_worker_matching_parity_profile()
+    assert profile.profile_id == "postgres-worker-strategy-parity-v1"
+    assert profile.parity_count == 8
+    assert len(profile.profile_digest) == 64
+    assert all(item.parity_verified for item in profile.observations)

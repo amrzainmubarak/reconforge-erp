@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-910: PostgreSQL worker strategy projection parity (2026-08-23)
+
+- Added `run_postgres_worker_matching_parity_profile` covering five grouped
+  modes and three sequential modes.
+- All `8/8` observations matched the direct strategy `decision_digest` through
+  worker lineage; stable profile digest:
+  `738b1d4cf7f3574bb65c6fa2f53dcd760d288a22c6910235366242fadf801101`.
+- Focused replay/parity tests: 3 passed; Ruff, Mypy, and diff checks passed.
+  This is in-process adapter evidence only, not live PostgreSQL or production
+  runtime evidence.
+
 ## E-909: Registry-wide deterministic matching replay (2026-08-23)
 
 - Added `run_matching_strategy_replay_profile`, which requires an exact

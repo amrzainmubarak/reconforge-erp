@@ -12,6 +12,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - This is local inventory evidence only; it does not prove signed SBOM
   provenance, registry attestation, license policy, scanner freshness, or
   hosted release artifact parity.
+- A subsequent `python -m build --no-isolation` completed successfully and
+  `reconforge_erp.egg-info/SOURCES.txt` includes
+  `docs/adr/0592-local-docker-scout-sbom-evidence.md`.
 
 ## E-885: Docker Scout base-layer scan (2026-08-23)
 

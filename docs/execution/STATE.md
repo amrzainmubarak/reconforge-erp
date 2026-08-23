@@ -11,6 +11,9 @@ Updated: 2026-08-23
   `41af050007ebf534ebd42d4354c5e5c4fb7ad0606002e38bd7076354f2195c7e`.
 - The raw file remains generated output; release SBOM signing/provenance and
   hosted artifact verification remain separate requirements.
+- `python -m build --no-isolation` completed successfully afterward, and
+  `reconforge_erp.egg-info/SOURCES.txt` contains ADR 0592, confirming the
+  evidence decision is included in the source distribution manifest.
 
 ## E-885 — Docker Scout base-layer scan (2026-08-23)
 

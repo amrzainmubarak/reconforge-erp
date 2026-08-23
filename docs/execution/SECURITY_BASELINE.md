@@ -2,6 +2,15 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-835 bounded amount ABAC control (2026-08-23)
+
+- A bounded policy cannot authorize an action when the exact financial amount
+  is missing; the engine returns `amount_missing_for_bounded_policy`.
+- The implementation accepts only the existing finite `Decimal` context and
+  does not coerce missing values to zero or infer them from untrusted fields.
+- Policy regression tests pass 80/80. Universal route adoption and deployed
+  IAM effectiveness remain outside this evidence.
+
 ## E-834 durable observation controls (2026-08-22)
 
 - Recovery observations are persisted before an accepted lifecycle transition;

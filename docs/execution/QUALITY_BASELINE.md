@@ -1,5 +1,12 @@
 # Quality Baseline
 
+## E-835 bounded amount ABAC (2026-08-23)
+
+The central policy engine now fails closed when an amount floor or ceiling is
+configured without an exact finite Decimal amount. The focused policy suite
+passes 80/80, with exact boundary behavior retained. This is a primitive-level
+authorization improvement, not universal enterprise IAM evidence.
+
 ## E-834 durable recovery observation persistence (2026-08-22)
 
 The recovery observation is now a versioned, digest-bound durable record with

@@ -264,7 +264,13 @@ class CentralPolicyEngine:
                     reason_code=f"{scope_name}_scope_denied",
                 )
 
-        if ctx.amount is not None:
+        if ctx.minimum_amount is not None or ctx.maximum_amount is not None:
+            if ctx.amount is None:
+                return PolicyDecision(
+                    False,
+                    "Deny: a bounded financial policy requires an exact amount.",
+                    "amount_missing_for_bounded_policy",
+                )
             if ctx.minimum_amount is not None and ctx.amount < ctx.minimum_amount:
                 return PolicyDecision(False, "Deny: amount is below the authorized policy floor.", "amount_below_floor")
             if ctx.maximum_amount is not None and ctx.amount > ctx.maximum_amount:

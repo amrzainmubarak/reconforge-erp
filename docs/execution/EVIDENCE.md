@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-835: Fail closed on missing amount under bounded ABAC policy (2026-08-23)
+
+- `CentralPolicyEngine` now denies any context with `minimum_amount` or
+  `maximum_amount` when `amount` is absent, returning
+  `amount_missing_for_bounded_policy`. No zero, rounding, or inferred amount is
+  substituted.
+- Exact Decimal below-floor, above-ceiling, and in-range behavior remains
+  unchanged; `evaluate_any` inherits the same contextual check.
+- Focused command: `python -m pytest tests/test_policy_engine.py -q` -> 80
+  passed. Ruff and Mypy pass for the changed policy/test files.
+- Boundary: this proves the central primitive only; all route/job/cache
+  callers, distributed invalidation, and production IAM effectiveness remain
+  future evidence.
+- Full regression after E-835: `python -m pytest --tb=short -q` completed with
+  zero failures (the three new parametrized cases are added to the prior
+  2996-pass baseline); Mypy passes across 526 source files and Ruff/diff-check
+  pass.
+
 ## E-834: Persist durable write-back recovery observations (2026-08-22)
 
 - Added the immutable `WritebackRecoveryObservationRecord` envelope. It binds

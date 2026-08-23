@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-935: Require an exact amount for bounded ABAC policies
+
+- **Date**: 2026-08-23
+- **Context**: The central policy engine compared amount bounds only when an
+  amount was supplied, so an omitted amount could bypass a configured floor or
+  ceiling.
+- **Decision**: Adopt ADR 0549. If either bound exists, deny without a finite
+  exact `Decimal` amount using reason code
+  `amount_missing_for_bounded_policy`.
+- **Rationale**: Missing financial data is a data-quality/security failure,
+  not zero. Requiring the value preserves deterministic, fail-closed ABAC and
+  avoids implicit rounding or inference.
+- **Reversibility**: Source-only additive behavior; no migration or data
+  rewrite. Existing unbounded policies and explicit amount decisions remain
+  compatible.
+
 ### D-934: Make provider recovery observations durable and append-only
 
 - **Date**: 2026-08-22

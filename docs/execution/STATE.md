@@ -1,6 +1,18 @@
 ﻿# Execution State
 
-Updated: 2026-08-22
+Updated: 2026-08-23
+
+## E-835 — Fail closed on missing amount under bounded ABAC policy (2026-08-23)
+
+- `CentralPolicyEngine` now denies `minimum_amount`/`maximum_amount` contexts
+  without an exact finite `Decimal` amount using
+  `amount_missing_for_bounded_policy`.
+- Lower-only, upper-only, combined missing amounts, and existing exact amount
+  boundaries pass the policy regression suite: 80/80.
+- This closes a central omission gap while route/job/cache adoption and
+  production IAM effectiveness remain unproven.
+- Full regression after the slice completed with zero failures; Mypy covers 526
+  source files and Ruff/diff-check pass.
 
 ## E-834 — Persist durable write-back recovery observations (2026-08-22)
 

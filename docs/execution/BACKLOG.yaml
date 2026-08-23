@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-835
+    priority: P0
+    area: identity-governance
+    title: Fail closed when bounded ABAC policy omits the financial amount
+    status: completed
+    depends_on: [E-1005]
+    exit_evidence: >-
+      CentralPolicyEngine now denies a context with minimum_amount or
+      maximum_amount when amount is absent, returning
+      amount_missing_for_bounded_policy. Exact Decimal below-floor,
+      above-ceiling, and in-range behavior is preserved. Focused policy tests,
+      Ruff, and Mypy pass. This closes the primitive omission gap but does not
+      prove universal route adoption or production IAM effectiveness.
   - id: E-834
     priority: P0
     area: connector-reliability

@@ -51,6 +51,7 @@ from reconforge.db.schema import (
     WRITEBACK_INTENTS_SCHEMA_SQL,
     WRITEBACK_PROPOSAL_IDENTITY_MIGRATION_SQL,
     WRITEBACK_RECONCILIATION_PERMISSION_SQL,
+    WRITEBACK_RECOVERY_OBSERVATIONS_SCHEMA_SQL,
 )
 
 
@@ -139,6 +140,11 @@ MIGRATIONS = [
     Migration(version=40, name="currency_registry_workspace_binding", sql=CURRENCY_REGISTRY_BINDING_SCHEMA_SQL),
     Migration(version=41, name="currency_registry_snapshot_store", sql=CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL),
     Migration(version=42, name="connector_writeback_proposal_identity_guard", sql=WRITEBACK_PROPOSAL_IDENTITY_MIGRATION_SQL),
+    Migration(
+        version=43,
+        name="connector_writeback_recovery_observations",
+        sql=WRITEBACK_RECOVERY_OBSERVATIONS_SCHEMA_SQL,
+    ),
 ]
 
 _MIGRATION_TABLE_SQL = """

@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-834
+    priority: P0
+    area: connector-reliability
+    title: Persist durable write-back recovery observations and evidence references
+    status: completed
+    depends_on: [E-833]
+    exit_evidence: >-
+      WritebackRecoveryObservationRecord binds scope, intent, connector,
+      immutable proposal digest, actor, timezone-aware timestamp, provider
+      outcome, raw/response/observation digests, and a deterministic evidence
+      node id. SQLite migration 43 and PostgreSQL Alembic 0090 implement
+      append-only, idempotent, RLS/tenant-scoped storage with direct mutation
+      refusal. The recovery API persists observations before accepted state
+      advancement and exposes reviewer drill-down. The SQLite/PostgreSQL
+      runtime matrix passes with identical record digest on exact PostgreSQL
+      16.14/17.10 cells and a non-privileged role. Evidence is synthetic and
+      single-host; live vendor, accounting, settlement, distributed HA, and
+      production assurance remain outside the claim.
   - id: E-833
     priority: P0
     area: connector-reliability
@@ -386,6 +404,9 @@ tasks:
       - E-833 adds explicit accepted/rejected/pending/not_found/unknown recovery
         observations with raw-response and observation digests; only accepted
         status can advance the intent, and all other outcomes remain non-mutating.
+      - E-834 persists those observations as immutable, scoped SQLite/PostgreSQL
+        records with deterministic evidence-node ids, API reviewer drill-down,
+        migration/restore boundaries, and exact 16.14/17.10 runtime parity.
   - id: E-1005
     priority: P0
     area: identity-governance

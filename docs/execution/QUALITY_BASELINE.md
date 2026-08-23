@@ -1,5 +1,19 @@
 # Quality Baseline
 
+## E-834 durable recovery observation persistence (2026-08-22)
+
+The recovery observation is now a versioned, digest-bound durable record with
+SQLite migration 43 and PostgreSQL revision 0090. Focused connector/API,
+migration, and repository tests pass 66/66; `mypy reconforge` passes across 526
+source files. The SQLite/PostgreSQL 16.14/17.10 disposable matrix produced one
+identical records digest and verified replay idempotency, append-only refusal,
+scope isolation, and role restrictions. This is bounded synthetic quality on
+one Docker host, not live-provider or production quality.
+
+The post-fix full Python gate passes 2996/2996 executed tests with 115 declared
+skips. Mypy, build, Bandit, Ruff, diff-check, and pip-audit are green; pip-audit
+was rerun after upgrading the local tool from 26.1.2 to 26.2.
+
 ## E-833 provider status taxonomy (2026-08-22)
 
 Recovery status evidence is now explicit and non-mutating. The classifier

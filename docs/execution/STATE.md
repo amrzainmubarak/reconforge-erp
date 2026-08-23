@@ -2,6 +2,23 @@
 
 Updated: 2026-08-22
 
+## E-834 — Persist durable write-back recovery observations (2026-08-22)
+
+- Added the immutable, digest-bound `WritebackRecoveryObservationRecord` and
+  repository protocol with SQLite and PostgreSQL implementations.
+- Added SQLite migration 43 and PostgreSQL Alembic revision 0090, including
+  append-only triggers, intent/idempotency binding, scoped uniqueness, and
+  PostgreSQL forced RLS.
+- Recovery now persists the observation before accepted lifecycle mutation;
+  the API exposes reviewer drill-down and idempotent replay.
+- Focused tests pass 66/66; `mypy reconforge` passes across 526 files. The
+  exact PostgreSQL 16.14/17.10 plus SQLite runtime matrix passed in 12.292s
+  with shared records digest
+  `768c363a6c196da78fe7c6ca40281f1d4ca051c194c8585f648b69c25574aa65`.
+- Boundary: synthetic provider-neutral evidence on one Docker host; live
+  provider semantics, accounting/settlement, cross-host HA/DR, and production
+  assurance remain unproven.
+
 ## E-833 — Classify provider status outcomes without lifecycle mutation (2026-08-22)
 
 - Added the explicit recovery outcome taxonomy: `accepted`, `rejected`,

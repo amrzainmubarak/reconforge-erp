@@ -897,7 +897,7 @@ direct_json_parser_allowlist:
     rationale: Parses only the canonical permission array returned by PostgreSQL JSONB; the typed grant validator rejects malformed or unsafe stored authority before it can influence policy evaluation.
   - path: reconforge/infrastructure/sqlite_writeback.py
     parser: json.loads
-    call_count: 1
+    call_count: 3
     surface_id: FI-026
     rationale: Parses only the append-only canonical write-back intent contract after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted status can be returned.
   - path: reconforge/infrastructure/postgres_consolidation_close.py
@@ -912,7 +912,7 @@ direct_json_parser_allowlist:
     rationale: Parses only the canonical PostgreSQL JSONB PPA result before closed replay verification, immutable posted=false enforcement, and tenant-scoped evidence return; malformed or tampered persisted data fails closed.
   - path: reconforge/infrastructure/postgres_writeback.py
     parser: json.loads
-    call_count: 1
+    call_count: 2
     surface_id: FI-032
     rationale: Parses only the canonical PostgreSQL JSONB write-back intent after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted lifecycle state is returned.
   - path: reconforge/infrastructure/postgres_intercompany_elimination.py

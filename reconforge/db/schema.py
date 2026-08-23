@@ -4223,6 +4223,72 @@ SELECT CASE WHEN EXISTS (
 DROP TABLE temp.reconforge_writeback_identity_migration_check;
 """ + WRITEBACK_PROPOSAL_IDENTITY_GUARD_SQL  # nosec B608
 
+WRITEBACK_RECOVERY_OBSERVATIONS_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS connector_writeback_recovery_observations (
+    observation_id TEXT NOT NULL CHECK (length(observation_id) = 64),
+    tenant_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    intent_id TEXT NOT NULL,
+    connector_id TEXT NOT NULL,
+    proposal_digest TEXT NOT NULL CHECK (length(proposal_digest) = 64),
+    observation_digest TEXT NOT NULL CHECK (length(observation_digest) = 64),
+    evidence_node_id TEXT NOT NULL,
+    observed_by TEXT NOT NULL,
+    observed_at TEXT NOT NULL,
+    observation_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, workspace_id, observation_id),
+    UNIQUE (tenant_id, workspace_id, intent_id, observation_id)
+);
+CREATE INDEX IF NOT EXISTS idx_connector_writeback_recovery_observations_intent
+    ON connector_writeback_recovery_observations(tenant_id, workspace_id, intent_id, observed_at, observation_id);
+CREATE TRIGGER IF NOT EXISTS connector_writeback_recovery_observations_no_update
+BEFORE UPDATE ON connector_writeback_recovery_observations
+BEGIN
+    SELECT RAISE(ABORT, 'write-back recovery observations are immutable');
+END;
+CREATE TRIGGER IF NOT EXISTS connector_writeback_recovery_observations_no_delete
+BEFORE DELETE ON connector_writeback_recovery_observations
+BEGIN
+    SELECT RAISE(ABORT, 'write-back recovery observations cannot be deleted');
+END;
+CREATE TRIGGER IF NOT EXISTS connector_writeback_recovery_observations_validate_insert
+BEFORE INSERT ON connector_writeback_recovery_observations
+BEGIN
+    SELECT CASE
+        WHEN json_valid(NEW.observation_json) <> 1
+        THEN RAISE(ABORT, 'write-back recovery observation JSON is invalid')
+    END;
+    SELECT CASE
+        WHEN json_extract(NEW.observation_json, '$.schema_version') IS NOT 'connector-writeback-recovery-observation-v1'
+          OR json_extract(NEW.observation_json, '$.observation_id') IS NOT NEW.observation_id
+          OR json_extract(NEW.observation_json, '$.tenant_id') IS NOT NEW.tenant_id
+          OR json_extract(NEW.observation_json, '$.workspace_id') IS NOT NEW.workspace_id
+          OR json_extract(NEW.observation_json, '$.intent_id') IS NOT NEW.intent_id
+          OR json_extract(NEW.observation_json, '$.connector_id') IS NOT NEW.connector_id
+          OR json_extract(NEW.observation_json, '$.proposal_digest') IS NOT NEW.proposal_digest
+          OR json_extract(NEW.observation_json, '$.observation_digest') IS NOT NEW.observation_digest
+          OR json_extract(NEW.observation_json, '$.evidence_node_id') IS NOT NEW.evidence_node_id
+          OR json_extract(NEW.observation_json, '$.observed_by') IS NOT NEW.observed_by
+          OR json_extract(NEW.observation_json, '$.observed_at') IS NOT NEW.observed_at
+          OR json_type(NEW.observation_json, '$.observation') IS NOT 'object'
+        THEN RAISE(ABORT, 'write-back recovery observation identity is invalid')
+    END;
+    SELECT CASE
+        WHEN NOT EXISTS (
+            SELECT 1
+            FROM connector_writeback_intents AS intent
+            WHERE intent.tenant_id = NEW.tenant_id
+              AND intent.workspace_id = NEW.workspace_id
+              AND intent.intent_id = NEW.intent_id
+              AND json_extract(intent.intent_json, '$.connector_id') IS NEW.connector_id
+              AND json_extract(intent.intent_json, '$.idempotency_key') IS json_extract(NEW.observation_json, '$.observation.idempotency_key')
+        )
+        THEN RAISE(ABORT, 'write-back recovery observation intent binding is invalid')
+    END;
+END;
+"""
+
 WRITEBACK_APPROVAL_PERMISSION_SQL = """
 INSERT OR IGNORE INTO permissions (name, description)
 VALUES ('connectors.writeback.approve', 'Approve a governed connector write-back intent as a distinct human checker.');

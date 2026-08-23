@@ -923,6 +923,18 @@ def test_writeback_recovery_api_reads_provider_status_without_post(tmp_path: Pat
     assert recovered.json()["intent"]["status"] == "acknowledged"
     assert recovered.json()["network_dispatch"] == "recovered"
     assert recovered.json()["version"] == 4
+    assert len(recovered.json()["observation_id"]) == 64
+    observations = client.get(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/recovery-observations",
+        params={"tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        headers=controller_headers,
+    )
+    assert observations.status_code == 200, observations.text
+    assert observations.json()["count"] == 1
+    assert observations.json()["observations"][0]["observation"]["outcome"] == "accepted"
+    assert observations.json()["observations"][0]["evidence_node_id"].endswith(
+        recovered.json()["observation_id"]
+    )
     assert recovery_transport.calls == 1
     assert post_transport.calls == 0
     replay = client.post(
@@ -932,6 +944,13 @@ def test_writeback_recovery_api_reads_provider_status_without_post(tmp_path: Pat
     )
     assert replay.status_code == 200, replay.text
     assert replay.json()["network_dispatch"] == "already_acknowledged"
+    replay_observations = client.get(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/recovery-observations",
+        params={"tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        headers=controller_headers,
+    )
+    assert replay_observations.status_code == 200, replay_observations.text
+    assert replay_observations.json()["count"] == 1
     assert recovery_transport.calls == 1
     assert post_transport.calls == 0
 

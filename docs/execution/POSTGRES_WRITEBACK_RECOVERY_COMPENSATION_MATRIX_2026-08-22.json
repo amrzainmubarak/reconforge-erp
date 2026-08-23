@@ -20,7 +20,7 @@
     ]
   },
   "profile": "provider-neutral-writeback-recovery-compensation-parity",
-  "report_digest": "bdf1d82d0667f244160c43068cdab5c7516096d31fba17848e2ec1c33a3cdbb2",
+  "report_digest": "ac1800b33456badeccc13a8f30308c1b1cc0852dd5dd24c27cae461c1a0aff80",
   "runs": [
     {
       "checks": {
@@ -703,8 +703,8 @@
     "base_commit": "3c4742eaffe84d53ceaeb101ecd60ed0de16b393",
     "matrix_runner_source_sha256": "1663c086cf2ab9997b2359e2c934c3fce92c4d482bf9141ab79f33de90011c57",
     "migration_source_sha256": "92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0",
-    "postgres_persistence_source_sha256": "8128fd99b2d075ee4c4e9ab20dd1aa196fcecef3ab871845b4ba14a28809fda9",
-    "sqlite_persistence_source_sha256": "68e972c1755ec70e987ec508c7e6f2325a6d9e3e1c799ff4a9ded6bcbce55046",
+    "postgres_persistence_source_sha256": "d5fd26473a7ada5a89d6aef6ec68a68fe9d8e9eddb115167012284fba10f98d4",
+    "sqlite_persistence_source_sha256": "867c198d170e8efda78ccd672a1f7fbd2228ca39cc44ea63415b99eb0ac3bd46",
     "supply_chain_policy_sha256": "15675362650f9b2691251da77dd01538d72b3a7249c7a60c7591b7bbe0a48cae",
     "writeback_source_sha256": "81da111e8b32adec2c7d90e3bf45d7acc8161f60e7f483ac501f711323cef01c"
   }

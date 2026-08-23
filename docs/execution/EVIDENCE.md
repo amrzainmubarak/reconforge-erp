@@ -2,6 +2,30 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-834: Persist durable write-back recovery observations (2026-08-22)
+
+- Added the immutable `WritebackRecoveryObservationRecord` envelope. It binds
+  tenant/workspace, intent, connector, proposal digest, idempotency-bound
+  observation data, actor, timestamp, record digest, and evidence-node ID.
+- SQLite migration 43 and PostgreSQL Alembic revision 0090 persist the record
+  with append-only mutation guards, JSON/column identity checks, intent binding,
+  scoped uniqueness, and tenant/workspace RLS on PostgreSQL.
+- The recovery API persists the observation before an accepted lifecycle
+  transition and exposes a reviewer list endpoint. Replays are idempotent and
+  rejected/pending/not-found/unknown observations leave the intent unchanged.
+- Focused tests pass 66/66; `python -m mypy reconforge` passes across 526 source
+  files. The disposable SQLite/PostgreSQL 16.14/17.10 matrix passed in 12.292
+  seconds with shared records digest
+  `768c363a6c196da78fe7c6ca40281f1d4ca051c194c8585f648b69c25574aa65`.
+- Scope: synthetic provider responses and one local Docker failure domain;
+  this is not live-vendor interoperability, settlement/accounting posting,
+  cross-host HA/DR, distributed exactly-once, or production assurance.
+- Full local gate after contract updates: `python -m pytest --tb=short -q`
+  passed 2996 tests with 115 declared skips and zero failures. Mypy, build,
+  Bandit, Ruff, and `git diff --check` passed; `pip_audit` passed after the
+  environment-only pip upgrade from 26.1.2 to 26.2 (the prior PYSEC-2026-3721
+  finding is no longer present).
+
 ## E-833: Classify provider status outcomes without lifecycle mutation (2026-08-22)
 
 - Added `WritebackProviderOutcome` with `accepted`, `rejected`, `pending`,

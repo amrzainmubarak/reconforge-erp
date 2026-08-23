@@ -2,6 +2,23 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-834 durable observation controls (2026-08-22)
+
+- Recovery observations are persisted before an accepted lifecycle transition;
+  rejected, pending, not-found, and unknown outcomes do not mutate the intent.
+- SQLite and PostgreSQL reject direct `UPDATE`/`DELETE`; triggers validate the
+  canonical JSON envelope, duplicated identity columns, nested observation
+  digest, and persisted connector/idempotency binding.
+- PostgreSQL revision 0090 enables forced tenant/workspace row-level security;
+  the disposable matrix verified that a role with all table privilege flags
+  disabled cannot bypass scope enforcement.
+- Replay uses the observation digest as an idempotency identity. The matrix
+  covered SQLite, PostgreSQL 16.14, and PostgreSQL 17.10 with synthetic data;
+  no secrets, provider credentials, or external network calls were used.
+- The full Python suite passed 2996 executed tests with 115 declared skips;
+  Bandit and pip-audit are green. The local pip tool was upgraded to 26.2 to
+  remove the previously reported PYSEC-2026-3721 finding in pip 26.1.2.
+
 ## E-833 provider outcome observation controls (2026-08-22)
 
 - Status lookup is separated from mutation; observations are frozen and

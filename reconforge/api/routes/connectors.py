@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Annotated, TypedDict, cast
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import enforce_server_scoped_permission, get_local_db, require_permission
@@ -24,12 +24,19 @@ from reconforge.connectors.writeback import (
     request_compensation,
 )
 from reconforge.connectors.writeback_network import (
+    WritebackNetworkDispatch,
     WritebackNetworkError,
     WritebackNetworkExecutor,
     WritebackNetworkRegistration,
+    WritebackRecoveryObservationRecord,
     WritebackRecoveryTransport,
 )
-from reconforge.infrastructure.sqlite_writeback import SQLiteWritebackIntentRepository, WritebackPersistenceError
+from reconforge.infrastructure.postgres_writeback import PostgresWritebackRecoveryObservationRepository
+from reconforge.infrastructure.sqlite_writeback import (
+    SQLiteWritebackIntentRepository,
+    SQLiteWritebackRecoveryObservationRepository,
+    WritebackPersistenceError,
+)
 
 router = APIRouter(prefix="/connectors", tags=["connectors"])
 WritebackProposer = Annotated[LocalUser, Depends(require_permission("connectors.writeback.propose"))]
@@ -346,7 +353,7 @@ def dispatch_writeback_intent(
         return {"intent": stored, "version": int(marked["version"]) + 1}
 
     persisted: _PersistedAcknowledgement = execute_postgres_writeback(request, persist_acknowledgement)
-    intent = persisted["intent"]
+    intent = cast(WritebackIntent, persisted["intent"])
     return {
         "intent": intent.model_dump(mode="json"),
         "version": persisted["version"],
@@ -369,7 +376,7 @@ def recover_writeback_intent(
 ) -> dict[str, object]:
     """Recover an uncertain provider result without sending another mutation."""
 
-    del connection, current_user
+    del connection
     if not server_writeback_enabled(request):
         raise APIError(
             status_code=503,
@@ -432,7 +439,7 @@ def recover_writeback_intent(
         )
     recovery_adapter = cast(WritebackRecoveryTransport, recovery_transport)
     try:
-        recovery = executor.recover(
+        observation = executor.observe_recovery(
             marked["intent"],
             registration=marked["registration"],
             policy=marked["policy"],
@@ -443,24 +450,58 @@ def recover_writeback_intent(
     except Exception as exc:
         raise APIError(status_code=502, code="writeback_recovery_failed", message="Provider write-back recovery failed safely; the intent remains retryable.") from exc
 
-    def persist_recovery(repository: object, tenant_id: str, workspace_id: str) -> _PersistedAcknowledgement:
+    def persist_recovery(repository: object, tenant_id: str, workspace_id: str) -> dict[str, object]:
         current = repository.get(intent_id=intent_id, tenant_id=tenant_id, workspace_id=workspace_id)  # type: ignore[attr-defined]
         if current is None:
             raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
         current_intent = cast(WritebackIntent, current["intent"])
         current_version = int(cast(int, current["version"]))
-        if current_intent.status is WritebackStatus.ACKNOWLEDGED:
-            return {"intent": current_intent, "version": current_version}
-        if current_version != int(marked["version"]):
+        if current_intent.status is not WritebackStatus.ACKNOWLEDGED and current_version != int(marked["version"]):
             raise APIError(status_code=409, code="writeback_recovery_version_conflict", message="Write-back intent changed during provider recovery; retry with the same idempotency key.")
+        record = WritebackRecoveryObservationRecord.for_intent(
+            current_intent,
+            observation,
+            observed_by=current_user.id,
+            observed_at=datetime.now(UTC),
+        )
+        if isinstance(repository.connection, sqlite3.Connection):  # type: ignore[attr-defined]
+            SQLiteWritebackRecoveryObservationRepository(repository.connection).put(record)  # type: ignore[attr-defined]
+        else:
+            PostgresWritebackRecoveryObservationRepository(repository.connection).put(record)  # type: ignore[attr-defined]
+        if current_intent.status is WritebackStatus.ACKNOWLEDGED:
+            return {"intent": current_intent, "version": current_version, "observation": record, "accepted": True, "already_acknowledged": True}
+        if observation.outcome.value != "accepted":
+            return {"observation": record, "accepted": False}
         try:
+            recovery = executor.recover_observation(
+                current_intent,
+                observation=observation,
+                registration=marked["registration"],
+                policy=marked["policy"],
+            )
             stored = repository.put(recovery.intent, expected_version=current_version)  # type: ignore[attr-defined]
         except (ValueError, WritebackPersistenceError) as exc:
             raise APIError(status_code=409, code="writeback_recovery_persistence_conflict", message=str(exc)) from exc
-        return {"intent": stored, "version": current_version + 1}
+        return {"intent": stored, "version": current_version + 1, "recovery": recovery, "observation": record, "accepted": True}
 
-    persisted: _PersistedAcknowledgement = execute_postgres_writeback(request, persist_recovery)
-    intent = persisted["intent"]
+    persisted = execute_postgres_writeback(request, persist_recovery)
+    if not bool(persisted["accepted"]):
+        error_code = executor.recovery_error_code(observation) or "writeback_recovery_unknown"
+        raise APIError(status_code=502, code=error_code, message="Provider write-back recovery was observed but did not advance the intent.")
+    if bool(persisted.get("already_acknowledged")):
+        acknowledged = cast(WritebackIntent, persisted["intent"])
+        record = cast(WritebackRecoveryObservationRecord, persisted["observation"])
+        return {
+            "intent": acknowledged.model_dump(mode="json"),
+            "version": persisted["version"],
+            "digest": acknowledged.digest,
+            "proposal_digest": acknowledged.proposal_digest,
+            "network_dispatch": "already_acknowledged",
+            "observation_id": record.observation_id,
+            "observation_digest": record.digest,
+        }
+    recovery = cast(WritebackNetworkDispatch, persisted["recovery"])
+    intent = cast(WritebackIntent, persisted["intent"])
     return {
         "intent": intent.model_dump(mode="json"),
         "version": persisted["version"],
@@ -470,6 +511,65 @@ def recover_writeback_intent(
         "request_digest": recovery.request_digest,
         "response_digest": recovery.response_digest,
         "attempts": recovery.attempts,
+        "observation_id": cast(WritebackRecoveryObservationRecord, persisted["observation"]).observation_id,
+        "observation_digest": cast(WritebackRecoveryObservationRecord, persisted["observation"]).digest,
+    }
+
+
+@router.get("/writeback/intents/{intent_id}/recovery-observations")
+def list_writeback_recovery_observations(
+    intent_id: str,
+    request: Request,
+    current_user: WritebackReconciler,
+    tenant_id: str = Query(..., min_length=1, max_length=256),
+    workspace_id: str = Query(..., min_length=1, max_length=256),
+    limit: int = Query(100, ge=1, le=1_000),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Read redacted, digest-bound recovery observations for reviewer drill-down."""
+
+    del current_user
+    if server_writeback_enabled(request):
+        scoped_tenant, scoped_workspace = _require_server_scope(request, tenant_id, workspace_id)
+        enforce_server_scoped_permission(
+            request,
+            permission="connectors.writeback.reconcile",
+            tenant_id=scoped_tenant,
+            workspace_id=scoped_workspace,
+        )
+
+        def list_server(repository: object, tenant: str, workspace: str) -> tuple[WritebackRecoveryObservationRecord, ...]:
+            observation_repository = (
+                SQLiteWritebackRecoveryObservationRepository(repository.connection)  # type: ignore[attr-defined]
+                if isinstance(repository.connection, sqlite3.Connection)  # type: ignore[attr-defined]
+                else PostgresWritebackRecoveryObservationRepository(repository.connection)  # type: ignore[attr-defined]
+            )
+            return observation_repository.list_for_intent(
+                intent_id=intent_id,
+                tenant_id=tenant,
+                workspace_id=workspace,
+                limit=limit,
+            )
+
+        observations = execute_postgres_writeback(request, list_server)
+    else:
+        if connection is None:
+            raise APIError(status_code=500, code="local_database_not_configured", message="Local database is not configured.")
+        try:
+            observations = SQLiteWritebackRecoveryObservationRepository(connection).list_for_intent(
+                intent_id=intent_id,
+                tenant_id=tenant_id,
+                workspace_id=workspace_id,
+                limit=limit,
+            )
+        except WritebackPersistenceError as exc:
+            raise APIError(status_code=409, code="writeback_observation_read_failed", message=str(exc)) from exc
+    return {
+        "intent_id": intent_id,
+        "tenant_id": tenant_id,
+        "workspace_id": workspace_id,
+        "observations": [observation.model_dump(mode="json") for observation in observations],
+        "count": len(observations),
     }
 
 

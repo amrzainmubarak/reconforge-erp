@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-934: Make provider recovery observations durable and append-only
+
+- **Date**: 2026-08-22
+- **Context**: E-833 produced a deterministic, non-mutating provider status
+  observation, but an accepted or unresolved lookup still needed durable
+  evidence that could be replayed and reviewed independently of the intent row.
+- **Decision**: Adopt ADR 0548. Persist a scoped observation envelope before an
+  accepted lifecycle transition; use SQLite migration 43 and PostgreSQL
+  revision 0090 with append-only guards, intent/idempotency binding, digest
+  identities, and forced tenant/workspace RLS. Expose read-only reviewer
+  drill-down and make duplicate writes idempotent.
+- **Rationale**: The observation is evidence, not a mutable status cache.
+  Persist-before-transition prevents an acknowledged intent from existing
+  without its provider evidence, while explicit unresolved outcomes preserve
+  operator control and safe replay.
+- **Reversibility**: Additive schema and API surface. Rollback is a versioned
+  migration downgrade only after dependent reads are disabled; existing intent
+  lifecycle data is not rewritten.
+
 ### D-933: Separate provider status observation from lifecycle transition
 
 - **Date**: 2026-08-22

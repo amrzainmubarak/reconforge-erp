@@ -920,3 +920,9 @@ include tests/test_postgres_writeback_recovery_compensation_matrix.py
 include docs/adr/0545-prove-writeback-recovery-compensation-parity.md
 include docs/adr/0546-reject-negative-provider-outcomes.md
 include docs/adr/0547-classify-provider-status-outcomes.md
+include reconforge/connectors/writeback_observations.py
+include tests/test_connector_writeback_observations.py
+include alembic/versions/0090_postgres_writeback_recovery_observations.py
+include .github/scripts/verify_postgres_writeback_observation_matrix.py
+include docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json
+include docs/adr/0548-durable-writeback-recovery-observations.md

@@ -218,6 +218,87 @@ class WritebackRecoveryObservation(BaseModel):
         return hashlib.sha256(encoded).hexdigest()
 
 
+class WritebackRecoveryObservationRecord(BaseModel):
+    """Durable, scoped evidence record for one provider status observation.
+
+    The inner observation is deliberately separated from lifecycle state.  A
+    record can therefore be stored for a rejected, pending, missing, or
+    unknown provider response without pretending that the write-back intent
+    advanced.  ``observation_id`` is a deterministic digest of the complete
+    record (excluding the id itself), making retries idempotent while allowing
+    later observations of the same intent.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["connector-writeback-recovery-observation-v1"] = (
+        "connector-writeback-recovery-observation-v1"
+    )
+    observation_id: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    evidence_node_id: str | None = Field(default=None, min_length=1, max_length=160)
+    intent_id: str = Field(min_length=1, max_length=256)
+    tenant_id: str = Field(min_length=1, max_length=256)
+    workspace_id: str = Field(min_length=1, max_length=256)
+    connector_id: str = Field(min_length=1, max_length=128)
+    proposal_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    observation_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    observed_by: str = Field(min_length=1, max_length=256)
+    observed_at: datetime
+    observation: WritebackRecoveryObservation
+
+    @model_validator(mode="after")
+    def validate_identity(self) -> WritebackRecoveryObservationRecord:
+        if self.observed_at.tzinfo is None or self.observed_at.utcoffset() is None:
+            raise ValueError("recovery observation timestamp must include a timezone")
+        if self.observation_digest != self.observation.digest:
+            raise ValueError("recovery observation digest mismatch")
+        expected_evidence_node_id = f"connector-writeback-recovery-observation:{self.observation_id}"
+        if self.evidence_node_id and self.evidence_node_id != expected_evidence_node_id:
+            raise ValueError("recovery observation evidence node identity mismatch")
+        if self.observation_id and self.observation_id != self.digest:
+            raise ValueError("recovery observation record digest mismatch")
+        return self
+
+    @property
+    def digest(self) -> str:
+        payload = self.model_dump(mode="json", exclude={"observation_id", "evidence_node_id"})
+        encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":")).encode("ascii")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def model_post_init(self, __context: object) -> None:
+        if not self.observation_id:
+            object.__setattr__(self, "observation_id", self.digest)
+        if not self.evidence_node_id:
+            object.__setattr__(
+                self,
+                "evidence_node_id",
+                f"connector-writeback-recovery-observation:{self.observation_id}",
+            )
+
+    @classmethod
+    def for_intent(
+        cls,
+        intent: WritebackIntent,
+        observation: WritebackRecoveryObservation,
+        *,
+        observed_by: str,
+        observed_at: datetime,
+    ) -> WritebackRecoveryObservationRecord:
+        """Bind one observation to the immutable proposal identity and scope."""
+
+        return cls(
+            intent_id=intent.intent_id,
+            tenant_id=intent.tenant_id,
+            workspace_id=intent.workspace_id,
+            connector_id=intent.connector_id,
+            proposal_digest=intent.proposal_digest,
+            observation_digest=observation.digest,
+            observed_by=observed_by,
+            observed_at=observed_at,
+            observation=observation,
+        )
+
+
 @dataclass(frozen=True)
 class WritebackNetworkResponse:
     status: int
@@ -507,6 +588,34 @@ class WritebackNetworkExecutor:
             policy=policy,
             transport=transport,
         )
+        return self.recover_observation(
+            intent,
+            observation=observation,
+            registration=registration,
+            policy=policy,
+        )
+
+    def recover_observation(
+        self,
+        intent: WritebackIntent,
+        *,
+        observation: WritebackRecoveryObservation,
+        registration: WritebackNetworkRegistration,
+        policy: WritebackPolicy,
+    ) -> WritebackNetworkDispatch:
+        """Apply a previously observed response without issuing another request."""
+
+        policy.authorize(intent)
+        if not registration.feature_enabled or not intent.feature_enabled:
+            raise WritebackNetworkError("writeback_network_feature_disabled")
+        if intent.status is not WritebackStatus.DISPATCHED:
+            raise WritebackNetworkError("writeback_network_recovery_requires_dispatched")
+        if intent.connector_id != registration.connector_id:
+            raise WritebackNetworkError("writeback_connector_not_allowed")
+        if intent.operation not in registration.allowed_operations:
+            raise WritebackNetworkError("writeback_operation_not_allowed")
+        if observation.idempotency_key != intent.idempotency_key:
+            raise WritebackNetworkError("writeback_recovery_acknowledgement_mismatch")
         if observation.outcome is not WritebackProviderOutcome.ACCEPTED:
             error_code = {
                 WritebackProviderOutcome.REJECTED: "writeback_recovery_not_accepted",
@@ -535,6 +644,17 @@ class WritebackNetworkExecutor:
             response_digest=observation.provider_response_digest,
             attempts=1,
         )
+
+    @staticmethod
+    def recovery_error_code(observation: WritebackRecoveryObservation) -> str | None:
+        """Map a non-accepted observation to a stable safe API error code."""
+
+        return {
+            WritebackProviderOutcome.REJECTED: "writeback_recovery_not_accepted",
+            WritebackProviderOutcome.PENDING: "writeback_recovery_pending",
+            WritebackProviderOutcome.NOT_FOUND: "writeback_recovery_not_found",
+            WritebackProviderOutcome.UNKNOWN: "writeback_recovery_unknown",
+        }.get(observation.outcome)
 
     def observe_recovery(
         self,
@@ -801,6 +921,7 @@ __all__ = [
     "WritebackNetworkResponse",
     "WritebackProviderOutcome",
     "WritebackRecoveryObservation",
+    "WritebackRecoveryObservationRecord",
     "WritebackRecoveryTransport",
     "WritebackNetworkTransport",
     "WritebackPayloadResolver",

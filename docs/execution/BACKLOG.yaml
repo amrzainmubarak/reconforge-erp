@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-864
+    priority: P0
+    area: connectors
+    title: Add live PostgreSQL receiver idempotency gate
+    status: completed
+    depends_on: [E-863]
+    exit_evidence: >-
+      An optional live gate initializes the digest-only PostgreSQL receiver,
+      proves one atomic receipt/effect for a request, exact replay without a
+      second effect, stable history digest, and deletion refusal under the
+      application role; it passes when the declared PostgreSQL DSN is present.
   - id: E-863
     priority: P0
     area: connectors

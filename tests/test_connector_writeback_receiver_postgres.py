@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import importlib
+import os
+from uuid import uuid4
 
 import pytest
 
 from reconforge.connectors.writeback_receiver import WritebackReceiverError, WritebackReceiverRequest
 from reconforge.connectors.writeback_receiver_postgres import (
     _SCHEMA,
+    EFFECTS_TABLE,
+    RECEIPTS_TABLE,
     PostgresWritebackReceiverStore,
     _load_psycopg,
     _receiver_key_digest,
@@ -76,3 +80,50 @@ def test_postgres_dependency_failure_is_fail_closed(monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(importlib, "import_module", unavailable)
     with pytest.raises(WritebackReceiverError, match="writeback_receiver_postgres_dependency_missing"):
         _load_psycopg()
+
+
+@pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
+def test_live_postgres_receiver_is_atomic_idempotent_and_digest_replayable() -> None:
+    psycopg = pytest.importorskip("psycopg")
+    app_dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
+    admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", app_dsn)
+    app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
+    if not app_user:
+        pytest.skip("requires a non-privileged application role")
+    receiver_id = "live-receiver-" + uuid4().hex[:12]
+    request = _request(receiver_id=receiver_id, idempotency_key="idem-" + uuid4().hex[:12])
+    admin = psycopg.connect(admin_dsn)
+    try:
+        admin.execute(_SCHEMA)
+        admin.execute(f"GRANT USAGE ON SCHEMA reconforge_receiver_conformance TO {app_user}")
+        admin.execute(
+            f"GRANT SELECT, INSERT ON {RECEIPTS_TABLE}, {EFFECTS_TABLE} TO {app_user}"
+        )
+        admin.commit()
+    finally:
+        admin.close()
+
+    store = PostgresWritebackReceiverStore(dsn=app_dsn)
+    before = store.counts()
+    applied = store.receive(request)
+    digest_after_apply = store.canonical_history_digest()
+    replayed = store.receive(request)
+    after = store.counts()
+
+    assert applied.disposition.value == "applied"
+    assert replayed.disposition.value == "replayed"
+    assert replayed.response == applied.response
+    assert after.receipts == before.receipts + 1
+    assert after.effects == before.effects + 1
+    assert store.canonical_history_digest() == digest_after_apply
+
+    with pytest.raises(psycopg.Error):
+        connection = psycopg.connect(app_dsn)
+        try:
+            connection.execute(
+                f"DELETE FROM {RECEIPTS_TABLE} WHERE receiver_id = %s",
+                (receiver_id,),
+            )
+            connection.commit()
+        finally:
+            connection.close()

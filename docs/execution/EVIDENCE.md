@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-864: Current PostgreSQL receiver idempotency runtime (2026-08-23)
+
+- With the local PostgreSQL DSN and `reconforge_app` role,
+  `tests/test_connector_writeback_receiver_postgres.py` passed 9/9.
+- The live gate proves digest-only receipt/effect atomicity, exact replay,
+  stable history digest, and application-role deletion refusal. It does not
+  contact a provider or prove cross-host/production behavior.
+
 ## E-863: Current PostgreSQL write-back append-only runtime (2026-08-23)
 
 - With the digest-pinned PostgreSQL 16.14 local service and

@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-864 — Add live PostgreSQL receiver idempotency gate (2026-08-23)
+
+- Added a live-gated receiver test for atomic receipt/effect persistence,
+  idempotent replay, stable canonical history digest, and delete refusal under
+  the non-privileged application role.
+- The current local PostgreSQL run passes 9/9 in the receiver test file; no
+  provider transport or production receiver claim is made.
+
 ## E-863 — Refresh live PostgreSQL write-back append-only evidence (2026-08-23)
 
 - `tests/test_postgres_writeback.py` passed 3/3 with the local PostgreSQL

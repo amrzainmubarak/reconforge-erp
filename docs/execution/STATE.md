@@ -18,6 +18,9 @@ Updated: 2026-08-22
 - Boundary: synthetic provider-neutral evidence on one Docker host; live
   provider semantics, accounting/settlement, cross-host HA/DR, and production
   assurance remain unproven.
+- A post-commit rerun was attempted on 2026-08-23 but Docker Desktop's Linux
+  engine was unavailable; the retained report is bound to commit
+  `c88b8c03666e1f61ac34a58ebe7591e07b878561` and its exact source digests.
 
 ## E-833 — Classify provider status outcomes without lifecycle mutation (2026-08-22)
 

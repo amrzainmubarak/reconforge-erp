@@ -25,6 +25,11 @@ This file records commands and observed results. It does not convert a dirty wor
   Bandit, Ruff, and `git diff --check` passed; `pip_audit` passed after the
   environment-only pip upgrade from 26.1.2 to 26.2 (the prior PYSEC-2026-3721
   finding is no longer present).
+- A post-commit rerun of the E-834 Docker matrix was attempted on 2026-08-23
+  but could not start because Docker Desktop's Linux engine was unavailable;
+  the retained 2026-08-22 report remains source-digest-bound to commit
+  `c88b8c03666e1f61ac34a58ebe7591e07b878561`, whose code digests are the same
+  code exercised by that successful run.
 
 ## E-833: Classify provider status outcomes without lifecycle mutation (2026-08-22)
 

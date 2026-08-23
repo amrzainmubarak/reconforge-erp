@@ -37,7 +37,9 @@ PASSWORD = secrets.token_urlsafe(24)
 SOURCE_DATABASE = "reconforge_writeback_source"
 RESTORED_DATABASE = "reconforge_writeback_restored"
 SOURCE_REVISION = "0088_pg_currency_snapshot"
-TARGET_REVISION = "0089_pg_writeback_identity"
+# The identity migration is validated through the current Alembic head so the
+# restore proof remains valid when follow-on migrations add compatible tables.
+TARGET_REVISION = "0090_pg_writeback_observations"
 EXPECTED_AUDIT_ERROR = "existing connector write-back history violates immutable proposal identity or lifecycle"
 NOW = datetime(2026, 8, 22, 12, 0, tzinfo=UTC)
 MIGRATION_PATH = ROOT / "alembic/versions/0089_postgres_writeback_proposal_identity.py"

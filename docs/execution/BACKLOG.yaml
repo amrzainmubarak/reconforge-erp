@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-893
+    priority: P0
+    area: database_migrations
+    title: Bind restore drill to current Alembic head
+    status: in_progress
+    depends_on: [E-892]
+    exit_evidence: >-
+      The identity migration restore runner, schemas, and retained reports
+      all declare 0090_pg_writeback_observations, focused local tests pass,
+      and a hosted server-boundaries rerun passes on the pushed commit.
   - id: E-892
     priority: P0
     area: release_operations

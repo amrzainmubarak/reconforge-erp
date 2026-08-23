@@ -2,6 +2,16 @@
 
 Updated: 2026-08-23
 
+## E-893 — Restore drill follows current Alembic head (2026-08-23)
+
+- Hosted CI run `32644742254` passed Python 3.11/3.12, engine parity,
+  Docker parity, and PostgreSQL HA/DR, but `server-boundaries` exposed a
+  stale retained migration expectation: the restored database correctly
+  reached `0090_pg_writeback_observations` while the drill expected `0089`.
+- The drill now declares and verifies the current head, and its retained
+  reports/schemas are digest-rebound. This is a contract repair; a new hosted
+  run is required before claiming the full CI gate is green.
+
 ## E-892 — Full history for retained evidence CI contracts (2026-08-23)
 
 - Hosted CI revealed that shallow checkout made exact source/migration commit

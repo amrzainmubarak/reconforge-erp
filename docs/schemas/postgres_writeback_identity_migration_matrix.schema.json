@@ -63,7 +63,7 @@
       "properties": {
         "postgresql_versions": {"const": ["16.14", "17.10"]},
         "source_revision": {"const": "0088_pg_currency_snapshot"},
-        "target_revision": {"const": "0089_pg_writeback_identity"},
+        "target_revision": {"const": "0090_pg_writeback_observations"},
         "valid_history_sha256": {"$ref": "#/$defs/sha256"},
         "invalid_history_sha256": {"$ref": "#/$defs/sha256"},
         "all_checks_passed": {"const": true},
@@ -145,7 +145,7 @@
             "image": {"const": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"},
             "postgresql": {"const": "16.14"},
             "source_revision": {"const": "0088_pg_currency_snapshot"},
-            "target_revision": {"const": "0089_pg_writeback_identity"}
+            "target_revision": {"const": "0090_pg_writeback_observations"}
           }
         },
         "history": {"$ref": "#/$defs/history"},
@@ -166,7 +166,7 @@
             "image": {"const": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"},
             "postgresql": {"const": "17.10"},
             "source_revision": {"const": "0088_pg_currency_snapshot"},
-            "target_revision": {"const": "0089_pg_writeback_identity"}
+            "target_revision": {"const": "0090_pg_writeback_observations"}
           }
         },
         "history": {"$ref": "#/$defs/history"},

@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-893: Restore drill follows current Alembic head (2026-08-23)
+
+- Hosted CI run `32644742254` passed both Python jobs, all four engine-parity
+  cells, Docker parity, and PostgreSQL HA/DR. Its `server-boundaries` job
+  failed only because the retained identity-restore contract expected the
+  superseded `0089_pg_writeback_identity` head while the repository head is
+  `0090_pg_writeback_observations`.
+- The runner, JSON Schemas, and retained drill/matrix reports now agree on
+  `0090_pg_writeback_observations`; focused local migration tests pass.
+- Hosted rerun evidence is pending; no full-green claim is made from this
+  intermediate run.
+
 ## E-892: Full history for retained evidence CI contracts (2026-08-23)
 
 - Hosted CI run `32643148675` reached 3043 passing tests but failed retained

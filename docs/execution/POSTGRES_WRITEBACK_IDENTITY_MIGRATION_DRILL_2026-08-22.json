@@ -27,18 +27,18 @@
     "no_cross_host_ha_dr_or_production_claim"
   ],
   "profile": "disposable-postgresql-writeback-identity-migration",
-  "report_digest": "b143c756a27b914ae92a32c3a1595529bd87fc4d64784afee1710a817a44674e",
+  "report_digest": "90e98efcad85b00a8f40ee0e09f6640c16a441b6d268d89a754d13b83074dee1",
   "runtime": {
     "docker_server": "29.7.2",
     "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
     "postgresql": "17.10",
     "source_revision": "0088_pg_currency_snapshot",
-    "target_revision": "0089_pg_writeback_identity"
+    "target_revision": "0090_pg_writeback_observations"
   },
   "schema_version": "postgres-writeback-identity-migration-drill-v1",
   "subject": {
     "migration_commit": "c7e357335c71a15889375be01bd3e6bf8d70041c",
     "migration_source_sha256": "92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0",
-    "runner_source_sha256": "e96d2fcda82f1b393024cc30c7b57f216346fb48d0510d623c43618c65a67b24"
+    "runner_source_sha256": "3db47c0b82fcb0fbf4944b8e7ad34a522cdbb9ddf1e421f42251cae9583e74fa"
   }
 }

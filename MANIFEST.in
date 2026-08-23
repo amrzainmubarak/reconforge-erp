@@ -528,6 +528,7 @@ include docs/adr/0594-release-candidate-hardened-image-gate.md
 include docs/adr/0595-offline-hardened-container-smoke.md
 include docs/adr/0596-hosted-gitleaks-synthetic-key-closure.md
 include docs/adr/0597-ci-fetches-history-for-retained-evidence.md
+include docs/adr/0598-follow-current-migration-head-in-restore-drill.md
 include docs/execution/security/docker-scout-current-2026-08-23.md
 include reconforge/benchmark/postgres_outbox_scale.py
 include tests/test_postgres_outbox_scale.py

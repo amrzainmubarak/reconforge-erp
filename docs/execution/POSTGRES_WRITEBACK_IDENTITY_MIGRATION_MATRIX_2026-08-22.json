@@ -18,11 +18,11 @@
       "17.10"
     ],
     "source_revision": "0088_pg_currency_snapshot",
-    "target_revision": "0089_pg_writeback_identity",
+    "target_revision": "0090_pg_writeback_observations",
     "valid_history_sha256": "ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886"
   },
   "profile": "disposable-postgresql-writeback-identity-migration-matrix",
-  "report_digest": "6c9e41dd55ef0ff9292a52aacd15030766660db85c5ddda78391aeeb4ecb73f3",
+  "report_digest": "b65c28df10ec3109b471ad971f936b5f3df6571c18acee370049a9e308674ba2",
   "runs": [
     {
       "checks": {
@@ -49,7 +49,7 @@
         "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
         "postgresql": "16.14",
         "source_revision": "0088_pg_currency_snapshot",
-        "target_revision": "0089_pg_writeback_identity"
+        "target_revision": "0090_pg_writeback_observations"
       }
     },
     {
@@ -77,7 +77,7 @@
         "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
         "postgresql": "17.10",
         "source_revision": "0088_pg_currency_snapshot",
-        "target_revision": "0089_pg_writeback_identity"
+        "target_revision": "0090_pg_writeback_observations"
       }
     }
   ],
@@ -86,7 +86,7 @@
     "matrix_runner_source_sha256": "6f1006edc1a8843f0a1c587f0726a097a9978f49c308e97db48b1308dfcedb03",
     "migration_commit": "c7e357335c71a15889375be01bd3e6bf8d70041c",
     "migration_source_sha256": "92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0",
-    "observation_runner_source_sha256": "e96d2fcda82f1b393024cc30c7b57f216346fb48d0510d623c43618c65a67b24",
+    "observation_runner_source_sha256": "3db47c0b82fcb0fbf4944b8e7ad34a522cdbb9ddf1e421f42251cae9583e74fa",
     "supply_chain_policy_sha256": "15675362650f9b2691251da77dd01538d72b3a7249c7a60c7591b7bbe0a48cae"
   }
 }

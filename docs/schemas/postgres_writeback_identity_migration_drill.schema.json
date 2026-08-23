@@ -67,7 +67,7 @@
           "const": "0088_pg_currency_snapshot"
         },
         "target_revision": {
-          "const": "0089_pg_writeback_identity"
+          "const": "0090_pg_writeback_observations"
         }
       }
     },

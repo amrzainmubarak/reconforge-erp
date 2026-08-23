@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-904: Full local regression after CI timeout hardening (2026-08-23)
+
+- Command: `python -m pytest -q --tb=short -ra`
+- Result: exit code 0 with no failures on the current Windows/Python 3.14
+  environment. Explicit skips require live PostgreSQL/S3/Redis, symlink
+  privilege, or opt-in public network and are not counted as passes.
+- Scope: local regression evidence only; it does not replace hosted CI or
+  cross-engine runtime evidence.
+
 ## E-903: Finite CI timeouts for long-running gates (2026-08-23)
 
 - `.github/workflows/ci.yml` sets `test.timeout-minutes: 45` and

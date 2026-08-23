@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-904
+    priority: P1
+    area: quality
+    title: Run full local regression after CI timeout hardening
+    status: completed
+    depends_on: [E-903]
+    exit_evidence: >-
+      python -m pytest -q --tb=short -ra exits 0 with no failures on the
+      current Windows/Python 3.14 environment. Explicit service/privilege
+      skips remain uncounted and hosted parity is not inferred.
   - id: E-903
     priority: P0
     area: release_operations

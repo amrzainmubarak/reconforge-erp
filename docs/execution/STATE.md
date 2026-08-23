@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-904 — Full local regression after CI timeout hardening (2026-08-23)
+
+- `python -m pytest -q --tb=short -ra` completed with exit code 0 on the
+  current Windows/Python 3.14 environment. No test failure occurred.
+- Skips remain explicitly environment-gated (live PostgreSQL/S3/Redis,
+  symlink privilege, and opt-in public network); they are not counted as
+  passes. This is local evidence, not hosted parity.
+
 ## E-903 — Finite CI timeouts for long-running gates (2026-08-23)
 
 - CI `test` now has a 45-minute timeout and `postgres-ha-dr` a 30-minute

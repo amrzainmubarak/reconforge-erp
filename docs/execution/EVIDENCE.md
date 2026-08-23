@@ -18391,3 +18391,16 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - Boundary: synthetic single-host PostgreSQL only; no external IdP/SSO,
     universal MFA, distributed revocation, production PAM, or independent IAM
     assurance.
+
+- E-870 current offline base-install drill (2026-08-23; ADR 0579):
+  - Command: `python .github/scripts/verify_airgap_install.py --base-install-only`.
+  - The digest-pinned `python:3.14.1-slim` Linux container ran with
+    `network_mode=none`, a read-only root filesystem, and a read-only bundle
+    mount. The wheel-only `uv.lock` bundle contained 68 entries and
+    100,627,876 bytes; pip used `--no-index --no-deps --require-hashes`.
+  - `reconforge doctor` exited zero and the disposable container cleanup
+    completed. The closed current artifact is
+    `docs/execution/OFFLINE_INSTALL_CURRENT_DRILL_2026-08-23.json`.
+  - Boundary: base install only; offline signature trust, identity recovery,
+    backup/restore, upgrade/rollback, physical air-gap isolation, and
+    production readiness remain unverified.

@@ -2,6 +2,17 @@
 
 Updated: 2026-08-23
 
+## E-870 — Refresh current offline base-install drill evidence (2026-08-23)
+
+- `verify_airgap_install.py --base-install-only` completed successfully using
+  the digest-pinned `python:3.14.1-slim` Linux image.
+- The wheel-only bundle contained 68 entries and 100,627,876 bytes; install
+  used `--network none`, read-only root, `--no-index`, `--no-deps`, and
+  `--require-hashes`.
+- `reconforge doctor` exited zero and the disposable container cleanup passed.
+- This does not cover offline signatures, identity recovery, backup/restore,
+  upgrade/rollback, physical air-gap isolation, or production readiness.
+
 ## E-869 — Refresh current PostgreSQL identity and scope governance runtime (2026-08-23)
 
 - Eleven focused tests passed against PostgreSQL 16.14 using the

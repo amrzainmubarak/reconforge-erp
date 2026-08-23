@@ -1,0 +1,37 @@
+{
+  "schema": "reconforge-offline-install-current-drill-v1",
+  "executed_at": "2026-08-23",
+  "application_version": "0.7.1",
+  "runtime": {
+    "image": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+    "platform": "linux/amd64",
+    "network_mode": "none",
+    "root_filesystem": "read-only"
+  },
+  "bundle": {
+    "manifest_sha256": "f03b6bc87128837be76c8fe0b1e6c5c7e710b44a7db3b958ec1bab46c975d251",
+    "entry_count": 68,
+    "total_bytes": 100627876,
+    "source_lock": "uv.lock",
+    "wheel_only": true
+  },
+  "installation": {
+    "bundle_mount": "read-only",
+    "pip_no_index": true,
+    "pip_no_deps": true,
+    "pip_require_hashes": true,
+    "doctor_exit_zero": true,
+    "cleanup_complete": true
+  },
+  "scope_status": "verified-single-linux-runtime-install",
+  "limitations": [
+    "base-install-only",
+    "no_offline_signature_trust",
+    "no_local_identity_recovery",
+    "no_backup_restore_in_same_drill",
+    "no_upgrade_rollback_in_same_drill",
+    "single_platform_single_run",
+    "no_physical_airgap_claim",
+    "no_production_readiness_claim"
+  ]
+}

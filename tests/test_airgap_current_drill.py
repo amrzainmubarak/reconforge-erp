@@ -19,3 +19,18 @@ def test_current_airgap_install_recovery_upgrade_drill_is_schema_valid() -> None
     assert report["installation"]["doctor_exit_zero"] is True
     assert report["identity_recovery"]["old_sessions_restored"] == 0
     assert report["upgrade_rollback"]["rollback_exact"] is True
+
+
+def test_current_offline_install_drill_is_schema_valid_and_fail_closed() -> None:
+    schema = json.loads(
+        (ROOT / "docs/schemas/offline_install_current_drill.schema.json").read_text(encoding="utf-8")
+    )
+    report = json.loads(
+        (ROOT / "docs/execution/OFFLINE_INSTALL_CURRENT_DRILL_2026-08-23.json").read_text(encoding="utf-8")
+    )
+    Draft202012Validator.check_schema(schema)
+    Draft202012Validator(schema).validate(report)
+    assert report["runtime"]["network_mode"] == "none"
+    assert report["installation"]["doctor_exit_zero"] is True
+    assert report["installation"]["cleanup_complete"] is True
+    assert "no_production_readiness_claim" in report["limitations"]

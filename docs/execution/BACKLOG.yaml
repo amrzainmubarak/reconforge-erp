@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-870
+    priority: P0
+    area: sovereign-deployment
+    title: Refresh current offline base-install drill evidence
+    status: completed
+    depends_on: [E-869]
+    exit_evidence: >-
+      `verify_airgap_install.py --base-install-only` builds and installs a
+      wheel-only uv.lock bundle with pip no-index/no-deps/require-hashes inside
+      a digest-pinned Linux container using network none and a read-only root;
+      reconforge doctor exits zero and cleanup completes. The current bundle
+      has 68 entries and 100627876 bytes. This is base-install evidence only.
+  - id: E-869
   - id: E-869
     priority: P0
     area: identity-governance

@@ -36,6 +36,7 @@ def test_managed_key_manifest_is_non_secret_and_digest_stable() -> None:
     [
         ("unknown", True, "closed contract"),
         ("customer_managed", False, "customer_managed must be true"),
+        ("customer_managed", "yes", "customer_managed must be boolean"),
         ("rotation_period_days", 0, "outside the allowed range"),
         ("provider", "made-up", "provider is unsupported"),
     ],

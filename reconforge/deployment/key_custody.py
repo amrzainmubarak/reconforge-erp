@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from typing import cast
 
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$")
-_DIGEST = re.compile(r"^[0-9a-f]{64}$")
 _PROVIDERS = frozenset({"aws-kms", "azure-key-vault", "customer-hsm", "gcp-kms", "local-development"})
 _PURPOSES = frozenset({"backup", "evidence", "object-storage"})
 _FIELDS = frozenset(
@@ -64,6 +63,8 @@ class ManagedKeyManifest:
             raise ManagedKeyManifestError("algorithm is unsupported")
         if self.status != "active":
             raise ManagedKeyManifestError("key status must be active")
+        if not isinstance(self.customer_managed, bool):
+            raise ManagedKeyManifestError("customer_managed must be boolean")
         if not self.customer_managed:
             raise ManagedKeyManifestError("customer_managed must be true")
         if isinstance(self.rotation_period_days, bool) or not isinstance(self.rotation_period_days, int):

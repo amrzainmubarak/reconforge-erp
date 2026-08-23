@@ -5,6 +5,18 @@
 
 ## Decisions
 
+### D-940: Pass gross acquisition exposure into PPA server policy
+
+- **Date**: 2026-08-23
+- **Context**: PPA preparation evaluated server policy before typed conversion
+  and supplied no amount; allocation detail could be mistakenly double-counted.
+- **Decision**: Adopt ADR 0554. Authorize absolute consideration plus absolute
+  NCI fair value, excluding allocation detail from the gross amount.
+- **Rationale**: Consideration and NCI represent the transaction exposure;
+  allocation items decompose it. Typed conversion preserves currency and
+  precision invariants.
+- **Reversibility**: Source-only optional amount binding; no migration.
+
 ### D-939: Pass deferred-tax fair-value exposure into server policy
 
 - **Date**: 2026-08-23

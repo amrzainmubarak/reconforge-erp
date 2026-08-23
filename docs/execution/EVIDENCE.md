@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-840: Bind PPA preparation to amount-bounded ABAC (2026-08-23)
+
+- PPA canonical inputs are converted to typed Money before policy; gross
+  acquisition exposure is `abs(consideration) + abs(nci_fair_value)` and is
+  authorized before PostgreSQL persistence. Allocation items are not counted a
+  second time.
+- Focused command: `python -m pytest tests/test_api_consolidation_ppa.py
+  tests/test_consolidation_ppa.py tests/test_api_dependencies.py -q` -> 16
+  passed. Ruff and Mypy pass.
+- Boundary: one synthetic non-posting route; universal route and production IAM
+  evidence remain future work.
+
 ## E-839: Bind deferred-tax preparation to amount-bounded ABAC (2026-08-23)
 
 - Deferred-tax canonical items are converted to typed Money before policy; the

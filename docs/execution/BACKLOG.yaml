@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-840
+    priority: P0
+    area: identity-governance
+    title: Bind PPA preparation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-839]
+    exit_evidence: >-
+      Typed PPA preparation passes consideration plus NCI fair value as the
+      exact gross Decimal acquisition exposure before PostgreSQL persistence;
+      allocation items are not double-counted. Focused route/domain/dependency
+      tests pass 16/16 with exact 200.00 synthetic exposure. Universal route
+      and production IAM evidence remain open.
   - id: E-839
     priority: P0
     area: identity-governance

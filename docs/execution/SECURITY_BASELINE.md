@@ -2,6 +2,13 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-840 PPA route amount ABAC control (2026-08-23)
+
+- PPA preparation authorizes gross consideration plus NCI exposure as exact
+  Decimal before persistence and does not double-count allocation detail.
+- Focused route/domain tests pass 16/16. Other financial routes and production
+  IAM effectiveness remain outside the evidence.
+
 ## E-839 deferred-tax route amount ABAC control (2026-08-23)
 
 - Deferred-tax preparation authorizes gross absolute typed fair-value exposure

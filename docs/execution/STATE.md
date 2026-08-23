@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-840 — Bind PPA preparation to amount-bounded ABAC (2026-08-23)
+
+- Typed PPA consideration and NCI values are converted before policy; their
+  gross absolute Decimal exposure is passed to server authorization before
+  persistence, without counting allocation detail twice.
+- Focused route/domain/dependency tests pass 16/16; universal route adoption
+  and production IAM effectiveness remain unproven.
+
 ## E-839 — Bind deferred-tax preparation to amount-bounded ABAC (2026-08-23)
 
 - Typed deferred-tax items are converted before policy; gross absolute

@@ -1,5 +1,11 @@
 # Quality Baseline
 
+## E-840 PPA route amount ABAC (2026-08-23)
+
+PPA preparation now supplies consideration plus NCI fair value as exact gross
+Decimal exposure before persistence, without double-counting allocation items.
+Focused route/domain tests pass 16/16; this is not universal adoption.
+
 ## E-839 deferred-tax route amount ABAC (2026-08-23)
 
 Deferred-tax preparation now supplies gross absolute fair-value exposure as an

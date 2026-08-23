@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-898 — Bounded one-to-one fee and FX matching (2026-08-23)
+
+- The grouped matcher now supports `one-to-one` with cardinality fixed at one
+  on both sides, reusing its Decimal fee-netting and explicit FX-rate paths.
+- Golden contract cases match a USD fee-netted pair and an EUR→USD explicit
+  rate pair; 59 focused grouped/matching tests pass, with Ruff and diff checks.
+- This is bounded synthetic evidence only; provider FX, posting, scale, and
+  production claims remain out of scope.
+
 ## E-897 — Indexed one-to-one mode declaration aligned (2026-08-23)
 
 - The indexed adapter already accepted only `request.mode == "one-to-one"`,

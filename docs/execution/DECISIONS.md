@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-958: Reuse bounded grouped invariants for fee/FX one-to-one matching
+
+E-898 adds one-to-one cardinality to the grouped matcher so explicit Decimal
+fee and FX policies are executable without a second, divergent algorithm. The
+rate remains caller-supplied and the production/provider boundary is retained.
+
 ### D-957: Keep indexed mode declarations aligned with runtime guards
 
 E-897 corrects the omitted `one-to-one` declaration and binds the architecture

@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-898
+    priority: P0
+    area: reconciliation
+    title: Add bounded fee-aware and FX-aware one-to-one matching
+    status: completed
+    depends_on: [E-897, E-712]
+    exit_evidence: >-
+      Grouped matching supports one-to-one cardinality with Decimal fee
+      netting and explicit FX conversion. Golden synthetic cases and 59
+      focused grouped/matching tests pass with Ruff and diff checks; external
+      providers and production claims remain out of scope.
   - id: E-897
     priority: P0
     area: reconciliation

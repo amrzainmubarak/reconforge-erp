@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-898: Bounded one-to-one fee and FX matching (2026-08-23)
+
+- `GroupedMatchMode` and the grouped strategy manifest now include
+  `one-to-one`; the domain enumerator fixes both cardinalities to one.
+- Golden tests cover net fee matching (`100 - 2 = 98`) and explicit EUR→USD
+  conversion (`100 × 1.1 = 110`) with deterministic result envelopes.
+- Focused command over matching contract and grouped application/domain suites:
+  59 passed. Ruff and `git diff --check` passed.
+- Scope is synthetic and bounded; no external rate provider, posting,
+  production throughput, or financial valuation claim is made.
+
 ## E-897: Indexed one-to-one mode declaration aligned (2026-08-23)
 
 - The indexed adapter's runtime guard accepts only `one-to-one`; its manifest

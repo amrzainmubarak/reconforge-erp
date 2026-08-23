@@ -45,6 +45,7 @@
         "many-to-many",
         "many-to-one",
         "one-to-many",
+        "one-to-one",
         "partial-settlement",
         "portfolio"
       ],

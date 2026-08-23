@@ -234,6 +234,32 @@ def test_cli_validates_result_envelope_without_external_calls(tmp_path: Path) ->
     assert "replay_request_required" in result.stdout
 
 
+def test_grouped_strategy_supports_bounded_one_to_one_fee_and_fx_cases() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    fee_result = strategy.execute(
+        MatchingStrategyRequest(
+            left_records=({"id": "L1", "amount": "100", "fee": "2", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+            right_records=({"id": "R1", "amount": "98", "fee": "0", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+            mode="one-to-one",
+            netting_mode="net",
+        )
+    )
+    assert fee_result.results[0]["status"] == "matched"
+    assert fee_result.results[0]["netting_mode"] == "net"
+
+    fx_result = strategy.execute(
+        MatchingStrategyRequest(
+            left_records=({"id": "L2", "amount": "100", "currency": "EUR", "date": "2026-01-01", "partition": "P1"},),
+            right_records=({"id": "R2", "amount": "110", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+            mode="one-to-one",
+            target_currency="USD",
+            fx_rates=({"base_currency": "EUR", "quote_currency": "USD", "rate": "1.1", "source": "SYNTHETIC", "rate_type": "spot"},),
+        )
+    )
+    assert fx_result.results[0]["status"] == "matched"
+    assert fx_result.results[0]["currency"] == "USD"
+
+
 def test_all_registered_strategy_families_pass_deterministic_reexecution(tmp_path: Path) -> None:
     indexed, service, connection = _strategy(tmp_path)
     try:

@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-911: Current local PostgreSQL grouped 500-partition runtime (2026-08-23)
+
+- On PostgreSQL 16.14 with the non-privileged `reconforge_app` role, the live
+  grouped worker profile completed `250/250` runs and `500/500` partitions,
+  produced `1200/1200` expected rows, and recorded zero duplicate identities,
+  failed runs, or active runs. Each of the five modes completed 50 runs.
+- Observed runtime was `20.7293s` on Windows 11/Python 3.14.6/AMD64 with 16
+  workers. Effect digest:
+  `d788a36aa4bd41c1b113b40da5161a68900999e642496b0c55c3d4fd1de41535`.
+- The companion runtime/application suite passed `8/8` against the same local
+  service. This is bounded one-host synthetic runtime evidence, not a
+  throughput, capacity, HA/DR, or production claim.
+- The focused manifest/package contract passed, and
+  `python -m build --no-isolation` completed successfully with the new ADR and
+  benchmark artifact included in the source distribution.
+
 ## E-910: PostgreSQL worker strategy projection parity (2026-08-23)
 
 - Added `run_postgres_worker_matching_parity_profile` covering five grouped

@@ -744,6 +744,8 @@ include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-10.json
 include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-11.json
 include docs/execution/POSTGRES_HA_DR_CURRENT_DRILL_2026-08-23.json
 include docs/execution/benchmarks/postgres-grouped-matching-64-partitions-v1.md
+include docs/execution/benchmarks/postgres-grouped-matching-500-current-2026-08-23.md
+include docs/adr/0614-local-postgres-grouped-500-runtime-evidence.md
 include docs/adr/0243-expiring-delegation-is-explicit-and-replayable.md
 include docs/adr/0244-local-delegation-administration-is-immutable-and-tenant-scoped.md
 include docs/adr/0245-postgres-durable-job-runtime-gate.md

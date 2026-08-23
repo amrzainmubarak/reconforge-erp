@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-911 — Current local PostgreSQL grouped 500-partition runtime (2026-08-23)
+
+- Live local PostgreSQL 16.14 evidence now covers 250 runs / 500 partitions /
+  1,200 result rows across all five grouped modes with zero duplicate, failed,
+  or active results. Runtime was 20.7293s on the declared host; the artifact
+  and digest are retained under `docs/execution/benchmarks/`.
+- This advances current local runtime evidence only. Production capacity,
+  cross-host behavior, HA/DR, and hosted publication remain open.
+
 ## E-910 — PostgreSQL worker strategy projection parity (2026-08-23)
 
 - Worker projections now have a consolidated bounded parity profile over five

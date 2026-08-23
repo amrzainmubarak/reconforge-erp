@@ -214,6 +214,10 @@ class MatchingStrategyResult:
         text_values = {field: payload[field] for field in text_fields}
         if any(not isinstance(value, str) or not value.strip() for value in text_values.values()):
             raise MatchingStrategyContractError("Strategy result envelope text fields are invalid.")
+        for field in ("manifest_digest", "input_digest", "decision_digest"):
+            value = text_values[field]
+            if not isinstance(value, str) or len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
+                raise MatchingStrategyContractError("Strategy result envelope digest fields are invalid.")
         results = payload["results"]
         exceptions = payload["exceptions"]
         if not isinstance(results, list) or not isinstance(exceptions, list):

@@ -139,6 +139,8 @@ def test_strategy_result_json_envelope_round_trip_is_closed_and_replay_verified(
 
     with pytest.raises(MatchingStrategyContractError, match="not closed"):
         MatchingStrategyResult.from_payload({**payload, "unexpected": True})
+    with pytest.raises(MatchingStrategyContractError, match="digest fields"):
+        MatchingStrategyResult.from_payload({**payload, "decision_digest": "not-a-digest"})
     with pytest.raises(MatchingStrategyContractError, match="identity"):
         restored.verify_payload(
             request,

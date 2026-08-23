@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-909 — Registry-wide deterministic matching replay (2026-08-23)
+
+- The public registry now has a single replay profile covering all seven
+  published strategy families. It rejects omitted fixtures and any envelope,
+  digest, or permutation drift.
+- Profile digest `b0af87bf60e5a438b4073d2f2dc601589d7f75cdcdcc551d172ae590b18b698e`;
+  focused tests: 2 passed. E-1003 remains in progress for PostgreSQL parity,
+  hosted evidence, and scale/performance gates.
+
 ## E-908 — Explicit fee-aware and FX-aware strategy identities (2026-08-23)
 
 - The matching registry now publishes bounded fee-aware and FX-aware

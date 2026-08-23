@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-909: Registry-wide deterministic matching replay (2026-08-23)
+
+- Added `run_matching_strategy_replay_profile`, which requires an exact
+  synthetic fixture for every published registry manifest, re-executes each
+  strategy under record/rate permutation, and verifies both JSON result
+  envelopes through the shared replay verifier.
+- Seven of seven strategy families passed; all permutation and envelope flags
+  are true. Stable profile digest:
+  `b0af87bf60e5a438b4073d2f2dc601589d7f75cdcdcc551d172ae590b18b698e`.
+- Focused profile tests: 2 passed; Ruff, Mypy, and diff checks passed. This is
+  bounded synthetic evidence only; PostgreSQL parity, hosted execution, live
+  rates, and production scale remain open.
+
 ## E-908: Explicit fee-aware and FX-aware strategy identities (2026-08-23)
 
 - Added `bounded-fee-aware-one-to-one@1.0.0` and

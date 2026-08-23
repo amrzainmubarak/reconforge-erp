@@ -1198,6 +1198,10 @@ tasks:
         inventory entries, and permutation/digest regression coverage. Live
         rate validation, write-back, cross-engine parity, and production
         throughput remain open.
+      - E-909 adds a registry-wide replay profile with an exact seven-family
+        fixture inventory, JSON envelope verification, permutation replay, and
+        a stable profile digest. PostgreSQL parity, hosted execution, and
+        production-scale evidence remain open.
   - id: E-1004
     priority: P0
     area: connectors

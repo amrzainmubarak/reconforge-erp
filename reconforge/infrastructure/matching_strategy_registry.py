@@ -11,6 +11,10 @@ from __future__ import annotations
 from reconforge.application.matching_strategies import MatchingStrategyRegistry
 from reconforge.infrastructure.carry_forward_strategy import CarryForwardFifoStrategy
 from reconforge.infrastructure.duplicate_detection_strategy import DuplicateDetectionStrategy
+from reconforge.infrastructure.fee_fx_matching_strategy import (
+    FeeAwareOneToOneStrategy,
+    FxAwareOneToOneStrategy,
+)
 from reconforge.infrastructure.grouped_matching_strategy import GroupedSubsetSumStrategy
 from reconforge.infrastructure.indexed_matching_strategy import IndexedOneToOneStrategy
 from reconforge.infrastructure.reversal_matching_strategy import ReversalPairingStrategy
@@ -30,6 +34,8 @@ def build_matching_strategy_registry(service: MatchingService) -> MatchingStrate
         (
             IndexedOneToOneStrategy(service),
             GroupedSubsetSumStrategy(),
+            FeeAwareOneToOneStrategy(),
+            FxAwareOneToOneStrategy(),
             DuplicateDetectionStrategy(),
             CarryForwardFifoStrategy(),
             ReversalPairingStrategy(),

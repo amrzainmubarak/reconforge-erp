@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-908: Explicit fee-aware and FX-aware strategy identities (2026-08-23)
+
+- Added `bounded-fee-aware-one-to-one@1.0.0` and
+  `bounded-fx-aware-one-to-one@1.0.0` adapters to the reviewed registry and
+  architecture inventory.
+- Fee-aware execution requires fee fields and forces net-fee arithmetic;
+  FX-aware execution requires a target currency and explicit rates. Both
+  delegate to the bounded grouped one-to-one implementation and emit their own
+  manifest/input/decision digests.
+- Matching strategy contract focus: 38 passed, including missing-input,
+  result-digest, and record-permutation cases. This is bounded synthetic
+  evidence only; live-rate validation, write-back, and production throughput
+  remain open.
+
 ## E-907: Cancel stale same-ref quality runs (2026-08-23)
 
 - CI, CodeQL, Security, and Docker workflow contracts now require per-ref

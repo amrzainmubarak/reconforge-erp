@@ -109,6 +109,46 @@
         "duplicate-detection"
       ],
       "version": "1.0.0"
+    },
+    {
+      "algorithm": "bounded-grouped-one-to-one-net-fee-v1",
+      "deterministic_tie_break": "difference-date-span-stable-record-identities-v1",
+      "explanation_schema": "grouped-matching-explanation-v2",
+      "id": "bounded-fee-aware-one-to-one",
+      "limits": {
+        "max_amount_text_characters": 128,
+        "max_candidates_per_record": 25000,
+        "max_total_candidate_evaluations": 25000,
+        "max_date_window_days": 3660,
+        "max_group_search_evaluations": 25000,
+        "max_left_group_cardinality": 1,
+        "max_left_records": 64,
+        "max_right_group_cardinality": 1,
+        "max_right_records": 64
+      },
+      "maturity": "experimental",
+      "supported_modes": ["fee-aware"],
+      "version": "1.0.0"
+    },
+    {
+      "algorithm": "bounded-grouped-one-to-one-explicit-fx-v1",
+      "deterministic_tie_break": "difference-date-span-stable-record-identities-v1",
+      "explanation_schema": "grouped-matching-explanation-v2",
+      "id": "bounded-fx-aware-one-to-one",
+      "limits": {
+        "max_amount_text_characters": 128,
+        "max_candidates_per_record": 25000,
+        "max_total_candidate_evaluations": 25000,
+        "max_date_window_days": 3660,
+        "max_group_search_evaluations": 25000,
+        "max_left_group_cardinality": 1,
+        "max_left_records": 64,
+        "max_right_group_cardinality": 1,
+        "max_right_records": 64
+      },
+      "maturity": "experimental",
+      "supported_modes": ["fx-aware"],
+      "version": "1.0.0"
     }
   ]
 }

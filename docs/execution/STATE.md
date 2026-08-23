@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-908 — Explicit fee-aware and FX-aware strategy identities (2026-08-23)
+
+- The matching registry now publishes bounded fee-aware and FX-aware
+  one-to-one adapters with fail-closed financial preconditions and independent
+  strategy identities/digests.
+- Focused matching strategy contract suite: 38 passed. The broader E-1003
+  advanced evidence package remains in progress because cross-engine and
+  hosted/performance evidence are not closed.
+
 ## E-907 — Cancel stale same-ref quality runs (2026-08-23)
 
 - CI, CodeQL, Security, and Docker now cancel older same-ref runs when a newer

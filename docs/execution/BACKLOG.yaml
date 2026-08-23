@@ -1192,6 +1192,12 @@ tasks:
       have bounded candidate-generation budgets, deterministic tie-breaks, unresolved-ambiguity
       behavior, explicit strategy/version/digest records, and cross-engine reproducibility
       replay checks under open and synthetic profiles.
+    completed_slices:
+      - E-908 publishes explicit bounded fee-aware and FX-aware one-to-one
+        strategy identities, fail-closed financial preconditions, architecture
+        inventory entries, and permutation/digest regression coverage. Live
+        rate validation, write-back, cross-engine parity, and production
+        throughput remain open.
   - id: E-1004
     priority: P0
     area: connectors

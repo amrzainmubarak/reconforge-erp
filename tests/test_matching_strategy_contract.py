@@ -31,6 +31,12 @@ from reconforge.infrastructure.carry_forward_strategy import (
     CarryForwardFifoStrategy,
 )
 from reconforge.infrastructure.duplicate_detection_strategy import DuplicateDetectionStrategy
+from reconforge.infrastructure.fee_fx_matching_strategy import (
+    FEE_AWARE_ONE_TO_ONE_MANIFEST,
+    FX_AWARE_ONE_TO_ONE_MANIFEST,
+    FeeAwareOneToOneStrategy,
+    FxAwareOneToOneStrategy,
+)
 from reconforge.infrastructure.grouped_matching_strategy import (
     GROUPED_SUBSET_SUM_MANIFEST,
     GroupedSubsetSumStrategy,
@@ -287,6 +293,57 @@ def test_grouped_one_to_one_fee_fx_replay_is_permutation_invariant() -> None:
     assert first.results == second.results
 
 
+def test_fee_and_fx_are_explicit_registry_strategies_and_fail_closed() -> None:
+    fee = FeeAwareOneToOneStrategy()
+    fee_request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "100", "fee": "2", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        right_records=({"id": "R1", "amount": "98", "fee": "0", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        mode="fee-aware",
+    )
+    fee_result = fee.execute(fee_request)
+    assert fee.manifest is FEE_AWARE_ONE_TO_ONE_MANIFEST
+    assert fee_result.results[0]["status"] == "matched"
+    assert fee_result.results[0]["netting_mode"] == "net"
+    with pytest.raises(MatchingStrategyContractError, match="fee field"):
+        fee.execute(replace(fee_request, left_fee_field=" "))
+
+    fx = FxAwareOneToOneStrategy()
+    fx_request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "100", "currency": "EUR", "date": "2026-01-01", "partition": "P1"},),
+        right_records=({"id": "R1", "amount": "110", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        mode="fx-aware",
+        target_currency="USD",
+        fx_rates=({"base_currency": "EUR", "quote_currency": "USD", "rate": "1.1", "source": "SYNTHETIC", "rate_type": "spot"},),
+    )
+    fx_result = fx.execute(fx_request)
+    assert fx.manifest is FX_AWARE_ONE_TO_ONE_MANIFEST
+    assert fx_result.results[0]["status"] == "matched"
+    assert fx_result.results[0]["currency"] == "USD"
+    with pytest.raises(MatchingStrategyContractError, match="explicit FX rates"):
+        fx.execute(replace(fx_request, fx_rates=()))
+
+
+def test_explicit_financial_aware_strategies_replay_under_record_permutation() -> None:
+    fee = FeeAwareOneToOneStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "L2", "amount": "50", "fee": "1", "currency": "USD", "date": "2026-01-02", "partition": "P1"},
+            {"id": "L1", "amount": "100", "fee": "2", "currency": "USD", "date": "2026-01-01", "partition": "P1"},
+        ),
+        right_records=(
+            {"id": "R1", "amount": "98", "fee": "0", "currency": "USD", "date": "2026-01-01", "partition": "P1"},
+            {"id": "R2", "amount": "49", "fee": "0", "currency": "USD", "date": "2026-01-02", "partition": "P1"},
+        ),
+        mode="fee-aware",
+    )
+    reversed_request = replace(request, left_records=tuple(reversed(request.left_records)), right_records=tuple(reversed(request.right_records)))
+    first = fee.execute(request)
+    second = fee.execute(reversed_request)
+    assert first.input_digest == second.input_digest
+    assert first.decision_digest == second.decision_digest
+    assert first.results == second.results
+
+
 def test_all_registered_strategy_families_pass_deterministic_reexecution(tmp_path: Path) -> None:
     indexed, service, connection = _strategy(tmp_path)
     try:
@@ -480,6 +537,8 @@ def test_complete_strategy_registry_covers_every_published_strategy_family(tmp_p
         assert manifest_ids == {
             "indexed-composite-one-to-one",
             "bounded-grouped-subset-sum",
+            "bounded-fee-aware-one-to-one",
+            "bounded-fx-aware-one-to-one",
             "bounded-duplicate-detection",
             "bounded-carry-forward-fifo",
             "bounded-reversal-pairing",

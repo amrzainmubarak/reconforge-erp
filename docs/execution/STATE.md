@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-836 — Bind impairment prepare to amount-bounded ABAC (2026-08-23)
+
+- The server-only impairment prepare route converts canonical Money to the
+  typed domain request, sums carrying amounts with Decimal arithmetic, and
+  re-evaluates central policy with the exact amount before persistence.
+- Focused route/policy/dependency tests pass 90/90; Ruff and Mypy pass.
+- This is one high-risk route binding; universal route adoption and production
+  IAM effectiveness remain unproven.
+
 ## E-835 — Fail closed on missing amount under bounded ABAC policy (2026-08-23)
 
 - `CentralPolicyEngine` now denies `minimum_amount`/`maximum_amount` contexts

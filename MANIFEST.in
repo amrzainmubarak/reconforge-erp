@@ -927,3 +927,4 @@ include .github/scripts/verify_postgres_writeback_observation_matrix.py
 include docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json
 include docs/adr/0548-durable-writeback-recovery-observations.md
 include docs/adr/0549-fail-closed-bounded-amount-policy.md
+include docs/adr/0550-bind-impairment-route-to-amount-abac.md

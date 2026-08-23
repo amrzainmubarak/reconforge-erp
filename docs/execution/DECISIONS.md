@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-936: Pass the typed impairment amount into server policy evaluation
+
+- **Date**: 2026-08-23
+- **Context**: E-835 closed missing-amount behavior centrally, but the
+  consolidation impairment route did not yet provide its financial amount to
+  the server-scope policy re-check.
+- **Decision**: Adopt ADR 0550. Convert canonical request data first, sum typed
+  carrying amounts with Decimal arithmetic, and pass the exact total before
+  persistence. Keep read-only retrieval amount-free.
+- **Rationale**: Amount bounds must constrain the actual financial effect at a
+  high-risk route boundary. Typed Money and fail-closed domain conversion
+  preserve currency and precision invariants.
+- **Reversibility**: Additive optional helper parameter and source-only
+  rollback; no schema or stored-data migration.
+
 ### D-935: Require an exact amount for bounded ABAC policies
 
 - **Date**: 2026-08-23

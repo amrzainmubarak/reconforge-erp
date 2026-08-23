@@ -2,6 +2,16 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-836 route-level amount ABAC control (2026-08-23)
+
+- Consolidation impairment preparation now passes the exact Decimal sum of
+  typed carrying amounts to central policy before persistence.
+- Domain conversion rejects malformed or cross-currency amounts before the
+  authorization/persistence boundary; no float or implicit currency conversion
+  is introduced.
+- Focused route/policy/dependency tests pass 90/90. Universal financial-route
+  adoption remains unverified.
+
 ## E-835 bounded amount ABAC control (2026-08-23)
 
 - A bounded policy cannot authorize an action when the exact financial amount

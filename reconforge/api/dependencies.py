@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import sqlite3
 from collections.abc import Callable, Iterator
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
 
@@ -281,6 +282,7 @@ def enforce_server_scoped_permissions(
     workspace_id: str | None,
     organization_id: str | None = None,
     entity_id: str | None = None,
+    amount: Decimal | None = None,
 ) -> None:
     """Re-evaluate one of several permissions against the server hierarchy.
 
@@ -358,6 +360,7 @@ def enforce_server_scoped_permissions(
         authorized_workspace_ids=principal.authorized_workspace_ids,
         authorized_organization_ids=principal.authorized_organization_ids,
         authorized_entity_ids=principal.authorized_legal_entity_ids,
+        amount=amount,
     )
     decision = _evaluate_any_policy(request, context, required_permissions=permissions)
     audit_policy_decision(
@@ -397,6 +400,7 @@ def enforce_server_scoped_permission(
     workspace_id: str,
     organization_id: str | None = None,
     entity_id: str | None = None,
+    amount: Decimal | None = None,
 ) -> None:
     """Re-evaluate one permission against the selected server hierarchy."""
 
@@ -407,6 +411,7 @@ def enforce_server_scoped_permission(
         workspace_id=workspace_id,
         organization_id=organization_id,
         entity_id=entity_id,
+        amount=amount,
     )
 
 

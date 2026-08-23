@@ -1,5 +1,12 @@
 # Quality Baseline
 
+## E-836 route-level amount ABAC (2026-08-23)
+
+The PostgreSQL consolidation impairment prepare route now supplies the exact
+Decimal total of typed carrying amounts to server policy evaluation before
+persistence. Route/policy/dependency focused tests pass 90/90. This is one
+high-risk route binding, not universal route adoption.
+
 ## E-835 bounded amount ABAC (2026-08-23)
 
 The central policy engine now fails closed when an amount floor or ceiling is

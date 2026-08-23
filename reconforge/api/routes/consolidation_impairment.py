@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Request
@@ -126,7 +127,12 @@ def _server_only(request: Request) -> None:
         )
 
 
-def _enforce_server_policy(request: Request, *, permissions: frozenset[str]) -> None:
+def _enforce_server_policy(
+    request: Request,
+    *,
+    permissions: frozenset[str],
+    amount: Decimal | None = None,
+) -> None:
     """Re-evaluate tenant policy before accessing tenant-scoped evidence."""
 
     from reconforge.api.server_identity import request_tenant_id
@@ -136,6 +142,7 @@ def _enforce_server_policy(request: Request, *, permissions: frozenset[str]) -> 
         permissions=permissions,
         tenant_id=request_tenant_id(request),
         workspace_id=None,
+        amount=amount,
     )
 
 
@@ -148,8 +155,16 @@ def prepare_impairment(
     """Persist one authenticated, maker-checker, non-posting impairment artifact."""
 
     _server_only(request)
-    _enforce_server_policy(request, permissions=frozenset({"finance_core.manage"}))
     domain_request = payload.to_domain(prepared_by=current_user.id)
+    total_carrying_amount = sum(
+        (unit.carrying_amount.amount for unit in domain_request.units),
+        Decimal("0"),
+    )
+    _enforce_server_policy(
+        request,
+        permissions=frozenset({"finance_core.manage"}),
+        amount=total_carrying_amount,
+    )
     artifact = execute_postgres_impairment(
         request,
         lambda repository, _tenant: ConsolidationImpairmentApplicationService(repository).prepare_and_persist(

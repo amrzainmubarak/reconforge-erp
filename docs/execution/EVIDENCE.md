@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-836: Bind impairment prepare to amount-bounded ABAC (2026-08-23)
+
+- The server-only consolidation impairment prepare route now converts the
+  canonical request into typed domain Money, sums carrying amounts with
+  `Decimal("0")`, and passes the exact total to central policy evaluation
+  before PostgreSQL persistence.
+- The read-only artifact route remains amount-free; malformed or cross-currency
+  inputs fail during existing domain conversion before policy/persistence.
+- Focused command: `python -m pytest tests/test_api_consolidation_impairment.py
+  tests/test_policy_engine.py tests/test_api_dependencies.py -q` -> 90 passed.
+  Ruff and Mypy pass for the changed files.
+- Boundary: one high-risk route binding with synthetic non-posting data; other
+  financial routes and deployed IAM effectiveness remain future evidence.
+
 ## E-835: Fail closed on missing amount under bounded ABAC policy (2026-08-23)
 
 - `CentralPolicyEngine` now denies any context with `minimum_amount` or

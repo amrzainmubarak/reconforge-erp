@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-836
+    priority: P0
+    area: identity-governance
+    title: Bind a high-risk financial route to amount-bounded ABAC
+    status: completed
+    depends_on: [E-835]
+    exit_evidence: >-
+      The PostgreSQL consolidation impairment prepare route converts canonical
+      Money inputs into its typed domain request, sums carrying amounts with
+      Decimal arithmetic, and passes the exact total to central server-scope
+      policy evaluation before persistence. Route, policy, dependency, Ruff,
+      and Mypy tests pass. Universal route adoption and production IAM remain
+      outside this slice.
   - id: E-835
     priority: P0
     area: identity-governance

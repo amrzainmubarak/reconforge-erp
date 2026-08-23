@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-874: Current web client verification and E2E runtime portability (2026-08-23)
+
+- `npm --prefix apps/web ci` completed successfully and npm reported zero
+  vulnerabilities. TypeScript typecheck passed; `vitest run` passed 15 files and
+  75 tests; and the Vite production build completed successfully.
+- `RECONFORGE_WEB_PORT=5180 npm --prefix apps/web run e2e` passed 16 Playwright
+  tests in 39.7 seconds. Coverage includes English/Arabic accessibility,
+  keyboard focus, redaction boundaries, responsive/mobile routes, screenshot
+  flows, and synthetic financial-control views. Five tests were skipped because
+  they require explicit local API-proxy or HTTPS production-bundle opt-in.
+- The first E2E attempt failed before test execution because the default 4173
+  loopback port returned `EACCES`. `playwright.config.ts` now derives both the
+  Vite command and Playwright base URL from `RECONFORGE_WEB_PORT`, defaulting to
+  4173 for backward compatibility. This fixes test-runner portability, not the
+  missing live API/HTTPS environment.
+
 ## Current full local regression gate (2026-08-23)
 
 - `python -m pytest -q` completed with exit code 0 after the execution-contract

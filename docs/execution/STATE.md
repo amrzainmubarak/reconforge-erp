@@ -2,6 +2,20 @@
 
 Updated: 2026-08-23
 
+## E-874 — Current web client verification and E2E runtime portability (2026-08-23)
+
+- `npm --prefix apps/web ci` completed with zero reported npm vulnerabilities.
+- TypeScript typecheck, 15 Vitest files / 75 tests, and the production Vite
+  build passed.
+- Playwright passed 16 tests, including English/Arabic accessibility, keyboard
+  focus, redaction, responsive/mobile routes, and screenshot flows; five tests
+  were explicit opt-in live-session/HTTPS scenarios and remained skipped.
+- `RECONFORGE_WEB_PORT` now controls the loopback E2E/Vite port while retaining
+  4173 by default, allowing constrained CI hosts to select an available port.
+
+This is local web verification, not hosted browser compatibility or production
+HTTPS/API deployment evidence.
+
 ## Current full local regression gate (2026-08-23)
 
 - `python -m pytest -q` completed with exit code 0 after the backlog contract

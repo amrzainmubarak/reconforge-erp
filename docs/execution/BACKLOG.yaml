@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-874
+    priority: P1
+    area: quality
+    title: Close current web client verification and configurable E2E runtime port
+    status: completed
+    depends_on: [E-873]
+    exit_evidence: >-
+      npm ci, TypeScript typecheck, 75 Vitest tests, production build, and a
+      Playwright run pass with 16 tests and 5 explicit opt-in live-service
+      skips. The E2E web-server port is configurable through
+      RECONFORGE_WEB_PORT while retaining 4173 as the default; live browser
+      session and HTTPS production-bundle scenarios remain explicitly gated.
   - id: E-873
     priority: P0
     area: security

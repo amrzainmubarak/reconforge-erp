@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-889 — Workflow contract protects hardened image gates (2026-08-23)
+
+- `tests/test_container_hardening_workflow.py` parses both CI and release
+  workflows, requires `--read-only`, `--cap-drop=ALL`, and
+  `--security-opt=no-new-privileges`, and checks that release smoke precedes
+  registry login and push.
+- The focused test and Ruff pass. This protects workflow intent locally; it
+  does not replace a fresh hosted run.
+
 ## E-888 — Release candidate hardened image gate (2026-08-23)
 
 - `.github/workflows/release.yml` now runs the exact scanned candidate image

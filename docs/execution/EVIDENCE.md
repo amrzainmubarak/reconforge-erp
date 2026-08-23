@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-889: Workflow contract protects hardened image gates (2026-08-23)
+
+- `python -m pytest -q tests/test_container_hardening_workflow.py` passed 2/2.
+- `python -m ruff check tests/test_container_hardening_workflow.py` passed.
+- The test parses both workflow files, checks the three hardening flags and
+  doctor invocation, and enforces smoke-before-login/push ordering. A hosted
+  run remains required for actual CI/release evidence.
+
 ## E-888: Release candidate hardened image gate (2026-08-23)
 
 - The signed release-candidate workflow now runs the exact scanned image with

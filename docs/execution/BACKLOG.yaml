@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-889
+    priority: P1
+    area: release_operations
+    title: Protect hardened image gates with workflow contract tests
+    status: completed
+    depends_on: [E-888]
+    exit_evidence: >-
+      A focused test parses both CI and release workflows, requires the three
+      hardened runtime flags and doctor command, and verifies the release
+      smoke precedes registry login and image push. Ruff, pytest, and diff
+      checks pass for the contract.
   - id: E-888
     priority: P1
     area: release_operations

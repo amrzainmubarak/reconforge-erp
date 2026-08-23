@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-886
+    priority: P1
+    area: supply_chain
+    title: Record local Docker image SBOM inventory evidence
+    status: completed
+    depends_on: [E-885]
+    exit_evidence: >-
+      Docker Scout emits a valid CycloneDX SBOM for the explicit local image,
+      containing 82 components. The generated output hash and command are
+      recorded; this remains local inventory evidence and does not replace
+      signed release SBOM/provenance verification.
   - id: E-885
     priority: P1
     area: security

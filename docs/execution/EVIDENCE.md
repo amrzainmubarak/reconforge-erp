@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-886: Local Docker Scout CycloneDX SBOM (2026-08-23)
+
+- `docker scout sbom local://reconforge:current --format cyclonedx
+  --output output/docker-scout-current-sbom.json` exited 0.
+- JSON parsing confirmed CycloneDX top-level fields and 82 components. The
+  generated file is 331,173 bytes with SHA-256
+  `41af050007ebf534ebd42d4354c5e5c4fb7ad0606002e38bd7076354f2195c7e`.
+- This is local inventory evidence only; it does not prove signed SBOM
+  provenance, registry attestation, license policy, scanner freshness, or
+  hosted release artifact parity.
+
 ## E-885: Docker Scout base-layer scan (2026-08-23)
 
 - `docker scout cves local://reconforge:current --only-base --format packages

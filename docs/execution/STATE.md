@@ -2,6 +2,16 @@
 
 Updated: 2026-08-23
 
+## E-886 — Local Docker Scout CycloneDX SBOM (2026-08-23)
+
+- `docker scout sbom local://reconforge:current --format cyclonedx
+  --output output/docker-scout-current-sbom.json` succeeded.
+- The generated JSON is valid CycloneDX with 82 components, 331,173 bytes,
+  and SHA-256
+  `41af050007ebf534ebd42d4354c5e5c4fb7ad0606002e38bd7076354f2195c7e`.
+- The raw file remains generated output; release SBOM signing/provenance and
+  hosted artifact verification remain separate requirements.
+
 ## E-885 — Docker Scout base-layer scan (2026-08-23)
 
 - `docker scout cves local://reconforge:current --only-base --format packages`

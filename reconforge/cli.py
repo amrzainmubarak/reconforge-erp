@@ -96,12 +96,14 @@ from reconforge.deployment import (
     DeploymentReadinessError,
     DeploymentRuntimeEvidenceError,
     ManagedKeyManifestError,
+    RegulatedAdmissionError,
     WorkerPermissionManifestError,
     deployment_profile,
     list_deployment_profiles,
     load_deployment_readiness_matrix,
     verify_deployment_runtime_evidence,
     verify_managed_key_manifest,
+    verify_regulated_admission,
     verify_worker_permission_manifest,
 )
 from reconforge.domain.consolidation import ConsolidationError
@@ -5982,6 +5984,28 @@ def deployment_verify_key_manifest_command(
             "digest": manifest.digest,
             "external_calls": False,
             "secret_material_present": False,
+        },
+    )
+
+
+@deployment_app.command("verify-regulated-admission")
+def deployment_verify_regulated_admission_command(
+    envelope_path: Annotated[Path, typer.Argument(help="Closed JSON regulated-admission evidence envelope to verify.")],
+) -> None:
+    """Verify regulated profile facts and managed-key metadata without external calls."""
+
+    try:
+        payload = json.loads(envelope_path.read_text(encoding="utf-8"))
+        evidence = verify_regulated_admission(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, RegulatedAdmissionError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Regulated Admission Evidence",
+        {
+            **evidence.to_dict(),
+            "digest": evidence.digest,
+            "external_calls": False,
+            "production_readiness_claim": False,
         },
     )
 

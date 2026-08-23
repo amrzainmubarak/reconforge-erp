@@ -1,5 +1,11 @@
 # Security Baseline
 
+## E-853 regulated admission gate (2026-08-23)
+
+- Composite verification rejects unresolved profile findings and local key
+  providers before emitting an admission evidence digest.
+- It handles no key material and does not call KMS/HSM or external IAM.
+
 ## E-852 managed-key custody evidence (2026-08-23)
 
 - The key manifest contains identifiers and lifecycle metadata only; key bytes

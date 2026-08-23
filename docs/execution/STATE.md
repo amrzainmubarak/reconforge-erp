@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-853 — Compose regulated admission evidence (2026-08-23)
+
+- Added a composite offline verifier and CLI that require complete regulated
+  profile findings plus a non-local customer-managed key manifest, and bind
+  child/composite digests.
+- Focused admission/key/deployment/inventory tests pass 50/50, Ruff and Mypy
+  pass. It remains a prerequisite check, not provider or production proof.
+
 ## E-852 — Add provider-neutral managed-key custody evidence (2026-08-23)
 
 - Added a closed non-secret key custody manifest and

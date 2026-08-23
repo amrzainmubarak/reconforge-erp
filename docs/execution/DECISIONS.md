@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-953: Require composite regulated admission prerequisites
+
+E-853 prevents a regulated evidence envelope from combining unresolved runtime
+facts with local key custody metadata. The verifier remains offline and does not
+grant admission or make a production claim.
+
 ### D-952: Separate managed-key custody metadata from KMS/HSM runtime proof
 
 E-852 adds a non-secret manifest and offline verifier, while explicitly keeping

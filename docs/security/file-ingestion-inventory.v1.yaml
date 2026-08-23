@@ -1020,8 +1020,8 @@ direct_json_parser_allowlist:
   - path: reconforge/cli.py
     parser: json.loads
     surface_id: FI-042
-    call_count: 3
-    rationale: Parses only operator-selected worker-permission, runtime-evidence, or non-secret managed-key manifests before strict closed-field, type, grant/profile-finding, custody, ordering, and digest verification; all commands perform no external probe or mutation.
+    call_count: 4
+    rationale: Parses only operator-selected worker-permission, runtime-evidence, non-secret managed-key, or composite regulated-admission manifests before strict closed-field, type, grant/profile-finding, custody, ordering, and digest verification; all commands perform no external probe or mutation.
 direct_yaml_parser_allowlist:
   - path: reconforge/io/structured.py
     parser: yaml.parse

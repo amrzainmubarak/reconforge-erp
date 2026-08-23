@@ -1,5 +1,10 @@
 """Deployment-profile contracts for truthful mode selection."""
 
+from reconforge.deployment.admission import (
+    RegulatedAdmissionError,
+    RegulatedAdmissionEvidence,
+    verify_regulated_admission,
+)
 from reconforge.deployment.key_custody import (
     ManagedKeyManifest,
     ManagedKeyManifestError,
@@ -50,4 +55,7 @@ __all__ = [
     "ManagedKeyManifest",
     "ManagedKeyManifestError",
     "verify_managed_key_manifest",
+    "RegulatedAdmissionError",
+    "RegulatedAdmissionEvidence",
+    "verify_regulated_admission",
 ]

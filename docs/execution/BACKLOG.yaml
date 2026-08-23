@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-853
+    priority: P0
+    area: security-and-deployment-governance
+    title: Compose regulated profile and managed-key admission evidence
+    status: completed
+    depends_on: [E-852]
+    exit_evidence: >-
+      A strict composite envelope requires regulated runtime facts with no
+      profile findings and a non-local customer-managed key manifest, then
+      emits child and composite digests through an offline CLI. Focused
+      admission/key/deployment/inventory tests pass 50/50, Ruff and Mypy pass.
+      KMS/HSM runtime enforcement and production readiness remain unproven.
   - id: E-852
     priority: P0
     area: security-and-deployment-governance

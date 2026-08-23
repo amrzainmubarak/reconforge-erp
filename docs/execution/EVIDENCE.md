@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-853: Composite regulated admission evidence (2026-08-23)
+
+- `deployment verify-regulated-admission` requires no unresolved regulated
+  profile findings and a non-local customer-managed key manifest, then emits
+  child/composite digests without external calls.
+- Focused admission/key/deployment/inventory suite: 50 passed; Ruff and Mypy
+  pass.
+- This is a prerequisite gate only; KMS/HSM runtime enforcement remains open.
+
 ## E-852: Managed-key custody evidence (2026-08-23)
 
 - `deployment verify-key-manifest` verifies non-secret key custody metadata and

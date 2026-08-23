@@ -1,5 +1,10 @@
 # Quality Baseline
 
+## E-853 regulated admission gate (2026-08-23)
+
+Admission/key/deployment/inventory tests pass 50/50; Ruff, Mypy, and whitespace
+checks pass. Local-provider and unresolved-profile refusal are covered.
+
 ## E-852 managed-key custody evidence (2026-08-23)
 
 Key/deployment/inventory tests pass 44/44; Ruff, Mypy, and whitespace checks

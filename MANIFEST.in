@@ -950,3 +950,6 @@ include docs/adr/0565-bind-runtime-evidence-to-profile-digest.md
 include docs/adr/0566-provider-neutral-managed-key-custody-evidence.md
 include reconforge/deployment/key_custody.py
 include tests/test_deployment_key_custody.py
+include docs/adr/0567-composite-regulated-admission-evidence.md
+include reconforge/deployment/admission.py
+include tests/test_deployment_admission.py

@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-849
+    priority: P0
+    area: deployment-governance
+    title: Consolidate mode-specific deployment readiness evidence
+    status: completed
+    depends_on: [E-848]
+    exit_evidence: >-
+      A closed schema-validated matrix covers all four deployment editions and
+      eight common gates, binds evidence references to existing repository paths,
+      and permits only verified_scoped/partial/open gate states with partial/open
+      edition status. Matrix tests pass 2/2. The artifact is an evidence index,
+      not production readiness, compliance, or independent assurance.
   - id: E-848
     priority: P0
     area: deployment-governance

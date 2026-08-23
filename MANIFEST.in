@@ -940,3 +940,7 @@ include docs/adr/0559-hosted-profile-worker-discovery-separation.md
 include docs/adr/0560-offline-worker-permission-manifest-verifier.md
 include docs/adr/0561-cli-worker-permission-manifest-verification.md
 include docs/adr/0562-digest-bound-deployment-runtime-evidence.md
+include docs/adr/0563-mode-specific-deployment-readiness-matrix.md
+include docs/execution/DEPLOYMENT_READINESS_MATRIX.v1.yaml
+include docs/schemas/deployment_readiness_matrix.v1.schema.json
+include tests/test_deployment_readiness_matrix.py

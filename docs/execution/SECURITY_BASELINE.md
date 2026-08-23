@@ -1,5 +1,11 @@
 # Security Baseline
 
+## E-849 deployment readiness matrix (2026-08-23)
+
+- Every mode has the same eight named gates and path-bound evidence references.
+- The schema forbids a generic `verified`/`ready` edition status; open key
+  custody and independent failure-domain gaps remain explicit.
+
 ## E-848 runtime evidence manifest (2026-08-23)
 
 - The closed manifest rejects expansion and type confusion before profile

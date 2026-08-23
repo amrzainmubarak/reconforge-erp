@@ -1,5 +1,10 @@
 # Quality Baseline
 
+## E-849 deployment readiness matrix (2026-08-23)
+
+Schema/path matrix tests pass 2/2; Ruff, Mypy, and whitespace checks pass.
+The matrix preserves partial/open statuses rather than promoting scoped drills.
+
 ## E-848 runtime evidence manifest (2026-08-23)
 
 Runtime/profile/worker/inventory tests pass 31/31; Ruff, Mypy, and whitespace

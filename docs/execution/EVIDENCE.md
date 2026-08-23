@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-849: Mode-specific deployment readiness matrix (2026-08-23)
+
+- The matrix covers all four editions and eight gates with repository-bound
+  evidence paths and explicit scope boundaries.
+- Schema/path regression: 2 passed. Regulated customer-managed keys and
+  independent failure-domain recovery remain open by assertion.
+- The matrix cannot express a generic ready/verified edition state.
+
 ## E-848: Digest-bound deployment runtime evidence (2026-08-23)
 
 - The closed manifest binds one edition to exact profile runtime facts and

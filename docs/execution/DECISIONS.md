@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-949: Keep deployment-mode readiness explicitly partial/open
+
+E-849 consolidates existing audits into a closed matrix but forbids a generic
+`verified` or `ready` edition status. Missing external, regulated, and
+independent-failure-domain evidence remains visible rather than inferred.
+
 ### D-948: Bind deployment runtime facts to a closed offline evidence manifest
 
 E-848 makes profile inputs reproducible and digestable while preserving the

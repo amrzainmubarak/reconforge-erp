@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-849 — Consolidate mode-specific deployment readiness evidence (2026-08-23)
+
+- Added a schema-validated matrix covering Community, Team, Enterprise, and
+  Regulated across eight common gates. It records only scoped/partial/open
+  status and binds every evidence reference to a repository path.
+- Matrix tests pass 2/2, with schema closure and unresolved regulated key and
+  failure-domain gates explicitly asserted. No readiness claim is inferred.
+
 ## E-848 — Add digest-bound deployment runtime evidence (2026-08-23)
 
 - Added a strict offline manifest for one deployment edition and the exact

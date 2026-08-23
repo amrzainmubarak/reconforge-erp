@@ -1,0 +1,164 @@
+schema_version: 1
+matrix_id: reconforge-deployment-readiness
+reviewed_on: "2026-08-23"
+claim_boundary: >-
+  This matrix consolidates repository-visible and disposable local evidence for
+  deployment modes. It is not a production-readiness, compliance, certification,
+  provider-interoperability, or independent-assurance claim. A mode is never
+  considered ready from this file alone; every open or partial gate remains an
+  explicit operator obligation.
+status_values: [verified_scoped, partial, open]
+required_gates:
+  - backup_restore
+  - rollback
+  - retention_privacy
+  - identity_and_worker_governance
+  - external_dependency_boundary
+  - failure_domain_and_dr
+  - sovereign_air_gap
+  - customer_managed_keys
+editions:
+  - id: community
+    readiness_status: partial
+    profile_command: reconforge deployment profiles --edition community
+    gates:
+      - id: backup_restore
+        status: verified_scoped
+        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml]
+        boundary: Local SQLite and disposable supported-version evidence only.
+      - id: rollback
+        status: verified_scoped
+        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml]
+        boundary: Versioned local rollback; no zero-downtime cutover.
+      - id: retention_privacy
+        status: partial
+        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml]
+        boundary: Governance contracts exist; complete Community lifecycle drill is open.
+      - id: identity_and_worker_governance
+        status: verified_scoped
+        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, tests/test_deployment_runtime_evidence.py]
+        boundary: Local profile/evidence validation, not identity-provider enforcement.
+      - id: external_dependency_boundary
+        status: verified_scoped
+        evidence: [reconforge/deployment/profiles.py]
+        boundary: Network-disabled default is a contract, not host firewall proof.
+      - id: failure_domain_and_dr
+        status: open
+        evidence: []
+        boundary: Community host-loss and independent-site recovery are not proven.
+      - id: sovereign_air_gap
+        status: partial
+        evidence: [docs/execution/P3_ENT_011_EXIT_AUDIT.yaml]
+        boundary: Python-wheel sovereign profile evidence is separate from every Community install.
+      - id: customer_managed_keys
+        status: open
+        evidence: []
+        boundary: Customer-managed key custody is not required or proven for Community.
+  - id: team
+    readiness_status: partial
+    profile_command: reconforge deployment profiles --edition team
+    gates:
+      - id: backup_restore
+        status: verified_scoped
+        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml]
+        boundary: Disposable PostgreSQL restore evidence; no independent production service.
+      - id: rollback
+        status: verified_scoped
+        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml]
+        boundary: Supported-version rollback evidence; no zero-downtime guarantee.
+      - id: retention_privacy
+        status: partial
+        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml]
+        boundary: Native policy lifecycle evidence remains bounded to its tested server scope.
+      - id: identity_and_worker_governance
+        status: partial
+        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, docs/adr/0561-cli-worker-permission-manifest-verification.md]
+        boundary: Manifest/profile checks do not provision or observe hosted IAM.
+      - id: external_dependency_boundary
+        status: partial
+        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml]
+        boundary: PostgreSQL/queue/object dependencies have disposable evidence, not service SLO proof.
+      - id: failure_domain_and_dr
+        status: partial
+        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml]
+        boundary: Single-host two-node drill; independent failure domains remain open.
+      - id: sovereign_air_gap
+        status: partial
+        evidence: [docs/execution/P3_ENT_011_EXIT_AUDIT.yaml]
+        boundary: Air-gap profile is separately verified and is not implicit in Team deployments.
+      - id: customer_managed_keys
+        status: open
+        evidence: []
+        boundary: Team profile does not require customer-managed keys and no such custody claim is made.
+  - id: enterprise
+    readiness_status: partial
+    profile_command: reconforge deployment profiles --edition enterprise
+    gates:
+      - id: backup_restore
+        status: verified_scoped
+        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml]
+        boundary: Disposable PostgreSQL restore and upgrade evidence only.
+      - id: rollback
+        status: verified_scoped
+        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml]
+        boundary: Versioned rollback evidence does not prove distributed cutover.
+      - id: retention_privacy
+        status: partial
+        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml]
+        boundary: Browser/server governance evidence is scoped and not external assurance.
+      - id: identity_and_worker_governance
+        status: partial
+        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, docs/adr/0561-cli-worker-permission-manifest-verification.md]
+        boundary: OIDC/SAML/SCIM and worker IAM interoperability remain external.
+      - id: external_dependency_boundary
+        status: partial
+        evidence: [docs/execution/P3_ENT_012_EXIT_AUDIT.yaml]
+        boundary: Reliability and collector evidence is bounded to local/disposable profiles.
+      - id: failure_domain_and_dr
+        status: partial
+        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml]
+        boundary: One-host topology explicitly lacks independent failure-domain proof.
+      - id: sovereign_air_gap
+        status: partial
+        evidence: [docs/execution/P3_ENT_011_EXIT_AUDIT.yaml]
+        boundary: Sovereign wheel profile is not an Enterprise OCI or multi-platform proof.
+      - id: customer_managed_keys
+        status: open
+        evidence: []
+        boundary: Enterprise profile does not require customer-managed keys; custody is not claimed.
+  - id: regulated
+    readiness_status: open
+    profile_command: reconforge deployment profiles --edition regulated
+    gates:
+      - id: backup_restore
+        status: verified_scoped
+        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml, docs/execution/P3_ENT_011_EXIT_AUDIT.yaml]
+        boundary: Local/disposable restore evidence is not regulated operational proof.
+      - id: rollback
+        status: verified_scoped
+        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml, docs/execution/P3_ENT_011_EXIT_AUDIT.yaml]
+        boundary: Offline and versioned rollback exercises remain bounded to disclosed profiles.
+      - id: retention_privacy
+        status: partial
+        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml]
+        boundary: No legal-hold, WORM retention, or independent regulated review is proven.
+      - id: identity_and_worker_governance
+        status: partial
+        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, docs/adr/0561-cli-worker-permission-manifest-verification.md]
+        boundary: Strong SoD and customer IAM integration still require deployment evidence.
+      - id: external_dependency_boundary
+        status: partial
+        evidence: [docs/execution/P3_ENT_012_EXIT_AUDIT.yaml]
+        boundary: Local observability evidence is not a regulated operational control assessment.
+      - id: failure_domain_and_dr
+        status: open
+        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml]
+        boundary: Independent sites, quorum/witness, and defined regulated RPO/RTO remain open.
+      - id: sovereign_air_gap
+        status: partial
+        evidence: [docs/execution/P3_ENT_011_EXIT_AUDIT.yaml]
+        boundary: Air-gap wheel evidence lacks hardware custody and repeated platform coverage.
+      - id: customer_managed_keys
+        status: open
+        evidence: []
+        boundary: KMS/HSM/customer-managed key lifecycle is not implemented or independently verified.

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "matrix_id", "reviewed_on", "claim_boundary", "status_values", "required_gates", "editions"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "matrix_id": {"const": "reconforge-deployment-readiness"},
+    "reviewed_on": {"type": "string", "format": "date"},
+    "claim_boundary": {"type": "string", "minLength": 80},
+    "status_values": {"type": "array", "const": ["verified_scoped", "partial", "open"]},
+    "required_gates": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}},
+    "editions": {
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "readiness_status", "profile_command", "gates"],
+        "properties": {
+          "id": {"enum": ["community", "team", "enterprise", "regulated"]},
+          "readiness_status": {"enum": ["partial", "open"]},
+          "profile_command": {"type": "string", "pattern": "^reconforge deployment profiles --edition "},
+          "gates": {
+            "type": "array", "minItems": 8, "maxItems": 8,
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["id", "status", "evidence", "boundary"],
+              "properties": {
+                "id": {"type": "string"},
+                "status": {"enum": ["verified_scoped", "partial", "open"]},
+                "evidence": {"type": "array", "items": {"type": "string"}},
+                "boundary": {"type": "string", "minLength": 20}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-848
+    priority: P0
+    area: deployment-governance
+    title: Add digest-bound deployment runtime evidence manifest
+    status: completed
+    depends_on: [E-847]
+    exit_evidence: >-
+      A strict offline JSON manifest binds one deployment edition to the exact
+      runtime facts consumed by profile validation, rejects missing/extra fields
+      and wrong types, returns deterministic findings and SHA-256 digest, and is
+      exposed through `deployment verify-runtime-evidence`. Focused
+      runtime/profile/worker/inventory tests pass 31/31; Ruff and Mypy pass.
+      It does not probe or provision external systems and does not prove
+      deployment readiness.
   - id: E-847
     priority: P0
     area: deployment-governance

@@ -1,5 +1,10 @@
 # Quality Baseline
 
+## E-848 runtime evidence manifest (2026-08-23)
+
+Runtime/profile/worker/inventory tests pass 31/31; Ruff, Mypy, and whitespace
+checks pass. The new CLI is deterministic and offline by contract.
+
 ## E-847 worker manifest verification CLI (2026-08-23)
 
 Focused CLI/manifest/profile/inventory tests pass 18/18; Ruff, Mypy, and

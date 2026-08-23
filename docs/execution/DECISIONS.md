@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-948: Bind deployment runtime facts to a closed offline evidence manifest
+
+E-848 makes profile inputs reproducible and digestable while preserving the
+fail-closed claim boundary. The verifier and CLI never probe or mutate external
+systems; readiness remains a separate runtime evidence obligation.
+
 ### D-947: Expose worker manifest verification through a read-only CLI
 
 E-847 adds `deployment verify-worker-manifest` as a strict, network-free,

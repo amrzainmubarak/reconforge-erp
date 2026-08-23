@@ -9,6 +9,11 @@ from reconforge.deployment.profiles import (
     list_deployment_profiles,
     validate_deployment_profile,
 )
+from reconforge.deployment.runtime_evidence import (
+    DeploymentRuntimeEvidence,
+    DeploymentRuntimeEvidenceError,
+    verify_deployment_runtime_evidence,
+)
 from reconforge.deployment.worker_permissions import (
     WorkerPermissionManifest,
     WorkerPermissionManifestError,
@@ -26,4 +31,7 @@ __all__ = [
     "WorkerPermissionManifest",
     "WorkerPermissionManifestError",
     "verify_worker_permission_manifest",
+    "DeploymentRuntimeEvidence",
+    "DeploymentRuntimeEvidenceError",
+    "verify_deployment_runtime_evidence",
 ]

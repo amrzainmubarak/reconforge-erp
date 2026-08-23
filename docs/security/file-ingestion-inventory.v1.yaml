@@ -829,6 +829,22 @@ surfaces:
     limitations:
       - The command verifies a bounded closed worker manifest and its digest locally; it does not provision IAM, contact a provider, or prove production runtime state.
     next_action: Add signed release-attached manifests and an independently exercised hosted deployment admission integration before expanding the claim beyond offline verification.
+  - id: FI-042
+    name: Deployment runtime evidence verification CLI
+    module_ids: [platform.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/cli.py::deployment_verify_runtime_evidence_command
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_deployment_runtime_evidence.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The command verifies operator-supplied runtime facts and profile findings locally; it does not probe storage, identity, queue, object-store, key, or backup systems.
+    next_action: Bind signed runtime evidence to an independently exercised deployment admission workflow before making mode-readiness claims.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -1003,9 +1019,9 @@ direct_json_parser_allowlist:
     rationale: Parses only the closed offline bundle manifest after strict size and path checks, before manifest/entry hash checks and deterministic install-argument derivation.
   - path: reconforge/cli.py
     parser: json.loads
-    call_count: 1
-    surface_id: FI-041
-    rationale: Parses only the operator-selected worker permission manifest before strict closed-field, grant separation, ordering, and digest verification; the command performs no network or IAM mutation.
+    surface_id: FI-042
+    call_count: 2
+    rationale: Parses only operator-selected worker-permission or runtime-evidence manifests before strict closed-field, type, grant/profile-finding, ordering, and digest verification; both commands perform no external probe or mutation.
 direct_yaml_parser_allowlist:
   - path: reconforge/io/structured.py
     parser: yaml.parse

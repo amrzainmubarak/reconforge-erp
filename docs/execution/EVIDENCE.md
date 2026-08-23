@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-848: Digest-bound deployment runtime evidence (2026-08-23)
+
+- The closed manifest binds one edition to exact profile runtime facts and
+  returns deterministic findings plus a SHA-256 digest without external calls.
+- Focused runtime/profile/worker/inventory suite: 31 passed; Ruff and Mypy pass.
+- A clean local manifest is evidence input only; external systems and readiness
+  remain unverified.
+
 ## E-847: Worker manifest verification CLI (2026-08-23)
 
 - The CLI verifies a closed local worker permission manifest and prints its

@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-848 — Add digest-bound deployment runtime evidence (2026-08-23)
+
+- Added a strict offline manifest for one deployment edition and the exact
+  runtime facts consumed by profile validation, with deterministic digest and
+  explicit findings. Added `deployment verify-runtime-evidence` CLI command.
+- Focused runtime/profile/worker/inventory tests pass 31/31; Ruff and Mypy
+  pass. The manifest is evidence input only and does not probe external
+  systems or establish production readiness.
+
 ## E-847 — Expose worker manifest verification through the CLI (2026-08-23)
 
 - Added `reconforge deployment verify-worker-manifest` for deterministic,

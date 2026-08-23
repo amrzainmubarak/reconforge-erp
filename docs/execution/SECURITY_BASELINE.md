@@ -1,5 +1,14 @@
 # Security Baseline
 
+## E-848 runtime evidence manifest (2026-08-23)
+
+- The closed manifest rejects expansion and type confusion before profile
+  evaluation and makes no external or secret-bearing calls.
+- The JSON parser is recorded under FI-042 and exact AST inventory remains
+  enforced.
+- A verified manifest does not authenticate external systems or prove runtime
+  enforcement.
+
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
 ## E-846 worker permission manifest verifier (2026-08-23)

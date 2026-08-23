@@ -93,9 +93,11 @@ from reconforge.db.importers import (
 )
 from reconforge.deployment import (
     DeploymentProfileError,
+    DeploymentRuntimeEvidenceError,
     WorkerPermissionManifestError,
     deployment_profile,
     list_deployment_profiles,
+    verify_deployment_runtime_evidence,
     verify_worker_permission_manifest,
 )
 from reconforge.domain.consolidation import ConsolidationError
@@ -5899,6 +5901,28 @@ def deployment_verify_worker_manifest_command(
             **manifest.to_dict(),
             "digest": manifest.digest,
             "discovery_execution_separated": True,
+        },
+    )
+
+
+@deployment_app.command("verify-runtime-evidence")
+def deployment_verify_runtime_evidence_command(
+    manifest_path: Annotated[Path, typer.Argument(help="Closed JSON deployment runtime-evidence manifest to verify.")],
+) -> None:
+    """Verify deployment runtime facts and profile findings without external calls."""
+
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        evidence = verify_deployment_runtime_evidence(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, DeploymentRuntimeEvidenceError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Deployment Runtime Evidence",
+        {
+            **evidence.to_dict(),
+            "digest": evidence.digest,
+            "findings": list(evidence.findings),
+            "external_calls": False,
         },
     )
 

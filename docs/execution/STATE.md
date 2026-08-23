@@ -2,6 +2,18 @@
 
 Updated: 2026-08-23
 
+## E-837 — Bind Finance Core entry creation to amount-bounded ABAC (2026-08-23)
+
+- Both PostgreSQL Finance Core entry branches parse debit/credit values as
+  exact non-negative decimals and pass gross debit into server policy before
+  adapter access.
+- Focused route/dependency tests pass 11 cases with one declared capability
+  skip; Ruff and Mypy pass.
+- Other financial routes and production IAM effectiveness remain unproven.
+- Full regression completed with zero failures after updating the server
+  identity contract assertion for the new amount field; PostgreSQL-dependent
+  cases remain declared skips.
+
 ## E-836 — Bind impairment prepare to amount-bounded ABAC (2026-08-23)
 
 - The server-only impairment prepare route converts canonical Money to the

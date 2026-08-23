@@ -2,6 +2,16 @@
 
 Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
 
+## E-837 Finance Core route amount ABAC control (2026-08-23)
+
+- PostgreSQL Finance Core entry creation parses every debit and credit as exact
+  non-negative decimals and passes one gross debit effect into central policy
+  before adapter access.
+- Invalid or negative amounts fail closed with a safe API error; no float,
+  implicit zero, or duplicated debit-plus-credit amount is used.
+- Focused route/dependency tests pass 11 cases with one declared capability
+  skip. Universal financial-route adoption remains unverified.
+
 ## E-836 route-level amount ABAC control (2026-08-23)
 
 - Consolidation impairment preparation now passes the exact Decimal sum of

@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-837: Bind Finance Core entry creation to amount-bounded ABAC (2026-08-23)
+
+- Both PostgreSQL Finance Core entry branches now parse every debit and credit
+  as exact non-negative decimals and pass the gross debit total into central
+  server policy before adapter access.
+- Invalid amount syntax or negative values fail with a safe 400 response;
+  balanced-entry semantics avoid double-counting debit and credit.
+- Focused command: `python -m pytest tests/test_api_server_finance_core.py
+  tests/test_api_server_finance_core_live.py tests/test_api_dependencies.py -q`
+  -> 11 passed, 1 declared capability skip. Ruff and Mypy pass.
+- Boundary: one Finance Core route boundary with synthetic server adapter data;
+  other financial routes and production IAM effectiveness remain future work.
+- Full regression after the route contract assertion update completed at 100%
+  with zero failures; the only PostgreSQL-dependent cases remain declared
+  capability skips.
+
 ## E-836: Bind impairment prepare to amount-bounded ABAC (2026-08-23)
 
 - The server-only consolidation impairment prepare route now converts the

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -699,9 +700,18 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     assert ledger_scoped_permissions.count(
         {"permission": "finance_core.read", "tenant_id": "tenant-a", "workspace_id": None}
     ) == 6
-    assert ledger_scoped_permissions.count(
-        {"permission": "finance_core.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"}
+    assert sum(
+        1
+        for item in ledger_scoped_permissions
+        if item.get("permission") == "finance_core.manage"
+        and item.get("tenant_id") == "tenant-a"
+        and item.get("workspace_id") == "workspace-a"
     ) == 3
+    assert any(
+        item.get("permission") == "finance_core.manage"
+        and item.get("amount") == Decimal("100.00")
+        for item in ledger_scoped_permissions
+    )
     assert master_scoped_permissions == [
         {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},

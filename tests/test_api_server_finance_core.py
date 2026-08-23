@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -134,6 +135,77 @@ def test_server_finance_core_routes_use_scoped_adapter_and_never_local_fallback(
     assert all(call[1].get("workspace") == "workspace-a" for call in calls if "workspace" in call[1])
     assert ("any", frozenset({"finance_core.read", "finance_core.manage", "finance_core.validate"})) in permission_checks
     assert ("exact", "finance_core.manage") in permission_checks
+
+
+def test_server_finance_core_entry_binds_exact_debit_amount_to_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+    repository = _FakeFinanceRepository([])
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: True)
+    monkeypatch.setattr(routes, "request_execution_scope", lambda _request: RequestExecutionScope("tenant-a", "workspace-a"))
+    monkeypatch.setattr(
+        routes,
+        "enforce_server_scoped_permission",
+        lambda _request, **values: captured.update(values),
+    )
+    monkeypatch.setattr(routes, "execute_postgres_finance_core", lambda _request, operation: operation(repository))
+
+    result = routes.create_entry(
+        request,
+        routes.LedgerEntryRequest(
+            entry_number="JE/ABAC/001",
+            organization_code="ORG-A",
+            entity_code="ENTITY-A",
+            period_id="PERIOD-A",
+            journal_code="GENERAL",
+            posting_date="2026-08-23",
+            description="Amount policy binding",
+            lines=[
+                routes.LedgerLineRequest(account_code="1000", debit="140.00", credit="0"),
+                routes.LedgerLineRequest(account_code="3000", debit="0", credit="140.00"),
+            ],
+        ),
+        user,
+        None,
+    )
+
+    assert result["entry"]["id"] == "entry-1"
+    assert captured["permission"] == "finance_core.manage"
+    assert captured["amount"] == Decimal("140.00")
+
+
+def test_server_finance_core_entry_rejects_negative_amount_before_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: True)
+    monkeypatch.setattr(routes, "execute_postgres_finance_core", lambda *_args: pytest.fail("adapter must not run"))
+
+    with pytest.raises(routes.APIError) as error:
+        routes.create_entry(
+            request,
+            routes.LedgerEntryRequest(
+                entry_number="JE/ABAC/NEGATIVE",
+                organization_code="ORG-A",
+                entity_code="ENTITY-A",
+                period_id="PERIOD-A",
+                journal_code="GENERAL",
+                posting_date="2026-08-23",
+                description="Invalid amount",
+                lines=[
+                    routes.LedgerLineRequest(account_code="1000", debit="-1.00", credit="0"),
+                    routes.LedgerLineRequest(account_code="3000", debit="0", credit="-1.00"),
+                ],
+            ),
+            user,
+            None,
+        )
+    assert error.value.code == "finance_entry_amount_invalid"
 
 
 def test_server_finance_core_rejects_cross_workspace_payload_before_adapter(

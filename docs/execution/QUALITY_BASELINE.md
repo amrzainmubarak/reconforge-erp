@@ -1,5 +1,12 @@
 # Quality Baseline
 
+## E-837 Finance Core route amount ABAC (2026-08-23)
+
+The two PostgreSQL Finance Core entry branches now pass an exact gross debit
+Decimal into server policy before adapter access and reject malformed/negative
+amounts. Focused server-core/dependency tests pass 11 cases with one declared
+capability skip. This is not universal route adoption.
+
 ## E-836 route-level amount ABAC (2026-08-23)
 
 The PostgreSQL consolidation impairment prepare route now supplies the exact

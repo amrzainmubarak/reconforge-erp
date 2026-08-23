@@ -5,6 +5,20 @@
 
 ## Decisions
 
+### D-937: Pass gross Finance Core entry amount into server policy
+
+- **Date**: 2026-08-23
+- **Context**: E-836 bound impairment preparation, but Finance Core entry
+  creation still evaluated server scope without its journal amount.
+- **Decision**: Adopt ADR 0551. Parse all debit/credit values exactly, reject
+  negatives or malformed input before adapter access, and pass the gross debit
+  total as Decimal into both PostgreSQL Finance Core policy paths.
+- **Rationale**: Balanced entries have one non-duplicated gross effect. Parsing
+  both sides prevents malformed data from crossing authorization, while no
+  float or implicit currency operation is introduced.
+- **Reversibility**: Optional helper parameter and source-only rollback; no
+  schema or persisted-data changes.
+
 ### D-936: Pass the typed impairment amount into server policy evaluation
 
 - **Date**: 2026-08-23

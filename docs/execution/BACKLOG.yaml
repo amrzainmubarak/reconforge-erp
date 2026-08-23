@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-837
+    priority: P0
+    area: identity-governance
+    title: Bind Finance Core entry creation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-836]
+    exit_evidence: >-
+      Both PostgreSQL Finance Core entry paths parse debit and credit values as
+      exact non-negative decimals and pass the gross debit total into server
+      policy evaluation before adapter access. Invalid amounts fail closed with
+      a safe API error. Route, dependency, Ruff, and Mypy tests pass. Other
+      financial routes and production IAM remain outside this slice.
   - id: E-836
     priority: P0
     area: identity-governance

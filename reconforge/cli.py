@@ -6015,7 +6015,8 @@ def deployment_verify_key_manifest_command(
             **manifest.to_dict(),
             "digest": manifest.digest,
             "external_calls": False,
-            "secret_material_present": False,
+            # This is an explicit non-secret evidence flag, not a credential.
+            "secret_material_present": False,  # nosec B105
         },
     )
 

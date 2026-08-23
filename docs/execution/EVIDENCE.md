@@ -18430,3 +18430,15 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
     hosted signed provenance, registry signature, SLSA level, independent
     verification, or publication evidence follows. `cyclonedx-py` was not
     counted because its host installation lacks `chardet`.
+
+- E-873 current static security/dependency gate (2026-08-23; ADR 0582):
+  - `python -m bandit -q -r reconforge` completed with no failed findings;
+    the managed-key Boolean evidence flag's intentional B105 false positive is
+    documented inline without changing the output contract.
+  - `python -m pip_audit -l --progress-spinner off` reported `No known
+    vulnerabilities found`; the editable local `reconforge-erp` distribution
+    was explicitly listed as not auditable because it is not on PyPI.
+  - Deployment/security focused tests passed 17 tests and Ruff passed.
+  - Boundary: local static/dependency evidence only; no penetration,
+    reachability, malware, license, hosted, provenance, or production-security
+    assurance follows.

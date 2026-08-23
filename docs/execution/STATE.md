@@ -2,6 +2,17 @@
 
 Updated: 2026-08-23
 
+## E-873 — Refresh static security and dependency gate evidence (2026-08-23)
+
+- Bandit completed without failed findings after documenting the intentional
+  Boolean evidence-field false positive in `reconforge/cli.py`.
+- `python -m pip_audit -l --progress-spinner off` reported no known
+  vulnerabilities; the local `reconforge-erp` project itself is not on PyPI
+  and was listed as not auditable.
+- Deployment/security focused tests passed 17 tests and Ruff passed.
+- This remains static/local evidence, not penetration, hosted, provenance,
+  malware, license, reachability, or production-security assurance.
+
 ## E-872 — Refresh release manifest and SBOM pipeline contract evidence (2026-08-23)
 
 - `tests/test_release_sbom_pipeline.py`,

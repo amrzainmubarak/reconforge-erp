@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-873
+    priority: P0
+    area: security
+    title: Refresh static security and dependency gate evidence
+    status: completed
+    depends_on: [E-872]
+    exit_evidence: >-
+      Bandit reports no failed findings, local pip-audit reports no known
+      vulnerabilities for auditable installed distributions, and focused
+      deployment/security tests pass 17 tests. The project package is not on
+      PyPI and is explicitly not counted as audited; hosted/provenance,
+      reachability, malware, license, and penetration assurance remain open.
+  - id: E-872
   - id: E-872
     priority: P0
     area: supply-chain

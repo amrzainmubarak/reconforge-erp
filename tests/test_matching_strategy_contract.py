@@ -441,6 +441,29 @@ def test_complete_strategy_registry_covers_every_published_strategy_family(tmp_p
         connection.close()
 
 
+def test_registry_mode_coverage_is_explicit_and_deterministic(tmp_path: Path) -> None:
+    _strategy_instance, service, connection = _strategy(tmp_path)
+    try:
+        registry = build_matching_strategy_registry(service)
+        report = registry.coverage_report(
+            ("many-to-many", "one-to-one", "many-to-one", "one-to-many", "unimplemented-mode")
+        )
+        assert report.required_modes == (
+            "many-to-many",
+            "many-to-one",
+            "one-to-many",
+            "one-to-one",
+            "unimplemented-mode",
+        )
+        assert report.missing_modes == ("one-to-one", "unimplemented-mode")
+        assert not report.complete
+        assert report.mode_strategies == tuple(sorted(report.mode_strategies))
+        assert report.mode_strategies[0][0] == "amount-tolerance"
+        assert registry.coverage_report(tuple(reversed(report.required_modes))) == report
+    finally:
+        connection.close()
+
+
 def test_published_strategy_manifest_matches_runtime_contract() -> None:
     root = Path(__file__).resolve().parents[1]
     document = json.loads((root / "docs/architecture/matching-strategies.v1.json").read_text(encoding="utf-8"))

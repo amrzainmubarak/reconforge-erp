@@ -9,6 +9,16 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-895
+    priority: P0
+    area: reconciliation
+    title: Expose deterministic matching mode coverage
+    status: completed
+    depends_on: [E-894]
+    exit_evidence: >-
+      MatchingStrategyRegistry.coverage_report emits deterministic sorted
+      required/registered/missing modes and strategy identities. Focused
+      matching tests, Ruff, and diff checks pass; missing modes remain explicit.
   - id: E-894
     priority: P0
     area: reconciliation

@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-895 — Deterministic matching mode coverage report (2026-08-23)
+
+- `MatchingStrategyRegistry.coverage_report()` now emits sorted required,
+  registered, missing, and mode-to-strategy identity mappings. Caller order and
+  duplicate required modes cannot change the report.
+- Focused matching contract, budget, and ambiguity tests pass (39 tests), with
+  Ruff and diff checks. This makes mode gaps measurable; it does not close the
+  advanced strategy-family evidence package.
+
 ## E-894 — Fail-closed matching strategy declarations (2026-08-23)
 
 - `MatchingStrategyManifest` now rejects unsupported maturity values and blank

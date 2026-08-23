@@ -143,6 +143,20 @@ class MatchingStrategyManifest:
 
 
 @dataclass(frozen=True)
+class MatchingStrategyCoverage:
+    """Deterministic coverage report for a caller-declared mode inventory."""
+
+    required_modes: tuple[str, ...]
+    registered_modes: tuple[str, ...]
+    missing_modes: tuple[str, ...]
+    mode_strategies: tuple[tuple[str, tuple[str, ...]], ...]
+
+    @property
+    def complete(self) -> bool:
+        return not self.missing_modes
+
+
+@dataclass(frozen=True)
 class MatchingStrategyRequest:
     left_records: tuple[Mapping[str, object], ...]
     right_records: tuple[Mapping[str, object], ...]
@@ -325,6 +339,27 @@ class MatchingStrategyRegistry:
     @property
     def manifests(self) -> tuple[MatchingStrategyManifest, ...]:
         return tuple(self._entries[key].manifest for key in sorted(self._entries))
+
+    def coverage_report(self, required_modes: tuple[str, ...]) -> MatchingStrategyCoverage:
+        """Report mode coverage without treating mode coverage as family proof."""
+
+        required = tuple(sorted(set(mode.strip() for mode in required_modes if mode.strip())))
+        supported: dict[str, list[str]] = {}
+        for manifest in self.manifests:
+            identity = f"{manifest.id}@{manifest.version}"
+            for mode in manifest.supported_modes:
+                supported.setdefault(mode, []).append(identity)
+        registered = tuple(sorted(supported))
+        missing = tuple(mode for mode in required if mode not in supported)
+        mode_strategies = tuple(
+            (mode, tuple(sorted(supported.get(mode, [])))) for mode in sorted(set(required) | set(registered))
+        )
+        return MatchingStrategyCoverage(
+            required_modes=required,
+            registered_modes=registered,
+            missing_modes=missing,
+            mode_strategies=mode_strategies,
+        )
 
 
 def canonical_payload(value: object) -> object:

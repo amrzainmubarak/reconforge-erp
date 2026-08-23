@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-895: Deterministic matching mode coverage report (2026-08-23)
+
+- `MatchingStrategyRegistry.coverage_report()` reports required/registered/
+  missing modes and deterministic strategy identities without relying on
+  caller ordering.
+- Focused command over matching contract, budget, and ambiguity suites:
+  39 passed. Ruff and `git diff --check` passed. The current synthetic report
+  deliberately exposes missing `one-to-one` and `unimplemented-mode` entries;
+  no completeness claim is inferred.
+- This is coverage inventory evidence only, not strategy-family correctness,
+  engine parity, scale, or production evidence.
+
 ## E-894: Fail-closed matching strategy declarations (2026-08-23)
 
 - `MatchingStrategyManifest` rejects unsupported maturity values and blank

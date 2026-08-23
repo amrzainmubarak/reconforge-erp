@@ -5,6 +5,12 @@
 
 ## Decisions
 
+### D-955: Make matching mode coverage machine-readable
+
+E-895 adds a deterministic registry report for required and missing modes, while
+keeping mode inventory separate from claims about algorithmic or financial
+correctness.
+
 ### D-954: Fail closed on incomplete matching strategy declarations
 
 E-894 makes strategy maturity, deterministic tie-break, and explanation schema

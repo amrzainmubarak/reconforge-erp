@@ -285,6 +285,14 @@ jobs:
           --image-config-digest "${IMAGE_CONFIG_DIGEST}"
           --output "${RUNNER_TEMP}/container-security-evidence.json"
 
+      - name: Run hardened candidate image smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --read-only --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            "$LOCAL_IMAGE" reconforge doctor
+
       - name: Preserve container security evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

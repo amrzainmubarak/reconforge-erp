@@ -2,6 +2,15 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-888: Release candidate hardened image gate (2026-08-23)
+
+- The signed release-candidate workflow now runs the exact scanned image with
+  `--read-only --cap-drop=ALL --security-opt=no-new-privileges` before registry
+  login, push, and attestation.
+- The workflow contract is locally reviewable; a fresh tag-triggered hosted run
+  is required for actual release evidence. Multi-architecture, host,
+  registry-availability, and production claims remain outside the boundary.
+
 ## E-887: Hardened container smoke required in CI (2026-08-23)
 
 - `.github/workflows/ci.yml` now requires the `docker-parity` job to run:

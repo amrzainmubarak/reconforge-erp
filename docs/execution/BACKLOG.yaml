@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-888
+    priority: P1
+    area: release_operations
+    title: Gate release candidates on hardened image execution
+    status: completed
+    depends_on: [E-887]
+    exit_evidence: >-
+      The signed release-candidate workflow runs the exact scanned local image
+      under read-only root, all capabilities dropped, and
+      no-new-privileges before registry login, push, or attestation. This is a
+      hosted Linux smoke and does not prove multi-architecture, host,
+      registry-availability, or production orchestration assurance.
   - id: E-887
     priority: P1
     area: deployment

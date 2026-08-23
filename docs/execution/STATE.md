@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-888 — Release candidate hardened image gate (2026-08-23)
+
+- `.github/workflows/release.yml` now runs the exact scanned candidate image
+  with a read-only root filesystem, all Linux capabilities dropped, and
+  `no-new-privileges` before registry login, push, or attestation.
+- This prevents a candidate that only passes an unconstrained local smoke from
+  reaching publication. It remains a hosted Linux smoke, not multi-arch,
+  host-isolation, registry-availability, or production evidence.
+
 ## E-887 — Hardened container smoke required in CI (2026-08-23)
 
 - The required `docker-parity` job now executes `reconforge doctor` with a

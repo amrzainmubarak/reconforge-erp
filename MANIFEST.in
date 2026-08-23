@@ -524,6 +524,7 @@ include docs/adr/0590-docker-scout-local-image-scan.md
 include docs/adr/0591-python-base-image-upgrade-is-gated.md
 include docs/adr/0592-local-docker-scout-sbom-evidence.md
 include docs/adr/0593-ci-enforces-hardened-container-smoke.md
+include docs/adr/0594-release-candidate-hardened-image-gate.md
 include docs/execution/security/docker-scout-current-2026-08-23.md
 include reconforge/benchmark/postgres_outbox_scale.py
 include tests/test_postgres_outbox_scale.py

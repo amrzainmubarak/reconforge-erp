@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-884
+    priority: P1
+    area: deployment
+    title: Gate Python 3.12 Alpine base-image upgrade behind matrix evidence
+    status: planned
+    depends_on: [E-883]
+    exit_evidence: >-
+      Planned only. Upgrade the digest-pinned Docker base from Python 3.11
+      Alpine after refreshed Scout evidence, Python/engine parity, package and
+      air-gap verification, Docker/API/web smoke, and a tested rollback. The
+      current 3.11 base remains unchanged until those gates pass.
+  - id: E-883
   - id: E-883
     priority: P1
     area: security

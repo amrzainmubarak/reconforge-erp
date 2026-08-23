@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-884: Python base-image upgrade decision (2026-08-23)
+
+- `docker scout recommendations local://reconforge:current` exited 0 and
+  reported the current `python:3.11-alpine` line as up to date, while listing
+  `3.12-alpine` as a smaller alternative with fewer packages and fewer reported
+  vulnerabilities in the recommendation view.
+- The runtime was intentionally not changed. A Python 3.12 base upgrade needs
+  a refreshed digest, full 3.11/3.12 and engine-parity matrix, package/air-gap
+  checks, Docker/API/web smoke, and rollback evidence. This is a planned risk
+  decision, not an unresolved scanner failure.
+
 ## E-883: Current Docker Scout local image scan (2026-08-23)
 
 - Docker Scout `v1.24.0` scanned the explicit `local://reconforge:current`

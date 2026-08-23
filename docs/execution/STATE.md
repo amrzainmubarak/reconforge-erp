@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-884 — Python base-image upgrade remains gated (2026-08-23)
+
+- Docker Scout recommends a smaller Python 3.12 Alpine alternative, while the
+  current digest-pinned Python 3.11 Alpine line is up to date in its tag line.
+- No base-image change was made. E-884 is intentionally `planned` until the
+  supported Python/engine matrix, package/air-gap, Docker/API/web smoke, and
+  rollback gates are executed against a refreshed digest.
+
 ## E-883 — Current Docker Scout local image scan (2026-08-23)
 
 - Docker Scout `v1.24.0` scanned `local://reconforge:current` at digest prefix

@@ -190,6 +190,7 @@ class MatchingStrategyResult:
             "input_digest": self.input_digest,
             "manifest_digest": self.manifest_digest,
             "results": canonical_payload(self.results),
+            "schema_version": 1,
             "strategy_id": self.strategy_id,
             "strategy_version": self.strategy_version,
         }
@@ -205,11 +206,14 @@ class MatchingStrategyResult:
             "input_digest",
             "manifest_digest",
             "results",
+            "schema_version",
             "strategy_id",
             "strategy_version",
         }
         if set(payload) != expected:
             raise MatchingStrategyContractError("Strategy result envelope fields are not closed.")
+        if payload["schema_version"] != 1:
+            raise MatchingStrategyContractError("Unsupported strategy result envelope schema version.")
         text_fields = ("strategy_id", "strategy_version", "manifest_digest", "input_digest", "decision_digest", "explanation_schema")
         text_values = {field: payload[field] for field in text_fields}
         if any(not isinstance(value, str) or not value.strip() for value in text_values.values()):

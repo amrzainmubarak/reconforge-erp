@@ -955,3 +955,4 @@ include reconforge/deployment/admission.py
 include tests/test_deployment_admission.py
 include docs/adr/0568-matching-result-strategy-identity.md
 include docs/adr/0569-closed-matching-result-json-envelope.md
+include docs/schemas/matching_strategy_result_envelope.v1.schema.json

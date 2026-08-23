@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-857: Versioned matching result envelope schema (2026-08-23)
+
+- `docs/schemas/matching_strategy_result_envelope.v1.schema.json` is closed at
+  the top level and constrains schema version, strategy identity/version, and
+  lowercase SHA-256 digest fields.
+- The contract suite validates emitted JSON against Draft 2020-12 and rejects
+  unsupported versions. External consumer interoperability remains unproven.
+
 ## E-856: Worker-boundary replay verification (2026-08-23)
 
 - Grouped and sequential PostgreSQL adapters now round-trip strategy output

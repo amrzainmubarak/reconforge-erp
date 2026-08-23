@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/matching_strategy_result_envelope.v1.schema.json",
+  "title": "ReconForge matching strategy result envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "strategy_id",
+    "strategy_version",
+    "manifest_digest",
+    "input_digest",
+    "decision_digest",
+    "explanation_schema",
+    "results",
+    "exceptions"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "strategy_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,79}$"},
+    "strategy_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "manifest_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "input_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decision_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "explanation_schema": {"type": "string", "minLength": 1, "maxLength": 100},
+    "results": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {"type": "object"}
+    }
+  }
+}

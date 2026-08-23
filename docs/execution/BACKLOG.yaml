@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-857
+    priority: P0
+    area: matching
+    title: Publish versioned matching result envelope schema
+    status: completed
+    depends_on: [E-856]
+    exit_evidence: >-
+      A Draft 2020-12 closed schema versions the strategy result envelope and
+      constrains strategy identity/version, lowercase SHA-256 digests, and JSON
+      object collections; runtime output validates against it and unsupported
+      schema versions fail closed.
   - id: E-856
     priority: P0
     area: matching

@@ -2,6 +2,13 @@
 
 Updated: 2026-08-23
 
+## E-857 — Publish versioned matching result envelope schema (2026-08-23)
+
+- Added `matching_strategy_result_envelope.v1.schema.json` with closed top-level
+  fields, schema version, semantic strategy version, and digest patterns.
+- Runtime contract tests validate emitted payloads against Draft 2020-12 and
+  reject unsupported schema versions. This remains bounded evidence.
+
 ## E-856 — Enforce replay envelope at PostgreSQL worker boundaries (2026-08-23)
 
 - Grouped and sequential PostgreSQL adapters now JSON round-trip and verify

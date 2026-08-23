@@ -129,6 +129,13 @@ def test_strategy_result_json_envelope_round_trip_is_closed_and_replay_verified(
         connection.close()
 
     payload = json.loads(json.dumps(result.to_payload(), sort_keys=True))
+    schema = json.loads(
+        (Path(__file__).resolve().parents[1] / "docs/schemas/matching_strategy_result_envelope.v1.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    jsonschema.Draft202012Validator.check_schema(schema)
+    jsonschema.Draft202012Validator(schema).validate(payload)
     restored = MatchingStrategyResult.from_payload(payload)
     restored.verify_payload(
         request,
@@ -141,6 +148,8 @@ def test_strategy_result_json_envelope_round_trip_is_closed_and_replay_verified(
 
     with pytest.raises(MatchingStrategyContractError, match="not closed"):
         MatchingStrategyResult.from_payload({**payload, "unexpected": True})
+    with pytest.raises(MatchingStrategyContractError, match="schema version"):
+        MatchingStrategyResult.from_payload({**payload, "schema_version": 2})
     with pytest.raises(MatchingStrategyContractError, match="digest fields"):
         MatchingStrategyResult.from_payload({**payload, "decision_digest": "not-a-digest"})
     with pytest.raises(MatchingStrategyContractError, match="identity"):

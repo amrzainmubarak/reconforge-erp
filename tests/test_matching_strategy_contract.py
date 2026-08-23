@@ -347,10 +347,18 @@ def test_strategy_result_replay_verifier_rejects_manifest_input_and_output_tampe
     )
     result = strategy.execute(request)
 
+    assert result.strategy_id == strategy.manifest.id
+    assert result.strategy_version == strategy.manifest.version
     result.verify_against(request, manifest_digest=strategy.manifest.digest)
 
     with pytest.raises(MatchingStrategyContractError, match="manifest digest"):
         result.verify_against(request, manifest_digest="0" * 64)
+
+    with pytest.raises(MatchingStrategyContractError, match="identity"):
+        result.verify_against(request, manifest_digest=strategy.manifest.digest, strategy_id="tampered")
+
+    with pytest.raises(MatchingStrategyContractError, match="version"):
+        result.verify_against(request, manifest_digest=strategy.manifest.digest, strategy_version="9.9.9")
 
     changed_request = replace(
         request,

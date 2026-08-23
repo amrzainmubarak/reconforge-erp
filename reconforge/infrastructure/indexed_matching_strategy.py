@@ -70,6 +70,8 @@ class IndexedOneToOneStrategy:
             exceptions=output.exceptions,
         )
         result = MatchingStrategyResult(
+            strategy_id=self.manifest.id,
+            strategy_version=self.manifest.version,
             manifest_digest=manifest_digest,
             input_digest=input_digest,
             decision_digest=decision_digest,
@@ -77,7 +79,7 @@ class IndexedOneToOneStrategy:
             exceptions=output.exceptions,
             explanation_schema=self.manifest.explanation_schema,
         )
-        result.verify_against(request, manifest_digest=manifest_digest)
+        result.verify_against(request, manifest_digest=manifest_digest, strategy_id=self.manifest.id, strategy_version=self.manifest.version)
         return result
 
     def _validate_request(self, request: MatchingStrategyRequest) -> None:

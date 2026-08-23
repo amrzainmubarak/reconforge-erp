@@ -2,6 +2,14 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-854: Matching strategy identity/version binding (2026-08-23)
+
+- Every reviewed strategy adapter emits strategy ID/version plus manifest,
+  input, and decision digests; replay verification rejects identity/version
+  tampering.
+- Matching strategy contract and PostgreSQL grouped/sequential worker suites
+  passed. This is synthetic contract evidence, not hosted cross-engine proof.
+
 ## E-853: Composite regulated admission evidence (2026-08-23)
 
 - `deployment verify-regulated-admission` requires no unresolved regulated

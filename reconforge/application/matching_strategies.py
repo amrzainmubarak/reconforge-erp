@@ -162,6 +162,8 @@ class MatchingStrategyRequest:
 
 @dataclass(frozen=True)
 class MatchingStrategyResult:
+    strategy_id: str
+    strategy_version: str
     manifest_digest: str
     input_digest: str
     decision_digest: str
@@ -169,7 +171,18 @@ class MatchingStrategyResult:
     exceptions: tuple[Mapping[str, object], ...]
     explanation_schema: str
 
-    def verify_against(self, request: MatchingStrategyRequest, *, manifest_digest: str) -> None:
+    def __post_init__(self) -> None:
+        if not self.strategy_id.strip() or not self.strategy_version.strip():
+            raise MatchingStrategyContractError("Strategy result must identify its strategy and version.")
+
+    def verify_against(
+        self,
+        request: MatchingStrategyRequest,
+        *,
+        manifest_digest: str,
+        strategy_id: str | None = None,
+        strategy_version: str | None = None,
+    ) -> None:
         """Fail closed when a strategy result is detached from its inputs.
 
         Strategy adapters cross persistence and worker boundaries, so the
@@ -180,6 +193,10 @@ class MatchingStrategyResult:
 
         if self.manifest_digest != manifest_digest:
             raise MatchingStrategyContractError("Strategy result manifest digest does not match the executing manifest.")
+        if strategy_id is not None and self.strategy_id != strategy_id:
+            raise MatchingStrategyContractError("Strategy result identity does not match the executing manifest.")
+        if strategy_version is not None and self.strategy_version != strategy_version:
+            raise MatchingStrategyContractError("Strategy result version does not match the executing manifest.")
         expected_input = request_digest(request, manifest_digest)
         if self.input_digest != expected_input:
             raise MatchingStrategyContractError("Strategy result input digest does not match the canonical request.")

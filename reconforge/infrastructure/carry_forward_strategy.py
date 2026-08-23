@@ -81,6 +81,8 @@ class CarryForwardFifoStrategy:
         manifest_digest = self.manifest.digest
         input_digest = request_digest(request, manifest_digest)
         result = MatchingStrategyResult(
+            strategy_id=self.manifest.id,
+            strategy_version=self.manifest.version,
             manifest_digest=manifest_digest,
             input_digest=input_digest,
             decision_digest=result_digest(manifest_digest=manifest_digest, input_digest=input_digest, results=results, exceptions=exceptions),
@@ -88,7 +90,7 @@ class CarryForwardFifoStrategy:
             exceptions=exceptions,
             explanation_schema=self.manifest.explanation_schema,
         )
-        result.verify_against(request, manifest_digest=manifest_digest)
+        result.verify_against(request, manifest_digest=manifest_digest, strategy_id=self.manifest.id, strategy_version=self.manifest.version)
         return result
 
     @staticmethod

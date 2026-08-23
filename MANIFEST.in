@@ -953,3 +953,4 @@ include tests/test_deployment_key_custody.py
 include docs/adr/0567-composite-regulated-admission-evidence.md
 include reconforge/deployment/admission.py
 include tests/test_deployment_admission.py
+include docs/adr/0568-matching-result-strategy-identity.md

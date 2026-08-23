@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-854 — Bind strategy identity/version to matching results (2026-08-23)
+
+- Matching strategy results now carry explicit strategy ID and version in
+  addition to manifest/input/decision digests. Replay verification can reject
+  identity or version drift at the adapter boundary.
+- Contract plus PostgreSQL grouped/sequential worker suites pass; this closes
+  result attribution only and does not prove cross-engine production readiness.
+
 ## E-853 — Compose regulated admission evidence (2026-08-23)
 
 - Added a composite offline verifier and CLI that require complete regulated

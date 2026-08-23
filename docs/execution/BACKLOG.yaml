@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-854
+    priority: P0
+    area: matching
+    title: Bind strategy identity and version to matching results
+    status: completed
+    depends_on: [E-1003]
+    exit_evidence: >-
+      Every reviewed matching strategy result carries its immutable strategy ID,
+      semantic version, manifest digest, input digest, and decision digest; the
+      replay verifier rejects identity/version drift. Five strategy adapters and
+      PostgreSQL worker contracts pass, with no change to financial behavior.
   - id: E-853
     priority: P0
     area: security-and-deployment-governance

@@ -150,15 +150,16 @@
       "workload_family": "durable_jobs"
     },
     {
-      "artifact": "docs/execution/benchmarks/postgres-durable-job-soak-current-2026-08-10.json",
-      "artifact_sha256": "c3baf77acdb2595ac9c38669ae00e02530af3b39de78405cee9fffc71a5e46cc",
-      "claim_boundary": "Single-host synthetic PostgreSQL repeated soak observation; not queue HA, host loss, cross-host fairness, RPO/RTO, or production sizing.",
+      "artifact": "docs/execution/benchmarks/postgres-durable-job-current-2026-08-23.json",
+      "artifact_sha256": "23e48da5e6a2bf85798b3ab2b0c0c064948f7c2f6eeae8603cb9af630cbf5ed3",
+      "claim_boundary": "Single-host synthetic PostgreSQL durable-job backpressure and repeated-soak observation; not queue HA, host loss, cross-host fairness, RPO/RTO, or production sizing.",
       "digest_fields": [
-        "aggregate_effect_digest",
-        "report_digest"
+        "effect_set_digest",
+        "manifest_digest",
+        "aggregate_effect_digest"
       ],
       "engine": "postgresql-durable-job",
-      "profile_id": "postgres-durable-job-soak/repeated-small-tier-v1",
+      "profile_id": "postgres-durable-job-load/backpressure-tier-v1 + postgres-durable-job-soak/repeated-small-tier-v1",
       "status": "verified",
       "workload_family": "durable_jobs"
     }

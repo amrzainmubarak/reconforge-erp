@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-875
+    priority: P1
+    area: scale
+    title: Refresh current PostgreSQL durable-job backpressure and soak evidence
+    status: completed
+    depends_on: [E-874]
+    exit_evidence: >-
+      The non-privileged local PostgreSQL runtime passes the backpressure and
+      repeated-small-soak profiles: 64/64 jobs and 256/256 effects with zero
+      duplicates and drained queues, plus 3/3 repeated iterations with
+      192/192 jobs, 768/768 effects, zero duplicates/residue, and identical
+      effect digests. Evidence is packaged in the dated benchmark artifact and
+      benchmark index; distributed HA, capacity, and production claims remain
+      explicitly open.
   - id: E-874
     priority: P1
     area: quality

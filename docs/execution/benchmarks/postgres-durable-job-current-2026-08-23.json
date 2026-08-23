@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "report_id": "postgres-durable-job-current-2026-08-23",
+  "status": "verified",
+  "profile_id": "postgres-durable-job-load/backpressure-tier-v1 + postgres-durable-job-soak/repeated-small-tier-v1",
+  "effect_set_digest": "fea65bc22803a4e2b68be7c3651251d3a0356994735bc059ec23cf5cdde4521b",
+  "manifest_digest": "aed13f0dddf24595757ed6e35b8517487c58edb4147c682a6622a875d81cc1c1",
+  "aggregate_effect_digest": "b71411151b595eb4ce9e9bb7747e4323982bf339822cf61cf7b0e50576c6b654",
+  "database": "PostgreSQL",
+  "environment": {
+    "cpu_count": 16,
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "python": "3.14.6"
+  },
+  "backpressure": {
+    "profile_id": "postgres-durable-job-load/backpressure-tier-v1",
+    "workers": 8,
+    "tenants": 4,
+    "jobs": 64,
+    "partitions_per_job": 4,
+    "committed_partition_effects": 256,
+    "duplicate_partition_effects": 0,
+    "final_queue_depth": 0,
+    "final_running_depth": 0,
+    "observed_max_queue_depth": 4,
+    "rejected_attempts": 20,
+    "observed_runtime_seconds": 1.3721,
+    "effect_set_digest": "fea65bc22803a4e2b68be7c3651251d3a0356994735bc059ec23cf5cdde4521b",
+    "manifest_digest": "aed13f0dddf24595757ed6e35b8517487c58edb4147c682a6622a875d81cc1c1"
+  },
+  "soak": {
+    "profile_id": "postgres-durable-job-soak/repeated-small-tier-v1",
+    "iterations": 3,
+    "jobs_per_iteration": 64,
+    "partitions_per_job": 4,
+    "total_jobs": 192,
+    "total_partition_effects": 768,
+    "duplicate_partition_effects": 0,
+    "nonzero_queue_or_running_runs": 0,
+    "observed_runtime_seconds": 10.5113,
+    "effect_digests": [
+      "33075d405dadc74abcf01106038d803659210dda30857a4cea68b4962d54ef1d",
+      "33075d405dadc74abcf01106038d803659210dda30857a4cea68b4962d54ef1d",
+      "33075d405dadc74abcf01106038d803659210dda30857a4cea68b4962d54ef1d"
+    ],
+    "aggregate_effect_digest": "b71411151b595eb4ce9e9bb7747e4323982bf339822cf61cf7b0e50576c6b654"
+  },
+  "limitations": [
+    "Single disposable PostgreSQL host with synthetic tenant lanes and independent local producer/worker connections.",
+    "Observed runtime, queue depth, and rejected attempts are workload observations, not throughput, capacity, or SLO claims.",
+    "Queue HA, automatic failover, host loss, cross-host fairness, RPO/RTO, and production workload diversity remain unverified."
+  ]
+}

@@ -511,7 +511,10 @@ include docs/execution/benchmarks/postgres-durable-job-backpressure-tier-v1.json
 include docs/execution/benchmarks/postgres-durable-job-backpressure-current-2026-08-06.json
 include docs/adr/0340-postgres-durable-job-backpressure-runtime-gate.md
 include docs/execution/benchmarks/postgres-durable-job-soak-current-2026-08-10.json
+include docs/execution/benchmarks/postgres-durable-job-current-2026-08-23.json
+include docs/execution/benchmarks/postgres-durable-job-current-2026-08-23.md
 include docs/adr/0510-postgres-durable-job-repeated-soak.md
+include docs/adr/0584-current-postgres-durable-job-soak-backpressure.md
 include reconforge/benchmark/postgres_outbox_scale.py
 include tests/test_postgres_outbox_scale.py
 include reconforge/benchmark/postgres_grouped_matching_scale.py

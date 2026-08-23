@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-875: Current PostgreSQL durable-job backpressure and repeated soak (2026-08-23)
+
+- With the local PostgreSQL DSN and the non-privileged `reconforge_app` role,
+  `tests/test_postgres_durable_jobs.py -s -q -k
+  "live_postgres_durable_job_soak_profile or
+  live_postgres_durable_job_backpressure_profile"` passed both tests without
+  skips.
+- Backpressure completed 64/64 jobs and 256/256 partition effects, observed a
+  maximum queue depth of four, rejected 20 bounded-submit attempts, and ended
+  with zero queue/running residue. Effect and manifest digests are recorded in
+  the dated JSON artifact.
+- Repeated soak completed three iterations (192/192 jobs, 768/768 effects),
+  with zero duplicate effects, zero non-drained runs, and one identical effect
+  digest across all iterations.
+- Artifact:
+  `docs/execution/benchmarks/postgres-durable-job-current-2026-08-23.json`;
+  SHA-256:
+  `58a0c17824725d472b961b04117bcd9efe1bcf3fb335d5f5dbaff2db7852963e`.
+  This remains single-host synthetic evidence and does not claim distributed
+  queue HA, capacity/SLO, host-loss recovery, RPO/RTO, or production readiness.
+
 ## E-874: Current web client verification and E2E runtime portability (2026-08-23)
 
 - `npm --prefix apps/web ci` completed successfully and npm reported zero

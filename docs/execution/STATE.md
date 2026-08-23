@@ -2,6 +2,19 @@
 
 Updated: 2026-08-23
 
+## E-875 — Current PostgreSQL durable-job backpressure and soak (2026-08-23)
+
+- The live local PostgreSQL run used `reconforge_app` and passed both targeted
+  profiles without skips: backpressure completed 64/64 jobs and 256/256
+  effects with zero duplicates and drained queue/running depth; repeated soak
+  completed 3/3 iterations with 192/192 jobs and 768/768 effects, zero residue,
+  and identical effect digests.
+- The schema-closed report is recorded in
+  `docs/execution/benchmarks/postgres-durable-job-current-2026-08-23.json` and
+  indexed with its SHA-256. This is single-host synthetic evidence only; queue
+  HA, cross-host fairness, capacity/SLO, RPO/RTO, and production operation are
+  not claimed.
+
 ## E-874 — Current web client verification and E2E runtime portability (2026-08-23)
 
 - `npm --prefix apps/web ci` completed with zero reported npm vulnerabilities.

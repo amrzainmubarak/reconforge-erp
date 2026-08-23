@@ -2,6 +2,16 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-862: Current PostgreSQL grouped 500/10K scale profiles (2026-08-23)
+
+- Under the same local PostgreSQL 16.14 image digest and
+  `reconforge_app` non-superuser/non-BYPASSRLS role, the following live tests
+  passed: `test_live_postgres_grouped_matching_500_partition_scale_profile`
+  and `test_live_postgres_grouped_matching_10k_partition_scale_profile`.
+- Both profiles completed with zero failed runs, duplicate result identities,
+  and active runs. Workloads are synthetic and the host is single-node; no
+  throughput, soak, HA/DR, or production capacity claim is made.
+
 ## E-861: Current PostgreSQL grouped matching runtime replay (2026-08-23)
 
 - Command (with a disposable local PostgreSQL service):

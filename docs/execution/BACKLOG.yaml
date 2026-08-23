@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-862
+    priority: P0
+    area: matching
+    title: Refresh live PostgreSQL grouped matching 500/10K scale evidence
+    status: completed
+    depends_on: [E-861]
+    exit_evidence: >-
+      The current PostgreSQL 16.14 service passes the declared 500-partition
+      and 10K-partition grouped scale profiles with zero failed runs, duplicate
+      result identities, or active runs; both are bounded synthetic local Docker
+      measurements under the non-privileged application role.
   - id: E-861
     priority: P0
     area: matching

@@ -2,6 +2,14 @@
 
 Updated: 2026-08-23
 
+## E-862 — Refresh live PostgreSQL grouped 500/10K scale evidence (2026-08-23)
+
+- With the same PostgreSQL 16.14 digest and `reconforge_app` non-superuser
+  role, the live 500-partition and 10K-partition scale tests both passed.
+- The declared profiles reported zero failed runs, duplicate result identities,
+  and active runs. These are bounded local Docker measurements, not throughput
+  sizing or production SLO evidence.
+
 ## E-861 — Refresh live PostgreSQL grouped matching replay evidence (2026-08-23)
 
 - Runtime command passed with PostgreSQL 16.14 image digest

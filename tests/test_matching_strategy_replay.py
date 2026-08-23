@@ -48,3 +48,4 @@ def test_postgres_worker_projection_matches_direct_strategy_digests() -> None:
     assert profile.parity_count == 8
     assert len(profile.profile_digest) == 64
     assert all(item.parity_verified for item in profile.observations)
+    assert all(item.permutation_invariant for item in profile.observations)

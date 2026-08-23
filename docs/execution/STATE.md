@@ -6,8 +6,9 @@ Updated: 2026-08-23
 
 - Worker projections now have a consolidated bounded parity profile over five
   grouped and three sequential modes. Every lineage digest equals the direct
-  strategy digest (`8/8`). Profile digest:
-  `738b1d4cf7f3574bb65c6fa2f53dcd760d288a22c6910235366242fadf801101`.
+  strategy digest (`8/8`) and remains invariant under input permutation.
+  Profile digest:
+  `29b72fdf33fbc4405ad898d5049715900ff1ad0766e11e79ea240ce42dfee72d`.
 - This remains adapter-contract evidence; live PostgreSQL runtime and scale
   gates remain open.
 

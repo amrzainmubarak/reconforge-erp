@@ -7,8 +7,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - Added `run_postgres_worker_matching_parity_profile` covering five grouped
   modes and three sequential modes.
 - All `8/8` observations matched the direct strategy `decision_digest` through
-  worker lineage; stable profile digest:
-  `738b1d4cf7f3574bb65c6fa2f53dcd760d288a22c6910235366242fadf801101`.
+  worker lineage and remained equal after input permutation; stable profile
+  digest:
+  `29b72fdf33fbc4405ad898d5049715900ff1ad0766e11e79ea240ce42dfee72d`.
 - Focused replay/parity tests: 3 passed; Ruff, Mypy, and diff checks passed.
   This is in-process adapter evidence only, not live PostgreSQL or production
   runtime evidence.

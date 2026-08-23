@@ -82,10 +82,15 @@ class WorkerParityObservation:
     strategy_id: str
     direct_decision_digest: str
     projected_decision_digests: tuple[str, ...]
+    permutation_invariant: bool
 
     @property
     def parity_verified(self) -> bool:
-        return bool(self.direct_decision_digest) and self.projected_decision_digests == (self.direct_decision_digest,)
+        return (
+            bool(self.direct_decision_digest)
+            and self.projected_decision_digests == (self.direct_decision_digest,)
+            and self.permutation_invariant
+        )
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -93,6 +98,7 @@ class WorkerParityObservation:
             "direct_decision_digest": self.direct_decision_digest,
             "mode": self.mode,
             "projected_decision_digests": list(self.projected_decision_digests),
+            "permutation_invariant": self.permutation_invariant,
             "strategy_id": self.strategy_id,
             "parity_verified": self.parity_verified,
         }
@@ -185,12 +191,24 @@ def run_postgres_worker_matching_parity_profile() -> WorkerParityProfile:
     }
     for mode, (grouped_strategy, rule) in grouped_cases.items():
         context = _worker_context(rule)
+        permuted_context = _worker_context(rule, reverse=True)
         partition = ReconciliationInputPartition("replay-worker", context.left_inputs, context.right_inputs)
         request = _grouped_request(context, partition.partition_key, partition.left_inputs, partition.right_inputs)
         direct = grouped_strategy.execute(request)
         projected = PostgresGroupedMatchingAdapter().iter_partition_results(context)[0]
+        permuted_partition = PostgresGroupedMatchingAdapter().iter_partition_results(permuted_context)[0]
         digests = _lineage_digests(projected.results)
-        observation = WorkerParityObservation("postgres-grouped", mode, grouped_strategy.manifest.id, direct.decision_digest, digests)
+        permuted_request = _grouped_request(
+            permuted_context, "replay-worker", permuted_context.left_inputs, permuted_context.right_inputs
+        )
+        permuted_direct = grouped_strategy.execute(permuted_request)
+        permutation_invariant = (
+            direct.to_payload() == permuted_direct.to_payload()
+            and digests == _lineage_digests(permuted_partition.results)
+        )
+        observation = WorkerParityObservation(
+            "postgres-grouped", mode, grouped_strategy.manifest.id, direct.decision_digest, digests, permutation_invariant
+        )
         if not observation.parity_verified:
             raise AssertionError(f"Grouped worker parity failed for {mode}.")
         observations.append(observation)
@@ -201,13 +219,26 @@ def run_postgres_worker_matching_parity_profile() -> WorkerParityProfile:
         "reversal-pairing": ReversalPairingStrategy(),
     }
     for mode, sequential_strategy in sequential_cases.items():
-        context = _worker_context({"matching_mode": mode, "date_window_days": 5, "amount_tolerance": "0"})
+        rule = {"matching_mode": mode, "date_window_days": 5, "amount_tolerance": "0"}
+        context = _worker_context(rule)
+        permuted_context = _worker_context(rule, reverse=True)
         partition = ReconciliationInputPartition("replay-worker", context.left_inputs, context.right_inputs)
         request = _sequential_request(context, partition.partition_key, partition.left_inputs, partition.right_inputs)
         direct = sequential_strategy.execute(request)
         projected = PostgresSequentialMatchingAdapter().iter_partition_results(context)[0]
+        permuted_partition = PostgresSequentialMatchingAdapter().iter_partition_results(permuted_context)[0]
         digests = _lineage_digests(projected.results)
-        observation = WorkerParityObservation("postgres-sequential", mode, sequential_strategy.manifest.id, direct.decision_digest, digests)
+        permuted_request = _sequential_request(
+            permuted_context, "replay-worker", permuted_context.left_inputs, permuted_context.right_inputs
+        )
+        permuted_direct = sequential_strategy.execute(permuted_request)
+        permutation_invariant = (
+            direct.to_payload() == permuted_direct.to_payload()
+            and digests == _lineage_digests(permuted_partition.results)
+        )
+        observation = WorkerParityObservation(
+            "postgres-sequential", mode, sequential_strategy.manifest.id, direct.decision_digest, digests, permutation_invariant
+        )
         if not observation.parity_verified:
             raise AssertionError(f"Sequential worker parity failed for {mode}.")
         observations.append(observation)
@@ -229,12 +260,17 @@ def _lineage_digests(rows: tuple[Mapping[str, object], ...]) -> tuple[str, ...]:
     return tuple(sorted(values))
 
 
-def _worker_context(rule: Mapping[str, object]) -> ReconciliationExecutionContext:
-    left = ({"source_id": "L1", "amount_decimal": "100", "attributes_json": {"date": "2026-08-01", "currency": "USD"}},)
-    right = (
+def _worker_context(rule: Mapping[str, object], *, reverse: bool = False) -> ReconciliationExecutionContext:
+    left: tuple[Mapping[str, object], ...] = (
+        {"source_id": "L1", "amount_decimal": "100", "attributes_json": {"date": "2026-08-01", "currency": "USD"}},
+    )
+    right: tuple[Mapping[str, object], ...] = (
         {"source_id": "R1", "amount_decimal": "40", "attributes_json": {"date": "2026-08-01", "currency": "USD"}},
         {"source_id": "R2", "amount_decimal": "60", "attributes_json": {"date": "2026-08-01", "currency": "USD"}},
     )
+    if reverse:
+        left = tuple(reversed(left))
+        right = tuple(reversed(right))
     return ReconciliationExecutionContext(
         run={"rule_json": dict(rule)},
         left_inputs=left,

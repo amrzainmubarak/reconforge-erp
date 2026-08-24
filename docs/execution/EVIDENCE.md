@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-916: Hosted PostgreSQL/domain-diverse CI gate for current code head (2026-08-24)
+
+- Hosted CI run `32696819965` passed on code head `eb24d519`; the complete
+  Python 3.11/3.12, engine-parity, web, object-storage, PostgreSQL HA/DR,
+  docker-parity, Docker, Security, and CodeQL gates were green.
+- The `server-boundaries` job `97342100366` completed in `17m28s` and passed
+  the live PostgreSQL/Redis boundary matrix, including the 500-partition,
+  homogeneous 10K-partition, and new
+  `test_live_postgres_grouped_matching_10k_domain_diverse_profile` selectors.
+- This is hosted verification for the exact code head only. It does not turn
+  the synthetic domain-diverse run into a throughput, capacity, SLO, soak,
+  provider, posting, write-back, HA/DR, or production-sizing claim.
+
 ## E-915: Current local PostgreSQL 10K-record domain-diverse grouped runtime (2026-08-24)
 
 - PostgreSQL 16.14 with the non-privileged `reconforge_app` role completed

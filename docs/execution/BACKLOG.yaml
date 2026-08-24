@@ -1238,6 +1238,13 @@ tasks:
         allowance error. This remains one-host synthetic runtime evidence,
         not throughput, capacity, soak, provider, posting, write-back, HA/DR,
         or production-sizing evidence; the overall E-1003 exit remains open.
+      - >
+        E-916 records hosted CI `32696819965` green on code head `eb24d519`,
+        including server-boundaries `97342100366` with the 500-partition,
+        homogeneous 10K-partition, and new domain-diverse 10K-record selectors.
+        This closes hosted verification for that exact code head only; the
+        overall E-1003 exit remains open and no capacity, provider, posting,
+        write-back, HA/DR, or production-sizing claim is permitted.
   - id: E-1004
     priority: P0
     area: connectors

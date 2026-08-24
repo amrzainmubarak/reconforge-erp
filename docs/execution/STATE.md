@@ -2,6 +2,15 @@
 
 Updated: 2026-08-24
 
+## E-916 — Hosted PostgreSQL/domain-diverse CI gate for current code head (2026-08-24)
+
+- Hosted CI `32696819965` is green on `eb24d519`; server-boundaries
+  `97342100366` completed in 17m28s with the live PostgreSQL/Redis matrix,
+  including the new domain-diverse 10K-record selector.
+- This closes hosted verification for the exact code head only. It does not
+  close E-1003 or widen local synthetic evidence into capacity, provider,
+  posting, write-back, HA/DR, or production readiness.
+
 ## E-915 — Current local PostgreSQL 10K-record domain-diverse grouped runtime (2026-08-24)
 
 - The domain-diverse PostgreSQL profile completed 250 runs, 2,500 partitions,

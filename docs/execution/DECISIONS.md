@@ -5,6 +5,15 @@
 
 ## Decisions
 
+### D-967: Record hosted verification for the domain-diverse gate
+
+E-916 records hosted CI `32696819965` and server-boundaries job
+`97342100366` passing on code head `eb24d519`, including the new domain-diverse
+PostgreSQL selector. The exact-head result verifies integration with the
+hosted server boundary but does not promote synthetic runtime observations to
+throughput, capacity, provider interoperability, posting, write-back, HA/DR,
+or production-sizing claims.
+
 ### D-966: Retain domain-diverse PostgreSQL 10K runtime as bounded evidence
 
 E-915 retains a six-shape, 10,000-record PostgreSQL grouped-matching run as

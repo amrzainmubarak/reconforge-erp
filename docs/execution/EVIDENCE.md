@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-914: Hosted full CI cycle for current evidence head (2026-08-24)
+
+- Hosted CI run `32682775174` passed on head `1be76bdd`; its
+  `server-boundaries` job `97303290224` completed successfully at
+  `02:40:44Z` after the live PostgreSQL/Redis boundary matrix.
+- The same head also passed Docker `32682775164`, Security `32682775187`, and
+  CodeQL `32682775218`. The aggregate CI jobs for Python 3.11/3.12,
+  engine-parity, web, object-storage, PostgreSQL HA/DR, and docker-parity all
+  completed successfully.
+- This closes hosted verification for this exact evidence head only. It does
+  not convert synthetic runtime observations into production capacity,
+  compliance, certification, or HA/DR claims.
+
 ## E-913: Hosted full CI cycle for current evidence head (2026-08-24)
 
 - Hosted CI run `32680807591` passed on head `9771d7cc`; its

@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-08-23"
+updated_at: "2026-08-24"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -1221,6 +1221,11 @@ tasks:
         CodeQL, both Python versions, engine parity, web, object storage,
         PostgreSQL HA/DR, and docker parity. This closes hosted verification
         for that exact head only; the overall E-1003 exit remains open.
+      - E-914 records hosted CI `32682775174` green on the current docs head
+        `1be76bdd`, including server-boundaries job `97303290224` and the
+        Docker, Security, and CodeQL workflows for the same commit. This
+        confirms the evidence documentation change is CI-clean; the overall
+        E-1003 exit remains open.
   - id: E-1004
     priority: P0
     area: connectors

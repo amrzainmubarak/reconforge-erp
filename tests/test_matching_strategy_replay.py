@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from reconforge.benchmark.matching_strategy_replay import (
     MatchingStrategyReplayProfile,
     run_matching_strategy_replay_profile,
+    run_postgres_domain_diverse_worker_parity_profile,
     run_postgres_worker_matching_parity_profile,
 )
 from reconforge.db import connect, run_migrations
@@ -49,3 +51,40 @@ def test_postgres_worker_projection_matches_direct_strategy_digests() -> None:
     assert len(profile.profile_digest) == 64
     assert all(item.parity_verified for item in profile.observations)
     assert all(item.permutation_invariant for item in profile.observations)
+
+
+def test_postgres_domain_diverse_worker_projection_matches_direct_strategy_digests() -> None:
+    profile = run_postgres_domain_diverse_worker_parity_profile()
+    assert profile.profile_id == "postgres-worker-domain-diverse-parity-v1"
+    assert profile.parity_count == 6
+    assert [item.mode for item in profile.observations] == [
+        "domain-one-to-many",
+        "domain-many-to-one",
+        "domain-many-to-many",
+        "domain-portfolio-net",
+        "domain-fx-many-to-many",
+        "domain-portfolio-partial",
+    ]
+    assert len(profile.profile_digest) == 64
+    assert all(item.parity_verified for item in profile.observations)
+    assert all(item.permutation_invariant for item in profile.observations)
+
+
+def test_postgres_domain_diverse_worker_parity_is_repeatable() -> None:
+    assert (
+        run_postgres_domain_diverse_worker_parity_profile().to_payload()
+        == run_postgres_domain_diverse_worker_parity_profile().to_payload()
+    )
+
+
+def test_postgres_domain_diverse_worker_parity_artifact_is_packaged() -> None:
+    manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
+    assert "include docs/execution/benchmarks/postgres-worker-domain-diverse-parity-v1.json" in manifest
+    assert "include docs/adr/0620-postgres-worker-domain-diverse-parity.md" in manifest
+
+
+def test_postgres_domain_diverse_worker_parity_artifact_matches_profile() -> None:
+    artifact = json.loads(
+        Path("docs/execution/benchmarks/postgres-worker-domain-diverse-parity-v1.json").read_text(encoding="utf-8")
+    )
+    assert artifact == run_postgres_domain_diverse_worker_parity_profile().to_payload()

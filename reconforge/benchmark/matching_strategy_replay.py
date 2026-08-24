@@ -251,6 +251,162 @@ def run_postgres_worker_matching_parity_profile() -> WorkerParityProfile:
     )
 
 
+def run_postgres_domain_diverse_worker_parity_profile() -> WorkerParityProfile:
+    """Compare grouped worker projections for six domain-diverse shapes.
+
+    The profile is an in-process provider-neutral contract check.  It uses the
+    same bounded cardinality, fee/netting, FX, and partial-settlement shapes as
+    the PostgreSQL domain-diverse runtime profile, but deliberately does not
+    connect to PostgreSQL or make a capacity claim.
+    """
+
+    observations: list[WorkerParityObservation] = []
+    strategy = GroupedSubsetSumStrategy()
+    adapter = PostgresGroupedMatchingAdapter()
+    for mode in _DOMAIN_DIVERSE_PARITY_MODES:
+        rule, left, right = _domain_worker_case(mode)
+        context = _worker_context_from_records(rule, left, right)
+        partition = ReconciliationInputPartition("replay-domain-diverse", context.left_inputs, context.right_inputs)
+        request = _grouped_request(context, partition.partition_key, partition.left_inputs, partition.right_inputs)
+        direct = strategy.execute(request)
+        projected = adapter.iter_partition_results(context)[0]
+        digests = _lineage_digests(projected.results)
+        permutation_invariant = True
+        for reverse_left, reverse_right in ((True, False), (False, True), (True, True)):
+            permuted_context = _worker_context_from_records(
+                rule,
+                left,
+                right,
+                reverse_left=reverse_left,
+                reverse_right=reverse_right,
+            )
+            permuted_partition = adapter.iter_partition_results(permuted_context)[0]
+            permuted_request = _grouped_request(
+                permuted_context,
+                "replay-domain-diverse",
+                permuted_context.left_inputs,
+                permuted_context.right_inputs,
+            )
+            permuted_direct = strategy.execute(permuted_request)
+            permutation_invariant = permutation_invariant and (
+                direct.to_payload() == permuted_direct.to_payload()
+                and digests == _lineage_digests(permuted_partition.results)
+            )
+        observation = WorkerParityObservation(
+            "postgres-grouped",
+            mode,
+            strategy.manifest.id,
+            direct.decision_digest,
+            digests,
+            permutation_invariant,
+        )
+        if not observation.parity_verified:
+            raise AssertionError(f"Domain-diverse grouped worker parity failed for {mode}.")
+        observations.append(observation)
+    payload = canonical_payload([item.to_payload() for item in observations])
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return WorkerParityProfile(
+        profile_id="postgres-worker-domain-diverse-parity-v1",
+        observations=tuple(observations),
+        profile_digest=hashlib.sha256(encoded.encode("ascii")).hexdigest(),
+    )
+
+
+_DOMAIN_DIVERSE_PARITY_MODES = (
+    "domain-one-to-many",
+    "domain-many-to-one",
+    "domain-many-to-many",
+    "domain-portfolio-net",
+    "domain-fx-many-to-many",
+    "domain-portfolio-partial",
+)
+
+
+def _domain_worker_case(
+    mode: str,
+) -> tuple[dict[str, object], tuple[Mapping[str, object], ...], tuple[Mapping[str, object], ...]]:
+    """Return one explicit synthetic domain-diverse worker fixture."""
+
+    def record(side: str, record_id: str, amount: str, currency: str, fee: str = "0") -> Mapping[str, object]:
+        return {
+            "source_id": f"{mode}-{side.lower()}-{record_id}",
+            "amount_decimal": amount,
+            "date_value": "2026-08-01",
+            "currency_code": currency,
+            "attributes_json": {"fee": fee},
+        }
+
+    left: tuple[Mapping[str, object], ...]
+    right: tuple[Mapping[str, object], ...]
+    strategy_mode: str
+    if mode == "domain-one-to-many":
+        left = (record("Left", "l1", "100", "USD"),)
+        right = (
+            record("Right", "r1", "30", "USD"),
+            record("Right", "r2", "30", "USD"),
+            record("Right", "r3", "40", "USD"),
+        )
+        strategy_mode = "one-to-many"
+    elif mode == "domain-many-to-one":
+        left = (
+            record("Left", "l1", "30", "USD"),
+            record("Left", "l2", "30", "USD"),
+            record("Left", "l3", "40", "USD"),
+        )
+        right = (record("Right", "r1", "100", "USD"),)
+        strategy_mode = "many-to-one"
+    elif mode == "domain-many-to-many":
+        left = (record("Left", "l1", "30", "USD"), record("Left", "l2", "70", "USD"))
+        right = (record("Right", "r1", "25", "USD"), record("Right", "r2", "75", "USD"))
+        strategy_mode = "many-to-many"
+    elif mode == "domain-portfolio-net":
+        left = (record("Left", "l1", "60", "USD", "5"), record("Left", "l2", "40", "USD", "5"))
+        right = (record("Right", "r1", "45", "USD"), record("Right", "r2", "45", "USD"))
+        strategy_mode = "portfolio"
+    elif mode == "domain-fx-many-to-many":
+        left = (record("Left", "l1", "50", "EUR"), record("Left", "l2", "50", "EUR"))
+        right = (record("Right", "r1", "100", "USD"), record("Right", "r2", "100", "USD"))
+        strategy_mode = "many-to-many"
+    elif mode == "domain-portfolio-partial":
+        left = (record("Left", "l1", "70", "USD"), record("Left", "l2", "30", "USD"))
+        right = (record("Right", "r1", "60", "USD"), record("Right", "r2", "20", "USD"))
+        strategy_mode = "portfolio"
+    else:
+        raise ValueError(f"unsupported domain-diverse parity mode: {mode}")
+
+    rule: dict[str, object] = {
+        "grouped_matching_mode": strategy_mode,
+        "date_window_days": 0,
+        "amount_tolerance": "0",
+    }
+    if mode in {"domain-portfolio-net", "domain-portfolio-partial"}:
+        rule.update(
+            {
+                "netting_mode": "net",
+                "left_fee_field": "fee",
+                "right_fee_field": "fee",
+                "allow_partial_settlement": mode == "domain-portfolio-partial",
+            }
+        )
+    if mode == "domain-fx-many-to-many":
+        rule.update(
+            {
+                "target_currency": "USD",
+                "fx_rates": (
+                    {
+                        "base_currency": "EUR",
+                        "quote_currency": "USD",
+                        "rate": "2",
+                        "rate_type": "spot",
+                        "source": "synthetic-domain-parity",
+                        "effective_at": "2026-08-01",
+                    },
+                ),
+            }
+        )
+    return rule, left, right
+
+
 def _lineage_digests(rows: tuple[Mapping[str, object], ...]) -> tuple[str, ...]:
     values: set[str] = set()
     for row in rows:
@@ -278,6 +434,29 @@ def _worker_context(rule: Mapping[str, object], *, reverse: bool = False) -> Rec
         heartbeat=lambda _progress: {},
         cancellation_requested=lambda: False,
         partition_supplier=lambda: (ReconciliationInputPartition("replay-worker", left, right),),
+    )
+
+
+def _worker_context_from_records(
+    rule: Mapping[str, object],
+    left: tuple[Mapping[str, object], ...],
+    right: tuple[Mapping[str, object], ...],
+    *,
+    reverse: bool = False,
+    reverse_left: bool = False,
+    reverse_right: bool = False,
+) -> ReconciliationExecutionContext:
+    """Build a worker context from explicit canonical synthetic records."""
+
+    ordered_left = tuple(reversed(left)) if reverse or reverse_left else left
+    ordered_right = tuple(reversed(right)) if reverse or reverse_right else right
+    return ReconciliationExecutionContext(
+        run={"rule_json": dict(rule)},
+        left_inputs=ordered_left,
+        right_inputs=ordered_right,
+        heartbeat=lambda _progress: {},
+        cancellation_requested=lambda: False,
+        partition_supplier=lambda: (ReconciliationInputPartition("replay-domain-diverse", ordered_left, ordered_right),),
     )
 
 

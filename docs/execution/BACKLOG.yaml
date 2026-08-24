@@ -1276,6 +1276,15 @@ tasks:
         integration evidence only; E-1003 remains open for broader parity,
         live-rate/provider, capacity/soak, posting/write-back, HA/DR, and
         production evidence.
+      - >
+        E-921 adds the additive `postgres-worker-domain-diverse-parity-v1`
+        profile over six grouped shapes: one-to-many, many-to-one, true
+        many-to-many, fee/net-aware portfolio, FX-aware many-to-many, and
+        partial settlement. All 6/6 direct/projected digests match and remain
+        permutation-invariant; the artifact is indexed with `partial` status
+        and its deterministic profile digest. This closes an in-process
+        adapter-parity gap only; live PostgreSQL replay, cross-engine parity,
+        capacity/soak, provider, posting, and production evidence remain open.
   - id: E-1004
     priority: P0
     area: connectors

@@ -18,7 +18,7 @@ def test_benchmark_evidence_index_verifies_checked_in_artifacts() -> None:
     report = verify_benchmark_index(INDEX)
 
     assert report["index_id"] == "benchmark-evidence-index-v1"
-    assert len(report["verified_entries"]) == 13
+    assert len(report["verified_entries"]) == 14
     assert {entry["status"] for entry in report["verified_entries"]} == {"verified", "partial"}
     assert all(entry["digests"] for entry in report["verified_entries"])
 
@@ -36,6 +36,21 @@ def test_benchmark_evidence_index_keeps_domain_diverse_postgres_claim_bounded() 
     assert entry["digests"] == {
         "effect_set_digest": "78168229e37a78bb859e664a75098890e0671f9a502c8f6f04c30380ee9b3681",
         "manifest_digest": "c4d3461885fd3626b66a787caf8b3800706d1505d84169375885cc001e4a133a",
+    }
+
+
+def test_benchmark_evidence_index_keeps_domain_diverse_worker_parity_bounded() -> None:
+    report = verify_benchmark_index(INDEX)
+
+    entry = next(
+        item
+        for item in report["verified_entries"]
+        if item["profile_id"] == "postgres-worker-domain-diverse-parity-v1"
+    )
+
+    assert entry["status"] == "partial"
+    assert entry["digests"] == {
+        "profile_digest": "0b0e875542be3a3d6d56fc7c3bf03e74dae21868ea0b55c9071c867246a57feb",
     }
 
 

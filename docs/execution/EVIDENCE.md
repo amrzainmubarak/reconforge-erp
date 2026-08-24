@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-921: Domain-diverse PostgreSQL worker projection parity profile (2026-08-24)
+
+- Added `postgres-worker-domain-diverse-parity-v1`, an in-process synthetic
+  profile covering six grouped shapes: one-to-many, many-to-one, true
+  many-to-many, fee/net-aware portfolio, FX-aware many-to-many, and partial
+  settlement portfolio.
+- All `6/6` observations matched the direct
+  `bounded-grouped-subset-sum` decision digest and remained invariant under
+  left/right record permutation. The profile digest is
+  `0b0e875542be3a3d6d56fc7c3bf03e74dae21868ea0b55c9071c867246a57feb`; the
+  checked-in artifact is indexed with canonical-LF SHA-256
+  `6535bff126ce90b285c0dbe9d7375d2af776a6bf0248dd078f5c586e9b69c6fa`.
+- The focused replay suite passes `7/7`; Ruff and Mypy pass. ADR 0620 records
+  the additive profile and keeps the existing eight-case v1 profile unchanged.
+  This is in-process adapter evidence only, not live PostgreSQL execution,
+  cross-engine parity, capacity, provider, or production evidence.
+
 ## E-920: Hosted exact-head verification after PostgreSQL adapter input-integrity fixes (2026-08-24)
 
 - Hosted CI run `32713536013` passed on the exact code head

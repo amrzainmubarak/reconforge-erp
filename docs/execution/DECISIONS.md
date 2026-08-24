@@ -5,6 +5,17 @@
 
 ## Decisions
 
+### D-972: Add an additive domain-diverse PostgreSQL worker parity profile
+
+E-921 adds `postgres-worker-domain-diverse-parity-v1` for six grouped domain
+shapes and requires direct/projected digest equality plus permutation
+invariance. The profile and JSON artifact are deterministic and indexed as
+`partial`; the existing eight-case `postgres-worker-strategy-parity-v1`
+profile remains unchanged. This is in-process adapter evidence only and does
+not widen claims to live PostgreSQL, cross-engine behavior, capacity,
+providers, posting, or production readiness. The addition is reversible and
+requires a new profile version if its fixture inventory changes.
+
 ### D-971: Record exact-head hosted verification for PostgreSQL adapter integrity
 
 E-920 records hosted CI run `32713536013` and server-boundaries job

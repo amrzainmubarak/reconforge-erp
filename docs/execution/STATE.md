@@ -2,6 +2,16 @@
 
 Updated: 2026-08-24
 
+## E-921 — Domain-diverse PostgreSQL worker projection parity profile (2026-08-24)
+
+- The additive `postgres-worker-domain-diverse-parity-v1` profile covers six
+  grouped domain shapes and verifies `6/6` direct/projected decision-digest
+  matches plus permutation invariance. Its deterministic profile digest and
+  indexed artifact are retained.
+- Focused replay tests, Ruff, and Mypy pass. This closes only an in-process
+  worker-adapter parity gap; live PostgreSQL replay, cross-engine parity,
+  capacity/soak, providers, posting, and production evidence remain open.
+
 ## E-920 — Hosted exact-head verification after PostgreSQL adapter input-integrity fixes (2026-08-24)
 
 - Hosted CI run `32713536013` is green on exact head

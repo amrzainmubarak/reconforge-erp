@@ -111,6 +111,18 @@
       "workload_family": "postgresql_matching"
     },
     {
+      "artifact": "docs/execution/benchmarks/postgres-worker-domain-diverse-parity-v1.json",
+      "artifact_sha256": "6535bff126ce90b285c0dbe9d7375d2af776a6bf0248dd078f5c586e9b69c6fa",
+      "claim_boundary": "In-process synthetic PostgreSQL worker-adapter parity observation across six grouped domain shapes; not live PostgreSQL execution, distributed capacity, provider I/O, or production sizing.",
+      "digest_fields": [
+        "profile_digest"
+      ],
+      "engine": "postgresql-grouped-worker-adapter",
+      "profile_id": "postgres-worker-domain-diverse-parity-v1",
+      "status": "partial",
+      "workload_family": "postgresql_matching"
+    },
+    {
       "artifact": "docs/execution/benchmarks/postgres-durable-job-100k-effects-v1.json",
       "artifact_sha256": "9cc7fce2cde17881528c60579112e18dbcc2fde1b9c62a1941fea010a2fd6181",
       "claim_boundary": "Single-host synthetic PostgreSQL durable-job effect observation; not queue HA, host loss, cross-host fairness, RPO/RTO, or production sizing.",

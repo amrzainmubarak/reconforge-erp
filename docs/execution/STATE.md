@@ -2,6 +2,15 @@
 
 Updated: 2026-08-24
 
+## E-913 — Hosted full CI cycle for current evidence head (2026-08-24)
+
+- CI run `32680807591` is green on head `9771d7cc`; server-boundaries job
+  `97298199908` passed the live boundary matrix, and Docker/Security/CodeQL
+  are green (`32680807558`, `32680807552`, `32680807547`).
+- Hosted verification is now complete for this exact head. Broader product
+  readiness, production sizing, compliance, and independent assurance remain
+  outside this evidence.
+
 ## E-912 — Current local PostgreSQL grouped 10K runtime (2026-08-24)
 
 - The current local PostgreSQL 16.14 profile completed 1,000 runs, 10,000

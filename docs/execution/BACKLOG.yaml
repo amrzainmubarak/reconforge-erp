@@ -1216,6 +1216,11 @@ tasks:
         rows, zero duplicates/failures/active runs, and 200 runs per mode.
         This remains one-host synthetic runtime evidence, not a capacity or
         production claim.
+      - E-913 records hosted CI `32680807591` green on head `9771d7cc`,
+        including server-boundaries job `97298199908`, Docker, Security,
+        CodeQL, both Python versions, engine parity, web, object storage,
+        PostgreSQL HA/DR, and docker parity. This closes hosted verification
+        for that exact head only; the overall E-1003 exit remains open.
   - id: E-1004
     priority: P0
     area: connectors

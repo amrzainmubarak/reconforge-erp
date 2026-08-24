@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-913: Hosted full CI cycle for current evidence head (2026-08-24)
+
+- Hosted CI run `32680807591` passed on head `9771d7cc`; its
+  `server-boundaries` job `97298199908` completed successfully after the live
+  PostgreSQL/Redis boundary matrix, and the aggregate CI conclusion is
+  `success`.
+- The same head also passed Docker `32680807558`, Security `32680807552`, and
+  CodeQL `32680807547`, alongside Python 3.11/3.12, engine-parity,
+  object-storage, web, postgres-ha-dr, and docker-parity jobs.
+- This closes hosted verification for this exact evidence head only. It does
+  not convert synthetic runtime observations into production capacity,
+  compliance, certification, or HA/DR claims.
+
 ## E-912: Current local PostgreSQL grouped 10K runtime (2026-08-24)
 
 - PostgreSQL 16.14 with the non-privileged `reconforge_app` role completed

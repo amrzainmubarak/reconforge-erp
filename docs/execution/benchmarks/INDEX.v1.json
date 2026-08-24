@@ -98,6 +98,19 @@
       "workload_family": "postgresql_matching"
     },
     {
+      "artifact": "docs/execution/benchmarks/postgres-grouped-matching-10k-domain-diverse-current-2026-08-24.json",
+      "artifact_sha256": "7cb954af66ede3d19296907d7beb595fba12a81a004a8039cb088b7bf13c9720",
+      "claim_boundary": "Single-host synthetic PostgreSQL domain-diverse grouped correctness observation; not cross-engine parity, cross-host fairness, queue HA, failover, provider I/O, or production sizing.",
+      "digest_fields": [
+        "effect_set_digest",
+        "manifest_digest"
+      ],
+      "engine": "postgresql-grouped-strategy",
+      "profile_id": "postgres-grouped-matching/10k-domain-diverse-v1",
+      "status": "partial",
+      "workload_family": "postgresql_matching"
+    },
+    {
       "artifact": "docs/execution/benchmarks/postgres-durable-job-100k-effects-v1.json",
       "artifact_sha256": "9cc7fce2cde17881528c60579112e18dbcc2fde1b9c62a1941fea010a2fd6181",
       "claim_boundary": "Single-host synthetic PostgreSQL durable-job effect observation; not queue HA, host loss, cross-host fairness, RPO/RTO, or production sizing.",

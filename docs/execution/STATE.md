@@ -2,6 +2,15 @@
 
 Updated: 2026-08-24
 
+## E-917 — Index current PostgreSQL domain-diverse artifact (2026-08-24)
+
+- The current domain-diverse PostgreSQL JSON artifact is now included in
+  `benchmark-evidence-index-v1` with canonical-LF SHA-256
+  `7cb954af66ede3d19296907d7beb595fba12a81a004a8039cb088b7bf13c9720`.
+- The verifier covers 13 selected artifacts, and the new entry remains
+  `partial`; this improves provenance without converting one-host synthetic
+  runtime evidence into cross-engine, capacity, or production evidence.
+
 ## E-916 — Hosted PostgreSQL/domain-diverse CI gate for current code head (2026-08-24)
 
 - Hosted CI `32696819965` is green on `eb24d519`; server-boundaries

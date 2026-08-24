@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-917: Index current PostgreSQL domain-diverse artifact (2026-08-24)
+
+- Added `postgres-grouped-matching-10k-domain-diverse-current-2026-08-24.json`
+  to `benchmark-evidence-index-v1` with canonical-LF SHA-256
+  `7cb954af66ede3d19296907d7beb595fba12a81a004a8039cb088b7bf13c9720`.
+- The index entry allows only `effect_set_digest` and `manifest_digest`,
+  declares `postgresql_matching`, and remains `partial` with explicit
+  single-host/synthetic/non-capacity boundaries.
+- `verify_benchmark_index` now verifies 13 selected artifacts; no runtime or
+  public claim was widened. ADR 0617 records the provenance decision.
+
 ## E-916: Hosted PostgreSQL/domain-diverse CI gate for current code head (2026-08-24)
 
 - Hosted CI run `32696819965` passed on code head `eb24d519`; the complete

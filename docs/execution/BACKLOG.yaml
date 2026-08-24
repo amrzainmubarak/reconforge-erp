@@ -1245,6 +1245,13 @@ tasks:
         This closes hosted verification for that exact code head only; the
         overall E-1003 exit remains open and no capacity, provider, posting,
         write-back, HA/DR, or production-sizing claim is permitted.
+      - >
+        E-917 indexes the current PostgreSQL domain-diverse JSON artifact in
+        `benchmark-evidence-index-v1` with its canonical-LF SHA-256, digest
+        allowlist, `partial` status, and explicit single-host synthetic claim
+        boundary. The verifier now covers 13 selected artifacts; E-1003 still
+        remains open for cross-engine parity, soak, and broader performance
+        evidence.
   - id: E-1004
     priority: P0
     area: connectors

@@ -18,9 +18,25 @@ def test_benchmark_evidence_index_verifies_checked_in_artifacts() -> None:
     report = verify_benchmark_index(INDEX)
 
     assert report["index_id"] == "benchmark-evidence-index-v1"
-    assert len(report["verified_entries"]) == 12
+    assert len(report["verified_entries"]) == 13
     assert {entry["status"] for entry in report["verified_entries"]} == {"verified", "partial"}
     assert all(entry["digests"] for entry in report["verified_entries"])
+
+
+def test_benchmark_evidence_index_keeps_domain_diverse_postgres_claim_bounded() -> None:
+    report = verify_benchmark_index(INDEX)
+
+    entry = next(
+        item
+        for item in report["verified_entries"]
+        if item["profile_id"] == "postgres-grouped-matching/10k-domain-diverse-v1"
+    )
+
+    assert entry["status"] == "partial"
+    assert entry["digests"] == {
+        "effect_set_digest": "78168229e37a78bb859e664a75098890e0671f9a502c8f6f04c30380ee9b3681",
+        "manifest_digest": "c4d3461885fd3626b66a787caf8b3800706d1505d84169375885cc001e4a133a",
+    }
 
 
 def test_benchmark_verifier_script_prefers_checked_out_source_tree() -> None:

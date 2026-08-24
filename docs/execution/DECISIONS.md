@@ -5,6 +5,16 @@
 
 ## Decisions
 
+### D-968: Index the current PostgreSQL domain-diverse artifact
+
+E-917 adds the current PostgreSQL domain-diverse JSON report to
+`benchmark-evidence-index-v1` with canonical-LF hash
+`7cb954af66ede3d19296907d7beb595fba12a81a004a8039cb088b7bf13c9720`, the
+two emitted digest fields, and `partial` status. The selected-artifact verifier
+now covers 13 entries. This is a provenance/claim-boundary improvement only;
+it does not create cross-engine, capacity, provider, HA/DR, or production
+evidence. ADR 0617 records the reversible decision.
+
 ### D-967: Record hosted verification for the domain-diverse gate
 
 E-916 records hosted CI `32696819965` and server-boundaries job

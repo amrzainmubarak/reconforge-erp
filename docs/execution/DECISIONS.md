@@ -5,6 +5,17 @@
 
 ## Decisions
 
+### D-971: Record exact-head hosted verification for PostgreSQL adapter integrity
+
+E-920 records hosted CI run `32713536013` and server-boundaries job
+`97392182901` passing on the exact head
+`21697476d4ea2f426ebe20a836d24c27435f8131` after E-918 canonical-zero
+precedence and E-919 explicit-currency changes. The result is retained as
+hosted integration evidence only; it does not widen claims to providers,
+capacity, production, compliance, or certification. The decision is
+reversible by correcting the evidence record if the hosted result is later
+invalidated.
+
 ### D-970: Require explicit currency in PostgreSQL matching adapters
 
 E-919 removes the implicit `USD` fallback from grouped and sequential

@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-920: Hosted exact-head verification after PostgreSQL adapter input-integrity fixes (2026-08-24)
+
+- Hosted CI run `32713536013` passed on the exact code head
+  `21697476d4ea2f426ebe20a836d24c27435f8131`; every job was green,
+  including Python 3.11/3.12, engine-parity lower/current bounds, web,
+  object-storage, PostgreSQL HA/DR, docker-parity, Docker, Security, CodeQL,
+  and the live `server-boundaries` matrix.
+- The `server-boundaries` job `97392182901` ran from `09:57:49Z` to
+  `10:17:52Z` (`20m03s`) and therefore verifies the current grouped/sequential
+  PostgreSQL adapter code in the hosted PostgreSQL/Redis boundary environment,
+  including E-918 canonical-zero precedence and E-919 explicit-currency refusal.
+- This is exact-head hosted integration evidence only. It does not establish
+  live provider interoperability, exchange-rate correctness beyond the tested
+  fixtures, cross-host capacity, soak/SLO behavior, posting, write-back,
+  HA/DR effectiveness, compliance, certification, or production readiness.
+
 ## E-919: PostgreSQL matching adapters require explicit currency (2026-08-24)
 
 - Removed the implicit `USD` fallback from grouped and sequential PostgreSQL

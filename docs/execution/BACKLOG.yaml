@@ -1266,6 +1266,16 @@ tasks:
         values remain supported. Focused regression suites, Ruff, and Mypy
         pass; E-1003 remains open for live-rate, parity, scale, provider, and
         production evidence.
+      - >
+        E-920 records hosted CI `32713536013` green on exact head
+        `21697476d4ea2f426ebe20a836d24c27435f8131`, including the complete
+        Python, engine-parity, web, object-storage, PostgreSQL HA/DR,
+        docker-parity, Docker, Security, CodeQL, and live `server-boundaries`
+        gates. The server-boundaries job `97392182901` passed in 20m03s after
+        the E-918/E-919 adapter integrity fixes. This is exact-head hosted
+        integration evidence only; E-1003 remains open for broader parity,
+        live-rate/provider, capacity/soak, posting/write-back, HA/DR, and
+        production evidence.
   - id: E-1004
     priority: P0
     area: connectors

@@ -2,6 +2,17 @@
 
 Updated: 2026-08-24
 
+## E-920 — Hosted exact-head verification after PostgreSQL adapter input-integrity fixes (2026-08-24)
+
+- Hosted CI run `32713536013` is green on exact head
+  `21697476d4ea2f426ebe20a836d24c27435f8131`; all aggregate, security,
+  Docker, engine-parity, PostgreSQL HA/DR, and web jobs passed.
+- `server-boundaries` job `97392182901` passed in `20m03s`, covering the live
+  PostgreSQL/Redis matrix for the current grouped/sequential adapter boundary.
+- This confirms exact-head hosted integration only. E-1003 remains open for
+  broader matching parity, live-rate/provider evidence, capacity/soak,
+  posting/write-back, and production assurance.
+
 ## E-919 — PostgreSQL matching adapters require explicit currency (2026-08-24)
 
 - Grouped and sequential PostgreSQL adapters now fail closed when no explicit

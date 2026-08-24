@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-912: Current local PostgreSQL grouped 10K runtime (2026-08-24)
+
+- PostgreSQL 16.14 with the non-privileged `reconforge_app` role completed
+  `1000/1000` runs, `10000/10000` partitions, and `24000/24000` expected
+  result rows across all five grouped modes. Each mode completed 200 runs;
+  duplicate identities, failed runs, and final active runs were all zero.
+- Observed runtime was `220.3637s` on Windows 11/Python 3.14.6/AMD64 with 16
+  workers. Effect digest:
+  `1276abceb444abdf83ca62ba13a2d37f039a5326e8d7b29ed267215b5d3294b2`.
+- The machine-readable report and benchmark note are included in the source
+  distribution. This is one-host synthetic runtime evidence, not throughput,
+  capacity, soak, HA/DR, or production evidence.
+
 ## E-911: Current local PostgreSQL grouped 500-partition runtime (2026-08-23)
 
 - On PostgreSQL 16.14 with the non-privileged `reconforge_app` role, the live

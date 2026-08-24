@@ -536,6 +536,9 @@ include reconforge/benchmark/postgres_grouped_matching_scale.py
 include tests/test_postgres_grouped_matching_scale.py
 include docs/execution/benchmarks/postgres-grouped-matching-10k-partitions-v1.md
 include docs/execution/benchmarks/postgres-grouped-matching-10k-partitions-v1.json
+include docs/execution/benchmarks/postgres-grouped-matching-10k-current-2026-08-24.md
+include docs/execution/benchmarks/postgres-grouped-matching-10k-current-2026-08-24.json
+include docs/adr/0615-local-postgres-grouped-10k-runtime-evidence.md
 include docs/adr/0341-postgres-grouped-matching-10k-connection-pool.md
 include docs/strategy/official-source-competitive-matrix-2026-08-05.md
 include docs/adr/0342-official-source-competitive-matrix.md

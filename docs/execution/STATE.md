@@ -2,6 +2,15 @@
 
 Updated: 2026-08-23
 
+## E-912 — Current local PostgreSQL grouped 10K runtime (2026-08-24)
+
+- The current local PostgreSQL 16.14 profile completed 1,000 runs, 10,000
+  partitions, and 24,000 expected rows across five grouped modes, with zero
+  duplicates/failures/active runs and 200 runs per mode. Runtime was 220.3637s
+  on the declared host; JSON and Markdown artifacts are retained.
+- This advances bounded local runtime evidence only. Capacity, soak,
+  cross-host behavior, HA/DR, and hosted publication remain open.
+
 ## E-911 — Current local PostgreSQL grouped 500-partition runtime (2026-08-23)
 
 - Live local PostgreSQL 16.14 evidence now covers 250 runs / 500 partitions /

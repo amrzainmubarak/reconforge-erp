@@ -1211,6 +1211,11 @@ tasks:
         duplicates/failures/active runs, and 50 runs per mode. This remains
         one-host synthetic runtime evidence, not a capacity or production
         claim.
+      - E-912 records a current local PostgreSQL 16.14 grouped 10K-partition
+        runtime: 1,000/1,000 runs, 10,000/10,000 partitions, 24,000/24,000
+        rows, zero duplicates/failures/active runs, and 200 runs per mode.
+        This remains one-host synthetic runtime evidence, not a capacity or
+        production claim.
   - id: E-1004
     priority: P0
     area: connectors

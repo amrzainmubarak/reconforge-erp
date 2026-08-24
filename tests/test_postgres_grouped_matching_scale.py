@@ -76,6 +76,9 @@ def test_postgres_grouped_matching_scale_artifacts_are_in_source_manifest() -> N
     assert "include docs/adr/0614-local-postgres-grouped-500-runtime-evidence.md" in manifest
     assert "include docs/execution/benchmarks/postgres-grouped-matching-10k-partitions-v1.md" in manifest
     assert "include docs/execution/benchmarks/postgres-grouped-matching-10k-partitions-v1.json" in manifest
+    assert "include docs/execution/benchmarks/postgres-grouped-matching-10k-current-2026-08-24.md" in manifest
+    assert "include docs/execution/benchmarks/postgres-grouped-matching-10k-current-2026-08-24.json" in manifest
+    assert "include docs/adr/0615-local-postgres-grouped-10k-runtime-evidence.md" in manifest
     assert "include docs/adr/0341-postgres-grouped-matching-10k-connection-pool.md" in manifest
     assert "test_live_postgres_grouped_matching_500_partition_scale_profile" in workflow
     assert "test_live_postgres_grouped_matching_10k_partition_scale_profile" in workflow

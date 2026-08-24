@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-919: PostgreSQL matching adapters require explicit currency (2026-08-24)
+
+- Removed the implicit `USD` fallback from grouped and sequential PostgreSQL
+  adapters. Missing or empty currency now raises a typed adapter validation
+  error before strategy execution; present canonical values retain precedence.
+- Focused grouped/sequential suites pass `23/23`; Ruff and Mypy pass for both
+  adapters. This is a request-boundary data-quality contract, not live provider,
+  cross-host, exchange-rate, or production evidence.
+- ADR 0619 records the decision. No schema, API version, matching strategy, or
+  public readiness claim changed.
+
 ## E-918: PostgreSQL matching adapters preserve canonical zero values (2026-08-24)
 
 - Grouped and sequential PostgreSQL adapters now use explicit `None` checks

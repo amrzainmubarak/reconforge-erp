@@ -51,8 +51,11 @@ def _record(value: Mapping[str, Any], *, partition_key: str) -> dict[str, object
     date_fallback = _canonical_value(value, "date", item.get("date", ""))
     date_value = _canonical_value(value, "date_value", date_fallback)
     item["date"] = date_value.isoformat() if hasattr(date_value, "isoformat") else date_value
-    currency_fallback = _canonical_value(value, "currency", item.get("currency", "USD"))
-    item["currency"] = _canonical_value(value, "currency_code", currency_fallback)
+    currency_fallback = _canonical_value(value, "currency", item.get("currency"))
+    currency_value = _canonical_value(value, "currency_code", currency_fallback)
+    if not isinstance(currency_value, str) or not currency_value.strip():
+        raise PostgresSequentialMatchingAdapterError("Sequential PostgreSQL records require an explicit currency.")
+    item["currency"] = currency_value
     item["partition"] = partition_key
     if not source_id or not str(item.get("amount", "")).strip() or not str(item.get("date", "")).strip():
         raise PostgresSequentialMatchingAdapterError("Sequential PostgreSQL records require id, amount, and date.")

@@ -1259,6 +1259,13 @@ tasks:
         over legacy columns and JSON attributes. Focused regression suites,
         Ruff, and Mypy pass; this fixes input integrity but does not close the
         broader E-1003 parity, scale, provider, or production evidence gates.
+      - >
+        E-919 removes the implicit `USD` fallback from grouped and sequential
+        PostgreSQL matching adapters. Missing or empty currency now fails
+        closed before strategy execution, while present canonical/legacy
+        values remain supported. Focused regression suites, Ruff, and Mypy
+        pass; E-1003 remains open for live-rate, parity, scale, provider, and
+        production evidence.
   - id: E-1004
     priority: P0
     area: connectors

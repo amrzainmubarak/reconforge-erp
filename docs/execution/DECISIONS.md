@@ -5,6 +5,15 @@
 
 ## Decisions
 
+### D-970: Require explicit currency in PostgreSQL matching adapters
+
+E-919 removes the implicit `USD` fallback from grouped and sequential
+PostgreSQL matching request construction. A present canonical or explicit
+legacy/attribute currency is accepted; absence or emptiness raises a typed
+adapter error before strategy execution. Focused suites, Ruff, and Mypy pass;
+ADR 0619 records the decision. This is a data-quality boundary correction, not
+live-rate, cross-engine, provider, or production-readiness evidence.
+
 ### D-969: Preserve canonical zero values in PostgreSQL matching adapters
 
 E-918 replaces truthiness-based fallback in grouped and sequential PostgreSQL

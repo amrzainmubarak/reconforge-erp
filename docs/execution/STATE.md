@@ -2,6 +2,15 @@
 
 Updated: 2026-08-24
 
+## E-919 — PostgreSQL matching adapters require explicit currency (2026-08-24)
+
+- Grouped and sequential PostgreSQL adapters now fail closed when no explicit
+  currency is present; they no longer invent `USD` for a missing financial
+  field.
+- Focused suites, Ruff, and Mypy pass. This extends input integrity only;
+  matching parity, live-rate validation, provider, and production gates remain
+  open.
+
 ## E-918 — PostgreSQL matching adapters preserve canonical zero values (2026-08-24)
 
 - Explicit `None` checks now preserve database-owned zero amounts and

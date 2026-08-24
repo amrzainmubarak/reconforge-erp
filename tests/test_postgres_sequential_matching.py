@@ -139,6 +139,19 @@ def test_postgres_sequential_request_preserves_explicit_zero_and_canonical_colum
     assert request.left_records[0]["partition"] == "entity/zero"
 
 
+def test_postgres_sequential_request_rejects_missing_currency_instead_of_defaulting() -> None:
+    context = _context("carry-forward", (), ())
+    row = {
+        "source_id": "O-no-currency",
+        "amount_decimal": Decimal("1"),
+        "date_value": date(2026, 8, 1),
+        "attributes_json": {"date": "2026-08-01"},
+    }
+
+    with pytest.raises(PostgresSequentialMatchingAdapterError, match="explicit currency"):
+        _request(context, "entity/no-currency", (row,), (row | {"source_id": "S-no-currency"},))
+
+
 def test_sequential_worker_rejects_implicit_or_malformed_modes() -> None:
     adapter = PostgresSequentialMatchingAdapter()
     with pytest.raises(PostgresSequentialMatchingAdapterError, match="explicit sequential mode"):

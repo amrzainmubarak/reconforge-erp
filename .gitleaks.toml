@@ -10,7 +10,7 @@ description = "Exclude VCS metadata, dependency installs, and local generated ou
 paths = [
   '''(^|[\\/])\.git[\\/]''',
   '''(^|[\\/])\.venv[\\/]''',
-  '''(^|[\\/])\.venv-windows[\\/]''',
+  '''(^|[\\/])\.venv-[^\\/]+[\\/]''',
   '''(^|[\\/])\.codex-test-tmp[\\/]''',
   '''(^|[\\/])\.tmp[\\/]''',
   '''(^|[\\/])node_modules[\\/]''',

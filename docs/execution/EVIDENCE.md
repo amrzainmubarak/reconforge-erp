@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-915: Current local PostgreSQL 10K-record domain-diverse grouped runtime (2026-08-24)
+
+- PostgreSQL 16.14 with the non-privileged `reconforge_app` role completed
+  `250/250` runs, `2500/2500` partitions, and `9160/9160` expected result
+  rows across six explicit domain-diverse grouped shapes: one-to-many,
+  many-to-one, true many-to-many, fee-aware portfolio netting, FX-aware
+  many-to-many, and portfolio partial-settlement ambiguity. Completion counts
+  were 42/42/42/42/41/41 respectively; duplicate identities, failed runs,
+  and final active runs were all zero.
+- Observed runtime was `63.9503s` on Windows 11/Python 3.14.6/AMD64 with 16
+  workers. Effect digest:
+  `78168229e37a78bb859e664a75098890e0671f9a502c8f6f04c30380ee9b3681`.
+  Manifest digest:
+  `c4d3461885fd3626b66a787caf8b3800706d1505d84169375885cc001e4a133a`.
+- The live run exposed and the focused regression now covers a stale claim
+  race where terminal execution state must win over a stale `Running` status;
+  the bounded fixture also records the three projected edges required by its
+  one-to-many/many-to-one shapes.
+- The machine-readable report, benchmark note, ADR 0616, source-manifest
+  entries, and hosted selector are retained. This is one-host synthetic
+  runtime evidence, not throughput, capacity, soak, HA/DR, provider, posting,
+  write-back, or production-sizing evidence.
+
 ## E-914: Hosted full CI cycle for current evidence head (2026-08-24)
 
 - Hosted CI run `32682775174` passed on head `1be76bdd`; its

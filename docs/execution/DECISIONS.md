@@ -5,6 +5,16 @@
 
 ## Decisions
 
+### D-966: Retain domain-diverse PostgreSQL 10K runtime as bounded evidence
+
+E-915 retains a six-shape, 10,000-record PostgreSQL grouped-matching run as
+local correctness evidence only. `claim_run` now gives terminal durable
+execution state precedence over a stale `Running` status, and the bounded
+domain fixtures use the explicit edge allowance they require. The profile is
+reproducible and package-retained, but it does not widen claims to throughput,
+capacity, provider interoperability, posting, write-back, HA/DR, or production
+sizing.
+
 ### D-965: Cancel redundant same-ref quality runs
 
 E-907 prevents stale CI, CodeQL, Security, and Docker runs from accumulating

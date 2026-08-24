@@ -2,6 +2,19 @@
 
 Updated: 2026-08-24
 
+## E-915 — Current local PostgreSQL 10K-record domain-diverse grouped runtime (2026-08-24)
+
+- The domain-diverse PostgreSQL profile completed 250 runs, 2,500 partitions,
+  and 9,160 expected rows across six grouped shapes with zero duplicate,
+  failed, or final-active outcomes. Runtime was 63.9503s on the declared
+  Windows 11/PostgreSQL 16.14 host; effect and manifest digests are retained.
+- The live attempt fixed a stale terminal-claim race and a bounded three-edge
+  fixture allowance. Focused regression and source-package contracts are now
+  recorded under ADR 0616.
+- This advances bounded local runtime evidence only. Capacity, soak,
+  cross-host behavior, queue HA, automatic failover, HA/DR, provider
+  interoperability, posting, write-back, and hosted publication remain open.
+
 ## E-914 — Hosted full CI cycle for current evidence head (2026-08-24)
 
 - CI run `32682775174` is green on head `1be76bdd`; server-boundaries job

@@ -27,12 +27,26 @@ from reconforge.workers.postgres_reconciliation import (
 
 POSTGRES_GROUPED_SCALE_SCHEMA_VERSION = 1
 _MODES = ("one-to-many", "many-to-one", "many-to-many", "portfolio", "fx-many-to-one")
+DOMAIN_MODES = (
+    "domain-one-to-many",
+    "domain-many-to-one",
+    "domain-many-to-many",
+    "domain-portfolio-net",
+    "domain-fx-many-to-many",
+    "domain-portfolio-partial",
+)
 _MODE_RESULT_ROWS = {
     "one-to-many": 2,
     "many-to-one": 2,
     "many-to-many": 4,
     "portfolio": 2,
     "fx-many-to-one": 2,
+    "domain-one-to-many": 3,
+    "domain-many-to-one": 3,
+    "domain-many-to-many": 4,
+    "domain-portfolio-net": 4,
+    "domain-fx-many-to-many": 4,
+    "domain-portfolio-partial": 4,
 }
 
 
@@ -57,7 +71,7 @@ class PostgresGroupedMatchingScaleProfile:
             raise ValueError("partitions_per_run must be between 1 and 32")
         if not 1 <= self.batch_size <= 1_000 or self.lease_seconds < 1:
             raise ValueError("batch_size or lease_seconds is outside the supported range")
-        if tuple(self.modes) != _MODES:
+        if tuple(self.modes) not in {_MODES, DOMAIN_MODES}:
             raise ValueError("the bounded profile must retain all declared grouped modes")
 
     @property
@@ -127,11 +141,36 @@ def ten_k_profile() -> PostgresGroupedMatchingScaleProfile:
     )
 
 
+def domain_diverse_profile() -> PostgresGroupedMatchingScaleProfile:
+    """Return the bounded 10K-record, six-mode domain-diverse profile.
+
+    The profile intentionally uses fewer durable runs than ``ten_k_profile``
+    while retaining 10,000 synthetic records across 2,500 hard-key partitions.
+    Each partition cycles through a distinct financial shape so the runtime
+    gate exercises domain diversity, not only repeated homogeneous USD groups.
+    """
+
+    return PostgresGroupedMatchingScaleProfile(
+        profile_id="postgres-grouped-matching/10k-domain-diverse-v1",
+        workers=16,
+        runs=250,
+        partitions_per_run=10,
+        batch_size=32,
+        modes=DOMAIN_MODES,
+    )
+
+
 LIMITATIONS = (
     "Synthetic one-tenant PostgreSQL 16 service with bounded independent worker connections.",
-    "The workload uses bounded partitioned runs and synthetic USD/FX/fee inputs; no provider or statutory posting is exercised.",
+    "The default tier uses homogeneous bounded partitions and synthetic USD/FX/fee inputs; no provider or statutory posting is exercised.",
     "Observed runtime is an environment observation, not a throughput, capacity, SLO, soak, or production-sizing claim.",
-    "Cross-host scheduling, queue HA, automatic failover, large-domain diversity, and HA/DR remain unverified.",
+    "Cross-host scheduling, queue HA, automatic failover, domain-diverse scale, and HA/DR remain separate evidence gates.",
+)
+DOMAIN_LIMITATIONS = (
+    "Synthetic one-tenant PostgreSQL 16 service with bounded independent worker connections.",
+    "The domain-diverse tier cycles six synthetic grouped shapes with exact USD, EUR/USD FX, fee-netting, and deliberate partial-settlement ambiguity; no provider or statutory posting is exercised.",
+    "Observed runtime is an environment observation, not a throughput, capacity, SLO, soak, or production-sizing claim.",
+    "Cross-host scheduling, queue HA, automatic failover, and HA/DR remain unverified.",
 )
 
 
@@ -160,8 +199,23 @@ def _manifest_digest(document: Mapping[str, object]) -> str:
     return _digest(json.dumps(stable, sort_keys=True, separators=(",", ":"), ensure_ascii=True))
 
 
+def _limitations_for_modes(modes: tuple[str, ...]) -> tuple[str, ...]:
+    return DOMAIN_LIMITATIONS if tuple(modes) == DOMAIN_MODES else LIMITATIONS
+
+
 def _rule(mode: str) -> dict[str, object]:
-    selected = "many-to-one" if mode == "fx-many-to-one" else mode
+    selected = {
+        "fx-many-to-one": "many-to-one",
+        "fx-many-to-many": "many-to-many",
+        "portfolio-net": "portfolio",
+        "portfolio-partial": "portfolio",
+        "domain-one-to-many": "one-to-many",
+        "domain-many-to-one": "many-to-one",
+        "domain-many-to-many": "many-to-many",
+        "domain-portfolio-net": "portfolio",
+        "domain-fx-many-to-many": "many-to-many",
+        "domain-portfolio-partial": "portfolio",
+    }.get(mode, mode)
     rule: dict[str, object] = {
         "partition_fields": ["entity_id"],
         "partition_max_records": 10,
@@ -169,16 +223,24 @@ def _rule(mode: str) -> dict[str, object]:
         "amount_tolerance": "0",
         "date_window_days": 0,
     }
-    if mode == "portfolio":
+    if mode in {
+        "portfolio",
+        "portfolio-net",
+        "portfolio-partial",
+        "domain-portfolio-net",
+        "domain-portfolio-partial",
+    }:
         rule.update(
             {
                 "netting_mode": "net",
                 "left_fee_field": "fee",
                 "right_fee_field": "fee",
-                "allow_partial_settlement": True,
+                "allow_partial_settlement": mode in {"portfolio", "portfolio-partial", "domain-portfolio-partial"},
             }
         )
-    if mode == "fx-many-to-one":
+    if mode in {"fx-many-to-one", "fx-many-to-many", "domain-fx-many-to-many"}:
+        rate = "2" if mode in {"fx-many-to-many", "domain-fx-many-to-many"} else "0.5"
+        source = "synthetic-domain-scale" if mode == "domain-fx-many-to-many" else "synthetic-fx"
         rule.update(
             {
                 "target_currency": "USD",
@@ -186,9 +248,9 @@ def _rule(mode: str) -> dict[str, object]:
                     {
                         "base_currency": "EUR",
                         "quote_currency": "USD",
-                        "rate": "0.5",
+                        "rate": rate,
                         "rate_type": "spot",
-                        "source": "synthetic-fx",
+                        "source": source,
                         "effective_at": "2026-08-01",
                     }
                 ],
@@ -199,6 +261,48 @@ def _rule(mode: str) -> dict[str, object]:
 
 def _partition_records(mode: str, run_index: int, partition_index: int) -> tuple[tuple[str, str, str, str, str], ...]:
     prefix = f"{run_index:03d}-{partition_index:02d}"
+    if mode == "domain-one-to-many":
+        return (
+            ("Left", f"l-{prefix}", "100.00", "USD", "0.00"),
+            ("Right", f"r1-{prefix}", "30.00", "USD", "0.00"),
+            ("Right", f"r2-{prefix}", "30.00", "USD", "0.00"),
+            ("Right", f"r3-{prefix}", "40.00", "USD", "0.00"),
+        )
+    if mode == "domain-many-to-one":
+        return (
+            ("Left", f"l1-{prefix}", "30.00", "USD", "0.00"),
+            ("Left", f"l2-{prefix}", "30.00", "USD", "0.00"),
+            ("Left", f"l3-{prefix}", "40.00", "USD", "0.00"),
+            ("Right", f"r-{prefix}", "100.00", "USD", "0.00"),
+        )
+    if mode == "domain-many-to-many":
+        return (
+            ("Left", f"l1-{prefix}", "30.00", "USD", "0.00"),
+            ("Left", f"l2-{prefix}", "70.00", "USD", "0.00"),
+            ("Right", f"r1-{prefix}", "25.00", "USD", "0.00"),
+            ("Right", f"r2-{prefix}", "75.00", "USD", "0.00"),
+        )
+    if mode == "domain-portfolio-net":
+        return (
+            ("Left", f"l1-{prefix}", "60.00", "USD", "5.00"),
+            ("Left", f"l2-{prefix}", "40.00", "USD", "5.00"),
+            ("Right", f"r1-{prefix}", "45.00", "USD", "0.00"),
+            ("Right", f"r2-{prefix}", "45.00", "USD", "0.00"),
+        )
+    if mode == "domain-fx-many-to-many":
+        return (
+            ("Left", f"l1-{prefix}", "50.00", "EUR", "0.00"),
+            ("Left", f"l2-{prefix}", "50.00", "EUR", "0.00"),
+            ("Right", f"r1-{prefix}", "100.00", "USD", "0.00"),
+            ("Right", f"r2-{prefix}", "100.00", "USD", "0.00"),
+        )
+    if mode == "domain-portfolio-partial":
+        return (
+            ("Left", f"l1-{prefix}", "70.00", "USD", "0.00"),
+            ("Left", f"l2-{prefix}", "30.00", "USD", "0.00"),
+            ("Right", f"r1-{prefix}", "60.00", "USD", "0.00"),
+            ("Right", f"r2-{prefix}", "20.00", "USD", "0.00"),
+        )
     if mode == "one-to-many":
         return (
             ("Left", f"l-{prefix}", "100.00", "USD", "0.00"),
@@ -274,6 +378,7 @@ def run_postgres_grouped_matching_scale_profile(
             for partition_index in range(declared.partitions_per_run):
                 entity = f"entity-{run_index:04d}-{partition_index:02d}"
                 for side, source_id, amount, currency, fee in _partition_records(mode, run_index, partition_index):
+                    allowed_uses = 3 if mode in {"domain-one-to-many", "domain-many-to-one"} else 2
                     repository.register_input(
                         tenant_id=tenant,
                         run_id=run_id,
@@ -288,7 +393,7 @@ def run_postgres_grouped_matching_scale_profile(
                             "entity_id": entity,
                             "fee": fee,
                         },
-                        allowed_uses=2,
+                        allowed_uses=allowed_uses,
                     )
 
     def worker_factory(worker_id: str) -> PostgresReconciliationWorker:
@@ -377,7 +482,7 @@ def run_postgres_grouped_matching_scale_profile(
         "final_active_runs": active,
         "per_mode_completed": dict(sorted(per_mode_completed.items())),
         "effect_set_digest": _digest(serialized),
-        "limitations": list(LIMITATIONS),
+        "limitations": list(_limitations_for_modes(declared.modes)),
     }
     return PostgresGroupedMatchingScaleResult(
         schema_version=POSTGRES_GROUPED_SCALE_SCHEMA_VERSION,
@@ -398,7 +503,7 @@ def run_postgres_grouped_matching_scale_profile(
         observed_runtime_seconds=round(runtime, 4),
         environment=_environment(),
         manifest_digest=_manifest_digest(document),
-        limitations=LIMITATIONS,
+        limitations=_limitations_for_modes(declared.modes),
     )
 
 
@@ -435,10 +540,13 @@ def verify_postgres_grouped_matching_scale_result(
 
 __all__ = [
     "LIMITATIONS",
+    "DOMAIN_LIMITATIONS",
+    "DOMAIN_MODES",
     "POSTGRES_GROUPED_SCALE_SCHEMA_VERSION",
     "PostgresGroupedMatchingScaleProfile",
     "PostgresGroupedMatchingScaleResult",
     "default_profile",
+    "domain_diverse_profile",
     "ten_k_profile",
     "run_postgres_grouped_matching_scale_profile",
     "verify_postgres_grouped_matching_scale_result",

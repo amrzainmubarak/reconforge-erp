@@ -1364,6 +1364,13 @@ def test_postgres_reconciliation_execution_failure_is_retryable_and_busy_runs_ar
     with pytest.raises(PostgresReconciliationBusyError):
         repository.claim_run(tenant_id="tenant_a", run_id="run-a", worker_id="recon-worker-c")
 
+    # The durable execution state can become terminal before the compatibility
+    # status projection is updated.  Terminal execution remains stale
+    # contention even while the secondary status still says Running.
+    connection.run.update({"status": "Running", "execution_status": "Complete"})
+    with pytest.raises(PostgresReconciliationBusyError):
+        repository.claim_run(tenant_id="tenant_a", run_id="run-a", worker_id="recon-worker-d")
+
 
 def test_postgres_reconciliation_requires_complete_left_and_right_coverage() -> None:
     connection = _ReconciliationConnection()

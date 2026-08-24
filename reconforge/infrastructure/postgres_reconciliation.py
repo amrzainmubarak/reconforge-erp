@@ -832,6 +832,14 @@ class PostgresReconciliationRepository:
             None if legal_entity_id is None else self._text(legal_entity_id, "legal_entity_id", maximum=160)
         )
         before = self._run_row(tenant, run, lock=True)
+        execution_status = str(before.get("execution_status") or "Queued")
+        # A concurrent worker can commit the terminal execution state before
+        # the legacy status column is observed as Complete by a stale active
+        # page.  Terminal execution is authoritative for claimability; treat
+        # every terminal state as contention before checking the secondary
+        # status column so a healthy high-volume drain cannot be marked failed.
+        if execution_status in {"Complete", "Failed", "Cancelled"}:
+            raise PostgresReconciliationBusyError("Reconciliation run is no longer active.")
         if str(before["status"]) != "Running":
             # A concurrent worker may have completed (or failed/cancelled) a
             # run after it was discovered by this worker's active-page query.
@@ -842,8 +850,6 @@ class PostgresReconciliationRepository:
             if str(before.get("execution_status") or "") in {"Complete", "Failed", "Cancelled"}:
                 raise PostgresReconciliationBusyError("Reconciliation run is no longer active.")
             raise PostgresReconciliationIntegrityError("Only a Running reconciliation can be claimed.")
-        if str(before.get("execution_status") or "Queued") in {"Complete", "Failed", "Cancelled"}:
-            raise PostgresReconciliationIntegrityError("Reconciliation execution must be requeued before it can run.")
         if bool(before.get("cancel_requested", False)):
             raise PostgresReconciliationBusyError("Reconciliation execution has a pending cancellation request.")
         query = _RUN_CLAIM_QUERY

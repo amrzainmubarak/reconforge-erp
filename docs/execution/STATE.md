@@ -2,6 +2,15 @@
 
 Updated: 2026-08-24
 
+## E-918 — PostgreSQL matching adapters preserve canonical zero values (2026-08-24)
+
+- Explicit `None` checks now preserve database-owned zero amounts and
+  canonical identity/date/currency fields in grouped and sequential matching
+  requests; JSON attributes cannot shadow present canonical values.
+- Focused suites, Ruff, and Mypy pass. This closes an input-precedence defect
+  only; broader E-1003 parity, scale, provider, and production evidence remain
+  open.
+
 ## E-917 — Index current PostgreSQL domain-diverse artifact (2026-08-24)
 
 - The current domain-diverse PostgreSQL JSON artifact is now included in

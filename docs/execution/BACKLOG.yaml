@@ -1252,6 +1252,13 @@ tasks:
         boundary. The verifier now covers 13 selected artifacts; E-1003 still
         remains open for cross-engine parity, soak, and broader performance
         evidence.
+      - >
+        E-918 replaces truthiness-based fallback in the grouped and sequential
+        PostgreSQL matching adapters with explicit `None` checks. Present
+        canonical values, including exact zero amounts, remain authoritative
+        over legacy columns and JSON attributes. Focused regression suites,
+        Ruff, and Mypy pass; this fixes input integrity but does not close the
+        broader E-1003 parity, scale, provider, or production evidence gates.
   - id: E-1004
     priority: P0
     area: connectors

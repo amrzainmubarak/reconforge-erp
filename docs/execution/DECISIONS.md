@@ -5,6 +5,16 @@
 
 ## Decisions
 
+### D-969: Preserve canonical zero values in PostgreSQL matching adapters
+
+E-918 replaces truthiness-based fallback in grouped and sequential PostgreSQL
+matching adapters with explicit `None` checks. This keeps valid zero amounts
+and present canonical identity/date/currency columns authoritative over JSON
+attributes, while retaining the existing fail-closed validation path for
+malformed values. Focused suites, Ruff, and Mypy pass; ADR 0618 records the
+reversible decision. This is an input-integrity correction, not a broader
+matching parity, capacity, provider, or production-readiness claim.
+
 ### D-968: Index the current PostgreSQL domain-diverse artifact
 
 E-917 adds the current PostgreSQL domain-diverse JSON report to

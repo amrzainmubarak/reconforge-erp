@@ -542,6 +542,7 @@ include docs/adr/0615-local-postgres-grouped-10k-runtime-evidence.md
 include docs/execution/benchmarks/postgres-grouped-matching-10k-domain-diverse-current-2026-08-24.md
 include docs/execution/benchmarks/postgres-grouped-matching-10k-domain-diverse-current-2026-08-24.json
 include docs/adr/0617-index-postgres-domain-diverse-benchmark-artifact.md
+include docs/adr/0618-postgres-adapter-preserves-canonical-zero-values.md
 include docs/adr/0616-local-postgres-grouped-10k-domain-diverse-runtime-evidence.md
 include docs/adr/0341-postgres-grouped-matching-10k-connection-pool.md
 include docs/strategy/official-source-competitive-matrix-2026-08-05.md

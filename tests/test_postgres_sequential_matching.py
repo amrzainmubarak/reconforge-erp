@@ -9,6 +9,7 @@ from reconforge.workers.postgres_reconciliation import ReconciliationExecutionCo
 from reconforge.workers.postgres_sequential_matching import (
     PostgresSequentialMatchingAdapter,
     PostgresSequentialMatchingAdapterError,
+    _request,
 )
 
 
@@ -115,6 +116,27 @@ def test_reversal_worker_projection_preserves_explicit_link_and_digest() -> None
     assert row["lineage"]["strategy_id"] == "bounded-reversal-pairing"
     assert row["lineage"]["pair"]["match_basis"] == "explicit-reversal-link"
     assert len(str(row["lineage"]["strategy_result_digest"])) == 64
+
+
+def test_postgres_sequential_request_preserves_explicit_zero_and_canonical_columns() -> None:
+    context = _context("carry-forward", (), ())
+    row = {
+        "source_id": "O-zero",
+        "amount_decimal": Decimal("0"),
+        "amount": "999",
+        "date_value": date(2026, 8, 1),
+        "date": "2099-01-01",
+        "currency_code": "USD",
+        "currency": "EUR",
+        "attributes_json": {"amount": "777", "date": "2000-01-01", "currency": "GBP"},
+    }
+
+    request = _request(context, "entity/zero", (row,), (row | {"source_id": "S-zero"},))
+
+    assert request.left_records[0]["amount"] == "0"
+    assert request.left_records[0]["date"] == "2026-08-01"
+    assert request.left_records[0]["currency"] == "USD"
+    assert request.left_records[0]["partition"] == "entity/zero"
 
 
 def test_sequential_worker_rejects_implicit_or_malformed_modes() -> None:

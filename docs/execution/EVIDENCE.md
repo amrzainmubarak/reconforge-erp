@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-918: PostgreSQL matching adapters preserve canonical zero values (2026-08-24)
+
+- Grouped and sequential PostgreSQL adapters now use explicit `None` checks
+  for canonical source identity, amount, date, and currency fields. A present
+  `Decimal("0")` remains zero and cannot be shadowed by `attributes_json`.
+- Focused grouped/sequential suites pass `21/21`; Ruff and Mypy pass for both
+  adapters. The regression is request-level and does not claim live provider,
+  cross-host, or production behavior.
+- ADR 0618 records the fail-closed precedence decision. No schema, API version,
+  matching strategy, or public readiness claim changed.
+
 ## E-917: Index current PostgreSQL domain-diverse artifact (2026-08-24)
 
 - Added `postgres-grouped-matching-10k-domain-diverse-current-2026-08-24.json`

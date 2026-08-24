@@ -2,6 +2,32 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-923: Current publication branch uses a neutral name (2026-08-24)
+
+- The local checkout and GitHub remote now publish from
+  `e830-postgres-receiver-failover`; its upstream is configured and the active
+  PR is #87. The remote branch inventory confirms the current ref exists under
+  that name and the prior ref is no longer present.
+- The branch rename changed only publication metadata; no schema, API, CLI,
+  matching, or financial behavior changed. The user-modified
+  `docs/execution/P3_ENT_013_EXIT_AUDIT.yaml` remains outside all commits.
+
+## E-922: Hosted exact-head verification after domain-diverse parity and security correction (2026-08-24)
+
+- Hosted CI run `32720224211` passed on exact head
+  `f45e81e7effbc37e000eecc3e7ac9c9da4ca97a3` of the current publication
+  branch. Python 3.11/3.12, engine-parity lower/current bounds, web,
+  object-storage, PostgreSQL HA/DR, docker-parity, Docker, Security, CodeQL,
+  and live `server-boundaries` were all green.
+- `server-boundaries` job `97411960661` ran from `11:15:24Z` to `11:34:31Z`
+  (`19m07s`). Security `32720224117`, CodeQL `32720224125`, and Docker
+  `32720224090` also passed for the same head. The bounded Gitleaks policy
+  validator passed after restoring its explicit generated-directory exclusion.
+- This is exact-head hosted integration evidence only. It does not establish
+  provider interoperability, distributed capacity, soak/SLO behavior, posting,
+  write-back, HA/DR effectiveness, compliance, certification, or production
+  readiness.
+
 ## E-921: Domain-diverse PostgreSQL worker projection parity profile (2026-08-24)
 
 - Added `postgres-worker-domain-diverse-parity-v1`, an in-process synthetic

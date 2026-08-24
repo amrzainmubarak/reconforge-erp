@@ -2,6 +2,23 @@
 
 Updated: 2026-08-24
 
+## E-923 — Current publication branch uses a neutral name (2026-08-24)
+
+- The active local/remote publication branch is `e830-postgres-receiver-failover`
+  with PR #87; its upstream is configured and no source behavior changed.
+- The user-modified `docs/execution/P3_ENT_013_EXIT_AUDIT.yaml` remains
+  uncommitted and outside the implementation history.
+
+## E-922 — Hosted exact-head verification after domain-diverse parity and security correction (2026-08-24)
+
+- Hosted CI `32720224211` is green on exact head
+  `f45e81e7effbc37e000eecc3e7ac9c9da4ca97a3`; `server-boundaries`
+  `97411960661` passed in `19m07s`. Security, CodeQL, Docker, and all
+  aggregate jobs for the same head are green.
+- This verifies the current publication head only. Matching E-1003 remains
+  open for provider/live-rate evidence, broader cross-engine replay,
+  capacity/soak, posting/write-back, and production assurance.
+
 ## E-921 — Domain-diverse PostgreSQL worker projection parity profile (2026-08-24)
 
 - The additive `postgres-worker-domain-diverse-parity-v1` profile covers six

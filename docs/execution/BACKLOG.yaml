@@ -1285,6 +1285,14 @@ tasks:
         and its deterministic profile digest. This closes an in-process
         adapter-parity gap only; live PostgreSQL replay, cross-engine parity,
         capacity/soak, provider, posting, and production evidence remain open.
+      - >
+        E-922 records hosted CI `32720224211` green on exact head
+        `f45e81e7effbc37e000eecc3e7ac9c9da4ca97a3`, including
+        server-boundaries `97411960661` in 19m07s, Security, CodeQL, Docker,
+        and every aggregate job. The bounded Gitleaks policy validator also
+        passes. This is exact-head hosted integration evidence only; E-1003
+        remains open for provider/live-rate, broader parity, capacity/soak,
+        posting/write-back, and production evidence.
   - id: E-1004
     priority: P0
     area: connectors

@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-974: Use a neutral current publication branch name
+
+The active publication branch is `e830-postgres-receiver-failover`, with PR #87
+and a matching local upstream. The rename is metadata-only and preserves all
+commits, tests, evidence, and the user-owned uncommitted audit file. Future
+updates use this branch name; no application or schema compatibility changes
+are implied.
+
+### D-973: Record hosted verification for the current parity/security head
+
+E-922 records hosted CI `32720224211` and server-boundaries
+`97411960661` passing on exact head
+`f45e81e7effbc37e000eecc3e7ac9c9da4ca97a3`, with Security `32720224117`,
+CodeQL `32720224125`, and Docker `32720224090` green. The bounded Gitleaks
+policy remains explicit and validator-approved. This is hosted integration
+evidence only and does not widen claims to production, providers, capacity,
+compliance, or certification.
+
 ### D-972: Add an additive domain-diverse PostgreSQL worker parity profile
 
 E-921 adds `postgres-worker-domain-diverse-parity-v1` for six grouped domain

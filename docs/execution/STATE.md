@@ -2,6 +2,23 @@
 
 Updated: 2026-08-26
 
+## E-940 — Expose Account Reconciliation through the live PostgreSQL API boundary (2026-08-26)
+
+- Account Reconciliation now has an explicit PostgreSQL server route path for
+  list/create/read/prepare/submit/review/complete. It resolves the request
+  execution scope, re-evaluates central policy, opens a tenant/workspace-bound
+  transaction, and never falls back to tenant SQLite in server mode.
+- Server actor identity is bound to the authenticated principal: create and
+  prepare bind the maker, review binds both reviewer and actor, and complete
+  binds the authenticated actor. Client-supplied preparer/reviewer values are
+  not trusted. Local SQLite behavior remains compatible.
+- The live FastAPI contract passed on the checked-in PostgreSQL 16 Alpine image
+  digest with a non-superuser/no-BYPASSRLS role. It covered exact decimal
+  serialization, the complete lifecycle, maker-checker separation, and
+  rejection of an ungranted workspace. This is single-node synthetic runtime
+  evidence only; external IAM, HA/DR, provider behavior, capacity, and
+  production readiness remain open. ADR 0633 records the boundary.
+
 ## E-939 — Keep Inventory Core server access fail-closed (2026-08-26)
 
 - All 19 Inventory Core API operations now use an explicit local SQLite

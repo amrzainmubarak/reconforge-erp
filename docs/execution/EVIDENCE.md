@@ -2,6 +2,37 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-940: Expose Account Reconciliation through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/accounts.py` now selects the explicit
+  PostgreSQL adapter whenever the server identity profile is enabled. The
+  route performs request hierarchy resolution and central scoped-policy
+  re-evaluation before `execute_postgres_accounts` opens a
+  `PostgresTenantBoundary` transaction. `reconforge/api/server_accounts.py`
+  maps unavailable/configuration failures to safe 503 responses and does not
+  open local SQLite. Server actor labels are derived from the authenticated
+  principal; payload reviewer/preparer identity is not authoritative.
+- Focused synthetic command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_accounts.py tests/test_api_server_accounts.py
+  tests/test_postgres_accounts.py tests/test_api_authorization_inventory.py
+  --tb=short -ra` exited `0`; live capability tests were skipped when the
+  environment was not provisioned.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, Alembic head, a separate `reconforge_app` role created without
+  superuser, create-role/create-database, replication, or `BYPASSRLS`, and
+  explicit app/admin DSNs. `tests/test_api_server_accounts.py` plus
+  `tests/test_postgres_accounts.py` exited `0` with `7 passed`. The HTTP test
+  exercised create, prepare, submit, review, complete, list, exact decimal
+  output, authenticated actor binding, maker-checker separation, and denied
+  workspace scope through the real FastAPI and PostgreSQL boundaries.
+- The disposable container was removed after the run. No customer or
+  production data was used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, HA/DR,
+  cross-host behavior, live providers, capacity, or production readiness.
+  ADR 0633 records the decision.
+
 ## E-939: Keep Inventory Core server access fail-closed
 
 - `reconforge/api/routes/inventory_core.py` now exposes one explicit

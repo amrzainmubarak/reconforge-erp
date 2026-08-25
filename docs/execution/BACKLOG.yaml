@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-940
+    priority: P0
+    area: identity-governance
+    title: Expose Account Reconciliation through the PostgreSQL server API boundary
+    status: completed
+    depends_on: [E-939, E-938]
+    exit_evidence: >-
+      Account Reconciliation server routes use an explicit PostgreSQL tenant/workspace
+      transaction and central scoped policy re-evaluation with authenticated actor binding;
+      local SQLite compatibility remains intact. The live FastAPI lifecycle test passes with
+      exact decimal output, maker-checker separation, workspace denial, and a non-superuser
+      no-BYPASSRLS PostgreSQL role on the checked-in PostgreSQL 16 image. This is bounded
+      single-node synthetic evidence, not external IAM, HA/DR, capacity, provider, or
+      production-readiness evidence. ADR 0633 records the boundary.
   - id: E-939
     priority: P0
     area: identity-governance
@@ -1514,6 +1528,11 @@ tasks:
         database. All 19 operations retain local compatibility; a dedicated
         PostgreSQL HTTP adapter with hierarchy policy, audit/outbox, and live
         evidence remains required.
+      - E-940 exposes the Account Reconciliation PostgreSQL adapter through the
+        authenticated server API. The live HTTP lifecycle passes exact decimal,
+        actor-binding, maker-checker, forced-workspace, and RLS checks; external
+        IAM, distributed invalidation, HA/DR, capacity, provider behavior, and
+        production effectiveness remain open.
   - id: E-1006
     priority: P1
     area: global-expansion

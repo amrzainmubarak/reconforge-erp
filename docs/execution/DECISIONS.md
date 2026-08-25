@@ -5,6 +5,20 @@
 
 ## Decisions
 
+### D-988: Bind Account Reconciliation server routes to the real PostgreSQL aggregate
+
+Account Reconciliation server-mode HTTP operations now use an explicit
+PostgreSQL adapter boundary instead of the legacy SQLite service. Every
+operation reconstructs the authenticated tenant/workspace hierarchy, performs
+central scoped-policy evaluation, and opens a transaction with the same scope.
+Create/prepare/review/complete actor identity comes from the authenticated
+principal; client-supplied preparer/reviewer labels are not trusted. Local
+SQLite remains the compatibility path. A live FastAPI/PostgreSQL test with a
+non-superuser/no-BYPASSRLS role verifies the lifecycle, exact decimal output,
+maker-checker separation, and workspace denial. This is reversible, but
+external IAM, HA/DR, provider behavior, capacity, and production effectiveness
+remain unproven. ADR 0633 records the rollback boundary.
+
 ### D-987: Keep the local Inventory Core API out of PostgreSQL server mode
 
 The Inventory Core router now uses an explicit local SQLite dependency that

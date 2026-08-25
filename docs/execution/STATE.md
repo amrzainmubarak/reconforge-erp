@@ -1,6 +1,20 @@
 ﻿# Execution State
 
-Updated: 2026-08-25
+Updated: 2026-08-26
+
+## E-938 — Verify live PostgreSQL server policy provenance (2026-08-26)
+
+- A disposable PostgreSQL 16 Alpine container at the checked-in image digest
+  ran the server policy sink with a non-superuser application role and
+  `BYPASSRLS` absent. The runtime test passed `1` case.
+- The test verified tenant-scoped insertion into `domain_audit_events`, valid
+  domain hash-chain state, decision-digest object/after-hash binding, no
+  cross-tenant visibility, and no raw tenant/workspace/amount/request values
+  in stored metadata. The disposable database was cleaned through an
+  admin-only trigger-controlled teardown.
+- This closes current local PostgreSQL provenance evidence, not external IAM
+  authenticity, distributed invalidation, HA/DR, customer-managed operation,
+  or production authorization effectiveness.
 
 ## E-937 — Persist server policy provenance through a tenant-scoped sink (2026-08-25)
 

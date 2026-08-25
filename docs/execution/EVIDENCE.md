@@ -2,6 +2,32 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-938: Verify live PostgreSQL server policy provenance
+
+- Runtime environment: Docker Desktop `29.7.2`, exact local image
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`,
+  one disposable container, two synthetic tenants, and a separate
+  `reconforge_app` login role created as `NOSUPERUSER NOCREATEDB NOCREATEROLE
+  NOINHERIT NOREPLICATION` without `BYPASSRLS`.
+- The command set
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_postgres_policy_provenance.py --tb=long -ra` with explicit app and
+  admin DSNs exited `0` with `1 passed`. `pg_isready` reported accepting
+  connections before the run.
+- The test passed through the real `_server_policy_audit_sink` and
+  `execute_postgres_policy_audit` boundary. The application role inserted one
+  tenant-scoped `authorization.policy_decision` event into
+  `domain_audit_events`; repository verification returned `ok=True`, the event
+  object ID and after-hash matched the policy decision digest, the second
+  tenant saw no event, and raw tenant/workspace/amount/request values were
+  absent from metadata.
+- Admin-only cleanup disabled the immutable trigger only for the explicit
+  tenant-specific teardown and restored it before closing the disposable
+  database. No production or customer data was used.
+- This is bounded one-host PostgreSQL 16 evidence. It does not prove external
+  IAM authenticity, cross-host RLS deployment, distributed invalidation,
+  HA/DR, provider behavior, or production authorization effectiveness.
+
 ## E-937: Persist server policy provenance through a tenant-scoped sink
 
 - `audit_policy_decision` now accepts exactly one of a local SQLite connection,

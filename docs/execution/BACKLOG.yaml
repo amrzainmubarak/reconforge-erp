@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-08-24"
+updated_at: "2026-08-26"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-938
+    priority: P0
+    area: identity-governance
+    title: Verify live PostgreSQL server policy provenance
+    status: completed
+    depends_on: [E-937]
+    exit_evidence: >-
+      The real server sink passes one disposable PostgreSQL 16 Alpine exact
+      image and a non-superuser/no-BYPASSRLS role. The runtime test verifies
+      tenant-scoped domain audit insertion, chain verification, digest binding,
+      redaction, and cross-tenant isolation; it exits 0 with 1 passed. External
+      IAM, distributed invalidation, HA/DR, and production effectiveness remain
+      open.
   - id: E-937
     priority: P0
     area: identity-governance
@@ -1478,6 +1491,11 @@ tasks:
         to the tenant-scoped PostgreSQL domain audit chain. Synthetic adapter
         and caller-contract tests pass; live PostgreSQL/RLS, external IAM,
         distributed invalidation, and production effectiveness remain open.
+      - E-938 runs the real sink against a disposable PostgreSQL 16 Alpine
+        exact image and non-superuser/no-BYPASSRLS role. One runtime test passes
+        for chain verification, digest binding, redaction, and tenant isolation;
+        external IAM, distributed invalidation, HA/DR, and production
+        effectiveness remain open.
   - id: E-1006
     priority: P1
     area: global-expansion

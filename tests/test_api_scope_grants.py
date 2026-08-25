@@ -52,6 +52,7 @@ def test_scope_grant_routes_require_governed_human_authority(tmp_path: Path, mon
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(routes, "execute_postgres_identity", execute)
     monkeypatch.setattr(routes, "PostgresScopeAuthorityRepository", Authority)
     tenant_root = tmp_path / "tenants"

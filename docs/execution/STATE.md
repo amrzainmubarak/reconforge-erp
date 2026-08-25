@@ -2,6 +2,23 @@
 
 Updated: 2026-08-25
 
+## E-937 — Persist server policy provenance through a tenant-scoped sink (2026-08-25)
+
+- `audit_policy_decision` now supports one explicit backend-neutral repository
+  or request-scoped `PolicyAuditSink` in addition to the existing local SQLite
+  boundary. Direct persistence options are mutually exclusive.
+- Server API authorization dependencies use a sink that opens a short
+  PostgreSQL tenant-scoped transaction and appends the same closed redacted
+  evidence to `domain_audit_events`. The event binds its object ID and
+  after-hash to the decision digest and stores no raw request/context values in
+  metadata. A configured server audit failure returns a safe 503 rather than
+  silently falling back to logs.
+- Focused policy/API tests, the sink redaction contract, AST caller inventory,
+  Ruff, Mypy, and diff checks pass; the full Python regression reaches 100%
+  with exit code `0`. Live PostgreSQL/RLS execution, external IAM, distributed
+  invalidation, and production authorization effectiveness remain open. ADR
+  0631 records the boundary.
+
 ## E-936 — Separate policy provenance from business rollback assertions (2026-08-25)
 
 - The full regression exposed four legacy assertions that counted every

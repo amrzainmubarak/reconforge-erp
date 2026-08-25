@@ -725,12 +725,12 @@ def test_production_policy_audits_pass_the_evaluated_context() -> None:
 def test_local_policy_audit_callers_bind_their_sqlite_connection() -> None:
     package_root = Path(__file__).resolve().parents[1] / "reconforge"
     expected_call_counts = {
-        Path("reconforge/api/dependencies.py"): (5, 4),
-        Path("reconforge/platform/common.py"): (2, 2),
-        Path("reconforge/workflow/service.py"): (1, 1),
-        Path("reconforge/studio/app.py"): (1, 1),
+        Path("reconforge/api/dependencies.py"): (5, 2, 3),
+        Path("reconforge/platform/common.py"): (2, 2, 0),
+        Path("reconforge/workflow/service.py"): (1, 1, 0),
+        Path("reconforge/studio/app.py"): (1, 1, 0),
     }
-    for relative_path, (total, bound) in expected_call_counts.items():
+    for relative_path, (total, bound, sink_bound) in expected_call_counts.items():
         source_path = package_root.parent / relative_path
         tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
         calls = [
@@ -742,3 +742,4 @@ def test_local_policy_audit_callers_bind_their_sqlite_connection() -> None:
         ]
         assert len(calls) == total, relative_path
         assert sum(any(keyword.arg == "audit_connection" for keyword in node.keywords) for node in calls) == bound
+        assert sum(any(keyword.arg == "audit_sink" for keyword in node.keywords) for node in calls) == sink_bound

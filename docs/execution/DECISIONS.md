@@ -5,6 +5,17 @@
 
 ## Decisions
 
+### D-986: Use a tenant-scoped server policy-audit sink
+
+Server authorization dependencies persist closed policy evidence through a
+request-scoped sink that opens an independent PostgreSQL tenant transaction and
+uses the existing `domain_audit_events` append-only repository. The policy
+engine remains backend-neutral; direct SQLite, repository, and sink options
+are mutually exclusive. A configured server audit failure is surfaced as a
+safe unavailable response rather than downgraded to structured logging. Live
+PostgreSQL/RLS and production IAM evidence remain required. ADR 0631 records
+the decision and rollback boundary.
+
 ### D-985: Classify policy provenance separately from business rollback effects
 
 Durable local authorization decisions are first-class append-only audit events,

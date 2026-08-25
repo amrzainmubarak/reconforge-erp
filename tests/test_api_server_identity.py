@@ -506,7 +506,10 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
         postgres_require_tls=False,
     )
     # This fixture intentionally covers the pre-Finance-Core server ledger
-    # compatibility contract.  Dedicated tests exercise the new adapter.
+    # compatibility contract. The fake identity transport has no PostgreSQL
+    # domain-audit backend; dedicated synthetic/live tests exercise the new
+    # durable policy-provenance adapter.
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     legacy_app.state.postgres_finance_core_factory = None
     client = TestClient(legacy_app)
     tenant_headers = {"X-ReconForge-Tenant": "tenant-a"}

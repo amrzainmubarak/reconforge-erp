@@ -65,6 +65,7 @@ def test_human_privileged_route_requires_current_session_step_up(
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(auth_routes, "execute_postgres_identity", execute)
     monkeypatch.setattr(auth_routes, "PostgresPrivilegedSessionRepository", FakePrivilegedRepository)
 
@@ -119,6 +120,7 @@ def test_service_principal_cannot_step_up(tmp_path: Path, monkeypatch: Any) -> N
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     root = tmp_path / "tenants"
     root.mkdir()
     run_migrations(root / "tenant-a.db")

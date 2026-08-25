@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-937
+    priority: P0
+    area: identity-governance
+    title: Persist server policy provenance through a tenant-scoped audit sink
+    status: completed
+    depends_on: [E-935]
+    exit_evidence: >-
+      Server API policy dependencies bind three server branches to a
+      request-scoped sink that appends closed redacted evidence to the existing
+      PostgreSQL domain audit chain. Synthetic sink/redaction tests, policy
+      caller AST contracts, Ruff, Mypy, diff checks, and the full Python
+      regression exit 0. Live PostgreSQL, RLS/grants, external IAM, distributed
+      invalidation, and production effectiveness remain open. ADR 0631 records
+      the boundary.
   - id: E-936
     priority: P0
     area: auditability
@@ -1459,6 +1473,10 @@ tasks:
         hash-chained audit ledger for API dependencies, platform authorization,
         workflow transitions, and Studio. The event stores digest-bound
         redacted evidence only; server append-only storage, external IAM,
+        distributed invalidation, and production effectiveness remain open.
+      - E-937 adds the server API sink that persists the same closed evidence
+        to the tenant-scoped PostgreSQL domain audit chain. Synthetic adapter
+        and caller-contract tests pass; live PostgreSQL/RLS, external IAM,
         distributed invalidation, and production effectiveness remain open.
   - id: E-1006
     priority: P1

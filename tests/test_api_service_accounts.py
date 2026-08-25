@@ -56,6 +56,7 @@ def test_service_principal_http_me_safe_permission_human_denial_logout_and_tenan
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(auth_routes, "execute_postgres_service_account", execute_service)
 
     tenant_root = tmp_path / "tenants"

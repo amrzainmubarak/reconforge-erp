@@ -2,6 +2,30 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-937: Persist server policy provenance through a tenant-scoped sink
+
+- `audit_policy_decision` now accepts exactly one of a local SQLite connection,
+  backend-neutral append-only repository, or request-scoped `PolicyAuditSink`.
+  The sink is invoked only after the closed policy evidence is built and is
+  rejected when combined with a direct persistence argument.
+- `reconforge/api/server_audit.py` adds a short PostgreSQL transaction using the
+  configured identity factory and request tenant. The API dependency sink
+  appends `authorization.policy_decision` to `domain_audit_events`, binding the
+  event object ID and after-hash to the evidence digest and storing only closed
+  evidence plus a request digest.
+- `tests/test_api_dependencies.py` proves the sink wiring and asserts that
+  tenant, workspace, and raw request values do not enter event metadata.
+  `tests/test_policy_engine.py` proves all five dependency callsites retain
+  context binding, two local callsites use SQLite, and the three server
+  callsites use the server sink. Focused tests and Ruff, Mypy, and diff checks
+  exit `0`.
+- This is synthetic adapter evidence. The current environment has no live
+  PostgreSQL execution for this turn; RLS/grant behavior, external IAM
+  authenticity, distributed invalidation, and production effectiveness remain
+  unverified. The full Python regression nevertheless reaches `100%` and exits
+  `0`; its declared live-service and Windows-capability skips remain visible.
+  ADR 0631 records the boundary.
+
 ## E-936: Separate policy provenance from business rollback assertions
 
 - The first full regression after E-935 found four expected-count failures in

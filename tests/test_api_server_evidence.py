@@ -111,6 +111,7 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(
         evidence_routes,
         "request_execution_scope",

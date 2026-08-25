@@ -140,6 +140,7 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(routes, "execute_postgres_access_administration", execute)
     root = tmp_path / "tenants"
     root.mkdir()

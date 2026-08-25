@@ -121,6 +121,7 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(
         reconciliation_routes,
         "request_execution_scope",
@@ -311,6 +312,7 @@ def test_server_reconciliation_routes_require_read_permission(tmp_path: Path, mo
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     tenant_root = tmp_path / "tenants"
     tenant_root.mkdir()
     client = TestClient(

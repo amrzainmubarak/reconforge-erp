@@ -20,6 +20,7 @@ from reconforge.api.browser_session import (
 )
 from reconforge.api.errors import APIError
 from reconforge.api.security import SessionError, authenticate_token
+from reconforge.api.server_audit import execute_postgres_policy_audit, server_audit_administration_enabled
 from reconforge.api.server_identity import (
     authenticate_server_request,
     record_emergency_authority_use,
@@ -28,7 +29,14 @@ from reconforge.api.server_identity import (
 )
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
 from reconforge.auth.models import LocalUser
-from reconforge.auth.policy import CentralPolicyEngine, PolicyDecision, PolicyEvaluationContext, audit_policy_decision
+from reconforge.auth.policy import (
+    CentralPolicyEngine,
+    PolicyAuditSink,
+    PolicyDecision,
+    PolicyDecisionEvidence,
+    PolicyEvaluationContext,
+    audit_policy_decision,
+)
 from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import DatabaseError, connect
@@ -51,6 +59,36 @@ def _required_step_up_method(request: Request) -> str | None:
         if isinstance(getattr(request.app.state, "webauthn_runtime", None), WebAuthnRuntime)
         else None
     )
+
+
+def _server_policy_audit_sink(
+    request: Request,
+    *,
+    actor_id: str,
+) -> PolicyAuditSink | None:
+    """Return a tenant-scoped sink for server authorization provenance."""
+
+    if not server_audit_administration_enabled(request):
+        return None
+
+    def persist(evidence: PolicyDecisionEvidence) -> None:
+        def append(repository: Any, _tenant_id: str) -> None:
+            repository.append(
+                actor_user_id=actor_id.strip() or None,
+                actor_label="policy-engine",
+                object_type="authorization.policy_decision",
+                object_id=evidence.decision_digest,
+                action="evaluated",
+                after_hash=evidence.decision_digest,
+                metadata={
+                    "policy_decision_evidence": evidence.to_dict(),
+                    "request_id_digest": evidence.request_id_digest,
+                },
+            )
+
+        execute_postgres_policy_audit(request, append)
+
+    return persist
 
 
 def _permission_contract(values: set[str] | frozenset[str]) -> frozenset[str]:
@@ -371,6 +409,7 @@ def enforce_server_scoped_permissions(
         request_id=str(getattr(request.state, "request_id", "")),
         principal_type=principal.principal_type,
         context=context,
+        audit_sink=_server_policy_audit_sink(request, actor_id=principal.user.id),
     )
     if decision.allowed:
         return
@@ -478,7 +517,7 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
                 request_id=str(getattr(request.state, "request_id", "")),
                 principal_type=principal.principal_type if principal is not None else "user",
                 context=policy_context,
-                audit_connection=connection,
+                audit_sink=_server_policy_audit_sink(request, actor_id=current_user.id),
             )
             if not allowed:
                 code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"
@@ -571,7 +610,7 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
                 request_id=str(getattr(request.state, "request_id", "")),
                 principal_type=principal.principal_type if principal is not None else "user",
                 context=policy_context,
-                audit_connection=connection,
+                audit_sink=_server_policy_audit_sink(request, actor_id=current_user.id),
             )
             if not allowed:
                 code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"

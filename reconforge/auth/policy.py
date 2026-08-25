@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import sqlite3
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -13,6 +14,7 @@ from typing import TYPE_CHECKING, Literal
 
 from reconforge.audit import append_audit_event
 from reconforge.auth.rbac import canonical_policy_value, check_sod_conflict
+from reconforge.domain.protocols import AuditEventRepositoryProtocol
 
 if TYPE_CHECKING:
     from reconforge.platform.common import ServerPrincipal
@@ -340,6 +342,9 @@ class PolicyDecisionEvidence:
         return {**self._unsigned(), "decision_digest": self.decision_digest}
 
 
+PolicyAuditSink = Callable[[PolicyDecisionEvidence], None]
+
+
 def build_policy_decision_evidence(
     decision: PolicyDecision,
     *,
@@ -491,16 +496,25 @@ def audit_policy_decision(
     principal_type: PrincipalType = "user",
     context: PolicyEvaluationContext | None = None,
     audit_connection: sqlite3.Connection | None = None,
+    audit_repository: AuditEventRepositoryProtocol | None = None,
+    audit_sink: PolicyAuditSink | None = None,
 ) -> PolicyDecisionEvidence:
     """Emit sanitized authorization evidence without raw scope data.
 
     The historical ``permission_contract_digest`` remains for log-reader
     compatibility.  The additive decision evidence carries the stronger closed
     contract and a digest over the policy context when the evaluator supplied
-    one. When a local SQLite connection is supplied, the same redacted evidence
-    is appended to the immutable local audit ledger; server-profile callers
-    without that connection retain the structured-log boundary.
+    one. When a local SQLite connection or backend-neutral append-only
+    repository is supplied, the same redacted evidence is appended to that
+    ledger. A sink is available for request-scoped server adapters that must
+    acquire their own tenant-bound transaction. Callers must select exactly one
+    persistence boundary; absent one, the structured-log boundary is retained.
     """
+
+    if audit_connection is not None and audit_repository is not None:
+        raise ValueError("audit_connection and audit_repository are mutually exclusive")
+    if (audit_connection is not None or audit_repository is not None) and audit_sink is not None:
+        raise ValueError("audit_sink cannot be combined with a direct audit persistence boundary")
 
     permission_digest = hashlib.sha256(
         json.dumps(sorted(required_permissions), separators=(",", ":"), ensure_ascii=True).encode("ascii")
@@ -536,6 +550,10 @@ def audit_policy_decision(
             }
         },
     )
+    event_metadata = {
+        "policy_decision_evidence": evidence.to_dict(),
+        "request_id_digest": _digest_text(namespace="request.id", value=request_id),
+    }
     if audit_connection is not None:
         append_audit_event(
             audit_connection,
@@ -545,11 +563,20 @@ def audit_policy_decision(
             object_id=evidence.decision_digest,
             action="evaluated",
             after_hash=evidence.decision_digest,
-            metadata={
-                "policy_decision_evidence": evidence.to_dict(),
-                "request_id_digest": _digest_text(namespace="request.id", value=request_id),
-            },
+            metadata=event_metadata,
         )
+    elif audit_repository is not None:
+        audit_repository.append(
+            actor_user_id=actor_id.strip() or None,
+            actor_label="policy-engine",
+            object_type="authorization.policy_decision",
+            object_id=evidence.decision_digest,
+            action="evaluated",
+            after_hash=evidence.decision_digest,
+            metadata=event_metadata,
+        )
+    elif audit_sink is not None:
+        audit_sink(evidence)
     return evidence
 
 

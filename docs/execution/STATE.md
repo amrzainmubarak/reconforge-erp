@@ -2,6 +2,21 @@
 
 Updated: 2026-08-25
 
+## E-931 — Verify the web quality and bilingual accessibility gates (2026-08-25)
+
+- `npm ci` completed from `apps/web/package-lock.json`; npm audited `161`
+  installed packages with `0` reported vulnerabilities. Web typecheck, `75`
+  Vitest tests across `15` files, and the Vite production build all exit `0`.
+- Standard Playwright Chromium E2E exits `0` with `16` passed and `5` explicitly
+  skipped out of `21`. With `RECONFORGE_LIVE_HTTPS_HOSTING=1`, the local
+  production-bundle HTTPS runtime exits `0` with `17` passed and `4` skipped;
+  the added pass verifies HSTS, CSP, same-origin health, and no inline script or
+  style execution.
+- The remaining four skips are opt-in live browser-session/administration
+  mutation tests. They require an explicitly provisioned API proxy and
+  synthetic mutation target; they remain open and are not counted as live IAM
+  or hosted evidence. ADR 0628 records this evidence boundary.
+
 ## E-930 — Bind production policy audits to evaluated context (2026-08-25)
 
 - Every production `audit_policy_decision` call now passes the exact

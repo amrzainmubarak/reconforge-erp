@@ -2,6 +2,33 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-931: Verify the web quality and bilingual accessibility gates
+
+- `npm ci` completed from `apps/web/package-lock.json` under Node `v26.3.0` and
+  npm `11.16.0`; npm audited `161` installed packages with `0` reported
+  vulnerabilities.
+- `npm --prefix apps/web run typecheck` exited `0`.
+- `npm --prefix apps/web run test:run` exited `0` with `15` files and `75`
+  tests passed.
+- `npm --prefix apps/web run build` exited `0`; Vite `8.1.5` produced the
+  production bundle after TypeScript build checking.
+- Standard `npm --prefix apps/web run e2e` exited `0` with `16` passed and `5`
+  skipped of `21`. Passing tests include the Axe/RTL route gate, keyboard focus
+  and dialog restoration, color/reduced-motion behavior, source-path redaction,
+  industry route contracts, and responsive landmarks.
+- `$env:RECONFORGE_LIVE_HTTPS_HOSTING='1'; npm --prefix apps/web run e2e`
+  exited `0` with `17` passed and `4` skipped of `21`. The additional HTTPS
+  production-bundle test passed HSTS, CSP, same-origin health, no inline script
+  or style execution, and zero observed CSP violations.
+- The remaining skipped tests are explicit in
+  `apps/web/e2e/browser-session-live.spec.ts`: they require a provisioned local
+  API proxy and explicitly enabled synthetic mutations. No live IAM/session
+  provisioning or hosted deployment claim is inferred from the local suite.
+- This is local frontend quality/accessibility evidence only. It does not prove
+  independent WCAG conformance, screen-reader interoperability, hosted
+  deployment, authenticated provider behavior, production availability, or
+  release signing. ADR 0628 records the boundary.
+
 ## E-930: Bind production policy audits to evaluated context
 
 - API dependencies, platform authorization, workflow transitions, durable-job

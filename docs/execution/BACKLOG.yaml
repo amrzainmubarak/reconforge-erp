@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-931
+    priority: P0
+    area: release_operations
+    title: Verify web quality and bilingual accessibility gates
+    status: completed
+    depends_on: [E-930]
+    exit_evidence: >-
+      npm ci, web typecheck, 15-file/75-test Vitest suite, and production build
+      exit 0. Standard Chromium Playwright exits 0 with 16 passed and 5
+      explicitly skipped of 21; the opt-in HTTPS production-bundle run exits 0
+      with 17 passed and 4 skipped, including HSTS/CSP/same-origin health and
+      zero CSP violations. Axe/RTL, keyboard, responsive, redaction, and
+      industry projection routes pass. Provisioned browser-session mutations
+      remain open and are not inferred.
   - id: E-907
     priority: P0
     area: release_operations

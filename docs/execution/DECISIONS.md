@@ -5,6 +5,18 @@
 
 ## Decisions
 
+### D-982: Keep web E2E live and HTTPS skips explicit
+
+The local web gate records `npm ci`, TypeScript typecheck, 75 Vitest tests,
+production build, and 21 Chromium E2E tests with 16 passes and 5 explicit
+skips in standard mode. The opt-in local HTTPS production-bundle run passes
+17 with 4 skips and verifies HSTS, CSP, same-origin health, and no inline
+script/style execution. The remaining browser-session/administration mutation
+tests require a provisioned API proxy and synthetic mutation target. Passing
+local browser tests must not be described as live IAM, hosted deployment, or
+independent accessibility certification. ADR 0628 records the reversible
+evidence-boundary decision.
+
 ### D-981: Bind production policy audits to the evaluated context
 
 Every production call to `audit_policy_decision` now passes the same

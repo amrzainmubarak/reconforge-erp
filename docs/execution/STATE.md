@@ -2,6 +2,25 @@
 
 Updated: 2026-08-25
 
+## E-925 — Digest-bound central policy decision evidence (2026-08-25)
+
+- `CentralPolicyEngine.evaluate` and `evaluate_any` now attach redacted,
+  deterministic context and typed-scope digests to every returned decision.
+  Tenant, organization, workspace, entity, period, region, and data-class
+  namespaces are separated before hashing; exact Decimal bounds and SoD input
+  history are included without emitting their raw values.
+- `audit_policy_decision` now emits additive closed schema-v1 decision evidence
+  and `verify_policy_decision_evidence` rejects field, version, digest, and
+  mutation drift. Existing permission-contract log fields and authorization
+  behavior remain compatible.
+- Policy-focused tests pass, including replay stability, namespace separation,
+  actor canonicalization, raw-value redaction, and tamper refusal; Ruff and
+  Mypy pass for the policy implementation.
+- This is local redacted evidence-input and policy-engine evidence only. It does
+  not prove append-only log storage, external IAM/provider enforcement,
+  universal route/job/UI adoption, distributed invalidation, or production
+  authorization effectiveness. ADR 0622 records the reversible decision.
+
 ## E-924 — Strict currency precision at application financial ingress (2026-08-25)
 
 - On feature branch `codex/money-strict-bank-control`, all application-level

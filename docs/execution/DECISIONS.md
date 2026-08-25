@@ -5,6 +5,20 @@
 
 ## Decisions
 
+### D-976: Bind central policy decisions to redacted evidence digests
+
+Central RBAC/ABAC/SoD decisions now carry deterministic context and typed-scope
+digests, and `audit_policy_decision` emits an additive closed schema-v1 evidence
+object with a self-verifying decision digest. The context includes exact Decimal
+amount/bounds, permissions, step-up/delegation, ownership, requested fields,
+and SoD history only as canonicalized or hashed inputs. Scope namespaces remain
+distinct before hashing so equal text cannot collapse tenant and workspace
+meaning. Existing authorization behavior and log-reader fields remain
+compatible. Policy tests, Ruff, and Mypy pass. This is local redacted evidence
+and does not claim append-only audit storage, external IAM enforcement,
+universal route adoption, distributed invalidation, or production readiness.
+ADR 0622 records the reversible decision.
+
 ### D-975: Enforce currency precision at application financial ingress
 
 `Money.from_exact` is now called with `strict_precision=True` throughout

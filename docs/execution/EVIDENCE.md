@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-925: Digest-bound central policy decision evidence
+
+- `CentralPolicyEngine.evaluate` and `evaluate_any` bind each decision to a
+  deterministic `context_digest` and typed `scope_digest`. The digest input
+  covers the permission snapshot, exact Decimal amounts/bounds, step-up state,
+  object/ownership context, delegation, requested fields, and SoD history while
+  keeping raw values out of the evidence payload.
+- `build_policy_decision_evidence` emits schema-v1 with only redacted digests
+  and bounded classifications. `verify_policy_decision_evidence` rejects
+  unknown fields, unsupported versions, malformed digests, and tampering.
+- `python -m pytest -q tests/test_policy_engine.py tests/test_policy_cache.py`
+  passed. The evidence tests cover deterministic replay, scope namespace
+  separation, actor presentation canonicalization, raw-value absence, and
+  mutation refusal. Ruff and Mypy pass for the policy implementation.
+- This is local policy/evidence-input evidence. No append-only sink, external
+  IAM/provider, universal authorization inventory, distributed cache
+  invalidation, or production effectiveness is claimed. ADR 0622 records the
+  boundary.
+
 ## E-924: Strict currency precision at application financial ingress (2026-08-25)
 
 - `reconforge/application/` now constructs source and tolerance `Money` values

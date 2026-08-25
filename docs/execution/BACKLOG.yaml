@@ -1364,6 +1364,12 @@ tasks:
       - E-825 preserves the canonical requester and captured feature decision
         across maker-checker write-back versions and rejects retargeting before
         any later provider-facing effect.
+      - E-925 binds CentralPolicyEngine decisions to redacted deterministic
+        context/scope digests and adds closed schema-v1 evidence verification;
+        policy replay, namespace separation, actor canonicalization, redaction,
+        and tamper-refusal tests pass. Universal route/job/UI adoption,
+        append-only storage, external IAM enforcement, distributed invalidation,
+        and production effectiveness remain open.
   - id: E-1006
     priority: P1
     area: global-expansion

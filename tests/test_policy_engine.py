@@ -17,7 +17,11 @@ from reconforge.auth.policy import (
     CentralPolicyEngine,
     PolicyEvaluationContext,
     audit_policy_decision,
+    build_policy_decision_evidence,
     evaluate_principal_access,
+    policy_context_digest,
+    policy_scope_digest,
+    verify_policy_decision_evidence,
 )
 from reconforge.auth.rbac import check_sod_conflict
 from reconforge.platform.common import ServerPrincipal
@@ -263,7 +267,9 @@ def test_creator_can_never_approve_or_review_own_object(action: str) -> None:
 
 
 @given(
-    actor=st.text(alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8),
+    actor=st.text(
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8
+    ),
     action=st.sampled_from(["approve", "review", "certify"]),
 )
 def test_creator_canonicalization_cannot_bypass_high_risk_self_approval(actor: str, action: str) -> None:
@@ -285,7 +291,9 @@ def test_creator_canonicalization_cannot_bypass_high_risk_self_approval(actor: s
 
 
 @given(
-    actor=st.text(alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8),
+    actor=st.text(
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8
+    ),
 )
 def test_sod_canonicalization_cannot_bypass_prior_prepare(actor: str) -> None:
     result = check_sod_conflict(
@@ -406,9 +414,7 @@ def test_amount_policy_rejects_non_finite_or_inverted_bounds() -> None:
     ("minimum", "maximum"),
     [(Decimal("100"), None), (None, Decimal("500")), (Decimal("100"), Decimal("500"))],
 )
-def test_bounded_amount_policy_denies_missing_amount(
-    minimum: Decimal | None, maximum: Decimal | None
-) -> None:
+def test_bounded_amount_policy_denies_missing_amount(minimum: Decimal | None, maximum: Decimal | None) -> None:
     decision = CentralPolicyEngine().evaluate(
         PolicyEvaluationContext(
             user_id="U-missing-amount",
@@ -490,3 +496,96 @@ def test_policy_audit_record_is_versioned_and_redacts_actor_and_permissions(
     assert len(evidence["actor_digest"]) == 64
     assert "sensitive-user" not in str(evidence)
     assert "audit.read" not in str(evidence)
+    decision_evidence = evidence["decision_evidence"]
+    assert decision_evidence["context_binding"] == "bound"
+    assert verify_policy_decision_evidence(decision_evidence) == decision_evidence
+    assert evidence["decision_digest"] == decision_evidence["decision_digest"]
+
+
+def test_policy_decision_evidence_is_replayable_closed_and_redacted() -> None:
+    context = PolicyEvaluationContext(
+        user_id=" USER-100 ",
+        username=" Controller ",
+        user_permissions={"finance_core.validate"},
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
+        entity_id="entity-a",
+        period_id="period-2026-08",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+        authorized_workspace_ids=frozenset({"workspace-a"}),
+        authorized_entity_ids=frozenset({"entity-a"}),
+        authorized_period_ids=frozenset({"period-2026-08"}),
+        amount=Decimal("123456789.01"),
+        minimum_amount=Decimal("100.00"),
+        maximum_amount=Decimal("200.00"),
+        object_type="journal",
+        object_id="journal-1",
+        action="validate",
+    )
+    decision = CentralPolicyEngine().evaluate(context, required_permission="finance_core.validate")
+    evidence = build_policy_decision_evidence(
+        decision,
+        actor_id=" USER-100 ",
+        required_permissions=frozenset({"finance_core.validate"}),
+        surface="POST /api/v1/finance-core/journals/validate",
+        request_id="request-1",
+    )
+    replay = build_policy_decision_evidence(
+        decision,
+        actor_id=" USER-100 ",
+        required_permissions=frozenset({"finance_core.validate"}),
+        surface="POST /api/v1/finance-core/journals/validate",
+        request_id="request-1",
+    )
+
+    assert evidence == replay
+    payload = evidence.to_dict()
+    assert verify_policy_decision_evidence(payload) == payload
+    assert "tenant-a" not in str(payload)
+    assert "123456789.01" not in str(payload)
+    assert "journal-1" not in str(payload)
+
+    tampered = dict(payload)
+    tampered["allowed"] = not payload["allowed"]
+    with pytest.raises(ValueError, match="digest mismatch"):
+        verify_policy_decision_evidence(tampered)
+
+
+def test_policy_scope_digest_keeps_same_text_in_distinct_namespaces_distinct() -> None:
+    tenant_context = PolicyEvaluationContext(
+        user_id="U-1",
+        username="user",
+        user_permissions={"evidence.read"},
+        tenant_id="same-id",
+        authorized_tenant_ids=frozenset({"same-id"}),
+    )
+    workspace_context = PolicyEvaluationContext(
+        user_id="U-1",
+        username="user",
+        user_permissions={"evidence.read"},
+        workspace_id="same-id",
+        authorized_workspace_ids=frozenset({"same-id"}),
+    )
+
+    assert policy_scope_digest(tenant_context) != policy_scope_digest(workspace_context)
+
+
+def test_policy_context_digest_canonicalizes_actor_presentation() -> None:
+    upper = PolicyEvaluationContext(
+        user_id="  USER-1  ",
+        username="  Controller  ",
+        user_permissions={"evidence.read"},
+        object_owner_id="owner-1",
+        object_id="  OBJECT-1  ",
+        action="review",
+    )
+    canonical = PolicyEvaluationContext(
+        user_id="user-1",
+        username="controller",
+        user_permissions={"evidence.read"},
+        object_owner_id="owner-1",
+        object_id="object-1",
+        action="review",
+    )
+
+    assert policy_context_digest(upper) == policy_context_digest(canonical)

@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-934
+    priority: P0
+    area: release_operations
+    title: Repair execution backlog dependency closure
+    status: completed
+    depends_on: [E-933]
+    exit_evidence: >-
+      The new execution tasks reference only IDs present in BACKLOG.yaml;
+      the phase dependency contract passes after removing the stale E-930
+      reference from E-931. The full Python regression rerun exits 0 with only
+      declared capability skips and existing warnings. No product behavior
+      changed.
   - id: E-933
     priority: P0
     area: financial_correctness
@@ -37,7 +49,7 @@ tasks:
     area: release_operations
     title: Verify web quality and bilingual accessibility gates
     status: completed
-    depends_on: [E-930]
+    depends_on: []
     exit_evidence: >-
       npm ci, web typecheck, 15-file/75-test Vitest suite, and production build
       exit 0. Standard Chromium Playwright exits 0 with 16 passed and 5

@@ -2,6 +2,16 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-934: Repair execution backlog dependency closure
+
+- The full Python regression reached the phase execution contract and failed at
+  `tests/test_phase_1_3_execution_contract.py::test_backlog_dependencies_are_closed_and_phase_ordered` because newly added E-931 referenced absent backlog ID E-930.
+- `docs/execution/BACKLOG.yaml` now keeps E-934 dependent on present E-933 and
+  makes E-931 independent; the repair changes metadata only. The focused
+  contract passes, and the rerun `.venv-windows\\Scripts\\python.exe -m pytest
+  -q --tb=short -ra` exits `0`; declared capability skips and existing
+  dependency/legacy-input warnings remain.
+
 ## E-933: Enforce explicit policy on direct Money constructors
 
 - `tests/test_financial_input_policy.py` now scans every production direct

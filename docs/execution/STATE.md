@@ -2,6 +2,18 @@
 
 Updated: 2026-08-25
 
+## E-934 — Repair execution backlog dependency closure (2026-08-25)
+
+- The full regression exposed a stale `E-931 -> E-930` dependency because
+  `E-930` is recorded in execution state but is not a task in the current
+  backlog snapshot. `E-931` now has no unresolved dependency, and E-934 records
+  the metadata repair as a release-process change with no product behavior
+  change.
+- The focused dependency contract passes, and the rerun of the full Python
+  regression exits `0`; declared PostgreSQL/Redis/S3/network/Windows-capability
+  skips and existing dependency/legacy-input warnings remain. The initial
+  failed attempt stays historical and is not counted as a green baseline.
+
 ## E-933 — Enforce explicit policy on direct Money constructors (2026-08-25)
 
 - The financial-input AST contract now requires every direct production

@@ -419,6 +419,7 @@ jobs:
           uv run --no-sync pytest tests/test_postgres_federation.py -k 'test_live_postgres_federation_replay_link_session_and_rls' -q
           uv run --no-sync pytest tests/test_api_server_consolidation_close.py -q
           uv run --no-sync pytest tests/test_api_server_reconciliation_live.py -q
+          uv run --no-sync pytest tests/test_api_server_inventory_core.py -q
           uv run --no-sync pytest tests/test_postgres_bank_statement.py -q
           uv run --no-sync pytest tests/test_api_server_bank_statement.py -q
           uv run --no-sync python .github/scripts/verify_redis_live.py --output "${RECONFORGE_REDIS_LIVE_REPORT}"

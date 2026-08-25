@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-941
+    priority: P0
+    area: identity-governance
+    title: Expose Inventory Core through the PostgreSQL server API boundary
+    status: completed
+    depends_on: [E-939, E-940, E-938]
+    exit_evidence: >-
+      All 19 Inventory Core server operations dispatch through an explicit
+      PostgreSQL adapter with authenticated hierarchy binding, central scoped
+      policy re-evaluation, movement object checks, tenant-bound RLS transaction,
+      principal actor binding, exact scaled quantities, and no SQLite fallback.
+      The live FastAPI contract passes CRUD, step-up-protected posting, snapshot,
+      source metadata, and denied workspace scope with a non-superuser/no-BYPASSRLS
+      role on the checked-in PostgreSQL 16 image. This is bounded single-node
+      synthetic evidence, not external IAM, HA/DR, capacity, provider,
+      backup/restore, or production-readiness evidence. ADR 0634 records the
+      boundary.
   - id: E-940
     priority: P0
     area: identity-governance
@@ -1532,6 +1549,12 @@ tasks:
         authenticated server API. The live HTTP lifecycle passes exact decimal,
         actor-binding, maker-checker, forced-workspace, and RLS checks; external
         IAM, distributed invalidation, HA/DR, capacity, provider behavior, and
+        production effectiveness remain open.
+      - E-941 exposes all 19 Inventory Core operations through the authenticated
+        PostgreSQL server API. The live HTTP lifecycle passes CRUD, exact scaled
+        quantity output, step-up-protected posting, source metadata, hierarchy
+        binding, and denied workspace scope; external IAM, distributed
+        invalidation, HA/DR, capacity, provider behavior, backup/restore, and
         production effectiveness remain open.
   - id: E-1006
     priority: P1

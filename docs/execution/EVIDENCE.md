@@ -2,6 +2,38 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-941: Expose Inventory Core through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/inventory_core.py` now dispatches all
+  19 operations to `execute_postgres_inventory` when the PostgreSQL server
+  profile is active. `reconforge/api/server_inventory_core.py` binds the
+  request hierarchy, re-evaluates central policy, validates movement object
+  scope, and opens a `PostgresTenantBoundary` transaction. The route never
+  opens tenant SQLite in server mode; unavailable configuration maps to a safe
+  error. Authenticated actor labels and canonical hierarchy values are used in
+  the PostgreSQL repository. PostgreSQL response metadata no longer claims a
+  local persistence source.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_inventory_core.py tests/test_api_server_inventory_core.py
+  tests/test_api_authorization_inventory.py tests/test_postgres_inventory_core.py
+  --tb=short -ra` exits `0`; Ruff, source Mypy, and `git diff --check` also exit
+  `0` for the slice.
+- Live command uses a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, an explicit application DSN, and a separate application role
+  without superuser or `BYPASSRLS`. `tests/test_api_server_inventory_core.py`
+  plus the existing live Inventory Core adapter tests exit `0` with `10
+  passed`. The HTTP contract covers unit/item/warehouse/location CRUD, a
+  receipt movement, step-up-protected posting, exact `2.500` on-hand output,
+  snapshot output, actor/hierarchy binding, and denied workspace scope.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, HA/DR,
+  cross-host behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0634
+  records the decision; ADR 0632 is now historical/superseded for this path.
+
 ## E-940: Expose Account Reconciliation through the live PostgreSQL API boundary
 
 - Code evidence: `reconforge/api/routes/accounts.py` now selects the explicit

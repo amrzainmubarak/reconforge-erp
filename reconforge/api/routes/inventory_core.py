@@ -4,14 +4,26 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Iterator
-from typing import Annotated
+from typing import Annotated, TypeVar
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    enforce_server_scoped_permissions,
+    get_db,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
-from reconforge.api.server_identity import server_identity_enabled
+from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope, server_identity_enabled
+from reconforge.api.server_inventory_core import (
+    InventoryOperation,
+    execute_postgres_inventory,
+    server_inventory_core_enabled,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.platform.common import PlatformError
@@ -28,6 +40,7 @@ InventoryManage = Annotated[LocalUser, Depends(require_permission("inventory.man
 InventoryPost = Annotated[LocalUser, Depends(require_permission("inventory.post"))]
 PageLimit = Annotated[int, Query(ge=1, le=MAX_API_LIST_LIMIT)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
+T = TypeVar("T")
 
 
 def get_inventory_local_db(request: Request) -> Iterator[sqlite3.Connection]:
@@ -149,6 +162,16 @@ def _error(code: str, exc: Exception, *, status_code: int = 400) -> APIError:
     return APIError(status_code=status_code, code=code, message=str(exc))
 
 
+def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
+    if connection is None:
+        raise APIError(
+            status_code=500,
+            code="local_database_not_configured",
+            message="The local Inventory Core database is not configured for this request.",
+        )
+    return connection
+
+
 def _list_response(
     key: str,
     records: list[dict[str, object]],
@@ -159,14 +182,64 @@ def _list_response(
     return {key: records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}}
 
 
+def _server_scope(request: Request, permissions: frozenset[str]) -> RequestExecutionScope:
+    scope = request_execution_scope(request)
+    if len(permissions) == 1:
+        enforce_server_scoped_permission(
+            request,
+            permission=next(iter(permissions)),
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+        )
+    else:
+        enforce_server_scoped_permissions(
+            request,
+            permissions=permissions,
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+        )
+    return scope
+
+
+def _server_call(
+    request: Request,
+    permissions: frozenset[str],
+    operation: InventoryOperation[T],
+    *,
+    organization_code: str = "",
+    entity_code: str = "",
+    movement_id: str | None = None,
+) -> T:
+    _server_scope(request, permissions)
+    return execute_postgres_inventory(
+        request,
+        operation,
+        organization_code=organization_code,
+        entity_code=entity_code,
+        movement_id=movement_id,
+    )
+
+
 @router.get("/summary")
 def summary(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        result = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.summary(workspace=scope.workspace_id, actor_label=current_user.id),
+        )
+        return {"summary": result.to_dict()}
     try:
-        result = InventoryCoreService(connection).summary(workspace=workspace, actor_label=current_user.username)
+        result = InventoryCoreService(_local_connection(connection)).summary(workspace=workspace, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_summary_failed", exc) from exc
     return {"summary": result.to_dict()}
@@ -174,26 +247,43 @@ def summary(
 
 @router.get("/snapshot")
 def snapshot(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        return _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.snapshot(workspace=scope.workspace_id, actor_label=current_user.id),
+        )
     try:
-        return InventoryCoreService(connection).snapshot(workspace=workspace, actor_label=current_user.username)
+        return InventoryCoreService(_local_connection(connection)).snapshot(workspace=workspace, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_snapshot_failed", exc) from exc
 
 
 @router.get("/units")
 def list_uoms(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.list_uoms(
+                workspace=scope.workspace_id, limit=limit, offset=offset, actor_label=current_user.id
+            ),
+        )
+        return _list_response("units_of_measure", records, limit=limit, offset=offset)
     try:
-        records = InventoryCoreService(connection).list_uoms(
+        records = InventoryCoreService(_local_connection(connection)).list_uoms(
             workspace=workspace, limit=limit, offset=offset, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -203,12 +293,23 @@ def list_uoms(
 
 @router.post("/units")
 def upsert_uom(
+    request: Request,
     payload: UomRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        values = payload.model_dump()
+        record = _server_call(
+            request,
+            frozenset({"inventory.manage"}),
+            lambda repository, scope: repository.upsert_uom(
+                **{**values, "workspace": scope.workspace_id, "actor_label": current_user.id}
+            ),
+        )
+        return {"unit_of_measure": record}
     try:
-        record = InventoryCoreService(connection).upsert_uom(**payload.model_dump(), actor_label=current_user.username)
+        record = InventoryCoreService(_local_connection(connection)).upsert_uom(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_unit_save_failed", exc) from exc
     return {"unit_of_measure": record}
@@ -216,16 +317,32 @@ def upsert_uom(
 
 @router.get("/items")
 def list_items(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     organization: str = "",
     active_only: bool = False,
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.list_items(
+                workspace=scope.workspace_id,
+                organization_code=scope.organization_code or organization,
+                active_only=active_only,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+            organization_code=organization,
+        )
+        return _list_response("items", records, limit=limit, offset=offset)
     try:
-        records = InventoryCoreService(connection).list_items(
+        records = InventoryCoreService(_local_connection(connection)).list_items(
             workspace=workspace,
             organization_code=organization,
             active_only=active_only,
@@ -240,12 +357,29 @@ def list_items(
 
 @router.post("/items")
 def upsert_item(
+    request: Request,
     payload: ItemRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        values = payload.model_dump()
+        record = _server_call(
+            request,
+            frozenset({"inventory.manage"}),
+            lambda repository, scope: repository.upsert_item(
+                **{
+                    **values,
+                    "workspace": scope.workspace_id,
+                    "organization_code": scope.organization_code or str(values["organization_code"]),
+                    "actor_label": current_user.id,
+                }
+            ),
+            organization_code=payload.organization_code,
+        )
+        return {"item": record}
     try:
-        record = InventoryCoreService(connection).upsert_item(**payload.model_dump(), actor_label=current_user.username)
+        record = InventoryCoreService(_local_connection(connection)).upsert_item(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_item_save_failed", exc) from exc
     return {"item": record}
@@ -253,15 +387,30 @@ def upsert_item(
 
 @router.get("/warehouses")
 def list_warehouses(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     organization: str = "",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.list_warehouses(
+                workspace=scope.workspace_id,
+                organization_code=scope.organization_code or organization,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+            organization_code=organization,
+        )
+        return _list_response("warehouses", records, limit=limit, offset=offset)
     try:
-        records = InventoryCoreService(connection).list_warehouses(
+        records = InventoryCoreService(_local_connection(connection)).list_warehouses(
             workspace=workspace,
             organization_code=organization,
             limit=limit,
@@ -275,12 +424,31 @@ def list_warehouses(
 
 @router.post("/warehouses")
 def upsert_warehouse(
+    request: Request,
     payload: WarehouseRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        values = payload.model_dump()
+        record = _server_call(
+            request,
+            frozenset({"inventory.manage"}),
+            lambda repository, scope: repository.upsert_warehouse(
+                **{
+                    **values,
+                    "workspace": scope.workspace_id,
+                    "organization_code": scope.organization_code or str(values["organization_code"]),
+                    "entity_code": scope.entity_code or str(values["entity_code"]),
+                    "actor_label": current_user.id,
+                }
+            ),
+            organization_code=payload.organization_code,
+            entity_code=payload.entity_code,
+        )
+        return {"warehouse": record}
     try:
-        record = InventoryCoreService(connection).upsert_warehouse(
+        record = InventoryCoreService(_local_connection(connection)).upsert_warehouse(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -290,16 +458,32 @@ def upsert_warehouse(
 
 @router.get("/locations")
 def list_locations(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     organization: str = "",
     warehouse: str = "",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.list_locations(
+                workspace=scope.workspace_id,
+                organization_code=scope.organization_code or organization,
+                warehouse_code=warehouse,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+            organization_code=organization,
+        )
+        return _list_response("locations", records, limit=limit, offset=offset)
     try:
-        records = InventoryCoreService(connection).list_locations(
+        records = InventoryCoreService(_local_connection(connection)).list_locations(
             workspace=workspace,
             organization_code=organization,
             warehouse_code=warehouse,
@@ -314,12 +498,29 @@ def list_locations(
 
 @router.post("/locations")
 def upsert_location(
+    request: Request,
     payload: LocationRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        values = payload.model_dump()
+        record = _server_call(
+            request,
+            frozenset({"inventory.manage"}),
+            lambda repository, scope: repository.upsert_location(
+                **{
+                    **values,
+                    "workspace": scope.workspace_id,
+                    "organization_code": scope.organization_code or str(values["organization_code"]),
+                    "actor_label": current_user.id,
+                }
+            ),
+            organization_code=payload.organization_code,
+        )
+        return {"location": record}
     try:
-        record = InventoryCoreService(connection).upsert_location(
+        record = InventoryCoreService(_local_connection(connection)).upsert_location(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -329,16 +530,32 @@ def upsert_location(
 
 @router.get("/lots")
 def list_lots(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     organization: str = "",
     item: str = "",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.list_lots(
+                workspace=scope.workspace_id,
+                organization_code=scope.organization_code or organization,
+                item_code=item,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+            organization_code=organization,
+        )
+        return _list_response("lots_and_serials", records, limit=limit, offset=offset)
     try:
-        records = InventoryCoreService(connection).list_lots(
+        records = InventoryCoreService(_local_connection(connection)).list_lots(
             workspace=workspace,
             organization_code=organization,
             item_code=item,
@@ -353,12 +570,29 @@ def list_lots(
 
 @router.post("/lots")
 def upsert_lot(
+    request: Request,
     payload: LotRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        values = payload.model_dump()
+        record = _server_call(
+            request,
+            frozenset({"inventory.manage"}),
+            lambda repository, scope: repository.upsert_lot(
+                **{
+                    **values,
+                    "workspace": scope.workspace_id,
+                    "organization_code": scope.organization_code or str(values["organization_code"]),
+                    "actor_label": current_user.id,
+                }
+            ),
+            organization_code=payload.organization_code,
+        )
+        return {"lot_or_serial": record}
     try:
-        record = InventoryCoreService(connection).upsert_lot(**payload.model_dump(), actor_label=current_user.username)
+        record = InventoryCoreService(_local_connection(connection)).upsert_lot(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_lot_save_failed", exc) from exc
     return {"lot_or_serial": record}
@@ -366,8 +600,9 @@ def upsert_lot(
 
 @router.get("/movements")
 def list_movements(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     organization: str = "",
     entity: str = "",
@@ -376,8 +611,26 @@ def list_movements(
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.list_movements(
+                workspace=scope.workspace_id,
+                organization_code=scope.organization_code or organization,
+                entity_code=scope.entity_code or entity,
+                period_id=period_id,
+                status=status,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+            organization_code=organization,
+            entity_code=entity,
+        )
+        return _list_response("movements", records, limit=limit, offset=offset)
     try:
-        records = InventoryCoreService(connection).list_movements(
+        records = InventoryCoreService(_local_connection(connection)).list_movements(
             workspace=workspace,
             organization_code=organization,
             entity_code=entity,
@@ -394,12 +647,31 @@ def list_movements(
 
 @router.post("/movements")
 def create_movement(
+    request: Request,
     payload: MovementRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        values = payload.model_dump()
+        record = _server_call(
+            request,
+            frozenset({"inventory.manage"}),
+            lambda repository, scope: repository.create_movement(
+                **{
+                    **values,
+                    "workspace": scope.workspace_id,
+                    "organization_code": scope.organization_code or str(values["organization_code"]),
+                    "entity_code": scope.entity_code or str(values["entity_code"]),
+                    "actor_label": current_user.id,
+                }
+            ),
+            organization_code=payload.organization_code,
+            entity_code=payload.entity_code,
+        )
+        return {"movement": record}
     try:
-        record = InventoryCoreService(connection).create_movement(
+        record = InventoryCoreService(_local_connection(connection)).create_movement(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -410,11 +682,20 @@ def create_movement(
 @router.get("/movements/{movement_id}")
 def get_movement(
     movement_id: str,
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        record = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, _scope: repository.get_movement(movement_id, actor_label=current_user.id),
+            movement_id=movement_id,
+        )
+        return {"movement": record}
     try:
-        record = InventoryCoreService(connection).get_movement(movement_id, actor_label=current_user.username)
+        record = InventoryCoreService(_local_connection(connection)).get_movement(movement_id, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_movement_not_found", exc, status_code=404) from exc
     return {"movement": record}
@@ -423,12 +704,23 @@ def get_movement(
 @router.post("/movements/{movement_id}/post")
 def post_movement(
     movement_id: str,
+    request: Request,
     payload: ReasonRequest,
     current_user: InventoryPost,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        record = _server_call(
+            request,
+            frozenset({"inventory.post"}),
+            lambda repository, _scope: repository.post_movement(
+                movement_id, reason=payload.reason, actor_label=current_user.id
+            ),
+            movement_id=movement_id,
+        )
+        return {"movement": record}
     try:
-        record = InventoryCoreService(connection).post_movement(
+        record = InventoryCoreService(_local_connection(connection)).post_movement(
             movement_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -439,12 +731,23 @@ def post_movement(
 @router.post("/movements/{movement_id}/void")
 def void_movement(
     movement_id: str,
+    request: Request,
     payload: ReasonRequest,
     current_user: InventoryPost,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        record = _server_call(
+            request,
+            frozenset({"inventory.post"}),
+            lambda repository, _scope: repository.void_movement(
+                movement_id, reason=payload.reason, actor_label=current_user.id
+            ),
+            movement_id=movement_id,
+        )
+        return {"movement": record}
     try:
-        record = InventoryCoreService(connection).void_movement(
+        record = InventoryCoreService(_local_connection(connection)).void_movement(
             movement_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -454,10 +757,11 @@ def void_movement(
 
 @router.get("/on-hand")
 def on_hand(
+    request: Request,
     organization: str,
     entity: str,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     item: str = "",
     warehouse: str = "",
@@ -465,8 +769,26 @@ def on_hand(
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        return _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.on_hand(
+                organization_code=scope.organization_code or organization,
+                entity_code=scope.entity_code or entity,
+                workspace=scope.workspace_id,
+                item_code=item,
+                warehouse_code=warehouse,
+                include_zero=include_zero,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+            organization_code=organization,
+            entity_code=entity,
+        )
     try:
-        return InventoryCoreService(connection).on_hand(
+        return InventoryCoreService(_local_connection(connection)).on_hand(
             workspace=workspace,
             organization_code=organization,
             entity_code=entity,
@@ -483,15 +805,30 @@ def on_hand(
 
 @router.get("/control-exceptions")
 def control_exceptions(
+    request: Request,
     organization: str,
     entity: str,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_inventory_local_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     as_of: str = "",
 ) -> dict[str, object]:
+    if server_inventory_core_enabled(request):
+        return _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
+            lambda repository, scope: repository.control_exceptions(
+                organization_code=scope.organization_code or organization,
+                entity_code=scope.entity_code or entity,
+                workspace=scope.workspace_id,
+                as_of=as_of,
+                actor_label=current_user.id,
+            ),
+            organization_code=organization,
+            entity_code=entity,
+        )
     try:
-        return InventoryCoreService(connection).control_exceptions(
+        return InventoryCoreService(_local_connection(connection)).control_exceptions(
             workspace=workspace,
             organization_code=organization,
             entity_code=entity,

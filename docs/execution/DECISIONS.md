@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-989: Bind Inventory Core server routes to the real PostgreSQL aggregate
+
+Inventory Core server-mode HTTP operations now use the explicit PostgreSQL
+adapter boundary instead of the interim 501 fail-closed route. Every operation
+reconstructs the authenticated tenant/workspace/organization/legal-entity
+hierarchy, re-evaluates central scoped policy, and opens a transaction with the
+same scope. Movement object scope is checked before object operations; actors
+come from the authenticated principal; exact scaled quantities remain the
+storage and serialization contract; and `inventory.post` retains step-up
+protection. Local SQLite remains the compatibility path. The live FastAPI /
+PostgreSQL gate verifies CRUD, posting, exact output, source metadata, and
+workspace denial with a non-superuser/no-BYPASSRLS role. This is reversible and
+bounded; external IAM, HA/DR, capacity, provider behavior, backup/restore, and
+production effectiveness remain unproven. ADR 0634 records the rollback
+boundary and supersedes ADR 0632 for this configured server path.
+
 ### D-988: Bind Account Reconciliation server routes to the real PostgreSQL aggregate
 
 Account Reconciliation server-mode HTTP operations now use an explicit

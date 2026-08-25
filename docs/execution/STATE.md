@@ -2,6 +2,24 @@
 
 Updated: 2026-08-26
 
+## E-941 — Expose Inventory Core through the live PostgreSQL API boundary (2026-08-26)
+
+- Inventory Core now has an explicit PostgreSQL server route path for all 19
+  operations. Requests bind authenticated tenant/workspace/organization/legal
+  entity scope, re-evaluate central policy, use a tenant-bound PostgreSQL
+  transaction, and never fall back to tenant SQLite in server mode.
+- Movement object scope is checked before read/post/void. Actor identity comes
+  from the authenticated principal, payload hierarchy values are canonicalized
+  to the request scope, and posting retains the existing privilege plus
+  step-up requirement. PostgreSQL output metadata identifies the persistence
+  source accurately while local SQLite output remains compatible.
+- A disposable PostgreSQL 16 Alpine runtime with a separate
+  non-superuser/no-BYPASSRLS role passed the real FastAPI HTTP lifecycle for
+  CRUD, exact scaled quantity output, posting, snapshot, and denied workspace
+  scope. This is bounded single-node synthetic evidence only; external IAM,
+  HA/DR, capacity, provider behavior, backup/restore, and production readiness
+  remain open. ADR 0634 records the boundary.
+
 ## E-940 — Expose Account Reconciliation through the live PostgreSQL API boundary (2026-08-26)
 
 - Account Reconciliation now has an explicit PostgreSQL server route path for

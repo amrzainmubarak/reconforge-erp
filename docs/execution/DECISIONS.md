@@ -5,6 +5,17 @@
 
 ## Decisions
 
+### D-977: Fail closed on incomplete deployment-readiness evidence
+
+The offline readiness matrix reader now requires every gate to carry a
+non-empty boundary and every `verified_scoped` gate to carry at least one
+repository-relative evidence file. Runtime evidence canonicalizes the selected
+edition through its immutable profile before digesting it. Existing matrix
+content remains valid; no readiness status or production claim is widened. The
+focused deployment suites, Ruff, and Mypy pass. ADR 0623 records the
+reversible schema-integrity decision; actual deployment drills and external
+enforcement remain open.
+
 ### D-976: Bind central policy decisions to redacted evidence digests
 
 Central RBAC/ABAC/SoD decisions now carry deterministic context and typed-scope

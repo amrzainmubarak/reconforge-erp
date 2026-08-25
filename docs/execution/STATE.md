@@ -2,6 +2,21 @@
 
 Updated: 2026-08-25
 
+## E-926 — Fail-closed deployment-readiness evidence shape (2026-08-25)
+
+- The readiness matrix reader now requires a non-empty boundary for every gate
+  and at least one repository-relative evidence file for every
+  `verified_scoped` gate. Unresolved `partial`/`open` gates remain allowed only
+  with explicit boundaries; no `verified` readiness status is accepted.
+- Runtime evidence canonicalizes edition identity through the immutable profile
+  before producing the digest-bound artifact, so casing/whitespace cannot create
+  a second identity for the same edition.
+- Deployment readiness, runtime evidence, profile, and regulated-admission
+  focused tests pass; Ruff and Mypy pass for the deployment package.
+- This closes a schema/integrity gap only. It does not produce backup/restore,
+  rollback, retention, IAM, failure-domain, KMS/HSM, RPO/RTO, provider, or
+  production-readiness evidence. ADR 0623 records the reversible decision.
+
 ## E-925 — Digest-bound central policy decision evidence (2026-08-25)
 
 - `CentralPolicyEngine.evaluate` and `evaluate_any` now attach redacted,

@@ -29,7 +29,13 @@
                 "status": {"enum": ["verified_scoped", "partial", "open"]},
                 "evidence": {"type": "array", "items": {"type": "string"}},
                 "boundary": {"type": "string", "minLength": 20}
-              }
+              },
+              "allOf": [
+                {
+                  "if": {"properties": {"status": {"const": "verified_scoped"}}},
+                  "then": {"properties": {"evidence": {"minItems": 1}}}
+                }
+              ]
             }
           }
         }

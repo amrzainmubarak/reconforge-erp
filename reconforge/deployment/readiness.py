@@ -110,7 +110,8 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
         if not isinstance(edition_id, str) or edition_id not in _EDITIONS or edition_id in seen_editions:
             raise DeploymentReadinessError("edition identity is invalid")
         seen_editions.add(edition_id)
-        if edition["readiness_status"] not in {"partial", "open"}:
+        readiness_status = edition["readiness_status"]
+        if not isinstance(readiness_status, str) or readiness_status not in {"partial", "open"}:
             raise DeploymentReadinessError("edition readiness status cannot claim readiness")
         gates = edition["gates"]
         if not isinstance(gates, list) or len(gates) != len(_GATES):
@@ -124,11 +125,17 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
             if not isinstance(gate_id, str) or gate_id not in _GATES or gate_id in seen_gates:
                 raise DeploymentReadinessError("gate identity is invalid")
             seen_gates.add(gate_id)
-            if gate["status"] not in _STATUSES:
+            status = gate["status"]
+            if not isinstance(status, str) or status not in _STATUSES:
                 raise DeploymentReadinessError("gate status is invalid")
+            boundary = gate["boundary"]
+            if not isinstance(boundary, str) or not boundary.strip():
+                raise DeploymentReadinessError("gate boundary must be a non-empty string")
             evidence = gate["evidence"]
             if not isinstance(evidence, list):
                 raise DeploymentReadinessError("gate evidence must be an array")
+            if status == "verified_scoped" and not evidence:
+                raise DeploymentReadinessError("verified_scoped gates require evidence paths")
             for evidence_path in evidence:
                 _relative_evidence_path(evidence_path, root=root)
     if seen_editions != set(_EDITIONS):

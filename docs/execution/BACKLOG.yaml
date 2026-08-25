@@ -1400,6 +1400,11 @@ tasks:
         and edition selection; it performs no external probes or mutation.
       - E-851 binds runtime evidence to the exact immutable profile digest,
         preventing stale or retargeted local facts from being reused.
+      - E-926 requires evidence for every `verified_scoped` matrix gate,
+        non-empty boundaries for all gate statuses, and canonical runtime
+        edition identity. Focused readiness/runtime/profile/admission tests
+        pass; actual mode-specific drills, external enforcement, and
+        production-readiness evidence remain required.
   - id: E-1007
     priority: P1
     area: global-expansion

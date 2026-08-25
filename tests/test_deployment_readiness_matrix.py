@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -68,3 +69,28 @@ def test_readiness_cli_is_offline_and_rejects_unknown_edition() -> None:
 def test_runtime_reader_rejects_missing_matrix() -> None:
     with pytest.raises(DeploymentReadinessError):
         load_deployment_readiness_matrix(ROOT / "docs" / "execution" / "missing.yaml")
+
+
+def test_runtime_reader_requires_evidence_for_verified_gates_and_boundaries_for_all_gates(
+    tmp_path: Path,
+) -> None:
+    source = yaml.safe_load(MATRIX_PATH.read_text(encoding="utf-8"))
+    verified_without_evidence = deepcopy(source)
+    for edition in verified_without_evidence["editions"]:
+        for gate in edition["gates"]:
+            gate["evidence"] = []
+    verified_path = tmp_path / "verified-without-evidence.yaml"
+    verified_path.write_text(yaml.safe_dump(verified_without_evidence, sort_keys=False), encoding="utf-8")
+    with pytest.raises(DeploymentReadinessError, match="verified_scoped gates require evidence"):
+        load_deployment_readiness_matrix(verified_path)
+
+    unbounded_gate = deepcopy(source)
+    for edition in unbounded_gate["editions"]:
+        for gate in edition["gates"]:
+            gate["status"] = "partial"
+            gate["evidence"] = []
+    unbounded_gate["editions"][0]["gates"][0]["boundary"] = ""
+    unbounded_path = tmp_path / "unbounded-gate.yaml"
+    unbounded_path.write_text(yaml.safe_dump(unbounded_gate, sort_keys=False), encoding="utf-8")
+    with pytest.raises(DeploymentReadinessError, match="gate boundary"):
+        load_deployment_readiness_matrix(unbounded_path)

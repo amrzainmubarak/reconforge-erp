@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-926: Fail-closed deployment-readiness evidence shape
+
+- `load_deployment_readiness_matrix` now rejects a `verified_scoped` gate with
+  no evidence files, any gate with an empty boundary, malformed status types,
+  and the existing unsupported `verified` edition status.
+- `verify_deployment_runtime_evidence` canonicalizes edition presentation via
+  the selected immutable profile before returning its digest-bound artifact.
+- `python -m pytest -q tests/test_deployment_readiness_matrix.py
+  tests/test_deployment_runtime_evidence.py tests/test_deployment_profiles.py
+  tests/test_deployment_admission.py` passed (`30` tests). Ruff and Mypy pass
+  for the deployment package.
+- This is an offline contract correction. It does not prove external services,
+  IAM, KMS/HSM, independent failure domains, RPO/RTO, provider behavior,
+  production recovery, or readiness.
+
 ## E-925: Digest-bound central policy decision evidence
 
 - `CentralPolicyEngine.evaluate` and `evaluate_any` bind each decision to a

@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-933: Enforce explicit policy on direct Money constructors
+
+- `tests/test_financial_input_policy.py` now scans every production direct
+  `Money(...)` call outside `reconforge/utils/money.py` and rejects omitted
+  `input_policy` or `strict_precision` choices. Typed helper parameters may be
+  propagated explicitly.
+- Existing production callers in reconciliation declare both policies; the
+  focused financial-input/P0 contract suite passes with no violations. The
+  contract allows explicit `strict_precision=False` only where the caller's
+  named compatibility behavior is intentional.
+- This is a source-policy guard. It does not prove dynamic runtime values,
+  legacy database column migration, cross-engine persistence parity, posting,
+  provider behavior, or production readiness. ADR 0629 records the boundary.
+
 ## E-932: Verify the Docker build and bounded runtime
 
 - Environment: Docker Desktop `4.87.0` (236836), Linux Engine `29.7.2`,

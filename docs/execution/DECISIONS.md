@@ -5,6 +5,15 @@
 
 ## Decisions
 
+### D-983: Require explicit precision on direct production Money calls
+
+Extend the existing financial-input AST contract so direct production
+`Money(...)` calls declare `strict_precision` as well as the existing
+`input_policy`; a typed helper parameter may be propagated explicitly. Both
+strict and explicitly named compatibility choices remain valid; omission is
+rejected. This prevents silent constructor-policy drift without breaking the
+legacy reader boundary. ADR 0629 records the reversible decision.
+
 ### D-982: Keep web E2E live and HTTPS skips explicit
 
 The local web gate records `npm ci`, TypeScript typecheck, 75 Vitest tests,

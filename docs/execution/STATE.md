@@ -2,6 +2,17 @@
 
 Updated: 2026-08-25
 
+## E-933 — Enforce explicit policy on direct Money constructors (2026-08-25)
+
+- The financial-input AST contract now requires every direct production
+  `Money(...)` call to declare both `input_policy` and `strict_precision`, just
+  as `Money.from_exact(...)` already does. A typed helper parameter may be
+  propagated explicitly.
+- Both intentional strict and compatibility choices remain allowed; the guard
+  prevents omitted precision behavior without removing named legacy readers.
+  The focused financial policy/P0 suite passes, with no production caller
+  violations. ADR 0629 records the reversible contract hardening.
+
 ## E-932 — Verify the Docker build and bounded runtime (2026-08-25)
 
 - Docker Desktop `4.87.0` / Engine `29.7.2` built `reconforge:baseline` from

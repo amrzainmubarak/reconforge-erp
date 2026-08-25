@@ -175,6 +175,12 @@ def test_production_code_cannot_call_legacy_scalar_helpers_or_implicit_money_rea
                 violations.append(
                     f"{path.relative_to(ROOT)}:{node.lineno}:implicit-Money-input-policy"
                 )
+            if called_name == "Money" and not any(
+                keyword.arg == "strict_precision" for keyword in node.keywords
+            ):
+                violations.append(
+                    f"{path.relative_to(ROOT)}:{node.lineno}:implicit-Money-precision-policy"
+                )
             if called_name == "_filter_exceptions" and not any(
                 keyword.arg == "financial_input_policy" for keyword in node.keywords
             ):

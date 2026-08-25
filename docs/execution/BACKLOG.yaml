@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-933
+    priority: P0
+    area: financial_correctness
+    title: Enforce explicit direct Money precision policy
+    status: completed
+    depends_on: [E-932]
+    exit_evidence: >-
+      The financial-input AST contract rejects every direct production Money
+      call that omits input_policy or strict_precision; typed helper parameters
+      may be propagated explicitly;
+      focused financial-input/P0 tests pass and named compatibility choices
+      remain explicit. Runtime migration and financial-path parity remain open.
   - id: E-932
     priority: P0
     area: release_operations

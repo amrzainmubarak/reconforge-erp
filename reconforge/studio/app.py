@@ -156,6 +156,7 @@ def create_studio_app(
                 required_permissions=frozenset({permission}),
                 surface=f"studio:{permission}",
                 context=policy_context,
+                audit_connection=connection,
             )
             return decision.allowed
         except (DatabaseError, AuthRepositoryError, AuthServiceError):

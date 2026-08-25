@@ -13,6 +13,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from reconforge.audit import list_audit_events, verify_audit_events
 from reconforge.auth.models import LocalUser
 from reconforge.auth.policy import (
     HUMAN_ONLY_PERMISSIONS,
@@ -27,6 +28,7 @@ from reconforge.auth.policy import (
     verify_policy_decision_evidence,
 )
 from reconforge.auth.rbac import check_sod_conflict
+from reconforge.db import connect, run_migrations
 from reconforge.platform.common import ServerPrincipal
 
 
@@ -505,6 +507,48 @@ def test_policy_audit_record_is_versioned_and_redacts_actor_and_permissions(
     assert evidence["decision_digest"] == decision_evidence["decision_digest"]
 
 
+def test_policy_audit_can_persist_redacted_evidence_in_the_local_append_only_ledger(tmp_path: Path) -> None:
+    database_path = tmp_path / "policy-audit.db"
+    run_migrations(database_path)
+    connection = connect(database_path, require_exists=True)
+    try:
+        context = PolicyEvaluationContext(
+            user_id="sensitive-user",
+            username="alice",
+            user_permissions={"finance_core.validate"},
+            tenant_id="tenant-secret",
+            workspace_id="workspace-secret",
+            amount=Decimal("123456789.01"),
+        )
+        decision = CentralPolicyEngine().evaluate(context, required_permission="finance_core.validate")
+        evidence = audit_policy_decision(
+            decision,
+            actor_id="sensitive-user",
+            required_permissions=frozenset({"finance_core.validate"}),
+            surface="POST /api/v1/finance-core/journals/validate",
+            request_id="request-secret",
+            context=context,
+            audit_connection=connection,
+        )
+
+        events = list_audit_events(connection)
+        verification = verify_audit_events(connection)
+        assert verification.ok is True
+        assert len(events) == 1
+        event = events[0]
+        assert event.object_type == "authorization.policy_decision"
+        assert event.action == "evaluated"
+        assert event.object_id == evidence.decision_digest
+        assert event.after_hash == evidence.decision_digest
+        assert event.metadata["policy_decision_evidence"] == evidence.to_dict()
+        assert "tenant-secret" not in str(event.metadata)
+        assert "workspace-secret" not in str(event.metadata)
+        assert "123456789.01" not in str(event.metadata)
+        assert "request-secret" not in str(event.metadata)
+    finally:
+        connection.close()
+
+
 def test_policy_decision_evidence_is_replayable_closed_and_redacted() -> None:
     context = PolicyEvaluationContext(
         user_id=" USER-100 ",
@@ -676,3 +720,25 @@ def test_production_policy_audits_pass_the_evaluated_context() -> None:
                 missing_context.append(f"{source_path.relative_to(package_root.parent)}:{node.lineno}")
 
     assert missing_context == []
+
+
+def test_local_policy_audit_callers_bind_their_sqlite_connection() -> None:
+    package_root = Path(__file__).resolve().parents[1] / "reconforge"
+    expected_call_counts = {
+        Path("reconforge/api/dependencies.py"): (5, 4),
+        Path("reconforge/platform/common.py"): (2, 2),
+        Path("reconforge/workflow/service.py"): (1, 1),
+        Path("reconforge/studio/app.py"): (1, 1),
+    }
+    for relative_path, (total, bound) in expected_call_counts.items():
+        source_path = package_root.parent / relative_path
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        calls = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "audit_policy_decision"
+        ]
+        assert len(calls) == total, relative_path
+        assert sum(any(keyword.arg == "audit_connection" for keyword in node.keywords) for node in calls) == bound

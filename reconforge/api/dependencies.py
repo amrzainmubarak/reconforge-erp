@@ -478,6 +478,7 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
                 request_id=str(getattr(request.state, "request_id", "")),
                 principal_type=principal.principal_type if principal is not None else "user",
                 context=policy_context,
+                audit_connection=connection,
             )
             if not allowed:
                 code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"
@@ -519,6 +520,7 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             surface=surface,
             request_id=str(getattr(request.state, "request_id", "")),
             context=policy_context,
+            audit_connection=connection,
         )
         if not allowed:
             raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
@@ -569,6 +571,7 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
                 request_id=str(getattr(request.state, "request_id", "")),
                 principal_type=principal.principal_type if principal is not None else "user",
                 context=policy_context,
+                audit_connection=connection,
             )
             if not allowed:
                 code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"
@@ -610,6 +613,7 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             surface=surface,
             request_id=str(getattr(request.state, "request_id", "")),
             context=policy_context,
+            audit_connection=connection,
         )
         if not allowed:
             raise APIError(status_code=403, code="permission_denied", message="Permission denied.")

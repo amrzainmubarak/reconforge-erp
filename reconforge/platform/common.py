@@ -487,6 +487,7 @@ def require_permission(connection: sqlite3.Connection, *, actor_label: str, perm
             required_permissions=frozenset({permission}),
             surface=f"platform:{permission}",
             context=policy_context,
+            audit_connection=connection,
         )
         if not decision.allowed:
             raise PlatformError("Permission denied for this server workflow action.")
@@ -511,6 +512,7 @@ def require_permission(connection: sqlite3.Connection, *, actor_label: str, perm
         required_permissions=frozenset({permission}),
         surface=f"platform:{permission}",
         context=policy_context,
+        audit_connection=connection,
     )
     if not decision.allowed:
         raise PlatformError("Permission denied for this local workflow action.")

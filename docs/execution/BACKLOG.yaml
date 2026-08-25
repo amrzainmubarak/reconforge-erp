@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-935
+    priority: P0
+    area: identity_governance
+    title: Persist local policy-decision evidence in the append-only ledger
+    status: completed
+    depends_on: [E-933]
+    exit_evidence: >-
+      Local SQLite policy decisions append closed redacted evidence to the
+      existing immutable audit chain; focused policy/API/Studio/workflow tests,
+      Ruff, and Mypy pass. Server append-only storage, external IAM, and
+      distributed invalidation remain open under E-1005.
   - id: E-934
     priority: P0
     area: release_operations
@@ -1431,6 +1442,11 @@ tasks:
         full 3,204-test Python regression passes. Principal authenticity,
         append-only storage, external IAM enforcement, distributed invalidation,
         and production effectiveness remain open.
+      - E-935 persists the same closed policy evidence into the local SQLite
+        hash-chained audit ledger for API dependencies, platform authorization,
+        workflow transitions, and Studio. The event stores digest-bound
+        redacted evidence only; server append-only storage, external IAM,
+        distributed invalidation, and production effectiveness remain open.
   - id: E-1006
     priority: P1
     area: global-expansion

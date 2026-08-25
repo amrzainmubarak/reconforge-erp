@@ -2,6 +2,20 @@
 
 Updated: 2026-08-25
 
+## E-935 — Persist local policy evidence in the append-only audit ledger (2026-08-25)
+
+- `audit_policy_decision` now accepts an optional SQLite connection and appends
+  the same closed `PolicyDecisionEvidence` into the existing hash-chained
+  `audit_events` ledger as `authorization.policy_decision`.
+- The durable event stores the evidence digest and request-ID digest only; raw
+  tenant, workspace, amount, object, and permission values are not placed in
+  event metadata. Local API dependencies, platform authorization, workflow,
+  and Studio pass their existing SQLite connection.
+- The focused policy/API/Studio/workflow suite, Ruff, and Mypy pass. This closes
+  local durable policy provenance only; server-side append-only storage,
+  external IAM, distributed invalidation, and production effectiveness remain
+  open. ADR 0630 records the boundary.
+
 ## E-934 — Repair execution backlog dependency closure (2026-08-25)
 
 - The full regression exposed a stale `E-931 -> E-930` dependency because

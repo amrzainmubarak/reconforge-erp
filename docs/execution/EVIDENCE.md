@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-935: Persist local policy evidence in the append-only audit ledger
+
+- `audit_policy_decision` now accepts `audit_connection`. With a local SQLite
+  connection it appends one immutable `authorization.policy_decision` event
+  whose object ID and `after_hash` equal the redacted evidence decision digest.
+- The event metadata contains the closed evidence object and a request-ID
+  digest only. A focused test proves audit-chain verification, evidence digest
+  binding, and absence of tenant/workspace/amount/request raw values.
+- Local API dependency, platform, workflow, and Studio callsites pass their
+  existing SQLite connection. Server workers and PostgreSQL-only paths remain
+  structured-log-only when no SQLite connection exists.
+- `tests/test_policy_engine.py tests/test_api_dependencies.py
+  tests/test_studio_auth.py tests/test_workflow_state_machine.py` pass; Ruff
+  and Mypy pass for the changed scope. This is local durable provenance only,
+  not server-side append-only, external IAM, distributed invalidation, or
+  production authorization evidence. ADR 0630 records the boundary.
+
 ## E-934: Repair execution backlog dependency closure
 
 - The full Python regression reached the phase execution contract and failed at

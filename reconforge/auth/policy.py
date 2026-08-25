@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import sqlite3
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Literal
 
+from reconforge.audit import append_audit_event
 from reconforge.auth.rbac import canonical_policy_value, check_sod_conflict
 
 if TYPE_CHECKING:
@@ -488,13 +490,16 @@ def audit_policy_decision(
     request_id: str = "",
     principal_type: PrincipalType = "user",
     context: PolicyEvaluationContext | None = None,
+    audit_connection: sqlite3.Connection | None = None,
 ) -> PolicyDecisionEvidence:
-    """Emit a sanitized structured authorization record without raw scope data.
+    """Emit sanitized authorization evidence without raw scope data.
 
     The historical ``permission_contract_digest`` remains for log-reader
     compatibility.  The additive decision evidence carries the stronger closed
     contract and a digest over the policy context when the evaluator supplied
-    one.
+    one. When a local SQLite connection is supplied, the same redacted evidence
+    is appended to the immutable local audit ledger; server-profile callers
+    without that connection retain the structured-log boundary.
     """
 
     permission_digest = hashlib.sha256(
@@ -531,6 +536,20 @@ def audit_policy_decision(
             }
         },
     )
+    if audit_connection is not None:
+        append_audit_event(
+            audit_connection,
+            actor_user_id=actor_id.strip() or None,
+            actor_label="policy-engine",
+            object_type="authorization.policy_decision",
+            object_id=evidence.decision_digest,
+            action="evaluated",
+            after_hash=evidence.decision_digest,
+            metadata={
+                "policy_decision_evidence": evidence.to_dict(),
+                "request_id_digest": _digest_text(namespace="request.id", value=request_id),
+            },
+        )
     return evidence
 
 

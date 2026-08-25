@@ -231,6 +231,7 @@ class WorkflowService:
             required_permissions=frozenset({transition.required_permission}),
             surface=f"workflow:{workflow_object.object_type}:{action or 'transition'}",
             context=policy_context,
+            audit_connection=self.connection,
         )
         if not decision.allowed:
             raise WorkflowServiceError(decision.reason)

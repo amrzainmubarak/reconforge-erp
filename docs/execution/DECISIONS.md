@@ -5,6 +5,16 @@
 
 ## Decisions
 
+### D-984: Persist local policy evidence in the existing audit chain
+
+When a local SQLite connection is available, `audit_policy_decision` appends
+the same closed policy evidence to the immutable hash-chained audit ledger as
+`authorization.policy_decision`. The event binds its object ID and after hash
+to the decision digest and stores a request digest rather than raw context.
+Local API, platform, workflow, and Studio callers pass their existing
+connection; server-only callers retain the structured-log boundary. ADR 0630
+records the reversible local-provenance decision and its limits.
+
 ### D-983: Require explicit precision on direct production Money calls
 
 Extend the existing financial-input AST contract so direct production

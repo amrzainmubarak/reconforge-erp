@@ -1,6 +1,24 @@
 ﻿# Execution State
 
-Updated: 2026-08-24
+Updated: 2026-08-25
+
+## E-924 — Strict currency precision at application financial ingress (2026-08-25)
+
+- On feature branch `codex/money-strict-bank-control`, all application-level
+  `Money.from_exact` source/tolerance readers now pass
+  `strict_precision=True`. The bounded domain calculation readers retain their
+  explicit rounding boundaries.
+- The bank-statement control regression rejects EUR source/tolerance values with
+  three fractional digits instead of silently rounding them. An AST contract
+  covers every `Money.from_exact` call under `reconforge/application/`.
+- Targeted local suites, Ruff, and Mypy pass on Python 3.14 and Python 3.12;
+  related API/SQLite/PostgreSQL-profile suites pass with three declared live
+  PostgreSQL capability skips and the existing Starlette/httpx warning.
+- The full Python 3.12.13 regression collected 3,119 nodes, exited `0`, and
+  took `437,092 ms`; declared capability skips and existing warnings remain.
+- This is a local source-ingress correctness slice only. It does not close
+  E-824, hosted PostgreSQL parity, live provider/source authenticity,
+  posting/write-back, HA/DR, or production readiness.
 
 ## E-923 — Current publication branch uses a neutral name (2026-08-24)
 

@@ -2,6 +2,30 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-924: Strict currency precision at application financial ingress (2026-08-25)
+
+- `reconforge/application/` now constructs source and tolerance `Money` values
+  with `strict_precision=True`. This includes bank statement, individual
+  cashflow, manufacturing, professional invoice/payment, retail settlement,
+  and grouped matching application boundaries.
+- `python -m pytest -q tests/test_money_currency.py tests/test_bank_statement_control.py`
+  passed. The bank control regression rejects EUR `100.001` source input and
+  `0.001` tolerance rather than rounding either value.
+- `python -m pytest -q tests/test_p0_correctness.py tests/test_bank_statement_control.py tests/test_individual_cashflow_control.py tests/test_manufacturing_cost_control.py tests/test_professional_invoice_payment_control.py tests/test_retail_settlement.py`
+  passed; the P0 AST contract found no application `Money.from_exact` call
+  without an explicit strict precision keyword.
+- The related API, SQLite, and PostgreSQL-profile suites passed on Python
+  3.12.13; three live PostgreSQL tests remained skipped because no DSN was
+  provisioned. Ruff and Mypy passed for the changed application/test scope.
+- The full `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra`
+  regression on Python 3.12.13 collected 3,119 test nodes, exited `0`, and
+  took `437,092 ms`; declared service/privilege capability skips and the
+  existing Starlette/httpx, SAML, and named legacy-input warnings remain.
+- This is bounded local input-integrity evidence. It does not prove hosted
+  PostgreSQL parity, source authenticity, live provider interoperability,
+  posting/write-back, HA/DR, or production readiness. ADR 0621 records the
+  reversible decision.
+
 ## E-923: Current publication branch uses a neutral name (2026-08-24)
 
 - The local checkout and GitHub remote now publish from

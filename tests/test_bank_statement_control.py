@@ -104,6 +104,34 @@ def test_bank_control_rejects_invalid_reference_float_and_currency() -> None:
         run_bank_statement_control((_bank(),), (), amount_tolerance=Money.from_exact("0.01", "USD"))
 
 
+def test_bank_control_rejects_amounts_beyond_currency_precision(tmp_path: Path) -> None:
+    over_precision_ledger = tmp_path / "over-precision-ledger.json"
+    over_precision_ledger.write_text(
+        json.dumps(
+            {
+                "records": [
+                    {
+                        "record_id": "LEDGER-OVER-PRECISION",
+                        "account_id": "DE89370400440532013000",
+                        "booking_date": "2026-08-04",
+                        "amount": "100.001",
+                        "currency": "EUR",
+                        "reference": "BANK-CREDIT-001",
+                        "source_reference": "synthetic-over-precision",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(BankStatementControlError, match="closed record contract"):
+        run_bank_statement_control_files(STATEMENT, over_precision_ledger, currency="EUR", tolerance="0.01")
+
+    with pytest.raises(BankStatementControlError, match="amount tolerance is invalid"):
+        run_bank_statement_control_files(STATEMENT, LEDGER, currency="EUR", tolerance="0.001")
+
+
 def test_bank_report_is_schema_and_digest_bound(tmp_path: Path) -> None:
     run = run_bank_statement_control_files(STATEMENT, LEDGER, currency="EUR", tolerance="0.01")
     output = tmp_path / "bank-report.json"

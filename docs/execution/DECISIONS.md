@@ -5,6 +5,19 @@
 
 ## Decisions
 
+### D-975: Enforce currency precision at application financial ingress
+
+`Money.from_exact` is now called with `strict_precision=True` throughout
+`reconforge/application/` for source-export monetary fields and tolerances.
+The application layer is the boundary where external financial text becomes a
+canonical domain value, so over-precision must fail closed instead of being
+rounded silently. Derived domain calculations retain their explicit rounding
+boundaries. The existing compatibility readers remain available and no public
+schema, API, CLI, or artifact version changes. ADR 0621 and the application AST
+contract record the rule; targeted local suites, Ruff, and Mypy pass. This does
+not widen claims to hosted parity, source authenticity, providers, posting,
+write-back, HA/DR, or production readiness.
+
 ### D-974: Use a neutral current publication branch name
 
 The active publication branch is `e830-postgres-receiver-failover`, with PR #87

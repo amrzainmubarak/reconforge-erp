@@ -61,7 +61,11 @@ def _read_orders(path: Path) -> tuple[tuple[ProductionOrder, ...], str]:
                 order_id=_required(record, "order_id"),
                 product_id=_required(record, "product_id"),
                 planned_quantity=_quantity(_required(record, "planned_quantity"), _required(record, "unit")),
-                standard_unit_cost=Money.from_exact(_required(record, "standard_unit_cost"), _required(record, "currency")),
+                standard_unit_cost=Money.from_exact(
+                    _required(record, "standard_unit_cost"),
+                    _required(record, "currency"),
+                    strict_precision=True,
+                ),
                 source_reference=_required(record, "source_reference"),
             )
             for record in records
@@ -80,7 +84,11 @@ def _read_issues(path: Path) -> tuple[tuple[MaterialIssue, ...], str]:
                 order_id=_required(record, "order_id"),
                 item_id=_required(record, "item_id"),
                 quantity=_quantity(_required(record, "quantity"), _required(record, "unit")),
-                unit_cost=Money.from_exact(_required(record, "unit_cost"), _required(record, "currency")),
+                unit_cost=Money.from_exact(
+                    _required(record, "unit_cost"),
+                    _required(record, "currency"),
+                    strict_precision=True,
+                ),
                 source_reference=_required(record, "source_reference"),
             )
             for record in records
@@ -99,7 +107,11 @@ def _read_completions(path: Path) -> tuple[tuple[ProductionCompletion, ...], str
                 order_id=_required(record, "order_id"),
                 completion_date=_required(record, "completion_date"),
                 quantity=_quantity(_required(record, "quantity"), _required(record, "unit")),
-                actual_cost=Money.from_exact(_required(record, "actual_cost"), _required(record, "currency")),
+                actual_cost=Money.from_exact(
+                    _required(record, "actual_cost"),
+                    _required(record, "currency"),
+                    strict_precision=True,
+                ),
                 source_reference=_required(record, "source_reference"),
             )
             for record in records
@@ -146,7 +158,7 @@ def run_manufacturing_cost_control_files(
     completions, completions_digest = _read_completions(completions_path)
     scrap, scrap_digest = _read_scrap(scrap_path)
     try:
-        amount_tolerance = Money.from_exact(tolerance, currency)
+        amount_tolerance = Money.from_exact(tolerance, currency, strict_precision=True)
         scrap_limit = _quantity(max_scrap_quantity, unit)
     except Exception as exc:
         raise ManufacturingControlError("manufacturing control policy is invalid.") from exc

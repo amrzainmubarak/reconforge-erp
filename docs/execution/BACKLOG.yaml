@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-939
+    priority: P0
+    area: identity-governance
+    title: Keep Inventory Core API fail-closed until its PostgreSQL adapter is wired
+    status: completed
+    depends_on: [E-938]
+    exit_evidence: >-
+      All 19 Inventory Core API operations use an explicit local SQLite
+      dependency. The dependency rejects the PostgreSQL server profile with
+      501 before opening tenant SQLite, while local migrated SQLite behavior
+      remains available. Focused API/authorization/domain tests, Ruff, and
+      Mypy pass. This is a profile-boundary guard, not PostgreSQL Inventory
+      API or production IAM evidence. ADR 0632 records the boundary.
   - id: E-938
     priority: P0
     area: identity-governance
@@ -1496,6 +1509,11 @@ tasks:
         for chain verification, digest binding, redaction, and tenant isolation;
         external IAM, distributed invalidation, HA/DR, and production
         effectiveness remain open.
+      - E-939 makes the existing Inventory Core SQLite router fail closed in
+        PostgreSQL server mode instead of silently using a tenant-local SQLite
+        database. All 19 operations retain local compatibility; a dedicated
+        PostgreSQL HTTP adapter with hierarchy policy, audit/outbox, and live
+        evidence remains required.
   - id: E-1006
     priority: P1
     area: global-expansion

@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-939: Keep Inventory Core server access fail-closed
+
+- `reconforge/api/routes/inventory_core.py` now exposes one explicit
+  `get_inventory_local_db` boundary. All 19 routes depend on it; no route uses
+  the generic `get_db` dependency directly.
+- In a synthetic PostgreSQL server-profile app, the dependency raises
+  `501 inventory_server_backend_unavailable` before opening a tenant SQLite
+  connection. In a migrated local app, it yields a normal SQLite connection.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_inventory_core.py tests/test_api_authorization_inventory.py
+  tests/test_inventory_core.py --tb=short -ra` exited `0` with all tests
+  passing. Ruff on the changed route/test and Mypy on the route also exited
+  `0`.
+- This is a fail-closed profile-boundary result. It does not prove a
+  PostgreSQL Inventory Core HTTP adapter, universal server route coverage,
+  external IAM, HA/DR, or production readiness. ADR 0632 records the
+  follow-up boundary.
+
 ## E-938: Verify live PostgreSQL server policy provenance
 
 - Runtime environment: Docker Desktop `29.7.2`, exact local image

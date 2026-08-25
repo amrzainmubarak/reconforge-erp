@@ -5,6 +5,16 @@
 
 ## Decisions
 
+### D-987: Keep the local Inventory Core API out of PostgreSQL server mode
+
+The Inventory Core router now uses an explicit local SQLite dependency that
+returns `501 inventory_server_backend_unavailable` when PostgreSQL server
+identity is enabled. This prevents a tenant-local SQLite fallback from being
+mistaken for server persistence. The existing PostgreSQL Inventory Core
+repository remains an unexposed adapter until request hierarchy, central
+policy, RLS, audit/outbox, and runtime API evidence are delivered. ADR 0632
+records the decision and rollback boundary.
+
 ### D-986: Use a tenant-scoped server policy-audit sink
 
 Server authorization dependencies persist closed policy evidence through a

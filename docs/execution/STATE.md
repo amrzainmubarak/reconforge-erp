@@ -2,6 +2,21 @@
 
 Updated: 2026-08-26
 
+## E-939 — Keep Inventory Core server access fail-closed (2026-08-26)
+
+- All 19 Inventory Core API operations now use an explicit local SQLite
+  dependency. When PostgreSQL server identity is enabled, the dependency
+  returns `501 inventory_server_backend_unavailable` before opening a tenant
+  SQLite database.
+- Local mode remains unchanged and continues to open the migrated SQLite
+  database. The repository already contains a PostgreSQL Inventory Core
+  adapter, but its HTTP route, hierarchy binding, audit/outbox integration,
+  and live server evidence are not yet complete; this slice refuses the
+  ambiguous fallback until that dedicated adapter is wired.
+- Focused Inventory API/authorization/domain tests pass, Ruff and Mypy pass.
+  ADR 0632 records the fail-closed boundary. This does not claim PostgreSQL
+  Inventory API support, complete server route adoption, or production IAM.
+
 ## E-938 — Verify live PostgreSQL server policy provenance (2026-08-26)
 
 - A disposable PostgreSQL 16 Alpine container at the checked-in image digest

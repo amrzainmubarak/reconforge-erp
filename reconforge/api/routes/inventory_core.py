@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import get_db, require_any_permission, require_permission
 from reconforge.api.errors import APIError
+from reconforge.api.server_identity import server_identity_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.platform.common import PlatformError
@@ -26,6 +28,25 @@ InventoryManage = Annotated[LocalUser, Depends(require_permission("inventory.man
 InventoryPost = Annotated[LocalUser, Depends(require_permission("inventory.post"))]
 PageLimit = Annotated[int, Query(ge=1, le=MAX_API_LIST_LIMIT)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
+
+
+def get_inventory_local_db(request: Request) -> Iterator[sqlite3.Connection]:
+    """Keep the SQLite inventory API out of the PostgreSQL server profile.
+
+    Inventory Core already has a PostgreSQL repository, but this router still
+    uses the local service and SQLite connection.  Falling through to a
+    tenant-local SQLite file when server identity is enabled would make the
+    server profile appear to succeed against the wrong persistence plane.
+    Fail closed until a dedicated server inventory adapter is wired.
+    """
+
+    if server_identity_enabled(request):
+        raise APIError(
+            status_code=501,
+            code="inventory_server_backend_unavailable",
+            message="Inventory Core is not available in the PostgreSQL server profile yet.",
+        )
+    yield from get_db(request)
 
 
 class UomRequest(BaseModel):
@@ -141,7 +162,7 @@ def _list_response(
 @router.get("/summary")
 def summary(
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
     try:
@@ -154,7 +175,7 @@ def summary(
 @router.get("/snapshot")
 def snapshot(
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
     try:
@@ -166,7 +187,7 @@ def snapshot(
 @router.get("/units")
 def list_uoms(
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
@@ -184,7 +205,7 @@ def list_uoms(
 def upsert_uom(
     payload: UomRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
 ) -> dict[str, object]:
     try:
         record = InventoryCoreService(connection).upsert_uom(**payload.model_dump(), actor_label=current_user.username)
@@ -196,7 +217,7 @@ def upsert_uom(
 @router.get("/items")
 def list_items(
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
     organization: str = "",
     active_only: bool = False,
@@ -221,7 +242,7 @@ def list_items(
 def upsert_item(
     payload: ItemRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
 ) -> dict[str, object]:
     try:
         record = InventoryCoreService(connection).upsert_item(**payload.model_dump(), actor_label=current_user.username)
@@ -233,7 +254,7 @@ def upsert_item(
 @router.get("/warehouses")
 def list_warehouses(
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
     organization: str = "",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
@@ -256,7 +277,7 @@ def list_warehouses(
 def upsert_warehouse(
     payload: WarehouseRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
 ) -> dict[str, object]:
     try:
         record = InventoryCoreService(connection).upsert_warehouse(
@@ -270,7 +291,7 @@ def upsert_warehouse(
 @router.get("/locations")
 def list_locations(
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
     organization: str = "",
     warehouse: str = "",
@@ -295,7 +316,7 @@ def list_locations(
 def upsert_location(
     payload: LocationRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
 ) -> dict[str, object]:
     try:
         record = InventoryCoreService(connection).upsert_location(
@@ -309,7 +330,7 @@ def upsert_location(
 @router.get("/lots")
 def list_lots(
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
     organization: str = "",
     item: str = "",
@@ -334,7 +355,7 @@ def list_lots(
 def upsert_lot(
     payload: LotRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
 ) -> dict[str, object]:
     try:
         record = InventoryCoreService(connection).upsert_lot(**payload.model_dump(), actor_label=current_user.username)
@@ -346,7 +367,7 @@ def upsert_lot(
 @router.get("/movements")
 def list_movements(
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
     organization: str = "",
     entity: str = "",
@@ -375,7 +396,7 @@ def list_movements(
 def create_movement(
     payload: MovementRequest,
     current_user: InventoryManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
 ) -> dict[str, object]:
     try:
         record = InventoryCoreService(connection).create_movement(
@@ -390,7 +411,7 @@ def create_movement(
 def get_movement(
     movement_id: str,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
 ) -> dict[str, object]:
     try:
         record = InventoryCoreService(connection).get_movement(movement_id, actor_label=current_user.username)
@@ -404,7 +425,7 @@ def post_movement(
     movement_id: str,
     payload: ReasonRequest,
     current_user: InventoryPost,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
 ) -> dict[str, object]:
     try:
         record = InventoryCoreService(connection).post_movement(
@@ -420,7 +441,7 @@ def void_movement(
     movement_id: str,
     payload: ReasonRequest,
     current_user: InventoryPost,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
 ) -> dict[str, object]:
     try:
         record = InventoryCoreService(connection).void_movement(
@@ -436,7 +457,7 @@ def on_hand(
     organization: str,
     entity: str,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
     item: str = "",
     warehouse: str = "",
@@ -465,7 +486,7 @@ def control_exceptions(
     organization: str,
     entity: str,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection = Depends(get_inventory_local_db),
     workspace: str = "default",
     as_of: str = "",
 ) -> dict[str, object]:

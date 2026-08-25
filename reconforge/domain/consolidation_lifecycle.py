@@ -785,8 +785,8 @@ def _nci_allocation(
     period_profit = Money.from_exact(period_profit_amount, currency, strict_precision=True)
     unrounded_net_assets = _exact_multiply(net_assets.amount, allocation.non_controlling_percentage)
     unrounded_period_profit = _exact_multiply(period_profit.amount, allocation.non_controlling_percentage)
-    nci_net_assets = Money.from_exact(unrounded_net_assets, currency)
-    nci_period_profit = Money.from_exact(unrounded_period_profit, currency)
+    nci_net_assets = Money.from_exact(unrounded_net_assets, currency, strict_precision=False)
+    nci_period_profit = Money.from_exact(unrounded_period_profit, currency, strict_precision=False)
     return NonControllingInterestAllocation(
         subsidiary_entity_code=allocation.subsidiary_entity_code,
         effective_group_ownership_percentage=allocation.effective_group_ownership_percentage,

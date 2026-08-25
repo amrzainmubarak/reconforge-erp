@@ -59,7 +59,7 @@ def _money(value: object, currency: object, field: str) -> Money:
     if isinstance(value, (bool, float)) or not isinstance(currency, str):
         raise ManufacturingControlError(f"{field} must use an exact decimal Money value.")
     try:
-        parsed = Money.from_exact(value, currency.strip().upper())
+        parsed = Money.from_exact(value, currency.strip().upper(), strict_precision=True)
     except Exception as exc:
         raise ManufacturingControlError(f"{field} is not a valid Money value.") from exc
     if not parsed.amount.is_finite():
@@ -240,7 +240,7 @@ def _sum_quantities(values: list[Quantity], *, unit: str) -> Quantity:
 
 
 def _sum_money(values: list[Money], *, currency: str) -> Money:
-    total = Money.from_exact("0", currency)
+    total = Money.from_exact("0", currency, strict_precision=True)
     for value in values:
         if value.currency != currency:
             raise ManufacturingControlError("all manufacturing costs must use one currency.")
@@ -305,11 +305,11 @@ def run_manufacturing_cost_control(
                     _zero_quantity(max_scrap_quantity.unit),
                     _zero_quantity(max_scrap_quantity.unit),
                     _zero_quantity(max_scrap_quantity.unit),
-                    Money.from_exact("0", amount_tolerance.currency),
-                    Money.from_exact("0", amount_tolerance.currency),
-                    Money.from_exact("0", amount_tolerance.currency),
-                    Money.from_exact("0", amount_tolerance.currency),
-                    Money.from_exact("0", amount_tolerance.currency),
+                    Money.from_exact("0", amount_tolerance.currency, strict_precision=True),
+                    Money.from_exact("0", amount_tolerance.currency, strict_precision=True),
+                    Money.from_exact("0", amount_tolerance.currency, strict_precision=True),
+                    Money.from_exact("0", amount_tolerance.currency, strict_precision=True),
+                    Money.from_exact("0", amount_tolerance.currency, strict_precision=True),
                     ("SOURCE_RECORD_REFERENCES_UNKNOWN_PRODUCTION_ORDER",),
                 )
             )

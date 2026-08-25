@@ -187,7 +187,10 @@ def run_individual_cashflow_control(
     transaction_groups: dict[tuple[str, CashflowType, str], list[str]] = {}
     for transaction in transactions:
         key = (transaction.period, transaction.flow_type, transaction.category)
-        actuals[key] = actuals.get(key, Money.from_exact("0", transaction.amount.currency)) + transaction.amount
+        actuals[key] = (
+            actuals.get(key, Money.from_exact("0", transaction.amount.currency, strict_precision=True))
+            + transaction.amount
+        )
         transaction_groups.setdefault(key, []).append(transaction.transaction_id)
     budget_groups: dict[tuple[str, CashflowType, str], CashBudgetLine] = {}
     for budget in budgets:
@@ -201,9 +204,9 @@ def run_individual_cashflow_control(
         key = (period, flow_type, category)
         budget_line = budget_groups.get(key)
         if budget_line is not None:
-            zero = Money.from_exact("0", budget_line.limit.currency)
+            zero = Money.from_exact("0", budget_line.limit.currency, strict_precision=True)
         else:
-            zero = Money.from_exact("0", currencies[0])
+            zero = Money.from_exact("0", currencies[0], strict_precision=True)
         actual = actuals.get(key, zero)
         ids = tuple(sorted(transaction_groups.get(key, [])))
         if budget_line is None:

@@ -2,6 +2,22 @@
 
 Updated: 2026-08-25
 
+## E-927 — Explicit precision policy for every production Money construction (2026-08-25)
+
+- Every `Money.from_exact` call under `reconforge/` now declares a literal
+  `strict_precision` choice. Domain source helpers in manufacturing and retail
+  reject over-precision; derived deferred-tax, NCI, and ownership-change
+  calculations explicitly retain registry rounding, and zero initializers use
+  strict precision.
+- The new repository AST contract covers all production call sites, while the
+  existing ownership-change rounding regression preserves the visible delta.
+  The focused domain/control collection passes 67/67; Ruff and Mypy pass for
+  the changed scope.
+- This is a financial-construction policy guard only. It does not close the
+  broader financial-path audit, source authenticity, posting, provider,
+  write-back, PostgreSQL parity, HA/DR, or production-readiness gates. ADR
+  0624 records the reversible decision.
+
 ## E-926 — Fail-closed deployment-readiness evidence shape (2026-08-25)
 
 - The readiness matrix reader now requires a non-empty boundary for every gate

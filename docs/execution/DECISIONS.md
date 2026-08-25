@@ -5,6 +5,18 @@
 
 ## Decisions
 
+### D-978: Make production Money precision choices explicit
+
+Every production `Money.from_exact` call now spells a literal
+`strict_precision` policy. Source-value helpers in manufacturing and retail
+use strict registered-currency precision, while derived deferred-tax, NCI, and
+ownership-change calculations explicitly retain the installed registry's
+rounding policy and existing visible deltas. Zero initializers use strict
+precision. A repository AST regression and 67 focused domain/control tests
+pass. This is a construction-policy guard, not evidence of complete financial
+coverage, provider behavior, posting, write-back, HA/DR, or production
+readiness. ADR 0624 records the reversible decision.
+
 ### D-977: Fail closed on incomplete deployment-readiness evidence
 
 The offline readiness matrix reader now requires every gate to carry a

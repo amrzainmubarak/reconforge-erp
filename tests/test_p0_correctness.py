@@ -88,6 +88,31 @@ def test_application_money_ingress_declares_currency_precision_policy() -> None:
     assert offenders == [], "application financial ingress must reject over-precision: " + ", ".join(offenders)
 
 
+def test_production_money_construction_declares_rounding_policy() -> None:
+    """Every production Money.from_exact call must choose strict or explicit rounding."""
+
+    root = Path(__file__).resolve().parents[1]
+    production_root = root / "reconforge"
+    offenders: list[str] = []
+    for path in sorted(production_root.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                continue
+            if (
+                node.func.attr != "from_exact"
+                or not isinstance(node.func.value, ast.Name)
+                or node.func.value.id != "Money"
+            ):
+                continue
+            strict_precision = next(
+                (keyword.value for keyword in node.keywords if keyword.arg == "strict_precision"), None
+            )
+            if not isinstance(strict_precision, ast.Constant) or not isinstance(strict_precision.value, bool):
+                offenders.append(f"{path.relative_to(root)}:{node.lineno}")
+    assert offenders == [], "production Money.from_exact calls must declare strict_precision: " + ", ".join(offenders)
+
+
 def test_unbound_actors_are_rejected_outside_trusted_local_mode(tmp_path: Path) -> None:
     db_path = tmp_path / "actor-context.db"
     run_migrations(db_path)

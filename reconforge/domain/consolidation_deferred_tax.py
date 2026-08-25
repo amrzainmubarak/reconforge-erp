@@ -152,7 +152,11 @@ class AcquisitionDeferredTaxItem:
 
     def tax_effect(self, currency: str) -> Money:
         # Money applies the installed currency registry's explicit ROUND_HALF_UP policy.
-        return Money.from_exact(self.temporary_difference(currency).amount * self.tax_rate, currency)
+        return Money.from_exact(
+            self.temporary_difference(currency).amount * self.tax_rate,
+            currency,
+            strict_precision=False,
+        )
 
     def classification(self, currency: str) -> DeferredTaxClassification:
         amount = self.tax_effect(currency).amount
@@ -425,7 +429,11 @@ def verify_acquisition_deferred_tax_bridge_payload(payload: object) -> dict[str,
         signed_fair = _signed(kind, fair_value.amount)
         signed_basis = _signed(kind, tax_basis.amount)
         expected_temporary = Money.from_exact(signed_fair - signed_basis, currency, strict_precision=True)
-        expected_tax = Money.from_exact(expected_temporary.amount * rate, currency)
+        expected_tax = Money.from_exact(
+            expected_temporary.amount * rate,
+            currency,
+            strict_precision=False,
+        )
         if temporary.amount != expected_temporary.amount or tax_amount.amount != expected_tax.amount:
             raise ConsolidationError(f"Acquisition deferred-tax item {item_id} arithmetic does not reconcile.")
         expected_classification: DeferredTaxClassification = (

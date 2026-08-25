@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-927: Explicit precision policy for every production Money construction
+
+- The production `Money.from_exact` inventory now has an explicit literal
+  `strict_precision=True` or `strict_precision=False` at every call site.
+  Domain source helpers reject registered-currency over-precision; derived
+  deferred-tax, NCI, and ownership-change calculations retain explicit
+  registry rounding.
+- `python -m pytest -q -ra tests/test_p0_correctness.py
+  tests/test_retail_settlement.py tests/test_manufacturing_cost_control.py
+  tests/test_consolidation_deferred_tax.py tests/test_consolidation_lifecycle.py
+  tests/test_consolidation_ownership_changes.py
+  tests/test_individual_cashflow_control.py` passed (`67` tests).
+- `tests/test_p0_correctness.py::test_production_money_construction_declares_rounding_policy`
+  passed; Ruff, Mypy, and `git diff --check` pass for the changed scope.
+- The full `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra`
+  regression collected 3,119 nodes and exited `0`; only declared capability
+  skips and the existing Starlette/httpx, SAML, and legacy-input warnings
+  remained. Package build, Bandit, and pip-audit also exited `0`; pip-audit
+  reported no known vulnerabilities and noted the local package is not on PyPI.
+- This is a local construction-policy and regression gate. It does not prove
+  complete financial-path coverage, source authenticity, posting, provider or
+  write-back behavior, PostgreSQL parity, HA/DR, or production readiness.
+
 ## E-926: Fail-closed deployment-readiness evidence shape
 
 - `load_deployment_readiness_matrix` now rejects a `verified_scoped` gate with

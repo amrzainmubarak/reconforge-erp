@@ -237,7 +237,7 @@ def prepare_ownership_change_adjustment(
     prior_nci = Decimal("1") - request.prior_group_ownership_percentage
     new_nci = Decimal("1") - request.new_group_ownership_percentage
     unrounded_nci_effect = _multiply(request.net_assets.amount, new_nci - prior_nci)
-    nci_effect = Money.from_exact(unrounded_nci_effect, currency)
+    nci_effect = Money.from_exact(unrounded_nci_effect, currency, strict_precision=False)
     nci_rounding_delta = nci_effect.amount - unrounded_nci_effect
     parent_equity_effect = -(nci_effect.amount + request.consideration_effect.amount)
     parent_equity = Money.from_exact(parent_equity_effect, currency, strict_precision=True)

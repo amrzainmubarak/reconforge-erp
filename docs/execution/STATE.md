@@ -2,6 +2,22 @@
 
 Updated: 2026-08-25
 
+## E-929 — Align deployment-readiness reader with JSON Schema (2026-08-25)
+
+- The readiness reader now rejects boolean schema versions, invalid ISO dates,
+  short claim boundaries, mismatched edition profile commands, and short or
+  whitespace-only gate boundaries. The v1 JSON Schema expresses the same
+  scalar constraints while runtime evidence-path checks remain intentionally
+  stronger.
+- The focused readiness/runtime/profile/admission collection passes `36/36`,
+  including schema/reader rejection parity cases; Ruff and Mypy pass for the
+  changed reader. The full Python 3.12 regression exits `0` with `3,204`
+  collected tests; declared capability skips and existing warnings remain.
+- This closes a local contract-drift gap only. It does not prove current
+  evidence, deployment drills, external IAM/KMS/HSM, live dependencies,
+  independent failure domains, RPO/RTO, or production readiness. ADR 0626
+  records the reversible decision.
+
 ## E-928 — Refuse policy evidence built from a mismatched context (2026-08-25)
 
 - `build_policy_decision_evidence` now derives context and typed-scope digests

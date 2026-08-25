@@ -6,6 +6,7 @@ import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import cast
 
@@ -86,8 +87,28 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
     top = _mapping(payload, "readiness matrix")
     if set(top) != _TOP_LEVEL:
         raise DeploymentReadinessError("readiness matrix fields do not match the closed contract")
-    if top["schema_version"] != 1 or top["matrix_id"] != "reconforge-deployment-readiness":
+    schema_version = top["schema_version"]
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int) or schema_version != 1:
         raise DeploymentReadinessError("readiness matrix identity is invalid")
+    if top["matrix_id"] != "reconforge-deployment-readiness":
+        raise DeploymentReadinessError("readiness matrix identity is invalid")
+    reviewed_on = top["reviewed_on"]
+    if (
+        not isinstance(reviewed_on, str)
+        or len(reviewed_on) != 10
+        or reviewed_on[4] != "-"
+        or reviewed_on[7] != "-"
+    ):
+        raise DeploymentReadinessError("reviewed_on must be an ISO date")
+    try:
+        parsed_reviewed_on = date.fromisoformat(reviewed_on)
+    except ValueError as exc:
+        raise DeploymentReadinessError("reviewed_on must be an ISO date") from exc
+    if parsed_reviewed_on.isoformat() != reviewed_on:
+        raise DeploymentReadinessError("reviewed_on must be an ISO date")
+    claim_boundary = top["claim_boundary"]
+    if not isinstance(claim_boundary, str) or len(claim_boundary) < 80:
+        raise DeploymentReadinessError("claim_boundary must contain at least 80 characters")
     status_values = top["status_values"]
     if not isinstance(status_values, list) or tuple(cast(list[object], status_values)) != (
         "verified_scoped",
@@ -113,6 +134,10 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
         readiness_status = edition["readiness_status"]
         if not isinstance(readiness_status, str) or readiness_status not in {"partial", "open"}:
             raise DeploymentReadinessError("edition readiness status cannot claim readiness")
+        profile_command = edition["profile_command"]
+        expected_profile_command = f"reconforge deployment profiles --edition {edition_id}"
+        if profile_command != expected_profile_command:
+            raise DeploymentReadinessError("edition profile command is invalid")
         gates = edition["gates"]
         if not isinstance(gates, list) or len(gates) != len(_GATES):
             raise DeploymentReadinessError("edition gates are invalid")
@@ -129,8 +154,8 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
             if not isinstance(status, str) or status not in _STATUSES:
                 raise DeploymentReadinessError("gate status is invalid")
             boundary = gate["boundary"]
-            if not isinstance(boundary, str) or not boundary.strip():
-                raise DeploymentReadinessError("gate boundary must be a non-empty string")
+            if not isinstance(boundary, str) or len(boundary) < 20 or not boundary.strip():
+                raise DeploymentReadinessError("gate boundary must contain at least 20 non-whitespace characters")
             evidence = gate["evidence"]
             if not isinstance(evidence, list):
                 raise DeploymentReadinessError("gate evidence must be an array")

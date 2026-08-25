@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from typer.testing import CliRunner
 
 from reconforge.cli import app
@@ -94,3 +94,43 @@ def test_runtime_reader_requires_evidence_for_verified_gates_and_boundaries_for_
     unbounded_path.write_text(yaml.safe_dump(unbounded_gate, sort_keys=False), encoding="utf-8")
     with pytest.raises(DeploymentReadinessError, match="gate boundary"):
         load_deployment_readiness_matrix(unbounded_path)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "error_message"),
+    [
+        ("boolean_schema_version", "readiness matrix identity"),
+        ("invalid_reviewed_on", "reviewed_on"),
+        ("short_claim_boundary", "claim_boundary"),
+        ("wrong_profile_command", "profile command"),
+        ("short_gate_boundary", "gate boundary"),
+        ("blank_gate_boundary", "gate boundary"),
+    ],
+)
+def test_runtime_reader_matches_schema_scalar_rejections(
+    tmp_path: Path,
+    mutation: str,
+    error_message: str,
+) -> None:
+    source = yaml.safe_load(MATRIX_PATH.read_text(encoding="utf-8"))
+    if mutation == "boolean_schema_version":
+        source["schema_version"] = True
+    elif mutation == "invalid_reviewed_on":
+        source["reviewed_on"] = "2026-02-29"
+    elif mutation == "short_claim_boundary":
+        source["claim_boundary"] = "too short"
+    elif mutation == "wrong_profile_command":
+        source["editions"][0]["profile_command"] = "reconforge deployment profiles --edition unknown"
+    elif mutation == "short_gate_boundary":
+        source["editions"][0]["gates"][0]["boundary"] = "too short"
+    else:
+        source["editions"][0]["gates"][0]["boundary"] = " " * 20
+
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    with pytest.raises(ValidationError):
+        Draft202012Validator(schema, format_checker=FormatChecker()).validate(source)
+
+    path = tmp_path / f"{mutation}.yaml"
+    path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+    with pytest.raises(DeploymentReadinessError, match=error_message):
+        load_deployment_readiness_matrix(path)

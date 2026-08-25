@@ -5,6 +5,16 @@
 
 ## Decisions
 
+### D-980: Align deployment-readiness scalar contracts
+
+The offline readiness reader and v1 JSON Schema now share strict scalar
+constraints: boolean-safe schema versioning, canonical ISO review dates, an
+80-character claim boundary, an exact edition profile command, and gate
+boundaries of at least 20 characters containing non-whitespace. Evidence path
+containment remains a deliberate runtime-strengthening check. The checked-in
+matrix remains valid and no readiness or production claim is widened. ADR 0626
+records the reversible decision.
+
 ### D-979: Refuse mismatched policy evidence context
 
 When `build_policy_decision_evidence` receives a `PolicyEvaluationContext`, it

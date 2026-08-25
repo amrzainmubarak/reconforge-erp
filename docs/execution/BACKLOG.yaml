@@ -1411,6 +1411,11 @@ tasks:
         edition identity. Focused readiness/runtime/profile/admission tests
         pass; actual mode-specific drills, external enforcement, and
         production-readiness evidence remain required.
+      - E-929 aligns the readiness reader and v1 JSON Schema on strict scalar
+        constraints for schema version, review date, claim boundary, edition
+        profile command, and gate boundaries; 36/36 focused readiness/runtime
+        tests pass. Deployment drills, external dependencies, independent
+        failure domains, RPO/RTO, and production readiness remain open.
   - id: E-1007
     priority: P1
     area: global-expansion

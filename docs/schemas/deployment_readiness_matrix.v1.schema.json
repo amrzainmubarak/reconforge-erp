@@ -18,7 +18,7 @@
         "properties": {
           "id": {"enum": ["community", "team", "enterprise", "regulated"]},
           "readiness_status": {"enum": ["partial", "open"]},
-          "profile_command": {"type": "string", "pattern": "^reconforge deployment profiles --edition "},
+          "profile_command": {"type": "string", "pattern": "^reconforge deployment profiles --edition (community|team|enterprise|regulated)$"},
           "gates": {
             "type": "array", "minItems": 8, "maxItems": 8,
             "items": {
@@ -28,7 +28,7 @@
                 "id": {"type": "string"},
                 "status": {"enum": ["verified_scoped", "partial", "open"]},
                 "evidence": {"type": "array", "items": {"type": "string"}},
-                "boundary": {"type": "string", "minLength": 20}
+                "boundary": {"type": "string", "minLength": 20, "pattern": "\\S"}
               },
               "allOf": [
                 {

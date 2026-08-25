@@ -2,6 +2,30 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-929: Align deployment-readiness reader with JSON Schema
+
+- The reader and `deployment_readiness_matrix.v1.schema.json` now agree on
+  boolean-safe schema versioning, canonical `reviewed_on`, minimum claim
+  boundary, exact edition profile commands, and non-whitespace gate boundaries.
+  Runtime evidence-path containment/existence remains an intentional stronger
+  check than generic schema validation.
+- `python -m pytest -ra tests/test_deployment_readiness_matrix.py
+  tests/test_deployment_runtime_evidence.py tests/test_deployment_profiles.py
+  tests/test_deployment_admission.py` passed `36/36`; Ruff, Mypy, and YAML/JSON
+  parse checks passed.
+- `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra` exited `0`
+  after the change; the current collection is `3,204` tests. Declared service,
+  network, and Windows-capability skips plus existing dependency and
+  legacy-input warnings remain.
+- Bandit exited `0` with the repository's existing `nosec`/comment warnings;
+  `pip-audit` reported no known vulnerabilities and could not audit the local
+  unpublished package on PyPI; `python -m build --no-isolation` produced the
+  0.7.1 sdist and wheel; `git diff --check` passed.
+- This is offline contract-integrity evidence only. It does not prove current
+  evidence, deployment drills, external IAM/KMS/HSM, live dependencies,
+  independent failure domains, RPO/RTO, or production readiness. ADR 0626
+  records the boundary.
+
 ## E-928: Refuse policy evidence built from a mismatched context
 
 - `build_policy_decision_evidence` now recomputes the expected context and

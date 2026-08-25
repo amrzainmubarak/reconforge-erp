@@ -2,6 +2,22 @@
 
 Updated: 2026-08-25
 
+## E-932 — Verify the Docker build and bounded runtime (2026-08-25)
+
+- Docker Desktop `4.87.0` / Engine `29.7.2` built `reconforge:baseline` from
+  the checked-in two-stage Dockerfile and digest-pinned Python base. The build
+  exited `0`.
+- `docker run --rm reconforge:baseline reconforge doctor` exited `0` with the
+  package, config, sample-data, output-path, and validation checks OK; the
+  sample data reported `0` errors and `10` warnings.
+- The container `validate examples/sample_data` and `demo run --output
+  output/baseline-demo` both exited `0`; demo artifacts included the evidence,
+  client-pack, reports, review register, and reconciliation workbooks.
+- The runtime still contains `libcrypto3/libssl3 3.5.7-r0`. E-824 remains
+  blocked by the current OpenSSL finding; successful build/doctor/demo does not
+  override the container security release gate. No image scan, publication, or
+  production-readiness claim is made.
+
 ## E-931 — Verify the web quality and bilingual accessibility gates (2026-08-25)
 
 - `npm ci` completed from `apps/web/package-lock.json`; npm audited `161`

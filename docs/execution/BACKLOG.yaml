@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-932
+    priority: P0
+    area: release_operations
+    title: Verify Docker build and bounded runtime
+    status: completed
+    depends_on: [E-824]
+    exit_evidence: >-
+      Docker Desktop 4.87.0 / Engine 29.7.2 builds the digest-pinned image;
+      doctor, sample validation, and demo run exit 0. The runtime still carries
+      libcrypto3/libssl3 3.5.7-r0, so E-824 remains blocked and no image
+      publication or production-readiness claim is inferred.
   - id: E-931
     priority: P0
     area: release_operations

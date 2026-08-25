@@ -2,6 +2,28 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-932: Verify the Docker build and bounded runtime
+
+- Environment: Docker Desktop `4.87.0` (236836), Linux Engine `29.7.2`,
+  `desktop-linux` builder on Windows. `docker build -t reconforge:baseline .`
+  exited `0`; the image uses the checked-in digest-pinned Python 3.11 Alpine
+  base and two-stage runtime.
+- `docker run --rm reconforge:baseline reconforge doctor` exited `0`:
+  package/config/sample-data/output-path/validation checks were OK, with `0`
+  validation errors and `10` sample-data warnings.
+- `docker run --rm reconforge:baseline reconforge validate examples/sample_data`
+  exited `0` with the same `10` warnings. These are visible synthetic fixture
+  quality observations, not silently converted errors.
+- `docker run --rm reconforge:baseline reconforge demo run --output
+  output/baseline-demo` exited `0` and emitted the management/executive HTML
+  outputs, workbooks, review register, evidence binder, client pack, and rule
+  results inside the disposable container.
+- Runtime package inspection reports `libcrypto3-3.5.7-r0` and
+  `libssl3-3.5.7-r0`; the `openssl` CLI is intentionally absent from the
+  trimmed runtime. E-824's current OpenSSL release block therefore remains
+  active. This evidence does not include a fresh Syft/Grype scan, signed SBOM,
+  provenance verification, registry publication, or production claim.
+
 ## E-931: Verify the web quality and bilingual accessibility gates
 
 - `npm ci` completed from `apps/web/package-lock.json` under Node `v26.3.0` and

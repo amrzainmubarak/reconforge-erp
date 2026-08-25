@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-993: Bind Inventory Planning server routes to the real PostgreSQL aggregate
+
+Inventory Planning server-mode operations now use an explicit PostgreSQL
+adapter boundary for count sessions, count lifecycle transitions, reorder
+rules, reorder signals, summaries, and snapshots. Each request reconstructs
+the authenticated tenant/workspace/organization/legal-entity hierarchy,
+re-evaluates central scoped policy, validates count-session object scope, and
+opens one `PostgresTenantBoundary` transaction. Payload hierarchy values are
+canonicalized from authenticated scope and actor identity comes from the
+authenticated principal. Exact scaled quantities and existing maker-checker
+controls remain the contract. Local SQLite remains the compatibility path.
+This is reversible and bounded; external IAM, HA/DR, provider behavior,
+capacity, backup/restore, and production effectiveness remain unproven. ADR
+0638 records the rollback boundary.
+
 ### D-992: Keep SQLite-only Exceptions and Workflow routes fail-closed
 
 The legacy Exceptions queue and Workflow state-machine routes remain local

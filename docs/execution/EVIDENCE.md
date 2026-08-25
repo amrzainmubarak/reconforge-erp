@@ -2,6 +2,37 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-945: Expose Inventory Planning through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/inventory_planning.py` now dispatches
+  all count-session, reorder-rule, reorder-signal, summary, and snapshot
+  operations to `execute_postgres_inventory_planning` in server mode. The
+  boundary binds authenticated hierarchy, re-evaluates central policy,
+  validates count-session object scope, binds actors to authenticated
+  principals, accepts canonical workspace IDs, and never opens local SQLite in
+  server mode.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_inventory_planning.py tests/test_inventory_planning.py
+  tests/test_application_inventory_planning.py
+  tests/test_postgres_inventory_planning.py --tb=short -ra` exits `0`; Ruff
+  and source Mypy pass for the changed implementation.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, an explicit application DSN, and a separate application role
+  without superuser or `BYPASSRLS`. The HTTP contract plus the existing direct
+  PostgreSQL Planning lifecycle exited `0` with `7 passed`. It covers seeded
+  Inventory Core movement, count create/start/record/submit/approve,
+  maker-checker denial, exact `2.500` quantity, reorder rule/signal, actor and
+  hierarchy binding, and denied workspace scope. The fixture installs the
+  ledger outbox schema required by transactional planning evidence.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, multi-host or
+  HA/DR behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0638
+  records the decision.
+
 ## E-944: Refuse SQLite-only Exceptions and Workflow fallback in Server Profile
 
 - Code evidence: `reconforge/api/routes/exceptions.py` and

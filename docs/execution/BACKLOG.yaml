@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-945
+    priority: P0
+    area: identity-governance
+    title: Expose Inventory Planning through the PostgreSQL server API boundary
+    status: completed
+    depends_on: [E-944, E-941, E-938]
+    exit_evidence: >-
+      Inventory Planning count, reorder, summary, snapshot, and signal routes
+      dispatch through an explicit PostgreSQL adapter with authenticated
+      hierarchy binding, central scoped-policy re-evaluation, count-session
+      scope checks, principal actor binding, exact scaled quantities, and no
+      SQLite fallback in server mode. The live FastAPI contract passes seeded
+      movement, count lifecycle, maker/checker approval, exact 2.500 output,
+      reorder signals, and denied workspace scope with a
+      non-superuser/no-BYPASSRLS role on the checked-in PostgreSQL 16 image.
+      This is bounded single-node synthetic evidence, not external IAM, HA/DR,
+      provider, capacity, backup/restore, or production-readiness evidence.
+      ADR 0638 records the boundary.
   - id: E-944
     priority: P0
     area: identity-governance

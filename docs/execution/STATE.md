@@ -2,6 +2,21 @@
 
 Updated: 2026-08-26
 
+## E-945 — Expose Inventory Planning through the live PostgreSQL API boundary (2026-08-26)
+
+- Inventory Planning server routes now use the PostgreSQL adapter for count
+  sessions, counted quantities, approvals/cancellations, reorder rules,
+  reorder signals, summaries, and snapshots. Authenticated workspace,
+  organization, legal-entity, object, and actor values are bound before the
+  repository transaction; server mode never falls back to tenant SQLite.
+- The live FastAPI contract passed with full organization/entity/fiscal-period
+  hierarchy, seeded Inventory Core movement, exact `2.500` scaled output,
+  maker/checker count approval, reorder signal generation, spoofed payload
+  hierarchy, and denied workspace scope. This is bounded single-node synthetic
+  evidence only; external IAM, HA/DR, provider behavior, capacity,
+  backup/restore, and production readiness remain open. ADR 0638 records the
+  boundary.
+
 ## E-944 — Refuse SQLite-only Exceptions and Workflow fallback in Server Profile (2026-08-26)
 
 - The legacy Exceptions queue and Workflow state-machine routes now use the

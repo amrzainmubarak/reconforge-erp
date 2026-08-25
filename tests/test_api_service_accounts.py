@@ -101,7 +101,8 @@ def test_service_principal_http_me_safe_permission_human_denial_logout_and_tenan
     assert me.json()["principal_type"] == "service_account"
     assert me.json()["roles"] == []
     assert me.json()["permissions"] == ["accounts.review", "db.read", "reconciliation.prepare"]
-    assert safe_read.status_code == 200
+    assert safe_read.status_code == 501
+    assert safe_read.json()["error"]["code"] == "workflow_server_backend_unavailable"
     assert human_review.status_code == 403
     assert human_review.json()["error"]["code"] == "permission_denied"
     assert dynamic_transition.status_code == 403

@@ -2,6 +2,17 @@
 
 Updated: 2026-08-26
 
+## E-944 — Refuse SQLite-only Exceptions and Workflow fallback in Server Profile (2026-08-26)
+
+- The legacy Exceptions queue and Workflow state-machine routes now use the
+  explicit local-database dependency. When PostgreSQL server identity is
+  active they fail closed with route-specific `501` errors before opening a
+  tenant SQLite database; local mode remains unchanged.
+- The HTTP boundary contract covers read and mutation endpoints for both
+  route families and verifies that server mode cannot silently use local
+  persistence. This is a safety boundary, not PostgreSQL Exceptions or
+  Workflow support. ADR 0637 records the decision and the next adapter gate.
+
 ## E-943 — Expose Payables through the live PostgreSQL API boundary (2026-08-26)
 
 - Accounts Payable server routes now use an explicit PostgreSQL adapter

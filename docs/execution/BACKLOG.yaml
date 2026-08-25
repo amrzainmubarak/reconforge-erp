@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-944
+    priority: P0
+    area: identity-governance
+    title: Refuse SQLite-only Exceptions and Workflow fallback in Server Profile
+    status: completed
+    depends_on: [E-943, E-938]
+    exit_evidence: >-
+      Exceptions and Workflow routes use the explicit local-database boundary
+      and return route-specific HTTP 501 errors before opening SQLite when
+      PostgreSQL server identity is active. Local workflow/audit compatibility
+      remains covered. The server-profile HTTP contract covers three exception
+      and four workflow endpoints using an unreachable PostgreSQL DSN. This is
+      a fail-closed safety boundary, not PostgreSQL Exceptions/Workflow
+      support, external IAM, HA/DR, capacity, or production evidence. ADR 0637
+      records the decision.
   - id: E-943
     priority: P0
     area: identity-governance
@@ -1609,6 +1624,12 @@ tasks:
         scope; external IAM, distributed invalidation, HA/DR, capacity,
         provider behavior, backup/restore, and production effectiveness remain
         open.
+      - E-944 keeps the legacy Exceptions and Workflow route families
+        fail-closed in PostgreSQL Server Profile rather than opening tenant
+        SQLite. The synthetic HTTP boundary passes three exception and four
+        workflow endpoint refusals while local workflow/audit behavior remains
+        covered; dedicated PostgreSQL adapters and server evidence remain
+        required.
   - id: E-1006
     priority: P1
     area: global-expansion

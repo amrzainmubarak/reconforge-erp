@@ -2,6 +2,26 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-944: Refuse SQLite-only Exceptions and Workflow fallback in Server Profile
+
+- Code evidence: `reconforge/api/routes/exceptions.py` and
+  `reconforge/api/routes/workflow.py` now use `get_local_db` and check the
+  server identity boundary before invoking SQLite services. Server requests
+  return `exceptions_server_backend_unavailable` or
+  `workflow_server_backend_unavailable` with HTTP 501; local requests retain
+  the existing service behavior.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_audit_workflow.py tests/test_api_service_accounts.py
+  tests/test_api_server_local_boundaries.py --tb=short -ra` exits `0`; Ruff
+  and Mypy on the changed routes also exit `0`.
+- `tests/test_api_server_local_boundaries.py` exercises three Exceptions
+  endpoints and four Workflow endpoints through a real FastAPI server-profile
+  app configured with an unreachable PostgreSQL DSN. All return 501 before a
+  local database is opened. The existing local workflow/audit tests continue
+  to pass. This proves fail-closed routing only; it does not prove PostgreSQL
+  Exceptions/Workflow support, external IAM, HA/DR, or production readiness.
+
 ## E-943: Expose Payables through the live PostgreSQL API boundary
 
 - Code evidence: `reconforge/api/routes/payables.py` now dispatches supplier,

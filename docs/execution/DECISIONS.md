@@ -5,6 +5,18 @@
 
 ## Decisions
 
+### D-992: Keep SQLite-only Exceptions and Workflow routes fail-closed
+
+The legacy Exceptions queue and Workflow state-machine routes remain local
+SQLite capabilities until dedicated PostgreSQL adapters, hierarchy policy,
+RLS, audit/outbox contracts, and live evidence exist. Their dependencies now
+return no local connection in Server Profile, and each route rejects the
+request with an explicit 501 before the SQLite service is called. Local mode
+is preserved. This prevents an authenticated PostgreSQL server request from
+silently creating or mutating financial workflow state in a tenant-local
+database. The decision is reversible when the dedicated adapters are ready;
+ADR 0637 records the boundary.
+
 ### D-991: Bind Payables server routes to the real PostgreSQL aggregate
 
 Payables server-mode HTTP operations now use an explicit PostgreSQL adapter

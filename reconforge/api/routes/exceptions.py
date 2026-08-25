@@ -5,11 +5,12 @@ from __future__ import annotations
 import sqlite3
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict
 
-from reconforge.api.dependencies import get_db, require_any_permission, require_permission
+from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
 from reconforge.api.errors import APIError
+from reconforge.api.server_identity import server_identity_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.platform.common import PlatformError
@@ -33,10 +34,23 @@ class StatusRequest(BaseModel):
     status: str
 
 
+def _local_connection(request: Request, connection: sqlite3.Connection | None) -> sqlite3.Connection:
+    if server_identity_enabled(request):
+        raise APIError(
+            status_code=501,
+            code="exceptions_server_backend_unavailable",
+            message="The unified exception queue is not exposed by the PostgreSQL server boundary.",
+        )
+    if connection is None:
+        raise APIError(status_code=500, code="local_database_not_configured", message="The local exception queue database is not configured.")
+    return connection
+
+
 @router.get("")
 def list_exceptions(
+    request: Request,
     current_user: ExceptionsRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     period: str = "",
     entity: str = "",
     account: str = "",
@@ -48,7 +62,7 @@ def list_exceptions(
     """List unified DB-backed exceptions."""
 
     try:
-        records = ExceptionQueueService(connection).list(
+        records = ExceptionQueueService(_local_connection(request, connection)).list(
             period_name=period,
             entity_code=entity,
             account_code=account,
@@ -65,14 +79,15 @@ def list_exceptions(
 @router.post("/{exception_id}/assign")
 def assign_exception(
     exception_id: str,
+    request: Request,
     payload: AssignRequest,
     current_user: ExceptionsManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     """Assign a unified exception."""
 
     try:
-        record = ExceptionQueueService(connection).assign(
+        record = ExceptionQueueService(_local_connection(request, connection)).assign(
             exception_id, owner=payload.owner, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -83,14 +98,15 @@ def assign_exception(
 @router.post("/{exception_id}/status")
 def set_exception_status(
     exception_id: str,
+    request: Request,
     payload: StatusRequest,
     current_user: ExceptionsManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     """Set a unified exception status."""
 
     try:
-        record = ExceptionQueueService(connection).set_status(
+        record = ExceptionQueueService(_local_connection(request, connection)).set_status(
             exception_id, status=payload.status, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:

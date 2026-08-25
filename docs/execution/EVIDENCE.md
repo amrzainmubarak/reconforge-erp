@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-936: Separate policy provenance from business rollback assertions
+
+- The first full regression after E-935 found four expected-count failures in
+  financial idempotency, account workflow, and receivables rollback tests. The
+  failures were caused by newly durable `authorization.policy_decision`
+  events, not by business rows, business audit entries, or outbox effects
+  escaping rollback.
+- The test contract now counts business audit events with
+  `object_type <> 'authorization.policy_decision'` for rollback assertions.
+  The independent policy-ledger test continues to verify that the authorization
+  event is retained, redacted, digest-bound, and hash-chain verifiable.
+- The focused repair command for the four affected tests exited `0`; Ruff and
+  Mypy exited `0`; the full
+  `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra` run reached
+  `100%` and exited `0`. The run retained declared skips for unavailable
+  PostgreSQL/Redis/S3/network/Windows capabilities and existing warnings for
+  deprecated dependencies and intentional legacy financial-input paths.
+- This evidence confirms the local test contract and regression state only; it
+  does not close server-side durable policy storage, production IAM, external
+  services, container vulnerability E-824, or release publication gates.
+
 ## E-935: Persist local policy evidence in the append-only audit ledger
 
 - `audit_policy_decision` now accepts `audit_connection`. With a local SQLite

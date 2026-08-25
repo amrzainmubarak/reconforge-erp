@@ -5,6 +5,17 @@
 
 ## Decisions
 
+### D-985: Classify policy provenance separately from business rollback effects
+
+Durable local authorization decisions are first-class append-only audit events,
+so rollback tests must distinguish `authorization.policy_decision` from
+business audit events. Update affected assertions to exclude only that explicit
+object type when measuring business rollback; do not delete, suppress, or roll
+back the authorization provenance event merely to preserve legacy row counts.
+This keeps authorization-attempt evidence durable while preserving the
+business transaction atomicity contract. The decision is limited to test
+semantics and is reversible if the audit taxonomy is versioned.
+
 ### D-984: Persist local policy evidence in the existing audit chain
 
 When a local SQLite connection is available, `audit_policy_decision` appends

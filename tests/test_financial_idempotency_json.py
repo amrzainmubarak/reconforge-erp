@@ -179,7 +179,10 @@ def test_corrupt_stored_financial_idempotency_response_rejects_before_new_busine
         connection.commit()
         before = {
             "business": connection.execute(f"SELECT COUNT(*) AS count FROM {business_table}").fetchone()["count"],
-            "audit": connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"],
+            "audit": connection.execute(
+                "SELECT COUNT(*) AS count FROM audit_events "
+                "WHERE object_type <> 'authorization.policy_decision'"
+            ).fetchone()["count"],
             "outbox": connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"],
         }
 
@@ -188,7 +191,10 @@ def test_corrupt_stored_financial_idempotency_response_rejects_before_new_busine
 
         after = {
             "business": connection.execute(f"SELECT COUNT(*) AS count FROM {business_table}").fetchone()["count"],
-            "audit": connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"],
+            "audit": connection.execute(
+                "SELECT COUNT(*) AS count FROM audit_events "
+                "WHERE object_type <> 'authorization.policy_decision'"
+            ).fetchone()["count"],
             "outbox": connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"],
         }
         assert after == before
@@ -220,13 +226,22 @@ def test_oversized_new_financial_idempotency_response_rolls_back_whole_mutation(
         business_table = "ar_invoices"
         message = "Receivables idempotency response failed safety validation"
     try:
-        before_audit = connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"]
+        before_audit = connection.execute(
+            "SELECT COUNT(*) AS count FROM audit_events "
+            "WHERE object_type <> 'authorization.policy_decision'"
+        ).fetchone()["count"]
         before_outbox = connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"]
         with pytest.raises(PlatformError, match=message):
             create()
         assert connection.execute(f"SELECT COUNT(*) AS count FROM {business_table}").fetchone()["count"] == 0
         assert connection.execute(f"SELECT COUNT(*) AS count FROM {idempotency_table}").fetchone()["count"] == 0
-        assert connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == before_audit
+        assert (
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM audit_events "
+                "WHERE object_type <> 'authorization.policy_decision'"
+            ).fetchone()["count"]
+            == before_audit
+        )
         assert connection.execute("SELECT COUNT(*) AS count FROM outbox_events").fetchone()["count"] == before_outbox
     finally:
         connection.close()

@@ -2,6 +2,20 @@
 
 Updated: 2026-08-25
 
+## E-936 — Separate policy provenance from business rollback assertions (2026-08-25)
+
+- The full regression exposed four legacy assertions that counted every
+  `audit_events` row as a business side effect. Local authorization decisions
+  are now durable `authorization.policy_decision` events by design, including
+  when the later business mutation rejects or rolls back.
+- The affected financial idempotency, account workflow, and receivables tests
+  now assert rollback against business audit events while retaining the
+  independent policy-provenance contract. The focused four-test repair passes;
+  Ruff, Mypy, and the full Python regression exit `0`.
+- This is test-contract clarification, not a relaxation of append-only audit
+  behavior. The full run still reports only declared capability skips and
+  existing deprecation/legacy-input warnings.
+
 ## E-935 — Persist local policy evidence in the append-only audit ledger (2026-08-25)
 
 - `audit_policy_decision` now accepts an optional SQLite connection and appends

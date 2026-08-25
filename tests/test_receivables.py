@@ -265,7 +265,10 @@ def test_receivables_reject_invalid_amount_and_roll_back_audit_failure(
                 actor_label="prep",
             )
 
-        before_audit_count = connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"]
+        before_audit_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM audit_events "
+            "WHERE object_type <> 'authorization.policy_decision'"
+        ).fetchone()["count"]
         monkeypatch.setattr(
             common_module, "audit", lambda *_args, **_kwargs: (_ for _ in ()).throw(AuditLedgerError("forced"))
         )
@@ -284,7 +287,11 @@ def test_receivables_reject_invalid_amount_and_roll_back_audit_failure(
             == 0
         )
         assert (
-            connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == before_audit_count
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM audit_events "
+                "WHERE object_type <> 'authorization.policy_decision'"
+            ).fetchone()["count"]
+            == before_audit_count
         )
     finally:
         connection.close()

@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-936
+    priority: P0
+    area: auditability
+    title: Separate policy provenance from business rollback assertions
+    status: completed
+    depends_on: [E-935]
+    exit_evidence: >-
+      Financial idempotency, account workflow, and receivables rollback tests
+      distinguish durable authorization.policy_decision events from business
+      audit effects. The focused repair, Ruff, Mypy, and full Python regression
+      exit 0; declared capability skips and existing warnings remain visible.
+      No append-only policy evidence is suppressed. D-985 records the test
+      contract decision.
   - id: E-935
     priority: P0
     area: identity_governance

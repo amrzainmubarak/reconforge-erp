@@ -261,7 +261,7 @@ jobs:
 
       - name: Attest source and Python release files
         id: attest-files
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: |
             release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.tar.gz
@@ -279,7 +279,7 @@ jobs:
 
       - name: Attest the image manifest digest
         id: attest-image
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-name: ${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.image.outputs.digest }}
@@ -288,7 +288,7 @@ jobs:
 
       - name: Attest the source archive SBOM
         id: attest-source-sbom
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.tar.gz
           sbom-path: release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.cdx.json
@@ -296,7 +296,7 @@ jobs:
 
       - name: Attest the wheel SBOM
         id: attest-wheel-sbom
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: release/reconforge_erp-${{ env.RELEASE_VERSION }}-py3-none-any.whl
           sbom-path: release/reconforge_erp-${{ env.RELEASE_VERSION }}-py3-none-any.cdx.json
@@ -304,7 +304,7 @@ jobs:
 
       - name: Attest the sdist SBOM
         id: attest-sdist-sbom
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: release/reconforge_erp-${{ env.RELEASE_VERSION }}.tar.gz
           sbom-path: release/reconforge_erp-${{ env.RELEASE_VERSION }}-sdist.cdx.json
@@ -312,7 +312,7 @@ jobs:
 
       - name: Attest the image SBOM
         id: attest-image-sbom
-        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-name: ${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.image.outputs.digest }}

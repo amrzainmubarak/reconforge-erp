@@ -5,6 +5,16 @@
 
 ## Decisions
 
+### D-995: Refuse local user SQLite access before the Server Profile guard
+
+The legacy `/users` routes now use `get_local_db` and resolve a local
+connection only after checking that PostgreSQL server identity is not active.
+This preserves Local Profile compatibility while preventing an authenticated
+server request from opening tenant SQLite before the intentionally disabled
+shadow identity surface returns `local_identity_surface_disabled`. The
+authoritative PostgreSQL identity/access routes remain separate. This is
+reversible and bounded; ADR 0640 records the rollback boundary.
+
 ### D-994: Bind Inventory Valuation and Reversal server routes to PostgreSQL
 
 Inventory Valuation and Valuation Reversal server-mode operations now use

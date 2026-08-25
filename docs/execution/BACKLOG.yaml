@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-947
+    priority: P0
+    area: identity-governance
+    title: Refuse local user SQLite access before opening a connection in Server Profile
+    status: completed
+    depends_on: [E-946, E-938]
+    exit_evidence: >-
+      All legacy /users routes use get_local_db and reject with the local
+      identity boundary before resolving SQLite when PostgreSQL server identity
+      is active. Roles retain the same boundary. The focused server-boundary
+      contract covers user and role reads plus user mutations, local
+      compatibility remains green, and higher-risk mutations fail earlier on
+      step-up policy where required. This is a fail-closed safety boundary,
+      not PostgreSQL identity administration, external IAM, SSO, HA/DR, or
+      production evidence. ADR 0640 records the decision.
   - id: E-946
     priority: P0
     area: identity-governance

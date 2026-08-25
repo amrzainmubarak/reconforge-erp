@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-947: Refuse local user SQLite access before opening a connection in Server Profile
+
+- Code evidence: every endpoint in `reconforge/api/routes/users.py` now uses
+  `get_local_db` and `_local_connection`, which evaluates
+  `local_identity_surface_disabled` before accepting a local connection.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_local_boundaries.py tests/test_api_users_roles.py
+  tests/test_api_identity_administration.py -k 'server or local_identity or
+  users or roles' --tb=short -ra` exits `0` with `7 passed`; Ruff and Mypy on
+  the changed route/test pass.
+- The synthetic Server Profile app uses an unreachable PostgreSQL DSN and
+  covers all local user and role route families. Authorized read routes return
+  `409 local_identity_surface_disabled`; higher-risk mutations can be denied
+  earlier by step-up policy, with no local SQLite fallback. Local user/role
+  tests remain green. This proves a fail-closed route boundary only, not
+  PostgreSQL identity administration, external IAM, SSO, HA/DR, or production
+  readiness. ADR 0640 records the decision.
+
 ## E-946: Expose Inventory Valuation and Reversal through the live PostgreSQL API boundary
 
 - Code evidence: `reconforge/api/routes/inventory_valuation.py` and

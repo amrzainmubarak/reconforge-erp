@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-947 — Refuse local user SQLite access before opening a connection in Server Profile (2026-08-26)
+
+- All legacy `/users` endpoints now depend on `get_local_db` and check the
+  local-identity guard before resolving a connection. PostgreSQL Server
+  Profile therefore rejects the shadow local user surface without opening
+  tenant SQLite; Local Profile behavior remains unchanged. Roles already used
+  the same boundary.
+- The server-boundary contract covers user list/create/update/disable/role
+  assignment/role removal/permission reads plus role reads. Authorized reads
+  return `local_identity_surface_disabled`; high-risk mutations can be denied
+  earlier by step-up policy, and all paths fail closed. ADR 0640 records the
+  decision.
+
 ## E-946 — Expose Inventory Valuation and Reversal through the live PostgreSQL API boundary (2026-08-26)
 
 - Inventory Valuation and Valuation Reversal server routes now use explicit

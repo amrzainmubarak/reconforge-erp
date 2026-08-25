@@ -212,6 +212,7 @@ def create_api_app(
     app.state.postgres_receivables_factory = app.state.postgres_identity_factory
     app.state.postgres_payables_factory = app.state.postgres_identity_factory
     app.state.postgres_inventory_planning_factory = app.state.postgres_identity_factory
+    app.state.postgres_inventory_valuation_factory = app.state.postgres_identity_factory
     app.state.postgres_bank_statement_factory = app.state.postgres_identity_factory
     app.state.postgres_writeback_factory = app.state.postgres_identity_factory
     app.state.postgres_retail_settlement_factory = app.state.postgres_identity_factory

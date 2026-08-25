@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-994: Bind Inventory Valuation and Reversal server routes to PostgreSQL
+
+Inventory Valuation and Valuation Reversal server-mode operations now use
+explicit PostgreSQL adapter boundaries. Each request reconstructs the
+authenticated tenant/workspace/organization/legal-entity hierarchy,
+re-evaluates central scoped policy, validates movement/document/reversal
+object scope, and opens one `PostgresTenantBoundary` transaction. Policy
+hierarchy values are canonicalized from authenticated scope and actor identity
+comes from the authenticated principal. Existing exact FIFO, minor/scaled
+quantity, Finance Draft, reversal-effect, audit/outbox, and maker-checker
+controls remain the contract. Local SQLite remains the compatibility path
+only outside Server Profile. This is reversible and bounded; external IAM,
+HA/DR, provider behavior, capacity, backup/restore, and production
+effectiveness remain unproven. ADR 0639 records the rollback boundary.
+
 ### D-993: Bind Inventory Planning server routes to the real PostgreSQL aggregate
 
 Inventory Planning server-mode operations now use an explicit PostgreSQL

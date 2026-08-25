@@ -2,6 +2,22 @@
 
 Updated: 2026-08-26
 
+## E-946 — Expose Inventory Valuation and Reversal through the live PostgreSQL API boundary (2026-08-26)
+
+- Inventory Valuation and Valuation Reversal server routes now use explicit
+  PostgreSQL adapters for policy, valuation document, FIFO cost-layer,
+  summary, snapshot, reversal, and lifecycle operations. Authenticated
+  workspace, organization, legal-entity, movement, valuation-document,
+  reversal, and actor values are bound before the repository transaction;
+  Server Profile never falls back to tenant SQLite.
+- The live FastAPI contract passed receipt valuation exact `12.34`, maker /
+  checker approval, delivery FIFO exact `4.94`, compensating reversal approval,
+  snapshot, hierarchy binding, and denied workspace scope under a separate
+  non-superuser/no-BYPASSRLS role. This is bounded single-node synthetic
+  evidence only; external IAM, HA/DR, provider behavior, capacity,
+  backup/restore, and production readiness remain open. ADR 0639 records the
+  boundary.
+
 ## E-945 — Expose Inventory Planning through the live PostgreSQL API boundary (2026-08-26)
 
 - Inventory Planning server routes now use the PostgreSQL adapter for count

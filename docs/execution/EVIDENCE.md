@@ -2,6 +2,40 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-946: Expose Inventory Valuation and Reversal through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/inventory_valuation.py` and
+  `reconforge/api/routes/inventory_valuation_reversal.py` now dispatch all
+  server-mode policy, document, cost-layer, summary, snapshot, reversal, and
+  lifecycle operations through `server_inventory_valuation`. The boundary
+  binds authenticated hierarchy, validates movement/document/reversal object
+  scope, binds actors, accepts canonical workspace IDs, and never opens local
+  SQLite in Server Profile.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_inventory_valuation.py tests/test_inventory_valuation.py
+  tests/test_inventory_valuation_reversal.py
+  tests/test_application_inventory_valuation.py
+  tests/test_application_inventory_valuation_reversal.py
+  tests/test_postgres_inventory_valuation.py
+  tests/test_postgres_inventory_valuation_reversal.py --tb=short -ra`
+  exits `0` locally; Ruff and Mypy pass for the changed implementation.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, explicit application/admin DSNs, and a separate application
+  role without superuser or `BYPASSRLS`. The HTTP contract exited `0` with
+  `1 passed`; it covers policy creation, receipt valuation exact `12.34`,
+  maker/checker approval, FIFO delivery valuation exact `4.94`, reversal
+  create/approve, snapshot, and denied workspace scope. The existing direct
+  PostgreSQL valuation and reversal contracts also passed in the same
+  disposable runtime.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, multi-host or
+  HA/DR behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0639
+  records the decision.
+
 ## E-945: Expose Inventory Planning through the live PostgreSQL API boundary
 
 - Code evidence: `reconforge/api/routes/inventory_planning.py` now dispatches

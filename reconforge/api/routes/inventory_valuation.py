@@ -3,15 +3,30 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Annotated
+from collections.abc import Callable
+from typing import Annotated, TypeVar
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_db, require_any_permission, require_permission
+from reconforge.api.dependencies import (
+    enforce_server_scoped_permission,
+    enforce_server_scoped_permissions,
+    get_local_db,
+    require_any_permission,
+    require_permission,
+)
 from reconforge.api.errors import APIError
+from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
+from reconforge.api.server_inventory_valuation import (
+    InventoryValuationExecutionScope,
+    InventoryValuationObject,
+    _run,
+    server_inventory_valuation_enabled,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
+from reconforge.infrastructure.postgres_inventory_valuation import PostgresInventoryValuationRepository
 from reconforge.platform.common import PlatformError
 from reconforge.platform.inventory_valuation import InventoryValuationService
 from reconforge.platform.inventory_values import DEFAULT_LIST_LIMIT
@@ -27,6 +42,7 @@ ValuationManage = Annotated[LocalUser, Depends(require_permission("inventory.val
 ValuationApprove = Annotated[LocalUser, Depends(require_permission("inventory.valuation.approve"))]
 PageLimit = Annotated[int, Query(ge=1, le=MAX_API_LIST_LIMIT)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
+T = TypeVar("T")
 
 
 class ValuationPolicyRequest(BaseModel):
@@ -74,14 +90,72 @@ def _list_response(key: str, records: list[dict[str, object]], *, limit: int, of
     return {key: records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}}
 
 
+def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
+    if connection is None:
+        raise APIError(status_code=500, code="local_database_not_configured", message="The local inventory valuation database is not configured.")
+    return connection
+
+
+def _server_scope(request: Request, permissions: frozenset[str]) -> RequestExecutionScope:
+    scope = request_execution_scope(request)
+    if len(permissions) == 1:
+        enforce_server_scoped_permission(
+            request,
+            permission=next(iter(permissions)),
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+        )
+    else:
+        enforce_server_scoped_permissions(
+            request,
+            permissions=permissions,
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+        )
+    return scope
+
+
+def _server_call(
+    request: Request,
+    permissions: frozenset[str],
+    operation: Callable[[PostgresInventoryValuationRepository, InventoryValuationExecutionScope], T],
+    *,
+    organization_code: str = "",
+    entity_code: str = "",
+    object_refs: tuple[tuple[InventoryValuationObject, str], ...] = (),
+) -> T:
+    _server_scope(request, permissions)
+    return _run(
+        request,
+        operation,
+        organization_code=organization_code,
+        entity_code=entity_code,
+        object_refs=object_refs,
+    )
+
+
 @router.get("/summary")
 def summary(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_inventory_valuation_enabled(request):
+        result = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}),
+            lambda repository, scope: repository.summary(workspace=scope.workspace_id, actor_label=current_user.id),
+        )
+        return {"summary": result.to_dict()}
     try:
-        result = InventoryValuationService(connection).summary(workspace=workspace, actor_label=current_user.username)
+        result = InventoryValuationService(_local_connection(connection)).summary(
+            workspace=workspace, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_summary_failed", exc) from exc
     return {"summary": result.to_dict()}
@@ -89,26 +163,45 @@ def summary(
 
 @router.get("/snapshot")
 def snapshot(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
 ) -> dict[str, object]:
+    if server_inventory_valuation_enabled(request):
+        return _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}),
+            lambda repository, scope: repository.snapshot(workspace=scope.workspace_id, actor_label=current_user.id),
+        )
     try:
-        return InventoryValuationService(connection).snapshot(workspace=workspace, actor_label=current_user.username)
+        return InventoryValuationService(_local_connection(connection)).snapshot(
+            workspace=workspace, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_snapshot_failed", exc) from exc
 
 
 @router.get("/policies")
 def list_policies(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_valuation_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}),
+            lambda repository, scope: repository.list_policies(
+                workspace=scope.workspace_id, limit=limit, offset=offset, actor_label=current_user.id
+            ),
+        )
+        return _list_response("policies", records, limit=limit, offset=offset)
     try:
-        records = InventoryValuationService(connection).list_policies(
+        records = InventoryValuationService(_local_connection(connection)).list_policies(
             workspace=workspace, limit=limit, offset=offset, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -118,12 +211,30 @@ def list_policies(
 
 @router.post("/policies")
 def upsert_policy(
+    request: Request,
     payload: ValuationPolicyRequest,
     current_user: ValuationManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_valuation_enabled(request):
+        values = payload.model_dump()
+        values["actor_label"] = current_user.id
+        return {"policy": _server_call(
+            request,
+            frozenset({"inventory.valuation.manage"}),
+            lambda repository, scope: repository.upsert_policy(
+                **{
+                    **values,
+                    "workspace": scope.workspace_id,
+                    "organization_code": scope.organization_code or payload.organization_code,
+                    "entity_code": scope.entity_code or payload.entity_code,
+                }
+            ),
+            organization_code=payload.organization_code,
+            entity_code=payload.entity_code,
+        )}
     try:
-        record = InventoryValuationService(connection).upsert_policy(
+        record = InventoryValuationService(_local_connection(connection)).upsert_policy(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -133,15 +244,25 @@ def upsert_policy(
 
 @router.get("/documents")
 def list_documents(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     status: str = "",
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_valuation_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}),
+            lambda repository, scope: repository.list_documents(
+                workspace=scope.workspace_id, status=status, limit=limit, offset=offset, actor_label=current_user.id
+            ),
+        )
+        return _list_response("documents", records, limit=limit, offset=offset)
     try:
-        records = InventoryValuationService(connection).list_documents(
+        records = InventoryValuationService(_local_connection(connection)).list_documents(
             workspace=workspace,
             status=status,
             limit=limit,
@@ -155,13 +276,24 @@ def list_documents(
 
 @router.post("/documents")
 def create_document(
+    request: Request,
     payload: ValuationDocumentRequest,
     current_user: ValuationManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     values = payload.model_dump()
+    if server_inventory_valuation_enabled(request):
+        values["actor_label"] = current_user.id
+        return {"document": _server_call(
+            request,
+            frozenset({"inventory.valuation.manage"}),
+            lambda repository, _scope: repository.create_document(**values),
+            object_refs=(("inventory_movement", payload.movement_id),),
+        )}
     try:
-        record = InventoryValuationService(connection).create_document(**values, actor_label=current_user.username)
+        record = InventoryValuationService(_local_connection(connection)).create_document(
+            **values, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_document_create_failed", exc) from exc
     return {"document": record}
@@ -170,11 +302,21 @@ def create_document(
 @router.get("/documents/{document_id}")
 def get_document(
     document_id: str,
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_valuation_enabled(request):
+        return {"document": _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}),
+            lambda repository, _scope: repository.get_document(document_id, actor_label=current_user.id),
+            object_refs=(("valuation_document", document_id),),
+        )}
     try:
-        record = InventoryValuationService(connection).get_document(document_id, actor_label=current_user.username)
+        record = InventoryValuationService(_local_connection(connection)).get_document(
+            document_id, actor_label=current_user.username
+        )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_document_read_failed", exc) from exc
     return {"document": record}
@@ -183,12 +325,22 @@ def get_document(
 @router.post("/documents/{document_id}/approve")
 def approve_document(
     document_id: str,
+    request: Request,
     payload: ReasonRequest,
     current_user: ValuationApprove,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_valuation_enabled(request):
+        return {"document": _server_call(
+            request,
+            frozenset({"inventory.valuation.approve"}),
+            lambda repository, _scope: repository.approve_document(
+                document_id, reason=payload.reason, actor_label=current_user.id
+            ),
+            object_refs=(("valuation_document", document_id),),
+        )}
     try:
-        record = InventoryValuationService(connection).approve_document(
+        record = InventoryValuationService(_local_connection(connection)).approve_document(
             document_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -199,12 +351,22 @@ def approve_document(
 @router.post("/documents/{document_id}/cancel")
 def cancel_document(
     document_id: str,
+    request: Request,
     payload: ReasonRequest,
     current_user: ValuationManage,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
+    if server_inventory_valuation_enabled(request):
+        return {"document": _server_call(
+            request,
+            frozenset({"inventory.valuation.manage"}),
+            lambda repository, _scope: repository.cancel_document(
+                document_id, reason=payload.reason, actor_label=current_user.id
+            ),
+            object_refs=(("valuation_document", document_id),),
+        )}
     try:
-        record = InventoryValuationService(connection).cancel_document(
+        record = InventoryValuationService(_local_connection(connection)).cancel_document(
             document_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
@@ -214,15 +376,29 @@ def cancel_document(
 
 @router.get("/cost-layers")
 def list_cost_layers(
+    request: Request,
     current_user: InventoryRead,
-    connection: sqlite3.Connection = Depends(get_db),
+    connection: sqlite3.Connection | None = Depends(get_local_db),
     workspace: str = "default",
     open_only: bool = False,
     limit: PageLimit = DEFAULT_LIST_LIMIT,
     offset: PageOffset = 0,
 ) -> dict[str, object]:
+    if server_inventory_valuation_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}),
+            lambda repository, scope: repository.list_cost_layers(
+                workspace=scope.workspace_id,
+                open_only=open_only,
+                limit=limit,
+                offset=offset,
+                actor_label=current_user.id,
+            ),
+        )
+        return _list_response("cost_layers", records, limit=limit, offset=offset)
     try:
-        records = InventoryValuationService(connection).list_cost_layers(
+        records = InventoryValuationService(_local_connection(connection)).list_cost_layers(
             workspace=workspace,
             open_only=open_only,
             limit=limit,

@@ -2,6 +2,26 @@
 
 Updated: 2026-08-26
 
+## E-943 — Expose Payables through the live PostgreSQL API boundary (2026-08-26)
+
+- Accounts Payable server routes now use an explicit PostgreSQL adapter
+  boundary for suppliers, purchase orders, goods receipts, supplier invoices,
+  three-way matching, and approval. The authenticated tenant/workspace scope
+  is re-evaluated by central policy, bound into a `PostgresTenantBoundary`
+  transaction, and never falls back to tenant SQLite in server mode.
+- Supplier, purchase-order, receipt, and invoice object scopes are checked
+  before mutation; actor identity is bound to the authenticated maker,
+  matcher, or checker; existing maker-checker and exact quantity/matching
+  controls remain in force. Workspace IDs are accepted without breaking the
+  existing workspace-name adapter contract.
+- A disposable PostgreSQL 16 Alpine runtime with a separate
+  non-superuser/no-BYPASSRLS role passed the real FastAPI HTTP lifecycle for
+  the PO/receipt/invoice/three-way-match/approval flow, exact quantity, actor
+  binding, maker denial, and denied workspace scope. This is bounded single-
+  node synthetic evidence only; external IAM, HA/DR, provider behavior,
+  capacity, backup/restore, and production readiness remain open. ADR 0636
+  records the boundary.
+
 ## E-942 — Expose Receivables through the live PostgreSQL API boundary (2026-08-26)
 
 - Accounts Receivable server routes now use an explicit PostgreSQL adapter

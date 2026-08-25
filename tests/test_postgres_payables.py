@@ -23,6 +23,7 @@ from reconforge.infrastructure.postgres import (
 )
 from reconforge.infrastructure.postgres_domain import install_postgres_domain_schema
 from reconforge.infrastructure.postgres_journals import POSTGRES_JOURNAL_SCHEMA_SQL
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_payables import (
     POSTGRES_PAYABLES_SCHEMA_SQL,
@@ -315,6 +316,7 @@ def test_live_postgres_payables_lifecycle_exactness_and_rls() -> None:
             install_postgres_rls_schema(admin)
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_JOURNAL_SCHEMA_SQL)
             admin.execute(POSTGRES_PAYABLES_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")

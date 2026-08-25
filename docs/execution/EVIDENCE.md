@@ -2,6 +2,40 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-943: Expose Payables through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/payables.py` now dispatches supplier,
+  purchase-order, goods-receipt, supplier-invoice, three-way-match, and
+  approval operations to the explicit PostgreSQL server boundary when
+  configured. `reconforge/api/server_payables.py` binds tenant/workspace
+  hierarchy, re-evaluates central scoped policy, validates object/supplier
+  scope, opens a `PostgresTenantBoundary` transaction, canonicalizes hierarchy
+  values, and maps unavailable/configuration failures to safe errors without
+  opening local SQLite. `PostgresPayablesRepository` accepts canonical
+  workspace IDs while preserving exact quantity serialization.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_payables.py tests/test_payables_api.py
+  tests/test_postgres_payables.py tests/test_payables.py --tb=short -ra`
+  exits `0`; the live-capability test skips only when no DSN is provisioned.
+  Ruff and source Mypy pass for the changed implementation.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, an explicit application DSN, and a separate application role
+  without superuser or `BYPASSRLS`. The HTTP contract plus the existing
+  PostgreSQL Payables adapter lifecycle exited `0` with `10 passed`. It covers
+  supplier/PO creation, exact `1.0000000000001` quantity, submit/approve,
+  goods receipt, supplier invoice, three-way match, maker denial, authenticated
+  checker/matcher actor binding, list projection, spoofed hierarchy binding,
+  and denied workspace scope. The disposable runtime creates the ledger
+  outbox schema required by append-only Payables events.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, multi-host or
+  HA/DR behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0636
+  records the decision.
+
 ## E-942: Expose Receivables through the live PostgreSQL API boundary
 
 - Code evidence: `reconforge/api/routes/receivables.py` now dispatches all

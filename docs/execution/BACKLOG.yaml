@@ -9,6 +9,25 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-943
+    priority: P0
+    area: identity-governance
+    title: Expose Payables through the PostgreSQL server API boundary
+    status: completed
+    depends_on: [E-942, E-941, E-938]
+    exit_evidence: >-
+      Payables supplier, purchase-order, goods-receipt, supplier-invoice,
+      three-way-match, and approval routes dispatch through an explicit
+      PostgreSQL adapter with authenticated tenant/workspace binding, central
+      scoped-policy re-evaluation, object/supplier scope checks, principal
+      actor binding, exact quantities, maker-checker controls, and no SQLite
+      fallback in server mode. The live FastAPI contract passes the complete
+      PO/receipt/invoice/match lifecycle, exact quantity, maker denial,
+      checker/matcher binding, and denied workspace scope with a
+      non-superuser/no-BYPASSRLS role on the checked-in PostgreSQL 16 image.
+      This is bounded single-node synthetic evidence, not external IAM, HA/DR,
+      provider, capacity, backup/restore, or production-readiness evidence.
+      ADR 0636 records the boundary.
   - id: E-942
     priority: P0
     area: identity-governance
@@ -1582,6 +1601,14 @@ tasks:
         binding, spoofed hierarchy binding, and denied workspace scope;
         external IAM, distributed invalidation, HA/DR, capacity, provider
         behavior, backup/restore, and production effectiveness remain open.
+      - E-943 exposes Payables supplier, purchase-order, goods-receipt,
+        supplier-invoice, three-way-match, and approval operations through the
+        authenticated PostgreSQL server API. The live HTTP lifecycle passes
+        exact quantity output, maker denial, checker/matcher actor binding,
+        complete matching flow, spoofed hierarchy binding, and denied workspace
+        scope; external IAM, distributed invalidation, HA/DR, capacity,
+        provider behavior, backup/restore, and production effectiveness remain
+        open.
   - id: E-1006
     priority: P1
     area: global-expansion

@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-991: Bind Payables server routes to the real PostgreSQL aggregate
+
+Payables server-mode HTTP operations now use an explicit PostgreSQL adapter
+boundary for suppliers, purchase orders, goods receipts, supplier invoices,
+three-way matching, and approval. Each request reconstructs the authenticated
+tenant/workspace hierarchy, re-evaluates central scoped policy, validates
+object and supplier scope, and opens one `PostgresTenantBoundary` transaction.
+Server payload workspace, organization, entity, and actor values are not
+authoritative: hierarchy is canonicalized from the request scope and actor
+identity comes from the authenticated principal. Exact quantities and the
+existing maker-checker/matching lifecycle remain the contract. Local SQLite
+remains the compatibility path. This is reversible and bounded; external IAM,
+HA/DR, provider behavior, capacity, backup/restore, and production
+effectiveness remain unproven. ADR 0636 records the rollback boundary.
+
 ### D-990: Bind Receivables server routes to the real PostgreSQL aggregate
 
 Receivables server-mode HTTP operations now use an explicit PostgreSQL adapter

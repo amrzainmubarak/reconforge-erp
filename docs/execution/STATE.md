@@ -2,6 +2,26 @@
 
 Updated: 2026-08-26
 
+## E-942 — Expose Receivables through the live PostgreSQL API boundary (2026-08-26)
+
+- Accounts Receivable server routes now use an explicit PostgreSQL adapter
+  boundary for customer, invoice, receipt, credit-exposure, and aging
+  operations. The request tenant/workspace scope is re-evaluated by central
+  policy, bound into a `PostgresTenantBoundary` transaction, and never falls
+  back to tenant SQLite when the server profile is active.
+- Customer/invoice/receipt hierarchy and actor values are canonicalized from
+  the authenticated request. Invoice object and customer scope are checked
+  before mutation, maker approval is denied by permission/SoD controls, credit
+  approval remains guarded by the existing override permission, and exact
+  minor-unit plus arbitrary-scale quantity serialization is preserved.
+- A disposable PostgreSQL 16 Alpine runtime with a separate
+  non-superuser/no-BYPASSRLS role passed the real FastAPI HTTP lifecycle for
+  the receivables lifecycle, exact quantity, credit exposure, aging, maker /
+  checker separation, and denied workspace scope. This is bounded single-node
+  synthetic evidence only; external IAM, HA/DR, provider behavior, capacity,
+  backup/restore, and production readiness remain open. ADR 0635 records the
+  boundary.
+
 ## E-941 — Expose Inventory Core through the live PostgreSQL API boundary (2026-08-26)
 
 - Inventory Core now has an explicit PostgreSQL server route path for all 19

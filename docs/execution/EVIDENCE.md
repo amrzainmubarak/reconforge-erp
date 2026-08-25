@@ -2,6 +2,40 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-942: Expose Receivables through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/receivables.py` now dispatches all
+  customer, invoice, receipt, credit-exposure, and aging operations to the
+  explicit PostgreSQL server boundary when configured. The boundary in
+  `reconforge/api/server_receivables.py` binds tenant/workspace hierarchy,
+  re-evaluates central scoped policy, validates object/customer scope, opens a
+  `PostgresTenantBoundary` transaction, canonicalizes hierarchy values, and
+  maps unavailable/configuration failures to safe errors without opening local
+  SQLite. `PostgresReceivablesRepository` accepts canonical workspace IDs and
+  retains exact minor-unit money plus arbitrary-scale quantity serialization.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_receivables.py tests/test_receivables_api.py
+  tests/test_postgres_receivables.py tests/test_application_receivables.py
+  --tb=short -ra` exits `0`; the live-capability tests skip only when no DSN is
+  provisioned. Ruff and source Mypy pass for the changed implementation.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, an explicit application DSN, and a separate application role
+  without superuser or `BYPASSRLS`. The new HTTP contract plus the existing
+  PostgreSQL Receivables adapter lifecycle exited `0` with `9 passed`. The
+  HTTP contract covers customer/invoice/receipt lifecycle, maker denial,
+  checker approval actor binding, credit exposure, aging, exact
+  `1.0000000000001` quantity output, spoofed hierarchy rejection by binding,
+  and denied workspace scope. The disposable runtime also creates the
+  outbox schema required by the append-only audit/outbox path.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, multi-host or
+  HA/DR behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0635
+  records the decision.
+
 ## E-941: Expose Inventory Core through the live PostgreSQL API boundary
 
 - Code evidence: `reconforge/api/routes/inventory_core.py` now dispatches all

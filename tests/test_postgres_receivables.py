@@ -21,6 +21,7 @@ from reconforge.infrastructure.postgres import (
     install_postgres_rls_schema,
 )
 from reconforge.infrastructure.postgres_domain import install_postgres_domain_schema
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_receivables import (
     POSTGRES_RECEIVABLES_SCHEMA_SQL,
@@ -128,6 +129,7 @@ def test_live_postgres_receivables_lifecycle_credit_allocation_aging_and_rls() -
             install_postgres_rls_schema(admin)
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_RECEIVABLES_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             tables = (

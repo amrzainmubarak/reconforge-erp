@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-990: Bind Receivables server routes to the real PostgreSQL aggregate
+
+Receivables server-mode HTTP operations now use an explicit PostgreSQL adapter
+boundary for customer, invoice, receipt, credit-exposure, and aging flows.
+Each request reconstructs the authenticated tenant/workspace hierarchy,
+re-evaluates central scoped policy, validates object/customer scope, and opens
+one `PostgresTenantBoundary` transaction. Server payload workspace,
+organization, entity, and actor values are not authoritative: hierarchy is
+canonicalized from the request scope and actor identity comes from the
+authenticated principal. Exact minor-unit amounts and arbitrary-scale
+quantities remain the persistence contract; existing SoD and credit-control
+guards remain in force. Local SQLite remains the compatibility path. This is
+reversible and bounded; external IAM, HA/DR, provider behavior, capacity,
+backup/restore, and production effectiveness remain unproven. ADR 0635 records
+the rollback boundary.
+
 ### D-989: Bind Inventory Core server routes to the real PostgreSQL aggregate
 
 Inventory Core server-mode HTTP operations now use the explicit PostgreSQL

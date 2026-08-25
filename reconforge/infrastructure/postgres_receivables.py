@@ -407,9 +407,12 @@ class PostgresReceivablesRepository:
             raise PostgresReceivablesError("PostgreSQL Receivables operation failed.") from exc
 
     def _workspace_id(self, workspace: str, *, required: bool = True) -> str | None:
+        cleaned = _text(workspace, "Workspace name")
         row = self.connection.execute(
-            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND name=%s",
-            (self.tenant_id, _text(workspace, "Workspace name")),
+            "SELECT id FROM reconforge.domain_workspaces "
+            "WHERE tenant_id=%s AND (id=%s OR name=%s) "
+            "ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1",
+            (self.tenant_id, cleaned, cleaned, cleaned),
         ).fetchone()
         if row is None:
             if required:
@@ -965,11 +968,13 @@ class PostgresReceivablesRepository:
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
             rows = self.connection.execute(
-                """SELECT i.id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id""",
+                """SELECT i.id,i.organization_id,i.legal_entity_id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id""",
                 (self.tenant_id, workspace_id),
             ).fetchall()
             columns = (
                 "id",
+                "organization_id",
+                "legal_entity_id",
                 "invoice_number",
                 "customer_code",
                 "customer_name",
@@ -1002,6 +1007,8 @@ class PostgresReceivablesRepository:
                 items.append(
                     {
                         "invoice_id": row["id"],
+                        "organization_id": row["organization_id"],
+                        "legal_entity_id": row["legal_entity_id"],
                         "invoice_number": row["invoice_number"],
                         "customer_code": row["customer_code"],
                         "customer_name": row["customer_name"],

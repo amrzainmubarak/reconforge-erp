@@ -2,6 +2,23 @@
 
 Updated: 2026-08-25
 
+## E-928 — Refuse policy evidence built from a mismatched context (2026-08-25)
+
+- `build_policy_decision_evidence` now derives context and typed-scope digests
+  from a supplied `PolicyEvaluationContext` and refuses any pre-bound decision
+  whose digest differs. This prevents silent rebinding of evidence to a
+  different tenant, object, amount, or other policy input while preserving the
+  no-context compatibility path.
+- Focused policy/cache tests pass `92/92`, covering a matching context, both
+  mismatch classes, replay, redaction, closed-shape, and tamper checks. The
+  full Python 3.12 regression exits `0` with a current collection of `3,204`
+  tests; declared capability skips and existing warnings remain. ADR 0625
+  records the reversible guard.
+- This closes a local evidence-construction mismatch only. It does not prove
+  authenticated principals, universal caller context adoption, append-only
+  storage, external IAM enforcement, distributed invalidation, or production
+  authorization effectiveness.
+
 ## E-927 — Explicit precision policy for every production Money construction (2026-08-25)
 
 - Every `Money.from_exact` call under `reconforge/` now declares a literal

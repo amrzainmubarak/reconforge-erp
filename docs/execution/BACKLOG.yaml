@@ -1370,6 +1370,12 @@ tasks:
         and tamper-refusal tests pass. Universal route/job/UI adoption,
         append-only storage, external IAM enforcement, distributed invalidation,
         and production effectiveness remain open.
+      - E-928 refuses policy evidence construction when a supplied context does
+        not match a pre-bound decision context or typed-scope digest. Focused
+        policy tests cover both mismatch classes; no-context compatibility
+        remains unchanged. Universal caller context provenance, append-only
+        storage, external IAM enforcement, distributed invalidation, and
+        production effectiveness remain open.
   - id: E-1006
     priority: P1
     area: global-expansion

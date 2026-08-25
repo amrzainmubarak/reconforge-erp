@@ -360,12 +360,18 @@ def build_policy_decision_evidence(
         or any(not isinstance(value, str) or not value.strip() for value in required_permissions)
     ):
         raise ValueError("required_permissions must be a non-empty frozenset of strings")
-    context_digest = decision.context_digest or (
-        policy_context_digest(context) if context is not None else _digest_payload({"context": "unbound"})
-    )
-    scope_digest = decision.scope_digest or (
-        policy_scope_digest(context) if context is not None else _digest_payload({"scope": "unbound"})
-    )
+    if context is not None:
+        expected_context_digest = policy_context_digest(context)
+        expected_scope_digest = policy_scope_digest(context)
+        if decision.context_digest is not None and decision.context_digest != expected_context_digest:
+            raise ValueError("policy decision context digest does not match supplied context")
+        if decision.scope_digest is not None and decision.scope_digest != expected_scope_digest:
+            raise ValueError("policy decision scope digest does not match supplied context")
+        context_digest = expected_context_digest
+        scope_digest = expected_scope_digest
+    else:
+        context_digest = decision.context_digest or _digest_payload({"context": "unbound"})
+        scope_digest = decision.scope_digest or _digest_payload({"scope": "unbound"})
     evidence = PolicyDecisionEvidence(
         schema_version=POLICY_DECISION_EVIDENCE_SCHEMA_VERSION,
         policy_version=POLICY_VERSION,

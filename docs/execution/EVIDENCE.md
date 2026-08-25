@@ -2,6 +2,30 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-928: Refuse policy evidence built from a mismatched context
+
+- `build_policy_decision_evidence` now recomputes the expected context and
+  typed-scope digests from a supplied `PolicyEvaluationContext`. A pre-bound
+  `PolicyDecision` with a different context or scope digest raises before an
+  evidence artifact can be emitted; the no-context compatibility path remains
+  unchanged.
+- `python -m pytest tests/test_policy_engine.py tests/test_policy_cache.py`
+  passed `92/92`. The new tests cover a matching context, full-context
+  mismatch, and independent scope mismatch refusal in addition to replay,
+  redaction, closed-field, and tamper checks.
+- `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra` exited `0`
+  on the current Windows/Python 3.12 environment; the current collection is
+  `3,204` tests. Declared PostgreSQL/Redis/S3/network/Windows-privilege
+  capability skips and existing dependency/legacy-input warnings remain.
+- Ruff, Mypy, Bandit, pip-audit, package build, YAML/JSON parsing, and
+  `git diff --check` passed. Pip-audit reported no known vulnerabilities and
+  could not audit the local unpublished `reconforge-erp` package on PyPI.
+- This is local evidence-construction integrity only. It does not prove
+  authenticated context provenance, universal route/job/UI adoption,
+  append-only audit storage, external IAM/provider enforcement, distributed
+  invalidation, or production authorization effectiveness. ADR 0625 records
+  the boundary.
+
 ## E-927: Explicit precision policy for every production Money construction
 
 - The production `Money.from_exact` inventory now has an explicit literal

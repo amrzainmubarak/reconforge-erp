@@ -5,6 +5,17 @@
 
 ## Decisions
 
+### D-979: Refuse mismatched policy evidence context
+
+When `build_policy_decision_evidence` receives a `PolicyEvaluationContext`, it
+now derives both expected digests from that context and rejects any existing
+decision digest that differs. Context and typed-scope mismatches are checked
+independently. Calls without a context retain the existing compatibility
+behavior for decision-bound or explicit unbound digests. This prevents silent
+evidence rebinding without changing authorization outcomes or evidence schema
+versions. ADR 0625 records the local, reversible decision; universal caller
+context provenance and append-only audit storage remain open.
+
 ### D-978: Make production Money precision choices explicit
 
 Every production `Money.from_exact` call now spells a literal

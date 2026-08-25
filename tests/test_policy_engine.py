@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -529,6 +530,7 @@ def test_policy_decision_evidence_is_replayable_closed_and_redacted() -> None:
         required_permissions=frozenset({"finance_core.validate"}),
         surface="POST /api/v1/finance-core/journals/validate",
         request_id="request-1",
+        context=context,
     )
     replay = build_policy_decision_evidence(
         decision,
@@ -536,6 +538,7 @@ def test_policy_decision_evidence_is_replayable_closed_and_redacted() -> None:
         required_permissions=frozenset({"finance_core.validate"}),
         surface="POST /api/v1/finance-core/journals/validate",
         request_id="request-1",
+        context=context,
     )
 
     assert evidence == replay
@@ -549,6 +552,70 @@ def test_policy_decision_evidence_is_replayable_closed_and_redacted() -> None:
     tampered["allowed"] = not payload["allowed"]
     with pytest.raises(ValueError, match="digest mismatch"):
         verify_policy_decision_evidence(tampered)
+
+
+def test_policy_decision_evidence_rejects_context_digest_mismatch() -> None:
+    original_context = PolicyEvaluationContext(
+        user_id="U-100",
+        username="controller",
+        user_permissions={"evidence.read"},
+        tenant_id="tenant-a",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+        object_type="evidence",
+        object_id="evidence-1",
+        action="read",
+    )
+    different_context = PolicyEvaluationContext(
+        user_id="U-100",
+        username="controller",
+        user_permissions={"evidence.read"},
+        tenant_id="tenant-a",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+        object_type="evidence",
+        object_id="evidence-2",
+        action="read",
+    )
+    decision = CentralPolicyEngine().evaluate(original_context, required_permission="evidence.read")
+
+    with pytest.raises(ValueError, match="context digest does not match"):
+        build_policy_decision_evidence(
+            decision,
+            actor_id="U-100",
+            required_permissions=frozenset({"evidence.read"}),
+            surface="GET /api/v1/evidence/evidence-2",
+            context=different_context,
+        )
+
+
+def test_policy_decision_evidence_rejects_scope_digest_mismatch() -> None:
+    original_context = PolicyEvaluationContext(
+        user_id="U-100",
+        username="controller",
+        user_permissions={"evidence.read"},
+        tenant_id="tenant-a",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+    )
+    different_scope_context = PolicyEvaluationContext(
+        user_id="U-100",
+        username="controller",
+        user_permissions={"evidence.read"},
+        tenant_id="tenant-b",
+        authorized_tenant_ids=frozenset({"tenant-b"}),
+    )
+    decision = CentralPolicyEngine().evaluate(original_context, required_permission="evidence.read")
+    context_bound_decision = replace(
+        decision,
+        context_digest=policy_context_digest(different_scope_context),
+    )
+
+    with pytest.raises(ValueError, match="scope digest does not match"):
+        build_policy_decision_evidence(
+            context_bound_decision,
+            actor_id="U-100",
+            required_permissions=frozenset({"evidence.read"}),
+            surface="GET /api/v1/evidence",
+            context=different_scope_context,
+        )
 
 
 def test_policy_scope_digest_keeps_same_text_in_distinct_namespaces_distinct() -> None:

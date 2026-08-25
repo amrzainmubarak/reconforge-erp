@@ -849,6 +849,7 @@ class GovernedDurableJobWorkerService:
             surface="durable-job.worker.claim",
             request_id=request_id,
             principal_type=context.principal_type,
+            context=context,
         )
         if not decision.allowed:
             raise JobAuthorizationError(f"worker policy denied: {decision.reason_code}")

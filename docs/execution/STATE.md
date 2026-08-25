@@ -2,6 +2,22 @@
 
 Updated: 2026-08-25
 
+## E-930 — Bind production policy audits to evaluated context (2026-08-25)
+
+- Every production `audit_policy_decision` call now passes the exact
+  `PolicyEvaluationContext` used for the corresponding policy evaluation,
+  covering API dependencies, platform authorization, workflow transitions,
+  durable jobs, hosted workers, Studio, and PostgreSQL scoped exports.
+- An AST contract prevents future production audit calls from omitting
+  `context=`. The focused policy/API/worker/workflow/Studio collection passes
+  `154` tests; the full Python 3.12 regression exits `0` with `3,204` tests;
+  Ruff, Mypy, and diff-check pass.
+- This closes production caller-to-evidence context binding only. It does not
+  prove principal authenticity, context correctness beyond each caller,
+  append-only storage, external IAM/provider enforcement, distributed cache
+  invalidation, or production authorization effectiveness. ADR 0627 records
+  the reversible decision.
+
 ## E-929 — Align deployment-readiness reader with JSON Schema (2026-08-25)
 
 - The readiness reader now rejects boolean schema versions, invalid ISO dates,

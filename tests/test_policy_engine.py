@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import ast
 import logging
 from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -656,3 +658,21 @@ def test_policy_context_digest_canonicalizes_actor_presentation() -> None:
     )
 
     assert policy_context_digest(upper) == policy_context_digest(canonical)
+
+
+def test_production_policy_audits_pass_the_evaluated_context() -> None:
+    package_root = Path(__file__).resolve().parents[1] / "reconforge"
+    missing_context: list[str] = []
+    for source_path in package_root.rglob("*.py"):
+        if source_path.as_posix().endswith("/auth/policy.py"):
+            continue
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if not isinstance(node.func, ast.Name) or node.func.id != "audit_policy_decision":
+                continue
+            if not any(keyword.arg == "context" for keyword in node.keywords):
+                missing_context.append(f"{source_path.relative_to(package_root.parent)}:{node.lineno}")
+
+    assert missing_context == []

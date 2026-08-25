@@ -5,6 +5,18 @@
 
 ## Decisions
 
+### D-981: Bind production policy audits to the evaluated context
+
+Every production call to `audit_policy_decision` now passes the same
+`PolicyEvaluationContext` used by the policy evaluation. API dependencies,
+platform/workflow authorization, durable and hosted workers, Studio, and
+PostgreSQL scoped exports retain that object; an AST inventory rejects future
+production calls without `context=`. Authorization behavior, reason codes, and
+schema-v1 evidence remain compatible. This proves caller plumbing and local
+evidence binding only; principal authenticity, durable append-only storage,
+external IAM enforcement, and universal authorization effectiveness remain
+open. ADR 0627 records the decision.
+
 ### D-980: Align deployment-readiness scalar contracts
 
 The offline readiness reader and v1 JSON Schema now share strict scalar

@@ -1376,6 +1376,12 @@ tasks:
         remains unchanged. Universal caller context provenance, append-only
         storage, external IAM enforcement, distributed invalidation, and
         production effectiveness remain open.
+      - E-930 binds every production `audit_policy_decision` call to the exact
+        evaluated `PolicyEvaluationContext` and adds an AST omission gate;
+        focused policy/API/worker/workflow/Studio tests pass 154/154 and the
+        full 3,204-test Python regression passes. Principal authenticity,
+        append-only storage, external IAM enforcement, distributed invalidation,
+        and production effectiveness remain open.
   - id: E-1006
     priority: P1
     area: global-expansion

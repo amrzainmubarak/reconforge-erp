@@ -370,6 +370,7 @@ def enforce_server_scoped_permissions(
         surface=f"server.scoped:{','.join(sorted(permissions))}",
         request_id=str(getattr(request.state, "request_id", "")),
         principal_type=principal.principal_type,
+        context=context,
     )
     if decision.allowed:
         return
@@ -453,18 +454,19 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
+            policy_context = PolicyEvaluationContext(
+                user_id=current_user.id if principal is not None else "",
+                username=current_user.username,
+                user_permissions=principal.permissions if principal is not None else frozenset(),
+                principal_type=principal.principal_type if principal is not None else "user",
+                step_up_active=principal.step_up_active if principal is not None else False,
+                step_up_enforced=True,
+                required_step_up_method=_required_step_up_method(request),
+                step_up_method=principal.step_up_method if principal is not None else None,
+            )
             decision = _evaluate_policy(
                 request,
-                PolicyEvaluationContext(
-                    user_id=current_user.id if principal is not None else "",
-                    username=current_user.username,
-                    user_permissions=principal.permissions if principal is not None else frozenset(),
-                    principal_type=principal.principal_type if principal is not None else "user",
-                    step_up_active=principal.step_up_active if principal is not None else False,
-                    step_up_enforced=True,
-                    required_step_up_method=_required_step_up_method(request),
-                    step_up_method=principal.step_up_method if principal is not None else None,
-                ),
+                policy_context,
                 required_permission=required_permission,
             )
             allowed = principal is not None and principal.user.id == current_user.id and decision.allowed
@@ -475,6 +477,7 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
                 surface=surface,
                 request_id=str(getattr(request.state, "request_id", "")),
                 principal_type=principal.principal_type if principal is not None else "user",
+                context=policy_context,
             )
             if not allowed:
                 code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"
@@ -496,13 +499,14 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
         try:
             service = LocalAuthService(connection)
+            policy_context = PolicyEvaluationContext(
+                user_id=current_user.id,
+                username=current_user.username,
+                user_permissions=service.roles.user_permissions(current_user.username),
+            )
             decision = _evaluate_policy(
                 request,
-                PolicyEvaluationContext(
-                    user_id=current_user.id,
-                    username=current_user.username,
-                    user_permissions=service.roles.user_permissions(current_user.username),
-                ),
+                policy_context,
                 required_permission=required_permission,
             )
             allowed = decision.allowed
@@ -514,6 +518,7 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             required_permissions=contract,
             surface=surface,
             request_id=str(getattr(request.state, "request_id", "")),
+            context=policy_context,
         )
         if not allowed:
             raise APIError(status_code=403, code="permission_denied", message="Permission denied.")
@@ -540,18 +545,19 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
+            policy_context = PolicyEvaluationContext(
+                user_id=current_user.id if principal is not None else "",
+                username=current_user.username,
+                user_permissions=principal.permissions if principal is not None else frozenset(),
+                principal_type=principal.principal_type if principal is not None else "user",
+                step_up_active=principal.step_up_active if principal is not None else False,
+                step_up_enforced=True,
+                required_step_up_method=_required_step_up_method(request),
+                step_up_method=principal.step_up_method if principal is not None else None,
+            )
             decision = _evaluate_any_policy(
                 request,
-                PolicyEvaluationContext(
-                    user_id=current_user.id if principal is not None else "",
-                    username=current_user.username,
-                    user_permissions=principal.permissions if principal is not None else frozenset(),
-                    principal_type=principal.principal_type if principal is not None else "user",
-                    step_up_active=principal.step_up_active if principal is not None else False,
-                    step_up_enforced=True,
-                    required_step_up_method=_required_step_up_method(request),
-                    step_up_method=principal.step_up_method if principal is not None else None,
-                ),
+                policy_context,
                 required_permissions=contract,
             )
             allowed = principal is not None and principal.user.id == current_user.id and decision.allowed
@@ -562,6 +568,7 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
                 surface=surface,
                 request_id=str(getattr(request.state, "request_id", "")),
                 principal_type=principal.principal_type if principal is not None else "user",
+                context=policy_context,
             )
             if not allowed:
                 code = decision.reason_code if decision.reason_code in {"step_up_required", "mfa_required"} else "permission_denied"
@@ -583,13 +590,14 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             raise APIError(status_code=500, code="db_not_configured", message="API database path is not configured.")
         try:
             service = LocalAuthService(connection)
+            policy_context = PolicyEvaluationContext(
+                user_id=current_user.id,
+                username=current_user.username,
+                user_permissions=service.roles.user_permissions(current_user.username),
+            )
             decision = _evaluate_any_policy(
                 request,
-                PolicyEvaluationContext(
-                    user_id=current_user.id,
-                    username=current_user.username,
-                    user_permissions=service.roles.user_permissions(current_user.username),
-                ),
+                policy_context,
                 required_permissions=contract,
             )
             allowed = decision.allowed
@@ -601,6 +609,7 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             required_permissions=contract,
             surface=surface,
             request_id=str(getattr(request.state, "request_id", "")),
+            context=policy_context,
         )
         if not allowed:
             raise APIError(status_code=403, code="permission_denied", message="Permission denied.")

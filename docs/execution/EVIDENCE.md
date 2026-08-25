@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-930: Bind production policy audits to evaluated context
+
+- API dependencies, platform authorization, workflow transitions, durable-job
+  claims, hosted worker guards, Studio checks, and PostgreSQL scoped exports now
+  pass the exact evaluated `PolicyEvaluationContext` into
+  `audit_policy_decision`. The production AST inventory rejects an audit call
+  without `context=` outside the policy definition module.
+- The focused policy/API/worker/workflow/Studio collection passed `154` tests;
+  the full `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra`
+  regression exited `0` with `3,204` tests. Ruff, Mypy, and `git diff --check`
+  passed.
+- Bandit exited `0` with existing `nosec`/comment warnings; `pip-audit`
+  reported no known vulnerabilities and could not audit the local unpublished
+  package on PyPI; `python -m build --no-isolation` produced the 0.7.1 sdist
+  and wheel.
+- This is local caller-to-evidence provenance evidence only. It does not prove
+  authenticated principal provenance, correct context construction at every
+  boundary, append-only audit storage, external IAM/provider enforcement,
+  distributed invalidation, or production authorization effectiveness. ADR
+  0627 records the boundary.
+
 ## E-929: Align deployment-readiness reader with JSON Schema
 
 - The reader and `deployment_readiness_matrix.v1.schema.json` now agree on

@@ -5,6 +5,19 @@
 
 ## Decisions
 
+### D-998: Remove the superseded Inventory Core guard and synchronize the audit trail
+
+ADR 0632's explicit `get_inventory_local_db` helper was correct for the
+pre-adapter E-939 state, but E-941/ADR 0634 now expose all Inventory Core
+operations through the real scoped PostgreSQL server adapter. Keeping the old
+helper and 501 tests in the current source created contradictory route and
+claim evidence even though the helper was no longer used. Remove the dead
+helper and obsolete tests, retain E-939/ADR 0632 as historical records, and
+make E-941/ADR 0634 authoritative for the current boundary. No runtime
+fallback is restored and Local Profile compatibility remains unchanged. This
+is reversible and bounded; no migration or persisted state changes. ADR 0643
+records the repair.
+
 ### D-997: Refuse incomplete Finance Core entry scope before legacy fallback
 
 When the PostgreSQL Finance Core backend is enabled, `/finance-core/entries`
@@ -143,15 +156,12 @@ maker-checker separation, and workspace denial. This is reversible, but
 external IAM, HA/DR, provider behavior, capacity, and production effectiveness
 remain unproven. ADR 0633 records the rollback boundary.
 
-### D-987: Keep the local Inventory Core API out of PostgreSQL server mode
+### D-987: Historical interim decision — keep the local Inventory Core API out of PostgreSQL server mode
 
-The Inventory Core router now uses an explicit local SQLite dependency that
-returns `501 inventory_server_backend_unavailable` when PostgreSQL server
-identity is enabled. This prevents a tenant-local SQLite fallback from being
-mistaken for server persistence. The existing PostgreSQL Inventory Core
-repository remains an unexposed adapter until request hierarchy, central
-policy, RLS, audit/outbox, and runtime API evidence are delivered. ADR 0632
-records the decision and rollback boundary.
+This was the E-939 interim decision before E-941/ADR 0634 exposed the
+PostgreSQL Inventory Core server boundary. It remains a historical record of
+the pre-adapter safety state and is not the current route contract. E-950
+removes the obsolete helper and synchronizes the current source and claims.
 
 ### D-986: Use a tenant-scoped server policy-audit sink
 

@@ -1,21 +1,17 @@
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
 from typing import Any
 
-import pytest
 from fastapi import Request
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
 from reconforge.api.dependencies import get_db, get_local_db
-from reconforge.api.errors import APIError
-from reconforge.api.routes.inventory_core import get_inventory_local_db, router
+from reconforge.api.routes.inventory_core import router
 from reconforge.api.server_identity import RequestExecutionScope, request_tenant_id
 from reconforge.application.inventory_core import InventoryCoreSummary
 from reconforge.auth.models import LocalUser
-from reconforge.db import run_migrations
 
 
 def _request(app: object) -> Request:
@@ -39,41 +35,7 @@ def test_inventory_router_uses_the_explicit_local_database_boundary() -> None:
         pending.extend(dependency.dependencies)
 
     assert route_dependencies.count(get_local_db) == len(router.routes)
-    assert get_inventory_local_db not in route_dependencies
     assert get_db not in route_dependencies
-
-
-def test_inventory_local_database_fails_closed_in_postgres_server_profile(tmp_path: Path) -> None:
-    tenant_root = tmp_path / "tenants"
-    tenant_root.mkdir()
-    app = create_api_app(
-        tmp_path / "unused.db",
-        tenant_db_root=tenant_root,
-        postgres_dsn="postgresql://synthetic.invalid/reconforge",
-        postgres_require_tls=False,
-    )
-
-    generator = get_inventory_local_db(_request(app))
-    with pytest.raises(APIError) as error:
-        next(generator)
-    generator.close()
-
-    assert error.value.status_code == 501
-    assert error.value.code == "inventory_server_backend_unavailable"
-
-
-def test_inventory_local_database_remains_available_in_local_profile(tmp_path: Path) -> None:
-    database = tmp_path / "inventory.db"
-    run_migrations(database)
-    app = create_api_app(database)
-
-    generator = get_inventory_local_db(_request(app))
-    connection = next(generator)
-    try:
-        assert isinstance(connection, sqlite3.Connection)
-    finally:
-        generator.close()
-        connection.close()
 
 
 def test_server_inventory_routes_bind_scope_and_use_postgres_adapter(tmp_path: Path, monkeypatch: Any) -> None:

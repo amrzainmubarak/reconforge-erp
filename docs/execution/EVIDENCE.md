@@ -2,6 +2,28 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-950: Remove the superseded Inventory Core fail-closed helper and documentation drift
+
+- Code evidence: all Inventory Core routes use `get_local_db` as the local
+  compatibility dependency and dispatch to `execute_postgres_inventory` when
+  the PostgreSQL server capability is enabled. The unused
+  `get_inventory_local_db` helper, `get_db` bridge, and obsolete 501 test cases
+  are removed; no implicit SQLite fallback is introduced.
+- Focused command `python -m pytest -q tests/test_api_inventory_core.py
+  tests/test_api_authorization_inventory.py tests/test_inventory_core.py` exits
+  `0` with 15 passing tests. Ruff, Mypy, and `git diff --check` pass.
+- E-941/ADR 0634 remain the current live PostgreSQL Inventory Core evidence;
+  E-939/ADR 0632 are historical interim evidence only. This slice repairs
+  auditability and documentation drift; it does not widen the existing
+  bounded one-host runtime, IAM, HA/DR, provider, capacity, or production
+  claims.
+- The post-repair live command `python -m pytest -q
+  tests/test_api_server_inventory_core.py -rs` also passes against the same
+  disposable PostgreSQL 16 image and `reconforge_app` role, with
+  `rolsuper=false` and `rolbypassrls=false`; the container is removed after the
+  run. This confirms the current FastAPI route reaches the server adapter
+  after the obsolete helper is removed.
+
 ## E-949: Refuse incomplete Finance Core entry scope before legacy fallback
 
 - Code evidence: Server Profile `reconforge/api/routes/finance_core.py` now
@@ -275,24 +297,12 @@ This file records commands and observed results. It does not convert a dirty wor
   cross-host behavior, live providers, capacity, or production readiness.
   ADR 0633 records the decision.
 
-## E-939: Keep Inventory Core server access fail-closed
+## E-939: Historical interim Inventory Core server fail-closed boundary (superseded by E-941)
 
-- `reconforge/api/routes/inventory_core.py` now exposes one explicit
-  `get_inventory_local_db` boundary. All 19 routes depend on it; no route uses
-  the generic `get_db` dependency directly.
-- In a synthetic PostgreSQL server-profile app, the dependency raises
-  `501 inventory_server_backend_unavailable` before opening a tenant SQLite
-  connection. In a migrated local app, it yields a normal SQLite connection.
-- Focused command
-  `.venv-windows\\Scripts\\python.exe -m pytest -q
-  tests/test_api_inventory_core.py tests/test_api_authorization_inventory.py
-  tests/test_inventory_core.py --tb=short -ra` exited `0` with all tests
-  passing. Ruff on the changed route/test and Mypy on the route also exited
-  `0`.
-- This is a fail-closed profile-boundary result. It does not prove a
-  PostgreSQL Inventory Core HTTP adapter, universal server route coverage,
-  external IAM, HA/DR, or production readiness. ADR 0632 records the
-  follow-up boundary.
+- E-939 was the interim fail-closed guard before E-941 exposed the real
+  PostgreSQL Inventory Core HTTP boundary. Its 501 result applies only to the
+  pre-E-941 tree; E-950 removes the now-unused helper and updates the current
+  route/test inventory. ADR 0632 is historical and ADR 0634 is authoritative.
 
 ## E-938: Verify live PostgreSQL server policy provenance
 

@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-950 — Remove the superseded Inventory Core fail-closed helper and documentation drift (2026-08-26)
+
+- Inventory Core routes now have one authoritative dependency contract:
+  `get_local_db` supplies the local connection only outside Server Profile, and
+  the route dispatches to the PostgreSQL adapter when the server capability is
+  enabled. The unused `get_inventory_local_db` helper and its obsolete 501
+  tests were removed.
+- Current route, authorization, domain, Ruff, and Mypy tests pass. E-941 and
+  ADR 0634 remain the authoritative PostgreSQL server boundary; E-939/ADR
+  0632 are retained as historical evidence and explicitly marked superseded.
+  ADR 0643 records the documentation-drift repair.
+
 ## E-949 — Refuse incomplete Finance Core entry scope before legacy fallback (2026-08-26)
 
 - Server Profile `create_entry` now selects Finance Core exclusively. Missing
@@ -158,20 +170,14 @@ Updated: 2026-08-26
   evidence only; external IAM, HA/DR, provider behavior, capacity, and
   production readiness remain open. ADR 0633 records the boundary.
 
-## E-939 — Keep Inventory Core server access fail-closed (2026-08-26)
+## E-939 — Historical interim Inventory Core fail-closed boundary (superseded by E-941)
 
-- All 19 Inventory Core API operations now use an explicit local SQLite
-  dependency. When PostgreSQL server identity is enabled, the dependency
-  returns `501 inventory_server_backend_unavailable` before opening a tenant
-  SQLite database.
-- Local mode remains unchanged and continues to open the migrated SQLite
-  database. The repository already contains a PostgreSQL Inventory Core
-  adapter, but its HTTP route, hierarchy binding, audit/outbox integration,
-  and live server evidence are not yet complete; this slice refuses the
-  ambiguous fallback until that dedicated adapter is wired.
-- Focused Inventory API/authorization/domain tests pass, Ruff and Mypy pass.
-  ADR 0632 records the fail-closed boundary. This does not claim PostgreSQL
-  Inventory API support, complete server route adoption, or production IAM.
+- E-939 recorded the interim 501 guard before the PostgreSQL Inventory Core
+  adapter was exposed. E-941 and ADR 0634 subsequently superseded that guard
+  with the real scoped PostgreSQL server route for all 19 operations.
+- The historical result remains valid for the pre-E-941 state, but it is not a
+  current runtime claim. E-950 removes the unused helper and synchronizes the
+  route inventory, tests, and documentation with the current implementation.
 
 ## E-938 — Verify live PostgreSQL server policy provenance (2026-08-26)
 

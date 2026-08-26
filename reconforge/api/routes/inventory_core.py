@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Iterator
 from typing import Annotated, TypeVar
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -12,13 +11,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from reconforge.api.dependencies import (
     enforce_server_scoped_permission,
     enforce_server_scoped_permissions,
-    get_db,
     get_local_db,
     require_any_permission,
     require_permission,
 )
 from reconforge.api.errors import APIError
-from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope, server_identity_enabled
+from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.api.server_inventory_core import (
     InventoryOperation,
     execute_postgres_inventory,
@@ -41,25 +39,6 @@ InventoryPost = Annotated[LocalUser, Depends(require_permission("inventory.post"
 PageLimit = Annotated[int, Query(ge=1, le=MAX_API_LIST_LIMIT)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
 T = TypeVar("T")
-
-
-def get_inventory_local_db(request: Request) -> Iterator[sqlite3.Connection]:
-    """Keep the SQLite inventory API out of the PostgreSQL server profile.
-
-    Inventory Core already has a PostgreSQL repository, but this router still
-    uses the local service and SQLite connection.  Falling through to a
-    tenant-local SQLite file when server identity is enabled would make the
-    server profile appear to succeed against the wrong persistence plane.
-    Fail closed until a dedicated server inventory adapter is wired.
-    """
-
-    if server_identity_enabled(request):
-        raise APIError(
-            status_code=501,
-            code="inventory_server_backend_unavailable",
-            message="Inventory Core is not available in the PostgreSQL server profile yet.",
-        )
-    yield from get_db(request)
 
 
 class UomRequest(BaseModel):

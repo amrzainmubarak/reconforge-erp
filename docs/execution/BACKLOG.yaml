@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-950
+    priority: P1
+    area: documentation-integrity
+    title: Remove superseded Inventory Core fail-closed helper and documentation drift
+    status: completed
+    depends_on: [E-941]
+    exit_evidence: >-
+      Removed the unused get_inventory_local_db helper and obsolete 501 tests
+      after E-941/ADR 0634 exposed the real scoped PostgreSQL Inventory Core
+      boundary. Current route inventory, focused Inventory Core/authorization/
+      domain tests, Ruff, Mypy, and diff-check pass; E-939/ADR 0632 are marked
+      historical rather than presented as current behavior. No implicit SQLite
+      fallback was restored and no runtime schema changed. ADR 0643 records
+      the repair.
   - id: E-949
     priority: P0
     area: identity-governance
@@ -185,16 +199,14 @@ tasks:
   - id: E-939
     priority: P0
     area: identity-governance
-    title: Keep Inventory Core API fail-closed until its PostgreSQL adapter is wired
+    title: Historical interim Inventory Core API fail-closed boundary (superseded by E-941)
     status: completed
     depends_on: [E-938]
     exit_evidence: >-
-      All 19 Inventory Core API operations use an explicit local SQLite
-      dependency. The dependency rejects the PostgreSQL server profile with
-      501 before opening tenant SQLite, while local migrated SQLite behavior
-      remains available. Focused API/authorization/domain tests, Ruff, and
-      Mypy pass. This is a profile-boundary guard, not PostgreSQL Inventory
-      API or production IAM evidence. ADR 0632 records the boundary.
+      E-939 recorded the pre-adapter 501 guard. E-941/ADR 0634 now govern the
+      current PostgreSQL Inventory Core server boundary; E-950 removes the
+      unused helper and synchronizes source/tests/docs. The E-939 result is
+      retained as historical evidence only.
   - id: E-938
     priority: P0
     area: identity-governance

@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-948
+    priority: P0
+    area: identity-governance
+    title: Bind Finance Core API hierarchy codes to authenticated PostgreSQL scope
+    status: completed
+    depends_on: [E-947, E-938]
+    exit_evidence: >-
+      Finance Core server chart, account, dimension, journal, trial-balance,
+      entry-list, and entry-creation paths use a scoped PostgreSQL executor
+      that resolves canonical organization/legal-entity codes from the
+      authenticated hierarchy IDs, verifies workspace linkage, rejects
+      spoofed selectors, and injects canonical values before repository writes
+      and filters. Local compatibility remains unchanged. Focused unit,
+      application, finance-core, PostgreSQL adapter, Ruff, Mypy, and diff-check
+      gates pass; the live PostgreSQL test is a declared skip without
+      RECONFORGE_TEST_POSTGRES_DSN. This is a bounded safety boundary, not
+      hosted parity, external IAM, HA/DR, provider, capacity, production,
+      compliance, or certification evidence. ADR 0641 records the decision.
   - id: E-947
     priority: P0
     area: identity-governance

@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 from starlette.requests import Request
 
+from reconforge.api import server_finance_core
 from reconforge.api.routes import finance_core as routes
 from reconforge.api.server_identity import RequestExecutionScope
 from reconforge.application.finance_core import FinanceCoreSummary
@@ -89,6 +90,38 @@ class _FakeFinanceRepository:
         return self._record("void_entry", entry_id=entry_id, **values)
 
 
+class _ScopeResult:
+    def __init__(self, row: dict[str, str] | None) -> None:
+        self.row = row
+
+    def fetchone(self) -> dict[str, str] | None:
+        return self.row
+
+
+class _ScopeConnection:
+    def execute(self, query: str, _parameters: tuple[object, ...]) -> _ScopeResult:
+        if "FROM reconforge.organizations" in query:
+            return _ScopeResult({"id": "org-a", "organization_code": "ORG-A"})
+        if "master_data_workspace_organizations" in query:
+            return _ScopeResult({"ok": "1"})
+        if "FROM reconforge.legal_entities" in query:
+            return _ScopeResult({"id": "entity-a", "entity_code": "ENTITY-A"})
+        raise AssertionError(f"unexpected scope query: {query}")
+
+
+def test_finance_core_scope_codes_are_canonical_and_reject_spoofed_values() -> None:
+    scope = RequestExecutionScope("tenant-a", "workspace-a", "org-a", "entity-a")
+    connection = _ScopeConnection()
+
+    assert server_finance_core._scope_codes(connection, scope) == ("ORG-A", "ENTITY-A")
+    with pytest.raises(routes.APIError) as organization_error:
+        server_finance_core._scope_codes(connection, scope, organization_code="ORG-SPOOF")
+    assert organization_error.value.code == "organization_scope_denied"
+    with pytest.raises(routes.APIError) as entity_error:
+        server_finance_core._scope_codes(connection, scope, entity_code="ENTITY-SPOOF")
+    assert entity_error.value.code == "entity_scope_denied"
+
+
 def test_server_finance_core_routes_use_scoped_adapter_and_never_local_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -111,6 +144,17 @@ def test_server_finance_core_routes_use_scoped_adapter_and_never_local_fallback(
         lambda _request, **values: permission_checks.append(("any", values["permissions"])),
     )
     monkeypatch.setattr(routes, "execute_postgres_finance_core", lambda _request, operation: operation(repository))
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core_scoped",
+        lambda _request, operation, **values: operation(
+            repository,
+            SimpleNamespace(
+                organization_code=values.get("organization_code", ""),
+                entity_code=values.get("entity_code", ""),
+            ),
+        ),
+    )
 
     summary = routes.summary(request, user, None, workspace="default")
     chart = routes.upsert_chart(
@@ -153,6 +197,17 @@ def test_server_finance_core_entry_binds_exact_debit_amount_to_policy(
         lambda _request, **values: captured.update(values),
     )
     monkeypatch.setattr(routes, "execute_postgres_finance_core", lambda _request, operation: operation(repository))
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core_scoped",
+        lambda _request, operation, **values: operation(
+            repository,
+            SimpleNamespace(
+                organization_code=values.get("organization_code", ""),
+                entity_code=values.get("entity_code", ""),
+            ),
+        ),
+    )
 
     result = routes.create_entry(
         request,

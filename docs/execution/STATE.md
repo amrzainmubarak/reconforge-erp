@@ -2,6 +2,20 @@
 
 Updated: 2026-08-26
 
+## E-948 — Bind Finance Core API hierarchy codes to authenticated PostgreSQL scope (2026-08-26)
+
+- Finance Core server operations that accept organization or legal-entity
+  selectors now resolve canonical codes from the authenticated hierarchy IDs
+  inside the same `PostgresTenantBoundary` transaction. Mismatched payload
+  selectors fail closed with `organization_scope_denied` or
+  `entity_scope_denied`; omitted selectors inherit the authenticated code
+  before persistence or filtering.
+- Chart, account, dimension, journal, trial-balance, entry-list, and entry
+  creation paths use the scoped adapter while local compatibility remains
+  unchanged. Unit scope tests and focused Finance Core tests pass; the live
+  PostgreSQL HTTP test remains capability-gated because this host does not
+  expose `RECONFORGE_TEST_POSTGRES_DSN`. ADR 0641 records the boundary.
+
 ## E-947 — Refuse local user SQLite access before opening a connection in Server Profile (2026-08-26)
 
 - All legacy `/users` endpoints now depend on `get_local_db` and check the

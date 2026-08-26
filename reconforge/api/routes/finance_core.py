@@ -20,7 +20,9 @@ from reconforge.api.dependencies import (
 )
 from reconforge.api.errors import APIError
 from reconforge.api.server_finance_core import (
+    FinanceCoreExecutionScope,
     execute_postgres_finance_core,
+    execute_postgres_finance_core_scoped,
     server_finance_core_enabled,
 )
 from reconforge.api.server_identity import request_execution_scope
@@ -442,7 +444,13 @@ def upsert_chart(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "chart": execute_postgres_finance_core(request, lambda repository: repository.upsert_chart(**values))
+            "chart": execute_postgres_finance_core_scoped(
+                request,
+                lambda repository, scope: repository.upsert_chart(
+                    **{**values, "organization_code": scope.organization_code}
+                ),
+                organization_code=payload.organization_code,
+            )
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("charts of accounts")
@@ -470,17 +478,20 @@ def list_accounts(
     if server_finance_core_enabled(request):
         scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
 
-        def finance_operation(repository: PostgresFinanceCoreRepository) -> list[dict[str, object]]:
+        def finance_operation(
+            repository: PostgresFinanceCoreRepository, scope: FinanceCoreExecutionScope
+        ) -> list[dict[str, object]]:
             # Finance accounts are scoped by chart.  When an organization is
             # supplied, resolve the permitted chart set before pagination so
             # records from another organization cannot cross the boundary.
             chart_codes: set[str] | None = None
-            if organization:
+            bound_organization = scope.organization_code
+            if bound_organization:
                 charts = repository.list_charts(workspace=scoped_workspace, limit=500, offset=0)
                 chart_codes = {
                     str(chart["chart_code"])
                     for chart in charts
-                    if str(chart.get("organization_code") or "").casefold() == organization.casefold()
+                    if str(chart.get("organization_code") or "").casefold() == bound_organization.casefold()
                 }
                 if not chart_codes:
                     return []
@@ -496,7 +507,11 @@ def list_accounts(
                 records = [record for record in records if str(record.get("chart_code")) in chart_codes]
             return records
 
-        records = execute_postgres_finance_core(request, finance_operation)
+        records = execute_postgres_finance_core_scoped(
+            request,
+            finance_operation,
+            organization_code=organization,
+        )
         page = records[offset : offset + limit]
         return _list_response("accounts", page, limit=limit, offset=offset)
     if server_ledger_enabled(request):
@@ -545,7 +560,9 @@ def upsert_account(
         values["actor_label"] = current_user.id
         # The adapter binds accounts to a chart.  Validate the optional
         # organization selector against that chart before persisting.
-        def finance_operation(repository: PostgresFinanceCoreRepository) -> dict[str, object]:
+        def finance_operation(
+            repository: PostgresFinanceCoreRepository, scope: FinanceCoreExecutionScope
+        ) -> dict[str, object]:
             charts = repository.list_charts(workspace=scoped_workspace, limit=500, offset=0)
             selected = next(
                 (chart for chart in charts if str(chart["chart_code"]).casefold() == payload.chart_code.casefold()),
@@ -553,15 +570,22 @@ def upsert_account(
             )
             if selected is None:
                 raise PlatformError("Accounts require an existing chart of accounts.")
-            if payload.organization_code and str(selected.get("organization_code") or "").casefold() not in {
+            bound_organization = scope.organization_code
+            if bound_organization and str(selected.get("organization_code") or "").casefold() not in {
                 "",
-                payload.organization_code.casefold(),
+                bound_organization.casefold(),
             }:
                 raise PlatformError("Account organization must match its chart of accounts.")
-            values.pop("organization_code", None)
-            return repository.upsert_account(**values)
+            values_without_selector = {key: value for key, value in values.items() if key != "organization_code"}
+            return repository.upsert_account(**values_without_selector)
 
-        return {"account": execute_postgres_finance_core(request, finance_operation)}
+        return {
+            "account": execute_postgres_finance_core_scoped(
+                request,
+                finance_operation,
+                organization_code=payload.organization_code,
+            )
+        }
     if server_ledger_enabled(request):
         _server_workspace(payload.workspace)
         scope = request_execution_scope(request)
@@ -660,8 +684,12 @@ def upsert_dimension(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "dimension": execute_postgres_finance_core(
-                request, lambda repository: repository.upsert_dimension(**values)
+            "dimension": execute_postgres_finance_core_scoped(
+                request,
+                lambda repository, scope: repository.upsert_dimension(
+                    **{**values, "organization_code": scope.organization_code}
+                ),
+                organization_code=payload.organization_code,
             )
         }
     if server_ledger_enabled(request):
@@ -753,15 +781,16 @@ def list_journals(
 ) -> dict[str, object]:
     if server_finance_core_enabled(request):
         scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
-        records = execute_postgres_finance_core(
+        records = execute_postgres_finance_core_scoped(
             request,
-            lambda repository: repository.list_journals(
+            lambda repository, scope: repository.list_journals(
                 workspace=scoped_workspace,
-                organization_code=organization,
+                organization_code=scope.organization_code,
                 limit=limit,
                 offset=offset,
                 actor_label=current_user.id,
             ),
+            organization_code=organization,
         )
         return _list_response("journals", records, limit=limit, offset=offset)
     if server_ledger_enabled(request):
@@ -792,8 +821,12 @@ def upsert_journal(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "journal": execute_postgres_finance_core(
-                request, lambda repository: repository.upsert_journal(**values)
+            "journal": execute_postgres_finance_core_scoped(
+                request,
+                lambda repository, scope: repository.upsert_journal(
+                    **{**values, "organization_code": scope.organization_code}
+                ),
+                organization_code=payload.organization_code,
             )
         }
     if server_ledger_enabled(request):
@@ -819,15 +852,17 @@ def trial_balance(
 ) -> dict[str, object]:
     if server_finance_core_enabled(request) and entity.strip():
         scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
-        return execute_postgres_finance_core(
+        return execute_postgres_finance_core_scoped(
             request,
-            lambda repository: repository.trial_balance(
+            lambda repository, scope: repository.trial_balance(
                 period_id=period_id,
-                organization_code=organization,
-                entity_code=entity,
+                organization_code=scope.organization_code,
+                entity_code=scope.entity_code,
                 workspace=scoped_workspace,
                 actor_label=current_user.id,
             ),
+            organization_code=organization,
+            entity_code=entity,
         )
     if server_ledger_enabled(request):
         _server_workspace(workspace)
@@ -877,18 +912,20 @@ def list_entries(
 ) -> dict[str, object]:
     if server_finance_core_enabled(request) and (entity.strip() or period_id.strip() or status.strip()):
         scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
-        records = execute_postgres_finance_core(
+        records = execute_postgres_finance_core_scoped(
             request,
-            lambda repository: repository.list_entries(
+            lambda repository, scope: repository.list_entries(
                 workspace=scoped_workspace,
-                organization_code=organization,
-                entity_code=entity,
+                organization_code=scope.organization_code,
+                entity_code=scope.entity_code,
                 period_id=period_id,
                 status=status,
                 limit=limit,
                 offset=offset,
                 actor_label=current_user.id,
             ),
+            organization_code=organization,
+            entity_code=entity,
         )
         return _list_response("entries", records, limit=limit, offset=offset)
     if server_ledger_enabled(request):
@@ -949,8 +986,13 @@ def create_entry(
         values["lines"] = [line.model_dump() for line in payload.lines]
         values["actor_label"] = current_user.id
         return {
-            "entry": execute_postgres_finance_core(
-                request, lambda repository: repository.create_entry(**values)
+            "entry": execute_postgres_finance_core_scoped(
+                request,
+                lambda repository, scope: repository.create_entry(
+                    **{**values, "organization_code": scope.organization_code, "entity_code": scope.entity_code}
+                ),
+                organization_code=payload.organization_code,
+                entity_code=payload.entity_code,
             )
         }
     if server_ledger_enabled(request):

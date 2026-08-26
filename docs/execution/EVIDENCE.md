@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-948: Bind Finance Core API hierarchy codes to authenticated PostgreSQL scope
+
+- Code evidence: `reconforge/api/server_finance_core.py` adds a request-scoped
+  executor that resolves organization and legal-entity codes from authenticated
+  IDs, verifies workspace organization linkage, rejects mismatched payload
+  selectors, and passes canonical codes to the repository. Finance Core routes
+  use it for chart/account/dimension/journal selectors and ledger entry
+  lifecycle filters/creation; local mode is unchanged.
+- Focused command `python -m pytest -q
+  tests/test_api_server_finance_core.py tests/test_application_finance_core.py
+  tests/test_finance_core.py tests/test_postgres_finance_core.py
+  tests/test_api_server_finance_core_live.py` exits `0` on this host; the
+  opt-in live test is the declared PostgreSQL capability skip. Ruff and Mypy
+  pass for the changed implementation; `git diff --check` passes.
+- The unit contract proves canonicalization and organization/entity spoof
+  rejection; the live PostgreSQL test is declared but skipped because
+  `RECONFORGE_TEST_POSTGRES_DSN` is absent. This is a hierarchy safety boundary,
+  not evidence of hosted parity, external IAM, HA/DR, provider integration,
+  capacity, production readiness, compliance, or certification. ADR 0641
+  records the decision.
+
 ## E-947: Refuse local user SQLite access before opening a connection in Server Profile
 
 - Code evidence: every endpoint in `reconforge/api/routes/users.py` now uses

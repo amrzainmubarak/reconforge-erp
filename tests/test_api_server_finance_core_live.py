@@ -118,13 +118,23 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
         maker = LocalUser(id="maker", username="maker", display_name="Maker")
         checker = LocalUser(id="checker", username="checker", display_name="Checker")
 
+        with pytest.raises(APIError) as spoofed_organization:
+            routes.upsert_chart(
+                request,
+                routes.ChartRequest(chart_code="SPOOF", name="Spoofed", organization_code="ORG-SPOOF"),
+                maker,
+                None,
+            )
+        assert spoofed_organization.value.code == "organization_scope_denied"
+
         chart = routes.upsert_chart(
             request,
-            routes.ChartRequest(chart_code="DEFAULT", name="Default", organization_code="ORG-A"),
+            routes.ChartRequest(chart_code="DEFAULT", name="Default"),
             maker,
             None,
         )
         assert chart["chart"]["workspace_id"] == workspace_a
+        assert chart["chart"]["organization_code"] == "ORG-A"
         for code, name, account_type, normal_balance in (
             ("1000", "Cash", "Asset", "Debit"),
             ("3000", "Capital", "Equity", "Credit"),
@@ -152,6 +162,26 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             maker,
             None,
         )
+        with pytest.raises(APIError) as spoofed_entity:
+            routes.create_entry(
+                request,
+                routes.LedgerEntryRequest(
+                    entry_number="JE/API/SPOOF",
+                    organization_code="ORG-A",
+                    entity_code="ENTITY-SPOOF",
+                    period_id="period-api",
+                    journal_code="GENERAL",
+                    posting_date="2026-07-23",
+                    description="Spoofed Finance Core API entry",
+                    lines=[
+                        routes.LedgerLineRequest(account_code="1000", debit="1.00", credit="0"),
+                        routes.LedgerLineRequest(account_code="3000", debit="0", credit="1.00"),
+                    ],
+                ),
+                maker,
+                None,
+            )
+        assert spoofed_entity.value.code == "entity_scope_denied"
         created = routes.create_entry(
             request,
             routes.LedgerEntryRequest(

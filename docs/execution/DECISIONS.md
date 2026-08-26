@@ -5,6 +5,19 @@
 
 ## Decisions
 
+### D-996: Canonicalize Finance Core hierarchy selectors from authenticated scope
+
+Finance Core server routes must not trust organization or legal-entity codes
+from request payloads when the authenticated PostgreSQL scope already carries
+the corresponding IDs. The new scoped executor resolves canonical codes inside
+the tenant-bound transaction, verifies organization-to-workspace linkage,
+rejects mismatches, and injects the canonical values into repository writes and
+queries. Local Profile behavior and the existing unscoped adapter contract are
+preserved for compatibility. This is reversible and bounded; the current live
+PostgreSQL proof remains capability-gated and no hosted, IAM, HA/DR, provider,
+production, compliance, or certification claim follows. ADR 0641 records the
+rollback boundary.
+
 ### D-995: Refuse local user SQLite access before the Server Profile guard
 
 The legacy `/users` routes now use `get_local_db` and resolve a local

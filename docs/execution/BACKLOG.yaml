@@ -1544,6 +1544,12 @@ tasks:
         period and protects locked actor/timestamp evidence with additive
         SQLite 45/PostgreSQL 0092 persistence guards; cross-host locking and
         statutory close remain open.
+      - >
+        E-956 serializes consolidation-close run preparation on the governed
+        parent period: PostgreSQL uses `FOR UPDATE`, while SQLite re-reads
+        the period after `BEGIN IMMEDIATE` before checking lock state and
+        inserting the immutable run. Cross-host lock drills and statutory
+        close remain open.
   - id: E-1003
     priority: P0
     area: matching

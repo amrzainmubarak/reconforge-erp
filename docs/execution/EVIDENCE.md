@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-956: Serialize consolidation-close run preparation
+
+- Code evidence: PostgreSQL consolidation `prepare_run` locks the parent
+  period with `FOR UPDATE`; SQLite acquires `BEGIN IMMEDIATE`, re-reads the
+  period, and only then performs the locked-state check and idempotent run
+  insert.
+- Test evidence: focused SQLite transaction-boundary and locked-period tests,
+  PostgreSQL source contract, full Python regression, Ruff, Mypy, Bandit, and
+  diff-check pass. A disposable PostgreSQL 16.14 run through Alembic head with
+  `reconforge_app` (`rolsuper=false`, `rolbypassrls=false`) passes the live
+  tenant-isolated consolidation-close replay lifecycle.
+- Boundary: this is supported-adapter concurrency evidence, not distributed
+  locking, statutory/legal-book close, source-ERP posting, HA/DR, or production
+  assurance.
+
 ## E-955: Serialize close mutations and protect lock evidence
 
 - Code evidence: PostgreSQL close task upsert/status and period status

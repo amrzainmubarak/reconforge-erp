@@ -117,6 +117,11 @@ def test_postgres_consolidation_close_schema_is_tenant_scoped_and_exact() -> Non
     assert "DOUBLE PRECISION" not in schema
 
 
+def test_postgres_prepare_run_serializes_on_the_parent_period() -> None:
+    source = inspect.getsource(PostgresConsolidationCloseRepository.prepare_run)
+    assert "SELECT status FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s FOR UPDATE" in source
+
+
 def test_postgres_close_hierarchy_scope_schema_is_additive_and_reversible() -> None:
     schema = POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL
     for table_name in (

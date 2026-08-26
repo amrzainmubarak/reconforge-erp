@@ -10265,3 +10265,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   already locked periods; no source-ERP or statutory posting change.
 - **Rollback**: SQLite backup restore; PostgreSQL 0092 downgrade restores the
   0091 guard.
+
+### D-818: Serialize consolidation-close preparation on the governed period
+
+- **Date**: 2026-08-26
+- **Context**: A consolidation run could read an open period and then race with
+  a period lock before its run row was inserted. This would allow a new close
+  run to enter a period that was locked after the stale read.
+- **Decision**: PostgreSQL `prepare_run` takes a parent-period row lock before
+  checking state. SQLite starts `BEGIN IMMEDIATE` before re-reading the period,
+  checking lock state, resolving idempotent run identity, and inserting the
+  run. The worksheet remains explicitly non-posting.
+- **Verification**: E-956 focused transaction-boundary contracts, live
+  PostgreSQL consolidation-close replay, full Python/static/security gates.
+- **Compatibility**: No schema or public route change; only the transaction
+  boundary and fail-closed race behavior change.
+- **Rollback**: Revert the adapter commit. No migration rollback is required.

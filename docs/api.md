@@ -286,6 +286,10 @@ postings. Lock and reopen identities are persisted, and the locker cannot
 reopen the same period. PostgreSQL task and period mutations serialize on the
 parent period, and locked actor/timestamp evidence is immutable. Close mutations append PostgreSQL audit-chain and
 outbox evidence in the same transaction and never fall back to SQLite.
+Consolidation-close run preparation uses the same governed-period serialization
+boundary: PostgreSQL locks the parent period and SQLite re-reads it after its
+writer transaction begins before accepting a new run. The close worksheet
+remains explicitly non-posting.
 
 Exceptions and metrics:
 

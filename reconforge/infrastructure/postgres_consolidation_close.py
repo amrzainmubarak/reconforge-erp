@@ -667,7 +667,7 @@ class PostgresConsolidationCloseRepository:
         with self.connection.transaction():
             self._scope()
             period = self.connection.execute(
-                "SELECT status FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s",
+                "SELECT status FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s FOR UPDATE",
                 (self.tenant_id, period_id),
             ).fetchone()
             if not period:

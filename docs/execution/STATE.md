@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-956 - Serialize consolidation-close run preparation (2026-08-26)
+
+- PostgreSQL `prepare_run` now locks the governed consolidation period with
+  `SELECT ... FOR UPDATE` before accepting a new immutable run.
+- SQLite `prepare_run` now acquires `BEGIN IMMEDIATE` before reading the
+  period and checking lock state; idempotent run lookup and insertion occur
+  inside that writer transaction.
+- Focused local contracts, full Python regression, Ruff, Mypy, Bandit, and a
+  disposable PostgreSQL 16 run with a non-superuser/non-BYPASSRLS role pass.
+- Boundary: this closes the supported adapter race only. It does not prove a
+  distributed lock service, statutory close, source-ERP posting, HA/DR, or
+  production assurance.
+
 ## E-955 - Serialize close mutations and protect lock evidence (2026-08-26)
 
 - PostgreSQL generic close task upserts, task status changes, and period status

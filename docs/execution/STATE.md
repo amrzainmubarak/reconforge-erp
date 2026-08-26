@@ -2,6 +2,17 @@
 
 Updated: 2026-08-26
 
+## E-951 - Make API health backend-aware (2026-08-26)
+
+- `GET /api/v1/health` now branches on the explicit PostgreSQL Server Profile
+  capability. Local Profile retains the SQLite response; Server Profile reports
+  PostgreSQL, the Alembic revision state, pending migration count, and the
+  redacted `server-managed` path summary.
+- Server health is `ok` only when migration state is readable and current;
+  connection, driver, or migration failures return a non-diagnostic
+  `degraded` response without DSNs or raw errors. Focused tests, Ruff, Mypy,
+  and diff-check pass. ADR 0644 records the compatibility and rollback scope.
+
 ## E-950 — Remove the superseded Inventory Core fail-closed helper and documentation drift (2026-08-26)
 
 - Inventory Core routes now have one authoritative dependency contract:

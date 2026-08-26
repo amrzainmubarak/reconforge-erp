@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-951: Make API health backend-aware for PostgreSQL Server Profile
+
+- Code evidence: `reconforge/api/routes/health.py` now selects the health
+  implementation from `server_identity_enabled`. Local Profile continues to
+  read SQLite migrations; Server Profile uses the existing PostgreSQL Alembic
+  revision provider and returns only backend, revision, pending-count, and
+  redacted path metadata.
+- Focused command `python -m pytest -q tests/test_api_foundation.py
+  tests/test_postgres_operations.py tests/test_release_readiness_docs.py
+  tests/test_phase4_execution_contract.py` exits `0` with all runnable tests
+  passing and one declared capability skip. Ruff, Mypy on the changed route,
+  and `git diff --check` pass.
+- Tests cover current PostgreSQL state, pending migrations, unavailable
+  migration state, non-disclosure of a driver error, and unchanged Local
+  Profile health. This
+  is a bounded operational probe correction; it does not prove complete
+  PostgreSQL module migrations, HA/DR, capacity, external IAM, production
+  readiness, compliance, or certification. ADR 0644 records the decision.
+
 ## E-950: Remove the superseded Inventory Core fail-closed helper and documentation drift
 
 - Code evidence: all Inventory Core routes use `get_local_db` as the local

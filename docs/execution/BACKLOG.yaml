@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-951
+    priority: P0
+    area: operational-integrity
+    title: Make API health backend-aware for PostgreSQL Server Profile
+    status: completed
+    depends_on: [E-950]
+    exit_evidence: >-
+      GET /api/v1/health retains the SQLite Local Profile contract but uses
+      PostgresMigrationStatusProvider in Server Profile, reports the
+      server-api/backend/migration state without DSNs, and returns degraded
+      when the state is unavailable or pending. Focused API foundation,
+      PostgreSQL operations, documentation, Ruff, Mypy, and diff-check gates
+      pass. ADR 0644 records the bounded no-schema-change rollback.
   - id: E-950
     priority: P1
     area: documentation-integrity

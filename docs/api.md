@@ -202,6 +202,13 @@ Unauthenticated:
 - `GET /api/v1/version`
 - `POST /api/v1/auth/login`
 
+`GET /api/v1/health` is backend-aware. Local Profile reports the SQLite
+migration version and a redacted database filename. PostgreSQL Server Profile
+reports the PostgreSQL Alembic revision, pending migration count, and the
+stable `server-managed` path summary. It returns `degraded` when the server
+database or migration state cannot be verified; it never exposes a DSN or raw
+driver error.
+
 Authenticated local users and roles:
 
 - `GET /api/v1/users`

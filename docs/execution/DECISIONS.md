@@ -5,6 +5,16 @@
 
 ## Decisions
 
+### D-999: Make the unauthenticated API health probe backend-aware
+
+The health route previously used the Local Profile SQLite path and service
+label regardless of whether PostgreSQL Server Profile was enabled. Branch on
+the explicit server capability, use the existing PostgreSQL migration-status
+provider, and report a non-diagnostic degraded state when the server probe
+cannot read migration state or has pending revisions. Preserve local response
+compatibility; add no schema or persisted-data changes. This is reversible and
+bounded. ADR 0644 records the decision.
+
 ### D-998: Remove the superseded Inventory Core guard and synchronize the audit trail
 
 ADR 0632's explicit `get_inventory_local_db` helper was correct for the

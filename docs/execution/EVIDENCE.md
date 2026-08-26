@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1013: Persist Server Profile governed-job facade decisions through policy audit sink
+
+- Code evidence: the governed durable-job facade accepts an optional
+  provider-neutral `PolicyAuditSink`; Server Profile injects the existing
+  tenant-scoped PostgreSQL sink while local callers omit it. No PostgreSQL or
+  network dependency was added to the application layer.
+- Test evidence: the synthetic Server Profile route test captures one facade
+  policy decision through the injected sink; full Python regression, focused
+  API/application/worker tests, Ruff, Mypy, and package build pass.
+- Boundary: sink behavior is proven through the synthetic server boundary;
+  this does not prove universal API adoption, external IAM, distributed
+  revocation, provider interoperability, HA/DR, production SLOs, or
+  production authorization effectiveness. ADR 0673 records rollback.
+
 ## E-1012: Use governed durable-job facade in Server Profile queue health
 
 - Code evidence: the PostgreSQL Server Profile queue-health route builds a
@@ -13,10 +27,11 @@ This file records commands and observed results. It does not convert a dirty wor
   verified principal/scope snapshot and passes through the governed facade;
   local API, application, worker, Ruff, and Mypy gates pass. Live PostgreSQL
   execution remains environment-gated where declared.
-- Boundary: facade policy evidence is not yet persisted through the
-  PostgreSQL audit sink. This does not prove universal API coverage, external
-  IAM, distributed revocation, provider interoperability, HA/DR, production
-  SLOs, or production authorization effectiveness. ADR 0672 records rollback.
+- Boundary: E-1013 proves sink persistence through the synthetic server
+  boundary, not an independent production audit exercise. This does not prove
+  universal API coverage, external IAM, distributed revocation, provider
+  interoperability, HA/DR, production SLOs, or production authorization
+  effectiveness. ADR 0672 records rollback.
 
 ## E-1011: Route local operations queue health through governed durable-job facade
 

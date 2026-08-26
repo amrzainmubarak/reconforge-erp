@@ -23,18 +23,17 @@ transaction-local PostgreSQL scope, and RLS enforcement remain in place as
 independent barriers. The route response and backend repository contract do
 not change.
 
-The facade's provider-neutral structured policy evidence remains separate from
-the server request's PostgreSQL policy-audit sink; the route-level server
-recheck continues to use that sink. Full sink parity is a future boundary,
-not an implied result of this slice.
+The facade's provider-neutral structured policy evidence is injectable;
+E-1013 wires it to the same server request's PostgreSQL policy-audit sink. The
+route-level server recheck continues to use that sink as an independent
+barrier.
 
 ## Consequences and boundaries
 
 Both local and Server Profile queue-health paths now use the governed
 application facade. This does not prove every API route is governed, external
-IAM or distributed revocation, provider interoperability, PostgreSQL audit
-sink parity for the facade decision, HA/DR, production SLOs, or production
-readiness.
+IAM or distributed revocation, provider interoperability, independent
+production audit assurance, HA/DR, production SLOs, or production readiness.
 
 ## Verification
 

@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request
 
 from reconforge.api.dependencies import (
+    _server_policy_audit_sink,
     enforce_server_tenant_permission,
     get_local_db,
     require_permission,
@@ -146,7 +147,8 @@ def durable_job_queue(
                 workspace_id=workspace,
             ) as postgres_connection:
                 snapshot = GovernedDurableJobApplicationService(
-                    DurableJobApplicationService(PostgresDurableJobRepository(postgres_connection))
+                    DurableJobApplicationService(PostgresDurableJobRepository(postgres_connection)),
+                    audit_sink=_server_policy_audit_sink(request, actor_id=principal.user.id),
                 ).queue_snapshot(
                     tenant_id=selected_tenant,
                     workspace_id=workspace,

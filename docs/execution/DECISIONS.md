@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-840: Inject the PostgreSQL policy-audit sink into governed job facade
+
+- **Date**: 2026-08-26
+- **Context**: E-1012 routed Server Profile through the governed facade, but
+  the facade decision itself had no request-scoped persistence sink.
+- **Decision**: Add optional provider-neutral `PolicyAuditSink` injection and
+  supply the existing tenant-scoped PostgreSQL sink in Server Profile. Keep
+  local/Community default behavior structured-log-only and dependency-free.
+- **Verification**: E-1013 sink-capture, full regression, Ruff, Mypy, and build
+  gates pass; failure behavior remains owned by the existing server adapter.
+- **Compatibility**: Constructor argument is optional; no route response,
+  repository, schema, or migration changes.
+- **Rollback**: Revert E-1013 facade/route/test/ADR 0673/manifest/execution
+  metadata.
+
 ### D-839: Use the governed durable-job facade in Server Profile queue health
 
 - **Date**: 2026-08-26

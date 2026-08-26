@@ -125,6 +125,7 @@ def test_server_durable_job_queue_route_rechecks_tenant_policy_and_rls_scope(mon
     connection = object()
     policy_calls: list[tuple[str, str]] = []
     boundary_calls: list[tuple[object, str, str | None, str | None]] = []
+    audit_evidence: list[object] = []
 
     monkeypatch.setattr(operations, "server_identity_enabled", lambda _request: True)
     monkeypatch.setattr(operations, "request_tenant_id", lambda _request: "tenant-a")
@@ -144,6 +145,11 @@ def test_server_durable_job_queue_route_rechecks_tenant_policy_and_rls_scope(mon
             authorized_organization_ids=frozenset({"organization-a"}),
             authorized_legal_entity_ids=frozenset({"entity-a"}),
         ),
+    )
+    monkeypatch.setattr(
+        operations,
+        "_server_policy_audit_sink",
+        lambda _request, *, actor_id: audit_evidence.append,
     )
 
     class Boundary:
@@ -193,6 +199,7 @@ def test_server_durable_job_queue_route_rechecks_tenant_policy_and_rls_scope(mon
     assert result["queue"]["queue_depth"] == 2
     assert policy_calls == [("ops.read", "tenant-a")]
     assert boundary_calls == [(factory, "tenant-a", "organization-a", "workspace-a")]
+    assert len(audit_evidence) == 1
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL service")

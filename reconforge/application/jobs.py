@@ -8,6 +8,7 @@ from typing import Protocol
 
 from reconforge.auth.policy import (
     CentralPolicyEngine,
+    PolicyAuditSink,
     PolicyDecision,
     PolicyEvaluationContext,
     audit_policy_decision,
@@ -350,9 +351,11 @@ class GovernedDurableJobApplicationService:
         service: DurableJobApplicationService,
         *,
         policy_engine: CentralPolicyEngine | None = None,
+        audit_sink: PolicyAuditSink | None = None,
     ) -> None:
         self._service = service
         self._policy = policy_engine or CentralPolicyEngine()
+        self._audit_sink = audit_sink
 
     def submit(
         self,
@@ -556,6 +559,7 @@ class GovernedDurableJobApplicationService:
             request_id=request_id,
             principal_type=bound_context.principal_type,
             context=bound_context,
+            audit_sink=self._audit_sink,
         )
         if not decision.allowed:
             raise JobAuthorizationError(f"job policy denied: {decision.reason_code}")

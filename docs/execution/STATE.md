@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1013 - Persist Server Profile governed-job facade decisions through policy audit sink (2026-08-26)
+
+- `GovernedDurableJobApplicationService` now accepts an optional
+  provider-neutral `PolicyAuditSink` and passes it to the existing closed
+  `audit_policy_decision` path. Server Profile injects its tenant-scoped
+  PostgreSQL sink; local/Community callers remain sink-free by default and
+  retain structured logging.
+- The synthetic Server Profile route test captures the facade decision through
+  the sink; focused tests, full Python regression, Ruff, Mypy, and package
+  build pass. Universal API coverage, external IAM, distributed revocation,
+  HA/DR, production SLOs, and production authorization effectiveness remain
+  open. ADR 0673 records rollback.
+
 ## E-1012 - Use governed durable-job facade in Server Profile queue health (2026-08-26)
 
 - The PostgreSQL Server Profile queue-health route now builds its policy
@@ -10,8 +23,8 @@ Updated: 2026-08-26
   facade with actor, selected hierarchy, and request ID.
 - Existing server tenant-policy recheck, transaction-local scope, and RLS
   remain independent barriers. API contract tests plus Ruff and Mypy pass.
-  The facade decision still emits provider-neutral structured evidence rather
-  than the PostgreSQL policy-audit sink; universal API coverage, external IAM,
+  E-1013 now also sends the facade decision through the PostgreSQL policy-audit
+  sink; universal API coverage, external IAM,
   distributed revocation, HA/DR, production SLOs, and production
   authorization effectiveness remain open. ADR 0672 records rollback.
 

@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1013
+    priority: P0
+    area: identity-governance
+    title: Persist Server Profile governed-job facade decisions through policy audit sink
+    status: completed
+    depends_on: [E-1012]
+    exit_evidence: >-
+      GovernedDurableJobApplicationService accepts an optional provider-neutral
+      PolicyAuditSink. Server Profile injects the existing tenant-scoped
+      PostgreSQL sink while Community/local callers retain structured logging
+      by default. The synthetic Server Profile route test captures the facade
+      evidence through the sink; focused, full regression, static, and package
+      build gates pass. Universal API coverage, external IAM, distributed
+      revocation, HA/DR, production SLOs, and production readiness remain
+      open. ADR 0673 records rollback.
   - id: E-1012
     priority: P0
     area: identity-governance
@@ -21,8 +36,8 @@ tasks:
       principal scope grants, then calls GovernedDurableJobApplicationService
       with the selected hierarchy and request ID. Existing server tenant
       policy recheck, transaction-local scope, and RLS remain independent
-      barriers. API contract tests and static gates pass. Provider-neutral
-      facade evidence is not yet persisted through the PostgreSQL audit sink;
+      barriers. API contract tests and static gates pass. E-1013 confirms the
+      facade evidence is persisted through the injected PostgreSQL audit sink;
       universal API coverage, external IAM, distributed revocation, HA/DR,
       production SLOs, and production readiness remain open. ADR 0672 records
       rollback.
@@ -2153,7 +2168,10 @@ tasks:
       - E-1012 extends the same governed queue-health facade to Server Profile
         using the verified ServerPrincipal and principal scope grants while
         retaining tenant-policy, transaction-local scope, and RLS barriers.
-        Facade audit-sink parity and universal API adoption remain open.
+      - E-1013 adds an optional provider-neutral PolicyAuditSink to the
+        governed facade and injects the existing PostgreSQL sink in Server
+        Profile. Local/Community remains dependency-free by default; universal
+        API adoption remains open.
   - id: E-1006
     priority: P1
     area: global-expansion

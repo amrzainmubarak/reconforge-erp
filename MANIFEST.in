@@ -1016,5 +1016,6 @@ include docs/adr/0669-governed-worker-lifecycle-policy-reevaluation.md
 include docs/adr/0670-governed-job-application-scope-policy.md
 include docs/adr/0671-local-operations-api-governed-job-facade.md
 include docs/adr/0672-server-operations-queue-uses-governed-job-facade.md
+include docs/adr/0673-governed-job-facade-policy-audit-sink.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

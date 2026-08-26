@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-828: Require per-handler server-boundary evidence
+
+- **Date**: 2026-08-26
+- **Context**: The existing route inventory only required a boundary marker
+  somewhere in a mutating route module. A newly added handler could therefore
+  be missed if a neighboring handler or module helper supplied the only marker.
+- **Decision**: Parse each mutating handler independently. Accept a direct
+  server-boundary marker or an explicit module-specific helper allowlist for
+  reviewed central service wrappers, server adapters, and local fail-closed
+  connection helpers. Keep authentication, SCIM, and WebAuthn as explicit
+  protocol exceptions.
+- **Verification**: The focused authorization inventory and full Python suite
+  pass; static gates and evidence files are updated for E-965.
+- **Compatibility**: Test and documentation only; no runtime, API, schema,
+  database, or authorization behavior changes.
+- **Rollback**: Revert the handler-level test, ADR, and E-965 documentation.
+
 ### D-827: Protect nonstandard-currency cross-engine parity
 
 - **Date**: 2026-08-26

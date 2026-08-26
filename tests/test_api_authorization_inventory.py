@@ -31,6 +31,31 @@ SERVER_BOUNDARY_MARKERS = (
     "enforce_server_tenant",
     "server_identity_enabled",
 )
+HANDLER_BOUNDARY_HELPERS = {
+    "access_administration.py": frozenset({"_service"}),
+    "accounts.py": frozenset({"_server_scope"}),
+    "consolidation_deferred_tax.py": frozenset({"_enforce_server_policy"}),
+    "consolidation_impairment.py": frozenset({"_enforce_server_policy"}),
+    "consolidation_intercompany.py": frozenset({"_scope_for_payload", "_server_only"}),
+    "consolidation_ownership_change.py": frozenset({"_enforce_server_policy"}),
+    "consolidation_ppa.py": frozenset({"_enforce_server_policy"}),
+    "emergency_access.py": frozenset({"_execute"}),
+    "exceptions.py": frozenset({"_local_connection"}),
+    "evidence.py": frozenset({"_enforce_server_evidence_permission"}),
+    "finance_core.py": frozenset({"_server_finance_workspace"}),
+    "identity_administration.py": frozenset({"_service"}),
+    "inventory_core.py": frozenset({"_server_call"}),
+    "inventory_planning.py": frozenset({"_server_call"}),
+    "inventory_valuation.py": frozenset({"_server_call"}),
+    "inventory_valuation_reversal.py": frozenset({"_server_call"}),
+    "master_data.py": frozenset({"_enforce_server_manage"}),
+    "payables.py": frozenset({"_server_call"}),
+    "receivables.py": frozenset({"_server_call"}),
+    "reconciliation.py": frozenset({"_enforce_server_run_scope"}),
+    "security_governance.py": frozenset({"_service"}),
+    "users.py": frozenset({"_local_connection"}),
+    "workflow.py": frozenset({"_local_connection"}),
+}
 
 
 def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Path) -> None:
@@ -74,6 +99,45 @@ def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_c
     assert violations == [], (
         "Mutating route modules must either call/declare a server scope or be "
         f"added to the reviewed protocol allowlist: {violations}"
+    )
+
+
+def test_each_mutating_route_handler_reaches_a_reviewed_server_boundary() -> None:
+    """Prevent a new handler from relying only on a neighboring route's guard."""
+
+    violations: list[str] = []
+    for path in sorted(ROUTES_ROOT.glob("*.py")):
+        if path.name in SPECIAL_ROUTE_MODULES:
+            continue
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+        reviewed_helpers = HANDLER_BOUNDARY_HELPERS.get(path.name, frozenset())
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            is_mutating_handler = any(
+                isinstance(decorator, ast.Call)
+                and isinstance(decorator.func, ast.Attribute)
+                and decorator.func.attr in {"post", "put", "patch", "delete"}
+                for decorator in node.decorator_list
+            )
+            if not is_mutating_handler:
+                continue
+            handler_source = ast.get_source_segment(source, node) or ""
+            handler_calls = {
+                call.func.id
+                for call in ast.walk(node)
+                if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+            }
+            has_direct_boundary = any(marker in handler_source for marker in SERVER_BOUNDARY_MARKERS)
+            has_reviewed_helper = bool(handler_calls & reviewed_helpers)
+            if not has_direct_boundary and not has_reviewed_helper:
+                violations.append(f"{path.name}:{node.name}")
+
+    assert violations == [], (
+        "Every mutating handler must reach a direct server boundary or a "
+        "reviewed module helper: "
+        f"{violations}"
     )
 
 

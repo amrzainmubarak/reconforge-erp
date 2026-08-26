@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-965
+    priority: P0
+    area: identity-governance
+    title: Require every mutating API handler to reach a reviewed server boundary
+    status: completed
+    depends_on: [E-962, E-1005]
+    exit_evidence: >-
+      The authorization regression now inspects each POST/PUT/PATCH/DELETE
+      handler, not only its containing module. A handler must call a visible
+      server-boundary marker or one of the small module-specific helpers whose
+      fail-closed/server-scope behavior is explicitly reviewed; authentication,
+      SCIM, and WebAuthn remain protocol exceptions. Focused authorization
+      tests, Ruff, Mypy, full Python regression, YAML, and diff-check pass.
+      This is a deterministic source-level omission guard, not proof of every
+      helper's runtime semantics, external IAM, distributed invalidation,
+      worker/export/UI adoption, HA/DR, or production effectiveness. ADR 0659
+      records rollback.
   - id: E-964
     priority: P0
     area: matching

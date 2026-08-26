@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-965: Require every mutating API handler to reach a reviewed server boundary
+
+- Code evidence: `tests/test_api_authorization_inventory.py` parses every
+  mutating handler and requires a direct server-boundary marker or a
+  module-specific reviewed helper. The helper allowlist is explicit and small;
+  protocol modules remain explicit exceptions.
+- Test evidence: the focused authorization inventory and full Python regression
+  pass, with Ruff, Mypy, YAML, and diff-check also passing on the current HEAD.
+- Boundary: this is static omission detection. It does not prove helper runtime
+  semantics, route-specific scope arguments, RLS/SoD behavior, worker/export/UI
+  adoption, distributed invalidation, external IAM, HA/DR, or production
+  effectiveness. ADR 0659 records rollback.
+
 ## E-964: Add a nonstandard-currency cross-engine parity regression
 
 - Code evidence: `tests/test_matching_properties.py` generates signed

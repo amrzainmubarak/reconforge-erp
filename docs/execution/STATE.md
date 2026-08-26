@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-965 - Require every mutating API handler to reach a reviewed server boundary (2026-08-26)
+
+- The authorization inventory now checks each mutating handler individually.
+  Module-level presence of a server marker is no longer sufficient.
+- The gate accepts a direct server-boundary call or a small, module-specific
+  allowlist of reviewed helpers: server adapters/scope helpers, central admin
+  service wrappers, or explicit local fail-closed connection helpers.
+- Focused authorization tests pass. This remains source-level omission
+  detection; it does not prove helper semantics, external IAM, distributed
+  invalidation, worker/export/UI coverage, HA/DR, or production effectiveness.
+  ADR 0659 records the reversible decision.
+
 ## E-964 - Add a nonstandard-currency cross-engine parity regression (2026-08-26)
 
 - The matching parity suite now exercises deterministic JPY and KWD generated

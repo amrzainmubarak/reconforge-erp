@@ -282,8 +282,9 @@ PostgreSQL close-control boundary. `POST /close/periods` requires an existing
 starter tasks. Task completion is blocked by incomplete dependencies, approval
 and locking require 100% readiness, and reopening requires a reason. These
 states coordinate ReconForge close work only; they do not lock source-ERP
-postings. Close mutations append PostgreSQL audit-chain and outbox evidence in
-the same transaction and never fall back to SQLite.
+postings. Lock and reopen identities are persisted, and the locker cannot
+reopen the same period. Close mutations append PostgreSQL audit-chain and
+outbox evidence in the same transaction and never fall back to SQLite.
 
 Exceptions and metrics:
 

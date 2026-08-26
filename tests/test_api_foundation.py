@@ -18,6 +18,7 @@ from reconforge.infrastructure.postgres import (
     PostgresPooledConnectionFactory,
     PostgresSettings,
 )
+from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REVISIONS
 from reconforge.infrastructure.redis import RedisPolicyCacheVersionStore
 from reconforge.platform.common import is_trusted_local_mode
 
@@ -92,7 +93,8 @@ def test_server_health_uses_postgresql_migration_state_instead_of_sqlite(tmp_pat
         postgres_dsn="postgresql://identity.test/reconforge",
     )
     api.state.postgres_identity_factory.close()
-    api.state.postgres_identity_factory = FakeFactory("0090_pg_writeback_observations")
+    latest_revision = POSTGRES_MIGRATION_REVISIONS[-1]
+    api.state.postgres_identity_factory = FakeFactory(latest_revision)
     client = TestClient(api)
 
     health = client.get("/api/v1/health")
@@ -107,8 +109,8 @@ def test_server_health_uses_postgresql_migration_state_instead_of_sqlite(tmp_pat
     assert payload["database"] == {
         "backend": "postgresql",
         "reachable": True,
-        "schema_version": "0090_pg_writeback_observations",
-        "latest_schema_version": "0090_pg_writeback_observations",
+        "schema_version": latest_revision,
+        "latest_schema_version": latest_revision,
         "pending_migrations": 0,
         "path_summary": "server-managed",
     }
@@ -144,7 +146,7 @@ def test_server_health_is_degraded_when_postgresql_migrations_are_pending(tmp_pa
     assert payload["status"] == "degraded"
     assert payload["database"]["reachable"] is True
     assert payload["database"]["schema_version"] == "0089_pg_writeback_identity"
-    assert payload["database"]["pending_migrations"] == 1
+    assert payload["database"]["pending_migrations"] == 2
 
 
 def test_server_health_is_degraded_when_postgresql_migration_state_is_unavailable(tmp_path: Path) -> None:

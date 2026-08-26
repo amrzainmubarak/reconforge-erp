@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-954
+    priority: P0
+    area: finance-close
+    title: Enforce independent actors on generic close-period reopen
+    status: completed
+    depends_on: [E-953]
+    exit_evidence: >-
+      Local SQLite migration 44 and PostgreSQL Alembic 0091 persist lock and
+      reopen actors, backfill legacy locked rows with an explicit unknown
+      sentinel, and enforce independent-actor reopen at adapter and database
+      trigger boundaries. Focused local/PostgreSQL contract, migration, and
+      SoD tests pass; the control remains workflow metadata only and does not
+      prove statutory close, source-ERP posting, HA/DR, or production assurance.
   - id: E-953
     priority: P1
     area: operational-integrity
@@ -1509,6 +1522,11 @@ tasks:
       digests, period lock governance, and non-posting/non-statement drift policy
       boundaries. It also requires evidence that close exports and evidence artifacts are
       reproducible under controlled rollback/restore steps.
+    completed_slices:
+      - E-954 adds persisted lock/reopen actors and independent-actor SoD
+        enforcement to the generic local/PostgreSQL close-management path at
+        both adapter and database-trigger boundaries; statutory close and
+        production assurance remain open.
   - id: E-1003
     priority: P0
     area: matching

@@ -4468,3 +4468,38 @@ CREATE TABLE IF NOT EXISTS currency_registry_snapshots (
 CREATE INDEX IF NOT EXISTS idx_currency_registry_snapshots_version
 ON currency_registry_snapshots(registry_version, captured_at, registry_digest);
 """
+
+CLOSE_PERIOD_SOD_MIGRATION_SQL = """
+ALTER TABLE close_periods ADD COLUMN locked_by TEXT NOT NULL DEFAULT '';
+ALTER TABLE close_periods ADD COLUMN reopened_by TEXT NOT NULL DEFAULT '';
+
+UPDATE close_periods
+SET locked_by = 'legacy-unknown'
+WHERE status IN ('Locked', 'Reopened') AND locked_by = '';
+
+UPDATE close_periods
+SET reopened_by = 'legacy-unknown'
+WHERE status = 'Reopened' AND reopened_by = '';
+
+CREATE TRIGGER IF NOT EXISTS close_periods_sod_guard
+BEFORE UPDATE ON close_periods
+WHEN OLD.status = 'Locked' AND NEW.status = 'Reopened'
+BEGIN
+    SELECT CASE
+        WHEN OLD.locked_by = '' THEN RAISE(ABORT, 'locked close period has no locker identity')
+        WHEN NEW.reopened_by = '' THEN RAISE(ABORT, 'reopening a close period requires an actor identity')
+        WHEN NEW.reopened_by = OLD.locked_by
+            THEN RAISE(ABORT, 'reopening a close period requires an independent actor')
+    END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS close_periods_lock_sod_guard
+BEFORE UPDATE ON close_periods
+WHEN OLD.status IN ('Open', 'Reopened') AND NEW.status = 'Locked'
+BEGIN
+    SELECT CASE
+        WHEN NEW.locked_by = '' THEN RAISE(ABORT, 'locking a close period requires an actor identity')
+        WHEN NEW.locked_at IS NULL THEN RAISE(ABORT, 'locking a close period requires a timestamp')
+    END;
+END;
+"""

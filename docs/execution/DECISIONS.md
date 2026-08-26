@@ -10232,3 +10232,20 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   or persisted data behavior changed.
 - **Rollback**: Supersede E-813 with a newer verified run if the tree changes
   or any previously skipped capability is exercised and fails.
+### D-816: Enforce independent actors on generic close-period reopen
+
+- **Date**: 2026-08-26
+- **Context**: Generic local and PostgreSQL close management persisted lock and
+  reopen timestamps but not the transition actors, so the declared SoD rule
+  could not be enforced. Consolidation close already had a narrower control.
+- **Decision**: Add `locked_by` and `reopened_by` through SQLite migration 44
+  and PostgreSQL Alembic 0091. Backfill historical locked/reopened rows with
+  `legacy-unknown`, require locked state and reason, and reject a reopen by the
+  locker in both adapters and database triggers.
+- **Verification**: E-954 and ADR 0647; focused migration, adapter, local
+  lifecycle, Ruff, Mypy, and diff-check evidence.
+- **Compatibility**: Additive persisted metadata; no source-ERP or statutory
+  posting behavior is changed. Existing historical state is not assigned a
+  fabricated human actor.
+- **Rollback**: Restore a pre-migration SQLite backup. PostgreSQL downgrade is
+  refusal-gated while locked/reopened evidence exists.

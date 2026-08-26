@@ -14,6 +14,7 @@ from reconforge.db.schema import (
     AUTH_RBAC_SCHEMA_SQL,
     BANK_STATEMENT_CONTROL_SCHEMA_SQL,
     CERTIFICATION_EVIDENCE_MIGRATION_SQL,
+    CLOSE_PERIOD_SOD_MIGRATION_SQL,
     CONSOLIDATION_CLOSE_SCHEMA_SQL,
     CONSOLIDATION_OWNERSHIP_SCHEMA_SQL,
     CURRENCY_REGISTRY_BINDING_SCHEMA_SQL,
@@ -145,6 +146,7 @@ MIGRATIONS = [
         name="connector_writeback_recovery_observations",
         sql=WRITEBACK_RECOVERY_OBSERVATIONS_SCHEMA_SQL,
     ),
+    Migration(version=44, name="close_period_segregation_of_duties", sql=CLOSE_PERIOD_SOD_MIGRATION_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

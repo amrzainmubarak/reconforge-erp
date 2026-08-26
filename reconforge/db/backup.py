@@ -1305,6 +1305,8 @@ BACKUP_INSERT_COLUMNS = {
         "readiness_score",
         "locked_at",
         "reopened_at",
+        "locked_by",
+        "reopened_by",
         "created_at",
         "updated_at",
     ),
@@ -2144,9 +2146,9 @@ BACKUP_INSERT_QUERIES = {
     "close_periods": """
         INSERT INTO close_periods (
             id, workspace_id, period_name, start_date, end_date, status,
-            readiness_score, locked_at, reopened_at, created_at, updated_at
+            readiness_score, locked_at, reopened_at, locked_by, reopened_by, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "close_tasks_db": """
         INSERT INTO close_tasks_db (

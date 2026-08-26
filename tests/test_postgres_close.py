@@ -42,6 +42,8 @@ class _FakeConnection:
             "updated",
             None,
             None,
+            "",
+            "",
         )
         self.task = (
             "tenant_a",
@@ -98,6 +100,8 @@ def test_close_schema_is_tenant_scoped_and_rls_protected() -> None:
     assert "FORCE ROW LEVEL SECURITY" in POSTGRES_CLOSE_SCHEMA_SQL
     assert "current_setting(''app.tenant_id'', true)" in POSTGRES_CLOSE_SCHEMA_SQL
     assert "readiness_score >= 0 AND readiness_score <= 100" in POSTGRES_CLOSE_SCHEMA_SQL
+    assert "locked_by TEXT NOT NULL DEFAULT ''" in POSTGRES_CLOSE_SCHEMA_SQL
+    assert "independent actor" in POSTGRES_CLOSE_SCHEMA_SQL
 
 
 def test_close_period_and_task_writes_are_caller_owned_and_deterministic() -> None:
@@ -191,3 +195,33 @@ def test_postgres_close_status_fails_closed_on_non_complete_decimal_readiness() 
         sql.strip().lower().startswith("update reconforge.close_periods set status")
         for sql, _ in connection.executed
     )
+
+
+def test_postgres_close_reopen_requires_an_independent_actor() -> None:
+    class _LockedConnection(_FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.period = (*self.period[:4], "Locked", *self.period[5:10], "locker-a", "")
+
+    connection = _LockedConnection()
+    repository = PostgresCloseRepository(connection)
+    with pytest.raises(PostgresCloseValidationError, match="independent actor"):
+        repository.set_period_status(
+            tenant_id="tenant_a",
+            period_id="close-period-a",
+            status="Reopened",
+            actor_id="locker-a",
+            reason="Late evidence",
+        )
+    assert not any("UPDATE reconforge.close_periods" in sql for sql, _ in connection.executed)
+
+    reopened = repository.set_period_status(
+        tenant_id="tenant_a",
+        period_id="close-period-a",
+        status="Reopened",
+        actor_id="reviewer-b",
+        reason="Late evidence",
+    )
+    assert reopened["id"] == "close-period-a"
+    update = next(params for sql, params in connection.executed if "UPDATE reconforge.close_periods" in sql)
+    assert "reviewer-b" in update

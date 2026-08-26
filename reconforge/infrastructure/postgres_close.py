@@ -74,6 +74,8 @@ _PERIOD_COLUMNS = (
     "updated_at",
     "locked_at",
     "reopened_at",
+    "locked_by",
+    "reopened_by",
 )
 _TASK_COLUMNS = (
     "tenant_id",
@@ -279,7 +281,8 @@ class PostgresCloseRepository:
         cursor = self.connection.execute(
             """
             SELECT tenant_id, id, fiscal_period_id, organization_id, status,
-                   readiness_score, created_at, updated_at, locked_at, reopened_at
+                   readiness_score, created_at, updated_at, locked_at, reopened_at,
+                   locked_by, reopened_by
             FROM reconforge.close_periods
             WHERE tenant_id = %s AND id = %s
             """,
@@ -333,7 +336,7 @@ class PostgresCloseRepository:
         if not bool(_row_value(organization_row, "active", 2)):
             raise PostgresCloseValidationError("Close control requires an active organization.")
         before_cursor = self.connection.execute(
-            "SELECT tenant_id, id, fiscal_period_id, organization_id, status, readiness_score, created_at, updated_at, locked_at, reopened_at FROM reconforge.close_periods WHERE tenant_id = %s AND id = %s",
+            "SELECT tenant_id, id, fiscal_period_id, organization_id, status, readiness_score, created_at, updated_at, locked_at, reopened_at, locked_by, reopened_by FROM reconforge.close_periods WHERE tenant_id = %s AND id = %s",
             (tenant, identifier),
         )
         before_row = before_cursor.fetchone()
@@ -346,7 +349,8 @@ class PostgresCloseRepository:
             VALUES (%s, %s, %s, %s, 'Open', 0, %s, %s)
             ON CONFLICT (tenant_id, fiscal_period_id, organization_id) DO UPDATE SET updated_at = EXCLUDED.updated_at
             RETURNING tenant_id, id, fiscal_period_id, organization_id, status,
-                      readiness_score, created_at, updated_at, locked_at, reopened_at
+                      readiness_score, created_at, updated_at, locked_at, reopened_at,
+                      locked_by, reopened_by
             """,
             (tenant, identifier, fiscal_period, organization, now, now),
         )
@@ -373,7 +377,8 @@ class PostgresCloseRepository:
                    fiscal_periods.name AS fiscal_period_name, fiscal_periods.start_date,
                    fiscal_periods.end_date, close_periods.status, close_periods.readiness_score,
                    close_periods.created_at, close_periods.updated_at, close_periods.locked_at,
-                   close_periods.reopened_at
+                   close_periods.reopened_at, close_periods.locked_by,
+                   close_periods.reopened_by
             FROM reconforge.close_periods
             JOIN reconforge.fiscal_periods
               ON fiscal_periods.tenant_id = close_periods.tenant_id
@@ -401,6 +406,8 @@ class PostgresCloseRepository:
             "updated_at",
             "locked_at",
             "reopened_at",
+            "locked_by",
+            "reopened_by",
         )
         return [_record(row, columns) for row in cursor.fetchall()]
 
@@ -649,6 +656,11 @@ class PostgresCloseRepository:
         clean_reason = _optional_text(reason, "reason", maximum=500)
         if selected == "Reopened" and not clean_reason:
             raise PostgresCloseValidationError("Reopening a close period requires a reason.")
+        if selected == "Reopened":
+            if current != "Locked":
+                raise PostgresCloseValidationError("Only Locked close periods can be reopened.")
+            if str(period.get("locked_by", "")) == actor:
+                raise PostgresCloseValidationError("Reopening a close period requires an independent actor.")
         if selected in {"Approved", "Locked"}:
             readiness = self.readiness(tenant_id=tenant, period_id=identifier)
             if readiness["readiness_score"] != COMPLETE_READINESS:
@@ -660,14 +672,17 @@ class PostgresCloseRepository:
             """
             UPDATE reconforge.close_periods
             SET status = %s,
+                locked_by = CASE WHEN %s = 'Locked' THEN %s ELSE locked_by END,
                 locked_at = CASE WHEN %s = 'Locked' THEN %s ELSE locked_at END,
+                reopened_by = CASE WHEN %s = 'Reopened' THEN %s ELSE reopened_by END,
                 reopened_at = CASE WHEN %s = 'Reopened' THEN %s ELSE reopened_at END,
                 updated_at = %s
             WHERE tenant_id = %s AND id = %s
             RETURNING tenant_id, id, fiscal_period_id, organization_id, status,
                       readiness_score, created_at, updated_at, locked_at, reopened_at
+                      , locked_by, reopened_by
             """,
-            (selected, selected, now, selected, now, now, tenant, identifier),
+            (selected, selected, actor, selected, now, selected, actor, selected, now, now, tenant, identifier),
         )
         record = _record_or_not_found(cursor.fetchone(), _PERIOD_COLUMNS, "Close period was not found.")
         self._append_evidence(
@@ -697,6 +712,8 @@ CREATE TABLE IF NOT EXISTS reconforge.close_periods (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     locked_at TIMESTAMPTZ,
     reopened_at TIMESTAMPTZ,
+    locked_by TEXT NOT NULL DEFAULT '',
+    reopened_by TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (tenant_id, id),
     UNIQUE (tenant_id, fiscal_period_id, organization_id),
     FOREIGN KEY (tenant_id, fiscal_period_id)
@@ -705,6 +722,31 @@ CREATE TABLE IF NOT EXISTS reconforge.close_periods (
         REFERENCES reconforge.organizations(tenant_id, id) ON DELETE RESTRICT,
     CHECK (status IN ('Open', 'Under Review', 'Approved', 'Locked', 'Reopened', 'Archived'))
 );
+
+CREATE OR REPLACE FUNCTION reconforge.guard_close_period_sod() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.status IN ('Open', 'Under Review', 'Approved', 'Reopened') AND NEW.status = 'Locked'
+       AND (NEW.locked_by = '' OR NEW.locked_at IS NULL) THEN
+        RAISE EXCEPTION 'locking a close period requires actor and timestamp evidence';
+    END IF;
+    IF OLD.status = 'Locked' AND NEW.status = 'Reopened'
+       AND (OLD.locked_by = '' OR NEW.reopened_by = '' OR NEW.reopened_at IS NULL)
+       THEN
+        RAISE EXCEPTION 'reopening a close period requires actor evidence';
+    END IF;
+    IF OLD.status = 'Locked' AND NEW.status = 'Reopened'
+       AND NEW.reopened_by = OLD.locked_by THEN
+        RAISE EXCEPTION 'reopening a close period requires an independent actor';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS close_period_sod_guard ON reconforge.close_periods;
+CREATE TRIGGER close_period_sod_guard
+BEFORE UPDATE ON reconforge.close_periods
+FOR EACH ROW EXECUTE FUNCTION reconforge.guard_close_period_sod();
 
 CREATE TABLE IF NOT EXISTS reconforge.close_tasks (
     tenant_id TEXT NOT NULL,

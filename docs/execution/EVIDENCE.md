@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-954: Enforce independent close-period reopen actors
+
+- Code evidence: local SQLite migration 44 and PostgreSQL Alembic
+  `0091_pg_close_period_sod` add `locked_by`/`reopened_by`, backfill legacy
+  locked state with `legacy-unknown`, and install persistence-boundary SoD
+  guards. The local and PostgreSQL close adapters reject a reopen by the actor
+  who locked the period and require the locked state plus a reason.
+- Test evidence: migration-chain/schema contracts, PostgreSQL close adapter
+  contracts, local close lifecycle SoD, Ruff, Mypy, focused pytest, and
+  `git diff --check` are required for this slice. Live disposable PostgreSQL
+  execution and independent operational assurance remain separate evidence
+  gates.
+- Boundary: this is ReconForge close-workflow metadata. It does not lock a
+  source ERP, post statutory/legal-book journals, or establish HA/DR,
+  production IAM, compliance, or certification.
+- Rollback: restore the pre-migration SQLite backup; PostgreSQL downgrade
+  refuses to discard lock evidence while locked/reopened rows exist. ADR 0647
+  is the decision record.
+
 ## E-953: Make API version scope backend-aware
 
 - Code evidence: `GET /api/v1/version` selects only the deployment scope label

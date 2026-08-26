@@ -2,6 +2,21 @@
 
 Updated: 2026-08-26
 
+## E-954 - Enforce independent close-period reopen actors (2026-08-26)
+
+- Generic close management now persists `locked_by` and `reopened_by` in local
+  SQLite migration 44 and PostgreSQL Alembic revision
+  `0091_pg_close_period_sod`. Legacy locked/reopened rows are marked with the
+  explicit `legacy-unknown` sentinel rather than receiving an invented actor.
+- Local and PostgreSQL adapters require the period to be locked, require a
+  reason, and refuse the locker as the reopen actor. SQLite and PostgreSQL
+  database triggers repeat the critical actor-evidence and independence
+  invariant at the persistence boundary.
+- Focused migration, adapter, and local lifecycle tests are the evidence for
+  this bounded workflow control. It does not claim statutory/legal-book close,
+  source-ERP posting, HA/DR, or production assurance. ADR 0647 records the
+  compatibility and rollback boundary.
+
 ## E-953 - Make API version scope backend-aware (2026-08-26)
 
 - `GET /api/v1/version` now retains `local/self-hosted foundation` for Local

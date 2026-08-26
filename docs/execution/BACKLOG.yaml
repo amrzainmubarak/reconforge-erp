@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1031
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Inventory Core master API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1030]
+    exit_evidence: >-
+      Inventory Core unit-of-measure, item, warehouse, location, and lot/serial
+      list/mutation responses use central resource allowlists across local
+      SQLite and PostgreSQL. Synthetic future-field tests, focused tests, full
+      Python regression, Ruff, Mypy, Bandit, pip-audit, package build,
+      targeted YAML, and diff checks must pass. Movement, on-hand,
+      control-exception, summary, and snapshot responses remain separate.
+      ADR 0691 records rollback.
   - id: E-1030
     priority: P0
     area: identity-governance

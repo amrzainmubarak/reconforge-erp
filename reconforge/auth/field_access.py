@@ -556,6 +556,25 @@ INVENTORY_VALUATION_REVERSAL_SUMMARY_FIELDS = frozenset(
 INVENTORY_VALUATION_REVERSAL_SNAPSHOT_FIELDS = frozenset(
     {"schema_version", "generated_at", "source", "workspace", "summary", "reversals", "boundary_note"}
 )
+INVENTORY_UOM_FIELDS = frozenset(
+    {"tenant_id", "id", "workspace_id", "uom_code", "name", "category", "decimal_places", "active", "created_at", "updated_at", "row_version"}
+)
+INVENTORY_ITEM_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "workspace_id", "organization_id", "item_code", "name", "item_type", "tracking_mode",
+        "uom_id", "inventory_account_id", "description", "active", "created_at", "updated_at", "row_version",
+        "organization_code", "uom_code", "decimal_places", "inventory_account_code",
+    }
+)
+INVENTORY_WAREHOUSE_FIELDS = frozenset(
+    {"tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "warehouse_code", "name", "active", "created_at", "updated_at", "row_version", "organization_code", "entity_code"}
+)
+INVENTORY_LOCATION_FIELDS = frozenset(
+    {"tenant_id", "id", "warehouse_id", "parent_location_id", "location_code", "name", "location_type", "allow_negative", "active", "created_at", "updated_at", "row_version", "warehouse_code", "organization_code", "parent_location_code"}
+)
+INVENTORY_LOT_FIELDS = frozenset(
+    {"tenant_id", "id", "workspace_id", "organization_id", "item_id", "lot_serial_code", "tracking_type", "manufactured_on", "expires_on", "active", "created_at", "updated_at", "row_version", "item_code", "organization_code"}
+)
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1153,6 +1172,26 @@ def project_inventory_valuation_reversal_snapshot(values: Mapping[str, object]) 
             projected_reversals.append(project_inventory_valuation_reversal(reversal).visible)
         record["reversals"] = projected_reversals
     return project_fields(record, allowed_fields=INVENTORY_VALUATION_REVERSAL_SNAPSHOT_FIELDS)
+
+
+def project_inventory_uom(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_UOM_FIELDS)
+
+
+def project_inventory_item(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_ITEM_FIELDS)
+
+
+def project_inventory_warehouse(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_WAREHOUSE_FIELDS)
+
+
+def project_inventory_location(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_LOCATION_FIELDS)
+
+
+def project_inventory_lot(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_LOT_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

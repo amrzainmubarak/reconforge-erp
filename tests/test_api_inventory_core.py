@@ -51,7 +51,15 @@ def test_server_inventory_routes_bind_scope_and_use_postgres_adapter(tmp_path: P
     class FakeRepository:
         def upsert_uom(self, **values: object) -> dict[str, object]:
             calls.append(("upsert_uom", values))
-            return {"uom_code": values["uom_code"], "workspace_id": values["workspace"]}
+            return {
+                "uom_code": values["uom_code"],
+                "workspace_id": values["workspace"],
+                "unknown_future_column": "must-not-escape",
+            }
+
+        def list_uoms(self, **values: object) -> list[dict[str, object]]:
+            calls.append(("list_uoms", values))
+            return [{"uom_code": "EA", "unknown_future_column": "must-not-escape"}]
 
         def summary(self, **values: object) -> InventoryCoreSummary:
             calls.append(("summary", values))
@@ -103,8 +111,12 @@ def test_server_inventory_routes_bind_scope_and_use_postgres_adapter(tmp_path: P
         json={"uom_code": "EA", "name": "Each", "workspace": "spoofed-workspace"},
     )
     summarized = client.get("/api/v1/inventory/summary", headers=headers)
+    listed = client.get("/api/v1/inventory/units", headers=headers)
 
     assert saved.status_code == 200, saved.text
     assert summarized.status_code == 200, summarized.text
+    assert listed.status_code == 200, listed.text
+    assert "unknown_future_column" not in saved.text
+    assert "unknown_future_column" not in listed.text
     assert next(values for name, values in calls if name == "upsert_uom")["workspace"] == "workspace-a"
     assert next(values for name, values in calls if name == "summary")["workspace"] == "workspace-a"

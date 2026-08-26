@@ -4,6 +4,15 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1031 migrated surface
+
+Inventory Core unit-of-measure, item, warehouse, location, and lot/serial
+list/mutation responses now use explicit central resource allowlists across
+local SQLite and PostgreSQL. This is a bounded disclosure control for the
+reviewed master-resource family, not complete Inventory Core response
+coverage, universal field-level authorization, or production IAM. ADR 0691
+records the decision and rollback.
+
 ## E-1030 migrated surface
 
 Inventory Valuation Reversal summary, snapshot, list, create, read, approve,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from typing import Annotated, TypeVar
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -21,6 +22,13 @@ from reconforge.api.server_inventory_core import (
     InventoryOperation,
     execute_postgres_inventory,
     server_inventory_core_enabled,
+)
+from reconforge.auth.field_access import (
+    project_inventory_item,
+    project_inventory_location,
+    project_inventory_lot,
+    project_inventory_uom,
+    project_inventory_warehouse,
 )
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
@@ -161,6 +169,10 @@ def _list_response(
     return {key: records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}}
 
 
+def _project_records(records: list[dict[str, object]], projector: Callable[[dict[str, object]], dict[str, object]]) -> list[dict[str, object]]:
+    return [projector(record) for record in records]
+
+
 def _server_scope(request: Request, permissions: frozenset[str]) -> RequestExecutionScope:
     scope = request_execution_scope(request)
     if len(permissions) == 1:
@@ -260,14 +272,14 @@ def list_uoms(
                 workspace=scope.workspace_id, limit=limit, offset=offset, actor_label=current_user.id
             ),
         )
-        return _list_response("units_of_measure", records, limit=limit, offset=offset)
+        return _list_response("units_of_measure", _project_records(records, lambda value: project_inventory_uom(value).visible), limit=limit, offset=offset)
     try:
         records = InventoryCoreService(_local_connection(connection)).list_uoms(
             workspace=workspace, limit=limit, offset=offset, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_units_list_failed", exc) from exc
-    return _list_response("units_of_measure", records, limit=limit, offset=offset)
+    return _list_response("units_of_measure", _project_records(records, lambda value: project_inventory_uom(value).visible), limit=limit, offset=offset)
 
 
 @router.post("/units")
@@ -286,12 +298,12 @@ def upsert_uom(
                 **{**values, "workspace": scope.workspace_id, "actor_label": current_user.id}
             ),
         )
-        return {"unit_of_measure": record}
+        return {"unit_of_measure": project_inventory_uom(record).visible}
     try:
         record = InventoryCoreService(_local_connection(connection)).upsert_uom(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_unit_save_failed", exc) from exc
-    return {"unit_of_measure": record}
+    return {"unit_of_measure": project_inventory_uom(record).visible}
 
 
 @router.get("/items")
@@ -319,7 +331,7 @@ def list_items(
             ),
             organization_code=organization,
         )
-        return _list_response("items", records, limit=limit, offset=offset)
+        return _list_response("items", _project_records(records, lambda value: project_inventory_item(value).visible), limit=limit, offset=offset)
     try:
         records = InventoryCoreService(_local_connection(connection)).list_items(
             workspace=workspace,
@@ -331,7 +343,7 @@ def list_items(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_items_list_failed", exc) from exc
-    return _list_response("items", records, limit=limit, offset=offset)
+    return _list_response("items", _project_records(records, lambda value: project_inventory_item(value).visible), limit=limit, offset=offset)
 
 
 @router.post("/items")
@@ -356,12 +368,12 @@ def upsert_item(
             ),
             organization_code=payload.organization_code,
         )
-        return {"item": record}
+        return {"item": project_inventory_item(record).visible}
     try:
         record = InventoryCoreService(_local_connection(connection)).upsert_item(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_item_save_failed", exc) from exc
-    return {"item": record}
+    return {"item": project_inventory_item(record).visible}
 
 
 @router.get("/warehouses")
@@ -387,7 +399,7 @@ def list_warehouses(
             ),
             organization_code=organization,
         )
-        return _list_response("warehouses", records, limit=limit, offset=offset)
+        return _list_response("warehouses", _project_records(records, lambda value: project_inventory_warehouse(value).visible), limit=limit, offset=offset)
     try:
         records = InventoryCoreService(_local_connection(connection)).list_warehouses(
             workspace=workspace,
@@ -398,7 +410,7 @@ def list_warehouses(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_warehouses_list_failed", exc) from exc
-    return _list_response("warehouses", records, limit=limit, offset=offset)
+    return _list_response("warehouses", _project_records(records, lambda value: project_inventory_warehouse(value).visible), limit=limit, offset=offset)
 
 
 @router.post("/warehouses")
@@ -425,14 +437,14 @@ def upsert_warehouse(
             organization_code=payload.organization_code,
             entity_code=payload.entity_code,
         )
-        return {"warehouse": record}
+        return {"warehouse": project_inventory_warehouse(record).visible}
     try:
         record = InventoryCoreService(_local_connection(connection)).upsert_warehouse(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_warehouse_save_failed", exc) from exc
-    return {"warehouse": record}
+    return {"warehouse": project_inventory_warehouse(record).visible}
 
 
 @router.get("/locations")
@@ -460,7 +472,7 @@ def list_locations(
             ),
             organization_code=organization,
         )
-        return _list_response("locations", records, limit=limit, offset=offset)
+        return _list_response("locations", _project_records(records, lambda value: project_inventory_location(value).visible), limit=limit, offset=offset)
     try:
         records = InventoryCoreService(_local_connection(connection)).list_locations(
             workspace=workspace,
@@ -472,7 +484,7 @@ def list_locations(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_locations_list_failed", exc) from exc
-    return _list_response("locations", records, limit=limit, offset=offset)
+    return _list_response("locations", _project_records(records, lambda value: project_inventory_location(value).visible), limit=limit, offset=offset)
 
 
 @router.post("/locations")
@@ -497,14 +509,14 @@ def upsert_location(
             ),
             organization_code=payload.organization_code,
         )
-        return {"location": record}
+        return {"location": project_inventory_location(record).visible}
     try:
         record = InventoryCoreService(_local_connection(connection)).upsert_location(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_location_save_failed", exc) from exc
-    return {"location": record}
+    return {"location": project_inventory_location(record).visible}
 
 
 @router.get("/lots")
@@ -532,7 +544,7 @@ def list_lots(
             ),
             organization_code=organization,
         )
-        return _list_response("lots_and_serials", records, limit=limit, offset=offset)
+        return _list_response("lots_and_serials", _project_records(records, lambda value: project_inventory_lot(value).visible), limit=limit, offset=offset)
     try:
         records = InventoryCoreService(_local_connection(connection)).list_lots(
             workspace=workspace,
@@ -544,7 +556,7 @@ def list_lots(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_lots_list_failed", exc) from exc
-    return _list_response("lots_and_serials", records, limit=limit, offset=offset)
+    return _list_response("lots_and_serials", _project_records(records, lambda value: project_inventory_lot(value).visible), limit=limit, offset=offset)
 
 
 @router.post("/lots")
@@ -569,12 +581,12 @@ def upsert_lot(
             ),
             organization_code=payload.organization_code,
         )
-        return {"lot_or_serial": record}
+        return {"lot_or_serial": project_inventory_lot(record).visible}
     try:
         record = InventoryCoreService(_local_connection(connection)).upsert_lot(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_lot_save_failed", exc) from exc
-    return {"lot_or_serial": record}
+    return {"lot_or_serial": project_inventory_lot(record).visible}
 
 
 @router.get("/movements")

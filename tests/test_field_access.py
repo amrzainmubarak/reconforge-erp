@@ -14,12 +14,17 @@ from reconforge.auth.field_access import (
     project_fields,
     project_finance_entry,
     project_inventory_cost_layer,
+    project_inventory_item,
+    project_inventory_location,
+    project_inventory_lot,
+    project_inventory_uom,
     project_inventory_valuation_document,
     project_inventory_valuation_policy,
     project_inventory_valuation_reversal,
     project_inventory_valuation_reversal_snapshot,
     project_inventory_valuation_reversal_summary,
     project_inventory_valuation_snapshot,
+    project_inventory_warehouse,
     project_master_snapshot,
     project_reconciliation_exception,
     project_reconciliation_input,
@@ -317,6 +322,26 @@ def test_inventory_valuation_reversal_projection_is_closed_across_effects_and_sn
     assert snapshot.visible["reversals"] == [{"reversal_number": "REV-001"}]
     assert snapshot.denied_fields == ("unknown",)
     assert "must-not-escape" not in str(reversal.visible | snapshot.visible)
+
+
+def test_inventory_core_master_projection_is_closed_for_each_resource() -> None:
+    records = (
+        project_inventory_uom({"id": "uom-1", "uom_code": "EA", "unknown": "must-not-escape"}),
+        project_inventory_item({"id": "item-1", "item_code": "ITEM", "unknown": "must-not-escape"}),
+        project_inventory_warehouse({"id": "warehouse-1", "warehouse_code": "MAIN", "unknown": "must-not-escape"}),
+        project_inventory_location({"id": "location-1", "location_code": "STOCK", "unknown": "must-not-escape"}),
+        project_inventory_lot({"id": "lot-1", "lot_serial_code": "LOT-1", "unknown": "must-not-escape"}),
+    )
+
+    assert [record.visible["id"] for record in records] == [
+        "uom-1",
+        "item-1",
+        "warehouse-1",
+        "location-1",
+        "lot-1",
+    ]
+    assert all(record.denied_fields == ("unknown",) for record in records)
+    assert "must-not-escape" not in str([record.visible for record in records])
 
 
 def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> None:

@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-858: Inventory Core master API uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Inventory Core master-resource routes returned local SQLite and
+  PostgreSQL mappings for units, items, warehouses, locations, and lots or
+  serials. Future storage or adapter fields could silently expand these
+  operational responses.
+- **Decision**: Apply one explicit resource allowlist to every reviewed list
+  and mutation response for the five master-resource families. Movement,
+  on-hand, control-exception, summary, and snapshot responses remain separate
+  surfaces.
+- **Verification**: Focused field/API tests and the full Python regression pass
+  at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML validation (9 files), and diff checks also pass. Universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing envelopes, reviewed known fields, permissions,
+  and local/server boundaries remain; no schema or migration changes.
+- **Rollback**: Revert E-1031 code/tests/ADR 0691/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
 ### D-857: Inventory Valuation Reversal API uses fail-closed field projection
 
 - **Date**: 2026-08-26

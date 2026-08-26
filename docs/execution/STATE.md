@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-1031 - Fail-closed projection for Inventory Core master API responses (2026-08-26)
+
+- Inventory Core unit-of-measure, item, warehouse, location, and lot/serial
+  list/mutation responses now use central allowlists across local SQLite and
+  PostgreSQL. Unknown future adapter/storage fields cannot silently enter
+  these operational master-data responses.
+- Focused field/API tests and the full Python regression pass at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted YAML
+  validation (9 files), and diff checks also pass. Movement, on-hand,
+  control-exception, summary, and snapshot responses remain separate surfaces.
+  ADR 0691 records rollback.
+
 ## E-1030 - Fail-closed projection for Inventory Valuation Reversal API responses (2026-08-26)
 
 - Inventory Valuation Reversal summary, snapshot, list, create, read,

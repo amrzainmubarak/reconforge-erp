@@ -2,6 +2,26 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1031: Fail-closed projection for Inventory Core master API responses
+
+- Code evidence: `/api/v1/inventory` unit-of-measure, item, warehouse,
+  location, and lot/serial list and mutation responses use central resource
+  allowlists across local SQLite and PostgreSQL shapes. Future adapter/storage
+  fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers all five resource
+  projections. `tests/test_api_inventory_core.py` covers the PostgreSQL route
+  projection with a synthetic future adapter field. Focused tests and the full
+  Python regression pass at 100%; Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML (9 files), and diff gates also pass.
+  pip-audit cannot audit the local `reconforge-erp` distribution name because
+  it is not published on PyPI.
+- Boundary: this closes the reviewed Inventory Core master-resource response
+  family only. Movement, on-hand, control-exception, summary, and snapshot
+  response projection remain separate slices. It does not establish universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, or production effectiveness. ADR 0691
+  records rollback.
+
 ## E-1030: Fail-closed projection for Inventory Valuation Reversal API responses
 
 - Code evidence: `/api/v1/inventory-valuation/reversals` summary, snapshot,

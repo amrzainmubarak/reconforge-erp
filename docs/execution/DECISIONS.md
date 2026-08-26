@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-831: Add a bounded Community Docker Compose profile
+
+- **Date**: 2026-08-26
+- **Context**: The standalone image had a hardened local smoke contract, but
+  operators had no checked-in Compose start path for the local SQLite API.
+- **Decision**: Ship `compose.yaml` only for Community/local use. Initialize
+  SQLite idempotently, persist it in a named volume, publish on loopback,
+  keep the network internal, and retain non-root/read-only/capability-dropped
+  runtime hardening with a local healthcheck. Do not imply Team, Enterprise,
+  Regulated, HA/DR, hosted, production, or compliance support.
+- **Verification**: Compose config/static tests pass; the image builds; a live
+  one-off service reaches healthy with SQLite schema 45/45, UID 10001, and a
+  retained database after restart. Host port publication is environment-
+  limited and is not counted as runtime application evidence.
+- **Compatibility**: Adds a new local deployment artifact; the standalone
+  Docker commands and API contracts remain unchanged.
+- **Rollback**: Revert `compose.yaml`, the Docker `/data` directory creation,
+  ADR 0662, tests, and synchronized docs/execution entries.
+
 ### D-830: Synchronize current Docker documentation with the hardened workflow
 
 - **Date**: 2026-08-26
@@ -12,13 +31,14 @@
   weaker cached/writable Docker smoke and historical Compose/dashboard commands,
   while the checked-in standalone workflow had moved to a hardened contract.
 - **Decision**: Update current operator-facing Docker/release surfaces to the
-  pull/no-cache linux/amd64 build and bounded hardened runtime. Explicitly state
-  that no Compose deployment contract is shipped until a versioned profile and
-  smoke evidence exist. Retain historical strategy records as historical.
+  pull/no-cache linux/amd64 build and bounded hardened runtime. At that time,
+  explicitly state that no Compose deployment contract was shipped until a
+  versioned profile and smoke evidence existed. Retain historical strategy
+  records as historical; E-968 later supplies the bounded Community profile.
 - **Verification**: The release-readiness documentation suite passes with the
   hardened commands; YAML and diff checks pass.
-- **Compatibility**: Documentation and test expectations only; no runtime,
-  image, API, or deployment artifact is added.
+- **Compatibility**: Documentation and test expectations only for E-967; no
+  runtime, image, API, or deployment artifact was added by that slice.
 - **Rollback**: Revert the documentation, regression expectation, ADR, and
   E-967 execution entries.
 

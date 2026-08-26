@@ -2,17 +2,34 @@
 
 Updated: 2026-08-26
 
+## E-968 - Add a bounded Community Docker Compose profile with live local smoke (2026-08-26)
+
+- `compose.yaml` now supplies one Community/local service backed by a named
+  SQLite volume. Startup runs the idempotent database initializer before the
+  local API, publishes only to loopback, and uses an internal network.
+- The profile is read-only at the container root, non-root (`10001`), drops
+  capabilities, enables `no-new-privileges`, constrains `/tmp`, and checks
+  `/api/v1/health`.
+- Static Compose tests and `docker compose config --quiet` pass. The image
+  built and a live one-off Compose service reached healthy with SQLite at
+  schema `45/45`; after restart it remained healthy and retained the database.
+  The environment reserved host port `8765`, and its Docker Desktop proxy did
+  not expose the temporary alternate mapping; this is recorded as an
+  environment limitation, not application health evidence.
+- This closes only the bounded Community local start path. It does not close
+  Team/Enterprise/Regulated deployment, HA/DR, hosted provenance, production
+  availability, or compliance. ADR 0662 records the decision and rollback.
+
 ## E-967 - Synchronize Docker release documentation with the hardened workflow contract (2026-08-26)
 
 - Current Docker instructions now use the pull/no-cache linux/amd64 build and
   the hardened networkless/read-only runtime profile with dropped capabilities
   and `no-new-privileges`.
-- The current deployment guide no longer implies that a Compose dashboard or
-  `docker-compose.yml` is shipped. Historical strategy notes remain historical;
-  current operator surfaces now state the absence of a Compose contract.
-- The release-readiness documentation contract passes after the update. This is
-  documentation/claim-boundary evidence, not Compose support or hosted release
-  provenance. ADR 0661 records rollback.
+- At the time of this slice, the current deployment guide no longer implied
+  that a Compose dashboard or `docker-compose.yml` was shipped. Historical
+  strategy notes remain historical. E-968 subsequently introduced the
+  bounded `compose.yaml` Community profile; the release-readiness correction
+  remains documentation/claim-boundary evidence. ADR 0661 records rollback.
 
 ## E-966 - Align the standalone Docker workflow with the hardened release runtime gate (2026-08-26)
 

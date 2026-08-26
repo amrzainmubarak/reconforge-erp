@@ -52,8 +52,8 @@ RUN rm -rf /usr/local/lib/python3.11/site-packages/* \
     /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.11 \
     && addgroup -g 10001 -S reconforge \
     && adduser -u 10001 -S -D -H -G reconforge -s /sbin/nologin reconforge \
-    && mkdir -p /app/output \
-    && chown 10001:10001 /app/output
+    && mkdir -p /app/output /data \
+    && chown 10001:10001 /app/output /data
 
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/config /app/config

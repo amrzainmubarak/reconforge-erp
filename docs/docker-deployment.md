@@ -63,12 +63,41 @@ before running; do not make a sensitive export directory broadly writable.
 - If WSL cannot reach Docker, confirm Docker Desktop WSL integration is enabled for the distro.
 - Use PowerShell commands from the repository root unless you intentionally change the mounted folder.
 
-## Docker Compose
+## Docker Compose — Community local profile
 
-No Compose deployment contract is currently shipped. Do not infer Compose
-support from historical notes or from the presence of a Dockerfile; use the
-single-image commands above until a versioned Compose profile and its smoke
-evidence are added.
+The repository ships one bounded Compose profile for Community/local use. It
+runs a single non-root ReconForge API container with SQLite in a named volume;
+it does not provision PostgreSQL, Redis, object storage, identity providers,
+or any hosted service. The port is published on loopback only and the Compose
+network is internal. This is a local operator profile, not a Team/Enterprise/
+Regulated deployment contract or a production-availability claim.
+
+Build and start it from the repository root:
+
+```bash
+docker compose -f compose.yaml build --pull
+docker compose -f compose.yaml up -d
+docker compose -f compose.yaml ps
+```
+
+The first start runs the idempotent SQLite migration initializer before the
+API process. Verify the local health endpoint:
+
+```bash
+curl --fail http://127.0.0.1:8765/api/v1/health
+```
+
+Stop it while retaining the named `reconforge-data` volume:
+
+```bash
+docker compose -f compose.yaml down
+```
+
+To remove the local data volume, use `docker compose -f compose.yaml down -v`
+only after confirming that the data is disposable or backed up. The profile
+has a bounded live smoke in the execution evidence; a host port conflict or a
+Docker Desktop port-proxy failure is an environment failure and must not be
+reported as application health evidence.
 
 ## Security Notes
 

@@ -9,6 +9,27 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-968
+    priority: P1
+    area: deployment-compose
+    title: Add a bounded Community Docker Compose profile with live local smoke
+    status: completed
+    depends_on: [E-967]
+    exit_evidence: >-
+      `compose.yaml` now provides a single Community/local SQLite API profile
+      with idempotent database initialization, loopback-only publication,
+      internal networking, persistent named data, non-root/read-only runtime
+      hardening, and a local healthcheck. `tests/test_compose_profile.py`,
+      `docker compose config --quiet`, and the Compose image build pass. A
+      live one-off Compose service reached healthy, returned local API health
+      with SQLite schema 45/45, ran as UID 10001, and remained healthy with
+      its database present after restart. The host environment reserved port
+      8765 and its Docker Desktop port proxy did not expose the temporary
+      alternate mapping, so host-port reachability is recorded as an
+      environment limitation. This closes only the bounded Community local
+      start path; Team/Enterprise/Regulated deployment, HA/DR, hosted
+      provenance, production availability, and compliance remain open. ADR
+      0662 records rollback.
   - id: E-967
     priority: P1
     area: documentation-release
@@ -22,8 +43,10 @@ tasks:
       wording is replaced with an explicit statement that no Compose contract is
       shipped, and the documentation regression requires the hardened commands.
       Focused release-readiness tests, YAML, and diff-check pass. This corrects
-      operator guidance and claim boundaries; it does not add Compose, hosted
-      release provenance, or production deployment. ADR 0661 records rollback.
+      operator guidance and claim boundaries at that point in history. E-968
+      later adds the bounded Community Compose profile; hosted release
+      provenance and production deployment remain outside both slices. ADR
+      0661 records rollback.
   - id: E-966
     priority: P0
     area: container-security

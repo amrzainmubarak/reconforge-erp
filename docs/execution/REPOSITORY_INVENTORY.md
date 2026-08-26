@@ -212,10 +212,13 @@ ADRs to 81; schemas remain 53 and workflows remain six.
   tooling/source/manifests/documentation, runs as fixed UID/GID 10001, and the policy
   validator closes the deny-by-default build-context allowlist. E-822 verifies
   the bounded image locally without widening the deployment-readiness claim.
-- No `docker-compose.yml` is shipped on the current HEAD. Historical strategy
-  notes mentioning local report/dashboard Compose services are not current
-  runtime evidence; the supported current container surface is the pinned
-  Dockerfile plus the bounded single-image workflow.
+- `compose.yaml` is shipped as a bounded Community/local profile: one
+  non-root SQLite API service, loopback-only publication, internal network,
+  named data volume, and hardened read-only runtime. It is not a
+  Team/Enterprise/Regulated, HA/DR, hosted, or production deployment contract.
+  No `docker-compose.yml` is shipped; historical strategy notes mentioning
+  local report/dashboard Compose services remain historical and are not
+  current runtime evidence.
 - `pyproject.toml` + `uv.lock`: lower-bounded consumer metadata plus a universal hash-bearing repository resolution for 128 non-root runtime/server/observability/backup/federation/MFA/build/tool packages, enforced with exact uv/cutoff policy; server includes boto3, observability pins OpenTelemetry API/SDK 1.44.0, backup/connectors pin cryptography 50.0.0, WebAuthn resolves with pyOpenSSL 26.4.0, and federation pins joserfc 1.7.4 plus python3-saml 1.16.0.
 - `apps/web/package-lock.json`: exact npm dependency versions for the web app;
   all 211 non-root registry entries carry HTTPS resolution and SRI. Package

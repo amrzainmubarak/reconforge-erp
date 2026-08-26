@@ -1,0 +1,50 @@
+name: reconforge-community
+
+services:
+  reconforge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: reconforge:community-local
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        reconforge db init --db /data/reconforge.db &&
+        exec reconforge api serve --db /data/reconforge.db
+          --host 0.0.0.0 --port 8765
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - reconforge-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - local
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen(
+          "http://127.0.0.1:8765/api/v1/health", timeout=2
+          ).read()
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    stop_grace_period: 10s
+
+networks:
+  local:
+    internal: true
+
+volumes:
+  reconforge-data:

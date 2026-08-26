@@ -2,17 +2,40 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-968: Add a bounded Community Docker Compose profile with live local smoke
+
+- Code evidence: `compose.yaml` runs one local API service with an idempotent
+  SQLite initializer, named `/data` volume, loopback-only port publication,
+  internal network, read-only/non-root/capability-dropped runtime, and a local
+  healthcheck. `Dockerfile` creates the runtime-owned `/data` directory.
+- Test evidence: `tests/test_compose_profile.py` and the focused container /
+  release tests pass; `docker compose -f compose.yaml config --quiet` passes;
+  the image builds with `docker compose ... build --pull`.
+- Runtime evidence: a live one-off Compose service reached `healthy`. An
+  in-container HTTP request returned `status=ok`, SQLite reachable, schema
+  `45/45`, path summary `reconforge.db`, UID `10001`, and an existing
+  `/data/reconforge.db`. After restart it returned to `healthy` and retained
+  the database.
+- Environment boundary: the host reserved `127.0.0.1:8765`, and Docker
+  Desktop did not expose the temporary alternate host mapping, so host-port
+  reachability is not counted as application evidence. The profile remains a
+  bounded Community/local contract; no Team/Enterprise/Regulated, HA/DR,
+  hosted provenance, production availability, or compliance claim follows.
+- ADR: `docs/adr/0662-community-compose-local-profile.md`.
+
 ## E-967: Synchronize Docker release documentation with the hardened workflow contract
 
 - Code evidence: README, deployment smoke, Docker verification, maintainer
   release, and release-readiness surfaces carry the same bounded build/runtime
-  contract as the standalone workflow. The Docker deployment guide explicitly
-  states that no Compose deployment contract is shipped.
+  contract as the standalone workflow. At the time of E-967, the Docker
+  deployment guide explicitly stated that no Compose deployment contract was
+  shipped; E-968 now owns the current bounded Community profile.
 - Test evidence: `tests/test_release_readiness_docs.py` passes with the hardened
   command set; YAML parsing and diff-check pass.
-- Boundary: this removes operator/documentation drift only. It does not create
-  Compose support, prove hosted clean-build identity, sign artifacts, or prove
-  production deployment behavior. ADR 0661 records rollback.
+- Boundary: this removes operator/documentation drift only. It did not create
+  Compose support at that time and does not prove hosted clean-build identity,
+  signed artifacts, or production deployment behavior. ADR 0661 records
+  rollback.
 
 ## E-966: Align the standalone Docker workflow with the hardened release runtime gate
 

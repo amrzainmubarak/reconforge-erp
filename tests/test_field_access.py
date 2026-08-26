@@ -13,10 +13,15 @@ from reconforge.auth.field_access import (
     project_exception,
     project_fields,
     project_finance_entry,
+    project_inventory_control_exceptions,
+    project_inventory_core_snapshot,
+    project_inventory_core_summary,
     project_inventory_cost_layer,
     project_inventory_item,
     project_inventory_location,
     project_inventory_lot,
+    project_inventory_movement,
+    project_inventory_on_hand,
     project_inventory_uom,
     project_inventory_valuation_document,
     project_inventory_valuation_policy,
@@ -342,6 +347,55 @@ def test_inventory_core_master_projection_is_closed_for_each_resource() -> None:
     ]
     assert all(record.denied_fields == ("unknown",) for record in records)
     assert "must-not-escape" not in str([record.visible for record in records])
+
+
+def test_inventory_core_operational_projection_is_closed_recursively() -> None:
+    movement = project_inventory_movement(
+        {
+            "id": "movement-1",
+            "lines": [
+                {
+                    "id": "line-1",
+                    "quantity_scaled": 1250,
+                    "quantity": "1.250",
+                    "unknown_line_field": "must-not-escape",
+                }
+            ],
+            "unknown_movement_field": "must-not-escape",
+        }
+    )
+    on_hand = project_inventory_on_hand(
+        {
+            "schema_version": 1,
+            "source": {"kind": "local-inventory-ledger", "future_source_field": "must-not-escape"},
+            "balances": [{"item_code": "ITEM", "quantity_scaled": 2, "unknown_balance_field": "must-not-escape"}],
+            "unknown_on_hand_field": "must-not-escape",
+        }
+    )
+    controls = project_inventory_control_exceptions(
+        {
+            "exceptions": [{"exception_id": "INVEX-1", "unknown_exception_field": "must-not-escape"}],
+            "unknown_controls_field": "must-not-escape",
+        }
+    )
+    summary = project_inventory_core_summary({"workspace": "default", "unknown_summary_field": "must-not-escape"})
+    snapshot = project_inventory_core_snapshot(
+        {
+            "source": {"kind": "local-inventory-core", "unknown_source_field": "must-not-escape"},
+            "summary": {"workspace": "default", "unknown_nested_summary_field": "must-not-escape"},
+            "movements": [{"id": "movement-1", "unknown_nested_movement_field": "must-not-escape"}],
+            "unknown_snapshot_field": "must-not-escape",
+        }
+    )
+
+    assert movement.visible["lines"] == [{"id": "line-1", "quantity": "1.250", "quantity_scaled": 1250}]
+    assert on_hand.visible["source"] == {"kind": "local-inventory-ledger"}
+    assert on_hand.visible["balances"] == [{"item_code": "ITEM", "quantity_scaled": 2}]
+    assert controls.visible["exceptions"] == [{"exception_id": "INVEX-1"}]
+    assert summary.visible == {"workspace": "default"}
+    assert snapshot.visible["summary"] == {"workspace": "default"}
+    assert snapshot.visible["movements"] == [{"id": "movement-1"}]
+    assert "must-not-escape" not in str([movement.visible, on_hand.visible, controls.visible, snapshot.visible])
 
 
 def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> None:

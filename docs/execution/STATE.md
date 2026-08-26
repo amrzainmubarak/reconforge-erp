@@ -2,6 +2,23 @@
 
 Updated: 2026-08-26
 
+## E-1032 - Fail-closed projection for Inventory Core operational API responses (2026-08-26)
+
+- Inventory Core movement list/create/read/post/void responses, exact on-hand
+  balances, control exceptions, summary, and bounded snapshot responses now
+  use central allowlists across local SQLite and PostgreSQL. Movement lines,
+  on-hand balances, control exceptions, snapshot source/summary, and all
+  snapshot collections are projected recursively; malformed nested values fail
+  closed.
+- Focused field/API tests pass (19 tests at the focused boundary), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. This is a bounded disclosure
+  control; universal field-level authorization, external IAM, distributed
+  revocation, disclosure approval, source authenticity, and production
+  effectiveness remain open. ADR 0692 records rollback.
+
 ## E-1031 - Fail-closed projection for Inventory Core master API responses (2026-08-26)
 
 - Inventory Core unit-of-measure, item, warehouse, location, and lot/serial

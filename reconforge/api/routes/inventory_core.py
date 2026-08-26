@@ -24,9 +24,14 @@ from reconforge.api.server_inventory_core import (
     server_inventory_core_enabled,
 )
 from reconforge.auth.field_access import (
+    project_inventory_control_exceptions,
+    project_inventory_core_snapshot,
+    project_inventory_core_summary,
     project_inventory_item,
     project_inventory_location,
     project_inventory_lot,
+    project_inventory_movement,
+    project_inventory_on_hand,
     project_inventory_uom,
     project_inventory_warehouse,
 )
@@ -228,12 +233,12 @@ def summary(
             frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
             lambda repository, scope: repository.summary(workspace=scope.workspace_id, actor_label=current_user.id),
         )
-        return {"summary": result.to_dict()}
+        return {"summary": project_inventory_core_summary(result.to_dict()).visible}
     try:
         result = InventoryCoreService(_local_connection(connection)).summary(workspace=workspace, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_summary_failed", exc) from exc
-    return {"summary": result.to_dict()}
+    return {"summary": project_inventory_core_summary(result.to_dict()).visible}
 
 
 @router.get("/snapshot")
@@ -244,15 +249,17 @@ def snapshot(
     workspace: str = "default",
 ) -> dict[str, object]:
     if server_inventory_core_enabled(request):
-        return _server_call(
+        result = _server_call(
             request,
             frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
             lambda repository, scope: repository.snapshot(workspace=scope.workspace_id, actor_label=current_user.id),
         )
+        return project_inventory_core_snapshot(result).visible
     try:
-        return InventoryCoreService(_local_connection(connection)).snapshot(workspace=workspace, actor_label=current_user.username)
+        result = InventoryCoreService(_local_connection(connection)).snapshot(workspace=workspace, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_snapshot_failed", exc) from exc
+    return project_inventory_core_snapshot(result).visible
 
 
 @router.get("/units")
@@ -619,7 +626,12 @@ def list_movements(
             organization_code=organization,
             entity_code=entity,
         )
-        return _list_response("movements", records, limit=limit, offset=offset)
+        return _list_response(
+            "movements",
+            _project_records(records, lambda value: project_inventory_movement(value).visible),
+            limit=limit,
+            offset=offset,
+        )
     try:
         records = InventoryCoreService(_local_connection(connection)).list_movements(
             workspace=workspace,
@@ -633,7 +645,12 @@ def list_movements(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_movements_list_failed", exc) from exc
-    return _list_response("movements", records, limit=limit, offset=offset)
+    return _list_response(
+        "movements",
+        _project_records(records, lambda value: project_inventory_movement(value).visible),
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.post("/movements")
@@ -660,14 +677,14 @@ def create_movement(
             organization_code=payload.organization_code,
             entity_code=payload.entity_code,
         )
-        return {"movement": record}
+        return {"movement": project_inventory_movement(record).visible}
     try:
         record = InventoryCoreService(_local_connection(connection)).create_movement(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_movement_save_failed", exc) from exc
-    return {"movement": record}
+    return {"movement": project_inventory_movement(record).visible}
 
 
 @router.get("/movements/{movement_id}")
@@ -684,12 +701,12 @@ def get_movement(
             lambda repository, _scope: repository.get_movement(movement_id, actor_label=current_user.id),
             movement_id=movement_id,
         )
-        return {"movement": record}
+        return {"movement": project_inventory_movement(record).visible}
     try:
         record = InventoryCoreService(_local_connection(connection)).get_movement(movement_id, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_movement_not_found", exc, status_code=404) from exc
-    return {"movement": record}
+    return {"movement": project_inventory_movement(record).visible}
 
 
 @router.post("/movements/{movement_id}/post")
@@ -709,14 +726,14 @@ def post_movement(
             ),
             movement_id=movement_id,
         )
-        return {"movement": record}
+        return {"movement": project_inventory_movement(record).visible}
     try:
         record = InventoryCoreService(_local_connection(connection)).post_movement(
             movement_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_movement_post_failed", exc) from exc
-    return {"movement": record}
+    return {"movement": project_inventory_movement(record).visible}
 
 
 @router.post("/movements/{movement_id}/void")
@@ -761,7 +778,7 @@ def on_hand(
     offset: PageOffset = 0,
 ) -> dict[str, object]:
     if server_inventory_core_enabled(request):
-        return _server_call(
+        result = _server_call(
             request,
             frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
             lambda repository, scope: repository.on_hand(
@@ -778,8 +795,9 @@ def on_hand(
             organization_code=organization,
             entity_code=entity,
         )
+        return project_inventory_on_hand(result).visible
     try:
-        return InventoryCoreService(_local_connection(connection)).on_hand(
+        result = InventoryCoreService(_local_connection(connection)).on_hand(
             workspace=workspace,
             organization_code=organization,
             entity_code=entity,
@@ -792,6 +810,7 @@ def on_hand(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_on_hand_failed", exc) from exc
+    return project_inventory_on_hand(result).visible
 
 
 @router.get("/control-exceptions")
@@ -805,7 +824,7 @@ def control_exceptions(
     as_of: str = "",
 ) -> dict[str, object]:
     if server_inventory_core_enabled(request):
-        return _server_call(
+        result = _server_call(
             request,
             frozenset({"inventory.read", "inventory.manage", "inventory.post"}),
             lambda repository, scope: repository.control_exceptions(
@@ -818,8 +837,9 @@ def control_exceptions(
             organization_code=organization,
             entity_code=entity,
         )
+        return project_inventory_control_exceptions(result).visible
     try:
-        return InventoryCoreService(_local_connection(connection)).control_exceptions(
+        result = InventoryCoreService(_local_connection(connection)).control_exceptions(
             workspace=workspace,
             organization_code=organization,
             entity_code=entity,
@@ -828,3 +848,4 @@ def control_exceptions(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_control_exceptions_failed", exc) from exc
+    return project_inventory_control_exceptions(result).visible

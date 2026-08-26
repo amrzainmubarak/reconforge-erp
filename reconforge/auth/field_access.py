@@ -575,6 +575,58 @@ INVENTORY_LOCATION_FIELDS = frozenset(
 INVENTORY_LOT_FIELDS = frozenset(
     {"tenant_id", "id", "workspace_id", "organization_id", "item_id", "lot_serial_code", "tracking_type", "manufactured_on", "expires_on", "active", "created_at", "updated_at", "row_version", "item_code", "organization_code"}
 )
+INVENTORY_MOVEMENT_FIELDS = frozenset(
+    {
+        # Deliberate union for local SQLite and tenant-scoped PostgreSQL
+        # movement responses.  This is narrower than either repository row.
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "period_id",
+        "movement_number", "movement_type", "movement_date", "source_reference", "description",
+        "source_type", "status", "created_by", "posted_by", "posted_at", "post_reason",
+        "voided_by", "voided_at", "void_reason", "created_at", "updated_at", "row_version",
+        "organization_code", "entity_code", "period_name", "line_count", "lines",
+    }
+)
+INVENTORY_MOVEMENT_LINE_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "movement_id", "line_number", "item_id", "uom_id", "inventory_lot_id",
+        "from_location_id", "to_location_id", "quantity_scaled", "quantity_precision", "quantity",
+        "description", "created_at", "item_code", "item_name", "uom_code", "lot_serial_code",
+        "from_location", "to_location",
+    }
+)
+INVENTORY_ON_HAND_FIELDS = frozenset(
+    {"schema_version", "source", "workspace", "organization_code", "entity_code", "summary", "balances"}
+)
+INVENTORY_ON_HAND_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
+INVENTORY_ON_HAND_SUMMARY_FIELDS = frozenset({"rows", "negative_rows"})
+INVENTORY_ON_HAND_BALANCE_FIELDS = frozenset(
+    {
+        "tenant_id", "location_id", "warehouse_code", "location_code", "allow_negative", "item_id", "item_code",
+        "item_name", "uom_code", "inventory_lot_id", "lot_serial_code", "quantity_precision", "quantity_scaled",
+        "quantity", "negative",
+    }
+)
+INVENTORY_CONTROL_EXCEPTION_FIELDS = frozenset(
+    {"schema_version", "generated_at", "as_of", "source", "workspace", "organization_code", "entity_code", "summary", "exceptions"}
+)
+INVENTORY_CONTROL_EXCEPTION_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
+INVENTORY_CONTROL_EXCEPTION_SUMMARY_FIELDS = frozenset({"total", "high", "medium"})
+INVENTORY_CONTROL_EXCEPTION_ITEM_FIELDS = frozenset(
+    {
+        "exception_id", "control_code", "risk_rating", "item_code", "warehouse_code", "location_code",
+        "lot_serial_code", "quantity", "description",
+    }
+)
+INVENTORY_CORE_SUMMARY_FIELDS = frozenset(
+    {"workspace", "units_of_measure", "items", "warehouses", "locations", "lots_and_serials", "draft_movements", "posted_movements", "voided_movements"}
+)
+INVENTORY_CORE_SNAPSHOT_FIELDS = frozenset(
+    {
+        "schema_version", "generated_at", "source", "workspace", "summary", "units_of_measure", "items",
+        "warehouses", "locations", "lots_and_serials", "movements",
+    }
+)
+INVENTORY_CORE_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1192,6 +1244,117 @@ def project_inventory_location(values: Mapping[str, object]) -> FieldProjection:
 
 def project_inventory_lot(values: Mapping[str, object]) -> FieldProjection:
     return project_fields(values, allowed_fields=INVENTORY_LOT_FIELDS)
+
+
+def project_inventory_movement(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for inventory movement responses."""
+
+    record = dict(values)
+    lines = record.get("lines")
+    if lines is not None:
+        if not isinstance(lines, list):
+            raise TypeError("inventory movement lines collection must be a list")
+        projected_lines: list[dict[str, object]] = []
+        for line in lines:
+            if not isinstance(line, Mapping):
+                raise TypeError("inventory movement line record must be a mapping")
+            projected_lines.append(project_fields(line, allowed_fields=INVENTORY_MOVEMENT_LINE_FIELDS).visible)
+        record["lines"] = projected_lines
+    return project_fields(record, allowed_fields=INVENTORY_MOVEMENT_FIELDS)
+
+
+def project_inventory_on_hand(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for exact inventory balances."""
+
+    record = dict(values)
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("inventory on-hand source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=INVENTORY_ON_HAND_SOURCE_FIELDS).visible
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("inventory on-hand summary must be a mapping")
+        record["summary"] = project_fields(summary, allowed_fields=INVENTORY_ON_HAND_SUMMARY_FIELDS).visible
+    balances = record.get("balances")
+    if balances is not None:
+        if not isinstance(balances, list):
+            raise TypeError("inventory on-hand balances collection must be a list")
+        projected_balances: list[dict[str, object]] = []
+        for balance in balances:
+            if not isinstance(balance, Mapping):
+                raise TypeError("inventory on-hand balance record must be a mapping")
+            projected_balances.append(project_fields(balance, allowed_fields=INVENTORY_ON_HAND_BALANCE_FIELDS).visible)
+        record["balances"] = projected_balances
+    return project_fields(record, allowed_fields=INVENTORY_ON_HAND_FIELDS)
+
+
+def project_inventory_control_exceptions(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for inventory control exceptions."""
+
+    record = dict(values)
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("inventory control exception source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=INVENTORY_CONTROL_EXCEPTION_SOURCE_FIELDS).visible
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("inventory control exception summary must be a mapping")
+        record["summary"] = project_fields(summary, allowed_fields=INVENTORY_CONTROL_EXCEPTION_SUMMARY_FIELDS).visible
+    exceptions = record.get("exceptions")
+    if exceptions is not None:
+        if not isinstance(exceptions, list):
+            raise TypeError("inventory control exceptions collection must be a list")
+        projected_exceptions: list[dict[str, object]] = []
+        for exception in exceptions:
+            if not isinstance(exception, Mapping):
+                raise TypeError("inventory control exception record must be a mapping")
+            projected_exceptions.append(project_fields(exception, allowed_fields=INVENTORY_CONTROL_EXCEPTION_ITEM_FIELDS).visible)
+        record["exceptions"] = projected_exceptions
+    return project_fields(record, allowed_fields=INVENTORY_CONTROL_EXCEPTION_FIELDS)
+
+
+def project_inventory_core_summary(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_CORE_SUMMARY_FIELDS)
+
+
+def project_inventory_core_snapshot(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for the bounded inventory snapshot."""
+
+    record = dict(values)
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("inventory core snapshot source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=INVENTORY_CORE_SOURCE_FIELDS).visible
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("inventory core snapshot summary must be a mapping")
+        record["summary"] = project_inventory_core_summary(summary).visible
+    for name, projector in (
+        ("units_of_measure", project_inventory_uom),
+        ("items", project_inventory_item),
+        ("warehouses", project_inventory_warehouse),
+        ("locations", project_inventory_location),
+        ("lots_and_serials", project_inventory_lot),
+        ("movements", project_inventory_movement),
+    ):
+        children = record.get(name)
+        if children is None:
+            continue
+        if not isinstance(children, list):
+            raise TypeError(f"inventory core snapshot {name} collection must be a list")
+        projected_children: list[dict[str, object]] = []
+        for child in children:
+            if not isinstance(child, Mapping):
+                raise TypeError(f"inventory core snapshot {name} record must be a mapping")
+            projected_children.append(projector(child).visible)
+        record[name] = projected_children
+    return project_fields(record, allowed_fields=INVENTORY_CORE_SNAPSHOT_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

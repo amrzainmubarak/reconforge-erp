@@ -5,6 +5,30 @@
 
 ## Decisions
 
+### D-859: Inventory Core operational API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: Inventory Core operational routes returned movement, balance,
+  control, summary, and snapshot mappings from both SQLite and PostgreSQL.
+  Repository rows include backend-specific fields and can gain future columns;
+  snapshots also contain nested master and movement collections.
+- **Decision**: Add separate central allowlists for movement headers/lines,
+  on-hand envelopes/balances, control-exception envelopes/items, summary, and
+  snapshot/source shapes. Reuse the E-1031 master-resource projectors inside
+  snapshots, and reject malformed nested collections or records before
+  serialization. Preserve exact quantity fields and existing response
+  envelopes for compatibility.
+- **Verification**: Focused field/API boundary tests pass 19 tests. Full
+  `python -m pytest -q` passes at 100%; Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted safe YAML validation (9 files), and diff
+  gates also pass. The local distribution is not auditable by pip-audit because
+  it is not published on PyPI.
+- **Compatibility**: Existing routes, envelopes, permissions, step-up policy,
+  known fields, and local/server separation remain; no schema or migration
+  changes are introduced.
+- **Rollback**: Revert E-1032 code/tests/ADR 0692/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
 ### D-858: Inventory Core master API uses fail-closed field projection
 
 - **Date**: 2026-08-26

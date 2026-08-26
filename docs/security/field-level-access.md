@@ -4,6 +4,18 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1032 migrated surface
+
+Inventory Core movement list/create/read/post/void, on-hand, control-exception,
+summary, and snapshot responses now use central allowlists across local SQLite
+and PostgreSQL. Movement lines, on-hand balances, control exceptions, and
+snapshot source/summary/collections are projected recursively; malformed
+nested data fails closed. The snapshot reuses the E-1031 master-resource
+projectors. Exact quantity fields and existing response envelopes are retained
+for compatibility. This is a bounded disclosure control for the reviewed
+operational response family, not universal field-level authorization or
+production IAM. ADR 0692 records the decision and rollback.
+
 ## E-1031 migrated surface
 
 Inventory Core unit-of-measure, item, warehouse, location, and lot/serial

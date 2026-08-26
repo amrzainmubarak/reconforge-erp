@@ -4,6 +4,18 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1039 migrated surface
+
+Retail Settlement create, list, and read responses now use central top-level and
+recursive allowlists across local SQLite and PostgreSQL. The run envelope,
+report, tolerance, canonical money values, status counts, settlement decisions,
+and optional variance values are projected explicitly; unknown adapter/storage
+fields are dropped before serialization. Evidence digests, workspace scope,
+and no-network/no-posting behavior remain compatible. This is a bounded
+disclosure control for the reviewed response family, not universal field-level
+authorization, external IAM, or production readiness. ADR 0699 records the
+decision and rollback.
+
 ## E-1038 migrated surface
 
 Professional invoice/payment create, list, and read responses now use central

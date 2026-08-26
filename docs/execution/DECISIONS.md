@@ -5,6 +5,29 @@
 
 ## Decisions
 
+### D-866: Retail Settlement API uses fail-closed recursive projection
+
+- **Date**: 2026-08-27
+- **Context**: Retail Settlement evidence is returned from local SQLite and
+  tenant-scoped PostgreSQL adapters as a run envelope containing a report,
+  canonical monetary fields, status counts, and nested POS/processor
+  decisions. Future adapter fields could silently expand a financial response.
+- **Decision**: Apply central allowlists to the run envelope and recursively
+  project report tolerance, settlement decisions, every optional variance
+  money value, and known status-count keys on create, list, and read responses.
+  Preserve existing response envelopes, exact money values, workspace scope,
+  and the no-network/no-posting boundary.
+- **Verification**: Focused field/API tests pass 31 tests plus 1 existing
+  live-PostgreSQL skip, including synthetic future fields at every reviewed
+  nesting level. Full Python regression passes at 100%; Ruff, Mypy (539 source
+  files), Bandit, pip-audit, package build, targeted safe YAML validation (9
+  files), and diff gates pass. The local distribution is not auditable by
+  pip-audit because it is not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, route, or
+  evidence-digest behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1039 code/tests/ADR 0699/manifest and execution
+  metadata together; do not restore unbounded adapter-row serialization.
+
 ### D-865: Professional invoice/payment API uses fail-closed recursive projection
 
 - **Date**: 2026-08-26

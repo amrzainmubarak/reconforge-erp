@@ -46,6 +46,7 @@ from reconforge.auth.field_access import (
     project_reconciliation_input,
     project_reconciliation_result,
     project_reconciliation_run,
+    project_retail_settlement,
 )
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
 
@@ -469,6 +470,61 @@ def test_professional_invoice_payment_projection_is_closed_recursively() -> None
         "decision_digest": "d" * 64,
         "schema_version": 1,
         "status_counts": {"matched": 1},
+    }
+    assert result.denied_fields == ("unknown_run_field",)
+    assert "must-not-escape" not in str(result.visible)
+
+
+def test_retail_settlement_projection_is_closed_recursively() -> None:
+    result = project_retail_settlement(
+        {
+            "id": "rtl-1",
+            "workspace_id": "shop-a",
+            "unknown_run_field": "must-not-escape",
+            "report": {
+                "schema_version": 1,
+                "decision_digest": "d" * 64,
+                "tolerance": {
+                    "amount": "0.01",
+                    "currency": "USD",
+                    "unknown_money_field": "must-not-escape",
+                },
+                "decisions": [
+                    {
+                        "batch_id": "BATCH-1",
+                        "store_id": "STORE-1",
+                        "status": "matched",
+                        "settlement_ids": ["SET-1"],
+                        "reason_code": "SETTLEMENT_RECONCILED",
+                        "net_variance": {
+                            "amount": "0",
+                            "currency": "USD",
+                            "unknown_variance_field": "must-not-escape",
+                        },
+                        "unknown_decision_field": "must-not-escape",
+                    }
+                ],
+                "status_counts": {"matched": 1, "future_status": 99},
+                "unknown_report_field": "must-not-escape",
+            },
+        }
+    )
+
+    assert result.visible["report"] == {
+        "decisions": [
+            {
+                "batch_id": "BATCH-1",
+                "net_variance": {"amount": "0", "currency": "USD"},
+                "reason_code": "SETTLEMENT_RECONCILED",
+                "settlement_ids": ["SET-1"],
+                "status": "matched",
+                "store_id": "STORE-1",
+            }
+        ],
+        "decision_digest": "d" * 64,
+        "schema_version": 1,
+        "status_counts": {"matched": 1},
+        "tolerance": {"amount": "0.01", "currency": "USD"},
     }
     assert result.denied_fields == ("unknown_run_field",)
     assert "must-not-escape" not in str(result.visible)

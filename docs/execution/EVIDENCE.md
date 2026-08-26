@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1039: Fail-closed projection for Retail Settlement API responses
+
+- Code evidence: `/api/v1/retail/settlements` create, list, and read responses
+  use central top-level and recursive report, money, decision, and known
+  status-count allowlists in both local SQLite and PostgreSQL branches. Unknown
+  adapter/storage fields are dropped before serialization; network dispatch,
+  posting, persistence, and workspace scope behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers the report, tolerance,
+  decision, variance, and status-count projections;
+  `tests/test_api_retail_settlement.py` injects future fields at top-level and
+  every reviewed nested response level across create/list/read. Focused
+  selectors pass 31 tests plus 1 existing live-PostgreSQL skip; `python -m
+  pytest -q` passes at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit,
+  package build, targeted safe YAML validation (9 files), and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI.
+- Boundary: this closes only the reviewed Retail Settlement response family.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0699 records rollback.
+
 ## E-1038: Fail-closed projection for professional invoice/payment API responses
 
 - Code evidence: `/api/v1/professional/invoice-payments` create, list, and

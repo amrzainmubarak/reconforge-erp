@@ -22,6 +22,7 @@ from reconforge.api.server_retail_settlement import (
     execute_postgres_retail_settlement,
     server_retail_settlement_enabled,
 )
+from reconforge.auth.field_access import project_retail_settlement
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres import PostgresConfigurationError, validate_workspace_id
 from reconforge.infrastructure.sqlite_retail_settlement import (
@@ -129,7 +130,7 @@ def persist_settlement(
 
         stored = execute_postgres_retail_settlement(request, persist)
         return {
-            "settlement": stored,
+            "settlement": project_retail_settlement(stored).visible,
             "source": {"kind": "postgresql-retail-settlement", "server_mode": True},
             "network_dispatch": "disabled",
             "workspace": scope.workspace_id,
@@ -143,7 +144,7 @@ def persist_settlement(
     except RetailSettlementPersistenceError as exc:
         raise _persistence_error(exc) from exc
     return {
-        "settlement": stored,
+        "settlement": project_retail_settlement(stored).visible,
         "source": {"kind": "sqlite-retail-settlement", "server_mode": False},
         "network_dispatch": "disabled",
     }
@@ -183,7 +184,7 @@ def list_settlements(
 
         records = execute_postgres_retail_settlement(request, read)
         return {
-            "settlements": records,
+            "settlements": [project_retail_settlement(record).visible for record in records],
             "workspace": scope.workspace_id,
             "limit": limit,
             "offset": offset,
@@ -199,7 +200,7 @@ def list_settlements(
     except RetailSettlementPersistenceError as exc:
         raise _persistence_error(exc) from exc
     return {
-        "settlements": records,
+        "settlements": [project_retail_settlement(record).visible for record in records],
         "workspace": resolved_workspace,
         "limit": limit,
         "offset": offset,
@@ -241,7 +242,7 @@ def get_settlement(
         if record is None:
             raise APIError(status_code=404, code="retail_settlement_not_found", message="Retail settlement evidence was not found.")
         return {
-            "settlement": record,
+            "settlement": project_retail_settlement(record).visible,
             "source": {"kind": "postgresql-retail-settlement", "server_mode": True},
         }
     try:
@@ -255,7 +256,7 @@ def get_settlement(
     if record is None:
         raise APIError(status_code=404, code="retail_settlement_not_found", message="Retail settlement evidence was not found.")
     return {
-        "settlement": record,
+        "settlement": project_retail_settlement(record).visible,
         "source": {"kind": "sqlite-retail-settlement", "server_mode": False},
     }
 

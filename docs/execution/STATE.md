@@ -1,6 +1,19 @@
 ﻿# Execution State
 
-Updated: 2026-08-26
+Updated: 2026-08-27
+
+## E-1039 - Fail-closed projection for Retail Settlement API responses (2026-08-27)
+
+- Retail settlement create, list, and read responses now use central top-level
+  and recursive report, money, decision, and status-count allowlists across
+  local SQLite and tenant-scoped PostgreSQL adapter paths. Unknown future
+  adapter/storage fields cannot silently enter POS settlement evidence.
+- Focused field/API tests pass (31 tests plus 1 existing live-PostgreSQL skip),
+  and the full Python regression passes at 100%. Ruff, Mypy (539 source files),
+  Bandit, pip-audit, package build, targeted YAML validation (9 files), and
+  diff checks also pass. pip-audit cannot audit the local `reconforge-erp`
+  distribution name because it is not published on PyPI. ADR 0699 records
+  rollback.
 
 ## E-1038 - Fail-closed projection for professional invoice/payment API responses (2026-08-26)
 

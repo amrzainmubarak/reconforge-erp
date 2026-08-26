@@ -782,6 +782,63 @@ PROFESSIONAL_INVOICE_PAYMENT_DECISION_FIELDS = frozenset(
 PROFESSIONAL_INVOICE_PAYMENT_STATUS_KEYS = frozenset(
     {"matched", "exception", "unmatched_invoice", "unmatched_payment", "ambiguous"}
 )
+RETAIL_SETTLEMENT_FIELDS = frozenset(
+    {
+        "id",
+        "tenant_id",
+        "workspace_id",
+        "decision_digest",
+        "artifact_digest",
+        "algorithm_version",
+        "prepared_by",
+        "prepared_at",
+        "created_at",
+        "report",
+    }
+)
+RETAIL_SETTLEMENT_REPORT_FIELDS = frozenset(
+    {
+        "algorithm_version",
+        "artifact_digest",
+        "artifact_type",
+        "decision_digest",
+        "decisions",
+        "input_digests",
+        "schema_version",
+        "status_counts",
+        "tolerance",
+    }
+)
+RETAIL_SETTLEMENT_MONEY_FIELDS = frozenset(
+    {
+        "amount",
+        "currency",
+        "currency_policy_digest",
+        "currency_registry_digest",
+        "currency_registry_version",
+        "minor_units",
+        "rounding_policy",
+        "schema_version",
+    }
+)
+RETAIL_SETTLEMENT_DECISION_FIELDS = frozenset(
+    {
+        "batch_id",
+        "card_gross_variance",
+        "expected_card_net",
+        "net_variance",
+        "pos_total_net_sales",
+        "reason_code",
+        "refund_variance",
+        "settlement_ids",
+        "settlement_net",
+        "status",
+        "store_id",
+    }
+)
+RETAIL_SETTLEMENT_STATUS_KEYS = frozenset(
+    {"matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"}
+)
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1694,6 +1751,72 @@ def project_professional_invoice_payment(values: Mapping[str, object]) -> FieldP
             allowed_fields=PROFESSIONAL_INVOICE_PAYMENT_REPORT_FIELDS,
         ).visible
     return project_fields(record, allowed_fields=PROFESSIONAL_INVOICE_PAYMENT_FIELDS)
+
+
+def project_retail_settlement(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for retail settlement evidence."""
+
+    record = dict(values)
+    report = record.get("report")
+    if report is not None:
+        if not isinstance(report, Mapping):
+            raise TypeError("retail settlement report must be a mapping")
+        report_record = dict(report)
+        tolerance = report_record.get("tolerance")
+        if tolerance is not None:
+            if not isinstance(tolerance, Mapping):
+                raise TypeError("retail settlement tolerance must be a mapping")
+            report_record["tolerance"] = project_fields(
+                tolerance,
+                allowed_fields=RETAIL_SETTLEMENT_MONEY_FIELDS,
+            ).visible
+        decisions = report_record.get("decisions")
+        if decisions is not None:
+            if not isinstance(decisions, list):
+                raise TypeError("retail settlement decisions collection must be a list")
+            projected_decisions: list[dict[str, object]] = []
+            for decision in decisions:
+                if not isinstance(decision, Mapping):
+                    raise TypeError("retail settlement decision must be a mapping")
+                decision_record = dict(decision)
+                for field_name in (
+                    "card_gross_variance",
+                    "expected_card_net",
+                    "net_variance",
+                    "pos_total_net_sales",
+                    "refund_variance",
+                    "settlement_net",
+                ):
+                    amount = decision_record.get(field_name)
+                    if amount is None:
+                        continue
+                    if not isinstance(amount, Mapping):
+                        raise TypeError(f"retail settlement {field_name} must be a mapping")
+                    decision_record[field_name] = project_fields(
+                        amount,
+                        allowed_fields=RETAIL_SETTLEMENT_MONEY_FIELDS,
+                    ).visible
+                projected_decisions.append(
+                    project_fields(
+                        decision_record,
+                        allowed_fields=RETAIL_SETTLEMENT_DECISION_FIELDS,
+                    ).visible
+                )
+            report_record["decisions"] = projected_decisions
+        status_counts = report_record.get("status_counts")
+        if status_counts is not None:
+            if not isinstance(status_counts, Mapping):
+                raise TypeError("retail settlement status counts must be a mapping")
+            report_record["status_counts"] = {
+                key: status_counts[key]
+                for key in sorted(status_counts)
+                if key in RETAIL_SETTLEMENT_STATUS_KEYS
+            }
+        record["report"] = project_fields(
+            report_record,
+            allowed_fields=RETAIL_SETTLEMENT_REPORT_FIELDS,
+        ).visible
+    return project_fields(record, allowed_fields=RETAIL_SETTLEMENT_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
@@ -13,6 +14,7 @@ from reconforge.application.retail_settlement import (
 )
 from reconforge.auth.service import LocalAuthService
 from reconforge.db import connect, run_migrations
+from reconforge.infrastructure.sqlite_retail_settlement import SQLiteRetailSettlementRepository
 
 
 def _client(tmp_path: Path) -> TestClient:
@@ -96,3 +98,63 @@ def test_local_retail_api_rejects_tampered_report_and_unknown_digest(tmp_path: P
         headers=headers,
     )
     assert missing.status_code == 404
+
+
+def test_retail_api_drops_future_adapter_fields_recursively(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = _client(tmp_path)
+    report = _report(tmp_path)
+    login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Secret-123"})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    baseline = client.post(
+        "/api/v1/retail/settlements",
+        json={"report": report, "workspace": "shop-a"},
+        headers=headers,
+    )
+    assert baseline.status_code == 200, baseline.text
+    future = json.loads(json.dumps(baseline.json()["settlement"]))
+    future["unknown_adapter_field"] = "must-not-escape"
+    future["report"]["unknown_report_field"] = "must-not-escape"
+    future["report"]["tolerance"]["unknown_money_field"] = "must-not-escape"
+    future["report"]["decisions"][0]["unknown_decision_field"] = "must-not-escape"
+    decision = future["report"]["decisions"][0]
+    for field_name in (
+        "card_gross_variance",
+        "expected_card_net",
+        "net_variance",
+        "pos_total_net_sales",
+        "refund_variance",
+        "settlement_net",
+    ):
+        if decision[field_name] is not None:
+            decision[field_name]["unknown_variance_field"] = "must-not-escape"
+
+    def fake_put(self: SQLiteRetailSettlementRepository, payload: dict[str, object], **kwargs: object) -> dict[str, object]:
+        return future
+
+    def fake_list(self: SQLiteRetailSettlementRepository, **kwargs: object) -> tuple[dict[str, object], ...]:
+        return (future,)
+
+    def fake_get(self: SQLiteRetailSettlementRepository, **kwargs: object) -> dict[str, object]:
+        return future
+
+    monkeypatch.setattr(SQLiteRetailSettlementRepository, "put_payload", fake_put)
+    monkeypatch.setattr(SQLiteRetailSettlementRepository, "list", fake_list)
+    monkeypatch.setattr(SQLiteRetailSettlementRepository, "get", fake_get)
+
+    created = client.post(
+        "/api/v1/retail/settlements",
+        json={"report": report, "workspace": "shop-a"},
+        headers=headers,
+    )
+    listed = client.get("/api/v1/retail/settlements", params={"workspace": "shop-a"}, headers=headers)
+    fetched = client.get(
+        f"/api/v1/retail/settlements/{report['decision_digest']}",
+        params={"workspace": "shop-a"},
+        headers=headers,
+    )
+
+    assert created.status_code == listed.status_code == fetched.status_code == 200
+    assert all("unknown_" not in response.text for response in (created, listed, fetched))
+    assert listed.json()["settlements"][0]["decision_digest"] == report["decision_digest"]

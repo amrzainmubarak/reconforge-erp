@@ -181,6 +181,17 @@ def test_docker_runtime_is_multistage_and_non_root() -> None:
     assert dockerfile.index("USER 10001:10001") < dockerfile.index('CMD ["reconforge", "doctor"]')
 
 
+def test_docker_stages_refresh_the_open_ssl_runtime_libraries_without_cli() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    stages = dockerfile.split("FROM ")[1:]
+
+    assert len(stages) == 2
+    assert all("apk add --no-cache --upgrade" in stage for stage in stages)
+    assert dockerfile.count("libcrypto3=3.5.8-r0") == 2
+    assert dockerfile.count("libssl3=3.5.8-r0") == 2
+    assert "openssl " not in dockerfile
+
+
 def test_docker_context_is_deny_by_default() -> None:
     rules = [
         line.strip()

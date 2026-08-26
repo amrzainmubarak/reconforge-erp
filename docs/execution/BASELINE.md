@@ -99,9 +99,11 @@
   CVE-2026-4224, and CVE-2026-7210 as fixed in Python 3.11.16. The closed
   fixed-only OpenVEX path records those decisions while retaining them in the
   total count.
-- CVE-2026-14456 remains unexcepted for libcrypto3 and libssl3 3.5.7-r0.
-  The gate exits 1 and blocks registry authentication. No supported current
-  Alpine candidate offered upstream-fixed OpenSSL 3.5.8 at review time.
+- E-959 refreshes libcrypto3/libssl3 in both pinned stages. A clean
+  linux/amd64 build and runtime inspection report 3.5.8-r0, with no OpenSSL
+  CLI added. The exact Syft/Grype gate has not yet been rerun against this
+  rebuilt image, so registry authentication and release publication remain
+  blocked pending that evidence.
 
 #### E-825 write-back lifecycle identity refresh (2026-08-22)
 

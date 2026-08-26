@@ -2,6 +2,26 @@
 
 Updated: 2026-08-26
 
+## E-959 - Refresh pinned container OpenSSL runtime libraries (2026-08-26)
+
+- The two digest-pinned Docker stages now install only the exact reviewed
+  Alpine package versions `libcrypto3=3.5.8-r0` and `libssl3=3.5.8-r0`. The
+  Python base digest and the trimmed non-root runtime contract remain
+  unchanged; the OpenSSL CLI is not installed. An unavailable fixed package
+  fails the build rather than silently accepting drift.
+- A clean `docker build --pull --no-cache --platform linux/amd64` completed
+  for `reconforge:e824-openssl`. Runtime inspection reports
+  `libcrypto3-3.5.8-r0` and `libssl3-3.5.8-r0`; the hardened `doctor` smoke
+  completed with `--network none`, read-only root, and bounded tmpfs mounts.
+  The Dockerfile regression test passes.
+- The exact Syft/Grype gate has not yet been rerun against this rebuilt image:
+  Syft produced the native SBOM locally, but the Grype database update could
+  not complete through the current container network/certificate path. E-824
+  is therefore `in_progress`, not complete; release authentication,
+  publication, and production claims remain blocked pending fresh
+  vulnerability/license evidence and the hosted gate.
+- ADR 0652 records the package-refresh and evidence boundary.
+
 ## E-958 - Bind server write-back registrations to tenant/workspace (2026-08-26)
 
 - `WritebackNetworkRegistration` now accepts an additive tenant/workspace

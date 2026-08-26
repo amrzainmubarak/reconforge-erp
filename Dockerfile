@@ -1,6 +1,14 @@
 # syntax=docker/dockerfile:1.7
 FROM python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1 AS builder
 
+# The pinned Python index is intentionally retained, but Alpine security
+# packages must be refreshed independently of the slower Python image cadence.
+# Keep the builder inside the same fixed-component boundary as the runtime and
+# fail closed if the reviewed fixed package version is unavailable.
+RUN apk add --no-cache --upgrade \
+    libcrypto3=3.5.8-r0 \
+    libssl3=3.5.8-r0
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
@@ -26,6 +34,13 @@ RUN uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy \
     && rm -rf /root/.cache/uv
 
 FROM python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1 AS runtime
+
+# The official index can lag an Alpine security fix. Install only the named,
+# reviewed OpenSSL runtime versions so the final image contains the fixed
+# packages without adding the OpenSSL CLI to the trimmed runtime.
+RUN apk add --no-cache --upgrade \
+    libcrypto3=3.5.8-r0 \
+    libssl3=3.5.8-r0
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

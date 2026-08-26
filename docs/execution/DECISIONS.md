@@ -5,6 +5,31 @@
 
 ## Decisions
 
+### D-821: Refresh only the pinned container OpenSSL runtime libraries
+
+- **Date**: 2026-08-26
+- **Context**: The pinned official Python Alpine index remained on OpenSSL
+  `3.5.7-r0` while Alpine published `3.5.8-r0`, the upstream-fixed package
+  needed for the tracked E-824 vulnerability. Changing the Python base digest
+  without a verified replacement would weaken provenance and compatibility
+  evidence.
+- **Decision**: Keep the reviewed Python digest and add an explicit,
+  exact-version `apk add --no-cache --upgrade` for `libcrypto3=3.5.8-r0` and
+  `libssl3=3.5.8-r0` in both builder and runtime stages. Do not install the
+  OpenSSL CLI or broaden the package set. Keep E-824 open until the exact
+  Syft/Grype gate is rerun.
+- **Verification**: E-959 clean linux/amd64 build, exact package inspection,
+  hardened Doctor smoke, Dockerfile regression test, and checksum-verified
+  Syft SBOM generation pass. Grype database refresh remains an environment
+  blocker and is not counted as a pass.
+- **Compatibility**: Python base identity, runtime user, application assets,
+  CLI, database, and persisted financial contracts are unchanged. The image
+  build now depends on the supported Alpine repository serving the pinned
+  architecture's security packages.
+- **Rollback**: Revert the two package-refresh RUN instructions to restore the
+  previous image bytes, then reopen the prior E-824 blocked evidence. Never use
+  a VEX ignore or severity reduction as rollback.
+
 ### D-820: Bind executable write-back registrations to authenticated scope
 
 - **Date**: 2026-08-26

@@ -369,9 +369,11 @@ tasks:
     depends_on: [E-824]
     exit_evidence: >-
       Docker Desktop 4.87.0 / Engine 29.7.2 builds the digest-pinned image;
-      doctor, sample validation, and demo run exit 0. The runtime still carries
-      libcrypto3/libssl3 3.5.7-r0, so E-824 remains blocked and no image
-      publication or production-readiness claim is inferred.
+      doctor, sample validation, and demo run exit 0. E-959 refreshes the
+      runtime libcrypto3/libssl3 packages to 3.5.8-r0, while the exact
+      Syft/Grype scan of the rebuilt image remains pending. E-824 is therefore
+      in progress and no image publication or production-readiness claim is
+      inferred.
   - id: E-931
     priority: P0
     area: release_operations
@@ -1391,19 +1393,20 @@ tasks:
     priority: P0
     area: container-security
     title: Remediate or independently disposition current exact-image High findings
-    status: blocked
+    status: in_progress
     depends_on: [E-823]
     exit_evidence: >-
       The signed CPython 3.11.16 tag and official security records independently
       establish CVE-2026-3644, CVE-2026-4224, and CVE-2026-7210 as fixed. A
       hash-bound, 30-day-reviewed OpenVEX document records only those exact
       fixed product decisions, and the gate verifies all ignored matches while
-      retaining them in the five-High total. CVE-2026-14456 remains a real
-      blocker on libcrypto3/libssl3 3.5.7-r0; current supported Alpine images
-      do not offer upstream-fixed OpenSSL 3.5.8. No not-affected disposition,
-      severity override, or exception was approved. Resume when a supported
-      fixed base is available or independent security reviewers approve a
-      policy-governed disposition; Critical findings remain non-exceptable.
+      retaining them in the five-High total. E-959 now refreshes libcrypto3 and
+      libssl3 in both pinned Docker stages; a clean linux/amd64 build and
+      runtime inspection report 3.5.8-r0 without adding the OpenSSL CLI. The
+      exact Syft/Grype release gate still needs to be rerun against this image
+      and its current vulnerability database before completion. No VEX,
+      severity override, or exception is used, and publication remains blocked
+      until the fail-closed gate passes.
   - id: E-823
     priority: P0
     area: supply-chain

@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-959: Refresh pinned container OpenSSL runtime libraries
+
+- Code evidence: both digest-pinned Docker stages install the exact
+  `libcrypto3=3.5.8-r0` and `libssl3=3.5.8-r0` packages; no OpenSSL CLI is added. The
+  change is guarded by `test_docker_stages_refresh_the_open_ssl_runtime_libraries_without_cli`.
+- Build/runtime evidence: `docker build --pull --no-cache --platform
+  linux/amd64 --tag reconforge:e824-openssl .` exited 0. The final image
+  reports `libcrypto3-3.5.8-r0` and `libssl3-3.5.8-r0`, retains user
+  `10001:10001`, and contains no `openssl` executable. Hardened
+  `reconforge doctor` exited 0 with network disabled, read-only root, and
+  bounded tmpfs mounts.
+- Scanner evidence: Syft 1.51.0 was checksum-verified and emitted a native
+  SBOM for the saved image. The Grype 0.117.0 database update did not finish
+  in the current container network/certificate environment, so no new
+  vulnerability result is claimed and the prior blocked E-824 artifact is not
+  overwritten.
+- Boundary: this is a local package-remediation and runtime-smoke slice. E-824
+  remains open until current Syft/Grype/license evidence and hosted clean-build
+  verification are available; no VEX, severity override, publication, or
+  production-readiness claim is made. ADR 0652 records rollback.
+
 ## E-957: Recheck consolidation period before run transitions
 
 - Code evidence: PostgreSQL consolidation `_transition` first resolves the

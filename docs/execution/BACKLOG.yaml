@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1020
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to evidence mutation responses
+    status: completed
+    depends_on: [E-1005, E-1018, E-1019]
+    exit_evidence: >-
+      Server Profile evidence requirement and checksum verification responses
+      use reviewed central allowlists, preserve the known fields required by
+      their existing permissions, add deterministic field-access metadata, and
+      drop unknown adapter fields. Focused API/field tests, Ruff, Mypy, full
+      Python regression, package build, YAML, and diff checks pass.
+      This closes these mutation response contracts only; external IAM,
+      distributed revocation, disclosure approval, source authenticity, and
+      production effectiveness remain open. ADR 0680 records rollback.
   - id: E-1019
     priority: P0
     area: identity-governance
@@ -2290,6 +2305,10 @@ tasks:
         tenant, target, request, reason, and metadata values remain masked and
         unknown adapter fields are dropped; this is a disclosure control, not
         universal field-level authorization or production IAM evidence.
+      - E-1020 applies closed allowlists to the Server Profile evidence
+        requirement and checksum-verification mutation responses. Known fields
+        remain available to the existing authorized operation, projection
+        metadata is additive, and unknown adapter fields are dropped.
   - id: E-1006
     priority: P1
     area: global-expansion

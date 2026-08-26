@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-847: Evidence mutation responses use fail-closed projection
+
+- **Date**: 2026-08-26
+- **Context**: Evidence list/get/drill-down responses were projected, but
+  Server Profile requirement and checksum-verification mutations returned
+  adapter fields directly.
+- **Decision**: Apply central allowlists to both mutation response families,
+  preserve their known authorized fields, add deterministic projection
+  metadata, and drop unknown adapter fields before serialization.
+- **Verification**: Focused field/API tests pass; full regression, static,
+  package, YAML, and diff gates are required for closure. External IAM,
+  distributed revocation, disclosure approval, source authenticity, and
+  production effectiveness remain unproven.
+- **Compatibility**: Additive `field_access` metadata; known fields remain
+  available under the existing permission and tenant boundaries.
+- **Rollback**: Revert E-1020 code/tests/ADR 0680/manifest and execution
+  metadata together.
+
 ### D-846: Legacy audit event responses use fail-closed field projection
 
 - **Date**: 2026-08-26

@@ -31,6 +31,8 @@ from reconforge.auth.field_access import (
     EVIDENCE_DRILL_DOWN_FIELDS,
     EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
     project_evidence_drill_down_record,
+    project_evidence_requirement,
+    project_evidence_verification,
 )
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
@@ -225,6 +227,34 @@ def _project_evidence_record_payload(
             message="Evidence registry returned an invalid field projection contract.",
         )
     return {**dict(visible), "field_access": dict(field_access)}
+
+
+def _project_evidence_mutation_payload(
+    result: Mapping[str, object],
+    *,
+    kind: Literal["requirement", "verification"],
+) -> dict[str, object]:
+    """Project an adapter mutation response before it crosses the API boundary."""
+
+    projector = project_evidence_requirement if kind == "requirement" else project_evidence_verification
+    try:
+        projection = projector(result)
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid mutation response contract.",
+        ) from exc
+    return {
+        **projection.visible,
+        "field_access": {
+            "version": "field-projection-v1",
+            "mode": "allowlisted",
+            "masked_fields": list(projection.masked_fields),
+            "denied_fields": list(projection.denied_fields),
+            "projection_digest": projection.projection_digest,
+        },
+    }
 
 
 def _enforce_server_evidence_permission(
@@ -599,7 +629,10 @@ def save_evidence_requirement(
             reason=payload.reason,
         ),
     )
-    return {"requirement": requirement, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+    return {
+        "requirement": _project_evidence_mutation_payload(requirement, kind="requirement"),
+        "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+    }
 
 
 @router.post("/records/{evidence_id}/verify")
@@ -627,4 +660,7 @@ def verify_evidence(
             reason=payload.reason,
         ),
     )
-    return {"verification": result.__dict__, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+    return {
+        "verification": _project_evidence_mutation_payload(result.__dict__, kind="verification"),
+        "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+    }

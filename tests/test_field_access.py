@@ -2,6 +2,8 @@ from reconforge.auth.field_access import (
     REDACTED_VALUE,
     project_audit_event,
     project_evidence_drill_down_record,
+    project_evidence_requirement,
+    project_evidence_verification,
     project_fields,
 )
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
@@ -100,3 +102,30 @@ def test_legacy_audit_projection_masks_sensitive_aliases_and_denies_future_field
             "unknown_future_column": "different-value",
         }
     ).projection_digest
+
+
+def test_evidence_mutation_projections_drop_unknown_adapter_fields() -> None:
+    requirement = project_evidence_requirement(
+        {
+            "id": "requirement-1",
+            "object_type": "close_task",
+            "object_id": "task-1",
+            "requirement_code": "TB",
+            "description": "Trial balance support",
+            "required_status": "Required",
+            "unknown_future_column": "must-not-escape",
+        }
+    )
+    verification = project_evidence_verification(
+        {
+            "evidence_id": "evidence-1",
+            "ok": True,
+            "expected_sha256": "a" * 64,
+            "actual_sha256": "a" * 64,
+            "unknown_future_column": "must-not-escape",
+        }
+    )
+    assert "unknown_future_column" not in requirement.visible
+    assert requirement.denied_fields == ("unknown_future_column",)
+    assert "unknown_future_column" not in verification.visible
+    assert verification.denied_fields == ("unknown_future_column",)

@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-1020 - Fail-closed projection for Evidence mutation responses (2026-08-26)
+
+- Server Profile evidence requirement and checksum verification responses now
+  use central allowlists instead of direct adapter serialization. Known fields
+  remain available to the existing authorized operation, additive
+  `field_access` metadata reports the projection, and unknown future fields
+  are dropped.
+- Focused field/API tests, full Python regression at 100%, Ruff, Mypy, package
+  build, YAML validation, and diff checks pass. External IAM, distributed
+  revocation, disclosure approval, source authenticity, and production
+  effectiveness remain open. ADR 0680 records rollback.
+
 ## E-1019 - Fail-closed projection for legacy audit event responses (2026-08-26)
 
 - The local and Server Profile `/api/v1/audit/events` response paths now use

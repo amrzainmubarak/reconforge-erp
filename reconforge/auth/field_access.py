@@ -64,6 +64,22 @@ EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS = frozenset(
 EVIDENCE_DRILL_DOWN_LINK_FIELDS = frozenset(
     {"tenant_id", "id", "evidence_id", "object_type", "object_id", "link_type", "created_at"}
 )
+EVIDENCE_REQUIREMENT_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "object_type",
+        "object_id",
+        "requirement_code",
+        "description",
+        "required_status",
+        "created_at",
+        "updated_at",
+    }
+)
+EVIDENCE_VERIFICATION_FIELDS = frozenset(
+    {"evidence_id", "ok", "expected_sha256", "actual_sha256"}
+)
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -210,3 +226,15 @@ def project_audit_event(values: Mapping[str, object]) -> FieldProjection:
         allowed_fields=AUDIT_EVENT_FIELDS,
         masked_fields=AUDIT_EVENT_SENSITIVE_FIELDS,
     )
+
+
+def project_evidence_requirement(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a governed evidence requirement response."""
+
+    return project_fields(values, allowed_fields=EVIDENCE_REQUIREMENT_FIELDS)
+
+
+def project_evidence_verification(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a checksum verification response."""
+
+    return project_fields(values, allowed_fields=EVIDENCE_VERIFICATION_FIELDS)

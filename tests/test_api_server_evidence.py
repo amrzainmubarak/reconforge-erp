@@ -216,8 +216,10 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     assert fetched.json()["evidence"]["id"] == "evidence-a"
     assert linked.status_code == 200
     assert requirement.status_code == 200
+    assert requirement.json()["requirement"]["field_access"]["denied_fields"] == []
     assert verified.status_code == 200
     assert verified.json()["verification"]["ok"] is True
+    assert verified.json()["verification"]["field_access"]["denied_fields"] == []
     assert drill_down.status_code == 200
     drill_node = drill_down.json()["drill_down"]["nodes"][0]
     assert drill_node["record"]["source_path"] == "***redacted***"

@@ -36,3 +36,12 @@ The route retains its existing `audit.read` requirement and Server Profile
 tenant-policy re-check. This is a disclosure boundary for one legacy response
 family, not universal field-level authorization or production IAM. ADR 0679
 records the decision and rollback.
+
+## E-1020 migrated surface
+
+Server Profile evidence requirement and checksum verification mutation
+responses now consume closed allowlists. Known fields needed by the existing
+authorized operation remain available, deterministic `field_access` metadata
+is additive, and unknown adapter fields are dropped. This covers two mutation
+response contracts and does not establish universal field-level authorization
+or production IAM. ADR 0680 records the decision and rollback.

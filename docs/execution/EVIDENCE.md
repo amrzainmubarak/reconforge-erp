@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1020: Fail-closed projection for Evidence mutation responses
+
+- Code evidence: evidence requirement and checksum verification responses use
+  central `EVIDENCE_REQUIREMENT_FIELDS` and `EVIDENCE_VERIFICATION_FIELDS`
+  allowlists. The route returns deterministic additive `field_access` metadata
+  and drops unknown adapter fields before serialization.
+- Test evidence: `tests/test_field_access.py` covers both mutation allowlists;
+  `tests/test_api_server_evidence.py` covers requirement and verification HTTP
+  envelopes. Focused tests, full Python regression at 100%, Ruff, Mypy, package
+  build, YAML validation, and diff checks pass.
+- Boundary: this closes two Server Profile mutation response contracts only.
+  Existing permissions and tenant transaction boundaries remain required;
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open. ADR 0680 records
+  rollback.
+
 ## Fresh local Docker runtime check (2026-08-26)
 
 - Environment: Docker Engine `29.7.2` / Docker Desktop Linux builder. The

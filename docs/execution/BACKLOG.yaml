@@ -20,8 +20,9 @@ tasks:
       boundary exclusively and rejects missing entity_code, period_id, or
       journal_code with finance_core_entry_scope_required before either the
       Finance Core or legacy ledger adapter runs. The regression proves no
-      ambiguous fallback, and focused tests, Ruff, Mypy, and diff-check pass;
-      the opt-in live PostgreSQL test remains capability-gated. This is a
+      ambiguous fallback, focused tests, Ruff, Mypy, and diff-check pass; the
+      disposable live PostgreSQL Finance Core HTTP contract also passes with a
+      non-superuser/non-BYPASSRLS application role. This is a
       bounded routing safety control, not legacy-ledger removal, hosted parity,
       external IAM, HA/DR, provider, capacity, production, compliance, or
       certification evidence. ADR 0642 records the decision.
@@ -39,10 +40,12 @@ tasks:
       spoofed selectors, and injects canonical values before repository writes
       and filters. Local compatibility remains unchanged. Focused unit,
       application, finance-core, PostgreSQL adapter, Ruff, Mypy, and diff-check
-      gates pass; the live PostgreSQL test is a declared skip without
-      RECONFORGE_TEST_POSTGRES_DSN. This is a bounded safety boundary, not
-      hosted parity, external IAM, HA/DR, provider, capacity, production,
-      compliance, or certification evidence. ADR 0641 records the decision.
+      gates pass. A disposable PostgreSQL 16 Alpine runtime at the checked-in
+      image digest passes the live HTTP contract with a role whose rolsuper and
+      rolbypassrls are both false; the fixture is cleaned up afterward. This
+      is a bounded single-host synthetic runtime, not hosted parity, external
+      IAM, HA/DR, provider, capacity, production, compliance, or certification
+      evidence. ADR 0641 records the decision.
   - id: E-947
     priority: P0
     area: identity-governance

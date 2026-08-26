@@ -36,10 +36,11 @@ the existing SQLite service.
   value is used for persistence or filtering.
 - Scope lookup adds bounded reads to the same transaction; no network call or
   new persisted schema is required.
-- Live PostgreSQL verification remains capability-gated when the declared test
-  DSN is unavailable. This ADR does not claim hosted parity, external IAM,
-  HA/DR, provider integration, capacity, production readiness, compliance, or
-  certification.
+- A disposable PostgreSQL 16 Alpine runtime at the checked-in image digest has
+  now verified the boundary with a role reporting `rolsuper=false` and
+  `rolbypassrls=false`. This ADR still does not claim hosted parity, external
+  IAM, HA/DR, provider integration, capacity, production readiness,
+  compliance, or certification.
 
 ## Verification
 

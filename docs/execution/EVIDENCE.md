@@ -10,9 +10,8 @@ This file records commands and observed results. It does not convert a dirty wor
   `finance_core_entry_scope_required` before invoking either the Finance Core
   or legacy ledger adapter.
 - Focused command `python -m pytest -q tests/test_api_server_finance_core.py
-  tests/test_api_server_finance_core_live.py` exits `0`; the live test remains
-  the declared PostgreSQL capability skip. Ruff, Mypy, and `git diff --check`
-  pass.
+  tests/test_api_server_finance_core_live.py` exits `0`; Ruff, Mypy, and
+  `git diff --check` pass.
 - This closes an ambiguous server routing path only. It does not claim legacy
   ledger removal, hosted parity, external IAM, HA/DR, provider integration,
   capacity, production readiness, compliance, or certification. ADR 0642
@@ -29,15 +28,17 @@ This file records commands and observed results. It does not convert a dirty wor
 - Focused command `python -m pytest -q
   tests/test_api_server_finance_core.py tests/test_application_finance_core.py
   tests/test_finance_core.py tests/test_postgres_finance_core.py
-  tests/test_api_server_finance_core_live.py` exits `0` on this host; the
-  opt-in live test is the declared PostgreSQL capability skip. Ruff and Mypy
-  pass for the changed implementation; `git diff --check` passes.
-- The unit contract proves canonicalization and organization/entity spoof
-  rejection; the live PostgreSQL test is declared but skipped because
-  `RECONFORGE_TEST_POSTGRES_DSN` is absent. This is a hierarchy safety boundary,
-  not evidence of hosted parity, external IAM, HA/DR, provider integration,
-  capacity, production readiness, compliance, or certification. ADR 0641
-  records the decision.
+  tests/test_api_server_finance_core_live.py` exits `0`; Ruff and Mypy pass
+  for the changed implementation and `git diff --check` passes.
+- Live command `python -m pytest tests/test_api_server_finance_core_live.py -q
+  -rs` passes against a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container. The fixture installs the ledger/outbox and master-data workspace
+  link schemas, uses a separate `reconforge_app` role, verifies
+  `rolsuper=false` and `rolbypassrls=false`, and removes the container after
+  the run. The runtime covers hierarchy binding, organization/entity spoof
+  rejection, exact entry lifecycle, maker/checker separation, and sibling
+  tenant isolation. This is one disposable host with synthetic data only.
 
 ## E-947: Refuse local user SQLite access before opening a connection in Server Profile
 

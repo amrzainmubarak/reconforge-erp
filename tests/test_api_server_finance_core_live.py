@@ -21,11 +21,13 @@ from reconforge.infrastructure.postgres import (
 )
 from reconforge.infrastructure.postgres_domain import install_postgres_domain_schema
 from reconforge.infrastructure.postgres_finance_core import install_postgres_finance_core_schema
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import (
     POSTGRES_FISCAL_PERIOD_SCHEMA_SQL,
     POSTGRES_MASTER_DATA_SCHEMA_SQL,
     PostgresMasterDataRepository,
 )
+from reconforge.infrastructure.postgres_master_data_application import POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -53,10 +55,13 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_FISCAL_PERIOD_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
+            admin.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
             install_postgres_finance_core_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             tables = (
                 "tenants,organizations,currencies,legal_entities,fiscal_periods,domain_workspaces,"
+                "master_data_workspace_organizations,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,finance_charts,finance_accounts,"
                 "finance_dimensions,finance_dimension_values,finance_journals,finance_entries,"
                 "finance_entry_lines,finance_entry_line_dimensions"
@@ -82,6 +87,11 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
                     organization_code="ORG-A",
                     name="API Organization",
                     base_currency="USD",
+                )
+                connection.execute(
+                    """INSERT INTO reconforge.master_data_workspace_organizations
+                       (tenant_id,workspace_id,organization_id) VALUES (%s,%s,%s)""",
+                    (tenant, workspace, f"org-{tenant}"),
                 )
                 master.upsert_legal_entity(
                     tenant_id=tenant,

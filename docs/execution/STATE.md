@@ -22,9 +22,11 @@ Updated: 2026-08-26
   before persistence or filtering.
 - Chart, account, dimension, journal, trial-balance, entry-list, and entry
   creation paths use the scoped adapter while local compatibility remains
-  unchanged. Unit scope tests and focused Finance Core tests pass; the live
-  PostgreSQL HTTP test remains capability-gated because this host does not
-  expose `RECONFORGE_TEST_POSTGRES_DSN`. ADR 0641 records the boundary.
+  unchanged. Unit scope tests, focused Finance Core tests, and the disposable
+  PostgreSQL HTTP test pass under image digest
+  `sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  with `rolsuper=false` and `rolbypassrls=false`. ADR 0641 records the
+  boundary; hosted parity and production assurance remain open.
 
 ## E-947 — Refuse local user SQLite access before opening a connection in Server Profile (2026-08-26)
 

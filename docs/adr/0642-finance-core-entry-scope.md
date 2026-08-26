@@ -37,7 +37,8 @@ Local Profile continues to use the existing SQLite service.
 ## Verification and rollback
 
 - A route regression asserts that incomplete scope invokes neither adapter.
-- Focused Finance Core tests, Ruff, Mypy, and diff-check pass; live PostgreSQL
-  verification remains opt-in and capability-gated.
+- Focused Finance Core tests, Ruff, Mypy, diff-check, and the disposable live
+  PostgreSQL Finance Core HTTP contract pass; the runtime uses a separate
+  non-superuser/non-BYPASSRLS role and synthetic data.
 - Roll back by reverting the route guard, regression, execution records, claims
   row, and this ADR together. No persisted state rollback is required.

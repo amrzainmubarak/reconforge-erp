@@ -495,6 +495,7 @@ class PostgresReconciliationWorkerSettings:
     policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None
     policy_permission: str = "match.run"
     discovery_policy_permission: str | None = None
+    allow_unbound_hosted_policy: bool = False
 
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
@@ -780,6 +781,14 @@ class PostgresReconciliationWorker:
     ) -> None:
         """Require a central service-account decision for one exact lane."""
 
+        if (
+            self.settings.policy_context_supplier is None
+            and self.settings.policy_context_scope_supplier is None
+            and not self.settings.allow_unbound_hosted_policy
+        ):
+            raise error_factory(
+                "PostgreSQL reconciliation worker requires an explicit service-account policy supplier."
+            )
         require_service_worker_policy(
             tenant_id=tenant_id,
             worker_id=self.settings.worker_id,

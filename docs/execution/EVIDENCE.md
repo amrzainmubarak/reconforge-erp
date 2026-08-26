@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1016: Require explicit policy supplier before PostgreSQL Reconciliation execution
+
+- Code evidence: `PostgresReconciliationWorker._authorize_scope` fails closed
+  when all policy suppliers are absent, covering discovery, claim, and
+  execution rechecks before transaction access. The compatibility flag is
+  explicit and disabled by default.
+- Test evidence: Reconciliation, persisted-JSON, and grouped-runtime suites
+  cover missing policy, permission denial, revocation, scoped lanes, and
+  bounded legacy operation; focused tests, Ruff, and Mypy pass. The full
+  Python regression passes at 100%, and `python -m build --no-isolation`
+  succeeds.
+- Boundary: this closes the PostgreSQL Reconciliation worker only. It does not
+  prove external IAM, provider delivery, distributed revocation, HA/DR,
+  production SLOs, or production authorization effectiveness. ADR 0676
+  records rollback.
+
 ## E-1015: Require explicit policy supplier before PostgreSQL Scheduler processing
 
 - Code evidence: `PostgresSchedulerWorker` fails closed for a valid lane when

@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-1016 - Require explicit policy supplier before PostgreSQL Reconciliation execution (2026-08-26)
+
+- `PostgresReconciliationWorker` now rejects missing policy
+  suppliers before discovery, claim, or execution transaction effects. The
+  explicit `allow_unbound_hosted_policy` compatibility flag is disabled by
+  default; bounded legacy fixtures and benchmarks opt into it explicitly.
+- Focused Reconciliation, persisted-JSON, and grouped-runtime tests pass;
+  Ruff and Mypy pass, the full Python regression passes at 100%, and package
+  build succeeds. External IAM, provider delivery, HA/DR, production SLOs,
+  and production authorization effectiveness remain open. ADR 0676 records
+  rollback.
+
 ## E-1015 - Require explicit policy supplier before PostgreSQL Scheduler processing (2026-08-26)
 
 - `PostgresSchedulerWorker` now rejects a valid lane with no

@@ -495,7 +495,9 @@ def test_postgres_reconciliation_execution_worker_claims_persists_and_completes(
         _ConnectionFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=matcher,
-        settings=PostgresReconciliationWorkerSettings(worker_id="recon-worker-a", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="recon-worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     summary = worker.process_once()
@@ -533,6 +535,24 @@ def test_postgres_reconciliation_worker_policy_denies_before_connection_access()
         ),
     )
     with pytest.raises(PostgresReconciliationWorkerError, match="permission_missing"):
+        worker.process_once()
+
+
+def test_postgres_reconciliation_worker_rejects_missing_policy_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("missing policy must be rejected before connection access")
+
+    worker = PostgresReconciliationWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(worker_id="unbound-recon-worker"),
+    )
+    with pytest.raises(
+        PostgresReconciliationWorkerError,
+        match="requires an explicit service-account policy supplier",
+    ):
         worker.process_once()
 
 
@@ -583,7 +603,9 @@ def test_postgres_reconciliation_worker_passes_persisted_policy_amount_to_claim_
         _ConnectionFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=lambda _context: ReconciliationExecutionResult(),
-        settings=PostgresReconciliationWorkerSettings(worker_id="amount-worker", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="amount-worker", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     summary = worker.process_once()
@@ -616,6 +638,7 @@ def test_postgres_reconciliation_worker_can_separate_discovery_and_execution_per
             worker_id="split-permission-worker",
             poll_interval_seconds=0,
             discovery_policy_permission="match.discover",
+            allow_unbound_hosted_policy=True,
         ),
     )
 
@@ -1063,7 +1086,9 @@ def test_postgres_reconciliation_worker_resumes_after_partition_failure() -> Non
         _ConnectionFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=matcher,
-        settings=PostgresReconciliationWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     failed = worker.process_run(tenant_id="tenant_a", run_id="run-resume")
@@ -1096,7 +1121,9 @@ def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_
             _ConnectionFactory(baseline_connection),
             tenant_supplier=lambda: ["tenant_a"],
             matcher=adapter,
-            settings=PostgresReconciliationWorkerSettings(worker_id="worker-baseline", poll_interval_seconds=0),
+            settings=PostgresReconciliationWorkerSettings(
+                worker_id="worker-baseline", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+            ),
         )
         baseline = baseline_worker.process_run(tenant_id="tenant_a", run_id=run_id)
         assert baseline.status == "Complete"
@@ -1136,7 +1163,9 @@ def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_
             _ConnectionFactory(crash_connection),
             tenant_supplier=lambda: ["tenant_a"],
             matcher=matcher,
-            settings=PostgresReconciliationWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+            settings=PostgresReconciliationWorkerSettings(
+                worker_id="worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+            ),
         )
         with pytest.raises(_SyntheticProcessCrash, match="after checkpoint commit"):
             first_worker.process_run(tenant_id="tenant_a", run_id=run_id)
@@ -1152,7 +1181,9 @@ def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_
             _ConnectionFactory(crash_connection),
             tenant_supplier=lambda: ["tenant_a"],
             matcher=matcher,
-            settings=PostgresReconciliationWorkerSettings(worker_id="worker-b", poll_interval_seconds=0),
+            settings=PostgresReconciliationWorkerSettings(
+                worker_id="worker-b", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+            ),
         )
         with pytest.raises(PostgresReconciliationBusyError, match="already leased"):
             replacement_worker.process_run(tenant_id="tenant_a", run_id=run_id)
@@ -1256,7 +1287,9 @@ def test_postgres_reconciliation_worker_close_is_idempotent_and_delegates() -> N
         factory,
         tenant_supplier=lambda: [],
         matcher=lambda _context: ReconciliationExecutionResult(results=(), exceptions=()),
-        settings=PostgresReconciliationWorkerSettings(worker_id="close-worker", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="close-worker", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
     worker.close()
     worker.close()
@@ -1342,7 +1375,9 @@ def test_postgres_reconciliation_execution_failure_is_retryable_and_busy_runs_ar
         _ConnectionFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=matcher,
-        settings=PostgresReconciliationWorkerSettings(worker_id="recon-worker-a", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="recon-worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
     failed = worker.process_run(tenant_id="tenant_a", run_id="run-a")
 

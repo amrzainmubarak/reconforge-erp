@@ -319,7 +319,9 @@ def test_corrupt_rule_rolls_back_before_claim_mutation_or_matcher_invocation() -
         _CorruptClaimFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=lambda _: matched.append("called"),  # type: ignore[arg-type]
-        settings=PostgresReconciliationWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     with pytest.raises(PostgresReconciliationWorkerError, match="Unable to persist reconciliation execution failure"):

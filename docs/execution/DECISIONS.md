@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-843: Require explicit policy supplier before PostgreSQL Reconciliation execution
+
+- **Date**: 2026-08-26
+- **Context**: The shared worker guard could no-op when PostgreSQL
+  Reconciliation omitted every policy supplier, allowing discovery or
+  execution to reach a database transaction without a service-account
+  decision.
+- **Decision**: Make the hosted Reconciliation boundary fail closed by
+  default for discovery, claim, and execution. Keep a clearly named
+  compatibility flag for bounded legacy fixtures and benchmarks.
+- **Verification**: E-1016 focused Reconciliation, persisted-JSON, grouped
+  runtime, static checks, full regression, and package build pass. External
+  IAM and production effectiveness remain unproven.
+- **Compatibility**: No schema or payload changes; ungoverned hosted
+  fixtures must opt out explicitly.
+- **Rollback**: Revert E-1016 worker/settings/tests/benchmark/ADR 0676/manifest
+  and execution metadata.
+
 ### D-842: Require explicit policy supplier before PostgreSQL Scheduler processing
 
 - **Date**: 2026-08-26

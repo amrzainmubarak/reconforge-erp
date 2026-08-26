@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1016
+    priority: P0
+    area: identity-governance
+    title: Require explicit policy supplier before PostgreSQL Reconciliation execution
+    status: completed
+    depends_on: [E-1005, E-1015]
+    exit_evidence: >-
+      PostgreSQL Reconciliation now fails closed before connection access when
+      no service-account policy supplier is configured for discovery, claim,
+      or execution. The explicit allow_unbound_hosted_policy compatibility
+      flag is disabled by default; bounded legacy fixtures and benchmarks opt
+      into it explicitly. Missing-policy, permission-denial, revocation,
+      scoped-lane, persisted JSON, grouped runtime, Ruff, Mypy, full-regression,
+      and package-build gates pass, including the full Python regression and
+      package build. External IAM, provider delivery,
+      HA/DR, production SLOs, and production readiness remain open. ADR 0676
+      records rollback.
   - id: E-1015
     priority: P0
     area: identity-governance
@@ -2213,6 +2230,9 @@ tasks:
         explicit service-account policy supplier is configured. The opt-out is
         explicit and bounded; Reconciliation remains a separate worker-policy
         slice.
+      - E-1016 makes PostgreSQL Reconciliation authorization fail closed for
+        discovery, claim, and execution when no explicit service-account policy
+        supplier is configured. The opt-out is explicit and bounded.
   - id: E-1006
     priority: P1
     area: global-expansion

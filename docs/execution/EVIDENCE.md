@@ -19998,6 +19998,29 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   legal hold, authorized deletion/erasure, backup/restore coupling, WORM,
   provider durability, independent failure domains, or production readiness.
 
+## E-972 — Disposable PostgreSQL identity and retention governance runtime (2026-08-26; ADR 0666)
+
+- A new labelled `postgres:17.10-alpine` container was created for this slice,
+  migrated from empty state through Alembic head `0092_pg_close_lock_evidence`,
+  and used only with synthetic tenant data. The application role was checked
+  as `rolsuper=false` and `rolbypassrls=false` before the live tests.
+- The following live tests passed `2/2`:
+  `tests/test_postgres_security_governance.py::test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated`
+  and
+  `tests/test_postgres_identity_administration.py::test_live_identity_admin_http_is_atomic_tenant_isolated_and_invalidates_sessions`.
+  The run covers tenant isolation, atomic integration/retention policy control,
+  non-shortening retention floor, session invalidation, step-up, and
+  last-administrator guards.
+- The closed report is
+  `docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json`, validated
+  by `docs/schemas/postgres_governance_runtime_report.schema.json`; its
+  structural report digest is
+  `9bb319f7c40b60df240935175fe3375f5044adba61ef631f69844722a95b6cab`.
+- Boundary: this is fresh local single-host runtime evidence only. It does not
+  establish external identity-provider interoperability, distributed session
+  revocation, HA/DR, legal hold, WORM, privacy erasure, independent regulated
+  review, or production IAM assurance.
+
 - E-958 tenant/workspace binding for executable server write-back registrations
   (2026-08-26; ADR 0651):
   - `WritebackNetworkRegistration` now validates paired optional

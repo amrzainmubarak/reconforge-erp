@@ -9814,3 +9814,19 @@ evidence remain open. GitHub publication remains deferred by owner policy.
 - Boundary: this is bounded local retention evidence, not a complete privacy
   administration/deletion/legal-hold lifecycle, backup coupling proof, WORM
   guarantee, production object-store durability, or Community readiness.
+
+## E-972 — Disposable PostgreSQL identity and retention governance runtime (2026-08-26; ADR 0666)
+
+- A new labelled PostgreSQL `17.10-alpine` container was migrated from empty
+  state to Alembic head `0092_pg_close_lock_evidence`. The dedicated application
+  role was verified as `superuser=false` and `bypassrls=false`.
+- The live security-governance retention test and identity-administration HTTP
+  test passed `2/2` against this fixture. Observed controls include tenant
+  isolation, atomic retention policy lifecycle, non-shortening retention floor,
+  session invalidation, step-up, and last-administrator protection.
+- The closed artifact is
+  `docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json`; its report
+  digest is `9bb319f7c40b60df240935175fe3375f5044adba61ef631f69844722a95b6cab`.
+- Boundary: one disposable Docker host and synthetic tenants/credentials only;
+  no external IdP/SSO/SCIM, distributed revocation, HA/DR, legal hold, WORM,
+  regulated review, or production IAM claim follows.

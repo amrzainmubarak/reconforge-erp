@@ -68,12 +68,12 @@ editions:
         boundary: Supported-version rollback evidence; no zero-downtime guarantee.
       - id: retention_privacy
         status: partial
-        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml]
-        boundary: Native policy lifecycle evidence remains bounded to its tested server scope.
+        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml, docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json, tests/test_current_postgres_governance_runtime_report.py]
+        boundary: Fresh PostgreSQL head/runtime evidence covers bounded policy lifecycle and retention-floor enforcement; external object-lock, legal hold, privacy erasure, and production governance remain open.
       - id: identity_and_worker_governance
         status: partial
-        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, docs/adr/0561-cli-worker-permission-manifest-verification.md]
-        boundary: Manifest/profile checks do not provision or observe hosted IAM.
+        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, docs/adr/0561-cli-worker-permission-manifest-verification.md, docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json, tests/test_postgres_identity_administration.py]
+        boundary: Fresh local PostgreSQL identity/session evidence is bounded; external IdP/SSO/SCIM interoperability, distributed revocation, and hosted IAM remain open.
       - id: external_dependency_boundary
         status: partial
         evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml]
@@ -104,12 +104,12 @@ editions:
         boundary: Versioned rollback evidence does not prove distributed cutover.
       - id: retention_privacy
         status: partial
-        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml]
-        boundary: Browser/server governance evidence is scoped and not external assurance.
+        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml, docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json, tests/test_current_postgres_governance_runtime_report.py]
+        boundary: Fresh PostgreSQL head/runtime evidence covers bounded policy lifecycle and retention-floor enforcement; browser, external object-lock, legal hold, privacy erasure, and production governance remain open.
       - id: identity_and_worker_governance
         status: partial
-        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, docs/adr/0561-cli-worker-permission-manifest-verification.md]
-        boundary: OIDC/SAML/SCIM and worker IAM interoperability remain external.
+        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, docs/adr/0561-cli-worker-permission-manifest-verification.md, docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json, tests/test_postgres_identity_administration.py]
+        boundary: Fresh local identity/session evidence is bounded; OIDC/SAML/SCIM and worker IAM interoperability remain external.
       - id: external_dependency_boundary
         status: partial
         evidence: [docs/execution/P3_ENT_012_EXIT_AUDIT.yaml]
@@ -140,12 +140,12 @@ editions:
         boundary: Offline and versioned rollback exercises remain bounded to disclosed profiles.
       - id: retention_privacy
         status: partial
-        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml]
-        boundary: No legal-hold, WORM retention, or independent regulated review is proven.
+        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml, docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json, tests/test_current_postgres_governance_runtime_report.py]
+        boundary: Fresh local runtime covers a bounded retention floor only; no legal hold, WORM, privacy erasure, or independent regulated review is proven.
       - id: identity_and_worker_governance
         status: partial
-        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, docs/adr/0561-cli-worker-permission-manifest-verification.md]
-        boundary: Strong SoD and customer IAM integration still require deployment evidence.
+        evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, docs/adr/0561-cli-worker-permission-manifest-verification.md, docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json, tests/test_postgres_identity_administration.py]
+        boundary: Fresh local identity/session evidence is bounded; strong SoD, customer IAM integration, and regulated operational evidence remain open.
       - id: external_dependency_boundary
         status: partial
         evidence: [docs/execution/P3_ENT_012_EXIT_AUDIT.yaml]

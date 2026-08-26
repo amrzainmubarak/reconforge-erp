@@ -7539,3 +7539,21 @@ tasks:
       Python regression gates pass. This closes only bounded local object
       retention evidence; privacy administration, legal hold, deletion workflow,
       backup/restore coupling, and production WORM semantics remain open.
+  - id: E-972
+    priority: P0
+    area: identity_retention_runtime
+    title: Refresh disposable PostgreSQL identity and retention governance runtime
+    status: completed
+    depends_on: [E-971, E-970]
+    exit_evidence: >-
+      A new labelled disposable PostgreSQL 17.10-alpine runtime was migrated
+      from empty state to Alembic head 0092_pg_close_lock_evidence. A dedicated
+      application role was created with superuser=false and bypassrls=false;
+      the role was granted only the schema/table/sequence/function privileges
+      required by the runtime contract. The live security-governance retention
+      lifecycle and identity-administration HTTP lifecycle passed 2/2 focused
+      tests, including tenant isolation, session invalidation, step-up and
+      last-administrator guards, atomic policy lifecycle, and retention-floor
+      refusal. A schema/digest-bound report is packaged. External IdP/SSO/SCIM,
+      distributed revocation, HA/DR, legal hold, WORM, regulated review, and
+      production IAM remain open.

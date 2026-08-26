@@ -10582,3 +10582,25 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   is promoted to legal hold, WORM, or production durability.
 - **Rollback**: Revert the CLI options, focused tests, matrix/evidence updates,
   and ADR. Existing local-filesystem evidence remains readable.
+
+### D-821: Use a fresh disposable PostgreSQL head for governance runtime evidence
+
+- **Date**: 2026-08-26
+- **Context**: Existing local PostgreSQL containers had different migration
+  heads and were not a safe basis for a current identity/retention claim. The
+  repository already had live-gated security-governance and identity tests,
+  but the evidence needed a clean current-head runtime.
+- **Decision**: Create a newly labelled disposable PostgreSQL `17.10-alpine`
+  container, migrate it from empty state to Alembic head `0092`, create a
+  dedicated non-superuser/non-BYPASSRLS application role, and run only the
+  focused live governance/identity selectors. Record only the observed
+  bounded controls and never include credentials in the report.
+- **Verification**: E-972, ADR 0666, the schema/digest-bound report and report
+  test, plus the two live selectors passing `2/2`.
+- **Compatibility**: No product schema or API behavior changed; this is
+  runtime evidence and packaging only. Team/Enterprise/Regulated statuses stay
+  `partial` or `open` because external IAM, failure domains, and regulated
+  controls are not established.
+- **Rollback**: Remove the disposable labelled container after evidence capture
+  and revert the report/schema/test/manifest/docs references. Existing runtime
+  code and prior evidence remain unchanged.

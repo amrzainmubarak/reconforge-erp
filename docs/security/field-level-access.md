@@ -54,3 +54,12 @@ prevents SQLite `SELECT *` schema growth or a future adapter field from
 silently expanding the response. Existing fields and route permissions are
 preserved. This is a bounded disclosure control, not universal field-level
 authorization or production IAM. ADR 0681 records the decision and rollback.
+
+## E-1022 migrated surface
+
+The local `/api/v1/exceptions` list, assignment, and status responses now use a
+central exception-record allowlist. This prevents `SELECT *` schema growth or
+future storage fields from silently expanding the API while preserving the
+existing response envelope and RBAC boundary. The route remains explicitly
+local-only. This is a bounded disclosure control, not universal field-level
+authorization or production IAM. ADR 0682 records the decision and rollback.

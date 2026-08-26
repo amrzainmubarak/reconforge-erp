@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-849: Exception API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Local exception queue reads used `SELECT *`, and the API
+  returned list, assignment, and status records directly. Future SQLite
+  fields could become response fields without review.
+- **Decision**: Apply one central exception allowlist to all three local API
+  response paths and drop unknown fields before serialization.
+- **Verification**: Synthetic future-column API coverage and field primitive
+  tests pass; full regression, static, package, YAML, and diff gates pass.
+  External IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing field names, response envelopes, and RBAC
+  boundaries remain unchanged.
+- **Rollback**: Revert E-1022 code/tests/ADR 0682/manifest and execution
+  metadata together; do not restore direct `SELECT *` response serialization.
+
 ### D-848: Close API responses use fail-closed field projection
 
 - **Date**: 2026-08-26

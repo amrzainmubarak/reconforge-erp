@@ -8,6 +8,7 @@ from reconforge.api import create_api_app
 from reconforge.auth import LocalAuthService
 from reconforge.db import connect, run_migrations
 from reconforge.platform.evidence import EvidenceRegistryService
+from reconforge.platform.exceptions import ExceptionQueueService
 from reconforge.platform.metrics import MetricsService
 
 
@@ -111,6 +112,46 @@ def test_close_api_drops_future_storage_columns_from_period_and_task_responses(t
     assert "unknown_future_column" not in tasks.json()["tasks"][0]
     assert "unknown_future_column" not in readiness.json()["readiness"]
     assert "must-not-escape" not in periods.text + tasks.text + readiness.text
+
+
+def test_exception_api_drops_future_storage_columns_from_read_and_mutation_responses(tmp_path: Path) -> None:
+    client, db_path = _setup(tmp_path)
+    headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+
+    connection = connect(db_path, require_exists=True)
+    try:
+        exception = ExceptionQueueService(connection).upsert_exception(
+            source_type="reconciliation",
+            source_id="recon-1",
+            description="Synthetic exception",
+            actor_label="admin",
+        )
+        connection.execute("ALTER TABLE exceptions_queue ADD COLUMN unknown_future_column TEXT")
+        connection.execute(
+            "UPDATE exceptions_queue SET unknown_future_column = ? WHERE id = ?",
+            ("must-not-escape", exception["id"]),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    listed = client.get("/api/v1/exceptions", headers=headers)
+    assigned = client.post(
+        f"/api/v1/exceptions/{exception['id']}/assign",
+        headers=headers,
+        json={"owner": "admin"},
+    )
+    status = client.post(
+        f"/api/v1/exceptions/{exception['id']}/status",
+        headers=headers,
+        json={"status": "In Review"},
+    )
+
+    assert listed.status_code == assigned.status_code == status.status_code == 200
+    assert "unknown_future_column" not in listed.json()["exceptions"][0]
+    assert "unknown_future_column" not in assigned.json()["exception"]
+    assert "unknown_future_column" not in status.json()["exception"]
+    assert "must-not-escape" not in listed.text + assigned.text + status.text
 
 
 def test_local_evidence_cursor_pagination_is_signed_and_offset_compatible(tmp_path: Path) -> None:

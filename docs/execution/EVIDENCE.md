@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1022: Fail-closed projection for Exception API responses
+
+- Code evidence: local `/api/v1/exceptions` list, assignment, and status
+  responses use `project_exception` from the central field-access module.
+  Unknown future SQLite storage fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers the exception allowlist;
+  `tests/test_api_platform_routes.py` adds a synthetic future column to
+  `exceptions_queue` and proves list, assign, and status responses omit the
+  column and value. Full Python regression passes at 100%; Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML validation, and diff checks also pass.
+  pip-audit cannot audit the local `reconforge-erp` distribution name because
+  it is not published on PyPI.
+- Boundary: this closes the local Exception API response family only. The
+  route remains refused in Server Profile; universal field-level
+  authorization, external IAM, distributed revocation, disclosure approval,
+  source authenticity, and production effectiveness remain open. ADR 0682
+  records rollback.
+
 ## E-1021: Fail-closed projection for Close API responses
 
 - Code evidence: `/api/v1/close` period, task, and readiness responses use

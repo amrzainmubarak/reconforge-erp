@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-1022 - Fail-closed projection for Exception API responses (2026-08-26)
+
+- Local exception list, assignment, and status responses now use a central
+  allowlist. A future `exceptions_queue` storage column cannot silently enter
+  the API response.
+- Focused field/API tests, full Python regression at 100%, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML validation, and diff checks pass. This is a
+  bounded local disclosure control; the route remains unavailable in Server
+  Profile and external IAM, distributed revocation, disclosure approval,
+  source authenticity, and production effectiveness remain open. ADR 0682
+  records rollback.
+
 ## E-1021 - Fail-closed projection for Close API responses (2026-08-26)
 
 - Close period, task, and readiness responses now use central allowlists over

@@ -7,6 +7,7 @@ from reconforge.auth.field_access import (
     project_evidence_drill_down_record,
     project_evidence_requirement,
     project_evidence_verification,
+    project_exception,
     project_fields,
 )
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
@@ -169,3 +170,20 @@ def test_close_projections_drop_unknown_adapter_fields_across_record_shapes() ->
     assert readiness.visible["readiness_score"] == "100.00"
     assert period.denied_fields == task.denied_fields == readiness.denied_fields == ("unknown_future_column",)
     assert "must-not-escape" not in str(period.visible | task.visible | readiness.visible)
+
+
+def test_exception_projection_drops_unknown_adapter_fields() -> None:
+    result = project_exception(
+        {
+            "id": "exception-1",
+            "workspace_id": "default",
+            "source_type": "reconciliation",
+            "source_id": "recon-1",
+            "status": "Open",
+            "description": "Synthetic exception",
+            "unknown_future_column": "must-not-escape",
+        }
+    )
+    assert result.visible["source_id"] == "recon-1"
+    assert result.denied_fields == ("unknown_future_column",)
+    assert "must-not-escape" not in str(result.visible)

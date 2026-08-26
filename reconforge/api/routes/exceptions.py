@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Mapping, Sequence
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -11,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from reconforge.api.dependencies import get_local_db, require_any_permission, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import server_identity_enabled
+from reconforge.auth.field_access import project_exception
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.platform.common import PlatformError
@@ -32,6 +34,14 @@ class StatusRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: str
+
+
+def _project_exception(value: Mapping[str, object]) -> dict[str, object]:
+    return project_exception(value).visible
+
+
+def _project_exceptions(values: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+    return [_project_exception(value) for value in values]
 
 
 def _local_connection(request: Request, connection: sqlite3.Connection | None) -> sqlite3.Connection:
@@ -73,7 +83,7 @@ def list_exceptions(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="exceptions_list_failed", message=str(exc)) from exc
-    return {"exceptions": records}
+    return {"exceptions": _project_exceptions(records)}
 
 
 @router.post("/{exception_id}/assign")
@@ -92,7 +102,7 @@ def assign_exception(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="exception_assign_failed", message=str(exc)) from exc
-    return {"exception": record}
+    return {"exception": _project_exception(record)}
 
 
 @router.post("/{exception_id}/status")
@@ -111,4 +121,4 @@ def set_exception_status(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="exception_status_failed", message=str(exc)) from exc
-    return {"exception": record}
+    return {"exception": _project_exception(record)}

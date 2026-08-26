@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1022
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Exception API responses
+    status: completed
+    depends_on: [E-1005, E-1021]
+    exit_evidence: >-
+      Local `/api/v1/exceptions` list, assignment, and status responses use a
+      central allowlist and drop unknown future `exceptions_queue` fields.
+      Focused field/API tests, full Python regression, Ruff, Mypy, Bandit,
+      pip-audit, package build, YAML, and diff checks pass. This closes the
+      local Exception response family only; Server Profile support, external
+      IAM, distributed revocation, disclosure approval, source authenticity,
+      and production effectiveness remain open. ADR 0682 records rollback.
   - id: E-1021
     priority: P0
     area: identity-governance
@@ -2330,6 +2344,10 @@ tasks:
         the full Python regression, Ruff, Mypy, Bandit, pip-audit, package build,
         YAML, and diff gates pass. This is a bounded disclosure control, not
         universal field-level authorization or production IAM evidence.
+      - E-1022 applies a closed allowlist to the local Exception API list,
+        assignment, and status responses, preventing future `exceptions_queue`
+        storage fields from entering the response silently. The route remains
+        refused in Server Profile; this is bounded disclosure evidence only.
   - id: E-1006
     priority: P1
     area: global-expansion

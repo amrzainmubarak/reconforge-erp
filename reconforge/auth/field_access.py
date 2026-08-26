@@ -126,6 +126,26 @@ CLOSE_TASK_FIELDS = frozenset(
 CLOSE_READINESS_FIELDS = frozenset(
     {"period_id", "period_name", "total_tasks", "complete_tasks", "blocked_tasks", "readiness_score"}
 )
+EXCEPTION_FIELDS = frozenset(
+    {
+        "id",
+        "workspace_id",
+        "source_type",
+        "source_id",
+        "period_name",
+        "entity_code",
+        "account_code",
+        "control_code",
+        "risk_rating",
+        "owner",
+        "status",
+        "escalation_level",
+        "sla_target_date",
+        "description",
+        "created_at",
+        "updated_at",
+    }
+)
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -302,3 +322,9 @@ def project_close_readiness(values: Mapping[str, object]) -> FieldProjection:
     """Return a closed projection for close-readiness summaries."""
 
     return project_fields(values, allowed_fields=CLOSE_READINESS_FIELDS)
+
+
+def project_exception(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for unified exception-queue records."""
+
+    return project_fields(values, allowed_fields=EXCEPTION_FIELDS)

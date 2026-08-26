@@ -24,6 +24,11 @@ from reconforge.api.server_inventory_valuation import (
     _run_reversal,
     server_inventory_valuation_enabled,
 )
+from reconforge.auth.field_access import (
+    project_inventory_valuation_reversal,
+    project_inventory_valuation_reversal_snapshot,
+    project_inventory_valuation_reversal_summary,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_inventory_valuation_reversal import PostgresInventoryValuationReversalRepository
@@ -77,6 +82,14 @@ def _list_response(records: list[dict[str, object]], *, limit: int, offset: int)
         "reversals": records,
         "pagination": {"limit": limit, "offset": offset, "returned": len(records)},
     }
+
+
+def _project_reversal(record: dict[str, object]) -> dict[str, object]:
+    return project_inventory_valuation_reversal(record).visible
+
+
+def _project_reversals(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [_project_reversal(record) for record in records]
 
 
 def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
@@ -134,14 +147,14 @@ def summary(
             frozenset({"inventory.read", "inventory.valuation.reverse.manage", "inventory.valuation.reverse.approve"}),
             lambda repository, scope: repository.summary(workspace=scope.workspace_id, actor_label=current_user.id),
         )
-        return {"summary": value.to_dict()}
+        return {"summary": project_inventory_valuation_reversal_summary(value.to_dict()).visible}
     try:
         value = InventoryValuationReversalService(_local_connection(connection)).summary(
             workspace=workspace, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_reversal_summary_failed", exc) from exc
-    return {"summary": value.to_dict()}
+    return {"summary": project_inventory_valuation_reversal_summary(value.to_dict()).visible}
 
 
 @router.get("/snapshot")
@@ -152,15 +165,16 @@ def snapshot(
     workspace: str = "default",
 ) -> dict[str, object]:
     if server_inventory_valuation_enabled(request):
-        return _server_call(
+        return project_inventory_valuation_reversal_snapshot(_server_call(
             request,
             frozenset({"inventory.read", "inventory.valuation.reverse.manage", "inventory.valuation.reverse.approve"}),
             lambda repository, scope: repository.snapshot(workspace=scope.workspace_id, actor_label=current_user.id),
-        )
+        )).visible
     try:
-        return InventoryValuationReversalService(_local_connection(connection)).snapshot(
+        result = InventoryValuationReversalService(_local_connection(connection)).snapshot(
             workspace=workspace, actor_label=current_user.username
         )
+        return project_inventory_valuation_reversal_snapshot(result).visible
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_reversal_snapshot_failed", exc) from exc
 
@@ -183,7 +197,7 @@ def list_reversals(
                 workspace=scope.workspace_id, status=status, limit=limit, offset=offset, actor_label=current_user.id
             ),
         )
-        return _list_response(records, limit=limit, offset=offset)
+        return _list_response(_project_reversals(records), limit=limit, offset=offset)
     try:
         records = InventoryValuationReversalService(_local_connection(connection)).list_reversals(
             workspace=workspace,
@@ -194,7 +208,7 @@ def list_reversals(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_reversals_list_failed", exc) from exc
-    return _list_response(records, limit=limit, offset=offset)
+    return _list_response(_project_reversals(records), limit=limit, offset=offset)
 
 
 @router.post("")
@@ -207,7 +221,7 @@ def create_reversal(
     if server_inventory_valuation_enabled(request):
         values = payload.model_dump()
         values["actor_label"] = current_user.id
-        return {"reversal": _server_call(
+        return {"reversal": _project_reversal(_server_call(
             request,
             frozenset({"inventory.valuation.reverse.manage"}),
             lambda repository, _scope: repository.create_reversal(**values),
@@ -215,14 +229,14 @@ def create_reversal(
                 ("valuation_document", payload.original_valuation_document_id),
                 ("inventory_movement", payload.reversal_movement_id),
             ),
-        )}
+        ))}
     try:
         record = InventoryValuationReversalService(_local_connection(connection)).create_reversal(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_reversal_create_failed", exc) from exc
-    return {"reversal": record}
+    return {"reversal": _project_reversal(record)}
 
 
 @router.get("/{reversal_id}")
@@ -233,19 +247,19 @@ def get_reversal(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_valuation_enabled(request):
-        return {"reversal": _server_call(
+        return {"reversal": _project_reversal(_server_call(
             request,
             frozenset({"inventory.read", "inventory.valuation.reverse.manage", "inventory.valuation.reverse.approve"}),
             lambda repository, _scope: repository.get_reversal(reversal_id, actor_label=current_user.id),
             object_refs=(("valuation_reversal", reversal_id),),
-        )}
+        ))}
     try:
         record = InventoryValuationReversalService(_local_connection(connection)).get_reversal(
             reversal_id, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_reversal_not_found", exc, status_code=404) from exc
-    return {"reversal": record}
+    return {"reversal": _project_reversal(record)}
 
 
 @router.post("/{reversal_id}/approve")
@@ -257,21 +271,21 @@ def approve_reversal(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_valuation_enabled(request):
-        return {"reversal": _server_call(
+        return {"reversal": _project_reversal(_server_call(
             request,
             frozenset({"inventory.valuation.reverse.approve"}),
             lambda repository, _scope: repository.approve_reversal(
                 reversal_id, reason=payload.reason, actor_label=current_user.id
             ),
             object_refs=(("valuation_reversal", reversal_id),),
-        )}
+        ))}
     try:
         record = InventoryValuationReversalService(_local_connection(connection)).approve_reversal(
             reversal_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_reversal_approve_failed", exc) from exc
-    return {"reversal": record}
+    return {"reversal": _project_reversal(record)}
 
 
 @router.post("/{reversal_id}/cancel")
@@ -283,18 +297,18 @@ def cancel_reversal(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_valuation_enabled(request):
-        return {"reversal": _server_call(
+        return {"reversal": _project_reversal(_server_call(
             request,
             frozenset({"inventory.valuation.reverse.manage"}),
             lambda repository, _scope: repository.cancel_reversal(
                 reversal_id, reason=payload.reason, actor_label=current_user.id
             ),
             object_refs=(("valuation_reversal", reversal_id),),
-        )}
+        ))}
     try:
         record = InventoryValuationReversalService(_local_connection(connection)).cancel_reversal(
             reversal_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_reversal_cancel_failed", exc) from exc
-    return {"reversal": record}
+    return {"reversal": _project_reversal(record)}

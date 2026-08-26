@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-857: Inventory Valuation Reversal API uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Reversal routes returned local SQLite and PostgreSQL mappings,
+  with effect records carrying restoration/removal quantities and values.
+  Summary and snapshot responses aggregate this financial evidence.
+- **Decision**: Apply central allowlists to reversal and summary responses, an
+  independent effect allowlist, and recursive source/summary/reversal
+  projection to the snapshot. Reject malformed nested collections or records
+  before serialization.
+- **Verification**: Focused field/API tests and the full Python regression pass
+  at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML validation (9 files), and diff checks also pass. Universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing envelopes, reviewed known fields, permissions,
+  money/quantity text, and local/server boundaries remain; no schema or
+  migration changes.
+- **Rollback**: Revert E-1030 code/tests/ADR 0690/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
 ### D-856: Inventory Valuation policy, layer, summary, and snapshot responses use fail-closed projection
 
 - **Date**: 2026-08-26

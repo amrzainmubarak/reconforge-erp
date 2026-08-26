@@ -531,6 +531,31 @@ INVENTORY_VALUATION_SNAPSHOT_FIELDS = frozenset(
     }
 )
 INVENTORY_VALUATION_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
+INVENTORY_VALUATION_REVERSAL_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "period_id",
+        "original_valuation_document_id", "reversal_movement_id", "reversal_number", "reversal_date",
+        "currency_code", "status", "total_value", "original_total_value", "finance_entry_id",
+        "created_by", "approved_by", "approved_at", "approval_reason", "cancelled_by", "cancelled_at",
+        "cancel_reason", "created_at", "updated_at", "row_version", "original_valuation_number",
+        "original_movement_id", "original_finance_entry_id", "original_movement_number",
+        "original_movement_type", "reversal_movement_number", "reversal_movement_type", "reversal_movement_status",
+        "organization_code", "entity_code", "period_name", "finance_entry_number", "finance_entry_status", "effects",
+    }
+)
+INVENTORY_VALUATION_REVERSAL_EFFECT_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "reversal_id", "original_valuation_line_id", "original_consumption_id",
+        "cost_layer_id", "effect_type", "quantity", "value", "created_at", "line_number", "flow_direction",
+        "quantity_precision", "item_code", "uom_code", "lot_serial_code", "layer_valuation_number",
+    }
+)
+INVENTORY_VALUATION_REVERSAL_SUMMARY_FIELDS = frozenset(
+    {"workspace", "draft_reversals", "approved_reversals", "cancelled_reversals", "approved_effects", "finance_drafts"}
+)
+INVENTORY_VALUATION_REVERSAL_SNAPSHOT_FIELDS = frozenset(
+    {"schema_version", "generated_at", "source", "workspace", "summary", "reversals", "boundary_note"}
+)
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1080,6 +1105,54 @@ def project_inventory_valuation_snapshot(values: Mapping[str, object]) -> FieldP
             projected_children.append(projector(child).visible)
         record[name] = projected_children
     return project_fields(record, allowed_fields=INVENTORY_VALUATION_SNAPSHOT_FIELDS)
+
+
+def project_inventory_valuation_reversal(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for valuation-reversal responses."""
+
+    record = dict(values)
+    effects = record.get("effects")
+    if effects is not None:
+        if not isinstance(effects, list):
+            raise TypeError("inventory valuation reversal effects collection must be a list")
+        projected_effects: list[dict[str, object]] = []
+        for effect in effects:
+            if not isinstance(effect, Mapping):
+                raise TypeError("inventory valuation reversal effect record must be a mapping")
+            projected_effects.append(project_fields(effect, allowed_fields=INVENTORY_VALUATION_REVERSAL_EFFECT_FIELDS).visible)
+        record["effects"] = projected_effects
+    return project_fields(record, allowed_fields=INVENTORY_VALUATION_REVERSAL_FIELDS)
+
+
+def project_inventory_valuation_reversal_summary(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_VALUATION_REVERSAL_SUMMARY_FIELDS)
+
+
+def project_inventory_valuation_reversal_snapshot(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for the reversal snapshot."""
+
+    record = dict(values)
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("inventory valuation reversal snapshot source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=INVENTORY_VALUATION_SOURCE_FIELDS).visible
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("inventory valuation reversal snapshot summary must be a mapping")
+        record["summary"] = project_inventory_valuation_reversal_summary(summary).visible
+    reversals = record.get("reversals")
+    if reversals is not None:
+        if not isinstance(reversals, list):
+            raise TypeError("inventory valuation reversal snapshot reversals collection must be a list")
+        projected_reversals: list[dict[str, object]] = []
+        for reversal in reversals:
+            if not isinstance(reversal, Mapping):
+                raise TypeError("inventory valuation reversal snapshot reversal must be a mapping")
+            projected_reversals.append(project_inventory_valuation_reversal(reversal).visible)
+        record["reversals"] = projected_reversals
+    return project_fields(record, allowed_fields=INVENTORY_VALUATION_REVERSAL_SNAPSHOT_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

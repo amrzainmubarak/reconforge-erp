@@ -16,6 +16,9 @@ from reconforge.auth.field_access import (
     project_inventory_cost_layer,
     project_inventory_valuation_document,
     project_inventory_valuation_policy,
+    project_inventory_valuation_reversal,
+    project_inventory_valuation_reversal_snapshot,
+    project_inventory_valuation_reversal_summary,
     project_inventory_valuation_snapshot,
     project_master_snapshot,
     project_reconciliation_exception,
@@ -273,6 +276,47 @@ def test_inventory_valuation_policy_layer_and_snapshot_projection_is_closed() ->
     assert snapshot.visible["open_cost_layers"] == [{"id": "layer-1"}]
     assert snapshot.denied_fields == ("unknown",)
     assert "must-not-escape" not in str(snapshot.visible)
+
+
+def test_inventory_valuation_reversal_projection_is_closed_across_effects_and_snapshot() -> None:
+    reversal = project_inventory_valuation_reversal(
+        {
+            "id": "reversal-1",
+            "reversal_number": "REV-001",
+            "total_value": "12.34",
+            "effects": [
+                {
+                    "id": "effect-1",
+                    "effect_type": "Restore",
+                    "quantity": "1.000",
+                    "value": "12.34",
+                    "unknown_effect_field": "must-not-escape",
+                }
+            ],
+            "unknown_reversal_field": "must-not-escape",
+        }
+    )
+    summary = project_inventory_valuation_reversal_summary(
+        {"workspace": "default", "approved_reversals": 1, "unknown": "must-not-escape"}
+    )
+    snapshot = project_inventory_valuation_reversal_snapshot(
+        {
+            "schema_version": 1,
+            "workspace": "default",
+            "source": {"kind": "local-inventory-valuation-reversal", "unknown": "must-not-escape"},
+            "summary": {"workspace": "default", "approved_reversals": 1, "unknown": "must-not-escape"},
+            "reversals": [{"reversal_number": "REV-001", "unknown": "must-not-escape"}],
+            "unknown": "must-not-escape",
+        }
+    )
+
+    assert reversal.visible["effects"] == [
+        {"effect_type": "Restore", "id": "effect-1", "quantity": "1.000", "value": "12.34"}
+    ]
+    assert summary.visible == {"approved_reversals": 1, "workspace": "default"}
+    assert snapshot.visible["reversals"] == [{"reversal_number": "REV-001"}]
+    assert snapshot.denied_fields == ("unknown",)
+    assert "must-not-escape" not in str(reversal.visible | snapshot.visible)
 
 
 def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> None:

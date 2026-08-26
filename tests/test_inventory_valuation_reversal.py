@@ -590,6 +590,14 @@ def test_reversal_api_cli_rbac_and_migration_12(tmp_path: Path) -> None:
     finally:
         connection.close()
 
+    connection = connect(path, require_exists=True)
+    try:
+        for table in ("inventory_valuation_reversals", "inventory_valuation_reversal_effects"):
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN unknown_future_column TEXT")  # nosec B608
+        connection.commit()
+    finally:
+        connection.close()
+
     client = TestClient(create_api_app(path))
     preparer = _token(client, "preparer")
     reviewer = _token(client, "reviewer")
@@ -614,6 +622,7 @@ def test_reversal_api_cli_rbac_and_migration_12(tmp_path: Path) -> None:
         },
     )
     assert created.status_code == 200, created.text
+    assert "unknown_future_column" not in created.text
     reversal_id = created.json()["reversal"]["id"]
     approved = client.post(
         f"/api/v1/inventory-valuation/reversals/{reversal_id}/approve",
@@ -622,6 +631,13 @@ def test_reversal_api_cli_rbac_and_migration_12(tmp_path: Path) -> None:
     )
     assert approved.status_code == 200, approved.text
     assert approved.json()["reversal"]["status"] == "Approved"
+    assert "unknown_future_column" not in approved.text
+    listed = client.get(
+        "/api/v1/inventory-valuation/reversals",
+        headers={"Authorization": f"Bearer {auditor}"},
+    )
+    assert listed.status_code == 200
+    assert "unknown_future_column" not in listed.text
     read = client.get(
         "/api/v1/inventory-valuation/reversals/snapshot",
         headers={"Authorization": f"Bearer {auditor}"},

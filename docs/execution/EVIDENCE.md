@@ -2,6 +2,28 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1030: Fail-closed projection for Inventory Valuation Reversal API responses
+
+- Code evidence: `/api/v1/inventory-valuation/reversals` summary, snapshot,
+  list, create, read, approve, and cancel responses use central allowlists.
+  Reversal effects use an independent child allowlist, and snapshot source,
+  summary, and reversal collections are projected recursively. Unknown
+  adapter/storage fields are dropped and malformed nested records are rejected
+  before serialization.
+- Test evidence: `tests/test_field_access.py` covers unknown reversal, effect,
+  summary, and snapshot fields. `tests/test_inventory_valuation_reversal.py`
+  adds synthetic future columns to reversal/effect tables before the HTTP
+  lifecycle and proves they are absent from create, approve, list, and
+  snapshot responses. Focused tests and the full Python regression pass at
+  100%; Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML (9 files), and diff gates also pass. pip-audit cannot audit
+  the local `reconforge-erp` distribution name because it is not published on
+  PyPI.
+- Boundary: this closes the reviewed valuation-reversal response family only.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0690 records rollback.
+
 ## E-1029: Fail-closed projection for Inventory Valuation policy/layer/snapshot API responses
 
 - Code evidence: `/api/v1/inventory-valuation` policy list/save, cost-layer

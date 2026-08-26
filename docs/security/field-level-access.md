@@ -4,6 +4,16 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1030 migrated surface
+
+Inventory Valuation Reversal summary, snapshot, list, create, read, approve,
+and cancel responses now use central top-level and effect allowlists across
+local SQLite and PostgreSQL. The snapshot recursively projects source,
+summary, and reversal records; malformed nested data fails closed. This is a
+bounded disclosure control for the reviewed reversal response family, not
+universal field-level authorization or production IAM. ADR 0690 records the
+decision and rollback.
+
 ## E-1029 migrated surface
 
 Inventory Valuation policy list/save, cost-layer list, summary, and snapshot

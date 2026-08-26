@@ -2,6 +2,20 @@
 
 Updated: 2026-08-26
 
+## E-1030 - Fail-closed projection for Inventory Valuation Reversal API responses (2026-08-26)
+
+- Inventory Valuation Reversal summary, snapshot, list, create, read,
+  approve, and cancel responses now use central allowlists across local SQLite
+  and PostgreSQL. Reversal effects are projected independently and the
+  snapshot is recursive; malformed nested collections or records fail closed.
+- Focused field/API tests and the full Python regression pass at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted YAML
+  validation (9 files), and diff checks also pass. This is a bounded disclosure
+  control only;
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0690 records rollback.
+
 ## E-1029 - Fail-closed projection for Inventory Valuation policy/layer/snapshot API responses (2026-08-26)
 
 - Inventory Valuation policy, cost-layer, summary, and snapshot responses now

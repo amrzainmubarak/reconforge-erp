@@ -1012,5 +1012,6 @@ include docs/adr/0582-security-gate-runtime-2026-08-23.md
 include docs/adr/0583-configurable-web-e2e-port.md
 include docs/adr/0667-sqlite-retention-floor-guard.md
 include docs/adr/0668-community-current-head-backup-restore-runtime.md
+include docs/adr/0669-governed-worker-lifecycle-policy-reevaluation.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from hashlib import sha256
 from typing import Protocol
 
@@ -760,11 +760,12 @@ class GovernedDurableJobWorkerService:
 
     The existing worker service remains a backend-neutral lease primitive.  This
     facade is an explicit adoption boundary for deployments that run workers as
-    service identities: a claim is denied before the repository is touched when
-    the principal is not a service account, the requested scope does not match
-    the policy context, or the central permission is absent. Lease fencing still
-    protects subsequent writes; callers should re-evaluate policy at their
-    deployment's claim boundary when permissions are changed.
+    service identities: every claim, read, lease mutation, checkpoint, effect,
+    and terminal transition is denied before the repository is touched when the
+    principal is not a service account, the requested scope does not match the
+    policy context, or the central permission is absent. Policy is deliberately
+    re-evaluated at every lifecycle boundary so revocation cannot leave an
+    already-claimed job authorized until lease expiry.
     """
 
     def __init__(
@@ -801,6 +802,7 @@ class GovernedDurableJobWorkerService:
             entity_id=entity_id,
             required_permission=required_permission,
             request_id=request_id,
+            action="claim",
         )
         return self._worker.claim(
             tenant_id=tenant_id,
@@ -810,6 +812,282 @@ class GovernedDurableJobWorkerService:
             worker_id=worker_id,
             occurred_at=occurred_at,
             lease_expires_at=lease_expires_at,
+        )
+
+    def heartbeat(
+        self,
+        leased_job: LeasedJob,
+        *,
+        occurred_at: str,
+        lease_expires_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> LeasedJob:
+        """Re-authorize an owned lease before extending its lifetime."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="heartbeat",
+        )
+        return self._worker.heartbeat(
+            leased_job,
+            occurred_at=occurred_at,
+            lease_expires_at=lease_expires_at,
+        )
+
+    def checkpoint(
+        self,
+        leased_job: LeasedJob,
+        *,
+        occurred_at: str,
+        completed_units: int,
+        checkpoint_digest: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> LeasedJob:
+        """Re-authorize a progress checkpoint before persisting it."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="checkpoint",
+        )
+        return self._worker.checkpoint(
+            leased_job,
+            occurred_at=occurred_at,
+            completed_units=completed_units,
+            checkpoint_digest=checkpoint_digest,
+        )
+
+    def completed_effects(
+        self,
+        leased_job: LeasedJob,
+        *,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> list[JobPartitionEffect]:
+        """Re-authorize a resumed worker before reading prior partition effects."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="read_partition_effects",
+        )
+        return self._worker.completed_effects(leased_job)
+
+    def commit_partition(
+        self,
+        leased_job: LeasedJob,
+        *,
+        partition_key: str,
+        ordinal: int,
+        completed_units: int,
+        input_digest: str,
+        output_digest: str,
+        effect_reference: str,
+        occurred_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> LeasedJob:
+        """Re-authorize a non-final effect before its atomic commit."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="commit_partition",
+        )
+        return self._worker.commit_partition(
+            leased_job,
+            partition_key=partition_key,
+            ordinal=ordinal,
+            completed_units=completed_units,
+            input_digest=input_digest,
+            output_digest=output_digest,
+            effect_reference=effect_reference,
+            occurred_at=occurred_at,
+        )
+
+    def complete_partition(
+        self,
+        leased_job: LeasedJob,
+        *,
+        partition_key: str,
+        ordinal: int,
+        input_digest: str,
+        output_digest: str,
+        effect_reference: str,
+        occurred_at: str,
+        output_manifest: JobOutputManifest,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> DurableJob:
+        """Re-authorize the final partition effect and completion transition."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="complete_partition",
+        )
+        return self._worker.complete_partition(
+            leased_job,
+            partition_key=partition_key,
+            ordinal=ordinal,
+            input_digest=input_digest,
+            output_digest=output_digest,
+            effect_reference=effect_reference,
+            occurred_at=occurred_at,
+            output_manifest=output_manifest,
+        )
+
+    def complete(
+        self,
+        leased_job: LeasedJob,
+        *,
+        occurred_at: str,
+        output_manifest: JobOutputManifest,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> DurableJob:
+        """Re-authorize the final completion transition before lease release."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="complete",
+        )
+        return self._worker.complete(
+            leased_job,
+            occurred_at=occurred_at,
+            output_manifest=output_manifest,
+        )
+
+    def schedule_retry(
+        self,
+        leased_job: LeasedJob,
+        *,
+        occurred_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> DurableJob:
+        """Re-authorize a retry transition before releasing the lease."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="schedule_retry",
+        )
+        return self._worker.schedule_retry(leased_job, occurred_at=occurred_at)
+
+    def fail(
+        self,
+        leased_job: LeasedJob,
+        *,
+        occurred_at: str,
+        safe_error_code: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> DurableJob:
+        """Re-authorize a failure transition before releasing the lease."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="fail",
+        )
+        return self._worker.fail(
+            leased_job,
+            occurred_at=occurred_at,
+            safe_error_code=safe_error_code,
+        )
+
+    def pause(
+        self,
+        leased_job: LeasedJob,
+        *,
+        occurred_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> DurableJob:
+        """Re-authorize an operator pause before releasing the lease."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="pause",
+        )
+        return self._worker.pause(leased_job, occurred_at=occurred_at)
+
+    def cancel(
+        self,
+        leased_job: LeasedJob,
+        *,
+        occurred_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> DurableJob:
+        """Re-authorize cancellation before mutating the durable job."""
+
+        self._authorize_leased(
+            leased_job,
+            policy_context=policy_context,
+            required_permission=required_permission,
+            request_id=request_id,
+            action="cancel",
+        )
+        return self._worker.cancel(leased_job, occurred_at=occurred_at)
+
+    def _authorize_leased(
+        self,
+        leased_job: LeasedJob,
+        *,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str,
+        action: str,
+    ) -> PolicyDecision:
+        """Bind a lifecycle decision to the exact leased job before delegation."""
+
+        job = leased_job.job
+        return self._authorize(
+            policy_context,
+            worker_id=leased_job.lease.owner_id,
+            tenant_id=job.tenant_id,
+            workspace_id=job.workspace_id,
+            organization_id=job.organization_id or None,
+            entity_id=job.entity_id,
+            required_permission=required_permission,
+            request_id=request_id,
+            action=action,
+            object_id=job.id,
         )
 
     def _authorize(
@@ -823,6 +1101,8 @@ class GovernedDurableJobWorkerService:
         entity_id: str | None,
         required_permission: str,
         request_id: str,
+        action: str,
+        object_id: str | None = None,
     ) -> PolicyDecision:
         if not required_permission.strip():
             raise JobAuthorizationError("worker permission contract is missing")
@@ -834,22 +1114,28 @@ class GovernedDurableJobWorkerService:
             raise JobAuthorizationError("worker policy scope does not match claim scope")
         if context.organization_id != organization_id:
             raise JobAuthorizationError("worker policy organization does not match claim scope")
-        if context.entity_id is not None and context.entity_id != entity_id:
+        if context.entity_id != entity_id:
             raise JobAuthorizationError("worker policy entity does not match claim scope")
-        decision = self._policy.evaluate(
+        bound_context = replace(
             context,
+            object_type="durable_job" if object_id is not None else context.object_type,
+            object_id=object_id if object_id is not None else context.object_id,
+            action=action,
+        )
+        decision = self._policy.evaluate(
+            bound_context,
             required_permission=required_permission.strip(),
             enforce_sod=False,
             enforce_ownership=False,
         )
         audit_policy_decision(
             decision,
-            actor_id=context.user_id,
+            actor_id=bound_context.user_id,
             required_permissions=frozenset({required_permission.strip()}),
-            surface="durable-job.worker.claim",
+            surface=f"durable-job.worker.{action}",
             request_id=request_id,
-            principal_type=context.principal_type,
-            context=context,
+            principal_type=bound_context.principal_type,
+            context=bound_context,
         )
         if not decision.allowed:
             raise JobAuthorizationError(f"worker policy denied: {decision.reason_code}")

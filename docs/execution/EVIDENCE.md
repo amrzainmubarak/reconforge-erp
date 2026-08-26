@@ -2,6 +2,26 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1008: Re-evaluate governed durable-worker policy at every lifecycle boundary
+
+- Code evidence: `GovernedDurableJobWorkerService` now wraps every worker
+  lifecycle read/write boundary with an explicit policy context and permission.
+  It binds the requested tenant/workspace/organization/entity hierarchy exactly,
+  rejects a missing entity context for an entity lane, derives the evaluated
+  context from the actual durable-job ID and action, and sends the resulting
+  decision through `audit_policy_decision` before delegation.
+- Test evidence: `tests/test_governed_worker_policy.py` passes the existing
+  claim allow/deny contracts, an entity-omission denial, a permission-revoked
+  heartbeat with no lease extension, a permission-revoked completion with no
+  terminal mutation, a subsequent allowed completion, and a signature
+  inventory over every governed lifecycle method. `python -m ruff check`
+  and `python -m mypy reconforge/application/jobs.py` pass.
+- Boundary: this is local application-facade evidence with SQLite synthetic
+  jobs and service-account contexts. It does not prove external IAM,
+  distributed revocation/cache invalidation, multi-host worker coordination,
+  provider behavior, HA/DR, production SLOs, or production authorization
+  effectiveness. ADR 0669 records rollback.
+
 ## E-974: Refresh current Community Compose schema, restart, and backup/restore runtime evidence
 
 - Build/runtime command: `docker compose -p reconforge-e974 -f compose.yaml

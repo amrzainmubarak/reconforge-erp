@@ -2,6 +2,25 @@
 
 Updated: 2026-08-26
 
+## E-1008 - Re-evaluate governed durable-worker policy at every lifecycle boundary (2026-08-26)
+
+- `GovernedDurableJobWorkerService` now requires a fresh explicit
+  `PolicyEvaluationContext` and permission for every governed worker boundary:
+  claim, partition-effect reads, heartbeat, checkpoint, partition effect,
+  completion, retry, failure, pause, and cancellation.
+- The worker rejects a missing entity context for an entity-scoped lane and
+  requires exact tenant/workspace/organization/entity equality before the
+  repository is called. Decisions are derived with the actual durable-job
+  object ID and lifecycle action, then persisted through the existing closed
+  policy-decision audit path.
+- Focused tests prove that permission revocation after claim cannot extend a
+  lease or complete a job, and a signature inventory prevents future governed
+  lifecycle wrappers from omitting `policy_context`/`required_permission`.
+  This is local service-account governance evidence only; external IAM,
+  distributed revocation, multi-host coordination, provider behavior, HA/DR,
+  production SLOs, and production authorization effectiveness remain open.
+  ADR 0669 records rollback.
+
 ## E-974 - Refresh current Community Compose schema, restart, and backup/restore runtime evidence (2026-08-26)
 
 - A fresh current-tree `reconforge:community-local` image was built with

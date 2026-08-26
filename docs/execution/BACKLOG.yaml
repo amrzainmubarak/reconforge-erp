@@ -9,6 +9,26 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1008
+    priority: P0
+    area: identity-governance
+    title: Re-evaluate governed durable-worker policy at every lifecycle boundary
+    status: completed
+    depends_on: [E-1005, E-534]
+    exit_evidence: >-
+      GovernedDurableJobWorkerService now requires and re-evaluates an explicit
+      service-account PolicyEvaluationContext before claim, partition-effect
+      reads, heartbeat, checkpoint, effect commit, completion, retry, failure,
+      pause, and cancellation. The requested tenant/workspace/organization/
+      entity hierarchy must match exactly, entity omission fails closed, and
+      each policy decision is audited with a derived durable-job object/action
+      binding. Focused worker lifecycle tests prove a permission revocation
+      after claim cannot extend a lease or complete a job; the lifecycle
+      signature inventory prevents future wrappers from omitting policy context.
+      This is local governed-worker evidence only; external IAM, distributed
+      revocation, multi-host worker coordination, provider behavior, HA/DR,
+      production SLOs, and production authorization effectiveness remain open.
+      ADR 0669 records the decision and rollback.
   - id: E-974
     priority: P1
     area: deployment-readiness

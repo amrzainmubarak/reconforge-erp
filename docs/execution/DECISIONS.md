@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-829: Harden the standalone Docker workflow
+
+- **Date**: 2026-08-26
+- **Context**: The dedicated Docker workflow used a cached/default-platform
+  build and a writable, networked Doctor smoke, while the CI and release paths
+  already used a bounded hardened runtime contract.
+- **Decision**: Require pull/no-cache linux/amd64 builds, a 20-minute timeout,
+  and a networkless read-only container with all capabilities dropped and
+  `no-new-privileges`. Remove the output volume from this smoke because the
+  check is an inspection-only runtime proof.
+- **Verification**: The standalone workflow contract test and the focused
+  release/container suite pass; supply-chain policy validation remains valid.
+- **Compatibility**: Workflow-only change; no application, image content, API,
+  schema, or local CLI contract changes.
+- **Rollback**: Revert the workflow, regression test, ADR, and E-966 evidence.
+
 ### D-828: Require per-handler server-boundary evidence
 
 - **Date**: 2026-08-26

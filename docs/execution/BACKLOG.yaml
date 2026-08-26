@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-966
+    priority: P0
+    area: container-security
+    title: Align the standalone Docker workflow with the hardened release runtime gate
+    status: completed
+    depends_on: [E-824]
+    exit_evidence: >-
+      The standalone Docker workflow now uses pull/no-cache linux/amd64
+      builds, a finite 20-minute job timeout, and a networkless read-only
+      non-privileged Doctor smoke with all capabilities dropped and
+      no-new-privileges. A workflow regression test prevents reverting to the
+      weaker writable/networked invocation. Focused container workflow tests,
+      Ruff, Mypy, YAML, and diff-check pass. This aligns recurring local Docker
+      CI with the bounded hardening contract; it does not prove hosted clean
+      release provenance, vulnerability reachability, or production deployment.
+      ADR 0660 records rollback.
   - id: E-965
     priority: P0
     area: identity-governance

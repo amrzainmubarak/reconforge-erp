@@ -52,6 +52,19 @@ def test_release_candidate_hardening_precedes_registry_login_and_push() -> None:
     assert smoke < login < push
 
 
+def test_standalone_docker_workflow_uses_reproducible_hardened_runtime() -> None:
+    workflow = _workflow(".github/workflows/docker.yml")
+    jobs = workflow["jobs"]
+    assert isinstance(jobs, dict)
+    job = jobs["docker-build"]
+    assert isinstance(job, dict)
+    assert job["timeout-minutes"] == 20
+    run_text = _run_text(workflow, "docker-build")
+    assert "docker build --pull --no-cache --platform linux/amd64" in run_text
+    _assert_hardened_doctor(run_text, "reconforge-erp")
+    assert "-v \"$PWD/output:/app/output\"" not in run_text
+
+
 def test_python_test_matrix_fetches_history_for_retained_evidence() -> None:
     workflow = _workflow(".github/workflows/ci.yml")
     jobs = workflow["jobs"]

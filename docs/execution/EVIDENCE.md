@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-966: Align the standalone Docker workflow with the hardened release runtime gate
+
+- Code evidence: `.github/workflows/docker.yml` uses a fresh linux/amd64
+  no-cache build and a bounded hardened Doctor invocation; the job has a
+  finite timeout.
+- Test evidence: `tests/test_container_hardening_workflow.py` asserts the build
+  flags, timeout, and all four hardened runtime flags, and rejects the old
+  output-volume invocation. Supply-chain validation and the focused release /
+  container test set pass on the current HEAD.
+- Boundary: this is workflow/static evidence plus local bounded checks. It does
+  not prove hosted clean-build identity, signed release provenance, registry
+  reachability, vulnerability reachability/disposition, or production runtime
+  behavior. ADR 0660 records rollback.
+
 ## E-965: Require every mutating API handler to reach a reviewed server boundary
 
 - Code evidence: `tests/test_api_authorization_inventory.py` parses every

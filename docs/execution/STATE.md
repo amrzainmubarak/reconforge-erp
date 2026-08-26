@@ -2,6 +2,17 @@
 
 Updated: 2026-08-26
 
+## E-966 - Align the standalone Docker workflow with the hardened release runtime gate (2026-08-26)
+
+- `.github/workflows/docker.yml` now builds with `--pull --no-cache
+  --platform linux/amd64`, has a finite 20-minute timeout, and runs Doctor
+  with no network, read-only root, all capabilities dropped, and
+  `no-new-privileges`.
+- A workflow regression test rejects a return to the previous writable,
+  networked smoke invocation. This improves recurring PR/push evidence but does
+  not replace hosted release attestation, independent vulnerability review, or
+  production deployment evidence. ADR 0660 records rollback.
+
 ## E-965 - Require every mutating API handler to reach a reviewed server boundary (2026-08-26)
 
 - The authorization inventory now checks each mutating handler individually.

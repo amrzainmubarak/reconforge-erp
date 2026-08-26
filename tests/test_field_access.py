@@ -1,4 +1,8 @@
-from reconforge.auth.field_access import REDACTED_VALUE, project_fields
+from reconforge.auth.field_access import (
+    REDACTED_VALUE,
+    project_evidence_drill_down_record,
+    project_fields,
+)
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
 
 
@@ -29,3 +33,37 @@ def test_field_projection_is_permutation_stable_and_masking_is_not_authorization
         required_permission="finance.read",
     )
     assert denied.reason_code == "field_scope_denied"
+
+
+def test_evidence_projection_is_allowlisted_in_both_modes_and_projects_links() -> None:
+    record = {
+        "id": "evidence-1",
+        "evidence_code": "CLOSE-1",
+        "source_path": "/sensitive/path.pdf",
+        "checksum_sha256": "a" * 64,
+        "unknown_future_column": "must-not-escape",
+        "links": [
+            {
+                "id": "link-1",
+                "object_type": "close_task",
+                "object_id": "task-1",
+                "link_type": "support",
+                "unknown_link_column": "must-not-escape",
+            }
+        ],
+    }
+
+    redacted = project_evidence_drill_down_record(record, include_sensitive=False)
+    assert redacted.visible["source_path"] == "***redacted***"
+    assert redacted.visible["checksum_sha256"] == "***redacted***"
+    assert redacted.denied_fields == ("unknown_future_column",)
+    assert redacted.visible["links"] == [
+        {"id": "link-1", "link_type": "support", "object_id": "task-1", "object_type": "close_task"}
+    ]
+    assert "must-not-escape" not in str(redacted.visible)
+
+    sensitive = project_evidence_drill_down_record(record, include_sensitive=True)
+    assert sensitive.visible["source_path"] == "/sensitive/path.pdf"
+    assert sensitive.visible["checksum_sha256"] == "a" * 64
+    assert sensitive.denied_fields == ("unknown_future_column",)
+    assert sensitive.projection_digest != redacted.projection_digest

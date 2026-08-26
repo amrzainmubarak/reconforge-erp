@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
 from reconforge.api.server_identity import RequestExecutionScope, request_tenant_id
+from reconforge.auth.field_access import EVIDENCE_DRILL_DOWN_FIELDS, EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS
 from reconforge.auth.models import LocalUser
 from reconforge.db import run_migrations
 from reconforge.infrastructure.postgres_evidence import PostgresEvidenceVerification
@@ -47,6 +48,7 @@ class _FakeEvidenceRepository:
             "id": values["evidence_id"],
             "evidence_code": values["evidence_code"],
             "source_name": values["source_name"],
+            "source_path": "/synthetic/close.pdf",
             "checksum_sha256": values["checksum_sha256"],
             "storage_backend": values["storage_backend"],
             "links": [],
@@ -89,6 +91,28 @@ class _FakeEvidenceRepository:
             expected_sha256=actual,
             actual_sha256=actual,
         )
+
+    def drill_down(self, **values: object) -> dict[str, object]:
+        assert values["tenant_id"] == "tenant-a"
+        evidence_id = str(values["evidence_id"])
+        return {
+            "evidence_id": evidence_id,
+            "direction": values["direction"],
+            "max_depth": values["max_depth"],
+            "include_sensitive": values["include_sensitive"],
+            "nodes": [
+                {
+                    "node_type": "evidence",
+                    "id": evidence_id,
+                    "record": {**self.records[evidence_id], "unknown_future_column": "must-not-escape"},
+                    "depth": 0,
+                }
+            ],
+            "edges": [],
+            "nodes_count": 1,
+            "edges_count": 0,
+            "pagination": {"limit": values["limit"], "offset": values["offset"]},
+        }
 
 
 def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, monkeypatch: Any) -> None:
@@ -176,6 +200,14 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
         headers=headers,
         json={"actual_sha256": digest},
     )
+    drill_down = client.get(
+        "/api/v1/evidence/records/evidence-a/drill-down",
+        headers=headers,
+    )
+    sensitive_drill_down = client.get(
+        "/api/v1/evidence/records/evidence-a/drill-down?include_sensitive=true",
+        headers=headers,
+    )
     coverage = client.get("/api/v1/evidence/coverage", headers=headers)
 
     assert created.status_code == 200, created.text
@@ -186,6 +218,16 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     assert requirement.status_code == 200
     assert verified.status_code == 200
     assert verified.json()["verification"]["ok"] is True
+    assert drill_down.status_code == 200
+    drill_node = drill_down.json()["drill_down"]["nodes"][0]
+    assert drill_node["record"]["source_path"] == "***redacted***"
+    assert drill_node["field_access"]["denied_fields"] == ["unknown_future_column"]
+    assert drill_down.json()["drill_down"]["field_access"]["version"] == "field-projection-v1"
+    assert sensitive_drill_down.status_code == 200
+    sensitive_node = sensitive_drill_down.json()["drill_down"]["nodes"][0]
+    assert sensitive_node["record"]["source_path"] == "/synthetic/close.pdf"
+    assert sensitive_node["field_access"]["masked_fields"] == []
+    assert sensitive_node["field_access"]["denied_fields"] == ["unknown_future_column"]
     assert coverage.status_code == 200
     expected_hierarchy = {
         "tenant_id": "tenant-a",
@@ -200,5 +242,17 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
         {"permission": "evidence.manage", **expected_hierarchy},
         {"permission": "evidence.manage", **expected_hierarchy},
         {"permission": "evidence.verify", **expected_hierarchy},
+        {
+            "permissions": frozenset({"evidence.read", "evidence.manage"}),
+            **expected_hierarchy,
+            "requested_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+            "authorized_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+        },
+        {
+            "permission": "evidence.manage",
+            **expected_hierarchy,
+            "requested_field_names": EVIDENCE_DRILL_DOWN_FIELDS,
+            "authorized_field_names": EVIDENCE_DRILL_DOWN_FIELDS,
+        },
         {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
     ]

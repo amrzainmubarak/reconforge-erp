@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1017: Fail-closed field projection for evidence drill-down
+
+- Code evidence: `reconforge.auth.field_access` defines the reviewed evidence
+  record/link allowlists and `project_evidence_drill_down_record` projects
+  every evidence node. The route adds projection metadata and fails closed on
+  malformed adapter response shapes. Server Profile passes safe or sensitive
+  field sets through central scoped policy evaluation; sensitive mode remains
+  `evidence.manage`-gated.
+- Test evidence: The field primitive test proves masking, unknown-field
+  denial, nested-link projection, and digest difference between modes. Local
+  API and Server Profile contract tests prove redacted/sensitive behavior and
+  policy field sets. The focused suite passes (7 tests); Ruff, Mypy, full
+  Python regression, package build, YAML validation, and diff checks pass.
+- Boundary: This is one migrated evidence response surface. It does not prove
+  universal route/export/UI field enforcement, external IAM, distributed
+  revocation, live PostgreSQL effectiveness, or production readiness.
+
 ## E-1016: Require explicit policy supplier before PostgreSQL Reconciliation execution
 
 - Code evidence: `PostgresReconciliationWorker._authorize_scope` fails closed

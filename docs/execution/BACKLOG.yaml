@@ -9,6 +9,25 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1017
+    priority: P0
+    area: identity-governance
+    title: Migrate evidence drill-down to fail-closed field projection
+    status: completed
+    depends_on: [E-1005, E-305]
+    exit_evidence: >-
+      Local and Server Profile evidence drill-down responses use one versioned
+      evidence record/link allowlist. Ordinary reads retain the legacy
+      redaction token; sensitive reads remain evidence.manage-gated, pass the
+      reviewed field set through the Server Profile central policy boundary,
+      and drop unknown future fields. Each evidence node returns projection
+      metadata and a deterministic digest. Focused field/API tests, Ruff, and
+      Mypy pass; full Python regression, package build, and diff checks are
+      required before completion. This closes one response surface only;
+      universal field-level enforcement, external IAM, distributed revocation,
+      and production effectiveness remain open. Focused tests, Ruff, Mypy,
+      full Python regression, package build, YAML validation, and diff checks
+      pass. ADR 0677 records rollback.
   - id: E-1016
     priority: P0
     area: identity-governance

@@ -321,6 +321,8 @@ def enforce_server_scoped_permissions(
     organization_id: str | None = None,
     entity_id: str | None = None,
     amount: Decimal | None = None,
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
 ) -> None:
     """Re-evaluate one of several permissions against the server hierarchy.
 
@@ -399,6 +401,8 @@ def enforce_server_scoped_permissions(
         authorized_organization_ids=principal.authorized_organization_ids,
         authorized_entity_ids=principal.authorized_legal_entity_ids,
         amount=amount,
+        requested_field_names=requested_field_names,
+        authorized_field_names=authorized_field_names,
     )
     decision = _evaluate_any_policy(request, context, required_permissions=permissions)
     audit_policy_decision(
@@ -441,9 +445,24 @@ def enforce_server_scoped_permission(
     organization_id: str | None = None,
     entity_id: str | None = None,
     amount: Decimal | None = None,
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
 ) -> None:
     """Re-evaluate one permission against the selected server hierarchy."""
 
+    if requested_field_names or authorized_field_names:
+        enforce_server_scoped_permissions(
+            request,
+            permissions=frozenset({permission}),
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
+            amount=amount,
+            requested_field_names=requested_field_names,
+            authorized_field_names=authorized_field_names,
+        )
+        return
     enforce_server_scoped_permissions(
         request,
         permissions=frozenset({permission}),

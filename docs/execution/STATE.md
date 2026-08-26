@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1017 - Migrate evidence drill-down to fail-closed field projection (2026-08-26)
+
+- Local and Server Profile evidence drill-down responses now use one reviewed
+  response allowlist for evidence records and nested links. Ordinary reads
+  preserve the legacy `***redacted***` token; sensitive reads remain gated by
+  `evidence.manage` and still drop unknown future fields.
+- Each evidence node exposes projection mode, masked/denied fields, version,
+  and a deterministic digest. Focused field/API tests, Ruff, and Mypy pass.
+  Full Python regression, package build, YAML validation, and diff checks pass.
+  This closes one surface only; universal field-level enforcement, external
+  IAM, distributed revocation, and production effectiveness remain open. ADR
+  0677 records rollback.
+
 ## E-1016 - Require explicit policy supplier before PostgreSQL Reconciliation execution (2026-08-26)
 
 - `PostgresReconciliationWorker` now rejects missing policy

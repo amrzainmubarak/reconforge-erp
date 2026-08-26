@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-844: Evidence drill-down uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Repository-specific evidence redaction could retain every
+  physical column and nested link field, while the reusable field-level
+  policy primitive had no sensitive evidence consumer.
+- **Decision**: Apply one versioned allowlist to local and Server Profile
+  evidence drill-down nodes and nested links. Preserve the legacy redaction
+  token, require `evidence.manage` for sensitive mode, pass the sensitive
+  field request through the central Server Profile policy boundary, and drop
+  unknown future fields in both modes. Return deterministic projection
+  evidence per node.
+- **Verification**: Focused field, local API, and Server Profile API tests
+  pass; full regression, package build, and diff checks are required for
+  closure. Universal field-level migration and production IAM effectiveness
+  remain unproven.
+- **Compatibility**: Additive response metadata only; known redaction token
+  and existing `include_sensitive` permission contract remain unchanged.
+- **Rollback**: Revert E-1017 code/tests/ADR 0677/manifest and execution
+  metadata; persisted evidence is unaffected.
+
 ### D-843: Require explicit policy supplier before PostgreSQL Reconciliation execution
 
 - **Date**: 2026-08-26

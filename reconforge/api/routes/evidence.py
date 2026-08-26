@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Mapping
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -26,6 +27,11 @@ from reconforge.application.pagination import (
     cursor_scope_digest,
 )
 from reconforge.auth import AuthServiceError, LocalAuthService
+from reconforge.auth.field_access import (
+    EVIDENCE_DRILL_DOWN_FIELDS,
+    EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+    project_evidence_drill_down_record,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.platform.common import PlatformError
@@ -40,6 +46,7 @@ EvidenceVerify = Annotated[LocalUser, Depends(require_permission("evidence.verif
 PageLimit = Annotated[int, Query(ge=1, le=MAX_LIMIT)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
 CursorToken = Annotated[str | None, Query(max_length=4096)]
+_EVIDENCE_SAFE_DRILL_DOWN_FIELDS = EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS
 
 
 def _cursor_page(
@@ -133,8 +140,84 @@ def _server_record(record: dict[str, object]) -> dict[str, object]:
     return {**record, "source_backend": "postgresql-evidence-registry"}
 
 
-def _enforce_server_evidence_permission(request: Request, *, permission: str) -> None:
+def _project_drill_down_result(result: dict[str, object], *, include_sensitive: bool) -> dict[str, object]:
+    """Apply the central response field policy to every evidence node."""
+
+    raw_nodes = result.get("nodes")
+    if not isinstance(raw_nodes, list):
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid drill-down contract.",
+        )
+    projected_nodes: list[dict[str, object]] = []
+    for raw_node in raw_nodes:
+        if not isinstance(raw_node, Mapping):
+            raise APIError(
+                status_code=503,
+                code="evidence_projection_failed",
+                message="Evidence registry returned an invalid node contract.",
+            )
+        node = dict(raw_node)
+        if node.get("node_type") == "evidence":
+            raw_record = node.get("record")
+            if not isinstance(raw_record, Mapping):
+                raise APIError(
+                    status_code=503,
+                    code="evidence_projection_failed",
+                    message="Evidence registry returned an invalid evidence record contract.",
+                )
+            try:
+                projection = project_evidence_drill_down_record(
+                    raw_record,
+                    include_sensitive=include_sensitive,
+                )
+            except (TypeError, ValueError) as exc:
+                raise APIError(
+                    status_code=503,
+                    code="evidence_projection_failed",
+                    message="Evidence registry returned an invalid field projection contract.",
+                ) from exc
+            node["record"] = projection.visible
+            node["field_access"] = {
+                "version": "field-projection-v1",
+                "mode": "sensitive" if include_sensitive else "redacted",
+                "masked_fields": list(projection.masked_fields),
+                "denied_fields": list(projection.denied_fields),
+                "projection_digest": projection.projection_digest,
+            }
+        projected_nodes.append(node)
+    projected = dict(result)
+    projected["nodes"] = projected_nodes
+    projected["field_access"] = {
+        "version": "field-projection-v1",
+        "mode": "sensitive" if include_sensitive else "redacted",
+        "allowlisted_record_fields": sorted(EVIDENCE_DRILL_DOWN_FIELDS),
+        "sensitive_record_fields": sorted(EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS),
+    }
+    return projected
+
+
+def _enforce_server_evidence_permission(
+    request: Request,
+    *,
+    permission: str,
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
+) -> None:
     scope = request_execution_scope(request)
+    if requested_field_names or authorized_field_names:
+        enforce_server_scoped_permission(
+            request,
+            permission=permission,
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+            requested_field_names=requested_field_names,
+            authorized_field_names=authorized_field_names,
+        )
+        return
     enforce_server_scoped_permission(
         request,
         permission=permission,
@@ -160,10 +243,20 @@ def _enforce_server_evidence_read_access(request: Request) -> None:
 
 
 def _require_evidence_manage_access(
-    request: Request, current_user: EvidenceRead, connection: sqlite3.Connection | None
+    request: Request,
+    current_user: EvidenceRead,
+    connection: sqlite3.Connection | None,
+    *,
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
 ) -> None:
     if server_evidence_enabled(request):
-        _enforce_server_evidence_permission(request, permission="evidence.manage")
+        _enforce_server_evidence_permission(
+            request,
+            permission="evidence.manage",
+            requested_field_names=requested_field_names,
+            authorized_field_names=authorized_field_names,
+        )
         return
     if connection is None:
         raise APIError(status_code=500, code="db_not_configured", message="Local auth database is not configured.")
@@ -292,10 +385,26 @@ def get_evidence_drill_down(
     """Return a governance-safe evidence relationship graph with optional sensitive fields."""
 
     if include_sensitive:
-        _require_evidence_manage_access(request, current_user, connection)
+        _require_evidence_manage_access(
+            request,
+            current_user,
+            connection,
+            requested_field_names=EVIDENCE_DRILL_DOWN_FIELDS,
+            authorized_field_names=EVIDENCE_DRILL_DOWN_FIELDS,
+        )
     if server_evidence_enabled(request):
         if not include_sensitive:
-            _enforce_server_evidence_read_access(request)
+            scope = request_execution_scope(request)
+            enforce_server_scoped_permissions(
+                request,
+                permissions=frozenset({"evidence.read", "evidence.manage"}),
+                tenant_id=scope.tenant_id,
+                workspace_id=scope.workspace_id,
+                organization_id=scope.organization_id,
+                entity_id=scope.legal_entity_id,
+                requested_field_names=_EVIDENCE_SAFE_DRILL_DOWN_FIELDS,
+                authorized_field_names=_EVIDENCE_SAFE_DRILL_DOWN_FIELDS,
+            )
         result = execute_postgres_evidence(
             request,
             lambda repository, tenant: repository.drill_down(
@@ -310,7 +419,10 @@ def get_evidence_drill_down(
                 request_id=str(getattr(request.state, "request_id", "")),
             ),
         )
-        return {"drill_down": result, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+        return {
+            "drill_down": _project_drill_down_result(result, include_sensitive=include_sensitive),
+            "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+        }
     try:
         result = EvidenceRegistryService(_local_connection(connection)).drill_down(
             evidence_id,
@@ -323,7 +435,7 @@ def get_evidence_drill_down(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="evidence_drill_down_failed", message=str(exc)) from exc
-    return {"drill_down": result}
+    return {"drill_down": _project_drill_down_result(result, include_sensitive=include_sensitive)}
 
 
 @router.post("/records")

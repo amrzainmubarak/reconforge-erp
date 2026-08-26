@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-952: Synchronize current-state PostgreSQL boundary wording
+
+- Code/evidence alignment: `docs/architecture/current-state.md` now lists the
+  bounded PostgreSQL server adapters represented by the current execution
+  evidence, identifies Alembic head `0090_pg_writeback_observations`, and
+  states that unsupported routes, statutory posting, external providers, and
+  production operations remain open. It no longer describes all recent
+  reconciliation/industry server routes as SQLite-only.
+- The documentation contract suite and `git diff --check` pass. No runtime,
+  migration, or persisted-data change was made. This repair changes wording
+  only and does not widen any Claims Evidence Matrix maturity or release claim.
+  ADR 0645 records the decision.
+
 ## E-951: Make API health backend-aware for PostgreSQL Server Profile
 
 - Code evidence: `reconforge/api/routes/health.py` now selects the health

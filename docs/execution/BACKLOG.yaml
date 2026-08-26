@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-952
+    priority: P1
+    area: documentation-integrity
+    title: Synchronize current-state PostgreSQL boundary wording
+    status: completed
+    depends_on: [E-951]
+    exit_evidence: >-
+      current-state.md now identifies the bounded PostgreSQL server adapters,
+      the 0090_pg_writeback_observations head, and the remaining non-complete
+      product/production boundaries without claiming that all routes are
+      hosted. This is a docs-only repair; diff-check and the documentation
+      contract suite pass. ADR 0645 records rollback.
   - id: E-951
     priority: P0
     area: operational-integrity

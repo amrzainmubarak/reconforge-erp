@@ -5,6 +5,15 @@
 
 ## Decisions
 
+### D-1000: Synchronize current-state server-boundary wording
+
+The architecture current-state document lagged the authenticated PostgreSQL
+adapter work and said reconciliation and other domains were still entirely
+SQLite-backed. Update it to describe the bounded adapters and current Alembic
+head while retaining explicit unsupported-route and production limitations.
+This is a documentation-only, reversible change with no migration or data
+effect. ADR 0645 records the decision.
+
 ### D-999: Make the unauthenticated API health probe backend-aware
 
 The health route previously used the Local Profile SQLite path and service

@@ -2,6 +2,17 @@
 
 Updated: 2026-08-26
 
+## E-952 - Synchronize current-state PostgreSQL boundary wording (2026-08-26)
+
+- `docs/architecture/current-state.md` now reflects the bounded PostgreSQL
+  adapters actually present through Alembic head
+  `0090_pg_writeback_observations`, while keeping explicit limits for
+  unsupported routes, statutory posting, external providers, and production
+  operations.
+- The Local Profile and explicitly supported tenant-local compatibility remain
+  unchanged. This is a documentation-integrity repair with no runtime or
+  persisted-data change. ADR 0645 records the decision and rollback.
+
 ## E-951 - Make API health backend-aware (2026-08-26)
 
 - `GET /api/v1/health` now branches on the explicit PostgreSQL Server Profile

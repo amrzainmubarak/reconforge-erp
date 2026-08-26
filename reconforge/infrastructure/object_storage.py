@@ -288,7 +288,9 @@ class S3ObjectStore:
                 raise ObjectStorageConfigurationError("Retention requires an object-lock mode in configuration.")
             put_kwargs["ObjectLockMode"] = self.settings.object_lock_mode.upper()
             put_kwargs["ObjectLockRetainUntilDate"] = retention_until.astimezone(UTC)
-            object_metadata["reconforge-retain-until"] = retention_until.astimezone(UTC).isoformat()
+            object_metadata["reconforge-retain-until"] = retention_until.astimezone(UTC).isoformat().replace(
+                "+00:00", "Z"
+            )
         response = self._call(lambda client: client.put_object(**put_kwargs))
         return StoredObject(
             key=key,
@@ -502,7 +504,7 @@ class LocalObjectStore:
         if retention_until is not None:
             if retention_until.tzinfo is None or retention_until <= datetime.now(UTC):
                 raise ObjectStorageConfigurationError("Retention timestamp must be timezone-aware and in the future.")
-            retain_text = retention_until.astimezone(UTC).isoformat()
+            retain_text = retention_until.astimezone(UTC).isoformat().replace("+00:00", "Z")
             object_metadata["reconforge-retain-until"] = retain_text
         manifest = json.dumps(
             {

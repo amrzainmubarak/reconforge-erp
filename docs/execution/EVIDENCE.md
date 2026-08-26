@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-973: Close SQLite evidence-retention shortening through migration, trigger, and version guard
+
+- Code evidence: migration `46` adds `evidence_registry.retention_version` and
+  the `evidence_registry_retention_floor_guard` trigger. The SQLite repository
+  validates the existing/requested floor before object-store I/O, preserves
+  the floor, versions extensions, and rejects shortening at the service
+  boundary.
+- Test evidence: `tests/test_evidence_object_storage.py` proves pre-upload
+  rejection, extension version `1 -> 2`, direct-SQL trigger refusal, and
+  backup-preserved version metadata. `tests/test_connector_writeback_observations.py`
+  proves additive migration from version 42 through the current head.
+- Backup evidence: `reconforge/db/backup.py` includes `retention_version` in
+  the explicit evidence field inventory and restore insert contract.
+- Boundary: this proves local SQLite retention-floor integrity only. It does
+  not prove legal hold, authorized deletion, WORM/object-lock semantics,
+  provider durability, privacy erasure, or production governance. ADR 0667
+  records rollback.
+
 ## E-970: Refresh bounded PostgreSQL HA/DR repeated runtime evidence
 
 - Command: `python .github/scripts/verify_postgres_ha_dr_repeated.py

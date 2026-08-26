@@ -6,7 +6,7 @@ import hashlib
 import mimetypes
 import sqlite3
 from collections import deque
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -79,6 +79,31 @@ _OBJECT_STORAGE_COLUMNS = {
     "byte_size",
     "retention_until",
 }
+_RETENTION_GOVERNANCE_COLUMNS = _OBJECT_STORAGE_COLUMNS | {"retention_version"}
+
+
+def _retention_datetime(value: str) -> datetime | None:
+    """Parse persisted retention metadata, failing closed on malformed values."""
+
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise PlatformError("Evidence retention metadata is invalid.") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise PlatformError("Evidence retention metadata must include a timezone offset.")
+    return parsed.astimezone(UTC)
+
+
+def _canonical_retention(value: datetime | None) -> str:
+    """Return a deterministic UTC representation for persisted retention metadata."""
+
+    if value is None:
+        return ""
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise PlatformError("Evidence retention timestamp must include a timezone offset.")
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 class SQLiteEvidenceRegistryRepository:
@@ -99,6 +124,36 @@ class SQLiteEvidenceRegistryRepository:
             str(row["name"]) for row in self.connection.execute("PRAGMA table_info(evidence_registry)").fetchall()
         }
         return columns >= _OBJECT_STORAGE_COLUMNS
+
+    def _retention_governance_columns_available(self) -> bool:
+        """Return whether the retention floor/version migration is present."""
+
+        columns = {
+            str(row["name"]) for row in self.connection.execute("PRAGMA table_info(evidence_registry)").fetchall()
+        }
+        return columns >= _RETENTION_GOVERNANCE_COLUMNS
+
+    def _retention_transition(self, workspace_id: str, code: str, incoming: str) -> tuple[str, int]:
+        """Validate and version a retention change before any object-store write."""
+
+        row = self.connection.execute(
+            "SELECT retention_until, retention_version FROM evidence_registry "
+            "WHERE workspace_id = ? AND evidence_code = ?",
+            (workspace_id, code),
+        ).fetchone()
+        if row is None:
+            return incoming, 1
+        existing_text = str(row["retention_until"] or "")
+        existing = _retention_datetime(existing_text)
+        requested = _retention_datetime(incoming)
+        if existing is not None and (requested is None or requested < existing):
+            raise PlatformError("Evidence retention cannot be shortened.")
+        existing_version = max(int(row["retention_version"] or 1), 1)
+        if existing is None and requested is not None:
+            return incoming, existing_version + 1
+        if existing is not None and requested is not None and requested > existing:
+            return incoming, existing_version + 1
+        return existing_text, existing_version
 
     def register(
         self,
@@ -139,13 +194,23 @@ class SQLiteEvidenceRegistryRepository:
         if object_store is None and (storage_tenant_id or storage_object_name or retention_until is not None):
             raise PlatformError("Object-storage options require an explicitly configured object store.")
 
+        retention_governance_available = self._retention_governance_columns_available()
+        requested_retention_until = _canonical_retention(retention_until)
+        if retention_governance_available:
+            stored_retention_until, retention_version = self._retention_transition(
+                workspace_id, code, requested_retention_until
+            )
+        else:
+            stored_retention_until = requested_retention_until
+            retention_version = 1
+        object_retention_until = _retention_datetime(stored_retention_until)
+
         storage_backend = LOCAL_STORAGE_BACKEND
         storage_tenant = ""
         storage_key = ""
         storage_version_id = ""
         stored_content_type = "application/octet-stream"
         byte_size = 0
-        stored_retention_until = ""
         if object_store is None:
             checksum = checksum_file(resolved)
         else:
@@ -171,7 +236,7 @@ class SQLiteEvidenceRegistryRepository:
                         content,
                         content_type=stored_content_type,
                         metadata={"evidence-id": evidence_id, "source-name": resolved.name},
-                        retention_until=retention_until,
+                        retention_until=object_retention_until,
                     )
                 else:
                     stored = object_store.put_bytes(
@@ -180,7 +245,7 @@ class SQLiteEvidenceRegistryRepository:
                         content,
                         content_type=stored_content_type,
                         metadata={"evidence-id": evidence_id, "source-name": resolved.name},
-                        retention_until=retention_until,
+                        retention_until=object_retention_until,
                     )
                 actual_checksum = hashlib.sha256(stored.content).hexdigest()
                 if actual_checksum != checksum or stored.sha256 != actual_checksum:
@@ -195,7 +260,6 @@ class SQLiteEvidenceRegistryRepository:
                 storage_backend = OBJECT_STORAGE_BACKEND
                 storage_version_id = stored.version_id or ""
                 byte_size = len(content)
-                stored_retention_until = retention_until.isoformat() if retention_until is not None else ""
             except PlatformError:
                 raise
             except Exception as exc:
@@ -203,15 +267,16 @@ class SQLiteEvidenceRegistryRepository:
         now = utc_now_text()
         try:
             if storage_columns_available:
-                self.connection.execute(
-                    """
+                if retention_governance_available:
+                    self.connection.execute(
+                        """
                     INSERT INTO evidence_registry (
                         id, workspace_id, evidence_code, source_path, checksum_sha256,
                         provenance_type, redaction_status, evidence_status, storage_backend,
                         storage_tenant_id, storage_key, storage_version_id, content_type,
-                        byte_size, retention_until, registered_by, created_at, updated_at
+                        byte_size, retention_until, retention_version, registered_by, created_at, updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(workspace_id, evidence_code)
                     DO UPDATE SET
                         source_path = excluded.source_path,
@@ -226,10 +291,11 @@ class SQLiteEvidenceRegistryRepository:
                         content_type = excluded.content_type,
                         byte_size = excluded.byte_size,
                         retention_until = excluded.retention_until,
+                        retention_version = excluded.retention_version,
                         registered_by = excluded.registered_by,
                         updated_at = excluded.updated_at
                     """,
-                    (
+                        (
                         evidence_id,
                         workspace_id,
                         code,
@@ -245,11 +311,60 @@ class SQLiteEvidenceRegistryRepository:
                         stored_content_type,
                         byte_size,
                         stored_retention_until,
+                        retention_version,
                         actor_label,
                         now,
                         now,
-                    ),
-                )
+                        ),
+                    )
+                else:
+                    self.connection.execute(
+                        """
+                        INSERT INTO evidence_registry (
+                            id, workspace_id, evidence_code, source_path, checksum_sha256,
+                            provenance_type, redaction_status, evidence_status, storage_backend,
+                            storage_tenant_id, storage_key, storage_version_id, content_type,
+                            byte_size, retention_until, registered_by, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(workspace_id, evidence_code)
+                        DO UPDATE SET
+                            source_path = excluded.source_path,
+                            checksum_sha256 = excluded.checksum_sha256,
+                            provenance_type = excluded.provenance_type,
+                            redaction_status = excluded.redaction_status,
+                            evidence_status = excluded.evidence_status,
+                            storage_backend = excluded.storage_backend,
+                            storage_tenant_id = excluded.storage_tenant_id,
+                            storage_key = excluded.storage_key,
+                            storage_version_id = excluded.storage_version_id,
+                            content_type = excluded.content_type,
+                            byte_size = excluded.byte_size,
+                            retention_until = excluded.retention_until,
+                            registered_by = excluded.registered_by,
+                            updated_at = excluded.updated_at
+                        """,
+                        (
+                            evidence_id,
+                            workspace_id,
+                            code,
+                            str(resolved),
+                            checksum,
+                            normalize_key(provenance_type, default="local-file"),
+                            normalize_key(redaction_status, default="unknown"),
+                            normalize_key(evidence_status, default="Available"),
+                            storage_backend,
+                            storage_tenant,
+                            storage_key,
+                            storage_version_id,
+                            stored_content_type,
+                            byte_size,
+                            stored_retention_until,
+                            actor_label,
+                            now,
+                            now,
+                        ),
+                    )
             else:
                 self.connection.execute(
                     """

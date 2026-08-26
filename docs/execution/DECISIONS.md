@@ -5,6 +5,30 @@
 
 ## Decisions
 
+### D-834: Close SQLite evidence-retention shortening through migration, trigger, and version guard
+
+- **Date**: 2026-08-26
+- **Context**: SQLite evidence re-registration used an upsert that replaced
+  `retention_until`, allowing a later request to shorten a previously stored
+  evidence floor. PostgreSQL already had a governed retention version/floor
+  contract, but the local adapter lacked an equivalent database backstop.
+- **Decision**: Add additive SQLite migration 46 with `retention_version` and
+  a trigger that rejects shortening, malformed timestamps, and invalid version
+  transitions. Validate the transition before object-store upload, preserve an
+  existing floor, increment the version only for a strict extension, and carry
+  the field through backup/restore. Keep pre-46 registration compatible until
+  the explicit migration is applied.
+- **Verification**: Focused evidence, backup/restore, migration-upgrade, Ruff,
+  full regression, and package checks pass. The direct service test confirms a
+  rejected shortening performs no additional object-store upload; the direct
+  SQL test confirms the trigger is an independent backstop.
+- **Compatibility**: Additive schema migration and backup field extension;
+  existing local evidence rows receive version `1`, and the current CLI/API
+  contracts remain unchanged.
+- **Rollback**: Revert migration 46, repository/version handling, backup field,
+  tests, ADR 0667, and execution references before accepting databases that
+  depend on the new column. No production data is modified by the local test.
+
 ### D-833: Refresh bounded PostgreSQL HA/DR repeated runtime evidence
 
 - **Date**: 2026-08-26

@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-973
+    priority: P1
+    area: evidence-retention
+    title: Close SQLite evidence-retention shortening through migration, trigger, and version guard
+    status: completed
+    depends_on: [E-971, E-972]
+    exit_evidence: >-
+      SQLite migration 46 adds a retention version and a database trigger that
+      rejects retention-floor shortening, malformed new timestamps, and
+      invalid version transitions. The evidence repository validates the
+      transition before object-store upload, preserves the existing floor,
+      increments the version only on extension, and remains compatible with
+      pre-46 databases until upgrade. Backup/restore carries the new field;
+      focused evidence, backup, migration-upgrade, Ruff, full regression, and
+      package checks pass. This proves only local SQLite retention-floor
+      integrity; legal hold, authorized deletion, WORM, provider durability,
+      and production privacy governance remain open. ADR 0667 records the
+      decision.
   - id: E-970
     priority: P1
     area: reliability-ha-dr

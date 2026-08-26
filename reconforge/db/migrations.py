@@ -27,6 +27,7 @@ from reconforge.db.schema import (
     DURABLE_JOB_SCHEDULER_CURSOR_MIGRATION_SQL,
     DURABLE_JOBS_SCHEMA_SQL,
     EVIDENCE_OBJECT_STORAGE_MIGRATION_SQL,
+    EVIDENCE_RETENTION_GOVERNANCE_MIGRATION_SQL,
     FINANCE_CORE_SCHEMA_SQL,
     FINANCE_PLATFORM_SCHEMA_SQL,
     IDEMPOTENCY_RECORDS_SCHEMA_SQL,
@@ -149,6 +150,7 @@ MIGRATIONS = [
     ),
     Migration(version=44, name="close_period_segregation_of_duties", sql=CLOSE_PERIOD_SOD_MIGRATION_SQL),
     Migration(version=45, name="close_period_lock_evidence_immutability", sql=CLOSE_PERIOD_LOCK_EVIDENCE_MIGRATION_SQL),
+    Migration(version=46, name="evidence_retention_governance", sql=EVIDENCE_RETENTION_GOVERNANCE_MIGRATION_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

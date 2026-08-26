@@ -2,6 +2,21 @@
 
 Updated: 2026-08-26
 
+## E-973 - Close SQLite evidence-retention shortening through migration, trigger, and version guard (2026-08-26)
+
+- SQLite migration `46` adds `evidence_registry.retention_version` and a
+  fail-closed trigger for retention-floor and version-transition integrity.
+- `SQLiteEvidenceRegistryRepository` validates existing and requested floors
+  before any object-store upload, preserves a floor when the requested value is
+  unchanged, increments the version only on extension, and rejects shortening
+  through the service boundary. Pre-46 databases retain the compatibility
+  reader until the additive migration is applied.
+- Backup/restore now carries `retention_version`; focused retention, backup,
+  migration-upgrade, and regression tests pass. This is local SQLite
+  integrity evidence only; legal hold, authorized deletion, WORM, provider
+  durability, and production privacy governance remain open. ADR 0667 records
+  the decision and rollback.
+
 ## E-970 - Refresh bounded PostgreSQL HA/DR repeated runtime evidence (2026-08-26)
 
 - `.github/scripts/verify_postgres_ha_dr_repeated.py` completed exactly three

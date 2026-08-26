@@ -32,8 +32,8 @@ editions:
         boundary: Versioned local rollback; no zero-downtime cutover.
       - id: retention_privacy
         status: partial
-        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml, reconforge/infrastructure/object_storage.py, reconforge/cli.py, tests/test_cli_evidence_local_object_store.py, tests/test_evidence_object_storage.py]
-        boundary: Governance contracts and bounded offline object retention are verified; complete Community retention/privacy administration, deletion workflow, legal hold, and lifecycle drill remain open.
+        evidence: [docs/execution/P3_ENT_006_EXIT_AUDIT.yaml, reconforge/infrastructure/object_storage.py, reconforge/infrastructure/sqlite_evidence.py, reconforge/db/schema.py, tests/test_cli_evidence_local_object_store.py, tests/test_evidence_object_storage.py, docs/adr/0667-sqlite-retention-floor-guard.md]
+        boundary: Governance contracts, bounded offline object retention, and the SQLite retention-floor/version guard are verified; complete Community retention/privacy administration, deletion workflow, legal hold, and lifecycle drill remain open.
       - id: identity_and_worker_governance
         status: verified_scoped
         evidence: [docs/adr/0562-digest-bound-deployment-runtime-evidence.md, tests/test_deployment_runtime_evidence.py]

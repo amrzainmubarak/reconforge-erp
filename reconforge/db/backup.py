@@ -1370,6 +1370,7 @@ BACKUP_INSERT_COLUMNS = {
         "content_type",
         "byte_size",
         "retention_until",
+        "retention_version",
         "registered_by",
         "created_at",
         "updated_at",
@@ -2181,9 +2182,9 @@ BACKUP_INSERT_QUERIES = {
         id, workspace_id, evidence_code, source_path, checksum_sha256,
             provenance_type, redaction_status, evidence_status, storage_backend,
             storage_tenant_id, storage_key, storage_version_id, content_type, byte_size,
-            retention_until, registered_by, created_at, updated_at
+            retention_until, retention_version, registered_by, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "evidence_requirements": """
         INSERT INTO evidence_requirements (

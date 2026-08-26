@@ -3955,6 +3955,39 @@ ON evidence_registry(workspace_id, storage_backend, storage_tenant_id, storage_k
 """
 
 
+EVIDENCE_RETENTION_GOVERNANCE_MIGRATION_SQL = """
+ALTER TABLE evidence_registry
+    ADD COLUMN retention_version INTEGER NOT NULL DEFAULT 1 CHECK (retention_version >= 1);
+
+CREATE TRIGGER IF NOT EXISTS evidence_registry_retention_floor_guard
+BEFORE UPDATE OF retention_until, retention_version ON evidence_registry
+WHEN
+    (
+        NEW.retention_until <> OLD.retention_until
+        AND NEW.retention_version <> OLD.retention_version + 1
+    )
+    OR (
+        NEW.retention_until = OLD.retention_until
+        AND NEW.retention_version <> OLD.retention_version
+    )
+    OR (
+        NEW.retention_until <> ''
+        AND julianday(NEW.retention_until) IS NULL
+    )
+    OR (
+        OLD.retention_until <> ''
+        AND (
+            NEW.retention_until = ''
+            OR julianday(OLD.retention_until) IS NULL
+            OR julianday(NEW.retention_until) < julianday(OLD.retention_until)
+        )
+    )
+BEGIN
+    SELECT RAISE(ABORT, 'Evidence retention cannot be shortened or version transition is invalid.');
+END;
+"""
+
+
 CONSOLIDATION_OWNERSHIP_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS consolidation_ownership_interests (
     id TEXT PRIMARY KEY,

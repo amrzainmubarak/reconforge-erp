@@ -1010,3 +1010,4 @@ include docs/adr/0580-current-airgap-recovery-upgrade.md
 include docs/adr/0581-release-sbom-pipeline-runtime.md
 include docs/adr/0582-security-gate-runtime-2026-08-23.md
 include docs/adr/0583-configurable-web-e2e-port.md
+include docs/adr/0667-sqlite-retention-floor-guard.md

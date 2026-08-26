@@ -14,6 +14,7 @@ import http.client
 import json
 import re
 import ssl
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -525,6 +526,7 @@ class WritebackNetworkExecutor:
     sleeper: Sleeper = field(default=lambda _seconds: None, repr=False)
     clock: Clock = field(default=time.monotonic, repr=False)
     _next_allowed_at: dict[str, float] = field(default_factory=dict, init=False, repr=False)
+    _rate_limit_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
 
     def dispatch(
         self,
@@ -916,11 +918,20 @@ class WritebackNetworkExecutor:
 
     def _apply_rate_limit(self, registration: WritebackNetworkRegistration) -> None:
         now = self.clock()
-        allowed_at = self._next_allowed_at.get(registration.connector_id, now)
-        if allowed_at > now:
-            self.sleeper(allowed_at - now)
-            now = allowed_at
-        self._next_allowed_at[registration.connector_id] = now + (60.0 / registration.rate_limit_per_minute)
+        # Reserve the next slot while holding the lock, but sleep after
+        # releasing it.  Without the reservation, concurrent workers can all
+        # observe the same deadline and collectively exceed the declared
+        # provider rate.  The immutable registration digest keeps tenants and
+        # separately configured endpoints from sharing a throttle lane merely
+        # because they reuse a connector id.
+        rate_limit_key = registration.digest
+        with self._rate_limit_lock:
+            allowed_at = self._next_allowed_at.get(rate_limit_key, now)
+            reservation_at = max(now, allowed_at)
+            self._next_allowed_at[rate_limit_key] = reservation_at + (60.0 / registration.rate_limit_per_minute)
+            wait_seconds = max(0.0, allowed_at - now)
+        if wait_seconds:
+            self.sleeper(wait_seconds)
 
     @staticmethod
     def _authorize_registration_scope(

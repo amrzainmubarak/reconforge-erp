@@ -2,6 +2,20 @@
 
 Updated: 2026-08-26
 
+## E-960 - Make write-back rate limiting atomic and registration-scoped (2026-08-26)
+
+- `WritebackNetworkExecutor` now reserves the next rate-limit slot under a
+  process-local lock and performs the injected sleep after releasing the lock.
+  Concurrent workers therefore cannot all observe and reuse the same deadline.
+- The throttle lane is keyed by the immutable registration digest rather than
+  only `connector_id`; tenant/workspace and endpoint registrations are
+  isolated while preserving the existing connector contract.
+- `tests/test_connector_writeback_network.py` passes 35/35, including the
+  concurrent reservation and cross-scope lane tests. This remains
+  process-local evidence only; distributed quota, provider semantics, live
+  interoperability, HA/DR, and production readiness remain open. ADR 0654
+  records the reversible decision.
+
 ## E-923 - Live PostgreSQL matching cross-engine replay (2026-08-26)
 
 - The existing live PostgreSQL matching integration test passed with exit 0

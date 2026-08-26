@@ -692,6 +692,62 @@ def test_network_dispatch_retries_transient_http_and_transport_failures_with_sam
     assert 1.0 in waits and 2.0 in waits
 
 
+def test_rate_limit_reservations_are_atomic_under_concurrent_workers() -> None:
+    executor = WritebackNetworkExecutor(
+        _Transport([]),
+        payload_resolver=_Payloads(),
+        clock=lambda: 0.0,
+    )
+    start = threading.Barrier(3)
+    waits: list[float] = []
+    waits_lock = threading.Lock()
+
+    def record_wait(seconds: float) -> None:
+        with waits_lock:
+            waits.append(seconds)
+
+    executor.sleeper = record_wait
+
+    def reserve() -> None:
+        start.wait(timeout=5)
+        executor._apply_rate_limit(_registration(rate_limit_per_minute=60))
+
+    threads = [threading.Thread(target=reserve) for _ in range(3)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+
+    # The first reservation is immediate; the two following reservations must
+    # observe distinct future slots without waiting in real time here.
+    assert sorted(waits) == [1.0, 2.0]
+    assert sorted(executor._next_allowed_at.values()) == [3.0]
+
+
+def test_rate_limit_lanes_are_isolated_by_registration_scope_digest() -> None:
+    waits: list[float] = []
+    executor = WritebackNetworkExecutor(
+        _Transport([]),
+        payload_resolver=_Payloads(),
+        sleeper=waits.append,
+        clock=lambda: 0.0,
+    )
+
+    executor._apply_rate_limit(_registration(rate_limit_per_minute=60))
+    executor._apply_rate_limit(
+        _registration(
+            tenant_id="tenant-b",
+            workspace_id="workspace-b",
+            credential_reference="vault://tenant-b/writeback-token",
+            rate_limit_per_minute=60,
+        )
+    )
+
+    assert waits == []
+    assert len(executor._next_allowed_at) == 2
+
+
 def test_network_dispatch_rejects_negative_provider_outcome_without_acknowledging() -> None:
     intent = _dispatched_intent()
     transport = _Transport([WritebackNetworkResponse(200, _provider_body(intent.idempotency_key, accepted=False))])

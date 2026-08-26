@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-960
+    priority: P0
+    area: connectors
+    title: Make write-back rate limiting atomic and registration-scoped
+    status: completed
+    depends_on: [E-958]
+    exit_evidence: >-
+      WritebackNetworkExecutor reserves rate-limit slots under a process-local
+      lock and sleeps only after reservation. The throttle key is the
+      immutable registration digest, so distinct tenant/workspace or endpoint
+      registrations cannot share a lane solely through connector_id. Focused
+      write-back tests pass with concurrent reservation evidence and separate
+      scope lanes. This is process-local quota enforcement only; it does not
+      prove distributed quota coordination, provider rate-limit semantics,
+      live interoperability, HA/DR, or production readiness. ADR 0654 records
+      the decision.
   - id: E-958
     priority: P0
     area: security-writeback

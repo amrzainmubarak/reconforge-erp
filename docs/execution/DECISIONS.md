@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-823: Make write-back rate-limit reservations atomic and registration-scoped
+
+- **Date**: 2026-08-26
+- **Context**: The write-back executor tracked the next allowed time by
+  `connector_id` without synchronization. Concurrent workers could read the
+  same deadline before either updated it, and unrelated tenant/workspace
+  registrations could share a throttle lane.
+- **Decision**: Add a process-local lock around deadline reservation, release it
+  before sleeping, and key the reservation by the immutable registration
+  digest. This preserves bounded retry behavior while making the declared
+  sender-side rate limit deterministic for concurrent workers and isolated
+  registrations.
+- **Verification**: E-960 focused write-back tests pass, including concurrent
+  reservation and cross-scope lane isolation. No provider or distributed quota
+  claim is added.
+- **Compatibility**: No public schema, database migration, request payload,
+  idempotency key, or provider contract changes. The only behavior change is
+  correct local throttling under concurrency and narrower lane sharing.
+- **Rollback**: Revert the lock/key implementation and E-960 evidence. No
+  persisted data or migration rollback is required.
+
 ### D-822: Record bounded live PostgreSQL matching replay
 
 - **Date**: 2026-08-26

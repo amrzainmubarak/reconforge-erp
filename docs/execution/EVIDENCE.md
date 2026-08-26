@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-960: Make write-back rate limiting atomic and registration-scoped
+
+- Code evidence: `WritebackNetworkExecutor._apply_rate_limit` reserves the
+  next deadline while holding a `threading.Lock`, then sleeps outside the lock.
+  The reservation key is the immutable `WritebackNetworkRegistration.digest`,
+  not the reusable connector ID.
+- Test evidence: `python -m pytest -q
+  tests/test_connector_writeback_network.py` exits 0 with 35 passing tests.
+  The new concurrency test observes two distinct future reservations for three
+  simultaneous workers, and the scope test proves separate registration lanes
+  do not wait on one another.
+- Boundary: this is a process-local sender-side quota guard. It does not prove
+  distributed worker coordination, provider-enforced quotas, Retry-After
+  interoperability, live vendor behavior, HA/DR, or production readiness.
+  ADR 0654 records rollback.
+
 ## E-923: Live PostgreSQL matching cross-engine replay
 
 - Runtime evidence: the existing live integration test passed with exit 0

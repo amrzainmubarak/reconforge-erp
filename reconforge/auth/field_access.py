@@ -80,6 +80,52 @@ EVIDENCE_REQUIREMENT_FIELDS = frozenset(
 EVIDENCE_VERIFICATION_FIELDS = frozenset(
     {"evidence_id", "ok", "expected_sha256", "actual_sha256"}
 )
+CLOSE_PERIOD_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "fiscal_period_id",
+        "period_name",
+        "organization_id",
+        "organization_code",
+        "fiscal_period_name",
+        "start_date",
+        "end_date",
+        "status",
+        "readiness_score",
+        "created_at",
+        "updated_at",
+        "locked_at",
+        "reopened_at",
+        "locked_by",
+        "reopened_by",
+    }
+)
+CLOSE_TASK_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "close_period_id",
+        "task_code",
+        "name",
+        "owner",
+        "owner_user_id",
+        "category",
+        "risk_rating",
+        "due_date",
+        "status",
+        "blocker_reason",
+        "updated_by",
+        "created_at",
+        "updated_at",
+        "period_name",
+        "fiscal_period_id",
+    }
+)
+CLOSE_READINESS_FIELDS = frozenset(
+    {"period_id", "period_name", "total_tasks", "complete_tasks", "blocked_tasks", "readiness_score"}
+)
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -238,3 +284,21 @@ def project_evidence_verification(values: Mapping[str, object]) -> FieldProjecti
     """Return a closed projection for a checksum verification response."""
 
     return project_fields(values, allowed_fields=EVIDENCE_VERIFICATION_FIELDS)
+
+
+def project_close_period(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for local and server close-period records."""
+
+    return project_fields(values, allowed_fields=CLOSE_PERIOD_FIELDS)
+
+
+def project_close_task(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for local and server close-task records."""
+
+    return project_fields(values, allowed_fields=CLOSE_TASK_FIELDS)
+
+
+def project_close_readiness(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for close-readiness summaries."""
+
+    return project_fields(values, allowed_fields=CLOSE_READINESS_FIELDS)

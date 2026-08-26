@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1021
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Close API responses
+    status: completed
+    depends_on: [E-1005, E-1020]
+    exit_evidence: >-
+      All `/api/v1/close` period, task, and readiness responses use central
+      allowlists covering the reviewed local SQLite and PostgreSQL shapes;
+      unknown future storage/adapter fields are dropped before serialization.
+      Focused field/API tests, Ruff, Mypy, full Python regression, package
+      build, YAML, and diff checks pass. This closes the Close response
+      projection surface only; external IAM, distributed revocation,
+      disclosure approval, source authenticity, and production effectiveness
+      remain open. ADR 0681 records rollback.
   - id: E-1020
     priority: P0
     area: identity-governance
@@ -2309,6 +2324,12 @@ tasks:
         requirement and checksum-verification mutation responses. Known fields
         remain available to the existing authorized operation, projection
         metadata is additive, and unknown adapter fields are dropped.
+      - E-1021 applies closed allowlists to all local and Server Profile Close
+        API period, task, and readiness responses. It prevents SQLite `SELECT *`
+        schema growth and future adapter fields from silently expanding the API;
+        the full Python regression, Ruff, Mypy, Bandit, pip-audit, package build,
+        YAML, and diff gates pass. This is a bounded disclosure control, not
+        universal field-level authorization or production IAM evidence.
   - id: E-1006
     priority: P1
     area: global-expansion

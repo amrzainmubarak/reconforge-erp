@@ -2,6 +2,17 @@
 
 Updated: 2026-08-26
 
+## E-1021 - Fail-closed projection for Close API responses (2026-08-26)
+
+- Close period, task, and readiness responses now use central allowlists over
+  the union of local SQLite and PostgreSQL fields. SQLite `SELECT *` schema
+  growth and future adapter fields cannot silently expand the API response.
+- Focused field/API tests, full Python regression at 100%, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML validation, and diff checks pass. This remains
+  a bounded disclosure control; external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness are
+  open. ADR 0681 records rollback.
+
 ## E-1020 - Fail-closed projection for Evidence mutation responses (2026-08-26)
 
 - Server Profile evidence requirement and checksum verification responses now

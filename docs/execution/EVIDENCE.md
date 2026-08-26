@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1021: Fail-closed projection for Close API responses
+
+- Code evidence: `/api/v1/close` period, task, and readiness responses use
+  `project_close_period`, `project_close_task`, and `project_close_readiness`
+  from the central field-access module before serialization. The allowlists
+  cover the reviewed local SQLite and PostgreSQL response shapes and drop
+  unknown future adapter/storage fields.
+- Test evidence: `tests/test_field_access.py` covers all three projection
+  contracts. `tests/test_api_platform_routes.py` adds synthetic future
+  columns to both local close tables and proves period, task, and readiness
+  responses do not expose the column or its value. Focused tests and the full
+  Python regression pass at 100%; Ruff, Mypy, Bandit, pip-audit, package build,
+  YAML validation, and diff checks also pass. pip-audit cannot audit the local
+  `reconforge-erp` distribution name because it is not published on PyPI.
+- Boundary: this closes the Close API response projection surface only. It
+  does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0681 records rollback.
+
 ## E-1020: Fail-closed projection for Evidence mutation responses
 
 - Code evidence: evidence requirement and checksum verification responses use

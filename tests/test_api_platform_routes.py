@@ -74,6 +74,45 @@ def test_account_api_lifecycle_and_metrics_are_rbac_protected(tmp_path: Path) ->
     assert "Traceback" not in denied.text
 
 
+def test_close_api_drops_future_storage_columns_from_period_and_task_responses(tmp_path: Path) -> None:
+    client, db_path = _setup(tmp_path)
+    headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+
+    created = client.post(
+        "/api/v1/close/periods",
+        headers=headers,
+        json={"period_name": "2026-08", "start_date": "2026-08-01", "end_date": "2026-08-31"},
+    )
+    assert created.status_code == 200, created.text
+    period_id = created.json()["period"]["id"]
+
+    connection = connect(db_path, require_exists=True)
+    try:
+        connection.execute("ALTER TABLE close_periods ADD COLUMN unknown_future_column TEXT")
+        connection.execute(
+            "UPDATE close_periods SET unknown_future_column = ? WHERE id = ?",
+            ("must-not-escape", period_id),
+        )
+        connection.execute("ALTER TABLE close_tasks_db ADD COLUMN unknown_future_column TEXT")
+        connection.execute(
+            "UPDATE close_tasks_db SET unknown_future_column = ? WHERE close_period_id = ?",
+            ("must-not-escape", period_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    periods = client.get("/api/v1/close/periods", headers=headers)
+    tasks = client.get("/api/v1/close/tasks", headers=headers, params={"period_id": period_id})
+    readiness = client.get(f"/api/v1/close/periods/{period_id}/readiness", headers=headers)
+
+    assert periods.status_code == tasks.status_code == readiness.status_code == 200
+    assert "unknown_future_column" not in periods.json()["periods"][0]
+    assert "unknown_future_column" not in tasks.json()["tasks"][0]
+    assert "unknown_future_column" not in readiness.json()["readiness"]
+    assert "must-not-escape" not in periods.text + tasks.text + readiness.text
+
+
 def test_local_evidence_cursor_pagination_is_signed_and_offset_compatible(tmp_path: Path) -> None:
     client, db_path = _setup(tmp_path)
     connection = connect(db_path, require_exists=True)

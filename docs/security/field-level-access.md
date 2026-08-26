@@ -45,3 +45,12 @@ authorized operation remain available, deterministic `field_access` metadata
 is additive, and unknown adapter fields are dropped. This covers two mutation
 response contracts and does not establish universal field-level authorization
 or production IAM. ADR 0680 records the decision and rollback.
+
+## E-1021 migrated surface
+
+The `/api/v1/close` period, task, and readiness responses now use central
+allowlists for the union of the local SQLite and PostgreSQL shapes. This
+prevents SQLite `SELECT *` schema growth or a future adapter field from
+silently expanding the response. Existing fields and route permissions are
+preserved. This is a bounded disclosure control, not universal field-level
+authorization or production IAM. ADR 0681 records the decision and rollback.

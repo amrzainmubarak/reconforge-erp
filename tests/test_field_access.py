@@ -1,6 +1,9 @@
 from reconforge.auth.field_access import (
     REDACTED_VALUE,
     project_audit_event,
+    project_close_period,
+    project_close_readiness,
+    project_close_task,
     project_evidence_drill_down_record,
     project_evidence_requirement,
     project_evidence_verification,
@@ -129,3 +132,40 @@ def test_evidence_mutation_projections_drop_unknown_adapter_fields() -> None:
     assert requirement.denied_fields == ("unknown_future_column",)
     assert "unknown_future_column" not in verification.visible
     assert verification.denied_fields == ("unknown_future_column",)
+
+
+def test_close_projections_drop_unknown_adapter_fields_across_record_shapes() -> None:
+    period = project_close_period(
+        {
+            "id": "period-1",
+            "workspace_id": "default",
+            "period_name": "2026-08",
+            "status": "Open",
+            "unknown_future_column": "must-not-escape",
+        }
+    )
+    task = project_close_task(
+        {
+            "id": "task-1",
+            "close_period_id": "period-1",
+            "task_code": "CLOSE-001",
+            "name": "Review",
+            "unknown_future_column": "must-not-escape",
+        }
+    )
+    readiness = project_close_readiness(
+        {
+            "period_id": "period-1",
+            "period_name": "2026-08",
+            "total_tasks": 1,
+            "complete_tasks": 1,
+            "blocked_tasks": 0,
+            "readiness_score": "100.00",
+            "unknown_future_column": "must-not-escape",
+        }
+    )
+    assert period.visible["period_name"] == "2026-08"
+    assert task.visible["task_code"] == "CLOSE-001"
+    assert readiness.visible["readiness_score"] == "100.00"
+    assert period.denied_fields == task.denied_fields == readiness.denied_fields == ("unknown_future_column",)
+    assert "must-not-escape" not in str(period.visible | task.visible | readiness.visible)

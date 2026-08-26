@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-848: Close API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Local close period/task reads used `SELECT *`, and close routes
+  returned local and PostgreSQL mappings directly. Future storage or adapter
+  fields could therefore become API fields without contract review.
+- **Decision**: Project all Close API period, task, and readiness responses
+  through central allowlists covering the reviewed union of both adapter
+  shapes; drop unknown fields before serialization.
+- **Verification**: Focused field/API tests cover unknown SQLite columns and
+  all three shapes. Full regression, static, package, YAML, and diff gates are
+  required for closure. External IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing field names and permission boundaries remain
+  unchanged. No new response envelope is introduced.
+- **Rollback**: Revert E-1021 code/tests/ADR 0681/manifest and execution
+  metadata together; do not restore direct `SELECT *` response serialization.
+
 ### D-847: Evidence mutation responses use fail-closed projection
 
 - **Date**: 2026-08-26

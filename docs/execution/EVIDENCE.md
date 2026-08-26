@@ -13,15 +13,18 @@ This file records commands and observed results. It does not convert a dirty wor
   `10001:10001`, and contains no `openssl` executable. Hardened
   `reconforge doctor` exited 0 with network disabled, read-only root, and
   bounded tmpfs mounts.
-- Scanner evidence: Syft 1.51.0 was checksum-verified and emitted a native
-  SBOM for the saved image. The Grype 0.117.0 database update did not finish
-  in the current container network/certificate environment, so no new
-  vulnerability result is claimed and the prior blocked E-824 artifact is not
-  overwritten.
-- Boundary: this is a local package-remediation and runtime-smoke slice. E-824
-  remains open until current Syft/Grype/license evidence and hosted clean-build
-  verification are available; no VEX, severity override, publication, or
-  production-readiness claim is made. ADR 0652 records rollback.
+- Scanner evidence: checksum-verified Syft 1.51.0 and Grype 0.117.0 were run
+  against the current image subject. The Grype v6.1.9 database was downloaded
+  with its published SHA-256 and imported locally before a network-none scan.
+  The fail-closed validator returned `status=passed`, zero blockers, and zero
+  active exceptions. It recorded 68 packages, 95.58 percent license metadata
+  coverage, and three fixed CPython High findings governed by the reviewed
+  OpenVEX document; no unexcepted Critical/High/Unknown finding remains.
+  The full bounded result is `CONTAINER_SECURITY_LOCAL_2026-08-26.json`.
+- Boundary: this is local exact-subject scanner evidence, not hosted clean-build,
+  registry publication, signed provenance, legal license compatibility, or
+  production-readiness evidence. E-824 therefore remains open for the hosted
+  gate. ADR 0652 records rollback.
 
 ## E-957: Recheck consolidation period before run transitions
 

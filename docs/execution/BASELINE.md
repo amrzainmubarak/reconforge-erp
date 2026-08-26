@@ -101,9 +101,9 @@
   total count.
 - E-959 refreshes libcrypto3/libssl3 in both pinned stages. A clean
   linux/amd64 build and runtime inspection report 3.5.8-r0, with no OpenSSL
-  CLI added. The exact Syft/Grype gate has not yet been rerun against this
-  rebuilt image, so registry authentication and release publication remain
-  blocked pending that evidence.
+  CLI added. The exact local Syft/Grype/license gate now passes against the
+  rebuilt subject; hosted clean-build, provenance, registry authentication,
+  and release publication remain blocked pending their separate evidence.
 
 #### E-825 write-back lifecycle identity refresh (2026-08-22)
 

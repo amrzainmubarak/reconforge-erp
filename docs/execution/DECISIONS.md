@@ -16,12 +16,14 @@
 - **Decision**: Keep the reviewed Python digest and add an explicit,
   exact-version `apk add --no-cache --upgrade` for `libcrypto3=3.5.8-r0` and
   `libssl3=3.5.8-r0` in both builder and runtime stages. Do not install the
-  OpenSSL CLI or broaden the package set. Keep E-824 open until the exact
-  Syft/Grype gate is rerun.
+  OpenSSL CLI or broaden the package set. Keep E-824 open until the hosted
+  release gate is rerun.
 - **Verification**: E-959 clean linux/amd64 build, exact package inspection,
-  hardened Doctor smoke, Dockerfile regression test, and checksum-verified
-  Syft SBOM generation pass. Grype database refresh remains an environment
-  blocker and is not counted as a pass.
+  hardened Doctor smoke, Dockerfile regression test, and the checksum-verified
+  Syft 1.51.0/Grype 0.117.0 gate against database v6.1.9 pass locally. The
+  subject-bound result is recorded in
+  `CONTAINER_SECURITY_LOCAL_2026-08-26.json`; the hosted run is not counted as
+  complete.
 - **Compatibility**: Python base identity, runtime user, application assets,
   CLI, database, and persisted financial contracts are unchanged. The image
   build now depends on the supported Alpine repository serving the pinned

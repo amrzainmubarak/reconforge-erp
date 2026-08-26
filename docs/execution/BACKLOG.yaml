@@ -1403,10 +1403,14 @@ tasks:
       retaining them in the five-High total. E-959 now refreshes libcrypto3 and
       libssl3 in both pinned Docker stages; a clean linux/amd64 build and
       runtime inspection report 3.5.8-r0 without adding the OpenSSL CLI. The
-      exact Syft/Grype release gate still needs to be rerun against this image
-      and its current vulnerability database before completion. No VEX,
-      severity override, or exception is used, and publication remains blocked
-      until the fail-closed gate passes.
+      exact local Syft/Grype release gate has now been rerun against this image
+      and the current imported v6.1.9 database. The validator passes with zero
+      blockers and zero active exceptions; its 68-package, 95.58 percent
+      license-inventory evidence and three fixed CPython High dispositions are
+      recorded in CONTAINER_SECURITY_LOCAL_2026-08-26.json. The hosted
+      clean-build/release gate is still required before completion. No severity
+      override or ungoverned exception is used, and publication remains blocked
+      until that hosted evidence is present.
   - id: E-823
     priority: P0
     area: supply-chain

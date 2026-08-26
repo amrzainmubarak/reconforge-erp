@@ -14,12 +14,16 @@ Updated: 2026-08-26
   `libcrypto3-3.5.8-r0` and `libssl3-3.5.8-r0`; the hardened `doctor` smoke
   completed with `--network none`, read-only root, and bounded tmpfs mounts.
   The Dockerfile regression test passes.
-- The exact Syft/Grype gate has not yet been rerun against this rebuilt image:
-  Syft produced the native SBOM locally, but the Grype database update could
-  not complete through the current container network/certificate path. E-824
-  is therefore `in_progress`, not complete; release authentication,
-  publication, and production claims remain blocked pending fresh
-  vulnerability/license evidence and the hosted gate.
+- The exact local Syft/Grype gate was rerun against the rebuilt image using
+  checksum-verified Syft 1.51.0, Grype 0.117.0, and imported Grype database
+  v6.1.9. The subject-bound validator returned `status=passed` with zero
+  blockers and zero active exceptions. It records 68 packages, 95.58 percent
+  license metadata coverage, three explicitly reviewed fixed CPython High
+  findings, and no unexcepted Critical/High/Unknown finding. Evidence is
+  captured in `CONTAINER_SECURITY_LOCAL_2026-08-26.json`. E-824 remains
+  `in_progress` only because the hosted clean-build/release gate has not run;
+  registry authentication, publication, and production claims remain
+  blocked.
 - ADR 0652 records the package-refresh and evidence boundary.
 
 ## E-958 - Bind server write-back registrations to tenant/workspace (2026-08-26)

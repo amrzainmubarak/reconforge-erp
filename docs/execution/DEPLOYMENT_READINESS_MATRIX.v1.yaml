@@ -80,7 +80,7 @@ editions:
         boundary: PostgreSQL/queue/object dependencies have disposable evidence, not service SLO proof.
       - id: failure_domain_and_dr
         status: partial
-        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml]
+        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml, docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json, tests/test_ha_dr_repeated_drill.py]
         boundary: Single-host two-node drill; independent failure domains remain open.
       - id: sovereign_air_gap
         status: partial
@@ -116,7 +116,7 @@ editions:
         boundary: Reliability and collector evidence is bounded to local/disposable profiles.
       - id: failure_domain_and_dr
         status: partial
-        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml]
+        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml, docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json, tests/test_ha_dr_repeated_drill.py]
         boundary: One-host topology explicitly lacks independent failure-domain proof.
       - id: sovereign_air_gap
         status: partial
@@ -152,7 +152,7 @@ editions:
         boundary: Local observability evidence is not a regulated operational control assessment.
       - id: failure_domain_and_dr
         status: open
-        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml]
+        evidence: [docs/execution/P3_ENT_010_EXIT_AUDIT.yaml, docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json, tests/test_ha_dr_repeated_drill.py]
         boundary: Independent sites, quorum/witness, and defined regulated RPO/RTO remain open.
       - id: sovereign_air_gap
         status: partial

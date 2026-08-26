@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-970: Refresh bounded PostgreSQL HA/DR repeated runtime evidence
+
+- Command: `python .github/scripts/verify_postgres_ha_dr_repeated.py
+  --executed-at 2026-08-26 --output
+  .tmp/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json`.
+- Runtime: Docker Engine `29.7.2`, PostgreSQL `17.10-alpine`, two disposable
+  nodes per run, one failure domain, exactly three runs. Every run passed
+  labelled-resource cleanup, recorded zero acknowledged transaction loss,
+  final sequence `4`, and the bounded failover/failback checks.
+- Measurements: failover RTO `11.270-11.721s` (max `11.721s`), failback RTO
+  `1.175-1.316s` (max `1.316s`), zero-loss runs `3/3`.
+- Artifact: `docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json`;
+  validated against `docs/schemas/ha_dr_repeated_drill_report.schema.json`,
+  tested by `tests/test_ha_dr_repeated_drill.py`, and added to `MANIFEST.in`.
+- Boundary: this is current single-host/manual-controller/synthetic evidence.
+  It does not prove independent failure domains, quorum/witness, automatic
+  failover, host/zone/site loss, production RPO/RTO SLOs, Enterprise readiness,
+  or Regulated readiness. The temporary labelled resources were absent after
+  completion.
+- ADR: `docs/adr/0664-refresh-postgresql-ha-dr-repeated-evidence.md`.
+
 ## E-969: Refresh the mode-specific readiness matrix with current Community Compose evidence
 
 - Code/evidence source: `DEPLOYMENT_READINESS_MATRIX.v1.yaml` is reviewed on

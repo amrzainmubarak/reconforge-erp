@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-970
+    priority: P1
+    area: reliability-ha-dr
+    title: Refresh bounded PostgreSQL HA/DR repeated runtime evidence
+    status: completed
+    depends_on: [E-969, E-426, E-866]
+    exit_evidence: >-
+      The current repeated Docker drill completed exactly three disposable
+      PostgreSQL 17.10 primary/synchronous-standby cycles on Docker Engine
+      29.7.2. All runs passed cleanup, recorded zero acknowledged transaction
+      loss, final sequence 4, failover RTO 11.270-11.721 seconds, and
+      failback RTO 1.175-1.316 seconds. The schema-valid artifact is packaged
+      in MANIFEST.in and the readiness matrix now references it for
+      Team/Enterprise/Regulated failure-domain context. This remains a
+      single-host/manual/synthetic bounded drill; it does not prove independent
+      failure domains, quorum/witness, automatic failover, site loss,
+      production SLOs, or Enterprise/Regulated readiness. ADR 0664 records the
+      evidence refresh.
   - id: E-969
     priority: P1
     area: deployment-readiness

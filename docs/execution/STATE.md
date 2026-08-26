@@ -2,6 +2,22 @@
 
 Updated: 2026-08-26
 
+## E-970 - Refresh bounded PostgreSQL HA/DR repeated runtime evidence (2026-08-26)
+
+- `.github/scripts/verify_postgres_ha_dr_repeated.py` completed exactly three
+  disposable PostgreSQL `17.10-alpine` primary/synchronous-standby cycles on
+  Docker Engine `29.7.2`.
+- All three runs passed cleanup, recorded zero acknowledged transaction loss,
+  final sequence `4`, failover RTO `11.270-11.721s`, and failback RTO
+  `1.175-1.316s`. The report is schema-valid and is packaged in
+  `MANIFEST.in`.
+- The readiness matrix now points Team/Enterprise/Regulated failure-domain
+  context at this current artifact and its regression test. This remains a
+  single-host, manual-controller, synthetic-data/key drill; no independent
+  failure domain, quorum/witness, automatic failover, site loss, production
+  SLO, Enterprise readiness, or Regulated readiness is claimed. ADR 0664
+  records the evidence refresh.
+
 ## E-969 - Refresh the mode-specific readiness matrix with current Community Compose evidence (2026-08-26)
 
 - `DEPLOYMENT_READINESS_MATRIX.v1.yaml` now reflects the current review date

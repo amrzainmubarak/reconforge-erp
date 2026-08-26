@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-833: Refresh bounded PostgreSQL HA/DR repeated runtime evidence
+
+- **Date**: 2026-08-26
+- **Context**: The repository had older repeated PostgreSQL HA/DR artifacts,
+  while the current Docker Engine was available for a fresh bounded drill.
+- **Decision**: Execute exactly three disposable primary/synchronous-standby
+  cycles, require encrypted restore/fencing/failover/failback/cleanup through
+  the existing script, package the schema-valid report, and reference it from
+  the mode-specific readiness matrix. Keep all single-host/manual/synthetic
+  limitations explicit.
+- **Verification**: Three runs passed with zero acknowledged transaction loss,
+  final sequence 4, failover max 11.721s, failback max 1.316s, and no labelled
+  Docker resources left behind. The repeated-report schema test passes.
+- **Compatibility**: Evidence artifact, manifest inclusion, matrix references,
+  and tests only; no production database or application data is changed.
+- **Rollback**: Remove the current report, manifest entry, matrix references,
+  regression assertions, ADR 0664, and E-970 execution entries. The drill's
+  temporary resources are already cleaned.
+
 ### D-832: Refresh the readiness matrix with current Community Compose evidence
 
 - **Date**: 2026-08-26

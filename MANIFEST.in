@@ -753,6 +753,7 @@ include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-05.json
 include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-06.json
 include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-10.json
 include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-11.json
+include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json
 include docs/execution/POSTGRES_HA_DR_CURRENT_DRILL_2026-08-23.json
 include docs/execution/benchmarks/postgres-grouped-matching-64-partitions-v1.md
 include docs/execution/benchmarks/postgres-grouped-matching-500-current-2026-08-23.md

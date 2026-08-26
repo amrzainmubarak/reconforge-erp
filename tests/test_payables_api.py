@@ -164,3 +164,68 @@ def test_payables_purchase_order_api_drops_future_storage_fields(tmp_path: Path)
     assert order.status_code == 200, order.text
     assert "unknown_future_column" not in order.text
     assert "unknown_line_column" not in order.text
+
+
+def test_payables_receipt_api_drops_future_storage_fields(tmp_path: Path) -> None:
+    db_path = tmp_path / "payables-receipt-projection.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        auth = LocalAuthService(connection)
+        auth.init_admin(username="admin", password="Secret-123")
+        auth.create_user(username="review", password="Secret-123", role="reviewer")
+        connection.execute("ALTER TABLE ap_goods_receipts ADD COLUMN unknown_future_column TEXT")
+        connection.execute("ALTER TABLE ap_goods_receipt_lines ADD COLUMN unknown_line_column TEXT")
+        connection.commit()
+    finally:
+        connection.close()
+
+    client = TestClient(create_api_app(db_path))
+    admin_headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+    review_headers = {"Authorization": f"Bearer {_token(client, 'review')}"}
+    supplier = client.post(
+        "/api/v1/payables/suppliers",
+        headers=admin_headers,
+        json={"supplier_code": "SUP-RECEIPT", "name": "Receipt Supplier", "currency_code": "USD"},
+    )
+    order = client.post(
+        "/api/v1/payables/purchase-orders",
+        headers=admin_headers,
+        json={
+            "po_number": "PO-RECEIPT",
+            "supplier_code": "SUP-RECEIPT",
+            "order_date": "2026-08-26",
+            "currency_code": "USD",
+            "lines": [{"item_code": "ITEM-1", "ordered_quantity": "1", "unit_price_minor": 100}],
+        },
+    )
+    order_id = order.json()["id"]
+    line_id = order.json()["lines"][0]["id"]
+    submitted = client.post(
+        f"/api/v1/payables/purchase-orders/{order_id}/submit",
+        headers=admin_headers,
+        json={"expected_version": 1},
+    )
+    approved = client.post(
+        f"/api/v1/payables/purchase-orders/{order_id}/approve",
+        headers=review_headers,
+        json={"expected_version": 2},
+    )
+    receipt = client.post(
+        "/api/v1/payables/receipts",
+        headers=admin_headers,
+        json={
+            "receipt_number": "GR-FUTURE",
+            "purchase_order_id": order_id,
+            "receipt_date": "2026-08-26",
+            "quantities": {line_id: "1"},
+        },
+    )
+
+    assert supplier.status_code == 200, supplier.text
+    assert order.status_code == 200, order.text
+    assert submitted.status_code == 200, submitted.text
+    assert approved.status_code == 200, approved.text
+    assert receipt.status_code == 200, receipt.text
+    assert "unknown_future_column" not in receipt.text
+    assert "unknown_line_column" not in receipt.text

@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-862: Payables goods-receipt API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: The Payables receipt-posting route returned local SQLite and
+  tenant-scoped PostgreSQL mappings with nested receipt lines. Future storage
+  or adapter fields could silently expand this financial operational response.
+- **Decision**: Apply central top-level and nested-line allowlists to receipt
+  posting responses in both local and PostgreSQL branches. Preserve the direct
+  response shape, exact quantity fields, permissions, lifecycle behavior, and
+  local/server boundaries.
+- **Verification**: Focused field/API tests pass 24 tests and include
+  synthetic future columns in both receipt tables. Full `python -m pytest -q`
+  passes at 100%; Ruff, Mypy (539 source files), Bandit, pip-audit, package
+  build, targeted safe YAML validation (9 files), and diff gates also pass.
+  The local distribution is not auditable by pip-audit because it is not
+  published on PyPI.
+- **Compatibility**: No route, schema, migration, permission, or lifecycle
+  behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1035 code/tests/ADR 0695/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
 ### D-861: Payables purchase-order API uses fail-closed recursive projection
 
 - **Date**: 2026-08-26

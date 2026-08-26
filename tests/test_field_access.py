@@ -32,6 +32,7 @@ from reconforge.auth.field_access import (
     project_inventory_warehouse,
     project_master_snapshot,
     project_payables_purchase_order,
+    project_payables_receipt,
     project_payables_supplier,
     project_reconciliation_exception,
     project_reconciliation_input,
@@ -421,6 +422,20 @@ def test_payables_purchase_order_projection_is_closed_recursively() -> None:
 
     assert result.visible == {"id": "po-1", "lines": [{"id": "line-1", "ordered_quantity": "2.5"}]}
     assert result.denied_fields == ("unknown_order_field",)
+    assert "must-not-escape" not in str(result.visible)
+
+
+def test_payables_receipt_projection_is_closed_recursively() -> None:
+    result = project_payables_receipt(
+        {
+            "id": "receipt-1",
+            "lines": [{"id": "line-1", "received_quantity": "2", "unknown_line_field": "must-not-escape"}],
+            "unknown_receipt_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible == {"id": "receipt-1", "lines": [{"id": "line-1", "received_quantity": "2"}]}
+    assert result.denied_fields == ("unknown_receipt_field",)
     assert "must-not-escape" not in str(result.visible)
 
 

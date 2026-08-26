@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1035: Fail-closed projection for Payables goods-receipt API responses
+
+- Code evidence: `/api/v1/payables/receipts` posting responses use central
+  top-level and nested-line allowlists across local SQLite and PostgreSQL
+  shapes. Unknown adapter/storage fields are dropped before serialization
+  while the existing direct response and lifecycle behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers the receipt and line
+  projectors; `tests/test_payables_api.py` adds synthetic future columns to
+  both receipt tables and proves they are absent from the post response.
+  Focused selectors pass 24 tests; `python -m pytest -q` passes at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted safe YAML
+  validation (9 files), and diff gates pass. pip-audit cannot audit the local
+  `reconforge-erp` distribution because it is not published on PyPI.
+- Boundary: this closes only the Payables goods-receipt response family.
+  Supplier invoices, three-way matching, universal field-level authorization,
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open. ADR 0695 records
+  rollback.
+
 ## E-1034: Fail-closed projection for Payables purchase-order API responses
 
 - Code evidence: `/api/v1/payables/purchase-orders` create, submit, and approve

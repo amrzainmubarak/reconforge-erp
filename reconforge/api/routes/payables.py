@@ -26,7 +26,11 @@ from reconforge.api.server_payables import (
     execute_postgres_payables,
     server_payables_enabled,
 )
-from reconforge.auth.field_access import project_payables_purchase_order, project_payables_supplier
+from reconforge.auth.field_access import (
+    project_payables_purchase_order,
+    project_payables_receipt,
+    project_payables_supplier,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_payables import PostgresPayablesRepository
@@ -336,16 +340,18 @@ def post_receipt(
     if server_payables_enabled(request):
         values = payload.model_dump()
         values["actor_label"] = current_user.id
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"payables.manage"}),
             lambda repository, scope: repository.post_receipt(**{**values, "workspace": scope.workspace_id}),
             object_refs=(("purchase_order", payload.purchase_order_id),),
         )
+        return project_payables_receipt(record).visible
     try:
-        return PayablesService(_local_connection(connection)).post_receipt(**payload.model_dump(), actor_label=current_user.username)
+        record = PayablesService(_local_connection(connection)).post_receipt(**payload.model_dump(), actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_receipt_post_failed", exc) from exc
+    return project_payables_receipt(record).visible
 
 
 @router.post("/invoices")

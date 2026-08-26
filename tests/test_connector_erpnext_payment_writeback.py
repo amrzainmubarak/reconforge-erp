@@ -183,7 +183,9 @@ def test_payment_entry_dispatch_requires_enablement_and_keeps_secret_out_of_rece
     )
     dispatched = dispatch_writeback(approved, policy=POLICY)
     registration = erpnext_payment_entry_writeback_registration(
-        credential_reference="vault://tenant-a/erpnext"
+        credential_reference="vault://tenant-a/erpnext",
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
     ).model_copy(update={"feature_enabled": True})
 
     class Payloads:

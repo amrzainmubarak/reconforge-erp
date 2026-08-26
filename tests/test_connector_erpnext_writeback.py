@@ -183,7 +183,11 @@ def test_erpnext_writeback_registration_is_disabled_and_endpoint_hardened() -> N
 
 def test_erpnext_writeback_uses_token_auth_only_after_human_approval_and_feature_enablement() -> None:
     payload = build_erpnext_journal_entry_payload(_draft())
-    registration = erpnext_writeback_registration(credential_reference="vault://tenant-a/erpnext").model_copy(
+    registration = erpnext_writeback_registration(
+        credential_reference="vault://tenant-a/erpnext",
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
+    ).model_copy(
         update={"feature_enabled": True}
     )
     intent = _intent(payload.payload_digest)
@@ -205,7 +209,11 @@ def test_erpnext_writeback_uses_token_auth_only_after_human_approval_and_feature
     with pytest.raises(WritebackNetworkError, match="feature_disabled"):
         disabled_executor.dispatch(
             dispatched,
-            registration=erpnext_writeback_registration(credential_reference="vault://tenant-a/erpnext"),
+            registration=erpnext_writeback_registration(
+                credential_reference="vault://tenant-a/erpnext",
+                tenant_id="tenant-a",
+                workspace_id="workspace-a",
+            ),
             policy=POLICY,
         )
     assert disabled_transport.calls == []

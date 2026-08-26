@@ -96,7 +96,11 @@ class ErpNextJournalEntryPayload:
 
 
 def erpnext_writeback_registration(
-    *, credential_reference: str, endpoint: str = ERP_NEXT_JOURNAL_ENTRY_ENDPOINT
+    *,
+    credential_reference: str,
+    endpoint: str = ERP_NEXT_JOURNAL_ENTRY_ENDPOINT,
+    tenant_id: str | None = None,
+    workspace_id: str | None = None,
 ) -> WritebackNetworkRegistration:
     """Bind an operator-owned ERPNext Journal Entry endpoint.
 
@@ -119,6 +123,8 @@ def erpnext_writeback_registration(
     return WritebackNetworkRegistration(
         registration_schema="writeback-network-registration-v1",
         connector_id="erpnext-journal-entry-writeback",
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
         version="1.0.0",
         endpoint=endpoint,
         egress_destinations=(endpoint,),

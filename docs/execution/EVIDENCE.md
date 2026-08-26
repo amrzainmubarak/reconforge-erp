@@ -19763,3 +19763,27 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - Boundary: local static/dependency evidence only; no penetration,
     reachability, malware, license, hosted, provenance, or production-security
     assurance follows.
+
+- E-958 tenant/workspace binding for executable server write-back registrations
+  (2026-08-26; ADR 0651):
+  - `WritebackNetworkRegistration` now validates paired optional
+    `tenant_id`/`workspace_id` fields and includes a bound scope in its
+    registration digest while preserving the historical digest shape for
+    unbound inspection-only registrations.
+  - Dispatch, recovery, and compensation route lookup now requires the exact
+    authenticated tenant/workspace pair. `WritebackNetworkExecutor` repeats
+    the check for dispatch, recovery observation/application, and compensation
+    before payload or secret resolution. Unbound and cross-scope registrations
+    are rejected without provider I/O.
+  - Focused command:
+    `python -m pytest -q tests/test_connector_writeback_network.py
+    tests/test_connector_erpnext_writeback.py
+    tests/test_connector_provider_tls_sandbox.py tests/test_api_connectors.py
+    tests/test_api_server_identity.py` completed with all tests passing and one
+    pre-existing capability skip. The regression includes explicit API denial
+    for unbound/cross-scope registrations and executor denial before payload or
+    secret resolution.
+  - Boundary: local synthetic HTTP/executor and TLS-sandbox evidence only;
+    no live vendor interoperability, credential-vault assurance, distributed
+    registry consistency, accounting posting, HA/DR, or production readiness
+    follows.

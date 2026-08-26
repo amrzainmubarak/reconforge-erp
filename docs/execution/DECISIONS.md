@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-820: Bind executable write-back registrations to authenticated scope
+
+- **Date**: 2026-08-26
+- **Context**: Server write-back intents and permissions were tenant/workspace
+  scoped, but the in-memory provider registration lookup used connector ID
+  only. A shared endpoint and credential reference could be selected across
+  scopes by configuration error.
+- **Decision**: Add an additive tenant/workspace binding to the registration,
+  require an exact match in the server route, and repeat the same fail-closed
+  check in the executor before payload or secret resolution. Bound scope is
+  included in the registration digest; unbound construction remains parseable
+  but is not executable.
+- **Verification**: E-958, ADR 0651, focused API/executor/TLS tests, Ruff,
+  Mypy, full regression, and diff checks.
+- **Compatibility**: No database migration; local intent and registration
+  inspection compatibility is retained. Server registrations require explicit
+  scope configuration.
+- **Rollback**: Revert the code and restore the prior registration shape if
+  required. No persisted data migration is involved.
+
 ### D-1001: Make API version scope backend-aware
 
 The public version endpoint still labeled PostgreSQL Server Profile as

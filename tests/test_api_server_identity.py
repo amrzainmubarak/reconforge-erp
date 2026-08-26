@@ -1328,6 +1328,8 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 {
                     "registration_schema": "writeback-network-registration-v1",
                     "connector_id": connector_id,
+                    "tenant_id": tenant_a,
+                    "workspace_id": "workspace-a",
                     "version": "1.0.0",
                     "endpoint": "https://api.example.test/v1/writeback",
                     "egress_destinations": ("https://api.example.test/v1/writeback",),

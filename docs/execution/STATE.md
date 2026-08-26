@@ -2,6 +2,23 @@
 
 Updated: 2026-08-26
 
+## E-958 - Bind server write-back registrations to tenant/workspace (2026-08-26)
+
+- `WritebackNetworkRegistration` now accepts an additive tenant/workspace
+  binding and requires both fields together. Bound scope is part of the
+  registration digest; legacy unbound inspection retains its historical digest
+  shape.
+- The server dispatch, recovery, and compensation routes select registrations
+  by connector ID plus exact authenticated tenant/workspace scope. The network
+  executor repeats the check for dispatch, recovery observation/application,
+  and compensation, rejecting unbound or cross-scope configuration before
+  payload/secret resolution and provider I/O.
+- Focused write-back, ERPNext TLS, API, and server-identity tests pass. The
+  boundary is application-level synthetic evidence only; provider
+  interoperability, distributed registry consistency, credential-vault
+  assurance, posting, HA/DR, and production readiness remain open. ADR 0651
+  records the additive compatibility decision.
+
 ## E-957 - Recheck consolidation period before run transitions (2026-08-26)
 
 - PostgreSQL consolidation transitions now identify and lock the parent

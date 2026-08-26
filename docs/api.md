@@ -194,6 +194,29 @@ call an external provider. This is a bounded server API composition, not proof
 of distributed export workers, object-store durability, UI adoption, HA/DR, or
 production readiness.
 
+## Governed server write-back boundary
+
+The server-profile write-back routes are:
+
+- `POST /api/v1/connectors/writeback/intents/{intent_id}/dispatch`
+- `POST /api/v1/connectors/writeback/intents/{intent_id}/recover`
+- `POST /api/v1/connectors/writeback/intents/{intent_id}/compensate`
+
+These routes require an authenticated tenant/workspace scope and the
+corresponding write-back permission. Each admitted in-memory
+`WritebackNetworkRegistration` must also declare the exact same `tenant_id`
+and `workspace_id`; a missing binding returns
+`writeback_connector_scope_not_configured`, and a different binding returns
+`writeback_connector_scope_mismatch`. The network executor repeats this check
+before resolving a payload or credential, so configuration cannot reuse an
+endpoint or credential reference across scopes by connector ID alone.
+
+Registration scope is digest-bound when present. Construction of an unbound
+registration remains parseable for compatibility and inspection, but it is not
+executable. Network write-back remains opt-in, provider-neutral, synthetic in
+the retained evidence, and explicitly non-posting until a separately governed
+provider integration is proven. See ADR 0651.
+
 ## Endpoints
 
 Unauthenticated:

@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-958
+    priority: P0
+    area: security-writeback
+    title: Bind executable server write-back registrations to tenant and workspace
+    status: completed
+    depends_on: [E-834, E-483]
+    exit_evidence: >-
+      WritebackNetworkRegistration requires tenant_id and workspace_id together
+      for bound configuration and includes the bound scope in its digest. The
+      server dispatch, recovery, and compensation routes reject unbound or
+      cross-scope registrations, and the network executor repeats the same
+      check before payload/secret resolution and provider I/O. Focused write-back,
+      ERPNext TLS, API, server-identity, Ruff, Mypy, full regression, and
+      diff-check gates pass. This is application-level synthetic scope evidence;
+      provider interoperability, credential-vault assurance, distributed
+      registry consistency, posting, HA/DR, and production readiness remain
+      open. ADR 0651 records the additive compatibility boundary.
   - id: E-955
     priority: P0
     area: finance-close

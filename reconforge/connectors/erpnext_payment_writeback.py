@@ -105,6 +105,8 @@ def erpnext_payment_entry_writeback_registration(
     *,
     credential_reference: str,
     endpoint: str = ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_ENDPOINT,
+    tenant_id: str | None = None,
+    workspace_id: str | None = None,
 ) -> WritebackNetworkRegistration:
     """Bind an operator-owned ERPNext Payment Entry draft endpoint."""
 
@@ -122,6 +124,8 @@ def erpnext_payment_entry_writeback_registration(
     return WritebackNetworkRegistration(
         registration_schema="writeback-network-registration-v1",
         connector_id="erpnext-payment-entry-writeback",
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
         version="1.0.0",
         endpoint=endpoint,
         egress_destinations=(endpoint,),

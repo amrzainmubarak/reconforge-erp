@@ -289,7 +289,12 @@ def dispatch_writeback_intent(
         version = int(cast(int, current["version"]))
         if version != payload.expected_version:
             raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
-        registration = _network_registration(request, intent.connector_id)
+        registration = _network_registration(
+            request,
+            intent.connector_id,
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+        )
         policy = WritebackPolicy(
             connector_id=registration.connector_id,
             allowed_operations=registration.allowed_operations,
@@ -397,7 +402,12 @@ def recover_writeback_intent(
             raise APIError(status_code=404, code="writeback_intent_not_found", message="Write-back intent was not found.")
         intent = cast(WritebackIntent, current["intent"])
         version = int(cast(int, current["version"]))
-        registration = _network_registration(request, intent.connector_id)
+        registration = _network_registration(
+            request,
+            intent.connector_id,
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+        )
         policy = WritebackPolicy(
             connector_id=registration.connector_id,
             allowed_operations=registration.allowed_operations,
@@ -776,7 +786,12 @@ def dispatch_writeback_compensation(
             raise APIError(status_code=409, code="writeback_intent_version_conflict", message="Write-back intent version is stale.")
         if intent.status is not WritebackStatus.COMPENSATION_REQUESTED:
             raise APIError(status_code=409, code="writeback_compensation_state_invalid", message="Write-back compensation has not been requested.")
-        registration = _network_registration(request, intent.connector_id)
+        registration = _network_registration(
+            request,
+            intent.connector_id,
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+        )
         return {"already_compensated": False, "intent": intent, "version": version}
 
     marked = execute_postgres_writeback(request, load)
@@ -894,7 +909,13 @@ def _writeback_response(intent: WritebackIntent, version: int, *, server_mode: b
     }
 
 
-def _network_registration(request: Request, connector_id: str) -> WritebackNetworkRegistration:
+def _network_registration(
+    request: Request,
+    connector_id: str,
+    *,
+    tenant_id: str,
+    workspace_id: str,
+) -> WritebackNetworkRegistration:
     registrations = getattr(request.app.state, "writeback_network_registrations", None)
     executor = getattr(request.app.state, "writeback_network_executor", None)
     if not isinstance(executor, WritebackNetworkExecutor) or not isinstance(registrations, Mapping):
@@ -909,5 +930,17 @@ def _network_registration(request: Request, connector_id: str) -> WritebackNetwo
             status_code=503,
             code="writeback_connector_not_registered",
             message="The requested connector is not admitted for network write-back.",
+        )
+    if registration.tenant_id is None or registration.workspace_id is None:
+        raise APIError(
+            status_code=503,
+            code="writeback_connector_scope_not_configured",
+            message="The requested connector is not bound to an authenticated server scope.",
+        )
+    if registration.tenant_id != tenant_id or registration.workspace_id != workspace_id:
+        raise APIError(
+            status_code=403,
+            code="writeback_connector_scope_mismatch",
+            message="The requested connector is not admitted for the authenticated server scope.",
         )
     return registration

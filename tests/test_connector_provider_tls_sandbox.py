@@ -353,6 +353,8 @@ def test_erpnext_journal_writeback_runs_over_pinned_tls_with_retry_and_idempoten
         registration = erpnext_writeback_registration(
             credential_reference="vault://tls/synthetic",
             endpoint=endpoint,
+            tenant_id="tenant-tls",
+            workspace_id="workspace-tls",
         ).model_copy(update={"feature_enabled": True})
         receipt = WritebackNetworkExecutor(
             transport,
@@ -429,6 +431,8 @@ def test_erpnext_payment_writeback_runs_over_pinned_tls_with_exact_draft_payload
         registration = erpnext_payment_entry_writeback_registration(
             credential_reference="vault://tls/synthetic",
             endpoint=endpoint,
+            tenant_id="tenant-tls",
+            workspace_id="workspace-tls",
         ).model_copy(update={"feature_enabled": True})
         receipt = WritebackNetworkExecutor(
             transport,

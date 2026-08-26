@@ -972,7 +972,22 @@ def create_entry(
     current_user: FinanceManage,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
-    if server_finance_core_enabled(request) and payload.entity_code.strip() and payload.period_id.strip() and payload.journal_code.strip():
+    if server_finance_core_enabled(request):
+        missing_scope = [
+            field
+            for field, value in (
+                ("entity_code", payload.entity_code),
+                ("period_id", payload.period_id),
+                ("journal_code", payload.journal_code),
+            )
+            if not value.strip()
+        ]
+        if missing_scope:
+            raise APIError(
+                status_code=400,
+                code="finance_core_entry_scope_required",
+                message="Server Finance Core entries require entity_code, period_id, and journal_code.",
+            )
         policy_amount = _entry_policy_amount(payload)
         scoped_workspace = _server_finance_workspace(
             request,

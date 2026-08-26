@@ -263,6 +263,45 @@ def test_server_finance_core_entry_rejects_negative_amount_before_adapter(
     assert error.value.code == "finance_entry_amount_invalid"
 
 
+def test_server_finance_core_entry_does_not_fall_back_to_legacy_ledger(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: True)
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core_scoped",
+        lambda *_args, **_kwargs: pytest.fail("Finance Core adapter must not run for incomplete scope"),
+    )
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_ledger",
+        lambda *_args, **_kwargs: pytest.fail("legacy ledger fallback must not run"),
+    )
+
+    with pytest.raises(routes.APIError) as error:
+        routes.create_entry(
+            request,
+            routes.LedgerEntryRequest(
+                entry_number="JE/BOUNDARY/001",
+                organization_code="ORG-A",
+                entity_code="",
+                period_id="PERIOD-A",
+                journal_code="GENERAL",
+                posting_date="2026-08-23",
+                description="Incomplete server scope",
+                lines=[
+                    routes.LedgerLineRequest(account_code="1000", debit="1.00", credit="0"),
+                    routes.LedgerLineRequest(account_code="3000", debit="0", credit="1.00"),
+                ],
+            ),
+            user,
+            None,
+        )
+    assert error.value.code == "finance_core_entry_scope_required"
+
+
 def test_server_finance_core_rejects_cross_workspace_payload_before_adapter(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

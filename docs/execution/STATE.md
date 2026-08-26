@@ -2,6 +2,16 @@
 
 Updated: 2026-08-26
 
+## E-949 — Refuse incomplete Finance Core entry scope before legacy fallback (2026-08-26)
+
+- Server Profile `create_entry` now selects Finance Core exclusively. Missing
+  `entity_code`, `period_id`, or `journal_code` returns the explicit
+  `finance_core_entry_scope_required` error before either adapter runs; it no
+  longer falls through to the legacy ledger boundary.
+- A regression test proves both PostgreSQL Finance Core and legacy ledger
+  adapters remain untouched for incomplete scope. Focused tests and static
+  gates pass. ADR 0642 records the compatibility and rollback boundary.
+
 ## E-948 — Bind Finance Core API hierarchy codes to authenticated PostgreSQL scope (2026-08-26)
 
 - Finance Core server operations that accept organization or legal-entity

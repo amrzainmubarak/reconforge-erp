@@ -5,6 +5,18 @@
 
 ## Decisions
 
+### D-997: Refuse incomplete Finance Core entry scope before legacy fallback
+
+When the PostgreSQL Finance Core backend is enabled, `/finance-core/entries`
+must not silently route an incomplete request to the older tenant-scoped ledger
+adapter. The route now requires `entity_code`, `period_id`, and `journal_code`
+for the Finance Core contract and returns a stable validation error before any
+adapter is called. Local Profile behavior is unchanged, and valid Server
+Profile Finance Core requests retain their existing path. This is reversible and
+bounded; it does not claim legacy ledger removal, hosted parity, external IAM,
+HA/DR, provider, production, compliance, or certification readiness. ADR 0642
+records the rollback boundary.
+
 ### D-996: Canonicalize Finance Core hierarchy selectors from authenticated scope
 
 Finance Core server routes must not trust organization or legal-entity codes

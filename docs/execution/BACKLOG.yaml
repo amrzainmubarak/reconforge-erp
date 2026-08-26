@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-949
+    priority: P0
+    area: identity-governance
+    title: Refuse incomplete Finance Core entry scope before legacy fallback
+    status: completed
+    depends_on: [E-948]
+    exit_evidence: >-
+      Server Profile Finance Core entry creation selects the Finance Core
+      boundary exclusively and rejects missing entity_code, period_id, or
+      journal_code with finance_core_entry_scope_required before either the
+      Finance Core or legacy ledger adapter runs. The regression proves no
+      ambiguous fallback, and focused tests, Ruff, Mypy, and diff-check pass;
+      the opt-in live PostgreSQL test remains capability-gated. This is a
+      bounded routing safety control, not legacy-ledger removal, hosted parity,
+      external IAM, HA/DR, provider, capacity, production, compliance, or
+      certification evidence. ADR 0642 records the decision.
   - id: E-948
     priority: P0
     area: identity-governance

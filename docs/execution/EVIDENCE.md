@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-949: Refuse incomplete Finance Core entry scope before legacy fallback
+
+- Code evidence: Server Profile `reconforge/api/routes/finance_core.py` now
+  enters the Finance Core branch whenever its backend is enabled, validates
+  `entity_code`, `period_id`, and `journal_code`, and returns
+  `finance_core_entry_scope_required` before invoking either the Finance Core
+  or legacy ledger adapter.
+- Focused command `python -m pytest -q tests/test_api_server_finance_core.py
+  tests/test_api_server_finance_core_live.py` exits `0`; the live test remains
+  the declared PostgreSQL capability skip. Ruff, Mypy, and `git diff --check`
+  pass.
+- This closes an ambiguous server routing path only. It does not claim legacy
+  ledger removal, hosted parity, external IAM, HA/DR, provider integration,
+  capacity, production readiness, compliance, or certification. ADR 0642
+  records the decision.
+
 ## E-948: Bind Finance Core API hierarchy codes to authenticated PostgreSQL scope
 
 - Code evidence: `reconforge/api/server_finance_core.py` adds a request-scoped

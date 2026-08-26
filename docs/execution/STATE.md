@@ -2,6 +2,24 @@
 
 Updated: 2026-08-26
 
+## E-974 - Refresh current Community Compose schema, restart, and backup/restore runtime evidence (2026-08-26)
+
+- A fresh current-tree `reconforge:community-local` image was built with
+  Docker Engine `29.7.2` / Compose `v5.4.0`. The disposable runtime reached
+  healthy after restart, returned API health `ok`, and reported SQLite
+  schema `46/46`.
+- Runtime hardening was observed as UID `10001:10001`, read-only root,
+  `CAP_DROP=ALL`, `no-new-privileges`, and an internal Compose network.
+- One synthetic evidence object with `retention_version=1` was registered.
+  `db backup-verify` passed with SHA-256
+  `89cc18067098509ef0de3f08d720ffe52a3958ba54346aea94d4f556e98e9334`, and
+  an independent restore passed with schema `46` and 113 restored tables.
+- The current report is schema-valid, digest-bound, and packaged. Host port
+  `8765` was reserved by the environment, so only in-container health is
+  counted. This is Community/local evidence only; no Team/Enterprise/Regulated,
+  independent HA/DR, external identity, production SLO, or compliance claim
+  follows. ADR 0668 records rollback.
+
 ## E-973 - Close SQLite evidence-retention shortening through migration, trigger, and version guard (2026-08-26)
 
 - SQLite migration `46` adds `evidence_registry.retention_version` and a

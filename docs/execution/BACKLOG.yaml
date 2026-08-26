@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-974
+    priority: P1
+    area: deployment-readiness
+    title: Refresh current Community Compose schema, restart, and backup/restore runtime evidence
+    status: completed
+    depends_on: [E-973, E-968, E-1006]
+    exit_evidence: >-
+      A fresh current-tree Community image was built and a disposable local
+      runtime reached healthy after restart with API health ok, SQLite schema
+      46/46, UID 10001, read-only root, dropped capabilities, and internal
+      networking. Synthetic evidence was registered with retention_version 1;
+      backup manifest verification and an independent restore both passed at
+      schema 46 with 113 tables. The schema-bound report is packaged and
+      tested. Host port 8765 remained reserved by the environment, so only
+      in-container health is counted. This refreshes Community/local evidence
+      only; it does not close Team/Enterprise/Regulated, independent HA/DR,
+      external identity, production SLOs, or compliance. ADR 0668 records the
+      evidence boundary and rollback.
   - id: E-973
     priority: P1
     area: evidence-retention

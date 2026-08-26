@@ -2,6 +2,33 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-974: Refresh current Community Compose schema, restart, and backup/restore runtime evidence
+
+- Build/runtime command: `docker compose -p reconforge-e974 -f compose.yaml
+  up -d --build` built the current `reconforge:community-local` image. Because
+  the host reserved `127.0.0.1:8765`, the smoke used the same Compose service
+  without host-port publication and checked the health endpoint from inside
+  the container.
+- Runtime evidence: Docker Engine `29.7.2`, Compose `v5.4.0`; container
+  `reconforge-e974-smoke` reached `healthy` before and after restart, API
+  health returned `status=ok`, SQLite reported `schema_version=46` and
+  `latest_schema_version=46`, UID was `10001:10001`, root was read-only,
+  capabilities were dropped, and the network was internal.
+- Backup/restore evidence: synthetic evidence was registered with
+  `retention_version=1`; `reconforge db backup` and `db backup-verify` passed
+  with SHA-256
+  `89cc18067098509ef0de3f08d720ffe52a3958ba54346aea94d4f556e98e9334`;
+  `reconforge db restore` passed into an independent target at schema `46`
+  with 113 restored tables, and direct SQLite verification found one evidence
+  row with retention version 1.
+- Artifact: `docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json`,
+  validated by its schema and `tests/test_current_community_compose_runtime_report.py`.
+- Boundary: this is one local Docker host with synthetic data and local
+  backup files. It does not prove host-loss recovery, encrypted production
+  key custody, independent HA/DR, external identity/provider interoperability,
+  production SLOs, or compliance. The temporary E-974 container/volume were
+  removed after capture. ADR 0668 records rollback.
+
 ## E-973: Close SQLite evidence-retention shortening through migration, trigger, and version guard
 
 - Code evidence: migration `46` adds `evidence_registry.retention_version` and

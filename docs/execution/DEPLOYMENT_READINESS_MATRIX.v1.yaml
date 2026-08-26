@@ -24,8 +24,8 @@ editions:
     gates:
       - id: backup_restore
         status: verified_scoped
-        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml]
-        boundary: Local SQLite and disposable supported-version evidence only.
+        evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml, docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json, tests/test_current_community_compose_runtime_report.py]
+        boundary: Current Community Compose schema 46, restart persistence, checksum-verified backup, and independent local restore are proven on one Docker host; no host-loss, encrypted production-key custody, HA/DR, or production SLO claim follows.
       - id: rollback
         status: verified_scoped
         evidence: [docs/execution/P3_ENT_009_EXIT_AUDIT.yaml]

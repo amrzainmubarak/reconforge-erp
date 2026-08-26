@@ -5,6 +5,29 @@
 
 ## Decisions
 
+### D-835: Refresh current Community Compose schema and backup/restore runtime evidence
+
+- **Date**: 2026-08-26
+- **Context**: E-973 advanced the local SQLite head to migration 46, while the
+  latest Compose runtime evidence was historical schema 45/45. The Community
+  readiness matrix needed current-head restart and backup/restore evidence
+  without widening the local-only deployment claim.
+- **Decision**: Build the current Community image, run a labelled disposable
+  Compose service without relying on the environment-reserved host port,
+  verify in-container health and hardening, register synthetic retention
+  evidence, verify its backup manifest, and restore into an independent local
+  SQLite target. Bind the result to a strict schema and digest report.
+- **Verification**: The runtime reached healthy after restart; API health was
+  `ok`; SQLite schema was `46/46`; UID, read-only root, capability drop, and
+  internal networking matched the Compose contract; backup verification and
+  independent restore passed at schema 46 with 113 tables.
+- **Compatibility**: Runtime evidence and readiness metadata only. The
+  Compose file, API contract, and historical E-968 artifact remain unchanged.
+- **Rollback**: Remove the E-974 report/schema/test, manifest and matrix
+  references, ADR 0668, and execution entries. The labelled disposable
+  container and volume are removed after capture; no user or production data
+  is changed.
+
 ### D-834: Close SQLite evidence-retention shortening through migration, trigger, and version guard
 
 - **Date**: 2026-08-26

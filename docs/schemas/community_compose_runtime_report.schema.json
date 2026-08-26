@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/community_compose_runtime_report.schema.json",
+  "title": "ReconForge Community Compose runtime report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "executed_at",
+    "status",
+    "runtime",
+    "database",
+    "backup_restore",
+    "observed",
+    "limitations",
+    "report_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "report_id": {"const": "community-compose-runtime-e974-2026-08-26"},
+    "executed_at": {"const": "2026-08-26"},
+    "status": {"const": "passed"},
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "docker_engine",
+        "compose_version",
+        "compose_project",
+        "image_tag",
+        "image_digest",
+        "container_name",
+        "health_after_restart",
+        "api_health_status",
+        "uid",
+        "read_only_root",
+        "cap_drop",
+        "no_new_privileges",
+        "internal_network"
+      ],
+      "properties": {
+        "docker_engine": {"const": "29.7.2"},
+        "compose_version": {"const": "v5.4.0"},
+        "compose_project": {"const": "reconforge-e974"},
+        "image_tag": {"const": "reconforge:community-local"},
+        "image_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+        "container_name": {"const": "reconforge-e974-smoke"},
+        "health_after_restart": {"const": "healthy"},
+        "api_health_status": {"const": "ok"},
+        "uid": {"const": "10001:10001"},
+        "read_only_root": {"const": true},
+        "cap_drop": {"const": ["ALL"]},
+        "no_new_privileges": {"const": true},
+        "internal_network": {"const": true}
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "schema_version", "latest_schema_version", "evidence_count", "retention_version"],
+      "properties": {
+        "backend": {"const": "sqlite"},
+        "schema_version": {"const": 46},
+        "latest_schema_version": {"const": 46},
+        "evidence_count": {"const": 1},
+        "retention_version": {"const": 1}
+      }
+    },
+    "backup_restore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "backup_verification",
+        "backup_schema_version",
+        "backup_sha256",
+        "restore_status",
+        "restored_schema_version",
+        "restored_tables"
+      ],
+      "properties": {
+        "backup_verification": {"const": "passed"},
+        "backup_schema_version": {"const": 46},
+        "backup_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "restore_status": {"const": "passed"},
+        "restored_schema_version": {"const": 46},
+        "restored_tables": {"const": 113}
+      }
+    },
+    "observed": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "compose_image_built",
+          "health_after_restart",
+          "api_health_ok",
+          "sqlite_current_head_46",
+          "non_root_uid_10001",
+          "read_only_root_and_capability_drop",
+          "backup_manifest_verified",
+          "independent_restore_current_head"
+        ]
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}
+    },
+    "report_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  }
+}

@@ -25,3 +25,14 @@ Server Profile registration response. List/get use the safe projection;
 registration uses the reviewed sensitive allowlist after `evidence.manage`
 authorization. The projection metadata remains additive and unknown adapter
 fields are dropped. ADR 0678 records this extension and its limits.
+
+## E-1019 migrated surface
+
+The legacy `GET /api/v1/audit/events` response now uses one central allowlist
+for both the local SQLite and PostgreSQL adapter shapes. Actor and tenant
+identity, object/resource identifiers, request IDs, reasons, and decoded
+metadata are masked with `[REDACTED]`; unknown adapter fields are dropped.
+The route retains its existing `audit.read` requirement and Server Profile
+tenant-policy re-check. This is a disclosure boundary for one legacy response
+family, not universal field-level authorization or production IAM. ADR 0679
+records the decision and rollback.

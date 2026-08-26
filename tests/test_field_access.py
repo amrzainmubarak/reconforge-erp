@@ -1,5 +1,6 @@
 from reconforge.auth.field_access import (
     REDACTED_VALUE,
+    project_audit_event,
     project_evidence_drill_down_record,
     project_fields,
 )
@@ -67,3 +68,35 @@ def test_evidence_projection_is_allowlisted_in_both_modes_and_projects_links() -
     assert sensitive.visible["checksum_sha256"] == "a" * 64
     assert sensitive.denied_fields == ("unknown_future_column",)
     assert sensitive.projection_digest != redacted.projection_digest
+
+
+def test_legacy_audit_projection_masks_sensitive_aliases_and_denies_future_fields() -> None:
+    result = project_audit_event(
+        {
+            "event_id": "event-1",
+            "actor_id": "user-1",
+            "resource_id": "record-1",
+            "metadata": {"secret": "must-not-leak"},
+            "action": "ledger.read",
+            "unknown_future_column": "must-not-escape",
+        }
+    )
+    assert result.visible == {
+        "action": "ledger.read",
+        "actor_id": REDACTED_VALUE,
+        "event_id": "event-1",
+        "metadata": REDACTED_VALUE,
+        "resource_id": REDACTED_VALUE,
+    }
+    assert result.denied_fields == ("unknown_future_column",)
+    assert "must-not-leak" not in str(result.visible)
+    assert result.projection_digest == project_audit_event(
+        {
+            "resource_id": "record-1",
+            "metadata": {"another": "secret"},
+            "actor_id": "user-2",
+            "event_id": "event-1",
+            "action": "ledger.read",
+            "unknown_future_column": "different-value",
+        }
+    ).projection_digest

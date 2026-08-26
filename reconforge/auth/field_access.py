@@ -65,6 +65,55 @@ EVIDENCE_DRILL_DOWN_LINK_FIELDS = frozenset(
     {"tenant_id", "id", "evidence_id", "object_type", "object_id", "link_type", "created_at"}
 )
 
+# Legacy audit events have two physical response shapes: the local SQLite
+# ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
+# uses ``event_id``/``actor_id``/``resource_id``.  Keep one closed response
+# policy for both adapters.  Sensitive values are retained only as a stable
+# redaction marker for backward-compatible keys; unknown adapter fields are
+# denied rather than copied into the API response.
+AUDIT_EVENT_FIELDS = frozenset(
+    {
+        "id",
+        "sequence",
+        "event_sequence",
+        "previous_hash",
+        "previous_event_hash",
+        "event_hash",
+        "event_id",
+        "actor_user_id",
+        "actor_id",
+        "actor_label",
+        "object_type",
+        "resource_type",
+        "object_id",
+        "resource_id",
+        "action",
+        "before_hash",
+        "before_state_hash",
+        "after_hash",
+        "after_state_hash",
+        "created_at",
+        "occurred_at",
+        "tenant_id",
+        "request_id",
+        "reason",
+        "metadata",
+    }
+)
+AUDIT_EVENT_SENSITIVE_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "actor_user_id",
+        "actor_id",
+        "actor_label",
+        "object_id",
+        "resource_id",
+        "request_id",
+        "reason",
+        "metadata",
+    }
+)
+
 
 @dataclass(frozen=True)
 class FieldProjection:
@@ -150,4 +199,14 @@ def project_evidence_drill_down_record(
         allowed_fields=EVIDENCE_DRILL_DOWN_FIELDS,
         masked_fields=masked_fields,
         mask_value=legacy_mask_value,
+    )
+
+
+def project_audit_event(values: Mapping[str, object]) -> FieldProjection:
+    """Return the redacted, fail-closed projection for a legacy audit event."""
+
+    return project_fields(
+        values,
+        allowed_fields=AUDIT_EVENT_FIELDS,
+        masked_fields=AUDIT_EVENT_SENSITIVE_FIELDS,
     )

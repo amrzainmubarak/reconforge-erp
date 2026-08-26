@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1019 - Fail-closed projection for legacy audit event responses (2026-08-26)
+
+- The local and Server Profile `/api/v1/audit/events` response paths now use
+  one central allowlist for their different SQLite/PostgreSQL field aliases.
+  Actor, tenant, target identifiers, request IDs, reasons, and decoded
+  metadata are masked with `[REDACTED]`; unknown future adapter fields are
+  dropped before serialization.
+- Focused field/API tests pass. This closes a disclosure boundary for the
+  legacy event list only; the route still requires `audit.read`, Server Profile
+  still re-evaluates tenant policy, and external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0679 records rollback.
+
 ## E-1018 - Extend fail-closed field projection to evidence record responses (2026-08-26)
 
 - Local and Server Profile evidence list/get responses now use the same

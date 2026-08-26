@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1019
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed field projection to legacy audit event responses
+    status: completed
+    depends_on: [E-1005, E-1018]
+    exit_evidence: >-
+      Local and Server Profile `/api/v1/audit/events` responses use one central
+      allowlist for the SQLite and PostgreSQL physical event shapes. Actor,
+      tenant, object/resource identifiers, request IDs, reasons, and metadata
+      are masked with the compatibility redaction marker; unknown adapter
+      fields are dropped. Focused field, local API, and Server Profile tests
+      pass, plus Ruff, Mypy, full Python regression, package build, YAML, and
+      diff checks. This closes the legacy audit event response family only;
+      external IAM, distributed revocation, disclosure approval, source
+      authenticity, and production effectiveness remain open. ADR 0679 records
+      rollback.
   - id: E-1018
     priority: P0
     area: identity-governance
@@ -2268,6 +2285,11 @@ tasks:
       - E-1016 makes PostgreSQL Reconciliation authorization fail closed for
         discovery, claim, and execution when no explicit service-account policy
         supplier is configured. The opt-out is explicit and bounded.
+      - E-1019 applies one central fail-closed response projection to the
+        legacy local and PostgreSQL audit event endpoints. Sensitive actor,
+        tenant, target, request, reason, and metadata values remain masked and
+        unknown adapter fields are dropped; this is a disclosure control, not
+        universal field-level authorization or production IAM evidence.
   - id: E-1006
     priority: P1
     area: global-expansion

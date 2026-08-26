@@ -16,7 +16,15 @@ def _request() -> Request:
 class _Repository:
     def list_audit_events(self, **values: object) -> list[dict[str, object]]:
         assert values == {"tenant_id": "tenant-a", "limit": None}
-        return [{"id": "audit-1"}]
+        return [
+            {
+                "id": "audit-1",
+                "actor_id": "sensitive-actor",
+                "resource_id": "sensitive-resource",
+                "metadata": {"secret": "must-not-leak"},
+                "action": "audit.read",
+            }
+        ]
 
     def verify_audit_events(self, **values: object) -> dict[str, object]:
         assert values == {"tenant_id": "tenant-a"}
@@ -45,7 +53,15 @@ def test_server_legacy_audit_views_recheck_tenant_policy(monkeypatch) -> None:  
     events = routes.audit_events(request, user, limit=None, connection=None)
     verification = routes.audit_verify(request, user, connection=None)
 
-    assert events["events"] == [{"id": "audit-1"}]
+    assert events["events"] == [
+        {
+            "action": "audit.read",
+            "actor_id": "[REDACTED]",
+            "id": "audit-1",
+            "metadata": "[REDACTED]",
+            "resource_id": "[REDACTED]",
+        }
+    ]
     assert verification["ok"] is True
     assert policy_calls == [
         {"permission": "audit.read", "tenant_id": "tenant-a"},

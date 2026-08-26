@@ -676,7 +676,7 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     assert server_trial_balance.json()["totals"]["balanced"] is True
     assert audit_events.status_code == 200
     assert audit_events.json()["source"]["kind"] == "postgresql-ledger-control"
-    assert audit_events.json()["events"][0]["metadata"] == {"source": "fake"}
+    assert audit_events.json()["events"][0]["metadata"] == "[REDACTED]"
     assert audit_verify.status_code == 200
     assert audit_verify.json()["ok"] is True
     assert entity_trial_balance.status_code == 501

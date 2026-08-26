@@ -2,6 +2,42 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## Fresh local Docker runtime check (2026-08-26)
+
+- Environment: Docker Engine `29.7.2` / Docker Desktop Linux builder. The
+  current tree built successfully with `docker build --pull --no-cache
+  --platform linux/amd64 --tag reconforge:codex-e824 .`; the local image
+  inspection reported the `linux/amd64` image subject
+  `sha256:735c0c382112793dfcc0d713a06f86960434de5429f642c52c940b39f4751144`,
+  non-root `10001:10001` configuration, and Linux/amd64 platform.
+- Runtime command:
+  `docker run --rm --network=none --read-only --cap-drop=ALL
+  --security-opt=no-new-privileges reconforge:codex-e824 reconforge doctor`.
+  It passed package/config/sample-data/output/validation checks; validation
+  reported zero errors and ten warnings.
+- Boundary: this is a fresh local build/runtime smoke only. Syft and Grype
+  are not installed on this Windows host, so no new scanner evidence was
+  generated. E-824 remains open for the hosted clean-build, exact scanner
+  gate, signed SBOM/provenance, legal license review, and production
+  assurance.
+
+## E-1019: Fail-closed projection for legacy audit event responses
+
+- Code evidence: `reconforge.auth.field_access.project_audit_event` defines
+  one closed response policy for the local SQLite and PostgreSQL legacy audit
+  shapes. `reconforge/api/routes/audit.py` applies it after both adapters and
+  before the response is serialized. Sensitive aliases remain only as the
+  `[REDACTED]` compatibility marker; unknown fields are denied.
+- Test evidence: `tests/test_field_access.py` covers sensitive aliases,
+  unknown-field denial, and projection-digest stability. Local API and server
+  policy tests cover both response paths and retain the tenant policy
+  re-check. Focused tests pass; full regression, Ruff, Mypy, package build,
+  YAML validation, and diff checks are required for the final gate.
+- Boundary: this closes `/api/v1/audit/events` only. It does not establish
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, or production effectiveness.
+  ADR 0679 records rollback.
+
 ## E-1018: Fail-closed field projection for evidence record responses
 
 - Code evidence: local and Server Profile evidence list/get responses reuse the

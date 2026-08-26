@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Mapping
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -12,6 +13,7 @@ from reconforge.api.errors import APIError
 from reconforge.api.server_identity import request_tenant_id
 from reconforge.api.server_ledger import execute_postgres_ledger, server_ledger_enabled
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
+from reconforge.auth.field_access import project_audit_event
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 
@@ -25,6 +27,30 @@ def _enforce_server_audit_permission(request: Request, *, permission: str) -> No
     """Bind tenant-scoped legacy ledger audit views to central policy."""
 
     enforce_server_tenant_permission(request, permission=permission, tenant_id=request_tenant_id(request))
+
+
+def _project_audit_events(events: object) -> list[dict[str, object]]:
+    """Apply the same closed redaction policy to SQLite and PostgreSQL rows."""
+
+    if not isinstance(events, list):
+        raise APIError(
+            status_code=503,
+            code="audit_projection_failed",
+            message="Audit repository returned an invalid event collection.",
+        )
+    projected: list[dict[str, object]] = []
+    try:
+        for event in events:
+            if not isinstance(event, Mapping):
+                raise TypeError("audit event must be a mapping")
+            projected.append(project_audit_event(event).visible)
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="audit_projection_failed",
+            message="Audit repository returned an invalid event contract.",
+        ) from exc
+    return projected
 
 
 @router.get("/events")
@@ -42,7 +68,10 @@ def audit_events(
             request,
             lambda repository, tenant: repository.list_audit_events(tenant_id=tenant, limit=limit),
         )
-        return {"events": events, "source": {"kind": "postgresql-ledger-control", "server_mode": True}}
+        return {
+            "events": _project_audit_events(events),
+            "source": {"kind": "postgresql-ledger-control", "server_mode": True},
+        }
 
     try:
         if connection is None:
@@ -51,7 +80,9 @@ def audit_events(
                 code="local_database_not_configured",
                 message="The local audit database is not configured for this request.",
             )
-        events = [event.model_dump(mode="json") for event in list_audit_events(connection, limit=limit)]
+        events = _project_audit_events(
+            [event.model_dump(mode="json") for event in list_audit_events(connection, limit=limit)]
+        )
     except (DatabaseError, AuditLedgerError) as exc:
         raise APIError(status_code=400, code="audit_read_failed", message=str(exc)) from exc
     return {"events": events}

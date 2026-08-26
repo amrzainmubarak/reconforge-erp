@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-846: Legacy audit event responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: The consolidated PostgreSQL administration audit route was
+  redacted, but the compatibility `/api/v1/audit/events` route serialized
+  local and PostgreSQL adapter records directly, exposing actor/target/request
+  identifiers, reasons, and decoded metadata.
+- **Decision**: Apply one central allowlist to both physical response shapes.
+  Preserve known non-sensitive fields and existing sensitive keys only as the
+  `[REDACTED]` marker; drop unknown future adapter fields before serialization.
+- **Verification**: Field, local API, and Server Profile policy tests cover
+  the boundary. Full regression, static, package, YAML, and diff gates are
+  required for closure. External IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: The response envelope and known field names remain
+  available, while sensitive values are no longer returned. This is a
+  security-preserving value change on the legacy route, not a new disclosure
+  contract.
+- **Rollback**: Revert E-1019 code/tests/ADR 0679/manifest and execution
+  metadata together; do not restore direct adapter serialization.
+
 ### D-845: Extend field projection to evidence record responses
 
 - **Date**: 2026-08-26

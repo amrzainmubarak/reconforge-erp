@@ -7521,3 +7521,21 @@ tasks:
       Focused variance/client-pack/rule constructor tests pass. Ruff and Mypy pass.
       No schema, migration, provider, posting, write-back, hosted, or publication
       behavior is changed; broader evidence remains separate under D-485.
+  - id: E-971
+    priority: P0
+    area: retention_privacy
+    title: Add opt-in Community local object-store retention path
+    status: completed
+    depends_on: [E-970, E-849]
+    exit_evidence: >-
+      The evidence CLI now exposes an opt-in local-object-store backend backed
+      by the existing offline immutable LocalObjectStore, while preserving the
+      historical local-filesystem default. Registration and verification use an
+      explicit bounded storage root, tenant/workspace scope, checksum manifest,
+      and future retention timestamp. Expired retention is rejected without a
+      registry row or object file; source removal does not prevent verification;
+      the default local backend still rejects retention rather than silently
+      downgrading it. Focused evidence/object-storage, Ruff, Mypy, and full
+      Python regression gates pass. This closes only bounded local object
+      retention evidence; privacy administration, legal hold, deletion workflow,
+      backup/restore coupling, and production WORM semantics remain open.

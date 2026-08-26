@@ -9800,3 +9800,17 @@ evidence remain open. GitHub publication remains deferred by owner policy.
   Distributed soak, queue HA, automatic failover, host loss, capacity,
   throughput, RPO/RTO, and production scheduling remain unverified. GitHub
   publication remains deferred by owner policy.
+
+## E-971 — Opt-in Community local object-store retention path (2026-08-26; ADR 0665)
+
+- `evidence register` now supports the explicit `local-object-store` backend
+  with a bounded `--storage-root`; `evidence verify` can read the same offline
+  object store without network access. The existing `local` backend remains
+  unchanged and continues to reject retention options.
+- The focused CLI and object-storage contract proves tenant/workspace-scoped
+  immutable content plus sidecar checksum/retention metadata, future-retention
+  rejection before registry persistence, source-removal verification, and no
+  object-store fallback. Ruff, Mypy, and the full Python regression pass.
+- Boundary: this is bounded local retention evidence, not a complete privacy
+  administration/deletion/legal-hold lifecycle, backup coupling proof, WORM
+  guarantee, production object-store durability, or Community readiness.

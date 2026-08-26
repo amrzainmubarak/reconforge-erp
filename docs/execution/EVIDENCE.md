@@ -19980,6 +19980,24 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
     reachability, malware, license, hosted, provenance, or production-security
     assurance follows.
 
+## E-971 — Opt-in Community local object-store retention path (2026-08-26; ADR 0665)
+
+- `reconforge evidence register` accepts `--storage-backend
+  local-object-store` and an explicit bounded `--storage-root`, using the
+  existing offline `LocalObjectStore` with tenant/workspace-separated keys,
+  immutable content, checksum manifests, and retention metadata. The default
+  `local` backend remains backward compatible and refuses retention because it
+  has no configured object store.
+- `reconforge evidence verify` accepts the same local backend/root and verifies
+  an object-backed record after the source path is removed. An expired retention
+  timestamp is rejected through the safe CLI error boundary before any registry
+  row or object file is created. Focused CLI/evidence/object-storage tests pass,
+  Ruff passes, Mypy passes, and the full local Python regression is green.
+- Boundary: the artifact proves a bounded offline retention primitive only. It
+  does not prove a complete Community retention/privacy administration workflow,
+  legal hold, authorized deletion/erasure, backup/restore coupling, WORM,
+  provider durability, independent failure domains, or production readiness.
+
 - E-958 tenant/workspace binding for executable server write-back registrations
   (2026-08-26; ADR 0651):
   - `WritebackNetworkRegistration` now validates paired optional

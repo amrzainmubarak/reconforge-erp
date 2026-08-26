@@ -10561,3 +10561,24 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   closed where the local path already did.
 - **Rollback**: Revert the adapter code. No database migration rollback is
   required.
+
+### D-820: Expose offline local object retention without changing the local default
+
+- **Date**: 2026-08-26
+- **Context**: `LocalObjectStore` already provided immutable offline content,
+  checksum manifests, tenant/workspace scope, and retention-delete guards, but
+  the evidence CLI exposed only direct local files or S3-compatible storage.
+  Community operators therefore could not use the tested retention primitive
+  without network/provider configuration.
+- **Decision**: Add an explicit `local-object-store` CLI backend with a bounded
+  `--storage-root` for register and verify. Keep `local` as the historical
+  direct-filesystem backend and fail closed when retention is supplied without
+  an object store. Keep the database's generic object-backed storage label for
+  compatibility; the selected provider remains an operator-side configuration.
+- **Verification**: E-971, ADR 0665, focused CLI/evidence/object-storage tests,
+  Ruff, Mypy, and full Python regression.
+- **Compatibility**: Additive CLI options only; no schema or migration change.
+  No network call is introduced for the offline backend, and no retention claim
+  is promoted to legal hold, WORM, or production durability.
+- **Rollback**: Revert the CLI options, focused tests, matrix/evidence updates,
+  and ADR. Existing local-filesystem evidence remains readable.

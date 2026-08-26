@@ -213,7 +213,9 @@ def test_postgres_outbox_worker_publishes_with_idempotent_event_id() -> None:
         _FakeFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         publisher=lambda event: published.append(event.id),
-        settings=OutboxWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+        settings=OutboxWorkerSettings(
+            worker_id="worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     result = worker.process_once()
@@ -235,7 +237,12 @@ def test_postgres_outbox_worker_records_publisher_failure() -> None:
         _FakeFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         publisher=publish,
-        settings=OutboxWorkerSettings(worker_id="worker-a", max_attempts=1, poll_interval_seconds=0),
+        settings=OutboxWorkerSettings(
+            worker_id="worker-a",
+            max_attempts=1,
+            poll_interval_seconds=0,
+            allow_unbound_hosted_policy=True,
+        ),
     )
 
     result = worker.process_once()
@@ -268,6 +275,21 @@ def test_postgres_outbox_worker_policy_denies_before_connection_access() -> None
         ),
     )
     with pytest.raises(PostgresOutboxWorkerError, match="permission_missing"):
+        worker.process_once()
+
+
+def test_postgres_outbox_worker_rejects_missing_policy_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("missing policy must be rejected before connection access")
+
+    worker = PostgresOutboxWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(worker_id="unbound-outbox-worker"),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="requires an explicit service-account policy supplier"):
         worker.process_once()
 
 

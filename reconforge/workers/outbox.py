@@ -39,6 +39,7 @@ class OutboxWorkerSettings:
     scope_supplier: Callable[[], Iterable[tuple[str, str | None, str | None, str | None]]] | None = None
     max_tenants: int = 10_000
     policy_permission: str = "outbox.publish"
+    allow_unbound_hosted_policy: bool = False
 
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
@@ -102,6 +103,7 @@ class OutboxWorker:
             or settings.policy_context_hierarchy_supplier is not None
             or settings.scope_supplier is not None
             or settings.policy_permission != "outbox.publish"
+            or settings.allow_unbound_hosted_policy
         ):
             raise OutboxWorkerError(
                 "Central worker policy and scope configuration is supported only by "

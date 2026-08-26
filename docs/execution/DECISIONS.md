@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-841: Require explicit policy supplier before PostgreSQL Outbox publishing
+
+- **Date**: 2026-08-26
+- **Context**: The shared worker guard could no-op when PostgreSQL Outbox
+  configuration omitted every policy supplier, allowing an external publish
+  path without a service-account decision.
+- **Decision**: Make the hosted Outbox boundary fail closed by default. Keep a
+  clearly named compatibility flag for bounded legacy fixtures/benchmarks and
+  reject that flag in the local SQLite worker.
+- **Verification**: E-1014 focused Outbox/payload/notification/local-worker
+  tests, static checks, and no-effect policy regressions pass. Scheduler and
+  Reconciliation remain separate follow-up slices.
+- **Compatibility**: No schema or payload changes; ungoverned hosted fixtures
+  must opt out explicitly.
+- **Rollback**: Revert E-1014 worker/settings/tests/ADR 0674/manifest and
+  execution metadata.
+
 ### D-840: Inject the PostgreSQL policy-audit sink into governed job facade
 
 - **Date**: 2026-08-26

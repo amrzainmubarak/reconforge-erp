@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1014
+    priority: P0
+    area: identity-governance
+    title: Require explicit policy supplier before PostgreSQL Outbox publishing
+    status: completed
+    depends_on: [E-1005, E-1013]
+    exit_evidence: >-
+      PostgresOutboxWorker now fails closed before connection access when no
+      service-account policy supplier is configured. The explicit
+      allow_unbound_hosted_policy compatibility flag is disabled by default
+      and rejected by the local SQLite worker; legacy fixtures and benchmark
+      profiles opt into it explicitly. Missing-policy, permission-denial,
+      publisher-revocation, hierarchy, payload, notification, local-worker,
+      Ruff, and Mypy tests pass. Scheduler and Reconciliation worker optional
+      policy behavior remains a separate open slice; external IAM, provider
+      delivery, HA/DR, production SLOs, and production readiness remain open.
+      ADR 0674 records rollback.
   - id: E-1013
     priority: P0
     area: identity-governance
@@ -2172,6 +2189,10 @@ tasks:
         governed facade and injects the existing PostgreSQL sink in Server
         Profile. Local/Community remains dependency-free by default; universal
         API adoption remains open.
+      - E-1014 makes PostgreSQL Outbox authorization fail closed when no
+        explicit service-account policy supplier is configured. The opt-out is
+        explicit and rejected by the local worker; Scheduler and Reconciliation
+        are intentionally left for separate worker-policy slices.
   - id: E-1006
     priority: P1
     area: global-expansion

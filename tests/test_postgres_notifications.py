@@ -243,6 +243,7 @@ def test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_a
                     batch_size=10,
                     max_attempts=2,
                     retry_base_seconds=0,
+                    allow_unbound_hosted_policy=True,
                 ),
             )
             first = failed_worker.process_once()
@@ -276,6 +277,7 @@ def test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_a
                     batch_size=10,
                     max_attempts=2,
                     retry_base_seconds=0,
+                    allow_unbound_hosted_policy=True,
                 ),
             )
             success = successful_worker.process_once()

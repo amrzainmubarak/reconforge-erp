@@ -47,6 +47,15 @@ class PostgresOutboxWorker:
         organization_id: str | None = None,
         legal_entity_id: str | None = None,
     ) -> None:
+        if (
+            self.settings.policy_context_supplier is None
+            and self.settings.policy_context_scope_supplier is None
+            and self.settings.policy_context_hierarchy_supplier is None
+            and not self.settings.allow_unbound_hosted_policy
+        ):
+            raise PostgresOutboxWorkerError(
+                "PostgreSQL outbox worker requires an explicit service-account policy supplier."
+            )
         require_service_worker_policy(
             tenant_id=tenant_id,
             worker_id=self.settings.worker_id,

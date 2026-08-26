@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1014 - Require explicit policy supplier before PostgreSQL Outbox publishing (2026-08-26)
+
+- `PostgresOutboxWorker` now rejects missing policy suppliers before opening a
+  connection or claiming/publishing an event. The explicit
+  `allow_unbound_hosted_policy` compatibility flag is disabled by default and
+  is rejected by the local SQLite worker; only bounded legacy fixtures and
+  benchmark profiles opt into it.
+- Missing-policy, permission-denial, revocation-before-publisher, hierarchy,
+  payload, notification, local-worker, Ruff, and Mypy gates pass. Scheduler and
+  Reconciliation still require separate secure-default slices; external IAM,
+  provider delivery, HA/DR, production SLOs, and production authorization
+  effectiveness remain open. ADR 0674 records rollback.
+
 ## E-1013 - Persist Server Profile governed-job facade decisions through policy audit sink (2026-08-26)
 
 - `GovernedDurableJobApplicationService` now accepts an optional

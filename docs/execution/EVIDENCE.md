@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1014: Require explicit policy supplier before PostgreSQL Outbox publishing
+
+- Code evidence: `PostgresOutboxWorker._authorize_scope` fails closed when all
+  policy suppliers are absent. `allow_unbound_hosted_policy` defaults false
+  and the local SQLite worker rejects that compatibility setting.
+- Test evidence: PostgreSQL Outbox, payload, notification, and local-worker
+  suites pass; the new missing-policy test proves rejection before connection
+  access; permission denial and revocation still prove no external publish.
+  Ruff and Mypy pass.
+- Boundary: this closes PostgreSQL Outbox only. Scheduler and Reconciliation
+  worker optional-policy behavior remains open, as do external IAM, provider
+  delivery, HA/DR, production SLOs, and production authorization
+  effectiveness. ADR 0674 records rollback.
+
 ## E-1013: Persist Server Profile governed-job facade decisions through policy audit sink
 
 - Code evidence: the governed durable-job facade accepts an optional

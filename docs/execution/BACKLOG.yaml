@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1036
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Payables supplier-invoice API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1035]
+    exit_evidence: >-
+      Payables supplier-invoice create, list, submit, match, and approve
+      responses use central invoice, nested-line, and three-way-match
+      allowlists across local SQLite and PostgreSQL. Synthetic future-column
+      tests prove unknown fields are dropped while lifecycle shape, exact
+      quantities/minor units, and permissions remain compatible. Focused tests,
+      full Python regression, Ruff, Mypy, Bandit, pip-audit, package build,
+      targeted YAML, and diff checks pass. ADR 0696 records rollback.
   - id: E-1035
     priority: P0
     area: identity-governance

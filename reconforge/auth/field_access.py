@@ -661,6 +661,29 @@ PAYABLES_RECEIPT_FIELDS = frozenset(
 PAYABLES_RECEIPT_LINE_FIELDS = frozenset(
     {"tenant_id", "id", "receipt_id", "purchase_order_line_id", "received_quantity", "received_quantity_text", "created_at"}
 )
+PAYABLES_SUPPLIER_INVOICE_FIELDS = frozenset(
+    {
+        # Deliberate union for local SQLite and tenant-scoped PostgreSQL
+        # invoice responses.  Lines and match results use child contracts.
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "supplier_id",
+        "purchase_order_id", "invoice_number", "invoice_date", "due_date", "currency_code", "tax_minor",
+        "total_minor", "status", "created_by", "approved_by", "approved_at", "created_at", "updated_at",
+        "row_version", "lines", "three_way_match",
+    }
+)
+PAYABLES_SUPPLIER_INVOICE_LINE_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "supplier_invoice_id", "purchase_order_line_id", "line_number", "description",
+        "invoiced_quantity", "invoiced_quantity_text", "unit_price_minor", "tax_minor", "line_total_minor",
+        "created_at",
+    }
+)
+PAYABLES_THREE_WAY_MATCH_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "match_id", "invoice_id", "supplier_invoice_id", "purchase_order_id", "status",
+        "quantity_variance", "price_variance_minor", "total_variance_minor", "reason", "created_at", "updated_at",
+    }
+)
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1429,6 +1452,34 @@ def project_payables_receipt(values: Mapping[str, object]) -> FieldProjection:
             projected_lines.append(project_fields(line, allowed_fields=PAYABLES_RECEIPT_LINE_FIELDS).visible)
         record["lines"] = projected_lines
     return project_fields(record, allowed_fields=PAYABLES_RECEIPT_FIELDS)
+
+
+def project_payables_three_way_match(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a deterministic three-way-match result."""
+
+    return project_fields(values, allowed_fields=PAYABLES_THREE_WAY_MATCH_FIELDS)
+
+
+def project_payables_supplier_invoice(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for supplier-invoice responses."""
+
+    record = dict(values)
+    lines = record.get("lines")
+    if lines is not None:
+        if not isinstance(lines, list):
+            raise TypeError("payables supplier-invoice lines collection must be a list")
+        projected_lines: list[dict[str, object]] = []
+        for line in lines:
+            if not isinstance(line, Mapping):
+                raise TypeError("payables supplier-invoice line record must be a mapping")
+            projected_lines.append(project_fields(line, allowed_fields=PAYABLES_SUPPLIER_INVOICE_LINE_FIELDS).visible)
+        record["lines"] = projected_lines
+    match = record.get("three_way_match")
+    if match is not None:
+        if not isinstance(match, Mapping):
+            raise TypeError("payables supplier-invoice match must be a mapping")
+        record["three_way_match"] = project_payables_three_way_match(match).visible
+    return project_fields(record, allowed_fields=PAYABLES_SUPPLIER_INVOICE_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

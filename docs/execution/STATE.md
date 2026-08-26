@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-1036 - Fail-closed projection for Payables supplier-invoice API responses (2026-08-26)
+
+- Payables supplier-invoice create, list, submit, match, and approve responses
+  now use central top-level, nested-line, and three-way-match child
+  allowlists across local SQLite and tenant-scoped PostgreSQL. Unknown future
+  adapter/storage fields cannot silently enter invoice lifecycle responses.
+- Focused field/API tests pass (26 tests at the focused boundary), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. ADR 0696 records rollback.
+
 ## E-1035 - Fail-closed projection for Payables goods-receipt API responses (2026-08-26)
 
 - Payables goods-receipt posting responses now use a central top-level and

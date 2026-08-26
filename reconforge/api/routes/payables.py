@@ -30,6 +30,8 @@ from reconforge.auth.field_access import (
     project_payables_purchase_order,
     project_payables_receipt,
     project_payables_supplier,
+    project_payables_supplier_invoice,
+    project_payables_three_way_match,
 )
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
@@ -364,7 +366,7 @@ def create_supplier_invoice(
     if server_payables_enabled(request):
         values = payload.model_dump(exclude={"lines"})
         values.update(lines=[SupplierInvoiceLineInput(**line.model_dump()) for line in payload.lines], actor_label=current_user.id)
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"payables.manage"}),
             lambda repository, scope: repository.create_supplier_invoice(
@@ -373,14 +375,16 @@ def create_supplier_invoice(
             amount=Decimal(payload.total_minor),
             supplier_code=payload.supplier_code,
         )
+        return project_payables_supplier_invoice(record).visible
     try:
-        return PayablesService(_local_connection(connection)).create_supplier_invoice(
+        record = PayablesService(_local_connection(connection)).create_supplier_invoice(
             **payload.model_dump(exclude={"lines"}),
             lines=[SupplierInvoiceLineInput(**line.model_dump()) for line in payload.lines],
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_invoice_create_failed", exc) from exc
+    return project_payables_supplier_invoice(record).visible
 
 
 @router.get("/invoices")
@@ -399,13 +403,13 @@ def list_supplier_invoices(
             frozenset({"payables.read", "payables.manage", "payables.match", "payables.approve"}),
             lambda repository, scope: repository.list_supplier_invoices(workspace=scope.workspace_id, status=status),
         )
-        return {"invoices": records[offset : offset + limit], "pagination": {"limit": limit, "offset": offset, "total": len(records)}}
+        return {"invoices": [project_payables_supplier_invoice(record).visible for record in records[offset : offset + limit]], "pagination": {"limit": limit, "offset": offset, "total": len(records)}}
     try:
         records = PayablesService(_local_connection(connection)).list_supplier_invoices(workspace=workspace, status=status)
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_invoice_list_failed", exc) from exc
     return {
-        "invoices": records[offset : offset + limit],
+        "invoices": [project_payables_supplier_invoice(record).visible for record in records[offset : offset + limit]],
         "pagination": {"limit": limit, "offset": offset, "total": len(records)},
     }
 
@@ -419,20 +423,22 @@ def submit_supplier_invoice(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_payables_enabled(request):
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"payables.manage"}),
             lambda repository, _scope: repository.submit_supplier_invoice(invoice_id, expected_version=payload.expected_version, actor_label=current_user.id),
             object_refs=(("invoice", invoice_id),),
         )
+        return project_payables_supplier_invoice(record).visible
     try:
-        return PayablesService(_local_connection(connection)).submit_supplier_invoice(
+        record = PayablesService(_local_connection(connection)).submit_supplier_invoice(
             invoice_id,
             expected_version=payload.expected_version,
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_invoice_submit_failed", exc) from exc
+    return project_payables_supplier_invoice(record).visible
 
 
 @router.post("/invoices/{invoice_id}/match")
@@ -443,16 +449,18 @@ def match_supplier_invoice(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_payables_enabled(request):
-        return _server_call(
+        result = _server_call(
             request,
             frozenset({"payables.match"}),
             lambda repository, _scope: asdict(repository.run_three_way_match(invoice_id, actor_label=current_user.id)),
             object_refs=(("invoice", invoice_id),),
         )
+        return project_payables_three_way_match(result).visible
     try:
-        return asdict(PayablesService(_local_connection(connection)).run_three_way_match(invoice_id, actor_label=current_user.username))
+        result = asdict(PayablesService(_local_connection(connection)).run_three_way_match(invoice_id, actor_label=current_user.username))
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_invoice_match_failed", exc) from exc
+    return project_payables_three_way_match(result).visible
 
 
 @router.post("/invoices/{invoice_id}/approve")
@@ -464,17 +472,19 @@ def approve_supplier_invoice(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_payables_enabled(request):
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"payables.approve"}),
             lambda repository, _scope: repository.approve_supplier_invoice(invoice_id, expected_version=payload.expected_version, actor_label=current_user.id),
             object_refs=(("invoice", invoice_id),),
         )
+        return project_payables_supplier_invoice(record).visible
     try:
-        return PayablesService(_local_connection(connection)).approve_supplier_invoice(
+        record = PayablesService(_local_connection(connection)).approve_supplier_invoice(
             invoice_id,
             expected_version=payload.expected_version,
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_invoice_approve_failed", exc) from exc
+    return project_payables_supplier_invoice(record).visible

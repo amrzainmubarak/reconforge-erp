@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-863: Payables supplier-invoice API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: Supplier-invoice create/list/lifecycle/match routes returned
+  local SQLite and tenant-scoped PostgreSQL mappings with nested invoice lines
+  and match results. Future adapter/storage fields could silently expand a
+  financial response.
+- **Decision**: Apply central invoice and nested-line allowlists to create,
+  list, submit, and approve responses, plus a separate three-way-match
+  allowlist for match results and embedded match children. Preserve existing
+  direct response shapes, exact quantities/minor units, permissions, and
+  lifecycle behavior.
+- **Verification**: Focused field/API tests pass 26 tests and include
+  synthetic future columns in invoice and line tables. Full Python, security,
+  package, YAML, and diff gates pass. The local distribution is not auditable
+  by pip-audit because it is not published on PyPI.
+- **Compatibility**: No route, schema, migration, permission, or lifecycle
+  behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1036 code/tests/ADR 0696/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
 ### D-862: Payables goods-receipt API uses fail-closed recursive projection
 
 - **Date**: 2026-08-26

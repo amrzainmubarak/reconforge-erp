@@ -229,3 +229,63 @@ def test_payables_receipt_api_drops_future_storage_fields(tmp_path: Path) -> Non
     assert receipt.status_code == 200, receipt.text
     assert "unknown_future_column" not in receipt.text
     assert "unknown_line_column" not in receipt.text
+
+
+def test_payables_supplier_invoice_api_drops_future_storage_fields(tmp_path: Path) -> None:
+    db_path = tmp_path / "payables-invoice-projection.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        auth = LocalAuthService(connection)
+        auth.init_admin(username="admin", password="Secret-123")
+        connection.execute("ALTER TABLE ap_supplier_invoices ADD COLUMN unknown_future_column TEXT")
+        connection.execute("ALTER TABLE ap_supplier_invoice_lines ADD COLUMN unknown_line_column TEXT")
+        connection.commit()
+    finally:
+        connection.close()
+
+    client = TestClient(create_api_app(db_path))
+    headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+    supplier = client.post(
+        "/api/v1/payables/suppliers",
+        headers=headers,
+        json={"supplier_code": "SUP-INVOICE", "name": "Invoice Supplier", "currency_code": "USD"},
+    )
+    order = client.post(
+        "/api/v1/payables/purchase-orders",
+        headers=headers,
+        json={
+            "po_number": "PO-INVOICE",
+            "supplier_code": "SUP-INVOICE",
+            "order_date": "2026-08-26",
+            "currency_code": "USD",
+            "lines": [{"item_code": "ITEM-1", "ordered_quantity": "1", "unit_price_minor": 100}],
+        },
+    )
+    line_id = order.json()["lines"][0]["id"]
+    invoice = client.post(
+        "/api/v1/payables/invoices",
+        headers=headers,
+        json={
+            "invoice_number": "INV-FUTURE",
+            "supplier_code": "SUP-INVOICE",
+            "invoice_date": "2026-08-26",
+            "currency_code": "USD",
+            "total_minor": 100,
+            "purchase_order_id": order.json()["id"],
+            "lines": [
+                {
+                    "purchase_order_line_id": line_id,
+                    "invoiced_quantity": "1",
+                    "unit_price_minor": 100,
+                    "line_total_minor": 100,
+                }
+            ],
+        },
+    )
+
+    assert supplier.status_code == 200, supplier.text
+    assert order.status_code == 200, order.text
+    assert invoice.status_code == 200, invoice.text
+    assert "unknown_future_column" not in invoice.text
+    assert "unknown_line_column" not in invoice.text

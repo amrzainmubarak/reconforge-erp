@@ -4,6 +4,17 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1036 migrated surface
+
+Payables supplier-invoice create, list, submit, match, and approve responses
+now use central invoice, nested-line, and three-way-match allowlists across
+local SQLite and PostgreSQL. Unknown future adapter/storage fields are dropped
+before serialization while exact quantities, minor units, and the existing
+lifecycle responses remain compatible. This is a bounded disclosure control
+for the supplier-invoice response family, not complete Payables response
+coverage, universal field-level authorization, or production IAM. ADR 0696
+records the decision and rollback.
+
 ## E-1035 migrated surface
 
 Payables goods-receipt posting responses now use central top-level and

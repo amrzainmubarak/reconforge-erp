@@ -34,6 +34,8 @@ from reconforge.auth.field_access import (
     project_payables_purchase_order,
     project_payables_receipt,
     project_payables_supplier,
+    project_payables_supplier_invoice,
+    project_payables_three_way_match,
     project_reconciliation_exception,
     project_reconciliation_input,
     project_reconciliation_result,
@@ -437,6 +439,29 @@ def test_payables_receipt_projection_is_closed_recursively() -> None:
     assert result.visible == {"id": "receipt-1", "lines": [{"id": "line-1", "received_quantity": "2"}]}
     assert result.denied_fields == ("unknown_receipt_field",)
     assert "must-not-escape" not in str(result.visible)
+
+
+def test_payables_supplier_invoice_and_match_projection_is_closed_recursively() -> None:
+    invoice = project_payables_supplier_invoice(
+        {
+            "id": "invoice-1",
+            "lines": [{"id": "line-1", "invoiced_quantity": "2", "unknown_line_field": "must-not-escape"}],
+            "three_way_match": {"status": "Passed", "unknown_match_field": "must-not-escape"},
+            "unknown_invoice_field": "must-not-escape",
+        }
+    )
+    match = project_payables_three_way_match(
+        {"status": "Passed", "unknown_match_field": "must-not-escape"}
+    )
+
+    assert invoice.visible == {
+        "id": "invoice-1",
+        "lines": [{"id": "line-1", "invoiced_quantity": "2"}],
+        "three_way_match": {"status": "Passed"},
+    }
+    assert match.visible == {"status": "Passed"}
+    assert invoice.denied_fields == ("unknown_invoice_field",)
+    assert "must-not-escape" not in str([invoice.visible, match.visible])
 
 
 def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> None:

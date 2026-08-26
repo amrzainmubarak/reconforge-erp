@@ -5,6 +5,28 @@
 
 ## Decisions
 
+### D-855: Inventory Valuation document API uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Inventory Valuation document routes returned local SQLite and
+  PostgreSQL adapter mappings. The document details include input costs,
+  valuation lines, and layer consumptions; repository `SELECT *` expansion or
+  adapter changes could silently expose financial fields.
+- **Decision**: Apply one central top-level allowlist to document list, create,
+  read, approve, and cancel responses, and independent child allowlists to all
+  three detail collections. Reject malformed nested collections or records
+  before serialization.
+- **Verification**: Focused field/API tests and the full Python regression pass
+  at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML validation (9 files), and diff checks also pass. Universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing response envelopes and reviewed known fields,
+  permissions, money text, and local/server boundaries remain; no schema or
+  migration changes.
+- **Rollback**: Revert E-1028 code/tests/ADR 0688/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
 ### D-854: Master Data API responses use fail-closed field projection
 
 - **Date**: 2026-08-26

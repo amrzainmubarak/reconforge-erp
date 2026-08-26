@@ -517,6 +517,56 @@ def test_known_user_sod_rbac_api_and_cli(tmp_path: Path) -> None:
     assert json.loads(result.stdout)["summary"]["approved_documents"] == 1
 
 
+def test_inventory_valuation_api_projects_future_adapter_fields(tmp_path: Path) -> None:
+    path = _database(tmp_path, "projection.db")
+    connection = connect(path, require_exists=True)
+    try:
+        inventory, valuation, period = _seed(connection, with_users=True)
+        receipt = _movement(
+            inventory,
+            period,
+            number="RCV-PROJECTION",
+            movement_type="Receipt",
+            movement_date="2026-07-01",
+            quantity="1.000",
+        )
+        document = _valuation_document(
+            valuation,
+            receipt,
+            number="VAL-PROJECTION",
+            total_cost="12.34",
+            actor="controller",
+        )
+        valuation.approve_document(str(document["id"]), reason="Projection review", actor_label="reviewer")
+    finally:
+        connection.close()
+
+    connection = connect(path, require_exists=True)
+    try:
+        for table in (
+            "inventory_valuation_documents",
+            "inventory_valuation_input_costs",
+            "inventory_valuation_lines",
+            "inventory_layer_consumptions",
+        ):
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN unknown_future_column TEXT")  # nosec B608
+        connection.commit()
+    finally:
+        connection.close()
+
+    client = TestClient(create_api_app(path))
+    reviewer_token = _token(client, "reviewer")
+    headers = {"Authorization": f"Bearer {reviewer_token}"}
+    listed = client.get("/api/v1/inventory-valuation/documents", headers=headers)
+    assert listed.status_code == 200
+    assert "unknown_future_column" not in listed.text
+
+    detailed = client.get(f"/api/v1/inventory-valuation/documents/{document['id']}", headers=headers)
+    assert detailed.status_code == 200, detailed.text
+    assert "unknown_future_column" not in detailed.text
+    assert detailed.json()["document"]["input_costs"][0]["total_cost"] == "12.34"
+
+
 def test_valuation_backup_restore_and_public_export(tmp_path: Path) -> None:
     source = _database(tmp_path, "source.db")
     connection = connect(source, require_exists=True)

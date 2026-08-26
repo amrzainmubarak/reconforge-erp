@@ -24,6 +24,7 @@ from reconforge.api.server_inventory_valuation import (
     _run,
     server_inventory_valuation_enabled,
 )
+from reconforge.auth.field_access import project_inventory_valuation_document
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_inventory_valuation import PostgresInventoryValuationRepository
@@ -88,6 +89,14 @@ def _error(code: str, exc: Exception) -> APIError:
 
 def _list_response(key: str, records: list[dict[str, object]], *, limit: int, offset: int) -> dict[str, object]:
     return {key: records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}}
+
+
+def _project_document(record: dict[str, object]) -> dict[str, object]:
+    return project_inventory_valuation_document(record).visible
+
+
+def _project_documents(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [_project_document(record) for record in records]
 
 
 def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
@@ -260,7 +269,7 @@ def list_documents(
                 workspace=scope.workspace_id, status=status, limit=limit, offset=offset, actor_label=current_user.id
             ),
         )
-        return _list_response("documents", records, limit=limit, offset=offset)
+        return _list_response("documents", _project_documents(records), limit=limit, offset=offset)
     try:
         records = InventoryValuationService(_local_connection(connection)).list_documents(
             workspace=workspace,
@@ -271,7 +280,7 @@ def list_documents(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_documents_list_failed", exc) from exc
-    return _list_response("documents", records, limit=limit, offset=offset)
+    return _list_response("documents", _project_documents(records), limit=limit, offset=offset)
 
 
 @router.post("/documents")
@@ -284,19 +293,19 @@ def create_document(
     values = payload.model_dump()
     if server_inventory_valuation_enabled(request):
         values["actor_label"] = current_user.id
-        return {"document": _server_call(
+        return {"document": _project_document(_server_call(
             request,
             frozenset({"inventory.valuation.manage"}),
             lambda repository, _scope: repository.create_document(**values),
             object_refs=(("inventory_movement", payload.movement_id),),
-        )}
+        ))}
     try:
         record = InventoryValuationService(_local_connection(connection)).create_document(
             **values, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_document_create_failed", exc) from exc
-    return {"document": record}
+    return {"document": _project_document(record)}
 
 
 @router.get("/documents/{document_id}")
@@ -307,19 +316,19 @@ def get_document(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_valuation_enabled(request):
-        return {"document": _server_call(
+        return {"document": _project_document(_server_call(
             request,
             frozenset({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}),
             lambda repository, _scope: repository.get_document(document_id, actor_label=current_user.id),
             object_refs=(("valuation_document", document_id),),
-        )}
+        ))}
     try:
         record = InventoryValuationService(_local_connection(connection)).get_document(
             document_id, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_document_read_failed", exc) from exc
-    return {"document": record}
+    return {"document": _project_document(record)}
 
 
 @router.post("/documents/{document_id}/approve")
@@ -331,21 +340,21 @@ def approve_document(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_valuation_enabled(request):
-        return {"document": _server_call(
+        return {"document": _project_document(_server_call(
             request,
             frozenset({"inventory.valuation.approve"}),
             lambda repository, _scope: repository.approve_document(
                 document_id, reason=payload.reason, actor_label=current_user.id
             ),
             object_refs=(("valuation_document", document_id),),
-        )}
+        ))}
     try:
         record = InventoryValuationService(_local_connection(connection)).approve_document(
             document_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_document_approve_failed", exc) from exc
-    return {"document": record}
+    return {"document": _project_document(record)}
 
 
 @router.post("/documents/{document_id}/cancel")
@@ -357,21 +366,21 @@ def cancel_document(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_valuation_enabled(request):
-        return {"document": _server_call(
+        return {"document": _project_document(_server_call(
             request,
             frozenset({"inventory.valuation.manage"}),
             lambda repository, _scope: repository.cancel_document(
                 document_id, reason=payload.reason, actor_label=current_user.id
             ),
             object_refs=(("valuation_document", document_id),),
-        )}
+        ))}
     try:
         record = InventoryValuationService(_local_connection(connection)).cancel_document(
             document_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_document_cancel_failed", exc) from exc
-    return {"document": record}
+    return {"document": _project_document(record)}
 
 
 @router.get("/cost-layers")

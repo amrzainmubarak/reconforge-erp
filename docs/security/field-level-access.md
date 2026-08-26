@@ -4,6 +4,17 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1028 migrated surface
+
+Inventory Valuation document list, create, read, approve, and cancel responses
+now use a central top-level allowlist across local SQLite and PostgreSQL. The
+input-cost, valuation-line, and layer-consumption collections use independent
+child allowlists, so future adapter/storage fields do not silently become
+financial API output. This is a bounded disclosure control for the reviewed
+document response family; valuation policies, cost layers, and snapshots are
+separate surfaces. It is not universal field-level authorization or
+production IAM. ADR 0688 records the decision and rollback.
+
 ## E-1027 migrated surface
 
 Master Data currency, organization, legal-entity, branch, and fiscal-period

@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1028
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Inventory Valuation document API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1027]
+    exit_evidence: >-
+      Inventory Valuation document list, create, read, approve, and cancel
+      responses use central top-level and nested allowlists across local SQLite
+      and PostgreSQL shapes. Input-cost, valuation-line, and
+      layer-consumption records are projected independently; synthetic future
+      column tests, focused tests, full Python regression, Ruff, Mypy, Bandit,
+      pip-audit, package build, targeted YAML, and diff checks must pass. This
+      closes the reviewed document response boundary only; policy, cost-layer,
+      and snapshot response projection remain separate. ADR 0688 records
+      rollback.
   - id: E-1027
     priority: P0
     area: identity-governance

@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1028: Fail-closed projection for Inventory Valuation document API responses
+
+- Code evidence: `/api/v1/inventory-valuation` document list, create, read,
+  approve, and cancel responses use `project_inventory_valuation_document`
+  from the central field-access module. The top-level document and nested
+  input-cost, valuation-line, and layer-consumption contracts cover the
+  reviewed local SQLite and PostgreSQL shapes; unknown adapter/storage fields
+  are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers unknown document and
+  nested financial fields. `tests/test_inventory_valuation.py` adds a
+  synthetic future column to the valuation document tables and proves it is
+  absent from list and detail HTTP responses. Focused tests and the full
+  Python regression pass at 100%; Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML (9 files), and diff gates also pass.
+  pip-audit cannot audit the local `reconforge-erp` distribution name because
+  it is not published on PyPI.
+- Boundary: this closes the reviewed Inventory Valuation document response
+  family only. Policy, cost-layer, and snapshot response projection remain
+  separate slices. It does not establish universal field-level
+  authorization, external IAM, distributed revocation, disclosure approval,
+  source authenticity, or production effectiveness. ADR 0688 records
+  rollback.
+
 ## E-1027: Fail-closed projection for Master Data API responses
 
 - Code evidence: `/api/v1/master-data` currency, organization,

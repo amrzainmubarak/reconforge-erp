@@ -367,6 +367,100 @@ FINANCE_ENTRY_LINE_FIELDS = frozenset(
         "created_at",
     }
 )
+INVENTORY_VALUATION_DOCUMENT_FIELDS = frozenset(
+    {
+        # This is the deliberate public union of the local SQLite and
+        # tenant-scoped PostgreSQL document projections.  Repository rows
+        # remain closed even when either adapter gains a future column.
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "organization_id",
+        "legal_entity_id",
+        "period_id",
+        "movement_id",
+        "policy_id",
+        "valuation_number",
+        "valuation_date",
+        "currency_code",
+        "status",
+        "total_value",
+        "finance_entry_id",
+        "created_by",
+        "approved_by",
+        "approved_at",
+        "approval_reason",
+        "cancelled_by",
+        "cancelled_at",
+        "cancel_reason",
+        "created_at",
+        "updated_at",
+        "row_version",
+        "movement_number",
+        "movement_type",
+        "movement_status",
+        "organization_code",
+        "entity_code",
+        "period_name",
+        "policy_code",
+        "costing_method",
+        "finance_entry_number",
+        "finance_entry_status",
+        "input_costs",
+        "lines",
+        "layer_consumptions",
+    }
+)
+INVENTORY_VALUATION_INPUT_COST_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "valuation_document_id",
+        "movement_line_id",
+        "total_cost",
+        "created_at",
+        "line_number",
+    }
+)
+INVENTORY_VALUATION_LINE_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "valuation_document_id",
+        "movement_line_id",
+        "line_number",
+        "flow_direction",
+        "item_id",
+        "uom_id",
+        "inventory_lot_id",
+        "quantity",
+        "quantity_precision",
+        "value",
+        "inventory_account_id",
+        "offset_account_id",
+        "created_at",
+        "item_code",
+        "uom_code",
+        "lot_serial_code",
+        "inventory_account_code",
+        "offset_account_code",
+    }
+)
+INVENTORY_LAYER_CONSUMPTION_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "valuation_line_id",
+        "cost_layer_id",
+        "quantity",
+        "value",
+        "created_at",
+        "line_number",
+        "layer_id",
+        "source_valuation_line_id",
+    }
+)
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -848,6 +942,29 @@ def project_finance_entry(values: Mapping[str, object]) -> FieldProjection:
             projected_lines.append(project_fields(line, allowed_fields=FINANCE_ENTRY_LINE_FIELDS).visible)
         record["lines"] = projected_lines
     return project_fields(record, allowed_fields=FINANCE_ENTRY_FIELDS)
+
+
+def project_inventory_valuation_document(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for local and server valuation documents."""
+
+    record = dict(values)
+    for name, allowed_fields in (
+        ("input_costs", INVENTORY_VALUATION_INPUT_COST_FIELDS),
+        ("lines", INVENTORY_VALUATION_LINE_FIELDS),
+        ("layer_consumptions", INVENTORY_LAYER_CONSUMPTION_FIELDS),
+    ):
+        children = record.get(name)
+        if children is None:
+            continue
+        if not isinstance(children, list):
+            raise TypeError(f"inventory valuation {name} collection must be a list")
+        projected_children: list[dict[str, object]] = []
+        for child in children:
+            if not isinstance(child, Mapping):
+                raise TypeError(f"inventory valuation {name} record must be a mapping")
+            projected_children.append(project_fields(child, allowed_fields=allowed_fields).visible)
+        record[name] = projected_children
+    return project_fields(record, allowed_fields=INVENTORY_VALUATION_DOCUMENT_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

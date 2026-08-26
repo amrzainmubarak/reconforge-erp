@@ -13,6 +13,7 @@ from reconforge.auth.field_access import (
     project_exception,
     project_fields,
     project_finance_entry,
+    project_inventory_valuation_document,
     project_master_snapshot,
     project_reconciliation_exception,
     project_reconciliation_input,
@@ -182,6 +183,55 @@ def test_finance_entry_projection_is_closed_across_local_and_server_shapes() -> 
     ]
     assert result.denied_fields == ("unknown_future_column",)
     assert "unknown_line_column" not in str(result.visible)
+
+
+def test_inventory_valuation_document_projection_is_closed_across_nested_financial_shapes() -> None:
+    result = project_inventory_valuation_document(
+        {
+            "id": "valuation-1",
+            "valuation_number": "VAL-001",
+            "total_value": "12.34",
+            "unknown_document_column": "must-not-escape",
+            "input_costs": [
+                {
+                    "id": "cost-1",
+                    "line_number": 1,
+                    "total_cost": "12.34",
+                    "unknown_cost_column": "must-not-escape",
+                }
+            ],
+            "lines": [
+                {
+                    "id": "line-1",
+                    "line_number": 1,
+                    "flow_direction": "Inbound",
+                    "quantity": "1.000",
+                    "value": "12.34",
+                    "unknown_line_column": "must-not-escape",
+                }
+            ],
+            "layer_consumptions": [
+                {
+                    "id": "consumption-1",
+                    "cost_layer_id": "layer-1",
+                    "quantity": "1.000",
+                    "value": "12.34",
+                    "unknown_consumption_column": "must-not-escape",
+                }
+            ],
+        }
+    )
+
+    assert result.visible["valuation_number"] == "VAL-001"
+    assert result.visible["input_costs"] == [{"id": "cost-1", "line_number": 1, "total_cost": "12.34"}]
+    assert result.visible["lines"] == [
+        {"flow_direction": "Inbound", "id": "line-1", "line_number": 1, "quantity": "1.000", "value": "12.34"}
+    ]
+    assert result.visible["layer_consumptions"] == [
+        {"cost_layer_id": "layer-1", "id": "consumption-1", "quantity": "1.000", "value": "12.34"}
+    ]
+    assert result.denied_fields == ("unknown_document_column",)
+    assert "must-not-escape" not in str(result.visible)
 
 
 def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> None:

@@ -2,6 +2,21 @@
 
 Updated: 2026-08-26
 
+## E-1028 - Fail-closed projection for Inventory Valuation document API responses (2026-08-26)
+
+- Inventory Valuation document list, create, read, approve, and cancel
+  responses now use central allowlists across local SQLite and PostgreSQL.
+  Input-cost records, valuation lines, and layer-consumption records are
+  projected independently; unknown future adapter/storage fields cannot
+  silently enter the financial response contract.
+- Focused field/API tests and the full Python regression pass at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted YAML
+  validation (9 files), and diff checks also pass. This is a bounded disclosure
+  control only;
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0688 records rollback.
+
 ## E-1027 - Fail-closed projection for Master Data API responses (2026-08-26)
 
 - Master Data currency, organization, legal-entity, branch, and fiscal-period

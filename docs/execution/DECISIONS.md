@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-825: Add a regression gate for mutating route server boundaries
+
+- **Date**: 2026-08-26
+- **Context**: Permission inventory prevents anonymous or unclassified API
+  mutations, but a new route module could still omit the Server Profile scope
+  or fail-closed boundary that E-1005 requires.
+- **Decision**: Add a deterministic AST test requiring every mutating route
+  module to show a server boundary marker, with only explicit auth/SCIM/
+  WebAuthn protocol modules exempted. Keep semantic scope, RLS, SoD, and
+  runtime tests as separate required evidence.
+- **Verification**: E-962 authorization inventory and full Python regression
+  pass, with Ruff, Mypy, YAML, and diff gates.
+- **Compatibility**: Test-only guard; no route, API, schema, migration, or
+  deployment behavior changes.
+- **Rollback**: Revert the gate and E-962 documentation. No persisted-state
+  rollback is required.
+
 ### D-824: Refuse the local-only individual cashflow API in Server Profile
 
 - **Date**: 2026-08-26

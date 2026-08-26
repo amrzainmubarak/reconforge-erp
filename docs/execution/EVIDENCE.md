@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-962: Add a regression gate for mutating route server boundaries
+
+- Code evidence: `tests/test_api_authorization_inventory.py` parses every
+  `reconforge/api/routes/*.py` module containing POST/PUT/PATCH/DELETE route
+  decorators and requires one of the reviewed server-boundary markers. Only
+  `auth.py`, `scim.py`, and `webauthn.py` are explicit protocol exceptions.
+- Test evidence: the authorization inventory and current full Python suite
+  pass with the new AST gate; Ruff, Mypy, YAML parsing, and diff-check also
+  pass. A future mutating module without a marker now fails before release
+  evidence can be claimed.
+- Boundary: this detects source-level omissions; it does not prove the
+  correctness of every scope argument, RLS policy, SoD path, worker/export/UI
+  adoption, distributed invalidation, external IAM, HA/DR, or production
+  effectiveness. ADR 0656 records rollback.
+
 ## E-961: Fail closed for the local-only individual cashflow API in Server Profile
 
 - Code evidence: `POST /api/v1/individual/cashflow-controls/run` checks the

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,21 @@ from reconforge.api.dependencies import require_any_permission, require_permissi
 
 EXPECTED_ROUTE_COUNT = 265
 EXPECTED_DIGEST = "66292d07fd4513cbdacc22a95fb4f0ed3f1e16497fdc9044ae02d99233f9efdf"
+ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
+SPECIAL_ROUTE_MODULES = frozenset(
+    {
+        # Authentication and protocol surfaces have their own explicit
+        # handshake or SCIM authorization classification.
+        "auth.py",
+        "scim.py",
+        "webauthn.py",
+    }
+)
+SERVER_BOUNDARY_MARKERS = (
+    "enforce_server_scoped",
+    "enforce_server_tenant",
+    "server_identity_enabled",
+)
 
 
 def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Path) -> None:
@@ -35,6 +51,30 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     assert all(contract.permissions for contract in contracts if contract.mode in {"all", "any"})
     assert len([contract for contract in contracts if contract.mode == "scim"]) == 15
     validate_authorization_surface(contracts)
+
+
+def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_classification() -> None:
+    """Prevent a new mutating API module from silently bypassing E-1005 scope review."""
+
+    violations: list[str] = []
+    for path in sorted(ROUTES_ROOT.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        has_mutation = any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in {"post", "put", "patch", "delete"}
+            for node in ast.walk(tree)
+        )
+        if not has_mutation or path.name in SPECIAL_ROUTE_MODULES:
+            continue
+        source = path.read_text(encoding="utf-8")
+        if not any(marker in source for marker in SERVER_BOUNDARY_MARKERS):
+            violations.append(path.name)
+
+    assert violations == [], (
+        "Mutating route modules must either call/declare a server scope or be "
+        f"added to the reviewed protocol allowlist: {violations}"
+    )
 
 
 def test_inventory_rejects_unclassified_and_stale_allowlisted_routes() -> None:

@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-962
+    priority: P0
+    area: identity-governance
+    title: Add a regression gate for mutating route server boundaries
+    status: completed
+    depends_on: [E-961, E-1005]
+    exit_evidence: >-
+      A deterministic AST gate scans every API route module containing POST,
+      PUT, PATCH, or DELETE decorators and requires a visible server scope or
+      fail-closed marker, with only authentication/SCIM/WebAuthn protocol
+      modules explicitly allowlisted. The closed authorization inventory,
+      focused API tests, Ruff, Mypy, full Python regression, and diff-check
+      pass. This is source-level omission detection, not proof of route
+      semantics, worker/export/UI adoption, distributed invalidation, external
+      IAM, HA/DR, or production authorization effectiveness. ADR 0656 records
+      the decision.
   - id: E-961
     priority: P0
     area: identity-governance

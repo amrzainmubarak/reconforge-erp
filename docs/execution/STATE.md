@@ -2,6 +2,17 @@
 
 Updated: 2026-08-26
 
+## E-962 - Add a regression gate for mutating route server boundaries (2026-08-26)
+
+- The API authorization test suite now parses every route module containing a
+  mutating decorator and requires a visible server scope/fail-closed marker.
+  Authentication, SCIM, and WebAuthn are explicit protocol exceptions rather
+  than implicit omissions.
+- The gate is source-level omission detection: it complements, but does not
+  replace, route-specific ABAC arguments, RLS, SoD, runtime, worker, export,
+  or UI evidence. Focused authorization tests, Ruff, Mypy, full Python
+  regression, YAML, and diff checks pass. ADR 0656 records rollback.
+
 ## E-961 - Fail closed for the local-only individual cashflow API in Server Profile (2026-08-26)
 
 - `POST /api/v1/individual/cashflow-controls/run` now preserves its

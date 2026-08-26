@@ -635,6 +635,21 @@ PAYABLES_SUPPLIER_FIELDS = frozenset(
         "currency_code", "tax_identifier", "status", "created_at", "updated_at", "row_version",
     }
 )
+PAYABLES_PURCHASE_ORDER_FIELDS = frozenset(
+    {
+        # Deliberate union for local SQLite and tenant-scoped PostgreSQL
+        # purchase-order responses.  Nested lines use a separate contract.
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "branch_id", "supplier_id",
+        "po_number", "order_date", "expected_date", "currency_code", "status", "created_by", "approved_by",
+        "approved_at", "created_at", "updated_at", "row_version", "lines",
+    }
+)
+PAYABLES_PURCHASE_ORDER_LINE_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "purchase_order_id", "line_number", "item_code", "description", "ordered_quantity",
+        "ordered_quantity_text", "unit_price_minor", "tax_minor", "created_at",
+    }
+)
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1369,6 +1384,23 @@ def project_payables_supplier(values: Mapping[str, object]) -> FieldProjection:
     """Return a closed projection for Accounts Payable supplier responses."""
 
     return project_fields(values, allowed_fields=PAYABLES_SUPPLIER_FIELDS)
+
+
+def project_payables_purchase_order(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for purchase-order responses."""
+
+    record = dict(values)
+    lines = record.get("lines")
+    if lines is not None:
+        if not isinstance(lines, list):
+            raise TypeError("payables purchase-order lines collection must be a list")
+        projected_lines: list[dict[str, object]] = []
+        for line in lines:
+            if not isinstance(line, Mapping):
+                raise TypeError("payables purchase-order line record must be a mapping")
+            projected_lines.append(project_fields(line, allowed_fields=PAYABLES_PURCHASE_ORDER_LINE_FIELDS).visible)
+        record["lines"] = projected_lines
+    return project_fields(record, allowed_fields=PAYABLES_PURCHASE_ORDER_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

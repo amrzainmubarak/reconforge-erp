@@ -5,6 +5,28 @@
 
 ## Decisions
 
+### D-861: Payables purchase-order API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: Purchase-order create and lifecycle routes returned local SQLite
+  and tenant-scoped PostgreSQL mappings, including nested line rows. Storage
+  or adapter growth could silently disclose new fields in a financial
+  lifecycle response.
+- **Decision**: Apply central allowlists to purchase-order create, submit, and
+  approve responses, with an independent nested-line allowlist. Preserve the
+  existing direct response shape, exact quantity/price fields, permissions,
+  lifecycle policy, and local/server boundaries.
+- **Verification**: Focused field/API tests pass 22 tests and include
+  synthetic future columns in both purchase-order tables. Full `python -m
+  pytest -q` passes at 100%; Ruff, Mypy (539 source files), Bandit, pip-audit,
+  package build, targeted safe YAML validation (9 files), and diff gates also
+  pass. The local distribution is not auditable by pip-audit because it is not
+  published on PyPI.
+- **Compatibility**: No route, schema, migration, permission, or lifecycle
+  behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1034 code/tests/ADR 0694/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
 ### D-860: Payables supplier API uses fail-closed field projection
 
 - **Date**: 2026-08-26

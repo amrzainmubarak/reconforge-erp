@@ -26,7 +26,7 @@ from reconforge.api.server_payables import (
     execute_postgres_payables,
     server_payables_enabled,
 )
-from reconforge.auth.field_access import project_payables_supplier
+from reconforge.auth.field_access import project_payables_purchase_order, project_payables_supplier
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_payables import PostgresPayablesRepository
@@ -253,21 +253,23 @@ def create_purchase_order(
     if server_payables_enabled(request):
         values = payload.model_dump(exclude={"lines"})
         values.update(lines=[PurchaseOrderLineInput(**line.model_dump()) for line in payload.lines], actor_label=current_user.id)
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"payables.manage"}),
             lambda repository, scope: repository.create_purchase_order(
                 **{**values, "workspace": scope.workspace_id, "organization_code": scope.organization_code or payload.organization_code, "entity_code": scope.entity_code or payload.entity_code}
             ),
         )
+        return project_payables_purchase_order(record).visible
     try:
-        return PayablesService(_local_connection(connection)).create_purchase_order(
+        record = PayablesService(_local_connection(connection)).create_purchase_order(
             **payload.model_dump(exclude={"lines"}),
             lines=[PurchaseOrderLineInput(**line.model_dump()) for line in payload.lines],
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_purchase_order_create_failed", exc) from exc
+    return project_payables_purchase_order(record).visible
 
 
 @router.post("/purchase-orders/{purchase_order_id}/submit")
@@ -279,20 +281,22 @@ def submit_purchase_order(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_payables_enabled(request):
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"payables.manage"}),
             lambda repository, _scope: repository.submit_purchase_order(purchase_order_id, expected_version=payload.expected_version, actor_label=current_user.id),
             object_refs=(("purchase_order", purchase_order_id),),
         )
+        return project_payables_purchase_order(record).visible
     try:
-        return PayablesService(_local_connection(connection)).submit_purchase_order(
+        record = PayablesService(_local_connection(connection)).submit_purchase_order(
             purchase_order_id,
             expected_version=payload.expected_version,
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_purchase_order_submit_failed", exc) from exc
+    return project_payables_purchase_order(record).visible
 
 
 @router.post("/purchase-orders/{purchase_order_id}/approve")
@@ -304,20 +308,22 @@ def approve_purchase_order(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_payables_enabled(request):
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"payables.approve"}),
             lambda repository, _scope: repository.approve_purchase_order(purchase_order_id, expected_version=payload.expected_version, actor_label=current_user.id),
             object_refs=(("purchase_order", purchase_order_id),),
         )
+        return project_payables_purchase_order(record).visible
     try:
-        return PayablesService(_local_connection(connection)).approve_purchase_order(
+        record = PayablesService(_local_connection(connection)).approve_purchase_order(
             purchase_order_id,
             expected_version=payload.expected_version,
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_purchase_order_approve_failed", exc) from exc
+    return project_payables_purchase_order(record).visible
 
 
 @router.post("/receipts")

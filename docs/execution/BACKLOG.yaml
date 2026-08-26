@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1034
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Payables purchase-order API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1033]
+    exit_evidence: >-
+      Payables purchase-order create, submit, and approve responses use central
+      top-level and nested-line allowlists across local SQLite and PostgreSQL.
+      Synthetic future-column tests prove unknown fields are dropped while
+      lifecycle shape, permissions, and exact quantity/price fields remain
+      compatible. Focused selectors pass 22 tests; full Python regression,
+      Ruff, Mypy, Bandit, pip-audit, package build, targeted YAML, and diff
+      checks pass.
+      Receipts, supplier invoices, and three-way-match responses remain
+      separate. ADR 0694 records rollback.
   - id: E-1033
     priority: P0
     area: identity-governance

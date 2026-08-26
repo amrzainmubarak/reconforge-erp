@@ -4,6 +4,17 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1034 migrated surface
+
+Payables purchase-order create, submit, and approve responses now use central
+top-level and nested-line allowlists across local SQLite and PostgreSQL.
+Unknown future adapter/storage fields are dropped before serialization while
+exact quantity/price fields and the existing direct lifecycle response remain
+compatible. This is a bounded disclosure control for the purchase-order
+response family, not complete Payables response coverage, universal
+field-level authorization, or production IAM. ADR 0694 records the decision
+and rollback.
+
 ## E-1033 migrated surface
 
 Payables supplier save and list responses now use a central supplier allowlist

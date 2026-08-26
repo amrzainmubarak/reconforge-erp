@@ -2,6 +2,20 @@
 
 Updated: 2026-08-26
 
+## E-1034 - Fail-closed projection for Payables purchase-order API responses (2026-08-26)
+
+- Payables purchase-order create, submit, and approve responses now use a
+  central top-level and nested-line allowlist across local SQLite and
+  tenant-scoped PostgreSQL. Unknown future adapter/storage fields cannot
+  silently enter purchase-order lifecycle responses.
+- Focused field/API tests pass (22 tests at the focused boundary), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. Receipts, supplier invoices, and
+  three-way-match responses remain separate surfaces. ADR 0694 records
+  rollback.
+
 ## E-1033 - Fail-closed projection for Payables supplier API responses (2026-08-26)
 
 - Payables supplier save and list responses now use a central allowlist across

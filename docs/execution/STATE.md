@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1011 - Route local operations queue health through governed durable-job facade (2026-08-26)
+
+- The local `/api/v1/ops/durable-jobs/queue` route now builds a scoped policy
+  context from the authenticated local user, local RBAC permissions, and the
+  selected tenant/workspace/organization/entity hierarchy before calling
+  `GovernedDurableJobApplicationService.queue_snapshot`.
+- The sanitized response contract is unchanged. API tests prove facade use and
+  the existing relevant API/application/worker tests pass. Server Profile
+  remains on its dedicated PostgreSQL tenant-policy/RLS path until a proper
+  PostgreSQL audit-sink adapter is added; universal API adoption, external IAM,
+  distributed revocation, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0671 records rollback.
+
 ## E-1010 - Govern durable-job application queue reads and requeue by exact scope (2026-08-26)
 
 - `GovernedDurableJobApplicationService` now policy-gates `queue_snapshot` and

@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from reconforge.api import create_api_app
 from reconforge.api.routes import operations
 from reconforge.application.jobs import DurableJobApplicationService, JobSubmission
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.auth.service import LocalAuthService
 from reconforge.db import connect, run_migrations
 from reconforge.domain.jobs import DurableJobQueueSnapshot
@@ -69,6 +70,44 @@ def test_local_durable_job_queue_route_is_sanitized_and_authenticated(tmp_path: 
     assert payload["queue_depth"] == 0
     assert "job_id" not in response.text
     assert "input_digest" not in response.text
+
+
+def test_local_durable_job_queue_route_uses_governed_application_facade(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    database_path = tmp_path / "governed-operations.db"
+    run_migrations(database_path)
+    connection = connect(database_path)
+    LocalAuthService(connection).init_admin(username="admin", password="Secret-123")
+    connection.close()
+    calls: list[dict[str, object]] = []
+
+    class GovernedFacade:
+        def __init__(self, _service: object) -> None:
+            pass
+
+        def queue_snapshot(self, **kwargs: object) -> DurableJobQueueSnapshot:
+            calls.append(kwargs)
+            return DurableJobQueueSnapshot(tenant_id="tenant-api", workspace_id="workspace-a", queued_count=0)
+
+    monkeypatch.setattr(operations, "GovernedDurableJobApplicationService", GovernedFacade)
+    client = TestClient(create_api_app(database_path))
+    login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Secret-123"})
+    response = client.get(
+        "/api/v1/ops/durable-jobs/queue",
+        params={"tenant_id": "tenant-api", "workspace_id": "workspace-a"},
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+
+    assert response.status_code == 200
+    assert len(calls) == 1
+    assert calls[0]["required_permission"] == "ops.read"
+    assert calls[0]["actor_id"]
+    context = calls[0]["policy_context"]
+    assert isinstance(context, PolicyEvaluationContext)
+    assert context.tenant_id == "tenant-api"
+    assert context.workspace_id == "workspace-a"
+    assert context.action is None
 
 
 def test_server_durable_job_queue_route_rechecks_tenant_policy_and_rls_scope(monkeypatch: Any) -> None:

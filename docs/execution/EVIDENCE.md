@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1011: Route local operations queue health through governed durable-job facade
+
+- Code evidence: local `/api/v1/ops/durable-jobs/queue` resolves local RBAC
+  permissions and builds a tenant/workspace/organization/entity-bound policy
+  context, then calls `GovernedDurableJobApplicationService.queue_snapshot`
+  with the authenticated actor and request ID. The sanitized response is
+  unchanged. Server mode retains its PostgreSQL tenant-policy/RLS boundary.
+- Test evidence: API tests pass for sanitized authenticated local health,
+  governed-facade invocation, server tenant-policy recheck, and the available
+  live selector contract. Relevant application/worker policy tests, Ruff, and
+  Mypy pass.
+- Boundary: local SQLite route adoption only. This does not prove universal
+  API adoption, PostgreSQL application-facade adoption, external IAM,
+  distributed revocation, HA/DR, production SLOs, or production
+  authorization effectiveness. ADR 0671 records rollback.
+
 ## E-1010: Govern durable-job application queue reads and requeue by exact scope
 
 - Code evidence: `GovernedDurableJobApplicationService` now owns policy-gated

@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1011
+    priority: P0
+    area: identity-governance
+    title: Route local operations queue health through governed durable-job facade
+    status: completed
+    depends_on: [E-1005, E-1010]
+    exit_evidence: >-
+      The local /api/v1/ops/durable-jobs/queue route now constructs a scoped
+      PolicyEvaluationContext from the authenticated local user and calls
+      GovernedDurableJobApplicationService.queue_snapshot with ops.read,
+      actor identity, selected hierarchy, and request ID. Existing sanitized
+      response compatibility remains intact. API tests prove the route uses
+      the governed facade and the complete relevant Python suite passes.
+      Server Profile intentionally remains on its existing PostgreSQL tenant
+      policy/RLS boundary until a PostgreSQL audit-sink adapter is available;
+      universal API adoption and production authorization remain open. ADR
+      0671 records rollback.
   - id: E-1010
     priority: P0
     area: identity-governance
@@ -2111,6 +2128,11 @@ tasks:
         object, action, and request ID before repository access, and requeue
         verifies persisted scope before mutation. Focused SQLite tests pass;
         API-wide adoption and production authorization remain open.
+      - E-1011 routes the local operations queue-health API through the
+        governed application facade with authenticated actor, local RBAC,
+        selected hierarchy, and request-ID binding. The sanitized response
+        contract remains unchanged; Server Profile PostgreSQL adoption and
+        universal API coverage remain open.
   - id: E-1006
     priority: P1
     area: global-expansion

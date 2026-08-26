@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-838: Route local operations queue health through the governed job facade
+
+- **Date**: 2026-08-26
+- **Context**: The local operations API checked `ops.read` but then called the
+  raw durable-job application service, bypassing the exact-scope facade.
+- **Decision**: Construct a local user/scope policy context and call the
+  governed `queue_snapshot` facade in local mode. Keep Server Profile on its
+  existing PostgreSQL tenant-policy/RLS boundary until a dedicated audit-sink
+  adapter exists.
+- **Verification**: E-1011 API, application, and worker tests pass with Ruff,
+  Mypy, and diff checks. The response projection remains backward compatible.
+- **Compatibility**: No endpoint, response, schema, or migration changes;
+  only the local service call path is strengthened.
+- **Rollback**: Revert E-1011 route/test/ADR 0671/manifest/execution metadata.
+
 ### D-837: Govern durable-job application queue reads and requeue by exact scope
 
 - **Date**: 2026-08-26

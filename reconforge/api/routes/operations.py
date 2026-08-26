@@ -18,8 +18,13 @@ from reconforge.api.server_identity import (
     request_tenant_id,
     server_identity_enabled,
 )
-from reconforge.application.jobs import DurableJobApplicationService
+from reconforge.application.jobs import (
+    DurableJobApplicationService,
+    GovernedDurableJobApplicationService,
+)
 from reconforge.auth.models import LocalUser
+from reconforge.auth.policy import PolicyEvaluationContext
+from reconforge.auth.service import LocalAuthService
 from reconforge.domain.jobs import DurableJobQueueSnapshot
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_jobs import PostgresDurableJobRepository, PostgresJobRepositoryError
@@ -78,7 +83,6 @@ def durable_job_queue(
 ) -> dict[str, object]:
     """Return sanitized durable-job queue health for one tenant or execution lane."""
 
-    del current_user
     workspace = _scope_query(workspace_id, field="workspace_id")
     organization = _scope_query(organization_id, field="organization_id")
     entity = _scope_query(entity_id, field="entity_id")
@@ -115,11 +119,36 @@ def durable_job_queue(
                 raise APIError(status_code=500, code="db_not_configured", message="Database not configured.")
             if tenant_id is None or not tenant_id.strip():
                 raise APIError(status_code=400, code="tenant_required", message="tenant_id is required in local mode.")
-            snapshot = DurableJobApplicationService(SQLiteDurableJobRepository(connection)).queue_snapshot(
-                tenant_id=tenant_id.strip(),
+            selected_tenant = tenant_id.strip()
+            local_permissions = LocalAuthService(connection).roles.user_permissions(current_user.username)
+            policy_context = PolicyEvaluationContext(
+                user_id=current_user.id,
+                username=current_user.username,
+                user_permissions=local_permissions,
+                tenant_id=selected_tenant,
                 workspace_id=workspace,
                 organization_id=organization,
                 entity_id=entity,
+                authorized_tenant_ids=frozenset({selected_tenant}),
+                authorized_workspace_ids=(
+                    frozenset({workspace}) if workspace is not None else frozenset()
+                ),
+                authorized_organization_ids=(
+                    frozenset({organization}) if organization is not None else frozenset()
+                ),
+                authorized_entity_ids=frozenset({entity}) if entity is not None else frozenset(),
+            )
+            snapshot = GovernedDurableJobApplicationService(
+                DurableJobApplicationService(SQLiteDurableJobRepository(connection))
+            ).queue_snapshot(
+                tenant_id=selected_tenant,
+                workspace_id=workspace,
+                organization_id=organization,
+                entity_id=entity,
+                actor_id=current_user.id,
+                policy_context=policy_context,
+                required_permission="ops.read",
+                request_id=str(getattr(request.state, "request_id", "")),
             )
     except APIError:
         raise

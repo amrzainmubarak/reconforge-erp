@@ -24,7 +24,13 @@ from reconforge.api.server_inventory_valuation import (
     _run,
     server_inventory_valuation_enabled,
 )
-from reconforge.auth.field_access import project_inventory_valuation_document
+from reconforge.auth.field_access import (
+    project_inventory_cost_layer,
+    project_inventory_valuation_document,
+    project_inventory_valuation_policy,
+    project_inventory_valuation_snapshot,
+    project_inventory_valuation_summary,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_inventory_valuation import PostgresInventoryValuationRepository
@@ -99,6 +105,22 @@ def _project_documents(records: list[dict[str, object]]) -> list[dict[str, objec
     return [_project_document(record) for record in records]
 
 
+def _project_policy(record: dict[str, object]) -> dict[str, object]:
+    return project_inventory_valuation_policy(record).visible
+
+
+def _project_policies(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [_project_policy(record) for record in records]
+
+
+def _project_cost_layer(record: dict[str, object]) -> dict[str, object]:
+    return project_inventory_cost_layer(record).visible
+
+
+def _project_cost_layers(records: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [_project_cost_layer(record) for record in records]
+
+
 def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
     if connection is None:
         raise APIError(status_code=500, code="local_database_not_configured", message="The local inventory valuation database is not configured.")
@@ -160,14 +182,14 @@ def summary(
             frozenset({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}),
             lambda repository, scope: repository.summary(workspace=scope.workspace_id, actor_label=current_user.id),
         )
-        return {"summary": result.to_dict()}
+        return {"summary": project_inventory_valuation_summary(result.to_dict()).visible}
     try:
         result = InventoryValuationService(_local_connection(connection)).summary(
             workspace=workspace, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_summary_failed", exc) from exc
-    return {"summary": result.to_dict()}
+    return {"summary": project_inventory_valuation_summary(result.to_dict()).visible}
 
 
 @router.get("/snapshot")
@@ -178,15 +200,16 @@ def snapshot(
     workspace: str = "default",
 ) -> dict[str, object]:
     if server_inventory_valuation_enabled(request):
-        return _server_call(
+        return project_inventory_valuation_snapshot(_server_call(
             request,
             frozenset({"inventory.read", "inventory.valuation.manage", "inventory.valuation.approve"}),
             lambda repository, scope: repository.snapshot(workspace=scope.workspace_id, actor_label=current_user.id),
-        )
+        )).visible
     try:
-        return InventoryValuationService(_local_connection(connection)).snapshot(
+        result = InventoryValuationService(_local_connection(connection)).snapshot(
             workspace=workspace, actor_label=current_user.username
         )
+        return project_inventory_valuation_snapshot(result).visible
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_snapshot_failed", exc) from exc
 
@@ -208,14 +231,14 @@ def list_policies(
                 workspace=scope.workspace_id, limit=limit, offset=offset, actor_label=current_user.id
             ),
         )
-        return _list_response("policies", records, limit=limit, offset=offset)
+        return _list_response("policies", _project_policies(records), limit=limit, offset=offset)
     try:
         records = InventoryValuationService(_local_connection(connection)).list_policies(
             workspace=workspace, limit=limit, offset=offset, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_policies_list_failed", exc) from exc
-    return _list_response("policies", records, limit=limit, offset=offset)
+    return _list_response("policies", _project_policies(records), limit=limit, offset=offset)
 
 
 @router.post("/policies")
@@ -228,7 +251,7 @@ def upsert_policy(
     if server_inventory_valuation_enabled(request):
         values = payload.model_dump()
         values["actor_label"] = current_user.id
-        return {"policy": _server_call(
+        return {"policy": _project_policy(_server_call(
             request,
             frozenset({"inventory.valuation.manage"}),
             lambda repository, scope: repository.upsert_policy(
@@ -241,14 +264,14 @@ def upsert_policy(
             ),
             organization_code=payload.organization_code,
             entity_code=payload.entity_code,
-        )}
+        ))}
     try:
         record = InventoryValuationService(_local_connection(connection)).upsert_policy(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_valuation_policy_save_failed", exc) from exc
-    return {"policy": record}
+    return {"policy": _project_policy(record)}
 
 
 @router.get("/documents")
@@ -405,7 +428,7 @@ def list_cost_layers(
                 actor_label=current_user.id,
             ),
         )
-        return _list_response("cost_layers", records, limit=limit, offset=offset)
+        return _list_response("cost_layers", _project_cost_layers(records), limit=limit, offset=offset)
     try:
         records = InventoryValuationService(_local_connection(connection)).list_cost_layers(
             workspace=workspace,
@@ -416,4 +439,4 @@ def list_cost_layers(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_cost_layers_list_failed", exc) from exc
-    return _list_response("cost_layers", records, limit=limit, offset=offset)
+    return _list_response("cost_layers", _project_cost_layers(records), limit=limit, offset=offset)

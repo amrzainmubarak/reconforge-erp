@@ -544,9 +544,11 @@ def test_inventory_valuation_api_projects_future_adapter_fields(tmp_path: Path) 
     connection = connect(path, require_exists=True)
     try:
         for table in (
+            "inventory_valuation_policies",
             "inventory_valuation_documents",
             "inventory_valuation_input_costs",
             "inventory_valuation_lines",
+            "inventory_cost_layers",
             "inventory_layer_consumptions",
         ):
             connection.execute(f"ALTER TABLE {table} ADD COLUMN unknown_future_column TEXT")  # nosec B608
@@ -565,6 +567,18 @@ def test_inventory_valuation_api_projects_future_adapter_fields(tmp_path: Path) 
     assert detailed.status_code == 200, detailed.text
     assert "unknown_future_column" not in detailed.text
     assert detailed.json()["document"]["input_costs"][0]["total_cost"] == "12.34"
+
+    policies = client.get("/api/v1/inventory-valuation/policies", headers=headers)
+    assert policies.status_code == 200, policies.text
+    assert "unknown_future_column" not in policies.text
+
+    layers = client.get("/api/v1/inventory-valuation/cost-layers", headers=headers)
+    assert layers.status_code == 200, layers.text
+    assert "unknown_future_column" not in layers.text
+
+    snapshot = client.get("/api/v1/inventory-valuation/snapshot", headers=headers)
+    assert snapshot.status_code == 200, snapshot.text
+    assert "unknown_future_column" not in snapshot.text
 
 
 def test_valuation_backup_restore_and_public_export(tmp_path: Path) -> None:

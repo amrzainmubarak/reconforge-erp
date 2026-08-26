@@ -2,6 +2,28 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1029: Fail-closed projection for Inventory Valuation policy/layer/snapshot API responses
+
+- Code evidence: `/api/v1/inventory-valuation` policy list/save, cost-layer
+  list, summary, and snapshot responses use central allowlists. Snapshot
+  source, summary, policies, documents, and open cost layers are projected
+  recursively; unknown adapter/storage fields are dropped and malformed
+  nested records are rejected before serialization.
+- Test evidence: `tests/test_field_access.py` covers unknown policy, layer,
+  and snapshot fields. `tests/test_inventory_valuation.py` adds a synthetic
+  future column to policy, document, input-cost, valuation-line, cost-layer,
+  and consumption tables and proves it is absent from policy, layer, document,
+  and snapshot HTTP responses. Focused tests and the full Python regression
+  pass at 100%; Ruff, Mypy (539 source files), Bandit, pip-audit, package
+  build, targeted YAML (9 files), and diff gates also pass. pip-audit cannot
+  audit the local `reconforge-erp` distribution name because it is not
+  published on PyPI.
+- Boundary: this closes the reviewed Inventory Valuation policy/layer,
+  summary, and snapshot response family only. It does not establish universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, or production effectiveness. ADR 0689
+  records rollback.
+
 ## E-1028: Fail-closed projection for Inventory Valuation document API responses
 
 - Code evidence: `/api/v1/inventory-valuation` document list, create, read,

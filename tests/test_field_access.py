@@ -13,7 +13,10 @@ from reconforge.auth.field_access import (
     project_exception,
     project_fields,
     project_finance_entry,
+    project_inventory_cost_layer,
     project_inventory_valuation_document,
+    project_inventory_valuation_policy,
+    project_inventory_valuation_snapshot,
     project_master_snapshot,
     project_reconciliation_exception,
     project_reconciliation_input,
@@ -232,6 +235,44 @@ def test_inventory_valuation_document_projection_is_closed_across_nested_financi
     ]
     assert result.denied_fields == ("unknown_document_column",)
     assert "must-not-escape" not in str(result.visible)
+
+
+def test_inventory_valuation_policy_layer_and_snapshot_projection_is_closed() -> None:
+    policy = project_inventory_valuation_policy(
+        {"id": "policy-1", "policy_code": "FIFO", "active": True, "unknown": "must-not-escape"}
+    )
+    layer = project_inventory_cost_layer(
+        {
+            "id": "layer-1",
+            "quantity_precision": 3,
+            "original_quantity": "1.000",
+            "remaining_quantity": "1.000",
+            "original_value": "12.34",
+            "remaining_value": "12.34",
+            "layer_status": "Open",
+            "unknown": "must-not-escape",
+        }
+    )
+    snapshot = project_inventory_valuation_snapshot(
+        {
+            "schema_version": 1,
+            "workspace": "default",
+            "source": {"kind": "local-inventory-valuation", "unknown": "must-not-escape"},
+            "summary": {"workspace": "default", "policies": 1, "unknown": "must-not-escape"},
+            "policies": [{"policy_code": "FIFO", "unknown": "must-not-escape"}],
+            "documents": [{"valuation_number": "VAL-001", "unknown": "must-not-escape"}],
+            "open_cost_layers": [{"id": "layer-1", "unknown": "must-not-escape"}],
+            "unknown": "must-not-escape",
+        }
+    )
+
+    assert policy.visible == {"active": True, "id": "policy-1", "policy_code": "FIFO"}
+    assert layer.visible["layer_status"] == "Open"
+    assert snapshot.visible["policies"] == [{"policy_code": "FIFO"}]
+    assert snapshot.visible["documents"] == [{"valuation_number": "VAL-001"}]
+    assert snapshot.visible["open_cost_layers"] == [{"id": "layer-1"}]
+    assert snapshot.denied_fields == ("unknown",)
+    assert "must-not-escape" not in str(snapshot.visible)
 
 
 def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> None:

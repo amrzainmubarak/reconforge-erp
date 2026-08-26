@@ -5,6 +5,28 @@
 
 ## Decisions
 
+### D-856: Inventory Valuation policy, layer, summary, and snapshot responses use fail-closed projection
+
+- **Date**: 2026-08-26
+- **Context**: Inventory Valuation policy and cost-layer routes returned
+  mappings sourced from local SQLite and PostgreSQL joins. The summary and
+  snapshot aggregate those mappings; future storage or adapter fields could
+  therefore silently expand multiple financial response paths.
+- **Decision**: Apply central allowlists to policy, cost-layer, and summary
+  responses, and a recursive closed projection to the snapshot source,
+  summary, policy, document, and open-layer collections. Reject malformed
+  nested collections or records before serialization.
+- **Verification**: Focused field/API tests and the full Python regression pass
+  at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML validation (9 files), and diff checks also pass. Universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing response envelopes, reviewed known fields,
+  permissions, money/quantity text, and local/server boundaries remain; no
+  schema or migration changes.
+- **Rollback**: Revert E-1029 code/tests/ADR 0689/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
 ### D-855: Inventory Valuation document API uses fail-closed field projection
 
 - **Date**: 2026-08-26

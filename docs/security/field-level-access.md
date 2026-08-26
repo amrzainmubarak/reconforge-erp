@@ -4,6 +4,16 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1029 migrated surface
+
+Inventory Valuation policy list/save, cost-layer list, summary, and snapshot
+responses now use central allowlists across local SQLite and PostgreSQL. The
+snapshot is recursively projected across source, summary, policy, document,
+and open-layer collections; malformed nested collections or records fail
+closed. This is a bounded disclosure control for the reviewed response
+family, not universal field-level authorization or production IAM. ADR 0689
+records the decision and rollback.
+
 ## E-1028 migrated surface
 
 Inventory Valuation document list, create, read, approve, and cancel responses

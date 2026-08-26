@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1029
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Inventory Valuation policy/layer/snapshot API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1028]
+    exit_evidence: >-
+      Inventory Valuation policy, cost-layer, summary, and snapshot responses
+      use central allowlists across local SQLite and PostgreSQL. Snapshot
+      source, summary, policy, document, and open-layer collections are
+      projected recursively; malformed nested data fails closed. Synthetic
+      future-column tests, focused tests, full Python regression, Ruff, Mypy,
+      Bandit, pip-audit, package build, targeted YAML, and diff checks must
+      pass. This closes the reviewed response boundary only; ADR 0689 records
+      rollback.
   - id: E-1028
     priority: P0
     area: identity-governance

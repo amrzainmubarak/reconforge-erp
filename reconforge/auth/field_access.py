@@ -461,6 +461,76 @@ INVENTORY_LAYER_CONSUMPTION_FIELDS = frozenset(
         "source_valuation_line_id",
     }
 )
+INVENTORY_VALUATION_POLICY_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "organization_id",
+        "legal_entity_id",
+        "policy_code",
+        "costing_method",
+        "currency_code",
+        "finance_journal_id",
+        "receipt_clearing_account_id",
+        "cogs_account_id",
+        "adjustment_account_id",
+        "active",
+        "created_by",
+        "created_at",
+        "updated_at",
+        "row_version",
+        "organization_code",
+        "entity_code",
+        "journal_code",
+        "receipt_clearing_account_code",
+        "cogs_account_code",
+        "adjustment_account_code",
+    }
+)
+INVENTORY_COST_LAYER_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "source_valuation_line_id",
+        "legal_entity_id",
+        "item_id",
+        "uom_id",
+        "inventory_lot_id",
+        "quantity_precision",
+        "original_quantity",
+        "remaining_quantity",
+        "original_value",
+        "remaining_value",
+        "currency_code",
+        "created_at",
+        "row_version",
+        "item_code",
+        "uom_code",
+        "lot_serial_code",
+        "entity_code",
+        "valuation_number",
+        "layer_status",
+    }
+)
+INVENTORY_VALUATION_SUMMARY_FIELDS = frozenset(
+    {"workspace", "policies", "draft_documents", "approved_documents", "open_layers", "unvalued_posted_movements"}
+)
+INVENTORY_VALUATION_SNAPSHOT_FIELDS = frozenset(
+    {
+        "schema_version",
+        "generated_at",
+        "source",
+        "workspace",
+        "summary",
+        "policies",
+        "documents",
+        "open_cost_layers",
+        "boundary_note",
+    }
+)
+INVENTORY_VALUATION_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -965,6 +1035,51 @@ def project_inventory_valuation_document(values: Mapping[str, object]) -> FieldP
             projected_children.append(project_fields(child, allowed_fields=allowed_fields).visible)
         record[name] = projected_children
     return project_fields(record, allowed_fields=INVENTORY_VALUATION_DOCUMENT_FIELDS)
+
+
+def project_inventory_valuation_policy(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_VALUATION_POLICY_FIELDS)
+
+
+def project_inventory_cost_layer(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_COST_LAYER_FIELDS)
+
+
+def project_inventory_valuation_summary(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_VALUATION_SUMMARY_FIELDS)
+
+
+def project_inventory_valuation_snapshot(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for the valuation snapshot."""
+
+    record = dict(values)
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("inventory valuation snapshot source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=INVENTORY_VALUATION_SOURCE_FIELDS).visible
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("inventory valuation snapshot summary must be a mapping")
+        record["summary"] = project_inventory_valuation_summary(summary).visible
+    for name, projector in (
+        ("policies", project_inventory_valuation_policy),
+        ("documents", project_inventory_valuation_document),
+        ("open_cost_layers", project_inventory_cost_layer),
+    ):
+        children = record.get(name)
+        if children is None:
+            continue
+        if not isinstance(children, list):
+            raise TypeError(f"inventory valuation snapshot {name} collection must be a list")
+        projected_children: list[dict[str, object]] = []
+        for child in children:
+            if not isinstance(child, Mapping):
+                raise TypeError(f"inventory valuation snapshot {name} record must be a mapping")
+            projected_children.append(projector(child).visible)
+        record[name] = projected_children
+    return project_fields(record, allowed_fields=INVENTORY_VALUATION_SNAPSHOT_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

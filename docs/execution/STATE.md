@@ -2,6 +2,21 @@
 
 Updated: 2026-08-26
 
+## E-964 - Add a nonstandard-currency cross-engine parity regression (2026-08-26)
+
+- The matching parity suite now exercises deterministic JPY and KWD generated
+  datasets, covering zero and three minor units respectively.
+- Pandas, DuckDB full-scan, and forced partitioned DuckDB must produce the same
+  result contract and reconciliation signature. The manifest assertion also
+  binds the test to the intended currency policy rather than only the currency
+  label.
+- The focused parity tests and full `python -m pytest -q` suite pass on the
+  current HEAD; only the repository's known dependency/legacy-input warnings
+  are emitted.
+- This is bounded local cross-engine evidence. Supported-version breadth,
+  live-provider behavior, capacity/soak, HA/DR, and production effectiveness
+  remain open. ADR 0658 records the reversible decision.
+
 ## E-963 - Reject hosted worker policy configuration in the local outbox runtime (2026-08-26)
 
 - The local SQLite `OutboxWorker` now rejects actor, central-policy supplier,

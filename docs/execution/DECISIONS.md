@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-827: Protect nonstandard-currency cross-engine parity
+
+- **Date**: 2026-08-26
+- **Context**: Existing engine parity properties covered generic and USD-shaped
+  records, while global financial correctness also depends on currency policies
+  with zero or three minor units surviving serialization, matching, digest, and
+  partitioned execution.
+- **Decision**: Add a deterministic regression using generated JPY and KWD
+  datasets. Require equal result contracts and reconciliation signatures across
+  Pandas, DuckDB full-scan, and forced partitioned DuckDB execution, while
+  asserting the manifest's resolved minor-unit policy.
+- **Verification**: The focused parity suite passes. The test is intentionally
+  synthetic and local; broader supported-version, provider, capacity, HA/DR,
+  and production evidence remains separately required.
+- **Compatibility**: Test-only change; no runtime, schema, CLI, API, or output
+  contract changes.
+- **Rollback**: Revert the test, ADR, and E-964 documentation entries. No data
+  migration or external-state rollback is required.
+
 ### D-826: Reject hosted policy configuration in the local outbox worker
 
 - **Date**: 2026-08-26

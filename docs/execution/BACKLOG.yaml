@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-964
+    priority: P0
+    area: matching
+    title: Add a nonstandard-currency cross-engine parity regression
+    status: completed
+    depends_on: [E-1003, E-712]
+    exit_evidence: >-
+      The matching engine parity suite now generates deterministic JPY (0 minor
+      units) and KWD (3 minor units) datasets and requires identical result
+      contracts and reconciliation signatures across Pandas, DuckDB full-scan,
+      and forced partitioned DuckDB execution. The focused regression, full
+      Python suite, Ruff, Mypy, YAML, and diff-check gates pass. This protects a
+      bounded local cross-engine currency-precision contract; it does not prove
+      all supported engine versions, live providers, capacity, HA/DR, or
+      production readiness. ADR 0658 records rollback.
   - id: E-963
     priority: P0
     area: identity-governance

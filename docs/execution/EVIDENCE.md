@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-964: Add a nonstandard-currency cross-engine parity regression
+
+- Code evidence: `tests/test_matching_properties.py` generates signed
+  synthetic JPY and KWD datasets and compares the Pandas result contract with
+  DuckDB full-scan and forced partitioned execution.
+- Test evidence: the focused matching parity command and the full
+  `python -m pytest -q` suite exit 0. The test asserts the manifest currency
+  policy (`0` and `3` minor units) and exact equality of signatures, policy
+  metadata, row counts, and summary counts. The full run emits only the
+  repository's known dependency/legacy-input warnings.
+- Boundary: this is local synthetic evidence for two currency policies and two
+  DuckDB execution modes. It does not establish every supported engine/version,
+  live provider/rate, capacity/soak, HA/DR, posting/write-back, or production
+  evidence. ADR 0658 records rollback.
+
 ## E-963: Reject hosted worker policy configuration in the local outbox runtime
 
 - Code evidence: `OutboxWorker` rejects non-default actor, policy-supplier,

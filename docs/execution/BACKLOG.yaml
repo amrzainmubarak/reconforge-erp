@@ -14,7 +14,7 @@ tasks:
     area: reliability-ha-dr
     title: Refresh bounded PostgreSQL HA/DR repeated runtime evidence
     status: completed
-    depends_on: [E-969, E-426, E-866]
+    depends_on: [E-969, E-866]
     exit_evidence: >-
       The current repeated Docker drill completed exactly three disposable
       PostgreSQL 17.10 primary/synchronous-standby cycles on Docker Engine
@@ -32,7 +32,7 @@ tasks:
     area: deployment-readiness
     title: Refresh the mode-specific readiness matrix with current Community Compose evidence
     status: completed
-    depends_on: [E-968, E-849, E-850, E-851, E-926]
+    depends_on: [E-968, E-849, E-850, E-851]
     exit_evidence: >-
       The readiness matrix review date is refreshed to 2026-08-26 and the
       Community external-dependency gate now references the immutable profile,

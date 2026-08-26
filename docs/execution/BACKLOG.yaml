@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1023
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to consolidation-close API responses
+    status: completed
+    depends_on: [E-1002, E-1005, E-1022]
+    exit_evidence: >-
+      Consolidation-close period and run responses use central allowlists across
+      local SQLite and PostgreSQL adapter shapes, including nested journal and
+      effect lines. Synthetic future-column tests prove unknown storage fields
+      are dropped before serialization; focused tests, full Python regression,
+      Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff checks pass.
+      This closes the consolidation-close response projection boundary only;
+      universal field-level authorization, external IAM, distributed
+      revocation, disclosure approval, source authenticity, and production
+      effectiveness remain open. ADR 0683 records rollback.
   - id: E-1022
     priority: P0
     area: identity-governance
@@ -2009,6 +2025,11 @@ tasks:
       boundaries. It also requires evidence that close exports and evidence artifacts are
       reproducible under controlled rollback/restore steps.
     completed_slices:
+      - E-1023 applies closed allowlists to consolidation-close period and run
+        responses across local SQLite and PostgreSQL shapes, including nested
+        journal/effect lines. Synthetic future-column coverage proves unknown
+        storage fields do not enter the API; universal field-level
+        authorization and production effectiveness remain open.
       - E-954 adds persisted lock/reopen actors and independent-actor SoD
         enforcement to the generic local/PostgreSQL close-management path at
         both adapter and database-trigger boundaries; statutory close and
@@ -2222,6 +2243,11 @@ tasks:
       checks for creator-vs-approver flows, and auditable policy decisions with stable identity
       canonicalization and namespace scopes.
     completed_slices:
+      - E-1023 applies one central fail-closed projection to consolidation-close
+        period and run responses, including nested journal/effect lines, while
+        retaining known local/PostgreSQL contract fields. This is bounded
+        disclosure evidence; universal route/job/UI enforcement and production
+        IAM effectiveness remain open.
       - E-817 centralizes trim+casefold identity/action comparisons for SoD and
         ownership checks, with property tests proving formatting cannot bypass
         approval/review/certification self-approval or prior-action conflicts.

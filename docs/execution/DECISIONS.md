@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-850: Consolidation-close API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Consolidation-close adapters use broad `SELECT *` reads and
+  return local/PostgreSQL period and run mappings, including nested journal and
+  effect records. Future storage or adapter fields could therefore become API
+  fields without a reviewed contract change.
+- **Decision**: Apply one central allowlist to every consolidation-close period
+  and run response path. Project nested journal lines and effect lines with
+  their own allowlists, retain the reviewed PostgreSQL evidence fields, and
+  drop unknown fields before serialization.
+- **Verification**: Synthetic future-column field/API coverage and focused
+  tests pass; full regression, static, security, package, YAML, and diff gates
+  pass. External IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing known fields and response envelopes remain
+  available; internal worksheet payload/cache fields remain excluded.
+- **Rollback**: Revert E-1023 code/tests/ADR 0683/manifest and execution
+  metadata together; do not restore direct `SELECT *` response serialization.
+
 ### D-849: Exception API responses use fail-closed field projection
 
 - **Date**: 2026-08-26

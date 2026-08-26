@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1023: Fail-closed projection for consolidation-close API responses
+
+- Code evidence: consolidation-close period and run responses in
+  `/api/v1/consolidation-close` use central `project_consolidation_period` and
+  `project_consolidation_run` allowlists. The run projection also projects
+  nested journal lines, effect lines, and the reviewed evidence arrays. This
+  covers the local SQLite and PostgreSQL response shapes while excluding
+  internal worksheet payload/cache fields and unknown adapter/storage fields.
+- Test evidence: `tests/test_field_access.py` covers unknown top-level and
+  nested run fields. `tests/test_api_consolidation_close.py` adds synthetic
+  future columns to the period, run, and run-line SQLite tables and proves the
+  unknown column/value do not reach period or run responses. Focused tests and
+  the full Python regression pass at 100%; Ruff, Mypy, Bandit, pip-audit,
+  package build, YAML validation, and diff checks also pass. pip-audit cannot
+  audit the local `reconforge-erp` distribution name because it is not
+  published on PyPI.
+- Boundary: this closes the consolidation-close response projection surface
+  only. It does not establish universal field-level authorization, external
+  IAM, distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0683 records rollback.
+
 ## E-1022: Fail-closed projection for Exception API responses
 
 - Code evidence: local `/api/v1/exceptions` list, assignment, and status

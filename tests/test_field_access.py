@@ -4,6 +4,8 @@ from reconforge.auth.field_access import (
     project_close_period,
     project_close_readiness,
     project_close_task,
+    project_consolidation_period,
+    project_consolidation_run,
     project_evidence_drill_down_record,
     project_evidence_requirement,
     project_evidence_verification,
@@ -187,3 +189,57 @@ def test_exception_projection_drops_unknown_adapter_fields() -> None:
     assert result.visible["source_id"] == "recon-1"
     assert result.denied_fields == ("unknown_future_column",)
     assert "must-not-escape" not in str(result.visible)
+
+
+def test_consolidation_projection_drops_unknown_storage_and_child_fields() -> None:
+    period = project_consolidation_period(
+        {
+            "id": "period-1",
+            "workspace_id": "default",
+            "group_code": "GLOBAL",
+            "period_name": "2026-08",
+            "unknown_future_column": "must-not-escape",
+        }
+    )
+    run = project_consolidation_run(
+        {
+            "id": "run-1",
+            "period_id": "period-1",
+            "status": "Prepared",
+            "journal_lines": [
+                {
+                    "id": "line-1",
+                    "ordinal": 1,
+                    "amount_minor": 100,
+                    "unknown_future_line_column": "must-not-escape",
+                }
+            ],
+            "effects": [
+                {
+                    "id": "effect-1",
+                    "effect_type": "Posting",
+                    "lines": [
+                        {
+                            "id": "effect-line-1",
+                            "amount_minor": -100,
+                            "unknown_future_effect_line_column": "must-not-escape",
+                        }
+                    ],
+                    "unknown_future_effect_column": "must-not-escape",
+                }
+            ],
+            "unknown_future_run_column": "must-not-escape",
+        }
+    )
+    assert period.visible["period_name"] == "2026-08"
+    assert run.visible["journal_lines"] == [{"amount_minor": 100, "id": "line-1", "ordinal": 1}]
+    assert run.visible["effects"] == [
+        {
+            "id": "effect-1",
+            "effect_type": "Posting",
+            "lines": [{"amount_minor": -100, "id": "effect-line-1"}],
+        }
+    ]
+    assert period.denied_fields == ("unknown_future_column",)
+    assert run.denied_fields == ("unknown_future_run_column",)
+    assert "must-not-escape" not in str(period.visible | run.visible)

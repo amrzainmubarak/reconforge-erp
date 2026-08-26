@@ -37,6 +37,19 @@ def test_consolidation_close_api_is_scoped_replay_checked_and_read_only(tmp_path
         worksheet=worksheet,
         actor_label=admin.username,
     )
+    connection.execute(
+        "ALTER TABLE consolidation_close_periods "
+        "ADD COLUMN unknown_future_column TEXT DEFAULT 'must-not-escape'"
+    )
+    connection.execute(
+        "ALTER TABLE consolidation_runs "
+        "ADD COLUMN unknown_future_column TEXT DEFAULT 'must-not-escape'"
+    )
+    connection.execute(
+        "ALTER TABLE consolidation_run_lines "
+        "ADD COLUMN unknown_future_column TEXT DEFAULT 'must-not-escape'"
+    )
+    connection.commit()
     repository.create_period(
         group_code="OTHER-GROUP",
         period_id="2026-08",
@@ -60,6 +73,8 @@ def test_consolidation_close_api_is_scoped_replay_checked_and_read_only(tmp_path
     periods = client.get("/api/v1/consolidation-close/periods?workspace=default", headers=headers)
     assert periods.status_code == 200
     assert [item["id"] for item in periods.json()["periods"]] == [period["id"]]
+    assert "unknown_future_column" not in periods.text
+    assert "must-not-escape" not in periods.text
     other = client.get("/api/v1/consolidation-close/periods?workspace=other", headers=headers)
     assert other.status_code == 200
     assert len(other.json()["periods"]) == 1
@@ -71,11 +86,14 @@ def test_consolidation_close_api_is_scoped_replay_checked_and_read_only(tmp_path
     detail = client.get(f"/api/v1/consolidation-close/runs/{run['id']}", headers=headers)
     assert detail.status_code == 200, detail.text
     assert detail.json()["run"]["worksheet"]["worksheet_id"] == run["worksheet_id"]
+    assert detail.json()["run"]["reporting_currency"] == "USD"
     assert detail.json()["run"]["journal_lines"]
     assert detail.json()["run"]["translation_evidence"]["result_digest"] == run["translation_result_digest"]
     assert detail.json()["run"]["translation_evidence"]["line_count"] == 4
     assert detail.json()["run"]["management_statement"]["total_balance"]["amount"] == "0.00"
     assert detail.json()["run"]["effects"] == []
+    assert "unknown_future_column" not in detail.text
+    assert "must-not-escape" not in detail.text
     assert detail.json()["source"]["kind"] == "sqlite-consolidation-close"
 
     tamper = connect(db_path)

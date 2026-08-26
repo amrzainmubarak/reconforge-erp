@@ -63,3 +63,14 @@ future storage fields from silently expanding the API while preserving the
 existing response envelope and RBAC boundary. The route remains explicitly
 local-only. This is a bounded disclosure control, not universal field-level
 authorization or production IAM. ADR 0682 records the decision and rollback.
+
+## E-1023 migrated surface
+
+Consolidation-close period and run responses now use central allowlists for the
+reviewed local SQLite and PostgreSQL shapes. Journal lines, effect records, and
+effect lines are projected independently; reviewed PostgreSQL evidence arrays
+remain available while internal worksheet payload/cache fields and unknown
+future adapter/storage fields are excluded. This is a bounded disclosure
+control for the consolidation-close response family, not universal
+field-level authorization or production IAM. ADR 0683 records the decision
+and rollback.

@@ -146,6 +146,122 @@ EXCEPTION_FIELDS = frozenset(
         "updated_at",
     }
 )
+CONSOLIDATION_PERIOD_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "group_code",
+        "period_name",
+        "reporting_currency",
+        "period_start_date",
+        "period_end_date",
+        "reporting_date",
+        "status",
+        "row_version",
+        "created_by",
+        "created_at",
+        "updated_at",
+        "locked_by",
+        "locked_at",
+        "lock_reason",
+        "reopened_by",
+        "reopened_at",
+        "reopen_reason",
+    }
+)
+CONSOLIDATION_JOURNAL_LINE_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "run_id",
+        "ordinal",
+        "elimination_id",
+        "source_line_id",
+        "entity_code",
+        "group_account_code",
+        "account_type",
+        "amount_decimal",
+        "amount_minor",
+        "currency_code",
+        "source_reference",
+        "source_digest",
+    }
+)
+CONSOLIDATION_EFFECT_LINE_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "effect_id",
+        "run_line_id",
+        "ordinal",
+        "amount_decimal",
+        "amount_minor",
+        "currency_code",
+    }
+)
+CONSOLIDATION_EFFECT_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "run_id",
+        "effect_type",
+        "source_effect_id",
+        "status",
+        "line_count",
+        "effect_digest",
+        "created_by",
+        "created_at",
+        "actor",
+        "lines",
+    }
+)
+CONSOLIDATION_RUN_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "period_id",
+        "workspace_id",
+        "run_number",
+        "worksheet_id",
+        "worksheet_request_digest",
+        "worksheet_result_digest",
+        "translation_result_digest",
+        "worksheet_payload_digest",
+        "worksheet_digest",
+        "reporting_currency",
+        "journal_line_count",
+        "journal_digest",
+        "status",
+        "row_version",
+        "prepared_by",
+        "prepared_at",
+        "approved_by",
+        "approved_at",
+        "approval_reason",
+        "posted_by",
+        "posted_at",
+        "posting_reason",
+        "reversal_requested_by",
+        "reversal_requested_at",
+        "reversal_request_reason",
+        "reversed_by",
+        "reversed_at",
+        "reversal_reason",
+        "reasons",
+        "worksheet",
+        "translation_evidence",
+        "management_statement",
+        "journal_lines",
+        "effects",
+        "intercompany_evidence",
+        "impairment_evidence",
+        "deferred_tax_evidence",
+        "ppa_evidence",
+        "ownership_change_evidence",
+        "close_bundle",
+    }
+)
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -328,3 +444,42 @@ def project_exception(values: Mapping[str, object]) -> FieldProjection:
     """Return a closed projection for unified exception-queue records."""
 
     return project_fields(values, allowed_fields=EXCEPTION_FIELDS)
+
+
+def project_consolidation_period(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for consolidation-close period records."""
+
+    return project_fields(values, allowed_fields=CONSOLIDATION_PERIOD_FIELDS)
+
+
+def _project_consolidation_journal_line(value: Mapping[str, object]) -> dict[str, object]:
+    return project_fields(value, allowed_fields=CONSOLIDATION_JOURNAL_LINE_FIELDS).visible
+
+
+def _project_consolidation_effect(value: Mapping[str, object]) -> dict[str, object]:
+    projection = project_fields(value, allowed_fields=CONSOLIDATION_EFFECT_FIELDS)
+    visible = dict(projection.visible)
+    lines = value.get("lines")
+    if isinstance(lines, list):
+        visible["lines"] = [
+            project_fields(line, allowed_fields=CONSOLIDATION_EFFECT_LINE_FIELDS).visible
+            for line in lines
+            if isinstance(line, Mapping)
+        ]
+    return visible
+
+
+def project_consolidation_run(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for consolidation-close run responses."""
+
+    projection = project_fields(values, allowed_fields=CONSOLIDATION_RUN_FIELDS)
+    visible = dict(projection.visible)
+    journal_lines = values.get("journal_lines")
+    if isinstance(journal_lines, list):
+        visible["journal_lines"] = [
+            _project_consolidation_journal_line(line) for line in journal_lines if isinstance(line, Mapping)
+        ]
+    effects = values.get("effects")
+    if isinstance(effects, list):
+        visible["effects"] = [_project_consolidation_effect(effect) for effect in effects if isinstance(effect, Mapping)]
+    return FieldProjection(visible, projection.masked_fields, projection.denied_fields, projection.projection_digest)

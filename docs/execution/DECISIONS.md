@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-826: Reject hosted policy configuration in the local outbox worker
+
+- **Date**: 2026-08-26
+- **Context**: The shared `OutboxWorkerSettings` exposes hosted worker policy
+  fields, but the local SQLite worker has no tenant lane or central-policy
+  boundary and previously ignored those fields silently.
+- **Decision**: Reject actor overrides, policy suppliers, scope suppliers, and
+  non-default hosted permissions when constructing `OutboxWorker`. Keep the
+  default local contract unchanged and direct governed deployments to
+  `PostgresOutboxWorker`.
+- **Verification**: E-963 local outbox regression proves rejection before
+  connection access; existing PostgreSQL outbox policy tests cover the
+  supported hosted path. Full/static gates provide the final slice evidence.
+- **Compatibility**: No default Community/local behavior, schema, event
+  format, or delivery lifecycle changes. Only previously silent unsupported
+  hosted configuration becomes an explicit error.
+- **Rollback**: Revert the constructor guard, regression test, ADR, and E-963
+  evidence entries. No database or external-state rollback is required.
+
 ### D-825: Add a regression gate for mutating route server boundaries
 
 - **Date**: 2026-08-26

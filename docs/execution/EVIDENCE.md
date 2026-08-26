@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-963: Reject hosted worker policy configuration in the local outbox runtime
+
+- Code evidence: `OutboxWorker` rejects non-default actor, policy-supplier,
+  scope-supplier, and hosted-permission settings before assigning or opening a
+  local SQLite connection. `PostgresOutboxWorker` remains the explicit hosted
+  worker implementation for service-account and hierarchy policy checks.
+- Test evidence: the local outbox regression proves an unsupported hosted
+  policy configuration fails before the connection factory is called; the
+  existing PostgreSQL outbox policy and revocation-fence contracts remain
+  covered. Focused tests, Ruff, Mypy, full Python regression, YAML, and
+  diff-check are required for the final gate.
+- Boundary: this prevents silent policy-configuration loss in one local worker
+  constructor. It does not establish external IAM, distributed invalidation,
+  broker/provider semantics, HA/DR, or production authorization effectiveness.
+  ADR 0657 records rollback.
+
 ## E-962: Add a regression gate for mutating route server boundaries
 
 - Code evidence: `tests/test_api_authorization_inventory.py` parses every

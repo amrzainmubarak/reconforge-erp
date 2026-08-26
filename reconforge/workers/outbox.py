@@ -95,6 +95,18 @@ class OutboxWorker:
         publisher: OutboxPublisher | Callable[[OutboxEvent], None],
         settings: OutboxWorkerSettings,
     ) -> None:
+        if (
+            settings.actor_id.strip()
+            or settings.policy_context_supplier is not None
+            or settings.policy_context_scope_supplier is not None
+            or settings.policy_context_hierarchy_supplier is not None
+            or settings.scope_supplier is not None
+            or settings.policy_permission != "outbox.publish"
+        ):
+            raise OutboxWorkerError(
+                "Central worker policy and scope configuration is supported only by "
+                "PostgresOutboxWorker; the local SQLite worker cannot enforce hosted authorization."
+            )
         self.connection_factory = connection_factory
         self.publisher = publisher
         self.settings = settings

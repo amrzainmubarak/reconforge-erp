@@ -6,6 +6,7 @@ from threading import Event
 
 import pytest
 
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.db import connect, run_migrations
 from reconforge.platform.common import append_outbox_event
 from reconforge.workers.outbox import OutboxWorker, OutboxWorkerError, OutboxWorkerSettings
@@ -121,3 +122,26 @@ def test_outbox_worker_rejects_invalid_settings_and_cycle_counts() -> None:
     )
     with pytest.raises(OutboxWorkerError, match="max_cycles"):
         worker.run(max_cycles=0)
+
+
+def test_local_outbox_worker_rejects_hosted_policy_configuration_before_connection() -> None:
+    class _NeverConnect:
+        def __call__(self) -> sqlite3.Connection:
+            raise AssertionError("unsupported hosted policy must be rejected before connection access")
+
+    with pytest.raises(OutboxWorkerError, match="PostgresOutboxWorker"):
+        OutboxWorker(
+            _NeverConnect(),
+            publisher=lambda _event: None,
+            settings=OutboxWorkerSettings(
+                worker_id="local-policy-misconfiguration",
+                policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                    user_id="unused",
+                    username="unused",
+                    user_permissions=set(),
+                    principal_type="service_account",
+                    tenant_id=tenant,
+                    authorized_tenant_ids=frozenset({tenant}),
+                ),
+            ),
+        )

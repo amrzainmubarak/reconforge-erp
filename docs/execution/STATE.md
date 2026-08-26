@@ -2,6 +2,20 @@
 
 Updated: 2026-08-26
 
+## E-963 - Reject hosted worker policy configuration in the local outbox runtime (2026-08-26)
+
+- The local SQLite `OutboxWorker` now rejects actor, central-policy supplier,
+  hierarchy/scope supplier, and non-default hosted-permission settings during
+  construction. It cannot enforce tenant/service-account authorization, so it
+  no longer accepts configuration that would be silently ignored.
+- Default Community/local settings remain unchanged. The hosted PostgreSQL
+  path remains `PostgresOutboxWorker`, where tenant/hierarchy scope and policy
+  re-evaluation are implemented.
+- The focused outbox worker and PostgreSQL outbox policy contracts pass for the
+  bounded slice; this remains a fail-closed configuration boundary, not
+  external IAM, distributed invalidation, provider, HA/DR, or production
+  authorization evidence. ADR 0657 records the reversible decision.
+
 ## E-962 - Add a regression gate for mutating route server boundaries (2026-08-26)
 
 - The API authorization test suite now parses every route module containing a

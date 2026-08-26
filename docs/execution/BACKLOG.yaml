@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-963
+    priority: P0
+    area: identity-governance
+    title: Reject hosted worker policy configuration in the local outbox runtime
+    status: completed
+    depends_on: [E-962, E-1005]
+    exit_evidence: >-
+      The local SQLite OutboxWorker now rejects actor, policy-supplier, scope,
+      and non-default hosted-permission settings at construction before its
+      connection factory can run. Default Community behavior remains
+      compatible, while PostgreSQL hosted policy continues through
+      PostgresOutboxWorker. Focused outbox tests, Ruff, Mypy, full Python
+      regression, YAML, and diff-check pass. This is a misconfiguration
+      fail-closed boundary, not external IAM, distributed invalidation,
+      provider, HA/DR, or production authorization evidence. ADR 0657 records
+      rollback.
   - id: E-962
     priority: P0
     area: identity-governance

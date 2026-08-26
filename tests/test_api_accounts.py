@@ -16,15 +16,22 @@ class _AccountRepository:
 
     def list_reconciliations(self, **values: object) -> list[dict[str, object]]:
         self.calls.append(("list", values))
-        return [{"id": "rec-a", "status": "Draft", "workspace": "workspace-a"}]
+        return [
+            {
+                "id": "rec-a",
+                "status": "Draft",
+                "workspace": "workspace-a",
+                "unknown_future_column": "must-not-escape",
+            }
+        ]
 
     def create_reconciliation(self, **values: object) -> dict[str, object]:
         self.calls.append(("create", values))
-        return {"id": "rec-a", "status": "Draft", **values}
+        return {"id": "rec-a", "status": "Draft", "unknown_future_column": "must-not-escape", **values}
 
     def get_reconciliation(self, reconciliation_id: str) -> dict[str, object]:
         self.calls.append(("get", {"reconciliation_id": reconciliation_id}))
-        return {"id": reconciliation_id, "status": "Draft"}
+        return {"id": reconciliation_id, "status": "Draft", "unknown_future_column": "must-not-escape"}
 
     def prepare(self, **values: object) -> dict[str, object]:
         self.calls.append(("prepare", values))
@@ -122,6 +129,10 @@ def test_server_accounts_routes_use_scoped_postgres_adapter_and_bind_reviewer(
     assert created.status_code == 200, created.text
     assert listed.status_code == 200, listed.text
     assert reviewed.status_code == 200, reviewed.text
+    assert "unknown_future_column" not in created.text
+    assert "must-not-escape" not in created.text
+    assert "unknown_future_column" not in listed.text
+    assert "must-not-escape" not in listed.text
     create_values = next(values for name, values in repository.calls if name == "create")
     review_values = next(values for name, values in repository.calls if name == "review")
     assert create_values["workspace"] == "workspace-a"

@@ -1,5 +1,6 @@
 from reconforge.auth.field_access import (
     REDACTED_VALUE,
+    project_account_reconciliation,
     project_audit_event,
     project_close_period,
     project_close_readiness,
@@ -188,6 +189,28 @@ def test_exception_projection_drops_unknown_adapter_fields() -> None:
     )
     assert result.visible["source_id"] == "recon-1"
     assert result.denied_fields == ("unknown_future_column",)
+    assert "must-not-escape" not in str(result.visible)
+
+
+def test_account_reconciliation_projection_drops_unknown_storage_and_item_fields() -> None:
+    result = project_account_reconciliation(
+        {
+            "id": "rec-1",
+            "status": "Draft",
+            "balance_decimal": "10.00",
+            "items": [
+                {
+                    "id": "item-1",
+                    "amount_decimal": "10.00",
+                    "unknown_future_item_column": "must-not-escape",
+                }
+            ],
+            "unknown_future_record_column": "must-not-escape",
+        }
+    )
+    assert result.visible["balance_decimal"] == "10.00"
+    assert result.visible["items"] == [{"amount_decimal": "10.00", "id": "item-1"}]
+    assert result.denied_fields == ("unknown_future_record_column",)
     assert "must-not-escape" not in str(result.visible)
 
 

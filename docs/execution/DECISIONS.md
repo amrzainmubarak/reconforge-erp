@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-851: Account reconciliation API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Account reconciliation repositories use broad `SELECT *` reads
+  and return local/PostgreSQL record mappings directly. Detailed reads also
+  include nested reconciliation items, so future storage or adapter fields
+  could become API fields without a reviewed contract change.
+- **Decision**: Apply one central allowlist to all account reconciliation list,
+  read, create, and lifecycle response paths. Project nested items with their
+  own allowlist and drop unknown fields before serialization.
+- **Verification**: Synthetic local future-column and server adapter-field
+  tests pass; full regression, static, security, package, YAML, and diff gates
+  pass. External IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing known fields and response envelopes remain
+  available. No change to route permissions or actor binding is introduced.
+- **Rollback**: Revert E-1024 code/tests/ADR 0684/manifest and execution
+  metadata together; do not restore direct mapping serialization.
+
 ### D-850: Consolidation-close API responses use fail-closed field projection
 
 - **Date**: 2026-08-26

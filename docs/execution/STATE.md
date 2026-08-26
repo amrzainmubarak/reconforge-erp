@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1024 - Fail-closed projection for account reconciliation API responses (2026-08-26)
+
+- Account reconciliation list, read, create, and lifecycle responses now use a
+  central allowlist over the reviewed local SQLite and PostgreSQL shapes.
+  Nested reconciliation items are projected independently, so future storage
+  or adapter fields cannot silently enter the API response.
+- Focused account/field/API tests, full Python regression at 100%, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML validation, and diff checks pass. This
+  is a bounded disclosure control only; universal field-level authorization,
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open. ADR 0684 records
+  rollback.
+
 ## E-1023 - Fail-closed projection for consolidation-close API responses (2026-08-26)
 
 - Consolidation-close period and run responses now use central allowlists over

@@ -34,7 +34,7 @@ def _token(client: TestClient, username: str) -> str:
 
 
 def test_account_api_lifecycle_and_metrics_are_rbac_protected(tmp_path: Path) -> None:
-    client, _ = _setup(tmp_path)
+    client, db_path = _setup(tmp_path)
     prep_headers = {"Authorization": f"Bearer {_token(client, 'prep')}"}
     review_headers = {"Authorization": f"Bearer {_token(client, 'review')}"}
 
@@ -50,6 +50,19 @@ def test_account_api_lifecycle_and_metrics_are_rbac_protected(tmp_path: Path) ->
         },
     )
     reconciliation_id = created.json()["reconciliation"]["id"]
+    connection = connect(db_path, require_exists=True)
+    try:
+        connection.execute(
+            "ALTER TABLE account_reconciliation_records "
+            "ADD COLUMN unknown_future_column TEXT DEFAULT 'must-not-escape'"
+        )
+        connection.execute(
+            "ALTER TABLE account_reconciliation_items "
+            "ADD COLUMN unknown_future_column TEXT DEFAULT 'must-not-escape'"
+        )
+        connection.commit()
+    finally:
+        connection.close()
     prepared = client.post(
         f"/api/v1/accounts/reconciliations/{reconciliation_id}/prepare", headers=prep_headers, json={}
     )
@@ -62,6 +75,7 @@ def test_account_api_lifecycle_and_metrics_are_rbac_protected(tmp_path: Path) ->
     completed = client.post(
         f"/api/v1/accounts/reconciliations/{reconciliation_id}/complete", headers=review_headers, json={}
     )
+    listed = client.get("/api/v1/accounts/reconciliations", headers=review_headers)
     metrics = client.get("/api/v1/metrics/dashboard", headers=review_headers)
     denied = client.post(f"/api/v1/accounts/reconciliations/{reconciliation_id}/review", headers=prep_headers, json={})
 
@@ -70,6 +84,11 @@ def test_account_api_lifecycle_and_metrics_are_rbac_protected(tmp_path: Path) ->
     assert submitted.json()["reconciliation"]["status"] == "In Review"
     assert reviewed.json()["reconciliation"]["status"] == "Reviewed"
     assert completed.json()["reconciliation"]["status"] == "Complete"
+    assert listed.status_code == 200
+    assert "unknown_future_column" not in listed.text
+    assert "must-not-escape" not in listed.text
+    assert "unknown_future_column" not in prepared.text
+    assert "must-not-escape" not in prepared.text
     assert metrics.status_code == 200
     assert denied.status_code == 403
     assert "Traceback" not in denied.text

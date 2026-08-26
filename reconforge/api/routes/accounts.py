@@ -19,6 +19,7 @@ from reconforge.api.dependencies import (
 from reconforge.api.errors import APIError
 from reconforge.api.server_accounts import execute_postgres_accounts, server_accounts_enabled
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
+from reconforge.auth.field_access import project_account_reconciliation
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.platform.accounts import AccountReconciliationService
@@ -33,6 +34,14 @@ AccountRead = Annotated[
 AccountPrepare = Annotated[LocalUser, Depends(require_permission("accounts.prepare"))]
 AccountReview = Annotated[LocalUser, Depends(require_permission("accounts.review"))]
 AccountComplete = Annotated[LocalUser, Depends(require_permission("accounts.complete"))]
+
+
+def _project_record(value: dict[str, object]) -> dict[str, object]:
+    return project_account_reconciliation(value).visible
+
+
+def _project_records(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [_project_record(value) for value in values]
 
 
 class CreateReconciliationRequest(BaseModel):
@@ -122,7 +131,7 @@ def list_reconciliations(
                 status=status, owner=owner, period_name=period, entity_code=entity, risk_rating=risk
             ),
         )
-        return {"reconciliations": records}
+        return {"reconciliations": _project_records(records)}
     try:
         records = AccountReconciliationService(_local_connection(connection)).list_reconciliations(
             status=status,
@@ -133,7 +142,7 @@ def list_reconciliations(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="accounts_list_failed", message=str(exc)) from exc
-    return {"reconciliations": records}
+    return {"reconciliations": _project_records(records)}
 
 
 @router.post("/reconciliations")
@@ -152,7 +161,7 @@ def create_reconciliation(
         record = execute_postgres_accounts(
             request, lambda repository, _tenant: repository.create_reconciliation(**values)
         )
-        return {"reconciliation": record}
+        return {"reconciliation": _project_record(record)}
     try:
         record = AccountReconciliationService(_local_connection(connection)).create_reconciliation(
             period_name=payload.period_name,
@@ -170,7 +179,7 @@ def create_reconciliation(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="account_create_failed", message=str(exc)) from exc
-    return {"reconciliation": record}
+    return {"reconciliation": _project_record(record)}
 
 
 @router.get("/reconciliations/{reconciliation_id}")
@@ -190,12 +199,12 @@ def get_reconciliation(
         record = execute_postgres_accounts(
             request, lambda repository, _tenant: repository.get_reconciliation(reconciliation_id)
         )
-        return {"reconciliation": record}
+        return {"reconciliation": _project_record(record)}
     try:
         record = AccountReconciliationService(_local_connection(connection)).get_reconciliation(reconciliation_id)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=404, code="account_not_found", message=str(exc)) from exc
-    return {"reconciliation": record}
+    return {"reconciliation": _project_record(record)}
 
 
 @router.post("/reconciliations/{reconciliation_id}/prepare")
@@ -216,14 +225,14 @@ def prepare_reconciliation(
                 reconciliation_id=reconciliation_id, workspace=scope.workspace_id, actor_label=current_user.id
             ),
         )
-        return {"reconciliation": record}
+        return {"reconciliation": _project_record(record)}
     try:
         record = AccountReconciliationService(_local_connection(connection)).prepare(
             reconciliation_id=reconciliation_id, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="account_prepare_failed", message=str(exc)) from exc
-    return {"reconciliation": record}
+    return {"reconciliation": _project_record(record)}
 
 
 @router.post("/reconciliations/{reconciliation_id}/submit")
@@ -241,14 +250,14 @@ def submit_reconciliation(
         record = execute_postgres_accounts(
             request, lambda repository, _tenant: repository.submit(reconciliation_id, actor_label=current_user.id)
         )
-        return {"reconciliation": record}
+        return {"reconciliation": _project_record(record)}
     try:
         record = AccountReconciliationService(_local_connection(connection)).submit(
             reconciliation_id, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="account_submit_failed", message=str(exc)) from exc
-    return {"reconciliation": record}
+    return {"reconciliation": _project_record(record)}
 
 
 @router.post("/reconciliations/{reconciliation_id}/review")
@@ -269,7 +278,7 @@ def review_reconciliation(
                 reconciliation_id, reviewer=current_user.id, actor_label=current_user.id
             ),
         )
-        return {"reconciliation": record}
+        return {"reconciliation": _project_record(record)}
     try:
         record = AccountReconciliationService(_local_connection(connection)).review(
             reconciliation_id,
@@ -278,7 +287,7 @@ def review_reconciliation(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="account_review_failed", message=str(exc)) from exc
-    return {"reconciliation": record}
+    return {"reconciliation": _project_record(record)}
 
 
 @router.post("/reconciliations/{reconciliation_id}/complete")
@@ -296,11 +305,11 @@ def complete_reconciliation(
         record = execute_postgres_accounts(
             request, lambda repository, _tenant: repository.complete(reconciliation_id, actor_label=current_user.id)
         )
-        return {"reconciliation": record}
+        return {"reconciliation": _project_record(record)}
     try:
         record = AccountReconciliationService(_local_connection(connection)).complete(
             reconciliation_id, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="account_complete_failed", message=str(exc)) from exc
-    return {"reconciliation": record}
+    return {"reconciliation": _project_record(record)}

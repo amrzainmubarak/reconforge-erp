@@ -74,3 +74,14 @@ future adapter/storage fields are excluded. This is a bounded disclosure
 control for the consolidation-close response family, not universal
 field-level authorization or production IAM. ADR 0683 records the decision
 and rollback.
+
+## E-1024 migrated surface
+
+Account reconciliation list, read, create, and lifecycle responses now use a
+central allowlist across the local SQLite and PostgreSQL shapes. Nested
+reconciliation items are projected independently, while known financial,
+workflow, and audit-attribution fields remain available. Unknown future
+storage/adapter fields are dropped before serialization. This is a bounded
+disclosure control for the account-reconciliation response family, not
+universal field-level authorization or production IAM. ADR 0684 records the
+decision and rollback.

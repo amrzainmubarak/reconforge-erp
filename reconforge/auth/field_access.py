@@ -146,6 +146,53 @@ EXCEPTION_FIELDS = frozenset(
         "updated_at",
     }
 )
+ACCOUNT_RECONCILIATION_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "period_name",
+        "entity_code",
+        "account_code",
+        "account_name",
+        "template_id",
+        "status",
+        "balance",
+        "balance_decimal",
+        "materiality_threshold",
+        "materiality_threshold_decimal",
+        "currency_code",
+        "risk_rating",
+        "owner",
+        "preparer",
+        "reviewer",
+        "prepared_at",
+        "submitted_at",
+        "reviewed_at",
+        "completed_at",
+        "aging_days",
+        "created_by",
+        "created_at",
+        "updated_at",
+        "row_version",
+        "items",
+    }
+)
+ACCOUNT_RECONCILIATION_ITEM_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "reconciliation_id",
+        "item_type",
+        "description",
+        "amount",
+        "amount_decimal",
+        "status",
+        "evidence_required",
+        "created_at",
+        "updated_at",
+    }
+)
 CONSOLIDATION_PERIOD_FIELDS = frozenset(
     {
         "tenant_id",
@@ -444,6 +491,20 @@ def project_exception(values: Mapping[str, object]) -> FieldProjection:
     """Return a closed projection for unified exception-queue records."""
 
     return project_fields(values, allowed_fields=EXCEPTION_FIELDS)
+
+
+def project_account_reconciliation(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for account reconciliation responses."""
+
+    record = dict(values)
+    items = record.get("items")
+    if isinstance(items, list):
+        record["items"] = [
+            project_fields(item, allowed_fields=ACCOUNT_RECONCILIATION_ITEM_FIELDS).visible
+            for item in items
+            if isinstance(item, Mapping)
+        ]
+    return project_fields(record, allowed_fields=ACCOUNT_RECONCILIATION_FIELDS)
 
 
 def project_consolidation_period(values: Mapping[str, object]) -> FieldProjection:

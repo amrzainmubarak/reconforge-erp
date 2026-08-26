@@ -187,7 +187,9 @@ def test_live_postgres_scheduler_notifications_are_atomic_scoped_retryable_and_a
                 factory,
                 tenant_supplier=lambda: (tenant,),
                 settings=PostgresSchedulerWorkerSettings(
-                    worker_id="scheduler-worker", poll_interval_seconds=0
+                    worker_id="scheduler-worker",
+                    poll_interval_seconds=0,
+                    allow_unbound_hosted_policy=True,
                 ),
                 clock=lambda: datetime(2026, 6, 2, 12, tzinfo=UTC),
             )

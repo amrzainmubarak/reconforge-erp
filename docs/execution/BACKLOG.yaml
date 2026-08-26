@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1015
+    priority: P0
+    area: identity-governance
+    title: Require explicit policy supplier before PostgreSQL Scheduler processing
+    status: completed
+    depends_on: [E-1005, E-1014]
+    exit_evidence: >-
+      PostgreSQL Scheduler now fails closed before connection access when no
+      service-account policy supplier is configured. The explicit
+      allow_unbound_hosted_policy compatibility flag is disabled by default;
+      bounded legacy fixtures opt into it explicitly. Missing-policy,
+      permission-denial, revocation, scope, notification, Ruff, Mypy,
+      full-regression, and package-build gates pass. PostgreSQL
+      Reconciliation optional policy behavior remains a separate open slice;
+      external IAM, provider delivery, HA/DR, production SLOs, and production
+      readiness remain open. ADR 0675 records rollback.
   - id: E-1014
     priority: P0
     area: identity-governance
@@ -2193,6 +2209,10 @@ tasks:
         explicit service-account policy supplier is configured. The opt-out is
         explicit and rejected by the local worker; Scheduler and Reconciliation
         are intentionally left for separate worker-policy slices.
+      - E-1015 makes PostgreSQL Scheduler authorization fail closed when no
+        explicit service-account policy supplier is configured. The opt-out is
+        explicit and bounded; Reconciliation remains a separate worker-policy
+        slice.
   - id: E-1006
     priority: P1
     area: global-expansion

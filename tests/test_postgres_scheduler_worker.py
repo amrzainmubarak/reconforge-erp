@@ -55,7 +55,10 @@ def test_scheduler_worker_uses_stable_tenant_order_one_clock_and_fresh_connectio
         factory,
         tenant_supplier=lambda: ("tenant-b", "tenant-a", "tenant-a"),
         settings=PostgresSchedulerWorkerSettings(
-            worker_id="scheduler-worker", poll_interval_seconds=0, batch_size=25
+            worker_id="scheduler-worker",
+            poll_interval_seconds=0,
+            batch_size=25,
+            allow_unbound_hosted_policy=True,
         ),
         clock=lambda: datetime(2026, 7, 29, 12, 0, 0, 987654, tzinfo=UTC),
     )
@@ -109,6 +112,23 @@ def test_scheduler_worker_policy_denies_before_connection_access() -> None:
         ),
     )
     with pytest.raises(PostgresSchedulerWorkerError, match="permission_missing"):
+        worker.process_once()
+
+
+def test_scheduler_worker_rejects_missing_policy_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> _Connection:
+            raise AssertionError("missing policy must be rejected before connection access")
+
+    worker = PostgresSchedulerWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ("tenant_a",),
+        settings=PostgresSchedulerWorkerSettings(worker_id="unbound-scheduler-worker"),
+    )
+    with pytest.raises(
+        PostgresSchedulerWorkerError,
+        match="requires an explicit service-account policy supplier",
+    ):
         worker.process_once()
 
 

@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1015 - Require explicit policy supplier before PostgreSQL Scheduler processing (2026-08-26)
+
+- `PostgresSchedulerWorker` now rejects a valid lane with no
+  policy supplier before connection access or schedule processing. The
+  explicit `allow_unbound_hosted_policy` compatibility flag is disabled by
+  default; bounded legacy fixtures opt into it explicitly.
+- Focused Scheduler worker/notification tests pass (`9 passed, 1 skipped`),
+  Ruff and Mypy pass, the full Python regression passes at 100%, and package
+  build succeeds. Reconciliation still requires a separate secure-default
+  slice; external IAM, provider delivery, HA/DR, production SLOs, and
+  production authorization effectiveness remain open. ADR 0675 records
+  rollback.
+
 ## E-1014 - Require explicit policy supplier before PostgreSQL Outbox publishing (2026-08-26)
 
 - `PostgresOutboxWorker` now rejects missing policy suppliers before opening a

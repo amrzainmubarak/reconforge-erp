@@ -34,6 +34,7 @@ class PostgresSchedulerWorkerSettings:
     policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None
     scope_supplier: Callable[[], Iterable[tuple[str, str | None, str | None]]] | None = None
     policy_permission: str = "schedule.run"
+    allow_unbound_hosted_policy: bool = False
 
     def __post_init__(self) -> None:
         normalized = str(self.worker_id or "").strip()
@@ -145,6 +146,14 @@ class PostgresSchedulerWorker:
             current = now.astimezone(UTC).replace(microsecond=0)
             results: list[ScheduleProcessResult] = []
             for tenant_id, workspace_id, entity_id in self._lanes():
+                if (
+                    self.settings.policy_context_supplier is None
+                    and self.settings.policy_context_scope_supplier is None
+                    and not self.settings.allow_unbound_hosted_policy
+                ):
+                    raise PostgresSchedulerWorkerError(
+                        "PostgreSQL scheduler worker requires an explicit service-account policy supplier."
+                    )
                 require_service_worker_policy(
                     tenant_id=tenant_id,
                     worker_id=self.settings.worker_id,

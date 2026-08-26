@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1015: Require explicit policy supplier before PostgreSQL Scheduler processing
+
+- Code evidence: `PostgresSchedulerWorker` fails closed for a valid lane when
+  all policy suppliers are absent, before opening a connection or processing a
+  schedule. The compatibility flag is explicit and disabled by default.
+- Test evidence: Scheduler worker and notification suites cover missing policy,
+  permission denial, revocation, exact scope, and bounded legacy operation;
+  the focused suite passes (`9 passed, 1 skipped`), Ruff passes, Mypy passes,
+  the full Python regression passes at 100%, and `python -m build
+  --no-isolation` succeeds.
+- Boundary: this closes PostgreSQL Scheduler only. Reconciliation worker
+  optional-policy behavior remains open, as do external IAM, provider
+  delivery, HA/DR, production SLOs, and production authorization
+  effectiveness. ADR 0675 records rollback.
+
 ## E-1014: Require explicit policy supplier before PostgreSQL Outbox publishing
 
 - Code evidence: `PostgresOutboxWorker._authorize_scope` fails closed when all

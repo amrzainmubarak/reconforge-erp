@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-842: Require explicit policy supplier before PostgreSQL Scheduler processing
+
+- **Date**: 2026-08-26
+- **Context**: The shared worker guard could no-op when PostgreSQL Scheduler
+  configuration omitted every policy supplier, allowing a valid lane to open
+  a connection and process due schedules without a service-account decision.
+- **Decision**: Make the hosted Scheduler boundary fail closed by default.
+  Keep a clearly named compatibility flag for bounded legacy fixtures and
+  reject no policy only after lane validation, before connection access.
+- **Verification**: E-1015 focused Scheduler worker/notification tests and
+  static checks pass; full regression and package build are required for
+  closure. Reconciliation remains a separate follow-up slice.
+- **Compatibility**: No schema or payload changes; ungoverned hosted
+  fixtures must opt out explicitly.
+- **Rollback**: Revert E-1015 worker/settings/tests/ADR 0675/manifest and
+  execution metadata.
+
 ### D-841: Require explicit policy supplier before PostgreSQL Outbox publishing
 
 - **Date**: 2026-08-26

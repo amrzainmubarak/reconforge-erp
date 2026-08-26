@@ -99,3 +99,30 @@ def test_payables_api_enforces_roles_and_runs_three_way_match(tmp_path: Path) ->
     assert approve.json()["status"] == "Approved"
     assert denied.status_code == 403
     assert "Traceback" not in denied.text
+
+
+def test_payables_supplier_api_drops_future_storage_fields(tmp_path: Path) -> None:
+    db_path = tmp_path / "payables-supplier-projection.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        auth = LocalAuthService(connection)
+        auth.init_admin(username="admin", password="Secret-123")
+        connection.execute("ALTER TABLE ap_suppliers ADD COLUMN unknown_future_column TEXT")
+        connection.commit()
+    finally:
+        connection.close()
+
+    client = TestClient(create_api_app(db_path))
+    headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+    saved = client.post(
+        "/api/v1/payables/suppliers",
+        headers=headers,
+        json={"supplier_code": "SUP-FUTURE", "name": "Future Supplier", "currency_code": "USD"},
+    )
+    listed = client.get("/api/v1/payables/suppliers", headers=headers)
+
+    assert saved.status_code == 200, saved.text
+    assert listed.status_code == 200, listed.text
+    assert "unknown_future_column" not in saved.text
+    assert "unknown_future_column" not in listed.text

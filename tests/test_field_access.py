@@ -31,6 +31,7 @@ from reconforge.auth.field_access import (
     project_inventory_valuation_snapshot,
     project_inventory_warehouse,
     project_master_snapshot,
+    project_payables_supplier,
     project_reconciliation_exception,
     project_reconciliation_input,
     project_reconciliation_result,
@@ -396,6 +397,16 @@ def test_inventory_core_operational_projection_is_closed_recursively() -> None:
     assert snapshot.visible["summary"] == {"workspace": "default"}
     assert snapshot.visible["movements"] == [{"id": "movement-1"}]
     assert "must-not-escape" not in str([movement.visible, on_hand.visible, controls.visible, snapshot.visible])
+
+
+def test_payables_supplier_projection_is_closed() -> None:
+    result = project_payables_supplier(
+        {"id": "supplier-1", "supplier_code": "SUP-1", "unknown_supplier_field": "must-not-escape"}
+    )
+
+    assert result.visible == {"id": "supplier-1", "supplier_code": "SUP-1"}
+    assert result.denied_fields == ("unknown_supplier_field",)
+    assert "must-not-escape" not in str(result.visible)
 
 
 def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> None:

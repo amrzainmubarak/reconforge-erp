@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1033
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Payables supplier API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1032]
+    exit_evidence: >-
+      Payables supplier save and list responses use a central allowlist across
+      local SQLite and PostgreSQL. A synthetic future-column test proves
+      unknown fields are dropped while response shape, permissions, and
+      pagination remain compatible. Focused selectors pass 20 tests; full
+      Python regression, Ruff, Mypy, Bandit, pip-audit, package build, targeted
+      YAML, and diff checks pass. Purchase orders, receipts, supplier invoices,
+      and three-way-match responses remain separate. ADR 0693 records rollback.
   - id: E-1032
     priority: P0
     area: identity-governance

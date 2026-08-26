@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-860: Payables supplier API uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Payables supplier save/list routes returned local SQLite and
+  tenant-scoped PostgreSQL mappings. The local table is queried with broad
+  columns and a future adapter/storage column could silently expand the
+  financial master-data response.
+- **Decision**: Apply one explicit supplier allowlist to save and paginated list
+  responses in both local and PostgreSQL branches. Preserve the direct response
+  shape, pagination metadata, permissions, and all reviewed supplier fields.
+- **Verification**: Focused field/API tests pass 20 tests and include a
+  synthetic future SQLite column. Full `python -m pytest -q` passes at 100%;
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  safe YAML validation (9 files), and diff gates also pass. The local
+  distribution is not auditable by pip-audit because it is not published on
+  PyPI.
+- **Compatibility**: No schema, migration, route, permission, or response
+  envelope change; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1033 code/tests/ADR 0693/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
 ### D-859: Inventory Core operational API uses fail-closed recursive projection
 
 - **Date**: 2026-08-26

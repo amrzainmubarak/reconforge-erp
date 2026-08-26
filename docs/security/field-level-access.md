@@ -4,6 +4,16 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1033 migrated surface
+
+Payables supplier save and list responses now use a central supplier allowlist
+across local SQLite and PostgreSQL. Unknown future adapter/storage fields are
+dropped before serialization while the existing direct response shape and
+pagination metadata remain compatible. This is a bounded disclosure control
+for the supplier-master response family, not complete Payables response
+coverage, universal field-level authorization, or production IAM. ADR 0693
+records the decision and rollback.
+
 ## E-1032 migrated surface
 
 Inventory Core movement list/create/read/post/void, on-hand, control-exception,

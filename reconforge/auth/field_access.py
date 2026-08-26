@@ -627,6 +627,14 @@ INVENTORY_CORE_SNAPSHOT_FIELDS = frozenset(
     }
 )
 INVENTORY_CORE_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
+PAYABLES_SUPPLIER_FIELDS = frozenset(
+    {
+        # Deliberate union for local SQLite and tenant-scoped PostgreSQL
+        # supplier responses; repository rows are never serialized wholesale.
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "supplier_code", "name",
+        "currency_code", "tax_identifier", "status", "created_at", "updated_at", "row_version",
+    }
+)
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1355,6 +1363,12 @@ def project_inventory_core_snapshot(values: Mapping[str, object]) -> FieldProjec
             projected_children.append(projector(child).visible)
         record[name] = projected_children
     return project_fields(record, allowed_fields=INVENTORY_CORE_SNAPSHOT_FIELDS)
+
+
+def project_payables_supplier(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for Accounts Payable supplier responses."""
+
+    return project_fields(values, allowed_fields=PAYABLES_SUPPLIER_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

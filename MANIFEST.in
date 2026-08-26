@@ -1036,5 +1036,6 @@ include docs/adr/0674-postgres-outbox-requires-explicit-worker-policy.md
 include docs/adr/0675-postgres-scheduler-requires-explicit-worker-policy.md
 include docs/adr/0676-postgres-reconciliation-requires-explicit-worker-policy.md
 include docs/adr/0692-inventory-core-operational-api-uses-fail-closed-field-projection.md
+include docs/adr/0693-payables-supplier-api-uses-fail-closed-field-projection.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

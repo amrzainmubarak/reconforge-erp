@@ -26,6 +26,7 @@ from reconforge.api.server_payables import (
     execute_postgres_payables,
     server_payables_enabled,
 )
+from reconforge.auth.field_access import project_payables_supplier
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_payables import PostgresPayablesRepository
@@ -197,20 +198,22 @@ def save_supplier(
     if server_payables_enabled(request):
         values = payload.model_dump()
         values["actor_label"] = current_user.id
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"payables.manage"}),
             lambda repository, scope: repository.upsert_supplier(
                 **{**values, "workspace": scope.workspace_id, "organization_code": scope.organization_code or payload.organization_code, "entity_code": scope.entity_code or payload.entity_code}
             ),
         )
+        return project_payables_supplier(record).visible
     try:
-        return PayablesService(_local_connection(connection)).upsert_supplier(
+        record = PayablesService(_local_connection(connection)).upsert_supplier(
             **payload.model_dump(),
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_supplier_save_failed", exc) from exc
+    return project_payables_supplier(record).visible
 
 
 @router.get("/suppliers")
@@ -229,13 +232,13 @@ def list_suppliers(
             frozenset({"payables.read", "payables.manage", "payables.match", "payables.approve"}),
             lambda repository, scope: repository.list_suppliers(workspace=scope.workspace_id, status=status),
         )
-        return {"suppliers": records[offset : offset + limit], "pagination": {"limit": limit, "offset": offset, "total": len(records)}}
+        return {"suppliers": [project_payables_supplier(record).visible for record in records[offset : offset + limit]], "pagination": {"limit": limit, "offset": offset, "total": len(records)}}
     try:
         records = PayablesService(_local_connection(connection)).list_suppliers(workspace=workspace, status=status)
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_supplier_list_failed", exc) from exc
     return {
-        "suppliers": records[offset : offset + limit],
+        "suppliers": [project_payables_supplier(record).visible for record in records[offset : offset + limit]],
         "pagination": {"limit": limit, "offset": offset, "total": len(records)},
     }
 

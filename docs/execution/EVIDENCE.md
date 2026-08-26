@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1033: Fail-closed projection for Payables supplier API responses
+
+- Code evidence: `/api/v1/payables/suppliers` save and list responses use a
+  central supplier allowlist across local SQLite and PostgreSQL shapes. Future
+  adapter/storage fields are dropped before serialization while the existing
+  response shape, permissions, and pagination envelope remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers the supplier projector;
+  `tests/test_payables_api.py` adds a synthetic future SQLite column and proves
+  it is absent from save and list responses. Focused selectors pass 20 tests;
+  `python -m pytest -q` passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted safe YAML validation (9 files), and diff
+  gates pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  because it is not published on PyPI.
+- Boundary: this closes only the Payables supplier-master response family.
+  Purchase orders, receipts, supplier invoices, three-way matching, universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+  ADR 0693 records rollback.
+
 ## E-1032: Fail-closed projection for Inventory Core operational API responses
 
 - Code evidence: `/api/v1/inventory` movement list/create/read/post/void,

@@ -5,6 +5,39 @@
 
 ## Decisions
 
+### D-837: Govern durable-job application queue reads and requeue by exact scope
+
+- **Date**: 2026-08-26
+- **Context**: E-1008 tightened worker lifecycle authorization, but the
+  application facade still left queue projection and terminal-job requeue
+  outside the same explicit policy boundary.
+- **Decision**: Add policy-gated `queue_snapshot` and `requeue` methods. Bind
+  each decision to the exact hierarchy, actual object ID, action, and request
+  ID; authorize before lookup; and verify persisted job scope before requeue.
+- **Verification**: E-1010 focused job/worker tests pass, the PostgreSQL
+  governed fixture supplies entity scope, and static gates pass. Evidence is
+  local/synthetic and does not establish API-wide or production authorization.
+- **Compatibility**: The raw backend-neutral service and existing submit/
+  cancel signatures remain reusable; governed callers gain optional request
+  IDs and explicit entity scope where required.
+- **Rollback**: Revert E-1010 code, tests, manifest, ADR 0670, and execution
+  entries. No migration or user data changes are involved.
+
+### D-836: Re-evaluate governed worker policy at every lifecycle boundary
+
+- **Date**: 2026-08-26
+- **Context**: A worker could retain a lease after policy revocation if policy
+  was checked only at claim time.
+- **Decision**: Require a fresh policy context and permission for every
+  governed worker lifecycle boundary and bind the decision to the actual job
+  and action.
+- **Verification**: E-1008 focused worker tests prove post-claim revocation
+  cannot renew or complete a job; local synthetic evidence only.
+- **Compatibility**: The raw worker primitive remains available to trusted
+  internal infrastructure; governed wrappers are explicit and fail closed.
+- **Rollback**: Revert the E-1008 worker, test, ADR 0669, and execution
+  metadata changes without touching data.
+
 ### D-835: Refresh current Community Compose schema and backup/restore runtime evidence
 
 - **Date**: 2026-08-26

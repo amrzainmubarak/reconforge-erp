@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1010: Govern durable-job application queue reads and requeue by exact scope
+
+- Code evidence: `GovernedDurableJobApplicationService` now owns policy-gated
+  `queue_snapshot` and `requeue` operations, with exact tenant/workspace/
+  organization/entity checks, derived durable-job or queue object/action
+  binding, request-ID propagation, and a persisted-scope check before requeue.
+- Test evidence: focused SQLite tests prove missing permission denies queue
+  visibility, an allowed queue projection reports the queued job, a wrong
+  entity cannot requeue the persisted job, and a failed job can be requeued
+  through the governed facade. The PostgreSQL governed fixture includes the
+  entity binding required by the stricter context contract.
+- Boundary: local application-facade and synthetic repository evidence only.
+  It does not prove API route adoption, external IAM, distributed revocation,
+  multi-host coordination, provider behavior, HA/DR, production SLOs, or
+  production authorization effectiveness. ADR 0670 records rollback.
+
 ## E-1008: Re-evaluate governed durable-worker policy at every lifecycle boundary
 
 - Code evidence: `GovernedDurableJobWorkerService` now wraps every worker

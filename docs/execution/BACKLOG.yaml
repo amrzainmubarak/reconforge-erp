@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1010
+    priority: P0
+    area: identity-governance
+    title: Govern durable-job application queue reads and requeue by exact scope
+    status: completed
+    depends_on: [E-1005, E-1008]
+    exit_evidence: >-
+      GovernedDurableJobApplicationService now policy-gates queue_snapshot and
+      requeue in addition to submit/cancel. It binds tenant/workspace/
+      organization/entity, actual durable-job or queue object ID, action, and
+      request ID before repository access; requeue also validates persisted
+      job scope before mutation. Focused SQLite tests prove permission denial,
+      queue projection, wrong-entity rejection, failed-job requeue, and allow
+      paths. PostgreSQL governed fixtures include the required entity binding.
+      Evidence is local and synthetic only; API adoption, external IAM,
+      distributed revocation, HA/DR, production authorization effectiveness,
+      and production readiness remain open. ADR 0670 records rollback.
   - id: E-1008
     priority: P0
     area: identity-governance
@@ -2084,6 +2101,16 @@ tasks:
         workflow endpoint refusals while local workflow/audit behavior remains
         covered; dedicated PostgreSQL adapters and server evidence remain
         required.
+      - E-1008 requires a fresh explicit policy context and permission before
+        every governed durable-worker lifecycle boundary, with exact hierarchy
+        and durable-job object/action binding. Post-claim revocation tests
+        prove lease renewal and completion fail closed without mutation; this
+        remains local governed-worker evidence only.
+      - E-1010 extends that boundary to governed application queue projection
+        and terminal-job requeue. Queue reads and requeue bind exact scope,
+        object, action, and request ID before repository access, and requeue
+        verifies persisted scope before mutation. Focused SQLite tests pass;
+        API-wide adoption and production authorization remain open.
   - id: E-1006
     priority: P1
     area: global-expansion

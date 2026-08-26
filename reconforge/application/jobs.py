@@ -361,6 +361,7 @@ class GovernedDurableJobApplicationService:
         actor_id: str,
         policy_context: PolicyEvaluationContext,
         required_permission: str,
+        request_id: str = "",
     ) -> tuple[DurableJob, bool]:
         self._authorize(
             policy_context,
@@ -369,8 +370,10 @@ class GovernedDurableJobApplicationService:
             tenant_id=submission.tenant_id,
             workspace_id=submission.workspace_id,
             organization_id=submission.organization_id or None,
+            entity_id=submission.entity_id,
             object_id=submission.job_id,
             action="submit",
+            request_id=request_id,
         )
         return self._service.submit(submission, actor_id=actor_id)
 
@@ -382,6 +385,7 @@ class GovernedDurableJobApplicationService:
         max_queued_jobs: int,
         policy_context: PolicyEvaluationContext,
         required_permission: str,
+        request_id: str = "",
     ) -> tuple[DurableJob, bool]:
         self._authorize(
             policy_context,
@@ -390,8 +394,10 @@ class GovernedDurableJobApplicationService:
             tenant_id=submission.tenant_id,
             workspace_id=submission.workspace_id,
             organization_id=submission.organization_id or None,
+            entity_id=submission.entity_id,
             object_id=submission.job_id,
             action="submit_bounded",
+            request_id=request_id,
         )
         return self._service.submit_bounded(
             submission,
@@ -405,11 +411,13 @@ class GovernedDurableJobApplicationService:
         tenant_id: str,
         workspace_id: str,
         organization_id: str | None = None,
+        entity_id: str | None = None,
         job_id: str,
         actor_id: str,
         occurred_at: str,
         policy_context: PolicyEvaluationContext,
         required_permission: str,
+        request_id: str = "",
     ) -> DurableJob:
         self._authorize(
             policy_context,
@@ -418,11 +426,92 @@ class GovernedDurableJobApplicationService:
             tenant_id=tenant_id,
             workspace_id=workspace_id,
             organization_id=organization_id,
+            entity_id=entity_id,
             object_id=job_id,
             action="cancel",
+            request_id=request_id,
         )
         return self._service.cancel(
             tenant_id=tenant_id, job_id=job_id, actor_id=actor_id, occurred_at=occurred_at
+        )
+
+    def requeue(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+        job_id: str,
+        actor_id: str,
+        occurred_at: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> DurableJob:
+        """Authorize an exact job scope before requeueing a terminal job."""
+
+        self._authorize(
+            policy_context,
+            actor_id=actor_id,
+            required_permission=required_permission,
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
+            object_id=job_id,
+            action="requeue",
+            request_id=request_id,
+        )
+        job = self._service._require_job(tenant_id=tenant_id, job_id=job_id)
+        if (
+            job.id != job_id
+            or job.workspace_id != workspace_id
+            or (job.organization_id or None) != organization_id
+            or job.entity_id != entity_id
+        ):
+            raise JobAuthorizationError("job policy scope does not match persisted job scope")
+        return self._service.requeue(
+            tenant_id=tenant_id,
+            job_id=job_id,
+            actor_id=actor_id,
+            occurred_at=occurred_at,
+        )
+
+    def queue_snapshot(
+        self,
+        *,
+        tenant_id: str,
+        workspace_id: str | None = None,
+        organization_id: str | None = None,
+        entity_id: str | None = None,
+        actor_id: str,
+        policy_context: PolicyEvaluationContext,
+        required_permission: str,
+        request_id: str = "",
+    ) -> DurableJobQueueSnapshot:
+        """Authorize a bounded queue projection without exposing job payloads."""
+
+        object_id = "queue:" + ":".join(
+            value or "" for value in (tenant_id, workspace_id, organization_id, entity_id)
+        )
+        self._authorize(
+            policy_context,
+            actor_id=actor_id,
+            required_permission=required_permission,
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
+            object_id=object_id,
+            action="read",
+            request_id=request_id,
+        )
+        return self._service.queue_snapshot(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
         )
 
     def _authorize(
@@ -432,25 +521,44 @@ class GovernedDurableJobApplicationService:
         actor_id: str,
         required_permission: str,
         tenant_id: str,
-        workspace_id: str,
+        workspace_id: str | None,
         organization_id: str | None,
+        entity_id: str | None,
         object_id: str,
         action: str,
+        request_id: str,
     ) -> PolicyDecision:
         if actor_id != context.user_id:
             raise JobAuthorizationError("job actor does not match policy identity")
-        decision = self._policy.evaluate(
-            context,
-            required_permission=required_permission,
-            enforce_sod=True,
-            enforce_ownership=True,
-        )
-        if not decision.allowed:
-            raise JobAuthorizationError(f"job policy denied: {decision.reason_code}")
         if context.tenant_id != tenant_id or context.workspace_id != workspace_id:
             raise JobAuthorizationError("job policy scope does not match mutation scope")
         if context.organization_id != organization_id:
             raise JobAuthorizationError("job policy organization does not match mutation scope")
+        if context.entity_id != entity_id:
+            raise JobAuthorizationError("job policy entity does not match mutation scope")
+        bound_context = replace(
+            context,
+            object_type="durable_job_queue" if object_id.startswith("queue:") else "durable_job",
+            object_id=object_id,
+            action=action,
+        )
+        decision = self._policy.evaluate(
+            bound_context,
+            required_permission=required_permission,
+            enforce_sod=True,
+            enforce_ownership=True,
+        )
+        audit_policy_decision(
+            decision,
+            actor_id=bound_context.user_id,
+            required_permissions=frozenset({required_permission.strip()}),
+            surface=f"durable-job.application.{action}",
+            request_id=request_id,
+            principal_type=bound_context.principal_type,
+            context=bound_context,
+        )
+        if not decision.allowed:
+            raise JobAuthorizationError(f"job policy denied: {decision.reason_code}")
         return decision
 
 

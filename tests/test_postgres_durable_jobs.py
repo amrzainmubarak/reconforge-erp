@@ -606,8 +606,10 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
             governed_context = PolicyEvaluationContext(
                 user_id="governed-operator", username="governed-operator",
                 user_permissions={"close.manage"}, tenant_id=tenant_a, workspace_id="workspace-a",
+                entity_id=governed_submission.entity_id,
                 authorized_tenant_ids=frozenset({tenant_a}),
                 authorized_workspace_ids=frozenset({"workspace-a"}),
+                authorized_entity_ids=frozenset({governed_submission.entity_id}),
             )
             denied_context = replace(governed_context, user_permissions=set())
             with pytest.raises(JobAuthorizationError, match="permission_missing"):
@@ -624,6 +626,7 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
             assert repository.get(tenant_id=tenant_b, job_id=governed_submission.job_id) is None
             governed_cancelled = governed.cancel(
                 tenant_id=tenant_a, workspace_id="workspace-a", job_id=governed_submission.job_id,
+                entity_id=governed_submission.entity_id,
                 actor_id="governed-operator", occurred_at="2026-07-27T09:00:15Z",
                 policy_context=governed_context, required_permission="close.manage",
             )

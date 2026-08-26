@@ -2,6 +2,21 @@
 
 Updated: 2026-08-26
 
+## E-1010 - Govern durable-job application queue reads and requeue by exact scope (2026-08-26)
+
+- `GovernedDurableJobApplicationService` now policy-gates `queue_snapshot` and
+  `requeue` alongside submit/cancel. Each decision binds the exact tenant,
+  workspace, organization, entity, object ID, action, and optional request ID
+  before repository access; requeue also checks the persisted job scope before
+  mutation.
+- Focused tests cover denied queue visibility, allowed queue projection,
+  wrong-entity requeue, failed-job recovery, and the existing worker policy
+  contracts. The PostgreSQL governed fixture now supplies the entity context
+  required by the stricter facade. This is local synthetic application-facade
+  evidence only; API route adoption, external IAM, distributed revocation,
+  multi-host coordination, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0670 records rollback.
+
 ## E-1008 - Re-evaluate governed durable-worker policy at every lifecycle boundary (2026-08-26)
 
 - `GovernedDurableJobWorkerService` now requires a fresh explicit

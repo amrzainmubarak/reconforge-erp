@@ -367,6 +367,117 @@ FINANCE_ENTRY_LINE_FIELDS = frozenset(
         "created_at",
     }
 )
+MASTER_CURRENCY_FIELDS = frozenset(
+    {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
+)
+MASTER_ORGANIZATION_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "organization_code",
+        "name",
+        "base_currency",
+        "active",
+        "created_at",
+        "updated_at",
+        "workspace",
+        "source_backend",
+    }
+)
+MASTER_ENTITY_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "organization_id",
+        "entity_code",
+        "name",
+        "currency",
+        "currency_code",
+        "active",
+        "created_at",
+        "updated_at",
+        "workspace",
+        "workspace_id",
+        "source_backend",
+    }
+)
+MASTER_BRANCH_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "organization_id",
+        "legal_entity_id",
+        "branch_code",
+        "entity_code",
+        "name",
+        "active",
+        "created_at",
+        "updated_at",
+        "workspace",
+        "workspace_id",
+        "source_backend",
+    }
+)
+MASTER_PERIOD_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "name",
+        "start_date",
+        "end_date",
+        "status",
+        "created_at",
+        "fiscal_year",
+        "period_number",
+        "status_reason",
+        "updated_at",
+        "workspace",
+        "source_backend",
+    }
+)
+MASTER_SNAPSHOT_FIELDS = frozenset(
+    {
+        "schema_version",
+        "generated_at",
+        "source",
+        "workspace",
+        "summary",
+        "currency_registry",
+        "currencies",
+        "organizations",
+        "legal_entities",
+        "branches",
+        "periods",
+        "unsupported_collections",
+    }
+)
+MASTER_SNAPSHOT_SUMMARY_FIELDS = frozenset(
+    {"workspace", "organizations", "legal_entities", "branches", "periods", "active_currencies", "source", "unsupported_collections"}
+)
+MASTER_SNAPSHOT_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
+MASTER_REGISTRY_FIELDS = frozenset(
+    {
+        "schema_version",
+        "scope",
+        "status",
+        "ok",
+        "registry",
+        "master_currency_count",
+        "active_master_currency_count",
+        "input_digest",
+        "issues",
+        "binding",
+    }
+)
+MASTER_REGISTRY_DETAILS_FIELDS = frozenset({"registry_version", "digest"})
+MASTER_REGISTRY_ISSUE_FIELDS = frozenset(
+    {"code", "currency_code", "message", "master_minor_units", "registry_minor_units"}
+)
+MASTER_REGISTRY_BINDING_FIELDS = frozenset(
+    {"status", "registry_version", "registry_digest", "bound_at", "bound_by"}
+)
 CONSOLIDATION_PERIOD_FIELDS = frozenset(
     {
         "tenant_id",
@@ -737,6 +848,91 @@ def project_finance_entry(values: Mapping[str, object]) -> FieldProjection:
             projected_lines.append(project_fields(line, allowed_fields=FINANCE_ENTRY_LINE_FIELDS).visible)
         record["lines"] = projected_lines
     return project_fields(record, allowed_fields=FINANCE_ENTRY_FIELDS)
+
+
+def project_master_currency(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=MASTER_CURRENCY_FIELDS)
+
+
+def project_master_organization(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=MASTER_ORGANIZATION_FIELDS)
+
+
+def project_master_entity(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=MASTER_ENTITY_FIELDS)
+
+
+def project_master_branch(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=MASTER_BRANCH_FIELDS)
+
+
+def project_master_period(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=MASTER_PERIOD_FIELDS)
+
+
+def project_master_snapshot(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for the versioned master-data snapshot."""
+
+    record = dict(values)
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("master-data snapshot summary must be a mapping")
+        summary_record = dict(summary)
+        source = summary_record.get("source")
+        if isinstance(source, Mapping):
+            summary_record["source"] = project_fields(
+                source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
+            ).visible
+        record["summary"] = project_fields(
+            summary_record, allowed_fields=MASTER_SNAPSHOT_SUMMARY_FIELDS
+        ).visible
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("master-data snapshot source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS).visible
+    registry = record.get("currency_registry")
+    if isinstance(registry, Mapping):
+        registry_record = dict(registry)
+        details = registry_record.get("registry")
+        if isinstance(details, Mapping):
+            registry_record["registry"] = project_fields(
+                details, allowed_fields=MASTER_REGISTRY_DETAILS_FIELDS
+            ).visible
+        issues = registry_record.get("issues")
+        if isinstance(issues, list):
+            projected_issues: list[dict[str, object]] = []
+            for issue in issues:
+                if not isinstance(issue, Mapping):
+                    raise TypeError("master-data registry issue must be a mapping")
+                projected_issues.append(project_fields(issue, allowed_fields=MASTER_REGISTRY_ISSUE_FIELDS).visible)
+            registry_record["issues"] = projected_issues
+        binding = registry_record.get("binding")
+        if isinstance(binding, Mapping):
+            registry_record["binding"] = project_fields(
+                binding, allowed_fields=MASTER_REGISTRY_BINDING_FIELDS
+            ).visible
+        record["currency_registry"] = project_fields(registry_record, allowed_fields=MASTER_REGISTRY_FIELDS).visible
+    for name, projector in (
+        ("currencies", project_master_currency),
+        ("organizations", project_master_organization),
+        ("legal_entities", project_master_entity),
+        ("branches", project_master_branch),
+        ("periods", project_master_period),
+    ):
+        children = record.get(name)
+        if children is None:
+            continue
+        if not isinstance(children, list):
+            raise TypeError(f"master-data snapshot {name} collection must be a list")
+        projected_children: list[dict[str, object]] = []
+        for child in children:
+            if not isinstance(child, Mapping):
+                raise TypeError(f"master-data snapshot {name} record must be a mapping")
+            projected_children.append(projector(child).visible)
+        record[name] = projected_children
+    return project_fields(record, allowed_fields=MASTER_SNAPSHOT_FIELDS)
 
 
 def project_consolidation_period(values: Mapping[str, object]) -> FieldProjection:

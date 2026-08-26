@@ -18,6 +18,14 @@ from reconforge.api.dependencies import (
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_master_data import execute_postgres_master_data, server_master_data_enabled
+from reconforge.auth.field_access import (
+    project_master_branch,
+    project_master_currency,
+    project_master_entity,
+    project_master_organization,
+    project_master_period,
+    project_master_snapshot,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_master_data import (
@@ -123,6 +131,26 @@ def _list_response(
             "returned": len(records),
         },
     }
+
+
+def _project_currency(value: dict[str, object]) -> dict[str, object]:
+    return project_master_currency(value).visible
+
+
+def _project_organization(value: dict[str, object]) -> dict[str, object]:
+    return project_master_organization(value).visible
+
+
+def _project_entity(value: dict[str, object]) -> dict[str, object]:
+    return project_master_entity(value).visible
+
+
+def _project_branch(value: dict[str, object]) -> dict[str, object]:
+    return project_master_branch(value).visible
+
+
+def _project_period(value: dict[str, object]) -> dict[str, object]:
+    return project_master_period(value).visible
 
 
 def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
@@ -274,11 +302,13 @@ def snapshot(
                 "unsupported_collections": [],
             }
 
-        return execute_postgres_master_data(request, operation)
+        return project_master_snapshot(execute_postgres_master_data(request, operation)).visible
     try:
-        return MasterDataService(_local_connection(connection)).snapshot(
-            workspace=workspace, actor_label=current_user.username
-        )
+        return project_master_snapshot(
+            MasterDataService(_local_connection(connection)).snapshot(
+                workspace=workspace, actor_label=current_user.username
+            )
+        ).visible
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("master_data_snapshot_failed", exc) from exc
 
@@ -298,7 +328,7 @@ def list_currencies(
 
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> list[dict[str, object]]:
             records = repository.list_currencies(tenant_id=tenant, active_only=active_only)
-            return [_server_currency(record) for record in records]
+            return [_project_currency(_server_currency(record)) for record in records]
 
         records = execute_postgres_master_data(request, operation)
         return _list_response(
@@ -313,7 +343,7 @@ def list_currencies(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("currencies_list_failed", exc) from exc
-    return _list_response("currencies", records, limit=limit, offset=offset)
+    return _list_response("currencies", [_project_currency(record) for record in records], limit=limit, offset=offset)
 
 
 @router.get("/currencies/reconciliation")
@@ -421,7 +451,7 @@ def upsert_currency(
                 metadata={"source": "api"},
             ),
         )
-        return {"currency": _server_currency(record)}
+        return {"currency": _project_currency(_server_currency(record))}
     try:
         record = MasterDataService(_local_connection(connection)).upsert_currency(
             code=payload.code,
@@ -432,7 +462,7 @@ def upsert_currency(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("currency_save_failed", exc) from exc
-    return {"currency": record}
+    return {"currency": _project_currency(record)}
 
 
 @router.get("/organizations")
@@ -450,7 +480,7 @@ def list_organizations(
         _server_workspace(workspace)
 
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> list[dict[str, object]]:
-            return [_server_organization(record) for record in repository.list_organizations(tenant_id=tenant)]
+            return [_project_organization(_server_organization(record)) for record in repository.list_organizations(tenant_id=tenant)]
 
         records = execute_postgres_master_data(request, operation)
         return _list_response(
@@ -465,7 +495,7 @@ def list_organizations(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("organizations_list_failed", exc) from exc
-    return _list_response("organizations", records, limit=limit, offset=offset)
+    return _list_response("organizations", [_project_organization(record) for record in records], limit=limit, offset=offset)
 
 
 @router.post("/organizations")
@@ -502,7 +532,7 @@ def upsert_organization(
             request,
             operation,
         )
-        return {"organization": _server_organization(record)}
+        return {"organization": _project_organization(_server_organization(record))}
     try:
         values = payload.model_dump()
         values.pop("base_currency", None)
@@ -512,7 +542,7 @@ def upsert_organization(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("organization_save_failed", exc) from exc
-    return {"organization": record}
+    return {"organization": _project_organization(record)}
 
 
 @router.get("/entities")
@@ -540,7 +570,7 @@ def list_legal_entities(
                     )["id"]
                 )
             return [
-                _server_entity(record)
+                _project_entity(_server_entity(record))
                 for record in repository.list_legal_entities(
                     tenant_id=tenant,
                     organization_id=organization_id,
@@ -559,7 +589,7 @@ def list_legal_entities(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("entities_list_failed", exc) from exc
-    return _list_response("entities", records, limit=limit, offset=offset)
+    return _list_response("entities", [_project_entity(record) for record in records], limit=limit, offset=offset)
 
 
 @router.post("/entities")
@@ -599,7 +629,7 @@ def upsert_legal_entity(
             )
             return record
 
-        return {"entity": _server_entity(execute_postgres_master_data(request, operation))}
+        return {"entity": _project_entity(_server_entity(execute_postgres_master_data(request, operation)))}
     try:
         record = MasterDataService(_local_connection(connection)).upsert_legal_entity(
             organization_code=payload.organization_code,
@@ -612,7 +642,7 @@ def upsert_legal_entity(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("entity_save_failed", exc) from exc
-    return {"entity": record}
+    return {"entity": _project_entity(record)}
 
 
 @router.get("/branches")
@@ -640,7 +670,7 @@ def list_branches(
                     )["id"]
                 )
             return [
-                _server_branch(record)
+                _project_branch(_server_branch(record))
                 for record in repository.list_branches(
                     tenant_id=tenant,
                     organization_id=organization_id,
@@ -659,7 +689,7 @@ def list_branches(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("branches_list_failed", exc) from exc
-    return _list_response("branches", records, limit=limit, offset=offset)
+    return _list_response("branches", [_project_branch(record) for record in records], limit=limit, offset=offset)
 
 
 @router.post("/branches")
@@ -704,7 +734,7 @@ def upsert_branch(
                 metadata={"source": "api"},
             )
 
-        return {"branch": _server_branch(execute_postgres_master_data(request, operation))}
+        return {"branch": _project_branch(_server_branch(execute_postgres_master_data(request, operation)))}
     try:
         record = MasterDataService(_local_connection(connection)).upsert_branch(
             organization_code=payload.organization_code,
@@ -717,7 +747,7 @@ def upsert_branch(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("branch_save_failed", exc) from exc
-    return {"branch": record}
+    return {"branch": _project_branch(record)}
 
 
 @router.get("/periods")
@@ -735,7 +765,7 @@ def list_periods(
         _server_workspace(workspace)
         records = execute_postgres_master_data(
             request,
-            lambda repository, tenant: [_server_period(record) for record in repository.list_periods(tenant_id=tenant)],
+            lambda repository, tenant: [_project_period(_server_period(record)) for record in repository.list_periods(tenant_id=tenant)],
         )
         return _list_response("periods", _server_page(records, limit=limit, offset=offset), limit=limit, offset=offset)
     try:
@@ -747,7 +777,7 @@ def list_periods(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("periods_list_failed", exc) from exc
-    return _list_response("periods", records, limit=limit, offset=offset)
+    return _list_response("periods", [_project_period(record) for record in records], limit=limit, offset=offset)
 
 
 @router.post("/periods")
@@ -776,7 +806,7 @@ def upsert_period(
                 metadata={"source": "api"},
             ),
         )
-        return {"period": _server_period(record)}
+        return {"period": _project_period(_server_period(record))}
     try:
         record = MasterDataService(_local_connection(connection)).upsert_period(
             name=payload.name,
@@ -789,7 +819,7 @@ def upsert_period(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("period_save_failed", exc) from exc
-    return {"period": record}
+    return {"period": _project_period(record)}
 
 
 @router.post("/periods/{period_id}/status")
@@ -816,7 +846,7 @@ def set_period_status(
                 metadata={"source": "api"},
             ),
         )
-        return {"period": _server_period(record)}
+        return {"period": _project_period(_server_period(record))}
     try:
         record = MasterDataService(_local_connection(connection)).set_period_status(
             period_id,
@@ -826,4 +856,4 @@ def set_period_status(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("period_status_failed", exc) from exc
-    return {"period": record}
+    return {"period": _project_period(record)}

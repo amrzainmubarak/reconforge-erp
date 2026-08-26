@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1027: Fail-closed projection for Master Data API responses
+
+- Code evidence: `/api/v1/master-data` currency, organization,
+  legal-entity, branch, and fiscal-period list/mutation responses use central
+  resource allowlists. The versioned snapshot uses a closed top-level
+  contract, projects each resource collection independently, and projects the
+  nested currency-registry result. Unknown future adapter/storage fields are
+  dropped; malformed nested records are rejected.
+- Test evidence: `tests/test_field_access.py` covers unknown snapshot and
+  nested resource fields; `tests/test_master_data.py` adds a synthetic future
+  column to all five local Master Data tables and proves it does not reach
+  list or snapshot responses. Focused tests and the full Python regression
+  pass at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package
+  build, targeted safe YAML validation (9 files), and diff checks also pass.
+  `pip-audit` cannot audit the local `reconforge-erp` distribution name
+  because it is not published on PyPI. A broad safe-load scan intentionally
+  rejects a synthetic hostile-tag YAML fixture; that fixture is not treated as
+  valid configuration.
+- Boundary: this closes the reviewed Master Data resource/snapshot response
+  family only. It does not establish universal field-level authorization,
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, or production effectiveness. ADR 0687 records rollback.
+
 ## E-1026: Fail-closed projection for Finance Core ledger-entry API responses
 
 - Code evidence: `/api/v1/finance-core/entries` list, read, create, validate,

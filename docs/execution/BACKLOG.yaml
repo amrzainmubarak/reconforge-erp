@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1027
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Master Data API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1026]
+    exit_evidence: >-
+      Master Data currency, organization, legal-entity, branch, and fiscal
+      period list/mutation responses plus the versioned snapshot use central
+      allowlists across local SQLite and PostgreSQL shapes. Snapshot
+      collections and currency-registry nested records are projected
+      independently; malformed nested records fail closed. Synthetic future
+      column tests, focused tests, full Python regression, Ruff, Mypy, Bandit,
+      pip-audit, package build, targeted YAML, and diff checks must pass. This
+      closes the reviewed Master Data response boundary only; universal
+      field-level authorization, external IAM, distributed revocation,
+      disclosure approval, source authenticity, and production effectiveness
+      remain open. ADR 0687 records rollback.
   - id: E-1026
     priority: P0
     area: identity-governance

@@ -5,6 +5,28 @@
 
 ## Decisions
 
+### D-854: Master Data API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Master Data routes returned local `SELECT *` rows and mapped
+  PostgreSQL records for currencies, organizations, legal entities, branches,
+  periods, and the versioned snapshot. Future columns could silently expand
+  these scope-defining responses.
+- **Decision**: Apply explicit resource allowlists to every reviewed list and
+  mutation response and a closed recursive projection to the snapshot,
+  including currency-registry nested records. Reject malformed nested
+  snapshot data instead of filtering it silently.
+- **Verification**: Focused field/API tests and full regression pass at 100%;
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  safe YAML validation (9 files), and diff gates pass. External
+  IAM, distributed revocation, disclosure approval, source authenticity, and
+  production effectiveness remain open.
+- **Compatibility**: Existing response envelopes, known resource fields,
+  permissions, and local/server boundaries remain; no schema or migration is
+  changed.
+- **Rollback**: Revert E-1027 code/tests/ADR 0687/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
 ### D-853: Finance Core ledger-entry API responses use fail-closed field projection
 
 - **Date**: 2026-08-26

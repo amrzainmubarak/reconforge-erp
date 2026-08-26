@@ -13,6 +13,7 @@ from reconforge.auth.field_access import (
     project_exception,
     project_fields,
     project_finance_entry,
+    project_master_snapshot,
     project_reconciliation_exception,
     project_reconciliation_input,
     project_reconciliation_result,
@@ -181,6 +182,36 @@ def test_finance_entry_projection_is_closed_across_local_and_server_shapes() -> 
     ]
     assert result.denied_fields == ("unknown_future_column",)
     assert "unknown_line_column" not in str(result.visible)
+
+
+def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> None:
+    result = project_master_snapshot(
+        {
+            "schema_version": 1,
+            "generated_at": "2026-08-26T00:00:00Z",
+            "source": {"kind": "local-sqlite-master-data", "unknown_source_field": "must-not-escape"},
+            "summary": {
+                "workspace": "default",
+                "organizations": 1,
+                "unknown_summary_field": "must-not-escape",
+            },
+            "currencies": [
+                {
+                    "code": "USD",
+                    "name": "US Dollar",
+                    "minor_units": 2,
+                    "unknown_currency_field": "must-not-escape",
+                }
+            ],
+            "unknown_snapshot_field": "must-not-escape",
+        }
+    )
+    assert result.visible["currencies"] == [{"code": "USD", "minor_units": 2, "name": "US Dollar"}]
+    assert result.visible["summary"] == {"organizations": 1, "workspace": "default"}
+    assert "unknown_source_field" not in str(result.visible)
+    assert "unknown_summary_field" not in str(result.visible)
+    assert "unknown_currency_field" not in str(result.visible)
+    assert result.denied_fields == ("unknown_snapshot_field",)
 
 
 def test_close_projections_drop_unknown_adapter_fields_across_record_shapes() -> None:

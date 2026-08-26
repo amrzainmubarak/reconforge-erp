@@ -2,6 +2,23 @@
 
 Updated: 2026-08-26
 
+## E-1027 - Fail-closed projection for Master Data API responses (2026-08-26)
+
+- Master Data currency, organization, legal-entity, branch, and fiscal-period
+  list/mutation responses plus the versioned snapshot now use central
+  allowlists across local SQLite and PostgreSQL shapes. Snapshot collections
+  and currency-registry nested records are projected independently; malformed
+  nested records fail closed.
+- Focused Master Data/field tests and the full Python regression pass at 100%.
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  YAML validation (9 files), and diff checks also pass. Broad safe-load
+  parsing of every repository YAML file remains intentionally separate because
+  a synthetic hostile-tag fixture uses a PyYAML-specific Python tag and must
+  not be accepted by `safe_load`. This is a bounded disclosure control only;
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0687 records rollback.
+
 ## E-1026 - Fail-closed projection for Finance Core ledger-entry API responses (2026-08-26)
 
 - Finance Core ledger-entry list, read, create, validate, and void responses

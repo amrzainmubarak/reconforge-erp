@@ -4,6 +4,17 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1027 migrated surface
+
+Master Data currency, organization, legal-entity, branch, and fiscal-period
+list/mutation responses now use explicit resource allowlists across local
+SQLite and PostgreSQL. The versioned master-data snapshot also projects its
+top-level, summary, source, resource collections, and currency-registry nested
+records; malformed nested records fail closed. This is a bounded disclosure
+control for the reviewed Master Data response family, not universal
+field-level authorization or production IAM. ADR 0687 records the decision
+and rollback.
+
 ## E-1026 migrated surface
 
 Finance Core ledger-entry list, read, create, validate, and void responses now

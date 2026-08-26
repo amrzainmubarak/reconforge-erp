@@ -14,7 +14,7 @@ tasks:
     area: deployment-readiness
     title: Refresh current Community Compose schema, restart, and backup/restore runtime evidence
     status: completed
-    depends_on: [E-973, E-968, E-1006]
+    depends_on: [E-973, E-968]
     exit_evidence: >-
       A fresh current-tree Community image was built and a disposable local
       runtime reached healthy after restart with API health ok, SQLite schema

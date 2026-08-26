@@ -5,19 +5,23 @@ This page summarizes Docker verification commands for ReconForge ERP foundation-
 ## Build
 
 ```bash
-docker build -t reconforge-erp .
+docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
 ```
 
 ## Run Doctor
 
 ```bash
-docker run --rm reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only --cap-drop=ALL \
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
 ```
 
 ## Run Demo
 
 ```bash
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge demo run --output output/demo
+docker run --rm --network=none --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700 \
+  --tmpfs /app/output:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0700 \
+  reconforge-erp reconforge demo run --output output/demo
 ```
 
 The image runs as fixed UID/GID `10001:10001`. A bind-mounted output directory

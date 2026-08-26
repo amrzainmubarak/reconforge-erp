@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-830: Synchronize current Docker documentation with the hardened workflow
+
+- **Date**: 2026-08-26
+- **Context**: Current release and deployment documents still advertised the
+  weaker cached/writable Docker smoke and historical Compose/dashboard commands,
+  while the checked-in standalone workflow had moved to a hardened contract.
+- **Decision**: Update current operator-facing Docker/release surfaces to the
+  pull/no-cache linux/amd64 build and bounded hardened runtime. Explicitly state
+  that no Compose deployment contract is shipped until a versioned profile and
+  smoke evidence exist. Retain historical strategy records as historical.
+- **Verification**: The release-readiness documentation suite passes with the
+  hardened commands; YAML and diff checks pass.
+- **Compatibility**: Documentation and test expectations only; no runtime,
+  image, API, or deployment artifact is added.
+- **Rollback**: Revert the documentation, regression expectation, ADR, and
+  E-967 execution entries.
+
 ### D-829: Harden the standalone Docker workflow
 
 - **Date**: 2026-08-26

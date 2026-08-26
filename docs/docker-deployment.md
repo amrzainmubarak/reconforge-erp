@@ -12,7 +12,7 @@ This page documents commands for local verification. If Docker is not available 
 ## Build
 
 ```bash
-docker build -t reconforge-erp .
+docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
 ```
 
 ## Run Doctor
@@ -20,20 +20,21 @@ docker build -t reconforge-erp .
 Linux/macOS Bash:
 
 ```bash
-docker run --rm reconforge-erp reconforge doctor
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only --cap-drop=ALL \
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
 ```
 
 Windows PowerShell:
 
 ```powershell
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only --cap-drop=ALL `
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
 ```
 
 Windows Command Prompt:
 
 ```cmd
-docker run --rm -v %cd%\output:/app/output reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only --cap-drop=ALL --security-opt=no-new-privileges reconforge-erp reconforge doctor
 ```
 
 ## Run The Demo
@@ -64,19 +65,10 @@ before running; do not make a sensitive export directory broadly writable.
 
 ## Docker Compose
 
-If `docker-compose.yml` is present:
-
-```bash
-docker compose build
-docker compose run --rm reconforge reconforge doctor
-docker compose run --rm reconforge reconforge demo run --output output/demo
-```
-
-The dashboard service exposes the local dashboard on port `8501`:
-
-```bash
-docker compose up dashboard
-```
+No Compose deployment contract is currently shipped. Do not infer Compose
+support from historical notes or from the presence of a Dockerfile; use the
+single-image commands above until a versioned Compose profile and its smoke
+evidence are added.
 
 ## Security Notes
 
@@ -96,9 +88,13 @@ docker compose up dashboard
 Before claiming Docker runtime verification for a release, run:
 
 ```bash
-docker build -t reconforge-erp .
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge demo run --output output/demo
+docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
+docker run --rm --network=none --read-only --cap-drop=ALL \
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700 \
+  --tmpfs /app/output:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0700 \
+  reconforge-erp reconforge demo run --output output/demo
 ```
 
 Record the Docker version, operating system, and command output in the release notes or maintainer notes.
@@ -109,7 +105,7 @@ Record the Docker version, operating system, and command output in the release n
 | --- | --- | --- |
 | `Cannot connect to the Docker daemon` | Docker Desktop or Docker Engine is not running | Start Docker and rerun `docker version`. |
 | Files are not written to `output/` | Volume path is wrong or Docker cannot mount the folder | Run from the repository root and confirm the local `output/` path exists or can be created. |
-| `reconforge: command not found` inside container | Image was not rebuilt after local changes | Rerun `docker build -t reconforge-erp .`. |
+| `reconforge: command not found` inside container | Image was not rebuilt after local changes | Rerun the pull/no-cache build command above. |
 | Permission errors on Linux | Host user permissions on mounted `output/` | Check owner/mode of `output/` or run with an appropriate user mapping for your environment. |
 
 ## Current Verification Status

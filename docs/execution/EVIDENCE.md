@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-967: Synchronize Docker release documentation with the hardened workflow contract
+
+- Code evidence: README, deployment smoke, Docker verification, maintainer
+  release, and release-readiness surfaces carry the same bounded build/runtime
+  contract as the standalone workflow. The Docker deployment guide explicitly
+  states that no Compose deployment contract is shipped.
+- Test evidence: `tests/test_release_readiness_docs.py` passes with the hardened
+  command set; YAML parsing and diff-check pass.
+- Boundary: this removes operator/documentation drift only. It does not create
+  Compose support, prove hosted clean-build identity, sign artifacts, or prove
+  production deployment behavior. ADR 0661 records rollback.
+
 ## E-966: Align the standalone Docker workflow with the hardened release runtime gate
 
 - Code evidence: `.github/workflows/docker.yml` uses a fresh linux/amd64

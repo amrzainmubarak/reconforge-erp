@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-967 - Synchronize Docker release documentation with the hardened workflow contract (2026-08-26)
+
+- Current Docker instructions now use the pull/no-cache linux/amd64 build and
+  the hardened networkless/read-only runtime profile with dropped capabilities
+  and `no-new-privileges`.
+- The current deployment guide no longer implies that a Compose dashboard or
+  `docker-compose.yml` is shipped. Historical strategy notes remain historical;
+  current operator surfaces now state the absence of a Compose contract.
+- The release-readiness documentation contract passes after the update. This is
+  documentation/claim-boundary evidence, not Compose support or hosted release
+  provenance. ADR 0661 records rollback.
+
 ## E-966 - Align the standalone Docker workflow with the hardened release runtime gate (2026-08-26)
 
 - `.github/workflows/docker.yml` now builds with `--pull --no-cache

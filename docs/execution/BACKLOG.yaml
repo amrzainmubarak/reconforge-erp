@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-967
+    priority: P1
+    area: documentation-release
+    title: Synchronize Docker release documentation with the hardened workflow contract
+    status: completed
+    depends_on: [E-966]
+    exit_evidence: >-
+      Current README, deployment smoke, Docker verification, maintainer release,
+      and release-readiness surfaces now use the pull/no-cache linux/amd64 build
+      and hardened networkless/read-only Doctor/demo smoke. Historical Compose
+      wording is replaced with an explicit statement that no Compose contract is
+      shipped, and the documentation regression requires the hardened commands.
+      Focused release-readiness tests, YAML, and diff-check pass. This corrects
+      operator guidance and claim boundaries; it does not add Compose, hosted
+      release provenance, or production deployment. ADR 0661 records rollback.
   - id: E-966
     priority: P0
     area: container-security

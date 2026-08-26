@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-969
+    priority: P1
+    area: deployment-readiness
+    title: Refresh the mode-specific readiness matrix with current Community Compose evidence
+    status: completed
+    depends_on: [E-968, E-849, E-850, E-851, E-926]
+    exit_evidence: >-
+      The readiness matrix review date is refreshed to 2026-08-26 and the
+      Community external-dependency gate now references the immutable profile,
+      Compose contract test, and ADR 0662. A regression requires those current
+      evidence paths and preserves an explicit boundary that local Compose
+      evidence is not host-firewall, backup, HA/DR, or production proof. The
+      remaining Team/Enterprise/Regulated gates stay partial/open and E-1006
+      remains in progress. ADR 0663 records the bounded matrix update.
   - id: E-968
     priority: P1
     area: deployment-compose

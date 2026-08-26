@@ -2,6 +2,17 @@
 
 Updated: 2026-08-26
 
+## E-969 - Refresh the mode-specific readiness matrix with current Community Compose evidence (2026-08-26)
+
+- `DEPLOYMENT_READINESS_MATRIX.v1.yaml` now reflects the current review date
+  and links the Community external-dependency gate to `compose.yaml`, its
+  contract test, and ADR 0662.
+- The matrix regression requires those evidence paths and preserves the
+  boundary that local Compose evidence does not prove host firewall behavior,
+  backup/restore, HA/DR, or production readiness.
+- Team, Enterprise, and Regulated gates remain explicitly partial/open;
+  E-1006 remains in progress. ADR 0663 records the bounded update.
+
 ## E-968 - Add a bounded Community Docker Compose profile with live local smoke (2026-08-26)
 
 - `compose.yaml` now supplies one Community/local service backed by a named

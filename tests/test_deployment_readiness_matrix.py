@@ -45,6 +45,19 @@ def test_matrix_preserves_unresolved_regulated_key_and_failure_domain_gates() ->
     assert gates["failure_domain_and_dr"]["status"] == "open"
 
 
+def test_matrix_tracks_the_current_community_compose_boundary() -> None:
+    matrix = yaml.safe_load(MATRIX_PATH.read_text(encoding="utf-8"))
+    assert matrix["reviewed_on"] == "2026-08-26"
+    community = next(edition for edition in matrix["editions"] if edition["id"] == "community")
+    gate = next(gate for gate in community["gates"] if gate["id"] == "external_dependency_boundary")
+    assert {
+        "compose.yaml",
+        "tests/test_compose_profile.py",
+        "docs/adr/0662-community-compose-local-profile.md",
+    } <= set(gate["evidence"])
+    assert "not host firewall" in gate["boundary"]
+
+
 def test_runtime_reader_produces_stable_digest_and_selects_one_edition() -> None:
     matrix = load_deployment_readiness_matrix(MATRIX_PATH)
     selected = matrix.select("regulated")

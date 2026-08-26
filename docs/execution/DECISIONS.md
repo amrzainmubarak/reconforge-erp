@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-832: Refresh the readiness matrix with current Community Compose evidence
+
+- **Date**: 2026-08-26
+- **Context**: E-968 added a live, bounded Community Compose profile, but the
+  centralized readiness matrix still had its 2026-08-23 review date and did
+  not point to the current Compose artifact or test.
+- **Decision**: Refresh the matrix date and add the Compose contract, test, and
+  ADR to only the Community external-dependency gate. Preserve the explicit
+  partial/open status and state that this local evidence does not prove host
+  firewall behavior, backup/restore, HA/DR, or production readiness.
+- **Verification**: Matrix schema/reader tests and the new exact-evidence
+  regression pass.
+- **Compatibility**: Evidence metadata only; no runtime or data migration.
+- **Rollback**: Revert the matrix references, regression assertion, ADR 0663,
+  and E-969 execution entries.
+
 ### D-831: Add a bounded Community Docker Compose profile
 
 - **Date**: 2026-08-26

@@ -1,6 +1,6 @@
 schema_version: 1
 matrix_id: reconforge-deployment-readiness
-reviewed_on: "2026-08-23"
+reviewed_on: "2026-08-26"
 claim_boundary: >-
   This matrix consolidates repository-visible and disposable local evidence for
   deployment modes. It is not a production-readiness, compliance, certification,
@@ -40,8 +40,8 @@ editions:
         boundary: Local profile/evidence validation, not identity-provider enforcement.
       - id: external_dependency_boundary
         status: verified_scoped
-        evidence: [reconforge/deployment/profiles.py]
-        boundary: Network-disabled default is a contract, not host firewall proof.
+        evidence: [reconforge/deployment/profiles.py, compose.yaml, tests/test_compose_profile.py, docs/adr/0662-community-compose-local-profile.md]
+        boundary: Community Compose now has live local SQLite evidence with an internal network and loopback publication; this is not host firewall, backup, HA/DR, or production proof.
       - id: failure_domain_and_dr
         status: open
         evidence: []

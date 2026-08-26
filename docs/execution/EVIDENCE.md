@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-969: Refresh the mode-specific readiness matrix with current Community Compose evidence
+
+- Code/evidence source: `DEPLOYMENT_READINESS_MATRIX.v1.yaml` is reviewed on
+  `2026-08-26`; the Community external-dependency gate references the current
+  deployment profile, `compose.yaml`, `tests/test_compose_profile.py`, and ADR
+  0662.
+- Test evidence: the readiness matrix test requires those exact paths and the
+  explicit non-host-firewall boundary; focused readiness and Compose tests pass.
+- Boundary: this refresh makes the new local evidence discoverable in the
+  centralized matrix. It does not advance Team/Enterprise/Regulated status,
+  prove backup/restore, HA/DR, host firewall behavior, or production readiness.
+- ADR: `docs/adr/0663-refresh-community-readiness-matrix-evidence.md`.
+
 ## E-968: Add a bounded Community Docker Compose profile with live local smoke
 
 - Code evidence: `compose.yaml` runs one local API service with an idempotent

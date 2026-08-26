@@ -22,17 +22,18 @@ call `GovernedDurableJobApplicationService.queue_snapshot` with `ops.read`,
 the authenticated actor ID, and the request ID. The response schema and
 sanitized projection remain unchanged.
 
-Server mode continues to use its existing `enforce_server_tenant_permission`
-and PostgreSQL RLS boundary until a dedicated adapter can pass the verified
-server principal and PostgreSQL policy-audit sink into the governed facade.
+Server mode was intentionally left on its existing
+`enforce_server_tenant_permission` and PostgreSQL RLS boundary in this local
+slice. E-1012 subsequently adds the verified `ServerPrincipal` to the same
+governed facade while retaining those server-specific barriers.
 
 ## Consequences and boundaries
 
 The local queue-health path now has defense in depth: the route dependency
 checks authentication/permission and the application facade rechecks the
 selected hierarchy before repository access. This does not prove universal API
-adoption, external IAM, distributed revocation, PostgreSQL application-facade
-adoption, HA/DR, production SLOs, or production readiness.
+adoption, external IAM, distributed revocation, PostgreSQL policy-audit sink
+parity, HA/DR, production SLOs, or production readiness.
 
 ## Verification
 

@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-839: Use the governed durable-job facade in Server Profile queue health
+
+- **Date**: 2026-08-26
+- **Context**: E-1011 governed the local queue route, while Server Profile
+  still called the raw application service after its tenant check.
+- **Decision**: Bind the verified `ServerPrincipal` and its scope grants into
+  the same governed facade in Server Profile. Retain the tenant-policy,
+  transaction-local scope, and RLS barriers; keep facade evidence provider
+  neutral until a PostgreSQL sink adapter is introduced.
+- **Verification**: E-1012 route, API, Ruff, and Mypy gates pass; live
+  PostgreSQL execution remains environment-gated where declared.
+- **Compatibility**: No route response, repository contract, schema, or
+  migration changes.
+- **Rollback**: Revert E-1012 route/test/ADR 0672/manifest/execution metadata.
+
 ### D-838: Route local operations queue health through the governed job facade
 
 - **Date**: 2026-08-26

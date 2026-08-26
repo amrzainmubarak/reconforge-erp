@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1012 - Use governed durable-job facade in Server Profile queue health (2026-08-26)
+
+- The PostgreSQL Server Profile queue-health route now builds its policy
+  context from the verified `ServerPrincipal` and principal workspace,
+  organization, and legal-entity grants, then calls the governed application
+  facade with actor, selected hierarchy, and request ID.
+- Existing server tenant-policy recheck, transaction-local scope, and RLS
+  remain independent barriers. API contract tests plus Ruff and Mypy pass.
+  The facade decision still emits provider-neutral structured evidence rather
+  than the PostgreSQL policy-audit sink; universal API coverage, external IAM,
+  distributed revocation, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0672 records rollback.
+
 ## E-1011 - Route local operations queue health through governed durable-job facade (2026-08-26)
 
 - The local `/api/v1/ops/durable-jobs/queue` route now builds a scoped policy

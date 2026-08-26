@@ -29,6 +29,7 @@ from reconforge.domain.jobs import DurableJobQueueSnapshot
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_jobs import PostgresDurableJobRepository, PostgresJobRepositoryError
 from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository, SQLiteJobRepositoryError
+from reconforge.platform.common import ServerPrincipal, current_server_principal
 
 router = APIRouter(prefix="/ops", tags=["operations"])
 
@@ -71,6 +72,37 @@ def _snapshot_payload(snapshot: DurableJobQueueSnapshot) -> dict[str, object]:
     }
 
 
+def _server_job_policy_context(
+    request: Request,
+    *,
+    tenant_id: str,
+    workspace_id: str | None,
+    organization_id: str | None,
+    entity_id: str | None,
+) -> tuple[ServerPrincipal, PolicyEvaluationContext]:
+    principal = getattr(request.state, "server_principal", None)
+    if not isinstance(principal, ServerPrincipal):
+        principal = current_server_principal()
+    if principal is None:
+        raise APIError(status_code=401, code="auth_required", message="Authentication required.")
+    return principal, PolicyEvaluationContext(
+        user_id=principal.user.id,
+        username=principal.user.username,
+        user_permissions=principal.permissions,
+        principal_type=principal.principal_type,
+        step_up_active=principal.step_up_active,
+        step_up_enforced=True,
+        tenant_id=tenant_id,
+        workspace_id=workspace_id,
+        organization_id=organization_id,
+        entity_id=entity_id,
+        authorized_tenant_ids=frozenset({tenant_id}),
+        authorized_workspace_ids=principal.authorized_workspace_ids,
+        authorized_organization_ids=principal.authorized_organization_ids,
+        authorized_entity_ids=principal.authorized_legal_entity_ids,
+    )
+
+
 @router.get("/durable-jobs/queue")
 def durable_job_queue(
     request: Request,
@@ -101,18 +133,29 @@ def durable_job_queue(
                     code="durable_job_queue_backend_unavailable",
                     message="Server durable-job queue backend is unavailable.",
                 )
+            principal, policy_context = _server_job_policy_context(
+                request,
+                tenant_id=selected_tenant,
+                workspace_id=workspace,
+                organization_id=organization,
+                entity_id=entity,
+            )
             with PostgresTenantBoundary(factory).transaction(
                 selected_tenant,
                 organization_id=organization,
                 workspace_id=workspace,
             ) as postgres_connection:
-                snapshot = DurableJobApplicationService(
-                    PostgresDurableJobRepository(postgres_connection)
+                snapshot = GovernedDurableJobApplicationService(
+                    DurableJobApplicationService(PostgresDurableJobRepository(postgres_connection))
                 ).queue_snapshot(
                     tenant_id=selected_tenant,
                     workspace_id=workspace,
                     organization_id=organization,
                     entity_id=entity,
+                    actor_id=principal.user.id,
+                    policy_context=policy_context,
+                    required_permission="ops.read",
+                    request_id=str(getattr(request.state, "request_id", "")),
                 )
         else:
             if connection is None:

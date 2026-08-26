@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1012: Use governed durable-job facade in Server Profile queue health
+
+- Code evidence: the PostgreSQL Server Profile queue-health route builds a
+  `PolicyEvaluationContext` from the verified `ServerPrincipal` and principal
+  scope grants, then calls `GovernedDurableJobApplicationService` with the
+  selected hierarchy and request ID. Existing tenant-policy recheck,
+  transaction-local scope, and RLS remain in place.
+- Test evidence: the synthetic Server Profile route test now supplies a
+  verified principal/scope snapshot and passes through the governed facade;
+  local API, application, worker, Ruff, and Mypy gates pass. Live PostgreSQL
+  execution remains environment-gated where declared.
+- Boundary: facade policy evidence is not yet persisted through the
+  PostgreSQL audit sink. This does not prove universal API coverage, external
+  IAM, distributed revocation, provider interoperability, HA/DR, production
+  SLOs, or production authorization effectiveness. ADR 0672 records rollback.
+
 ## E-1011: Route local operations queue health through governed durable-job facade
 
 - Code evidence: local `/api/v1/ops/durable-jobs/queue` resolves local RBAC

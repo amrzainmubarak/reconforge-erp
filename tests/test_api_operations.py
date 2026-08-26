@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from reconforge.api import create_api_app
 from reconforge.api.routes import operations
 from reconforge.application.jobs import DurableJobApplicationService, JobSubmission
+from reconforge.auth.models import LocalUser
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.auth.service import LocalAuthService
 from reconforge.db import connect, run_migrations
@@ -35,6 +36,7 @@ from reconforge.infrastructure.postgres_service_accounts import (
     POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL,
     PostgresServiceAccountRepository,
 )
+from reconforge.platform.common import ServerPrincipal
 
 
 def test_local_durable_job_queue_route_is_sanitized_and_authenticated(tmp_path: Path) -> None:
@@ -131,6 +133,17 @@ def test_server_durable_job_queue_route_rechecks_tenant_policy_and_rls_scope(mon
         operations,
         "enforce_server_tenant_permission",
         lambda _request, *, permission, tenant_id: policy_calls.append((permission, tenant_id)),
+    )
+    monkeypatch.setattr(
+        operations,
+        "current_server_principal",
+        lambda: ServerPrincipal(
+            user=LocalUser(id="server-operator", username="server-operator", display_name="Server Operator"),
+            permissions=frozenset({"ops.read"}),
+            authorized_workspace_ids=frozenset({"workspace-a"}),
+            authorized_organization_ids=frozenset({"organization-a"}),
+            authorized_legal_entity_ids=frozenset({"entity-a"}),
+        ),
     )
 
     class Boundary:

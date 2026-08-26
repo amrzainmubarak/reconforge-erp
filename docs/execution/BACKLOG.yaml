@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1012
+    priority: P0
+    area: identity-governance
+    title: Use governed durable-job facade in Server Profile queue health
+    status: completed
+    depends_on: [E-1011, E-972]
+    exit_evidence: >-
+      The PostgreSQL Server Profile /api/v1/ops/durable-jobs/queue route now
+      builds a PolicyEvaluationContext from the verified ServerPrincipal and
+      principal scope grants, then calls GovernedDurableJobApplicationService
+      with the selected hierarchy and request ID. Existing server tenant
+      policy recheck, transaction-local scope, and RLS remain independent
+      barriers. API contract tests and static gates pass. Provider-neutral
+      facade evidence is not yet persisted through the PostgreSQL audit sink;
+      universal API coverage, external IAM, distributed revocation, HA/DR,
+      production SLOs, and production readiness remain open. ADR 0672 records
+      rollback.
   - id: E-1011
     priority: P0
     area: identity-governance
@@ -2133,6 +2150,10 @@ tasks:
         selected hierarchy, and request-ID binding. The sanitized response
         contract remains unchanged; Server Profile PostgreSQL adoption and
         universal API coverage remain open.
+      - E-1012 extends the same governed queue-health facade to Server Profile
+        using the verified ServerPrincipal and principal scope grants while
+        retaining tenant-policy, transaction-local scope, and RLS barriers.
+        Facade audit-sink parity and universal API adoption remain open.
   - id: E-1006
     priority: P1
     area: global-expansion

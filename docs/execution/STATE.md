@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-1038 - Fail-closed projection for professional invoice/payment API responses (2026-08-26)
+
+- Professional invoice/payment evidence responses now use central top-level and
+  recursive report, money, and decision allowlists across local SQLite and
+  tenant-scoped PostgreSQL adapter paths. Unknown future adapter fields cannot
+  silently enter financial evidence responses.
+- Focused field/API tests pass (29 tests plus 1 existing skip), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. ADR 0698 records rollback.
+
 ## E-1037 - Fail-closed projection for Receivables API responses (2026-08-26)
 
 - Receivables customer, invoice, receipt, credit-exposure, and aging responses

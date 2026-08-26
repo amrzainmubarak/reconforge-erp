@@ -36,6 +36,7 @@ from reconforge.auth.field_access import (
     project_payables_supplier,
     project_payables_supplier_invoice,
     project_payables_three_way_match,
+    project_professional_invoice_payment,
     project_receivables_aging,
     project_receivables_credit_exposure,
     project_receivables_customer,
@@ -415,6 +416,61 @@ def test_payables_supplier_projection_is_closed() -> None:
 
     assert result.visible == {"id": "supplier-1", "supplier_code": "SUP-1"}
     assert result.denied_fields == ("unknown_supplier_field",)
+    assert "must-not-escape" not in str(result.visible)
+
+
+def test_professional_invoice_payment_projection_is_closed_recursively() -> None:
+    result = project_professional_invoice_payment(
+        {
+            "id": "pip-1",
+            "workspace_id": "firm-a",
+            "unknown_run_field": "must-not-escape",
+            "report": {
+                "schema_version": 1,
+                "decision_digest": "d" * 64,
+                "amount_tolerance": {
+                    "amount": "0.01",
+                    "currency": "USD",
+                    "unknown_money_field": "must-not-escape",
+                },
+                "decisions": [
+                    {
+                        "invoice_id": "INV-1",
+                        "client_id": "CLIENT-1",
+                        "status": "matched",
+                        "payment_ids": ["PAY-1"],
+                        "reason_code": "INVOICE_PAYMENT_RECONCILED",
+                        "amount_variance": {
+                            "amount": "0",
+                            "currency": "USD",
+                            "unknown_variance_field": "must-not-escape",
+                        },
+                        "unknown_decision_field": "must-not-escape",
+                    }
+                ],
+                "status_counts": {"matched": 1, "future_status": 99},
+                "unknown_report_field": "must-not-escape",
+            },
+        }
+    )
+
+    assert result.visible["report"] == {
+        "amount_tolerance": {"amount": "0.01", "currency": "USD"},
+        "decisions": [
+            {
+                "amount_variance": {"amount": "0", "currency": "USD"},
+                "client_id": "CLIENT-1",
+                "invoice_id": "INV-1",
+                "payment_ids": ["PAY-1"],
+                "reason_code": "INVOICE_PAYMENT_RECONCILED",
+                "status": "matched",
+            }
+        ],
+        "decision_digest": "d" * 64,
+        "schema_version": 1,
+        "status_counts": {"matched": 1},
+    }
+    assert result.denied_fields == ("unknown_run_field",)
     assert "must-not-escape" not in str(result.visible)
 
 

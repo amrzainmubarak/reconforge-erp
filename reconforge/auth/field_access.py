@@ -728,6 +728,60 @@ RECEIVABLES_AGING_ITEM_FIELDS = frozenset(
         "currency_code", "invoice_date", "due_date", "total_minor", "outstanding_minor", "days_overdue", "bucket",
     }
 )
+PROFESSIONAL_INVOICE_PAYMENT_FIELDS = frozenset(
+    {
+        "id",
+        "tenant_id",
+        "workspace_id",
+        "decision_digest",
+        "artifact_digest",
+        "algorithm_version",
+        "prepared_by",
+        "prepared_at",
+        "created_at",
+        "report",
+    }
+)
+PROFESSIONAL_INVOICE_PAYMENT_REPORT_FIELDS = frozenset(
+    {
+        "algorithm_version",
+        "artifact_digest",
+        "artifact_type",
+        "amount_tolerance",
+        "decision_digest",
+        "decisions",
+        "input_digests",
+        "payment_window_days",
+        "schema_version",
+        "status_counts",
+    }
+)
+PROFESSIONAL_INVOICE_PAYMENT_MONEY_FIELDS = frozenset(
+    {
+        "amount",
+        "currency",
+        "currency_policy_digest",
+        "currency_registry_digest",
+        "currency_registry_version",
+        "minor_units",
+        "rounding_policy",
+        "schema_version",
+    }
+)
+PROFESSIONAL_INVOICE_PAYMENT_DECISION_FIELDS = frozenset(
+    {
+        "amount_variance",
+        "client_id",
+        "days_from_due_date",
+        "invoice_id",
+        "payment_ids",
+        "reason_code",
+        "status",
+    }
+)
+PROFESSIONAL_INVOICE_PAYMENT_STATUS_KEYS = frozenset(
+    {"matched", "exception", "unmatched_invoice", "unmatched_payment", "ambiguous"}
+)
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1583,6 +1637,63 @@ def project_receivables_aging(values: Mapping[str, object]) -> FieldProjection:
             projected_items.append(project_fields(item, allowed_fields=RECEIVABLES_AGING_ITEM_FIELDS).visible)
         record["items"] = projected_items
     return project_fields(record, allowed_fields=RECEIVABLES_AGING_FIELDS)
+
+
+def project_professional_invoice_payment(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for professional-control evidence."""
+
+    record = dict(values)
+    report = record.get("report")
+    if report is not None:
+        if not isinstance(report, Mapping):
+            raise TypeError("professional invoice/payment report must be a mapping")
+        report_record = dict(report)
+        amount_tolerance = report_record.get("amount_tolerance")
+        if amount_tolerance is not None:
+            if not isinstance(amount_tolerance, Mapping):
+                raise TypeError("professional invoice/payment tolerance must be a mapping")
+            report_record["amount_tolerance"] = project_fields(
+                amount_tolerance,
+                allowed_fields=PROFESSIONAL_INVOICE_PAYMENT_MONEY_FIELDS,
+            ).visible
+        decisions = report_record.get("decisions")
+        if decisions is not None:
+            if not isinstance(decisions, list):
+                raise TypeError("professional invoice/payment decisions collection must be a list")
+            projected_decisions: list[dict[str, object]] = []
+            for decision in decisions:
+                if not isinstance(decision, Mapping):
+                    raise TypeError("professional invoice/payment decision must be a mapping")
+                decision_record = dict(decision)
+                amount_variance = decision_record.get("amount_variance")
+                if amount_variance is not None:
+                    if not isinstance(amount_variance, Mapping):
+                        raise TypeError("professional invoice/payment variance must be a mapping")
+                    decision_record["amount_variance"] = project_fields(
+                        amount_variance,
+                        allowed_fields=PROFESSIONAL_INVOICE_PAYMENT_MONEY_FIELDS,
+                    ).visible
+                projected_decisions.append(
+                    project_fields(
+                        decision_record,
+                        allowed_fields=PROFESSIONAL_INVOICE_PAYMENT_DECISION_FIELDS,
+                    ).visible
+                )
+            report_record["decisions"] = projected_decisions
+        status_counts = report_record.get("status_counts")
+        if status_counts is not None:
+            if not isinstance(status_counts, Mapping):
+                raise TypeError("professional invoice/payment status counts must be a mapping")
+            report_record["status_counts"] = {
+                key: status_counts[key]
+                for key in sorted(status_counts)
+                if key in PROFESSIONAL_INVOICE_PAYMENT_STATUS_KEYS
+            }
+        record["report"] = project_fields(
+            report_record,
+            allowed_fields=PROFESSIONAL_INVOICE_PAYMENT_REPORT_FIELDS,
+        ).visible
+    return project_fields(record, allowed_fields=PROFESSIONAL_INVOICE_PAYMENT_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

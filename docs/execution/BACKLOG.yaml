@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1038
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to professional invoice/payment API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1037]
+    exit_evidence: >-
+      Professional invoice/payment create, list, and read responses use central
+      top-level and recursive report, money, decision, and status-count
+      allowlists across local SQLite and PostgreSQL. Synthetic future-field
+      tests prove unknown adapter fields are dropped while evidence envelopes,
+      exact values, workspace scope, and no-network behavior remain compatible.
+      Focused selectors pass 29 tests plus 1 existing skip; full Python
+      regression, Ruff, Mypy (539 source files), Bandit, pip-audit, package
+      build, targeted YAML, and diff checks pass. The local distribution is
+      not auditable by pip-audit because it is not published on PyPI. ADR 0698
+      records rollback.
   - id: E-1037
     priority: P0
     area: identity-governance

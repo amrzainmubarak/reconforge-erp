@@ -2,6 +2,26 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1038: Fail-closed projection for professional invoice/payment API responses
+
+- Code evidence: `/api/v1/professional/invoice-payments` create, list, and
+  read responses use central top-level and recursive report, money, and
+  decision allowlists in both local SQLite and PostgreSQL branches. Unknown
+  adapter/storage fields are dropped before serialization; network dispatch
+  remains disabled and the persisted evidence contract is unchanged.
+- Test evidence: `tests/test_field_access.py` covers report, money, decision,
+  and status-count projection; `tests/test_api_professional_invoice_payment.py`
+  injects future fields into top-level, report, tolerance, decision, and
+  variance adapter shapes across create/list/read responses. Focused selectors
+  pass 29 tests plus 1 existing skip; `python -m pytest -q` passes at 100%.
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  safe YAML validation (9 files), and diff gates pass. pip-audit cannot audit
+  the local distribution because it is not published on PyPI.
+- Boundary: this closes only the professional invoice/payment response family.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0698 records rollback.
+
 ## E-1037: Fail-closed projection for Receivables API responses
 
 - Code evidence: `/api/v1/receivables` customer, invoice, receipt,

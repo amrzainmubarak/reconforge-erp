@@ -22,10 +22,9 @@ Updated: 2026-08-26
   default; bounded legacy fixtures opt into it explicitly.
 - Focused Scheduler worker/notification tests pass (`9 passed, 1 skipped`),
   Ruff and Mypy pass, the full Python regression passes at 100%, and package
-  build succeeds. Reconciliation still requires a separate secure-default
-  slice; external IAM, provider delivery, HA/DR, production SLOs, and
-  production authorization effectiveness remain open. ADR 0675 records
-  rollback.
+  build succeeds. E-1016 separately closes the Reconciliation worker boundary;
+  external IAM, provider delivery, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0675 records rollback.
 
 ## E-1014 - Require explicit policy supplier before PostgreSQL Outbox publishing (2026-08-26)
 
@@ -35,10 +34,10 @@ Updated: 2026-08-26
   is rejected by the local SQLite worker; only bounded legacy fixtures and
   benchmark profiles opt into it.
 - Missing-policy, permission-denial, revocation-before-publisher, hierarchy,
-  payload, notification, local-worker, Ruff, and Mypy gates pass. Scheduler and
-  Reconciliation still require separate secure-default slices; external IAM,
-  provider delivery, HA/DR, production SLOs, and production authorization
-  effectiveness remain open. ADR 0674 records rollback.
+  payload, notification, local-worker, Ruff, and Mypy gates pass. E-1015 and
+  E-1016 separately close the Scheduler and Reconciliation worker boundaries;
+  external IAM, provider delivery, HA/DR, production SLOs, and production
+  authorization effectiveness remain open. ADR 0674 records rollback.
 
 ## E-1013 - Persist Server Profile governed-job facade decisions through policy audit sink (2026-08-26)
 

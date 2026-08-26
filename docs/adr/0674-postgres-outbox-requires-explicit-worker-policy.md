@@ -28,10 +28,10 @@ publisher API changes.
 ## Consequences and boundaries
 
 Missing hosted Outbox policy can no longer silently become an authorization
-no-op. This slice does not yet change the analogous optional-policy behavior in
-PostgreSQL Scheduler or Reconciliation workers; those remain separate slices.
-It does not prove external IAM, distributed revocation, provider delivery,
-HA/DR, production SLOs, or production readiness.
+no-op. The analogous PostgreSQL Scheduler and Reconciliation worker slices
+are now recorded separately as E-1015 and E-1016. This ADR still does not
+prove external IAM, distributed revocation, provider delivery, HA/DR,
+production SLOs, or production readiness.
 
 ## Verification
 

@@ -38,10 +38,10 @@ tasks:
       allow_unbound_hosted_policy compatibility flag is disabled by default;
       bounded legacy fixtures opt into it explicitly. Missing-policy,
       permission-denial, revocation, scope, notification, Ruff, Mypy,
-      full-regression, and package-build gates pass. PostgreSQL
-      Reconciliation optional policy behavior remains a separate open slice;
-      external IAM, provider delivery, HA/DR, production SLOs, and production
-      readiness remain open. ADR 0675 records rollback.
+      full-regression, and package-build gates pass. E-1016 separately closes
+      the analogous Reconciliation worker boundary; external IAM, provider
+      delivery, HA/DR, production SLOs, and production readiness remain open.
+      ADR 0675 records rollback.
   - id: E-1014
     priority: P0
     area: identity-governance
@@ -55,10 +55,10 @@ tasks:
       and rejected by the local SQLite worker; legacy fixtures and benchmark
       profiles opt into it explicitly. Missing-policy, permission-denial,
       publisher-revocation, hierarchy, payload, notification, local-worker,
-      Ruff, and Mypy tests pass. Scheduler and Reconciliation worker optional
-      policy behavior remains a separate open slice; external IAM, provider
-      delivery, HA/DR, production SLOs, and production readiness remain open.
-      ADR 0674 records rollback.
+      Ruff, and Mypy tests pass. E-1015 and E-1016 separately close the
+      analogous Scheduler and Reconciliation worker boundaries; external IAM,
+      provider delivery, HA/DR, production SLOs, and production readiness
+      remain open. ADR 0674 records rollback.
   - id: E-1013
     priority: P0
     area: identity-governance
@@ -2224,12 +2224,11 @@ tasks:
         API adoption remains open.
       - E-1014 makes PostgreSQL Outbox authorization fail closed when no
         explicit service-account policy supplier is configured. The opt-out is
-        explicit and rejected by the local worker; Scheduler and Reconciliation
-        are intentionally left for separate worker-policy slices.
+        explicit and rejected by the local worker; E-1015 and E-1016 extend
+        the same secure-default boundary to Scheduler and Reconciliation.
       - E-1015 makes PostgreSQL Scheduler authorization fail closed when no
         explicit service-account policy supplier is configured. The opt-out is
-        explicit and bounded; Reconciliation remains a separate worker-policy
-        slice.
+        explicit and bounded; E-1016 closes the Reconciliation worker boundary.
       - E-1016 makes PostgreSQL Reconciliation authorization fail closed for
         discovery, claim, and execution when no explicit service-account policy
         supplier is configured. The opt-out is explicit and bounded.

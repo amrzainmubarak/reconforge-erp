@@ -29,10 +29,10 @@ schedule payload, or dispatch API changes.
 ## Consequences and boundaries
 
 Missing hosted Scheduler policy can no longer silently become an
-authorization no-op. This slice does not change the analogous optional-policy
-behavior in PostgreSQL Reconciliation workers; that remains a separate slice.
-It does not prove external IAM, distributed revocation, provider delivery,
-HA/DR, production SLOs, or production readiness.
+authorization no-op. The analogous PostgreSQL Reconciliation worker slice is
+now recorded separately as E-1016. This ADR still does not prove external IAM,
+distributed revocation, provider delivery, HA/DR, production SLOs, or
+production readiness.
 
 ## Verification
 

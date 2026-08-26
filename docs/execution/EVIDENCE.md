@@ -28,10 +28,10 @@ This file records commands and observed results. It does not convert a dirty wor
   the focused suite passes (`9 passed, 1 skipped`), Ruff passes, Mypy passes,
   the full Python regression passes at 100%, and `python -m build
   --no-isolation` succeeds.
-- Boundary: this closes PostgreSQL Scheduler only. Reconciliation worker
-  optional-policy behavior remains open, as do external IAM, provider
-  delivery, HA/DR, production SLOs, and production authorization
-  effectiveness. ADR 0675 records rollback.
+- Boundary: this closes PostgreSQL Scheduler only; E-1016 separately closes
+  the Reconciliation worker boundary. External IAM, provider delivery, HA/DR,
+  production SLOs, and production authorization effectiveness remain open.
+  ADR 0675 records rollback.
 
 ## E-1014: Require explicit policy supplier before PostgreSQL Outbox publishing
 
@@ -42,10 +42,10 @@ This file records commands and observed results. It does not convert a dirty wor
   suites pass; the new missing-policy test proves rejection before connection
   access; permission denial and revocation still prove no external publish.
   Ruff and Mypy pass.
-- Boundary: this closes PostgreSQL Outbox only. Scheduler and Reconciliation
-  worker optional-policy behavior remains open, as do external IAM, provider
-  delivery, HA/DR, production SLOs, and production authorization
-  effectiveness. ADR 0674 records rollback.
+- Boundary: this closes PostgreSQL Outbox only; E-1015 and E-1016 separately
+  close the Scheduler and Reconciliation worker boundaries. External IAM,
+  provider delivery, HA/DR, production SLOs, and production authorization
+  effectiveness remain open. ADR 0674 records rollback.
 
 ## E-1013: Persist Server Profile governed-job facade decisions through policy audit sink
 

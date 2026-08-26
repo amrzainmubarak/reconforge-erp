@@ -2,6 +2,21 @@
 
 Updated: 2026-08-26
 
+## E-955 - Serialize close mutations and protect lock evidence (2026-08-26)
+
+- PostgreSQL generic close task upserts, task status changes, and period status
+  changes now serialize on the parent close-period row with `FOR UPDATE`.
+  Task state is re-read after acquiring the parent lock before dependency and
+  evidence evaluation. A second lock of an already locked period is refused.
+- SQLite migration 45 and PostgreSQL Alembic revision
+  `0092_pg_close_lock_evidence` prevent changing `locked_by` or `locked_at`
+  while a period remains `Locked`; the PostgreSQL downgrade restores the 0091
+  SoD guard rather than dropping it.
+- Focused race-boundary/migration tests, full Python regression, Ruff, Mypy,
+  Bandit, and diff/YAML checks are the evidence. Cross-host distributed lock
+  service, statutory close, source-ERP posting, and production assurance
+  remain open. ADR 0648 records the decision.
+
 ## E-954 - Enforce independent close-period reopen actors (2026-08-26)
 
 - Generic close management now persists `locked_by` and `reopened_by` in local

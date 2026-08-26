@@ -126,6 +126,15 @@ def test_close_period_sod_migration_is_versioned_scoped_and_reversible() -> None
     assert "guard_close_period_sod" in schema
 
 
+def test_close_lock_evidence_migration_is_additive_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0092_postgres_close_lock_evidence.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0092_pg_close_lock_evidence"' in migration
+    assert 'down_revision = "0091_pg_close_period_sod"' in migration
+    assert "locked close-period evidence is immutable" in migration
+    assert "def downgrade" in migration
+
+
 def test_reconciliation_entity_scope_migration_is_versioned_and_reversible() -> None:
     migration = (ROOT / "alembic/versions/0072_postgres_reconciliation_entity_scope.py").read_text(
         encoding="utf-8"

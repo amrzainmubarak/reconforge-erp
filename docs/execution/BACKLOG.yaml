@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-955
+    priority: P0
+    area: finance-close
+    title: Serialize generic close mutations and protect lock evidence
+    status: completed
+    depends_on: [E-954]
+    exit_evidence: >-
+      PostgreSQL generic close task and period mutations lock the parent
+      period row, re-read task state after the lock, reject a second lock of
+      an already locked period, and protect locked actor/timestamp evidence
+      with PostgreSQL Alembic 0092 and SQLite migration 45 triggers. Focused
+      race-boundary, migration, adapter, Ruff, Mypy, and full Python gates
+      pass; cross-host distributed locking and statutory close remain open.
   - id: E-954
     priority: P0
     area: finance-close
@@ -1527,6 +1540,10 @@ tasks:
         enforcement to the generic local/PostgreSQL close-management path at
         both adapter and database-trigger boundaries; statutory close and
         production assurance remain open.
+      - E-955 serializes PostgreSQL task/period mutations on the parent close
+        period and protects locked actor/timestamp evidence with additive
+        SQLite 45/PostgreSQL 0092 persistence guards; cross-host locking and
+        statutory close remain open.
   - id: E-1003
     priority: P0
     area: matching

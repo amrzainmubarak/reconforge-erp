@@ -283,7 +283,8 @@ starter tasks. Task completion is blocked by incomplete dependencies, approval
 and locking require 100% readiness, and reopening requires a reason. These
 states coordinate ReconForge close work only; they do not lock source-ERP
 postings. Lock and reopen identities are persisted, and the locker cannot
-reopen the same period. Close mutations append PostgreSQL audit-chain and
+reopen the same period. PostgreSQL task and period mutations serialize on the
+parent period, and locked actor/timestamp evidence is immutable. Close mutations append PostgreSQL audit-chain and
 outbox evidence in the same transaction and never fall back to SQLite.
 
 Exceptions and metrics:

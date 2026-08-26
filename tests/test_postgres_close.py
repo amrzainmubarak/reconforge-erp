@@ -102,6 +102,7 @@ def test_close_schema_is_tenant_scoped_and_rls_protected() -> None:
     assert "readiness_score >= 0 AND readiness_score <= 100" in POSTGRES_CLOSE_SCHEMA_SQL
     assert "locked_by TEXT NOT NULL DEFAULT ''" in POSTGRES_CLOSE_SCHEMA_SQL
     assert "independent actor" in POSTGRES_CLOSE_SCHEMA_SQL
+    assert "locked close-period evidence is immutable" in POSTGRES_CLOSE_SCHEMA_SQL
 
 
 def test_close_period_and_task_writes_are_caller_owned_and_deterministic() -> None:
@@ -129,6 +130,7 @@ def test_close_period_and_task_writes_are_caller_owned_and_deterministic() -> No
     assert task["task_code"] == "CLOSE-001"
     assert connection.commits == 0
     assert any("INSERT INTO reconforge.close_periods" in sql for sql, _ in connection.executed)
+    assert any("FROM reconforge.close_periods" in sql and "FOR UPDATE" in sql for sql, _ in connection.executed)
     task_insert = next(sql for sql, _ in connection.executed if "INSERT INTO reconforge.close_tasks" in sql)
     assert "NULLIF(%s, '')::date" in task_insert
 
@@ -205,6 +207,13 @@ def test_postgres_close_reopen_requires_an_independent_actor() -> None:
 
     connection = _LockedConnection()
     repository = PostgresCloseRepository(connection)
+    with pytest.raises(PostgresCloseValidationError, match="locked again"):
+        repository.set_period_status(
+            tenant_id="tenant_a",
+            period_id="close-period-a",
+            status="Locked",
+            actor_id="reviewer-b",
+        )
     with pytest.raises(PostgresCloseValidationError, match="independent actor"):
         repository.set_period_status(
             tenant_id="tenant_a",
@@ -225,3 +234,4 @@ def test_postgres_close_reopen_requires_an_independent_actor() -> None:
     assert reopened["id"] == "close-period-a"
     update = next(params for sql, params in connection.executed if "UPDATE reconforge.close_periods" in sql)
     assert "reviewer-b" in update
+    assert any("FROM reconforge.close_periods" in sql and "FOR UPDATE" in sql for sql, _ in connection.executed)

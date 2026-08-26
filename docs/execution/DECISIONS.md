@@ -10249,3 +10249,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   fabricated human actor.
 - **Rollback**: Restore a pre-migration SQLite backup. PostgreSQL downgrade is
   refusal-gated while locked/reopened evidence exists.
+
+### D-817: Serialize generic close mutations and protect lock evidence
+
+- **Date**: 2026-08-26
+- **Context**: SoD depends on `locked_by` remaining authoritative. Without a
+  parent-period lock and immutable lock evidence, concurrent task updates or a
+  direct mutation could make readiness or locker identity stale.
+- **Decision**: Lock the PostgreSQL parent period for task/period mutations,
+  re-read task state after the lock, reject a second lock, and add SQLite 45 /
+  PostgreSQL 0092 persistence guards for `locked_by` and `locked_at`.
+- **Verification**: E-955, ADR 0648, focused contracts, migration trigger
+  test, full Python/static/security gates.
+- **Compatibility**: Additive migration and stricter fail-closed behavior for
+  already locked periods; no source-ERP or statutory posting change.
+- **Rollback**: SQLite backup restore; PostgreSQL 0092 downgrade restores the
+  0091 guard.

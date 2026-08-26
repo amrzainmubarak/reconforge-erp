@@ -4502,4 +4502,15 @@ BEGIN
         WHEN NEW.locked_at IS NULL THEN RAISE(ABORT, 'locking a close period requires a timestamp')
     END;
 END;
+
+"""
+
+CLOSE_PERIOD_LOCK_EVIDENCE_MIGRATION_SQL = """
+CREATE TRIGGER IF NOT EXISTS close_periods_lock_evidence_guard
+BEFORE UPDATE ON close_periods
+WHEN OLD.status = 'Locked' AND NEW.status = 'Locked'
+     AND (NEW.locked_by <> OLD.locked_by OR NEW.locked_at IS NOT OLD.locked_at)
+BEGIN
+    SELECT RAISE(ABORT, 'locked close-period evidence is immutable');
+END;
 """

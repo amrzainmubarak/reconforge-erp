@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from decimal import Decimal, localcontext
 from pathlib import Path
 
@@ -204,5 +205,9 @@ def test_close_sod_migration_backfills_legacy_lock_identity(tmp_path: Path) -> N
             "SELECT locked_by,reopened_by FROM close_periods WHERE id='legacy-close'"
         ).fetchone()
         assert dict(row) == {"locked_by": "legacy-unknown", "reopened_by": ""}
+        with pytest.raises(sqlite3.IntegrityError, match="immutable"):
+            migrated.execute(
+                "UPDATE close_periods SET locked_by='forged-actor' WHERE id='legacy-close'"
+            )
     finally:
         migrated.close()

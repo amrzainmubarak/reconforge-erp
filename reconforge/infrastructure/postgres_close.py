@@ -275,19 +275,27 @@ class PostgresCloseRepository:
             ),
         )
 
-    def _period(self, *, tenant_id: str, period_id: str) -> dict[str, Any]:
+    def _period(self, *, tenant_id: str, period_id: str, for_update: bool = False) -> dict[str, Any]:
         tenant = _tenant_id(tenant_id)
         identifier = _scope_id(period_id, "close_period_id")
-        cursor = self.connection.execute(
-            """
+        if for_update:
+            query = """
             SELECT tenant_id, id, fiscal_period_id, organization_id, status,
                    readiness_score, created_at, updated_at, locked_at, reopened_at,
                    locked_by, reopened_by
             FROM reconforge.close_periods
             WHERE tenant_id = %s AND id = %s
-            """,
-            (tenant, identifier),
-        )
+            FOR UPDATE
+            """
+        else:
+            query = """
+            SELECT tenant_id, id, fiscal_period_id, organization_id, status,
+                   readiness_score, created_at, updated_at, locked_at, reopened_at,
+                   locked_by, reopened_by
+            FROM reconforge.close_periods
+            WHERE tenant_id = %s AND id = %s
+            """
+        cursor = self.connection.execute(query, (tenant, identifier))
         return _record_or_not_found(cursor.fetchone(), _PERIOD_COLUMNS, "Close period was not found.")
 
     def create_period(
@@ -449,7 +457,7 @@ class PostgresCloseRepository:
     ) -> dict[str, Any]:
         tenant = _tenant_id(tenant_id)
         identifier = _scope_id(task_id, "task_id")
-        period = self._period(tenant_id=tenant, period_id=close_period_id)
+        period = self._period(tenant_id=tenant, period_id=close_period_id, for_update=True)
         code = _code(task_code, "task_code")
         task_name = _text(name, "task name", maximum=255)
         owner = _optional_text(owner_user_id, "owner_user_id", maximum=160)
@@ -550,7 +558,11 @@ class PostgresCloseRepository:
         actor = _text(actor_id, "actor_id", maximum=160)
         selected = _choice(status, "status", _TASK_STATUSES)
         task = self._task(tenant_id=tenant, task_id=identifier)
-        period = self._period(tenant_id=tenant, period_id=str(task["close_period_id"]))
+        period = self._period(tenant_id=tenant, period_id=str(task["close_period_id"]), for_update=True)
+        # Re-read after acquiring the parent-period lock. All supported task
+        # mutations take this same lock, so the before-state hash and
+        # dependency check describe the state being changed, not a stale read.
+        task = self._task(tenant_id=tenant, task_id=identifier)
         if str(period["status"]) in {"Locked", "Archived"}:
             raise PostgresCloseValidationError(
                 "Close tasks cannot change after the close period is locked or archived."
@@ -649,10 +661,12 @@ class PostgresCloseRepository:
         identifier = _scope_id(period_id, "close_period_id")
         actor = _text(actor_id, "actor_id", maximum=160)
         selected = _choice(status, "status", _CLOSE_STATUSES)
-        period = self._period(tenant_id=tenant, period_id=identifier)
+        period = self._period(tenant_id=tenant, period_id=identifier, for_update=True)
         current = str(period["status"])
         if selected != current and selected not in _PERIOD_TRANSITIONS.get(current, set()):
             raise PostgresCloseValidationError(f"Invalid close-period transition: {current} -> {selected}.")
+        if selected == current == "Locked":
+            raise PostgresCloseValidationError("A Locked close period cannot be locked again.")
         clean_reason = _optional_text(reason, "reason", maximum=500)
         if selected == "Reopened" and not clean_reason:
             raise PostgresCloseValidationError("Reopening a close period requires a reason.")
@@ -738,6 +752,11 @@ BEGIN
     IF OLD.status = 'Locked' AND NEW.status = 'Reopened'
        AND NEW.reopened_by = OLD.locked_by THEN
         RAISE EXCEPTION 'reopening a close period requires an independent actor';
+    END IF;
+    IF OLD.status = 'Locked' AND NEW.status = 'Locked'
+       AND (NEW.locked_by IS DISTINCT FROM OLD.locked_by
+            OR NEW.locked_at IS DISTINCT FROM OLD.locked_at) THEN
+        RAISE EXCEPTION 'locked close-period evidence is immutable';
     END IF;
     RETURN NEW;
 END;

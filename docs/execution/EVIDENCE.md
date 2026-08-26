@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-955: Serialize close mutations and protect lock evidence
+
+- Code evidence: PostgreSQL close task upsert/status and period status
+  mutations use the parent-period row lock; task status is re-read after the
+  lock. Re-locking a locked period is rejected. SQLite migration 45 and
+  PostgreSQL Alembic `0092_pg_close_lock_evidence` install immutable lock
+  evidence guards.
+- Test evidence: focused PostgreSQL close contracts, SQLite migration 45
+  backfill/trigger tests, Alembic chain tests, full Python regression, Ruff,
+  Mypy, Bandit, diff-check, and BACKLOG YAML parsing pass. The PostgreSQL
+  migration path is verified through the existing disposable upgrade gate;
+  cross-host race testing remains open.
+- Boundary: this proves adapter/database serialization for the generic close
+  workflow, not a distributed lock service, statutory close, source-ERP
+  posting, HA/DR, or production assurance. ADR 0648 records rollback.
+
 ## E-954: Enforce independent close-period reopen actors
 
 - Code evidence: local SQLite migration 44 and PostgreSQL Alembic

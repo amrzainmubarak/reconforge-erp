@@ -21,7 +21,7 @@ This file records commands and observed results. It does not convert a dirty wor
 ## Fresh local Docker runtime check (2026-08-26)
 
 - Environment: Docker Engine `29.7.2` / Docker Desktop Linux builder. The
-  current tree built successfully with `docker build --pull --no-cache
+  E-1019 boundary tree built successfully with `docker build --pull --no-cache
   --platform linux/amd64 --tag reconforge:codex-e824 .`; the local image
   inspection reported the `linux/amd64` image subject
   `sha256:735c0c382112793dfcc0d713a06f86960434de5429f642c52c940b39f4751144`,

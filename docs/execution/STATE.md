@@ -2,6 +2,18 @@
 
 Updated: 2026-08-26
 
+## E-1037 - Fail-closed projection for Receivables API responses (2026-08-26)
+
+- Receivables customer, invoice, receipt, credit-exposure, and aging responses
+  now use central top-level and nested allowlists across local SQLite and
+  tenant-scoped PostgreSQL. Unknown future adapter/storage fields cannot
+  silently enter AR responses.
+- Focused field/API tests pass (24 tests plus 1 existing skip), and the full
+  Python regression passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML validation (9 files), and diff checks
+  also pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  name because it is not published on PyPI. ADR 0697 records rollback.
+
 ## E-1036 - Fail-closed projection for Payables supplier-invoice API responses (2026-08-26)
 
 - Payables supplier-invoice create, list, submit, match, and approve responses

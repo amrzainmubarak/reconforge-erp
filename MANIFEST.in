@@ -1040,5 +1040,6 @@ include docs/adr/0693-payables-supplier-api-uses-fail-closed-field-projection.md
 include docs/adr/0694-payables-purchase-order-api-uses-fail-closed-field-projection.md
 include docs/adr/0695-payables-goods-receipt-api-uses-fail-closed-field-projection.md
 include docs/adr/0696-payables-supplier-invoice-api-uses-fail-closed-field-projection.md
+include docs/adr/0697-receivables-api-uses-fail-closed-field-projection.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

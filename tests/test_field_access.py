@@ -36,6 +36,11 @@ from reconforge.auth.field_access import (
     project_payables_supplier,
     project_payables_supplier_invoice,
     project_payables_three_way_match,
+    project_receivables_aging,
+    project_receivables_credit_exposure,
+    project_receivables_customer,
+    project_receivables_invoice,
+    project_receivables_receipt,
     project_reconciliation_exception,
     project_reconciliation_input,
     project_reconciliation_result,
@@ -462,6 +467,42 @@ def test_payables_supplier_invoice_and_match_projection_is_closed_recursively() 
     assert match.visible == {"status": "Passed"}
     assert invoice.denied_fields == ("unknown_invoice_field",)
     assert "must-not-escape" not in str([invoice.visible, match.visible])
+
+
+def test_receivables_projection_is_closed_recursively() -> None:
+    customer = project_receivables_customer(
+        {"id": "customer-1", "customer_code": "CUS-1", "unknown_customer_field": "must-not-escape"}
+    )
+    invoice = project_receivables_invoice(
+        {
+            "id": "invoice-1",
+            "lines": [{"id": "line-1", "quantity": "2", "unknown_line_field": "must-not-escape"}],
+            "unknown_invoice_field": "must-not-escape",
+        }
+    )
+    receipt = project_receivables_receipt(
+        {
+            "id": "receipt-1",
+            "allocations": [{"id": "allocation-1", "amount_minor": 10, "unknown_allocation_field": "must-not-escape"}],
+            "unknown_receipt_field": "must-not-escape",
+        }
+    )
+    exposure = project_receivables_credit_exposure(
+        {"customer_code": "CUS-1", "exposure_minor": 10, "unknown_exposure_field": "must-not-escape"}
+    )
+    aging = project_receivables_aging(
+        {
+            "items": [{"invoice_id": "invoice-1", "outstanding_minor": 10, "unknown_item_field": "must-not-escape"}],
+            "unknown_aging_field": "must-not-escape",
+        }
+    )
+
+    assert customer.visible == {"customer_code": "CUS-1", "id": "customer-1"}
+    assert invoice.visible["lines"] == [{"id": "line-1", "quantity": "2"}]
+    assert receipt.visible["allocations"] == [{"amount_minor": 10, "id": "allocation-1"}]
+    assert exposure.visible == {"customer_code": "CUS-1", "exposure_minor": 10}
+    assert aging.visible["items"] == [{"invoice_id": "invoice-1", "outstanding_minor": 10}]
+    assert "must-not-escape" not in str([customer.visible, invoice.visible, receipt.visible, exposure.visible, aging.visible])
 
 
 def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> None:

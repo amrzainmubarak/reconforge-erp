@@ -25,6 +25,13 @@ from reconforge.api.server_receivables import (
     execute_postgres_receivables,
     server_receivables_enabled,
 )
+from reconforge.auth.field_access import (
+    project_receivables_aging,
+    project_receivables_credit_exposure,
+    project_receivables_customer,
+    project_receivables_invoice,
+    project_receivables_receipt,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
@@ -236,7 +243,7 @@ def save_customer(
         values.update(
             actor_label=current_user.id,
         )
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"receivables.manage"}),
             lambda repository, bound_scope: repository.upsert_customer(
@@ -248,12 +255,14 @@ def save_customer(
                 }
             ),
         )
+        return project_receivables_customer(record).visible
     try:
-        return ReceivablesService(_local_connection(connection)).upsert_customer(
+        record = ReceivablesService(_local_connection(connection)).upsert_customer(
             **payload.model_dump(), actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_customer_save_failed", exc) from exc
+    return project_receivables_customer(record).visible
 
 
 @router.get("/customers")
@@ -275,7 +284,7 @@ def list_customers(
             ),
         )
         return {
-            "customers": records[offset : offset + limit],
+            "customers": [project_receivables_customer(record).visible for record in records[offset : offset + limit]],
             "pagination": {"limit": limit, "offset": offset, "total": len(records)},
         }
     try:
@@ -283,7 +292,7 @@ def list_customers(
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_customer_list_failed", exc) from exc
     return {
-        "customers": records[offset : offset + limit],
+        "customers": [project_receivables_customer(record).visible for record in records[offset : offset + limit]],
         "pagination": {"limit": limit, "offset": offset, "total": len(records)},
     }
 
@@ -301,7 +310,7 @@ def create_invoice(
             lines=[ReceivableInvoiceLineInput(**line.model_dump()) for line in payload.lines],
             actor_label=current_user.id,
         )
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"receivables.manage"}),
             lambda repository, bound_scope: repository.create_invoice(
@@ -314,14 +323,16 @@ def create_invoice(
             ),
             amount=Decimal(sum(line.line_total_minor for line in payload.lines) + payload.tax_minor),
         )
+        return project_receivables_invoice(record).visible
     try:
-        return ReceivablesService(_local_connection(connection)).create_invoice(
+        record = ReceivablesService(_local_connection(connection)).create_invoice(
             **payload.model_dump(exclude={"lines"}),
             lines=[ReceivableInvoiceLineInput(**line.model_dump()) for line in payload.lines],
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_invoice_create_failed", exc) from exc
+    return project_receivables_invoice(record).visible
 
 
 @router.get("/invoices")
@@ -343,7 +354,7 @@ def list_invoices(
             ),
         )
         return {
-            "invoices": records[offset : offset + limit],
+            "invoices": [project_receivables_invoice(record).visible for record in records[offset : offset + limit]],
             "pagination": {"limit": limit, "offset": offset, "total": len(records)},
         }
     try:
@@ -351,7 +362,7 @@ def list_invoices(
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_invoice_list_failed", exc) from exc
     return {
-        "invoices": records[offset : offset + limit],
+        "invoices": [project_receivables_invoice(record).visible for record in records[offset : offset + limit]],
         "pagination": {"limit": limit, "offset": offset, "total": len(records)},
     }
 
@@ -365,7 +376,7 @@ def submit_invoice(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_receivables_enabled(request):
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"receivables.manage"}),
             lambda repository, _scope: repository.submit_invoice(
@@ -373,14 +384,16 @@ def submit_invoice(
             ),
             object_refs=(("invoice", invoice_id),),
         )
+        return project_receivables_invoice(record).visible
     try:
-        return ReceivablesService(_local_connection(connection)).submit_invoice(
+        record = ReceivablesService(_local_connection(connection)).submit_invoice(
             invoice_id,
             expected_version=payload.expected_version,
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_invoice_submit_failed", exc) from exc
+    return project_receivables_invoice(record).visible
 
 
 @router.post("/invoices/{invoice_id}/approve")
@@ -394,7 +407,7 @@ def approve_invoice(
     if server_receivables_enabled(request):
         if payload.credit_override_reason.strip():
             _server_scope(request, frozenset({"receivables.credit_override"}))
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"receivables.approve"}),
             lambda repository, _scope: repository.approve_invoice(
@@ -405,8 +418,9 @@ def approve_invoice(
             ),
             object_refs=(("invoice", invoice_id),),
         )
+        return project_receivables_invoice(record).visible
     try:
-        return ReceivablesService(_local_connection(connection)).approve_invoice(
+        record = ReceivablesService(_local_connection(connection)).approve_invoice(
             invoice_id,
             expected_version=payload.expected_version,
             credit_override_reason=payload.credit_override_reason,
@@ -414,6 +428,7 @@ def approve_invoice(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_invoice_approve_failed", exc) from exc
+    return project_receivables_invoice(record).visible
 
 
 @router.post("/receipts")
@@ -429,7 +444,7 @@ def post_receipt(
             allocations=[ReceiptAllocationInput(**item.model_dump()) for item in payload.allocations],
             actor_label=current_user.id,
         )
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"receivables.manage"}),
             lambda repository, bound_scope: repository.post_receipt(
@@ -443,14 +458,16 @@ def post_receipt(
             amount=Decimal(payload.amount_minor),
             customer_code=payload.customer_code,
         )
+        return project_receivables_receipt(record).visible
     try:
-        return ReceivablesService(_local_connection(connection)).post_receipt(
+        record = ReceivablesService(_local_connection(connection)).post_receipt(
             **payload.model_dump(exclude={"allocations"}),
             allocations=[ReceiptAllocationInput(**item.model_dump()) for item in payload.allocations],
             actor_label=current_user.username,
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_receipt_post_failed", exc) from exc
+    return project_receivables_receipt(record).visible
 
 
 @router.post("/receipts/{receipt_id}/allocate")
@@ -462,7 +479,7 @@ def allocate_receipt(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_receivables_enabled(request):
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"receivables.manage"}),
             lambda repository, _scope: repository.allocate_receipt(
@@ -475,8 +492,9 @@ def allocate_receipt(
             amount=Decimal(payload.amount_minor),
             object_refs=(("receipt", receipt_id), ("invoice", payload.invoice_id)),
         )
+        return project_receivables_receipt(record).visible
     try:
-        return ReceivablesService(_local_connection(connection)).allocate_receipt(
+        record = ReceivablesService(_local_connection(connection)).allocate_receipt(
             receipt_id,
             invoice_id=payload.invoice_id,
             amount_minor=payload.amount_minor,
@@ -485,6 +503,7 @@ def allocate_receipt(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_receipt_allocate_failed", exc) from exc
+    return project_receivables_receipt(record).visible
 
 
 @router.get("/credit-exposure/{customer_code}")
@@ -496,16 +515,18 @@ def credit_exposure(
     workspace: str = "default",
 ) -> dict[str, object]:
     if server_receivables_enabled(request):
-        return _server_call(
+        record = _server_call(
             request,
             frozenset({"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"}),
             lambda repository, scope: repository.credit_exposure(customer_code, workspace=scope.workspace_id),
             customer_code=customer_code,
         )
+        return project_receivables_credit_exposure(record).visible
     try:
-        return ReceivablesService(_local_connection(connection)).credit_exposure(customer_code, workspace=workspace)
+        record = ReceivablesService(_local_connection(connection)).credit_exposure(customer_code, workspace=workspace)
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_credit_exposure_failed", exc) from exc
+    return project_receivables_credit_exposure(record).visible
 
 
 @router.get("/aging")
@@ -517,14 +538,16 @@ def aging_report(
     workspace: str = "default",
 ) -> dict[str, object]:
     if server_receivables_enabled(request):
-        return _server_call(
+        result = _server_call(
             request,
             frozenset({"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"}),
             lambda repository, scope: _filter_aging(
                 repository.aging_report(workspace=scope.workspace_id, as_of_date=as_of_date), scope
             ),
         )
+        return project_receivables_aging(result).visible
     try:
-        return ReceivablesService(_local_connection(connection)).aging_report(workspace=workspace, as_of_date=as_of_date)
+        result = ReceivablesService(_local_connection(connection)).aging_report(workspace=workspace, as_of_date=as_of_date)
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_aging_failed", exc) from exc
+    return project_receivables_aging(result).visible

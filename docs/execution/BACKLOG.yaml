@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1037
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Receivables API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1036]
+    exit_evidence: >-
+      Receivables customer, invoice, receipt, credit-exposure, and aging
+      responses use central top-level and nested allowlists across local SQLite
+      and PostgreSQL. Synthetic future-column tests prove unknown fields are
+      dropped while direct envelopes, exact minor units, lifecycle behavior,
+      and permissions remain compatible. Focused selectors pass 24 tests plus
+      1 existing skip; full Python regression, Ruff, Mypy, Bandit, pip-audit,
+      package build, targeted YAML, and diff checks pass. ADR 0697 records
+      rollback.
   - id: E-1036
     priority: P0
     area: identity-governance

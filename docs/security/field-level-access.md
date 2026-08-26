@@ -4,6 +4,18 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1037 migrated surface
+
+Receivables customer, invoice, receipt, credit-exposure, and aging responses
+now use central top-level and recursive nested allowlists across local SQLite
+and PostgreSQL. Invoice lines, receipt allocations, and aging items are
+projected explicitly; malformed nested collections fail closed. Unknown future
+adapter/storage fields are dropped before serialization while the existing
+response envelopes, exact minor units, lifecycle behavior, and scope checks
+remain compatible. This is a bounded disclosure control for the reviewed
+Receivables response family, not universal field-level authorization, external
+IAM, or production readiness. ADR 0697 records the decision and rollback.
+
 ## E-1036 migrated surface
 
 Payables supplier-invoice create, list, submit, match, and approve responses

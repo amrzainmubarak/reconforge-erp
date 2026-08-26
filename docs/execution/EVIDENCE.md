@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1037: Fail-closed projection for Receivables API responses
+
+- Code evidence: `/api/v1/receivables` customer, invoice, receipt,
+  credit-exposure, and aging responses use central top-level and recursive
+  nested allowlists across local SQLite and tenant-scoped PostgreSQL shapes.
+  Unknown adapter/storage fields are dropped before serialization while exact
+  minor-unit, date, lifecycle, and aging fields remain available.
+- Test evidence: `tests/test_field_access.py` covers customer, invoice/line,
+  receipt/allocation, credit-exposure, and aging/item projectors;
+  `tests/test_receivables_api.py` adds synthetic future columns to all reviewed
+  local AR tables and proves they are absent from mutation and read responses.
+  Focused selectors pass 24 tests plus 1 existing skip; `python -m pytest -q`
+  passes at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package
+  build, targeted safe YAML validation (9 files), and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI.
+- Boundary: this closes only the reviewed Receivables response family.
+  Universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0697 records rollback.
+
 ## E-1036: Fail-closed projection for Payables supplier-invoice API responses
 
 - Code evidence: `/api/v1/payables/invoices` create, list, submit, match, and

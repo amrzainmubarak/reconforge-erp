@@ -5,6 +5,28 @@
 
 ## Decisions
 
+### D-864: Receivables API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: Receivables customer, invoice, receipt, credit-exposure, and
+  aging routes returned local SQLite and tenant-scoped PostgreSQL mappings.
+  Future storage or adapter fields could silently expand financial responses,
+  including invoice lines, receipt allocations, and aging items.
+- **Decision**: Apply central top-level and nested allowlists to every reviewed
+  Receivables response family in both local and PostgreSQL branches. Preserve
+  existing direct response shapes, exact minor units, lifecycle behavior,
+  pagination, and scope/permission checks.
+- **Verification**: Focused field/API tests pass 24 tests plus 1 existing skip
+  and include synthetic future columns in all reviewed AR tables. Full Python
+  regression passes at 100%; Ruff, Mypy (539 source files), Bandit, pip-audit,
+  package build, targeted safe YAML validation (9 files), and diff gates pass.
+  The local distribution is not auditable by pip-audit because it is not
+  published on PyPI.
+- **Compatibility**: No route, schema, migration, permission, envelope, or
+  lifecycle behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1037 code/tests/ADR 0697/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
 ### D-863: Payables supplier-invoice API uses fail-closed recursive projection
 
 - **Date**: 2026-08-26

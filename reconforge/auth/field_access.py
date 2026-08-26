@@ -684,6 +684,50 @@ PAYABLES_THREE_WAY_MATCH_FIELDS = frozenset(
         "quantity_variance", "price_variance_minor", "total_variance_minor", "reason", "created_at", "updated_at",
     }
 )
+RECEIVABLES_CUSTOMER_FIELDS = frozenset(
+    {
+        # Deliberate union for local SQLite and tenant-scoped PostgreSQL
+        # customer responses; repository rows are never serialized wholesale.
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "customer_code", "name",
+        "currency_code", "tax_identifier", "payment_terms_days", "credit_limit_minor", "credit_hold", "status",
+        "created_at", "updated_at", "row_version",
+    }
+)
+RECEIVABLES_INVOICE_FIELDS = frozenset(
+    {
+        # Exact integer minor units and canonical quantity text are retained
+        # for compatibility; unknown adapter/storage fields are excluded.
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "customer_id", "invoice_number",
+        "invoice_date", "due_date", "currency_code", "subtotal_minor", "tax_minor", "total_minor", "status",
+        "created_by", "approved_by", "approved_at", "credit_override_reason", "cancelled_by", "cancelled_at",
+        "cancel_reason", "created_at", "updated_at", "row_version", "lines", "allocated_minor", "outstanding_minor",
+    }
+)
+RECEIVABLES_INVOICE_LINE_FIELDS = frozenset(
+    {"tenant_id", "id", "invoice_id", "line_number", "description", "quantity", "quantity_text", "unit_price_minor", "tax_minor", "line_total_minor", "created_at"}
+)
+RECEIVABLES_RECEIPT_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "customer_id", "receipt_number",
+        "receipt_date", "currency_code", "amount_minor", "status", "created_by", "posted_by", "posted_at",
+        "created_at", "updated_at", "row_version", "allocations", "allocated_minor", "unallocated_minor",
+    }
+)
+RECEIVABLES_ALLOCATION_FIELDS = frozenset(
+    {"tenant_id", "id", "workspace_id", "receipt_id", "invoice_id", "amount_minor", "created_at"}
+)
+RECEIVABLES_CREDIT_EXPOSURE_FIELDS = frozenset(
+    {"customer_id", "customer_code", "currency_code", "credit_limit_minor", "exposure_minor", "available_credit_minor", "credit_hold", "status"}
+)
+RECEIVABLES_AGING_FIELDS = frozenset(
+    {"as_of_date", "items", "bucket_totals_minor", "total_outstanding_minor"}
+)
+RECEIVABLES_AGING_ITEM_FIELDS = frozenset(
+    {
+        "invoice_id", "organization_id", "legal_entity_id", "invoice_number", "customer_code", "customer_name",
+        "currency_code", "invoice_date", "due_date", "total_minor", "outstanding_minor", "days_overdue", "bucket",
+    }
+)
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1480,6 +1524,65 @@ def project_payables_supplier_invoice(values: Mapping[str, object]) -> FieldProj
             raise TypeError("payables supplier-invoice match must be a mapping")
         record["three_way_match"] = project_payables_three_way_match(match).visible
     return project_fields(record, allowed_fields=PAYABLES_SUPPLIER_INVOICE_FIELDS)
+
+
+def project_receivables_customer(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=RECEIVABLES_CUSTOMER_FIELDS)
+
+
+def project_receivables_invoice(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for receivable-invoice responses."""
+
+    record = dict(values)
+    lines = record.get("lines")
+    if lines is not None:
+        if not isinstance(lines, list):
+            raise TypeError("receivables invoice lines collection must be a list")
+        projected_lines: list[dict[str, object]] = []
+        for line in lines:
+            if not isinstance(line, Mapping):
+                raise TypeError("receivables invoice line record must be a mapping")
+            projected_lines.append(project_fields(line, allowed_fields=RECEIVABLES_INVOICE_LINE_FIELDS).visible)
+        record["lines"] = projected_lines
+    return project_fields(record, allowed_fields=RECEIVABLES_INVOICE_FIELDS)
+
+
+def project_receivables_receipt(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for receivables receipt responses."""
+
+    record = dict(values)
+    allocations = record.get("allocations")
+    if allocations is not None:
+        if not isinstance(allocations, list):
+            raise TypeError("receivables receipt allocations collection must be a list")
+        projected_allocations: list[dict[str, object]] = []
+        for allocation in allocations:
+            if not isinstance(allocation, Mapping):
+                raise TypeError("receivables receipt allocation record must be a mapping")
+            projected_allocations.append(project_fields(allocation, allowed_fields=RECEIVABLES_ALLOCATION_FIELDS).visible)
+        record["allocations"] = projected_allocations
+    return project_fields(record, allowed_fields=RECEIVABLES_RECEIPT_FIELDS)
+
+
+def project_receivables_credit_exposure(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=RECEIVABLES_CREDIT_EXPOSURE_FIELDS)
+
+
+def project_receivables_aging(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for scoped receivables aging results."""
+
+    record = dict(values)
+    items = record.get("items")
+    if items is not None:
+        if not isinstance(items, list):
+            raise TypeError("receivables aging items collection must be a list")
+        projected_items: list[dict[str, object]] = []
+        for item in items:
+            if not isinstance(item, Mapping):
+                raise TypeError("receivables aging item record must be a mapping")
+            projected_items.append(project_fields(item, allowed_fields=RECEIVABLES_AGING_ITEM_FIELDS).visible)
+        record["items"] = projected_items
+    return project_fields(record, allowed_fields=RECEIVABLES_AGING_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

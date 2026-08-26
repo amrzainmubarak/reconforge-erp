@@ -83,3 +83,81 @@ def test_receivables_api_enforces_roles_and_exposes_credit_and_aging(tmp_path: P
     assert aging.json()["total_outstanding_minor"] == 0
     assert denied.status_code == 403
     assert "Traceback" not in denied.text
+
+
+def test_receivables_api_drops_future_storage_fields(tmp_path: Path) -> None:
+    db_path = tmp_path / "receivables-projection.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        auth = LocalAuthService(connection)
+        auth.init_admin(username="admin", password="Secret-123")
+        auth.create_user(username="review", password="Secret-123", role="reviewer")
+        connection.execute("ALTER TABLE ar_customers ADD COLUMN unknown_customer_column TEXT")
+        connection.execute("ALTER TABLE ar_invoices ADD COLUMN unknown_invoice_column TEXT")
+        connection.execute("ALTER TABLE ar_invoice_lines ADD COLUMN unknown_invoice_line_column TEXT")
+        connection.execute("ALTER TABLE ar_receipts ADD COLUMN unknown_receipt_column TEXT")
+        connection.execute("ALTER TABLE ar_receipt_allocations ADD COLUMN unknown_allocation_column TEXT")
+        connection.commit()
+    finally:
+        connection.close()
+
+    client = TestClient(create_api_app(db_path))
+    admin_headers = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+    review_headers = {"Authorization": f"Bearer {_token(client, 'review')}"}
+    customer = client.post(
+        "/api/v1/receivables/customers",
+        headers=admin_headers,
+        json={"customer_code": "CUS-FUTURE", "name": "Future Customer", "currency_code": "USD", "credit_limit_minor": 1_000},
+    )
+    invoice = client.post(
+        "/api/v1/receivables/invoices",
+        headers=admin_headers,
+        json={
+            "invoice_number": "AR-FUTURE",
+            "customer_code": "CUS-FUTURE",
+            "invoice_date": "2026-08-26",
+            "currency_code": "USD",
+            "lines": [{"description": "Future test", "quantity": "1", "unit_price_minor": 100, "line_total_minor": 100}],
+        },
+    )
+    submitted = client.post(
+        f"/api/v1/receivables/invoices/{invoice.json()['id']}/submit",
+        headers=admin_headers,
+        json={"expected_version": 1},
+    )
+    approved = client.post(
+        f"/api/v1/receivables/invoices/{invoice.json()['id']}/approve",
+        headers=review_headers,
+        json={"expected_version": 2},
+    )
+    receipt = client.post(
+        "/api/v1/receivables/receipts",
+        headers=admin_headers,
+        json={
+            "receipt_number": "RCPT-FUTURE",
+            "customer_code": "CUS-FUTURE",
+            "receipt_date": "2026-08-26",
+            "currency_code": "USD",
+            "amount_minor": 100,
+            "allocations": [{"invoice_id": invoice.json()["id"], "amount_minor": 100}],
+        },
+    )
+    customers = client.get("/api/v1/receivables/customers", headers=admin_headers)
+    invoices = client.get("/api/v1/receivables/invoices", headers=admin_headers)
+    exposure = client.get("/api/v1/receivables/credit-exposure/CUS-FUTURE", headers=admin_headers)
+    aging = client.get("/api/v1/receivables/aging?as_of_date=2026-08-26", headers=admin_headers)
+
+    assert customer.status_code == 200, customer.text
+    assert invoice.status_code == 200, invoice.text
+    assert submitted.status_code == 200, submitted.text
+    assert approved.status_code == 200, approved.text
+    assert receipt.status_code == 200, receipt.text
+    assert customers.status_code == 200, customers.text
+    assert invoices.status_code == 200, invoices.text
+    assert exposure.status_code == 200, exposure.text
+    assert aging.status_code == 200, aging.text
+    assert all(
+        "unknown_" not in response.text
+        for response in (customer, invoice, receipt, customers, invoices, exposure, aging)
+    )

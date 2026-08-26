@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1025
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to reconciliation API responses
+    status: completed
+    depends_on: [E-1001, E-1003, E-1005, E-1024]
+    exit_evidence: >-
+      PostgreSQL reconciliation run, canonical-input, deterministic-result,
+      and exception responses use central allowlists, including nested run
+      collections. Synthetic adapter-field tests prove unknown fields are
+      dropped before serialization; focused tests, full Python regression,
+      Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff checks pass.
+      This closes the reconciliation response projection boundary only;
+      universal field-level authorization, external IAM, distributed
+      revocation, disclosure approval, source authenticity, and production
+      effectiveness remain open. ADR 0685 records rollback.
   - id: E-1024
     priority: P0
     area: identity-governance
@@ -2090,6 +2106,11 @@ tasks:
       behavior, explicit strategy/version/digest records, and cross-engine reproducibility
       replay checks under open and synthetic profiles.
     completed_slices:
+      - E-1025 applies closed allowlists to PostgreSQL reconciliation run,
+        canonical-input, deterministic-result, and exception API responses,
+        including nested run collections. Unknown adapter fields are covered
+        by focused tests; matching completeness and production throughput
+        remain open.
       - E-908 publishes explicit bounded fee-aware and FX-aware one-to-one
         strategy identities, fail-closed financial preconditions, architecture
         inventory entries, and permutation/digest regression coverage. Live
@@ -2265,6 +2286,10 @@ tasks:
       checks for creator-vs-approver flows, and auditable policy decisions with stable identity
       canonicalization and namespace scopes.
     completed_slices:
+      - E-1025 applies one central fail-closed projection to reconciliation
+        runs and child response paths. This is bounded disclosure evidence;
+        universal route/job/UI enforcement and production IAM effectiveness
+        remain open.
       - E-1024 applies one central fail-closed projection to account
         reconciliation records and nested items across local and PostgreSQL
         response paths. This is bounded disclosure evidence; universal

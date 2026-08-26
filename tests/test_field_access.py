@@ -12,6 +12,10 @@ from reconforge.auth.field_access import (
     project_evidence_verification,
     project_exception,
     project_fields,
+    project_reconciliation_exception,
+    project_reconciliation_input,
+    project_reconciliation_result,
+    project_reconciliation_run,
 )
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
 
@@ -212,6 +216,25 @@ def test_account_reconciliation_projection_drops_unknown_storage_and_item_fields
     assert result.visible["items"] == [{"amount_decimal": "10.00", "id": "item-1"}]
     assert result.denied_fields == ("unknown_future_record_column",)
     assert "must-not-escape" not in str(result.visible)
+
+
+def test_reconciliation_projection_drops_unknown_run_and_child_fields() -> None:
+    run = project_reconciliation_run(
+        {
+            "id": "run-1",
+            "status": "Complete",
+            "inputs": [{"source_id": "bank-1", "unknown_future_input_column": "must-not-escape"}],
+            "results": [{"id": "match-1", "unknown_future_result_column": "must-not-escape"}],
+            "unknown_future_run_column": "must-not-escape",
+        }
+    )
+    assert run.visible["inputs"] == [{"source_id": "bank-1"}]
+    assert run.visible["results"] == [{"id": "match-1"}]
+    assert run.denied_fields == ("unknown_future_run_column",)
+    assert project_reconciliation_input({"source_id": "bank-1", "future": "x"}).denied_fields == ("future",)
+    assert project_reconciliation_result({"id": "match-1", "future": "x"}).denied_fields == ("future",)
+    assert project_reconciliation_exception({"id": "exception-1", "future": "x"}).denied_fields == ("future",)
+    assert "must-not-escape" not in str(run.visible)
 
 
 def test_consolidation_projection_drops_unknown_storage_and_child_fields() -> None:

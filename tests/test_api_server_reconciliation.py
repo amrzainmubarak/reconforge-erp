@@ -26,9 +26,26 @@ class _FakeReconciliationRepository:
             "result_count": 1,
             "matched_count": 1,
             "exception_count": 0,
+            "unknown_future_run_column": "must-not-escape",
         }
-        self.inputs = [{"tenant_id": "tenant-a", "run_id": "run-a", "side": "Left", "source_id": "bank-1"}]
-        self.results = [{"tenant_id": "tenant-a", "run_id": "run-a", "id": "match-a", "status": "Matched"}]
+        self.inputs = [
+            {
+                "tenant_id": "tenant-a",
+                "run_id": "run-a",
+                "side": "Left",
+                "source_id": "bank-1",
+                "unknown_future_input_column": "must-not-escape",
+            }
+        ]
+        self.results = [
+            {
+                "tenant_id": "tenant-a",
+                "run_id": "run-a",
+                "id": "match-a",
+                "status": "Matched",
+                "unknown_future_result_column": "must-not-escape",
+            }
+        ]
         self.exceptions: list[dict[str, object]] = []
         self.submitted_inputs: list[dict[str, object]] = []
         self.submitted_run: dict[str, object] | None = None
@@ -243,6 +260,8 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
         == "reconciliation_record_identity_policy_invalid"
     )
     assert submitted.json()["run"]["execution_status"] == "Queued"
+    assert "unknown_future_run_column" not in submitted.text
+    assert "must-not-escape" not in submitted.text
     assert submitted.json()["input_count"] == 2
     assert scoped_permissions[0]["amount"] == Decimal("20.00")
     assert repository.submitted_run is not None
@@ -256,19 +275,25 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
     assert len(repository.submitted_inputs) == 2
     assert repository.submitted_inputs[0]["amount"] == "10.00"
     assert runs.json()["runs"][0]["id"] == "run-a"
+    assert "unknown_future_run_column" not in runs.text
+    assert "must-not-escape" not in runs.text
     assert runs.json()["source"]["kind"] == "postgresql-reconciliation-results"
     assert run.status_code == 200
     assert run.json()["run"]["status"] == "Complete"
     assert inputs.status_code == 200
     assert inputs.json()["inputs"][0]["source_id"] == "bank-1"
+    assert "unknown_future_input_column" not in inputs.text
     assert results.status_code == 200
     assert results.json()["results"][0]["id"] == "match-a"
+    assert "unknown_future_result_column" not in results.text
     assert exceptions.status_code == 200
     assert exceptions.json()["exceptions"] == []
     assert cancelled.status_code == 200
     assert cancelled.json()["run"]["cancel_requested"] is True
+    assert "unknown_future_run_column" not in cancelled.text
     assert requeued.status_code == 200
     assert requeued.json()["run"]["execution_status"] == "Queued"
+    assert "unknown_future_run_column" not in requeued.text
     assert len(scoped_permissions) == 11
     assert scoped_permissions[:4] == [
         {

@@ -193,6 +193,108 @@ ACCOUNT_RECONCILIATION_ITEM_FIELDS = frozenset(
         "updated_at",
     }
 )
+RECONCILIATION_RUN_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "name",
+        "left_source",
+        "right_source",
+        "status",
+        "algorithm_version",
+        "rule_json",
+        "rule",
+        "input_hash",
+        "idempotency_key",
+        "created_by",
+        "created_at",
+        "completed_at",
+        "left_input_count",
+        "right_input_count",
+        "result_count",
+        "matched_count",
+        "exception_count",
+        "input_manifest_hash",
+        "result_set_hash",
+        "execution_status",
+        "execution_worker_id",
+        "execution_claimed_at",
+        "execution_lease_until",
+        "execution_progress",
+        "execution_attempt",
+        "execution_started_at",
+        "execution_finished_at",
+        "execution_error",
+        "cancel_requested",
+        "workspace_id",
+        "organization_id",
+        "legal_entity_id",
+        "inputs",
+        "results",
+        "exceptions",
+    }
+)
+RECONCILIATION_INPUT_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "run_id",
+        "side",
+        "source_id",
+        "record_hash",
+        "amount_decimal",
+        "amount_original",
+        "currency_code",
+        "date_original",
+        "date_value",
+        "reference_original",
+        "reference_normalized",
+        "attributes_json",
+        "attributes",
+        "valid",
+        "allowed_uses",
+        "created_at",
+    }
+)
+RECONCILIATION_RESULT_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "run_id",
+        "left_id",
+        "right_id",
+        "match_type",
+        "confidence",
+        "explanation",
+        "amount_difference",
+        "date_difference_days",
+        "status",
+        "reason_code",
+        "lineage_json",
+        "lineage",
+        "created_at",
+    }
+)
+RECONCILIATION_EXCEPTION_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "run_id",
+        "exception_type",
+        "source_side",
+        "source_id",
+        "title",
+        "explanation",
+        "severity",
+        "risk_score",
+        "workflow_status",
+        "owner_id",
+        "reason_code",
+        "evidence_json",
+        "evidence",
+        "created_at",
+        "updated_at",
+    }
+)
 CONSOLIDATION_PERIOD_FIELDS = frozenset(
     {
         "tenant_id",
@@ -505,6 +607,47 @@ def project_account_reconciliation(values: Mapping[str, object]) -> FieldProject
             if isinstance(item, Mapping)
         ]
     return project_fields(record, allowed_fields=ACCOUNT_RECONCILIATION_FIELDS)
+
+
+def project_reconciliation_run(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for persisted matching-run responses."""
+
+    record = dict(values)
+    for name, allowed_fields in (
+        ("inputs", RECONCILIATION_INPUT_FIELDS),
+        ("results", RECONCILIATION_RESULT_FIELDS),
+        ("exceptions", RECONCILIATION_EXCEPTION_FIELDS),
+    ):
+        children = record.get(name)
+        if children is None:
+            continue
+        if not isinstance(children, list):
+            raise TypeError(f"reconciliation {name} collection must be a list")
+        projected_children: list[dict[str, object]] = []
+        for child in children:
+            if not isinstance(child, Mapping):
+                raise TypeError(f"reconciliation {name} record must be a mapping")
+            projected_children.append(project_fields(child, allowed_fields=allowed_fields).visible)
+        record[name] = projected_children
+    return project_fields(record, allowed_fields=RECONCILIATION_RUN_FIELDS)
+
+
+def project_reconciliation_input(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for canonical reconciliation inputs."""
+
+    return project_fields(values, allowed_fields=RECONCILIATION_INPUT_FIELDS)
+
+
+def project_reconciliation_result(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for deterministic reconciliation results."""
+
+    return project_fields(values, allowed_fields=RECONCILIATION_RESULT_FIELDS)
+
+
+def project_reconciliation_exception(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for reconciliation exceptions."""
+
+    return project_fields(values, allowed_fields=RECONCILIATION_EXCEPTION_FIELDS)
 
 
 def project_consolidation_period(values: Mapping[str, object]) -> FieldProjection:

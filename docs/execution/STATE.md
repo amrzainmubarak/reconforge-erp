@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1025 - Fail-closed projection for reconciliation API responses (2026-08-26)
+
+- PostgreSQL reconciliation run, canonical-input, deterministic-result, and
+  exception responses now use central allowlists. Nested run collections are
+  projected before serialization, so unknown adapter fields cannot silently
+  become API output.
+- Focused reconciliation/field/API tests, full Python regression at 100%,
+  Ruff, Mypy, Bandit, pip-audit, package build, YAML validation, and diff
+  checks pass. This is a bounded disclosure control only; universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+  ADR 0685 records rollback.
+
 ## E-1024 - Fail-closed projection for account reconciliation API responses (2026-08-26)
 
 - Account reconciliation list, read, create, and lifecycle responses now use a

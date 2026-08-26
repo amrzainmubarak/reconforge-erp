@@ -85,3 +85,13 @@ storage/adapter fields are dropped before serialization. This is a bounded
 disclosure control for the account-reconciliation response family, not
 universal field-level authorization or production IAM. ADR 0684 records the
 decision and rollback.
+
+## E-1025 migrated surface
+
+PostgreSQL reconciliation run, canonical-input, deterministic-result, and
+exception responses now use central allowlists. Nested run collections and
+paginated child responses are projected by their own reviewed contracts, while
+known financial and execution fields remain available. Unknown future adapter
+fields are dropped before serialization. This is a bounded disclosure control
+for the reconciliation response family, not universal field-level
+authorization or production IAM. ADR 0685 records the decision and rollback.

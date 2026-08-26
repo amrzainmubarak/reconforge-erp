@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1025: Fail-closed projection for reconciliation API responses
+
+- Code evidence: PostgreSQL `/api/v1/reconciliations` run, input, result, and
+  exception response paths use central allowlists in `reconforge.auth.field_access`.
+  Run responses project nested inputs/results/exceptions, and paginated child
+  responses project their respective record contracts.
+- Test evidence: `tests/test_field_access.py` covers unknown run and child
+  fields. `tests/test_api_server_reconciliation.py` covers unknown server
+  adapter fields across submitted/listed/cancelled/requeued runs and input/
+  result child responses. Focused tests and the full Python regression pass at
+  100%; Ruff, Mypy, Bandit, pip-audit, package build, YAML validation, and diff
+  checks also pass. pip-audit cannot audit the local `reconforge-erp`
+  distribution name because it is not published on PyPI.
+- Boundary: this closes the reconciliation response projection family only.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0685 records rollback.
+
 ## E-1024: Fail-closed projection for account reconciliation API responses
 
 - Code evidence: `/api/v1/accounts/reconciliations` list, read, create, and

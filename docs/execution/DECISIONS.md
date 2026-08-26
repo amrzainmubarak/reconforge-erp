@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-852: Reconciliation API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: PostgreSQL reconciliation routes returned run metadata and
+  paginated input/result/exception mappings from the adapter. Although the
+  repository selects reviewed columns, future adapter fields or nested shape
+  changes could become API fields without a centralized response contract.
+- **Decision**: Apply central allowlists to run, canonical-input,
+  deterministic-result, and reconciliation-exception responses. Project
+  nested run collections and reject malformed child collections before
+  serialization.
+- **Verification**: Synthetic server adapter-field coverage and field tests
+  pass; full regression, static, security, package, YAML, and diff gates pass.
+  External IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing known fields and response envelopes remain
+  available; route permissions, tenant scoping, and actor binding are unchanged.
+- **Rollback**: Revert E-1025 code/tests/ADR 0685/manifest and execution
+  metadata together; do not restore direct adapter mapping serialization.
+
 ### D-851: Account reconciliation API responses use fail-closed field projection
 
 - **Date**: 2026-08-26

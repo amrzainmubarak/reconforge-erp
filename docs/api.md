@@ -209,6 +209,11 @@ stable `server-managed` path summary. It returns `degraded` when the server
 database or migration state cannot be verified; it never exposes a DSN or raw
 driver error.
 
+`GET /api/v1/version` preserves the package/API version contract and reports
+`local/self-hosted foundation` or
+`postgresql server/self-hosted foundation` according to the configured
+backend profile.
+
 Authenticated local users and roles:
 
 - `GET /api/v1/users`

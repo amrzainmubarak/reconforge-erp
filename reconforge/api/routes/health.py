@@ -86,12 +86,16 @@ def _server_health(request: Request) -> dict[str, object]:
 
 
 @router.get("/version")
-def version() -> dict[str, str]:
+def version(request: Request) -> dict[str, str]:
     """Return package and API version metadata."""
 
     return {
         "package": "reconforge-erp",
         "version": __version__,
         "api_version": "v1",
-        "scope": "local/self-hosted foundation",
+        "scope": (
+            "postgresql server/self-hosted foundation"
+            if server_identity_enabled(request)
+            else "local/self-hosted foundation"
+        ),
     }

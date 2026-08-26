@@ -9,6 +9,17 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-953
+    priority: P1
+    area: operational-integrity
+    title: Make API version scope backend-aware
+    status: completed
+    depends_on: [E-952]
+    exit_evidence: >-
+      GET /api/v1/version preserves the Local Profile scope label and reports
+      postgresql server/self-hosted foundation for PostgreSQL Server Profile;
+      package and API versions remain compatible. Focused API tests, Ruff,
+      Mypy, and diff-check pass. ADR 0646 records the metadata-only rollback.
   - id: E-952
     priority: P1
     area: documentation-integrity

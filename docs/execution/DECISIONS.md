@@ -5,6 +5,14 @@
 
 ## Decisions
 
+### D-1001: Make API version scope backend-aware
+
+The public version endpoint still labeled PostgreSQL Server Profile as
+`local/self-hosted foundation`. Preserve the Local response and select an
+explicit PostgreSQL server/self-hosted scope label from the configured backend
+capability. This is a reversible metadata-only change with no schema or data
+effect. ADR 0646 records the decision.
+
 ### D-1000: Synchronize current-state server-boundary wording
 
 The architecture current-state document lagged the authenticated PostgreSQL

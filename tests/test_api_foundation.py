@@ -96,8 +96,11 @@ def test_server_health_uses_postgresql_migration_state_instead_of_sqlite(tmp_pat
     client = TestClient(api)
 
     health = client.get("/api/v1/health")
+    version = client.get("/api/v1/version")
 
     assert health.status_code == 200
+    assert version.status_code == 200
+    assert version.json()["scope"] == "postgresql server/self-hosted foundation"
     payload = health.json()
     assert payload["status"] == "ok"
     assert payload["service"] == "reconforge-server-api"

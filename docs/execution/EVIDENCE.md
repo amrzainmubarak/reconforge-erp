@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-953: Make API version scope backend-aware
+
+- Code evidence: `GET /api/v1/version` selects only the deployment scope label
+  from `server_identity_enabled`; package version and API version remain
+  unchanged, and no connection details are returned.
+- Focused API foundation tests cover the unchanged Local Profile label and the
+  PostgreSQL Server Profile label. Ruff, Mypy on the changed route, and
+  `git diff --check` pass. This is metadata-only evidence and does not claim
+  complete PostgreSQL coverage, hosted availability, HA/DR, production,
+  compliance, or certification. ADR 0646 records the decision.
+
 ## E-952: Synchronize current-state PostgreSQL boundary wording
 
 - Code/evidence alignment: `docs/architecture/current-state.md` now lists the

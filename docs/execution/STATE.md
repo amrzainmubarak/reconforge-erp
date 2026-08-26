@@ -2,6 +2,16 @@
 
 Updated: 2026-08-26
 
+## E-953 - Make API version scope backend-aware (2026-08-26)
+
+- `GET /api/v1/version` now retains `local/self-hosted foundation` for Local
+  Profile and returns `postgresql server/self-hosted foundation` when the
+  explicit PostgreSQL Server Profile capability is enabled. Package and API
+  version values remain unchanged.
+- Focused API tests and static checks cover both profiles. This is metadata-only
+  and does not widen schema, production, HA/DR, or compliance claims. ADR 0646
+  records the rollback boundary.
+
 ## E-952 - Synchronize current-state PostgreSQL boundary wording (2026-08-26)
 
 - `docs/architecture/current-state.md` now reflects the bounded PostgreSQL

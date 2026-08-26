@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-822: Record bounded live PostgreSQL matching replay
+
+- **Date**: 2026-08-26
+- **Context**: E-1003 had in-process strategy/worker parity and larger
+  PostgreSQL synthetic profiles, but the current tree lacked a fresh live
+  PostgreSQL run comparing persisted worker lineage with direct strategy
+  digests across grouped and sequential fixtures.
+- **Decision**: Record the existing live integration test as E-923 when it
+  passes against a digest-bound disposable PostgreSQL image. Keep the claim
+  one-host and synthetic, and do not widen it to provider, capacity, soak,
+  hosted, or production evidence.
+- **Verification**: PostgreSQL image digest, command, exit code, grouped and
+  sequential counts, direct-digest assertions, tenant-isolation assertion, and
+  cleanup boundary are recorded in
+  `POSTGRES_MATCHING_LIVE_2026-08-26.json`.
+- **Rollback**: Remove the E-923 evidence and ADR. No application or database
+  migration rollback is required.
+
 ### D-821: Refresh only the pinned container OpenSSL runtime libraries
 
 - **Date**: 2026-08-26

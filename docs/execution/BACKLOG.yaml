@@ -1698,6 +1698,16 @@ tasks:
         passes. This is exact-head hosted integration evidence only; E-1003
         remains open for provider/live-rate, broader parity, capacity/soak,
         posting/write-back, and production evidence.
+      - >
+        E-923 runs the existing live PostgreSQL grouped/sequential integration
+        test to completion against the exact disposable PostgreSQL 16 Alpine
+        image `postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`.
+        Four grouped and four sequential synthetic runs pass persisted-worker
+        versus direct-strategy digest assertions and tenant isolation, with no
+        failed runs or duplicate effects. This closes a bounded live runtime
+        replay gap only; provider/live-rate, larger cross-engine breadth,
+        capacity/soak, posting/write-back, hosted repetition, and production
+        evidence remain open.
   - id: E-1004
     priority: P0
     area: connectors

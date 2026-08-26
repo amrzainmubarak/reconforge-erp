@@ -2,6 +2,20 @@
 
 Updated: 2026-08-26
 
+## E-923 - Live PostgreSQL matching cross-engine replay (2026-08-26)
+
+- The existing live PostgreSQL matching integration test passed with exit 0
+  against a disposable PostgreSQL 16 Alpine `linux/amd64` image bound to
+  `postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`.
+- The run completed four grouped and four sequential synthetic runs, compared
+  persisted worker lineage digests with direct strategy digests, and asserted
+  tenant isolation. No failed runs or duplicate effects were observed. The
+  bounded record is `POSTGRES_MATCHING_LIVE_2026-08-26.json`.
+- This is one-host local runtime evidence only. E-1003 remains open for
+  cross-engine breadth beyond this test, provider/live-rate validation,
+  capacity/soak, posting/write-back, hosted repetition, and production proof.
+- ADR 0653 records the decision and rollback boundary.
+
 ## E-959 - Refresh pinned container OpenSSL runtime libraries (2026-08-26)
 
 - The two digest-pinned Docker stages now install only the exact reviewed

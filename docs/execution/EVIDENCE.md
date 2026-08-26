@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-923: Live PostgreSQL matching cross-engine replay
+
+- Runtime evidence: the existing live integration test passed with exit 0
+  against a disposable PostgreSQL 16 Alpine `linux/amd64` image bound to
+  `postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`.
+- The test completed four grouped and four sequential synthetic runs, checked
+  direct-strategy decision digests against persisted PostgreSQL worker lineage,
+  and asserted that another tenant could not read the run. No failed runs or
+  duplicate effects were observed. The structured evidence is
+  `POSTGRES_MATCHING_LIVE_2026-08-26.json`.
+- Boundary: this is one-host local runtime evidence. It does not prove
+  provider/live-rate authenticity, posting/write-back, capacity, soak, SLO,
+  HA/DR, hosted repetition, or production readiness. ADR 0653 records the
+  reversible evidence decision.
+
 ## E-959: Refresh pinned container OpenSSL runtime libraries
 
 - Code evidence: both digest-pinned Docker stages install the exact

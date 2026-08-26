@@ -2,6 +2,16 @@
 
 Updated: 2026-08-26
 
+## E-957 - Recheck consolidation period before run transitions (2026-08-26)
+
+- PostgreSQL consolidation transitions now identify and lock the parent
+  period before locking/re-reading the run; a `Locked` period refuses further
+  run transitions.
+- This restores the existing SQLite invariant for posted-run reversal and
+  keeps the operation non-posting at the source-ERP boundary.
+- Focused parity contracts pass. Full regression and final static/security
+  gates remain the release evidence for this slice.
+
 ## E-956 - Serialize consolidation-close run preparation (2026-08-26)
 
 - PostgreSQL `prepare_run` now locks the governed consolidation period with

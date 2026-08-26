@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-957: Recheck consolidation period before run transitions
+
+- Code evidence: PostgreSQL consolidation `_transition` first resolves the
+  run's parent period, locks it with `FOR UPDATE`, rejects `Locked`, and then
+  re-reads/locks the run before applying the transition.
+- Test evidence: the existing SQLite locked-period reversal regression and the
+  PostgreSQL transition source contract pass; full Python, Ruff, Mypy, Bandit,
+  diff-check, and YAML verification are run at the slice head.
+- Boundary: this closes adapter parity for the supported consolidation
+  lifecycle only. It does not prove distributed locks, statutory/legal-book
+  posting, source-ERP write-back, HA/DR, or production assurance.
+
 ## E-956: Serialize consolidation-close run preparation
 
 - Code evidence: PostgreSQL consolidation `prepare_run` locks the parent

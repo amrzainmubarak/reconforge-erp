@@ -1550,6 +1550,12 @@ tasks:
         the period after `BEGIN IMMEDIATE` before checking lock state and
         inserting the immutable run. Cross-host lock drills and statutory
         close remain open.
+      - >
+        E-957 makes PostgreSQL consolidation run transitions serialize on and
+        re-check the parent period after locking it, refusing approve/post/
+        reversal transitions for Locked periods and restoring parity with the
+        SQLite fail-closed lifecycle. Statutory close and source-ERP posting
+        remain open.
   - id: E-1003
     priority: P0
     area: matching

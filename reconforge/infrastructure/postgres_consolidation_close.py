@@ -745,6 +745,20 @@ class PostgresConsolidationCloseRepository:
         actor = self._actor(actor_label)
         with self.connection.transaction():
             self._scope()
+            identity = self.connection.execute(
+                "SELECT period_id FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s",
+                (self.tenant_id, run_id),
+            ).fetchone()
+            if identity is None:
+                raise PlatformError("Consolidation run not found.")
+            period = self.connection.execute(
+                "SELECT status FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                (self.tenant_id, str(identity["period_id"])),
+            ).fetchone()
+            if period is None:
+                raise PlatformError("Consolidation period not found.")
+            if str(period["status"]) == "Locked":
+                raise PlatformError("A locked consolidation period cannot accept a run transition.")
             row = self.connection.execute(
                 "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s FOR UPDATE",
                 (self.tenant_id, run_id),

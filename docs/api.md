@@ -290,6 +290,8 @@ Consolidation-close run preparation uses the same governed-period serialization
 boundary: PostgreSQL locks the parent period and SQLite re-reads it after its
 writer transaction begins before accepting a new run. The close worksheet
 remains explicitly non-posting.
+Server consolidation run transitions also lock and re-check the parent period;
+once it is `Locked`, approval/posting/reversal transitions fail closed.
 
 Exceptions and metrics:
 

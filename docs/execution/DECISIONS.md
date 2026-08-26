@@ -10281,3 +10281,19 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Compatibility**: No schema or public route change; only the transaction
   boundary and fail-closed race behavior change.
 - **Rollback**: Revert the adapter commit. No migration rollback is required.
+
+### D-819: Serialize consolidation run transitions on the parent period
+
+- **Date**: 2026-08-26
+- **Context**: SQLite refused run transitions after a period lock, but the
+  PostgreSQL transition path locked only the run and could continue a posted
+  run's reversal after the parent period was locked.
+- **Decision**: Resolve the run's parent period, lock it with `FOR UPDATE`,
+  reject `Locked`, then re-read and lock the run before evaluating its state,
+  SoD, evidence, and transition effect.
+- **Verification**: E-957 focused SQLite/PostgreSQL parity contracts and the
+  full release gate at the slice head.
+- **Compatibility**: No schema or route change; the server path now fails
+  closed where the local path already did.
+- **Rollback**: Revert the adapter code. No database migration rollback is
+  required.

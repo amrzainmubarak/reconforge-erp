@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconforge.api.dependencies import require_any_permission
 from reconforge.api.errors import APIError
+from reconforge.api.server_identity import server_identity_enabled
 from reconforge.application.individual_cashflow_control import run_individual_cashflow_control_records
 from reconforge.auth.models import LocalUser
 from reconforge.domain.individual_cashflow_control import IndividualCashflowControlError
@@ -32,17 +33,24 @@ class IndividualCashflowRunRequest(BaseModel):
 
 @router.post("/cashflow-controls/run")
 def run_individual_cashflow(
-    request: IndividualCashflowRunRequest,
+    request: Request,
+    payload: IndividualCashflowRunRequest,
     current_user: IndividualCashflowRead,
 ) -> dict[str, object]:
     """Run a replay-verifiable, non-posting control over local records."""
 
     del current_user
+    if server_identity_enabled(request):
+        raise APIError(
+            status_code=501,
+            code="individual_cashflow_server_backend_unavailable",
+            message="Individual cashflow control is available only in the local profile.",
+        )
     try:
         run = run_individual_cashflow_control_records(
-            request.transactions,
-            request.budgets,
-            currency=request.currency,
+            payload.transactions,
+            payload.budgets,
+            currency=payload.currency,
         )
     except IndividualCashflowControlError as exc:
         raise APIError(status_code=400, code="individual_cashflow_control_failed", message=str(exc)) from exc

@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-824: Refuse the local-only individual cashflow API in Server Profile
+
+- **Date**: 2026-08-26
+- **Context**: The authenticated individual cashflow endpoint is a stateless
+  local control with no tenant-scoped PostgreSQL persistence or server adapter.
+  Its permission dependency alone would allow the route to appear in Server
+  Profile without a request scope or durable evidence boundary.
+- **Decision**: Preserve the Local Profile endpoint and fail closed with HTTP
+  501 and a stable safe error code whenever `server_identity_enabled` is true.
+  Do not add an implicit SQLite fallback or claim server-side support.
+- **Verification**: E-961 focused HTTP and local-boundary tests pass, along
+  with authorization inventory, Ruff, Mypy, and diff checks.
+- **Compatibility**: Local API, CLI, control-pack, report schema, and existing
+  non-posting behavior remain unchanged. Only unsupported Server Profile
+  access becomes explicit.
+- **Rollback**: Revert the route guard, test, and E-961 documentation. No
+  database or external-state rollback is required.
+
 ### D-823: Make write-back rate-limit reservations atomic and registration-scoped
 
 - **Date**: 2026-08-26

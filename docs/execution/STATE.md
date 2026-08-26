@@ -2,6 +2,22 @@
 
 Updated: 2026-08-26
 
+## E-961 - Fail closed for the local-only individual cashflow API in Server Profile (2026-08-26)
+
+- `POST /api/v1/individual/cashflow-controls/run` now preserves its
+  authenticated, non-posting Local Profile behavior but returns
+  `individual_cashflow_server_backend_unavailable` with HTTP 501 when the
+  PostgreSQL Server Profile is active.
+- The route has no tenant-scoped persistence or PostgreSQL adapter; the
+  explicit refusal prevents a server-mode request from being mistaken for a
+  governed enterprise financial surface. No SQLite access or provider call is
+  introduced in Server Profile.
+- The focused individual-cashflow and server-local-boundary suites pass 5/5;
+  the authorization inventory, Ruff, and Mypy gates pass. This remains a
+  classification/fail-closed boundary, not server cashflow support, posting,
+  bank integration, production IAM, or production readiness. ADR 0655 records
+  the reversible decision.
+
 ## E-960 - Make write-back rate limiting atomic and registration-scoped (2026-08-26)
 
 - `WritebackNetworkExecutor` now reserves the next rate-limit slot under a

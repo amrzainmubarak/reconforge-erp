@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-961
+    priority: P0
+    area: identity-governance
+    title: Fail closed for the local-only individual cashflow API in Server Profile
+    status: completed
+    depends_on: [E-1005, E-650]
+    exit_evidence: >-
+      POST /api/v1/individual/cashflow-controls/run preserves its authenticated
+      Local Profile behavior but refuses with an explicit 501 boundary in
+      PostgreSQL Server Profile because it has no tenant-scoped persistence or
+      server adapter. The focused HTTP contract, server-local-boundary suite,
+      Ruff, Mypy, and authorization inventory pass. This is a fail-closed
+      classification boundary, not server-side cashflow support, posting,
+      bank integration, or production IAM evidence. ADR 0655 records rollback.
   - id: E-960
     priority: P0
     area: connectors

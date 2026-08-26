@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-961: Fail closed for the local-only individual cashflow API in Server Profile
+
+- Code evidence: `POST /api/v1/individual/cashflow-controls/run` checks the
+  explicit `server_identity_enabled` boundary before executing the in-memory
+  control. Server Profile returns the safe code
+  `individual_cashflow_server_backend_unavailable`; Local Profile remains
+  unchanged.
+- Test evidence: `python -m pytest -q
+  tests/test_api_individual_cashflow.py
+  tests/test_api_server_local_boundaries.py` exits 0 with 5 passing tests.
+  The server test uses an authenticated synthetic server principal and an
+  unreachable PostgreSQL DSN, proving the route refuses before any local
+  persistence or provider behavior is inferred. Authorization inventory,
+  Ruff, Mypy, and `git diff --check` pass.
+- Boundary: this classifies a local-only route as unsupported in Server
+  Profile. It does not provide server-side cashflow persistence, bank
+  connectivity, posting, tax/legal treatment, external IAM, HA/DR, or
+  production readiness. ADR 0655 records rollback.
+
 ## E-960: Make write-back rate limiting atomic and registration-scoped
 
 - Code evidence: `WritebackNetworkExecutor._apply_rate_limit` reserves the

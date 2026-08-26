@@ -259,6 +259,7 @@ include reconforge/auth/field_access.py
 include tests/test_field_access.py
 include docs/adr/0256-field-level-policy-and-masking-are-explicit.md
 include docs/adr/0677-evidence-drill-down-uses-fail-closed-field-projection.md
+include docs/adr/0678-evidence-record-reads-use-fail-closed-field-projection.md
 include docs/security/field-level-access.md
 include reconforge/infrastructure/sqlite_writeback.py
 include tests/test_sqlite_writeback.py

@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-845: Extend field projection to evidence record responses
+
+- **Date**: 2026-08-26
+- **Context**: E-1017 protected drill-down, but evidence list/get and the
+  Server Profile registration response still serialized adapter records
+  directly.
+- **Decision**: Apply the same evidence record/link allowlist to local and
+  Server Profile list/get responses, pass safe field names through the Server
+  Profile central policy boundary, and project registration responses with the
+  sensitive allowlist after existing `evidence.manage` authorization.
+- **Verification**: Focused local/Server API and field tests pass; full
+  regression, package build, and diff checks are required for closure.
+  Universal field-level migration and production IAM effectiveness remain
+  unproven.
+- **Compatibility**: Additive `field_access` metadata; the existing redaction
+  token and permission contracts remain unchanged.
+- **Rollback**: Revert E-1018 code/tests/ADR 0678/manifest and execution
+  metadata; persisted evidence is unaffected.
+
 ### D-844: Evidence drill-down uses fail-closed field projection
 
 - **Date**: 2026-08-26

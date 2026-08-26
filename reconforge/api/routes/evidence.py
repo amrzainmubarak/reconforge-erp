@@ -136,10 +136,6 @@ def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connecti
     return connection
 
 
-def _server_record(record: dict[str, object]) -> dict[str, object]:
-    return {**record, "source_backend": "postgresql-evidence-registry"}
-
-
 def _project_drill_down_result(result: dict[str, object], *, include_sensitive: bool) -> dict[str, object]:
     """Apply the central response field policy to every evidence node."""
 
@@ -167,25 +163,12 @@ def _project_drill_down_result(result: dict[str, object], *, include_sensitive: 
                     code="evidence_projection_failed",
                     message="Evidence registry returned an invalid evidence record contract.",
                 )
-            try:
-                projection = project_evidence_drill_down_record(
-                    raw_record,
-                    include_sensitive=include_sensitive,
-                )
-            except (TypeError, ValueError) as exc:
-                raise APIError(
-                    status_code=503,
-                    code="evidence_projection_failed",
-                    message="Evidence registry returned an invalid field projection contract.",
-                ) from exc
-            node["record"] = projection.visible
-            node["field_access"] = {
-                "version": "field-projection-v1",
-                "mode": "sensitive" if include_sensitive else "redacted",
-                "masked_fields": list(projection.masked_fields),
-                "denied_fields": list(projection.denied_fields),
-                "projection_digest": projection.projection_digest,
-            }
+            projected_record = _project_evidence_record_response(
+                raw_record,
+                include_sensitive=include_sensitive,
+            )
+            node["record"] = projected_record["record"]
+            node["field_access"] = projected_record["field_access"]
         projected_nodes.append(node)
     projected = dict(result)
     projected["nodes"] = projected_nodes
@@ -196,6 +179,52 @@ def _project_drill_down_result(result: dict[str, object], *, include_sensitive: 
         "sensitive_record_fields": sorted(EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS),
     }
     return projected
+
+
+def _project_evidence_record_response(
+    record: Mapping[str, object],
+    *,
+    include_sensitive: bool,
+) -> dict[str, object]:
+    """Project one evidence response and expose bounded projection evidence."""
+
+    try:
+        projection = project_evidence_drill_down_record(record, include_sensitive=include_sensitive)
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid field projection contract.",
+        ) from exc
+    return {
+        "record": projection.visible,
+        "field_access": {
+            "version": "field-projection-v1",
+            "mode": "sensitive" if include_sensitive else "redacted",
+            "masked_fields": list(projection.masked_fields),
+            "denied_fields": list(projection.denied_fields),
+            "projection_digest": projection.projection_digest,
+        },
+    }
+
+
+def _project_evidence_record_payload(
+    record: Mapping[str, object],
+    *,
+    include_sensitive: bool,
+) -> dict[str, object]:
+    """Flatten one projected record for list/get/register response envelopes."""
+
+    projected = _project_evidence_record_response(record, include_sensitive=include_sensitive)
+    visible = projected["record"]
+    field_access = projected["field_access"]
+    if not isinstance(visible, Mapping) or not isinstance(field_access, Mapping):
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid field projection contract.",
+        )
+    return {**dict(visible), "field_access": dict(field_access)}
 
 
 def _enforce_server_evidence_permission(
@@ -228,10 +257,22 @@ def _enforce_server_evidence_permission(
     )
 
 
-def _enforce_server_evidence_read_access(request: Request) -> None:
+def _enforce_server_evidence_read_access(request: Request, *, field_level: bool = False) -> None:
     """Bind tenant/workspace evidence reads to the same central policy gate."""
 
     scope = request_execution_scope(request)
+    if field_level:
+        enforce_server_scoped_permissions(
+            request,
+            permissions=frozenset({"evidence.read", "evidence.manage"}),
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+            requested_field_names=_EVIDENCE_SAFE_DRILL_DOWN_FIELDS,
+            authorized_field_names=_EVIDENCE_SAFE_DRILL_DOWN_FIELDS,
+        )
+        return
     enforce_server_scoped_permissions(
         request,
         permissions=frozenset({"evidence.read", "evidence.manage"}),
@@ -289,7 +330,7 @@ def list_evidence(
     if pagination == "cursor" and offset != 0:
         raise APIError(status_code=400, code="pagination_mode_conflict", message="Offset is not valid in cursor mode.")
     if server_evidence_enabled(request):
-        _enforce_server_evidence_read_access(request)
+        _enforce_server_evidence_read_access(request, field_level=True)
         if pagination == "cursor":
             raise APIError(
                 status_code=501,
@@ -303,7 +344,13 @@ def list_evidence(
             ),
         )
         return {
-            "evidence": [_server_record(record) for record in records],
+            "evidence": [
+                {
+                    **_project_evidence_record_payload(record, include_sensitive=False),
+                    "source_backend": "postgresql-evidence-registry",
+                }
+                for record in records
+            ],
             "pagination": {"limit": limit, "offset": offset, "returned": len(records)},
             "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
         }
@@ -313,13 +360,14 @@ def list_evidence(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="evidence_list_failed", message=str(exc)) from exc
+    projected_records = [_project_evidence_record_payload(record, include_sensitive=False) for record in records]
     if pagination == "cursor":
-        page, next_cursor = _cursor_page(request, records, status=status, limit=limit, cursor=cursor)
+        page, next_cursor = _cursor_page(request, projected_records, status=status, limit=limit, cursor=cursor)
         return {
             "evidence": page,
             "pagination": {"limit": limit, "returned": len(page), "next_cursor": next_cursor, "mode": "cursor"},
         }
-    page = records[offset : offset + limit]
+    page = projected_records[offset : offset + limit]
     return {
         "evidence": page,
         "pagination": {"limit": limit, "offset": offset, "returned": len(page)},
@@ -355,19 +403,20 @@ def get_evidence(
     """Return evidence provenance and links; artifact bytes remain out of band."""
 
     if server_evidence_enabled(request):
-        _enforce_server_evidence_read_access(request)
+        _enforce_server_evidence_read_access(request, field_level=True)
         record = execute_postgres_evidence(
             request, lambda repository, tenant: repository.get(tenant_id=tenant, evidence_id=evidence_id)
         )
+        projected = _project_evidence_record_payload(record, include_sensitive=False)
         return {
-            "evidence": _server_record(record),
+            "evidence": {**projected, "source_backend": "postgresql-evidence-registry"},
             "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
         }
     try:
         record = EvidenceRegistryService(_local_connection(connection)).get(evidence_id)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=404, code="evidence_record_not_found", message=str(exc)) from exc
-    return {"evidence": record}
+    return {"evidence": _project_evidence_record_payload(record, include_sensitive=False)}
 
 
 @router.get("/records/{evidence_id}/drill-down")
@@ -482,7 +531,13 @@ def register_evidence(
             reason=payload.reason,
         ),
     )
-    return {"evidence": _server_record(record), "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+    return {
+        "evidence": {
+            **_project_evidence_record_payload(record, include_sensitive=True),
+            "source_backend": "postgresql-evidence-registry",
+        },
+        "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+    }
 
 
 @router.post("/records/{evidence_id}/links")

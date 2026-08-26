@@ -237,8 +237,18 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     }
     assert scoped_permissions == [
         {"permission": "evidence.manage", **expected_hierarchy},
-        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
-        {"permissions": frozenset({"evidence.read", "evidence.manage"}), **expected_hierarchy},
+        {
+            "permissions": frozenset({"evidence.read", "evidence.manage"}),
+            **expected_hierarchy,
+            "requested_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+            "authorized_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+        },
+        {
+            "permissions": frozenset({"evidence.read", "evidence.manage"}),
+            **expected_hierarchy,
+            "requested_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+            "authorized_field_names": EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+        },
         {"permission": "evidence.manage", **expected_hierarchy},
         {"permission": "evidence.manage", **expected_hierarchy},
         {"permission": "evidence.verify", **expected_hierarchy},

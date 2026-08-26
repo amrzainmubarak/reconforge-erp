@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1018
+    priority: P0
+    area: identity-governance
+    title: Extend fail-closed field projection to evidence record responses
+    status: completed
+    depends_on: [E-1005, E-1017]
+    exit_evidence: >-
+      Local and Server Profile evidence list/get responses reuse the reviewed
+      record/link allowlist; Server Profile registration responses use the
+      sensitive allowlist after evidence.manage authorization. Safe Server
+      Profile reads pass the safe field set through central scoped policy.
+      Unknown adapter fields are dropped and projection metadata is additive.
+      Focused API/field tests, Ruff, and Mypy pass; full Python regression,
+      package build, YAML, and diff checks pass.
+      This closes the evidence record response family only; universal
+      field-level enforcement, external IAM, distributed revocation, and
+      production effectiveness remain open. ADR 0678 records rollback.
   - id: E-1017
     priority: P0
     area: identity-governance

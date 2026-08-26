@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1018: Fail-closed field projection for evidence record responses
+
+- Code evidence: local and Server Profile evidence list/get responses reuse the
+  central evidence record/link allowlist; Server Profile registration responses
+  are projected with the sensitive allowlist after authorization. Server list/
+  get calls pass the safe field set through central scoped policy.
+- Test evidence: local API tests prove safe list/get output; Server Profile
+  contracts prove safe list/get, sensitive registration, and field-scope
+  arguments; the field primitive tests prove unknown-field denial. Focused
+  tests pass (7 tests), plus Ruff, Mypy, and full Python regression.
+- Boundary: This closes the evidence record response family only. It does not
+  prove universal route/export/UI field enforcement, external IAM, distributed
+  revocation, live provider behavior, or production readiness. Package build,
+  YAML, and diff checks pass.
+
 ## E-1017: Fail-closed field projection for evidence drill-down
 
 - Code evidence: `reconforge.auth.field_access` defines the reviewed evidence

@@ -2,6 +2,19 @@
 
 Updated: 2026-08-26
 
+## E-1018 - Extend fail-closed field projection to evidence record responses (2026-08-26)
+
+- Local and Server Profile evidence list/get responses now use the same
+  reviewed record/link allowlist as drill-down; Server Profile registration
+  responses use the sensitive allowlist after `evidence.manage` authorization.
+  Safe reads retain the legacy `***redacted***` token and all unknown adapter
+  fields are dropped.
+- Server Profile list/get requests pass the safe field set through central
+  scoped policy. Focused API/field tests, Ruff, Mypy, full Python regression,
+  YAML, and diff gates pass; package build is the final artifact check.
+  Universal field-level enforcement, external IAM, distributed revocation,
+  and production effectiveness remain open. ADR 0678 records rollback.
+
 ## E-1017 - Migrate evidence drill-down to fail-closed field projection (2026-08-26)
 
 - Local and Server Profile evidence drill-down responses now use one reviewed

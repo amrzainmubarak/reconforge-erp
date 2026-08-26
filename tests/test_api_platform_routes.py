@@ -100,6 +100,13 @@ def test_local_evidence_cursor_pagination_is_signed_and_offset_compatible(tmp_pa
 
     assert offset_page.status_code == 200
     assert offset_page.json()["pagination"] == {"limit": 1, "offset": 1, "returned": 1}
+    listed_record = offset_page.json()["evidence"][0]
+    assert listed_record["source_path"] == "***redacted***"
+    assert listed_record["field_access"]["mode"] == "redacted"
+    fetched = client.get(f"/api/v1/evidence/records/{listed_record['id']}", headers=headers)
+    assert fetched.status_code == 200
+    assert fetched.json()["evidence"]["source_path"] == "***redacted***"
+    assert fetched.json()["evidence"]["field_access"]["version"] == "field-projection-v1"
     assert first.status_code == 200 and token
     assert second.status_code == 200
     assert len(first.json()["evidence"]) == 2

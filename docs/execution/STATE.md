@@ -2,6 +2,23 @@
 
 Updated: 2026-08-26
 
+## E-1026 - Fail-closed projection for Finance Core ledger-entry API responses (2026-08-26)
+
+- Finance Core ledger-entry list, read, create, validate, and void responses
+  now use one central allowlist across local SQLite, PostgreSQL Finance Core,
+  and the bounded legacy PostgreSQL ledger shapes. Nested ledger lines are
+  projected independently, so future adapter or storage fields cannot
+  silently become API output.
+- Focused field/API tests and the full Python regression pass at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted YAML
+  validation (9 files), and diff checks also pass. Broad safe-load parsing of
+  every repository YAML file remains intentionally separate because a
+  synthetic hostile-tag fixture uses a PyYAML-specific Python tag and must not
+  be accepted by `safe_load`. This is a bounded disclosure control only;
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0686 records rollback.
+
 ## E-1025 - Fail-closed projection for reconciliation API responses (2026-08-26)
 
 - PostgreSQL reconciliation run, canonical-input, deterministic-result, and

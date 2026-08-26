@@ -267,6 +267,7 @@ include docs/adr/0682-exception-api-uses-fail-closed-field-projection.md
 include docs/adr/0683-consolidation-close-api-uses-fail-closed-field-projection.md
 include docs/adr/0684-account-reconciliation-api-uses-fail-closed-field-projection.md
 include docs/adr/0685-reconciliation-api-uses-fail-closed-field-projection.md
+include docs/adr/0686-finance-core-entry-api-uses-fail-closed-field-projection.md
 include docs/security/field-level-access.md
 include reconforge/infrastructure/sqlite_writeback.py
 include tests/test_sqlite_writeback.py

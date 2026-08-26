@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-853: Finance Core ledger-entry API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Finance Core entry routes returned mappings from local SQLite,
+  PostgreSQL Finance Core, and the bounded legacy PostgreSQL ledger. Local
+  `SELECT *` queries and nested ledger lines made future storage/adapter fields
+  capable of silently expanding the API response.
+- **Decision**: Apply one central allowlist to entry list, read, create,
+  validate, and void responses and a separate allowlist to nested ledger
+  lines. Preserve known envelopes and fields while denying unknown fields.
+- **Verification**: Focused field/API tests and full regression pass at 100%;
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  safe YAML validation (9 files), and diff gates pass. External
+  IAM, distributed revocation, disclosure approval, source authenticity, and
+  production effectiveness remain open.
+- **Compatibility**: Existing permissions, tenant/workspace scope, write
+  invariants, response envelopes, and reviewed financial fields remain.
+- **Rollback**: Revert E-1026 code/tests/ADR 0686/manifest and execution
+  metadata together; do not restore direct repository-mapping serialization.
+
 ### D-852: Reconciliation API responses use fail-closed field projection
 
 - **Date**: 2026-08-26

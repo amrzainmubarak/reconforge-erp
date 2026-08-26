@@ -263,6 +263,46 @@ def test_server_finance_core_entry_rejects_negative_amount_before_adapter(
     assert error.value.code == "finance_entry_amount_invalid"
 
 
+def test_finance_core_entry_route_drops_future_adapter_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: True)
+    monkeypatch.setattr(
+        routes,
+        "_server_finance_workspace",
+        lambda *_args, **_kwargs: "workspace-a",
+    )
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core",
+        lambda _request, _operation: {
+            "id": "GLE-1",
+            "entry_number": "JE-001",
+            "status": "Validated",
+            "unknown_future_column": "must-not-escape",
+            "lines": [
+                {
+                    "id": "line-1",
+                    "line_number": 1,
+                    "account_id": "account-1",
+                    "unknown_line_column": "must-not-escape",
+                }
+            ],
+        },
+    )
+
+    result = routes.get_entry(request, "GLE-1", user, None)
+
+    assert result["entry"] == {
+        "entry_number": "JE-001",
+        "id": "GLE-1",
+        "lines": [{"account_id": "account-1", "id": "line-1", "line_number": 1}],
+        "status": "Validated",
+    }
+
+
 def test_server_finance_core_entry_does_not_fall_back_to_legacy_ledger(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

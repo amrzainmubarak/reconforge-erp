@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1026: Fail-closed projection for Finance Core ledger-entry API responses
+
+- Code evidence: `/api/v1/finance-core/entries` list, read, create, validate,
+  and void paths use `project_finance_entry` from the central field-access
+  module. The top-level entry and nested ledger-line response contracts cover
+  the reviewed local SQLite, PostgreSQL Finance Core, and bounded legacy ledger
+  shapes; unknown adapter/storage fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers unknown top-level and
+  nested entry fields; `tests/test_api_server_finance_core.py` covers the API
+  route projection. Focused tests and the full Python regression pass at
+  100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted safe YAML validation (9 files), and diff checks also pass.
+  `pip-audit` cannot audit the local `reconforge-erp` distribution name
+  because it is not published on PyPI. A broad safe-load scan intentionally
+  rejects a synthetic hostile-tag YAML fixture; that fixture is not treated
+  as valid configuration.
+- Boundary: this closes the Finance Core ledger-entry response family only.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0686 records rollback.
+
 ## E-1025: Fail-closed projection for reconciliation API responses
 
 - Code evidence: PostgreSQL `/api/v1/reconciliations` run, input, result, and

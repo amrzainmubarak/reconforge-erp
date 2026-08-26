@@ -4,6 +4,16 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1026 migrated surface
+
+Finance Core ledger-entry list, read, create, validate, and void responses now
+use one central allowlist across local SQLite, PostgreSQL Finance Core, and the
+bounded legacy PostgreSQL ledger shape. Nested ledger lines are projected with
+their own allowlist, preserving reviewed financial and lineage fields while
+dropping unknown adapter/storage fields. This is a bounded disclosure control
+for the ledger-entry response family, not universal field-level authorization
+or production IAM. ADR 0686 records the decision and rollback.
+
 ## E-1017 migrated surface
 
 The local and Server Profile `GET /api/v1/evidence/records/{evidence_id}/drill-down`

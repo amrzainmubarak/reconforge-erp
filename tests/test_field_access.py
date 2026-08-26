@@ -12,6 +12,7 @@ from reconforge.auth.field_access import (
     project_evidence_verification,
     project_exception,
     project_fields,
+    project_finance_entry,
     project_reconciliation_exception,
     project_reconciliation_input,
     project_reconciliation_result,
@@ -140,6 +141,46 @@ def test_evidence_mutation_projections_drop_unknown_adapter_fields() -> None:
     assert requirement.denied_fields == ("unknown_future_column",)
     assert "unknown_future_column" not in verification.visible
     assert verification.denied_fields == ("unknown_future_column",)
+
+
+def test_finance_entry_projection_is_closed_across_local_and_server_shapes() -> None:
+    result = project_finance_entry(
+        {
+            "tenant_id": "tenant-a",
+            "id": "GLE-1",
+            "entry_number": "JE-001",
+            "currency_code": "USD",
+            "total_debit_minor": 1000,
+            "total_credit_minor": 1000,
+            "source_id": "import-1",
+            "entry_fingerprint": "fingerprint",
+            "unknown_future_column": "must-not-escape",
+            "lines": [
+                {
+                    "id": "line-1",
+                    "entry_id": "GLE-1",
+                    "line_number": 1,
+                    "account_id": "account-1",
+                    "credit_amount": "0",
+                    "debit_amount": "10.00",
+                    "unknown_line_column": "must-not-escape",
+                }
+            ],
+        }
+    )
+    assert result.visible["entry_number"] == "JE-001"
+    assert result.visible["lines"] == [
+        {
+            "account_id": "account-1",
+            "credit_amount": "0",
+            "debit_amount": "10.00",
+            "entry_id": "GLE-1",
+            "id": "line-1",
+            "line_number": 1,
+        }
+    ]
+    assert result.denied_fields == ("unknown_future_column",)
+    assert "unknown_line_column" not in str(result.visible)
 
 
 def test_close_projections_drop_unknown_adapter_fields_across_record_shapes() -> None:

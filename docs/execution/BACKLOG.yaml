@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1026
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Finance Core ledger-entry API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1025]
+    exit_evidence: >-
+      Finance Core ledger-entry list, read, create, validate, and void
+      responses use a central allowlist across local SQLite, PostgreSQL
+      Finance Core, and the bounded legacy PostgreSQL ledger shapes. Nested
+      ledger lines use a child allowlist; focused field/API tests, full Python
+      regression, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+      checks pass. This closes the ledger-entry response boundary only;
+      universal field-level authorization, external IAM, distributed
+      revocation, disclosure approval, source authenticity, and production
+      effectiveness remain open. ADR 0686 records rollback.
   - id: E-1025
     priority: P0
     area: identity-governance

@@ -295,6 +295,78 @@ RECONCILIATION_EXCEPTION_FIELDS = frozenset(
         "updated_at",
     }
 )
+FINANCE_ENTRY_FIELDS = frozenset(
+    {
+        # Local Finance Core and the tenant-scoped PostgreSQL ledger expose
+        # different physical names.  This is the union of their deliberate
+        # API contract, not a license to serialize repository rows wholesale.
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "organization_id",
+        "chart_id",
+        "legal_entity_id",
+        "finance_journal_id",
+        "journal_id",
+        "organization_code",
+        "entity_code",
+        "entry_number",
+        "posting_date",
+        "currency_code",
+        "description",
+        "external_reference",
+        "source_type",
+        "source_id",
+        "entry_fingerprint",
+        "status",
+        "created_by",
+        "validated_by",
+        "validated_at",
+        "validation_reason",
+        "voided_by",
+        "voided_at",
+        "void_reason",
+        "created_at",
+        "updated_at",
+        "posted_at",
+        "journal_code",
+        "chart_code",
+        "period_id",
+        "period_name",
+        "currency_minor_units",
+        "total_debit_minor",
+        "total_credit_minor",
+        "total_debit",
+        "total_credit",
+        "debit_total",
+        "credit_total",
+        "balanced",
+        "line_count",
+        "lines",
+    }
+)
+FINANCE_ENTRY_LINE_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "entry_id",
+        "line_number",
+        "account_id",
+        "account_code",
+        "account_name",
+        "description",
+        "reference",
+        "currency_code",
+        "debit_minor",
+        "credit_minor",
+        "debit_amount",
+        "credit_amount",
+        "debit",
+        "credit",
+        "dimensions",
+        "created_at",
+    }
+)
 CONSOLIDATION_PERIOD_FIELDS = frozenset(
     {
         "tenant_id",
@@ -648,6 +720,23 @@ def project_reconciliation_exception(values: Mapping[str, object]) -> FieldProje
     """Return a closed projection for reconciliation exceptions."""
 
     return project_fields(values, allowed_fields=RECONCILIATION_EXCEPTION_FIELDS)
+
+
+def project_finance_entry(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for local and server ledger entries."""
+
+    record = dict(values)
+    lines = record.get("lines")
+    if lines is not None:
+        if not isinstance(lines, list):
+            raise TypeError("finance entry lines collection must be a list")
+        projected_lines: list[dict[str, object]] = []
+        for line in lines:
+            if not isinstance(line, Mapping):
+                raise TypeError("finance entry line record must be a mapping")
+            projected_lines.append(project_fields(line, allowed_fields=FINANCE_ENTRY_LINE_FIELDS).visible)
+        record["lines"] = projected_lines
+    return project_fields(record, allowed_fields=FINANCE_ENTRY_FIELDS)
 
 
 def project_consolidation_period(values: Mapping[str, object]) -> FieldProjection:

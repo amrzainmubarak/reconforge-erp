@@ -27,6 +27,7 @@ from reconforge.api.server_finance_core import (
 )
 from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_ledger import execute_postgres_ledger, server_ledger_enabled
+from reconforge.auth.field_access import project_finance_entry
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
@@ -161,6 +162,14 @@ def _list_response(
     offset: int,
 ) -> dict[str, object]:
     return {key: records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}}
+
+
+def _project_entry(value: dict[str, object]) -> dict[str, object]:
+    return project_finance_entry(value).visible
+
+
+def _project_entries(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [_project_entry(value) for value in values]
 
 
 def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
@@ -927,7 +936,7 @@ def list_entries(
             organization_code=organization,
             entity_code=entity,
         )
-        return _list_response("entries", records, limit=limit, offset=offset)
+        return _list_response("entries", _project_entries(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         _server_workspace(workspace)
         _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
@@ -948,7 +957,7 @@ def list_entries(
             )
 
         records = execute_postgres_ledger(request, operation)
-        return _list_response("entries", records, limit=limit, offset=offset)
+        return _list_response("entries", _project_entries(records), limit=limit, offset=offset)
     try:
         records = FinanceCoreService(_local_connection(connection)).list_entries(
             workspace=workspace,
@@ -962,7 +971,7 @@ def list_entries(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entries_list_failed", exc) from exc
-    return _list_response("entries", records, limit=limit, offset=offset)
+    return _list_response("entries", _project_entries(records), limit=limit, offset=offset)
 
 
 @router.post("/entries")
@@ -1001,14 +1010,14 @@ def create_entry(
         values["lines"] = [line.model_dump() for line in payload.lines]
         values["actor_label"] = current_user.id
         return {
-            "entry": execute_postgres_finance_core_scoped(
+            "entry": _project_entry(execute_postgres_finance_core_scoped(
                 request,
                 lambda repository, scope: repository.create_entry(
                     **{**values, "organization_code": scope.organization_code, "entity_code": scope.entity_code}
                 ),
                 organization_code=payload.organization_code,
                 entity_code=payload.entity_code,
-            )
+            ))
         }
     if server_ledger_enabled(request):
         policy_amount = _entry_policy_amount(payload)
@@ -1030,7 +1039,7 @@ def create_entry(
                 request_id=str(getattr(request.state, "request_id", "")),
             ),
         )
-        return {"entry": record}
+        return {"entry": _project_entry(record)}
     try:
         values = payload.model_dump()
         values.pop("currency_code", None)
@@ -1039,7 +1048,7 @@ def create_entry(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_save_failed", exc) from exc
-    return {"entry": record}
+    return {"entry": _project_entry(record)}
 
 
 @router.get("/entries/{entry_id}")
@@ -1052,24 +1061,24 @@ def get_entry(
     if server_finance_core_enabled(request) and entry_id.startswith("GLE-"):
         _server_finance_workspace(request, "default", permission="finance_core.read")
         return {
-            "entry": execute_postgres_finance_core(
+            "entry": _project_entry(execute_postgres_finance_core(
                 request,
                 lambda repository: repository.get_entry(entry_id, actor_label=current_user.id),
-            )
+            ))
         }
     if server_ledger_enabled(request):
         _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         record = execute_postgres_ledger(
             request, lambda repository, tenant: repository.get_entry(tenant_id=tenant, entry_id=entry_id)
         )
-        return {"entry": record}
+        return {"entry": _project_entry(record)}
     try:
         record = FinanceCoreService(_local_connection(connection)).get_entry(
             entry_id, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_not_found", exc, status_code=404) from exc
-    return {"entry": record}
+    return {"entry": _project_entry(record)}
 
 
 @router.post("/entries/{entry_id}/validate")
@@ -1083,12 +1092,12 @@ def validate_entry(
     if server_finance_core_enabled(request) and entry_id.startswith("GLE-"):
         _server_finance_workspace(request, "default", permission="finance_core.validate")
         return {
-            "entry": execute_postgres_finance_core(
+            "entry": _project_entry(execute_postgres_finance_core(
                 request,
                 lambda repository: repository.validate_entry(
                     entry_id, reason=payload.reason, actor_label=current_user.id
                 ),
-            )
+            ))
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("draft validation; server entries are posted atomically")
@@ -1098,7 +1107,7 @@ def validate_entry(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_validate_failed", exc) from exc
-    return {"entry": record}
+    return {"entry": _project_entry(record)}
 
 
 @router.post("/entries/{entry_id}/void")
@@ -1112,12 +1121,12 @@ def void_entry(
     if server_finance_core_enabled(request) and entry_id.startswith("GLE-"):
         _server_finance_workspace(request, "default", permission="finance_core.validate")
         return {
-            "entry": execute_postgres_finance_core(
+            "entry": _project_entry(execute_postgres_finance_core(
                 request,
                 lambda repository: repository.void_entry(
                     entry_id, reason=payload.reason, actor_label=current_user.id
                 ),
-            )
+            ))
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("voiding; server entries are immutable and require reversal support")
@@ -1127,4 +1136,4 @@ def void_entry(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_void_failed", exc) from exc
-    return {"entry": record}
+    return {"entry": _project_entry(record)}

@@ -839,6 +839,60 @@ RETAIL_SETTLEMENT_DECISION_FIELDS = frozenset(
 RETAIL_SETTLEMENT_STATUS_KEYS = frozenset(
     {"matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"}
 )
+BANK_STATEMENT_FIELDS = frozenset(
+    {
+        "id",
+        "tenant_id",
+        "workspace_id",
+        "decision_digest",
+        "artifact_digest",
+        "algorithm_version",
+        "prepared_by",
+        "prepared_at",
+        "created_at",
+        "report",
+    }
+)
+BANK_STATEMENT_REPORT_FIELDS = frozenset(
+    {
+        "algorithm_version",
+        "artifact_digest",
+        "artifact_type",
+        "amount_tolerance",
+        "date_window_days",
+        "decision_digest",
+        "decisions",
+        "input_digests",
+        "schema_version",
+        "status_counts",
+    }
+)
+BANK_STATEMENT_MONEY_FIELDS = frozenset(
+    {
+        "amount",
+        "currency",
+        "currency_policy_digest",
+        "currency_registry_digest",
+        "currency_registry_version",
+        "minor_units",
+        "rounding_policy",
+        "schema_version",
+    }
+)
+BANK_STATEMENT_DECISION_FIELDS = frozenset(
+    {
+        "account_id",
+        "amount_variance",
+        "bank_line_id",
+        "days_variance",
+        "ledger_record_ids",
+        "reason_code",
+        "status",
+    }
+)
+BANK_STATEMENT_STATUS_KEYS = frozenset(
+    {"matched", "exception", "unmatched_bank", "unmatched_ledger", "ambiguous"}
+)
 MANUFACTURING_COST_CONTROL_FIELDS = frozenset(
     {
         "id",
@@ -1876,6 +1930,63 @@ def project_retail_settlement(values: Mapping[str, object]) -> FieldProjection:
             allowed_fields=RETAIL_SETTLEMENT_REPORT_FIELDS,
         ).visible
     return project_fields(record, allowed_fields=RETAIL_SETTLEMENT_FIELDS)
+
+
+def project_bank_statement(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for bank statement evidence."""
+
+    record = dict(values)
+    report = record.get("report")
+    if report is not None:
+        if not isinstance(report, Mapping):
+            raise TypeError("bank statement report must be a mapping")
+        report_record = dict(report)
+        amount_tolerance = report_record.get("amount_tolerance")
+        if amount_tolerance is not None:
+            if not isinstance(amount_tolerance, Mapping):
+                raise TypeError("bank statement amount tolerance must be a mapping")
+            report_record["amount_tolerance"] = project_fields(
+                amount_tolerance,
+                allowed_fields=BANK_STATEMENT_MONEY_FIELDS,
+            ).visible
+        decisions = report_record.get("decisions")
+        if decisions is not None:
+            if not isinstance(decisions, list):
+                raise TypeError("bank statement decisions collection must be a list")
+            projected_decisions: list[dict[str, object]] = []
+            for decision in decisions:
+                if not isinstance(decision, Mapping):
+                    raise TypeError("bank statement decision must be a mapping")
+                decision_record = dict(decision)
+                amount_variance = decision_record.get("amount_variance")
+                if amount_variance is not None:
+                    if not isinstance(amount_variance, Mapping):
+                        raise TypeError("bank statement amount variance must be a mapping")
+                    decision_record["amount_variance"] = project_fields(
+                        amount_variance,
+                        allowed_fields=BANK_STATEMENT_MONEY_FIELDS,
+                    ).visible
+                projected_decisions.append(
+                    project_fields(
+                        decision_record,
+                        allowed_fields=BANK_STATEMENT_DECISION_FIELDS,
+                    ).visible
+                )
+            report_record["decisions"] = projected_decisions
+        status_counts = report_record.get("status_counts")
+        if status_counts is not None:
+            if not isinstance(status_counts, Mapping):
+                raise TypeError("bank statement status counts must be a mapping")
+            report_record["status_counts"] = {
+                key: status_counts[key]
+                for key in sorted(status_counts)
+                if key in BANK_STATEMENT_STATUS_KEYS
+            }
+        record["report"] = project_fields(
+            report_record,
+            allowed_fields=BANK_STATEMENT_REPORT_FIELDS,
+        ).visible
+    return project_fields(record, allowed_fields=BANK_STATEMENT_FIELDS)
 
 
 def project_manufacturing_cost_control(values: Mapping[str, object]) -> FieldProjection:

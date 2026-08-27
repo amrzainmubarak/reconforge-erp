@@ -2,6 +2,7 @@ from reconforge.auth.field_access import (
     REDACTED_VALUE,
     project_account_reconciliation,
     project_audit_event,
+    project_bank_statement,
     project_close_period,
     project_close_readiness,
     project_close_task,
@@ -526,6 +527,65 @@ def test_retail_settlement_projection_is_closed_recursively() -> None:
         "schema_version": 1,
         "status_counts": {"matched": 1},
         "tolerance": {"amount": "0.01", "currency": "USD"},
+    }
+    assert result.denied_fields == ("unknown_run_field",)
+    assert "must-not-escape" not in str(result.visible)
+
+
+def test_bank_statement_projection_is_closed_recursively() -> None:
+    result = project_bank_statement(
+        {
+            "id": "bank-1",
+            "workspace_id": "firm-a",
+            "unknown_run_field": "must-not-escape",
+            "report": {
+                "schema_version": 1,
+                "decision_digest": "d" * 64,
+                "amount_tolerance": {
+                    "amount": "0.01",
+                    "currency": "EUR",
+                    "unknown_money_field": "must-not-escape",
+                },
+                "date_window_days": 1,
+                "decisions": [
+                    {
+                        "account_id": "ACCOUNT-1",
+                        "amount_variance": {
+                            "amount": "0.00",
+                            "currency": "EUR",
+                            "unknown_money_field": "must-not-escape",
+                        },
+                        "bank_line_id": "BANK-1",
+                        "days_variance": 0,
+                        "ledger_record_ids": ["LEDGER-1"],
+                        "reason_code": "BANK_LEDGER_RECONCILED",
+                        "status": "matched",
+                        "unknown_decision_field": "must-not-escape",
+                    }
+                ],
+                "status_counts": {"matched": 1, "future_status": 99},
+                "unknown_report_field": "must-not-escape",
+            },
+        }
+    )
+
+    assert result.visible["report"] == {
+        "amount_tolerance": {"amount": "0.01", "currency": "EUR"},
+        "date_window_days": 1,
+        "decision_digest": "d" * 64,
+        "decisions": [
+            {
+                "account_id": "ACCOUNT-1",
+                "amount_variance": {"amount": "0.00", "currency": "EUR"},
+                "bank_line_id": "BANK-1",
+                "days_variance": 0,
+                "ledger_record_ids": ["LEDGER-1"],
+                "reason_code": "BANK_LEDGER_RECONCILED",
+                "status": "matched",
+            }
+        ],
+        "schema_version": 1,
+        "status_counts": {"matched": 1},
     }
     assert result.denied_fields == ("unknown_run_field",)
     assert "must-not-escape" not in str(result.visible)

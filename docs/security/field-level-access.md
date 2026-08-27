@@ -4,6 +4,19 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1041 migrated surface
+
+Bank Statement Control create, list, and read responses now use central
+top-level and recursive allowlists across local SQLite and PostgreSQL. The run
+envelope, report, amount tolerance, canonical money values, status counts, and
+bank-to-ledger decisions are projected explicitly; unknown adapter/storage
+fields are dropped before serialization and malformed nested mappings fail
+closed. Evidence digests, workspace scope, and no-network/no-posting behavior
+remain compatible. This is a bounded disclosure control for the reviewed
+response family, not bank-source authenticity, payment initiation, universal
+field-level authorization, external IAM, or production readiness. ADR 0701
+records the decision and rollback.
+
 ## E-1040 migrated surface
 
 Manufacturing Cost Control create, list, and read responses now use central

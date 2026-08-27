@@ -2,6 +2,21 @@
 
 Updated: 2026-08-27
 
+## E-1041 - Fail-closed projection for Bank Statement Control API responses (2026-08-27)
+
+- Bank Statement Control create, list, and read responses now use central
+  top-level and recursive report, money, decision, and status-count allowlists
+  across local SQLite and tenant-scoped PostgreSQL adapter paths. Unknown
+  future adapter/storage fields cannot silently enter bank reconciliation
+  evidence responses, while malformed nested objects fail closed.
+- Focused field/API tests pass (31 tests plus 1 existing live-PostgreSQL skip).
+  Full Python regression passes at 100%; Ruff, Mypy (539 source files),
+  Bandit, pip-audit, package build, source YAML validation (174 files), and
+  diff checks also pass. The local distribution is not auditable by pip-audit
+  because it is not published on PyPI. ADR 0701 records rollback. This remains
+  a bounded disclosure control, not universal field-level authorization or
+  production readiness.
+
 ## E-1040 - Fail-closed projection for Manufacturing Cost Control API responses (2026-08-27)
 
 - Manufacturing cost-control create, list, and read responses now use central

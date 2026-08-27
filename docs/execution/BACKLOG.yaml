@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1041
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Bank Statement Control API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1040]
+    exit_evidence: >-
+      Bank Statement Control create, list, and read responses use central
+      top-level and recursive report, money, decision, and status-count
+      allowlists across local SQLite and PostgreSQL. Synthetic future-field
+      tests prove unknown adapter fields are dropped while evidence envelopes,
+      exact values, workspace scope, and no-network/no-posting behavior remain
+      compatible. Focused selectors pass 31 tests plus 1 existing
+      live-PostgreSQL skip; full Python regression, Ruff, Mypy, Bandit,
+      pip-audit, package build, source YAML validation (174 files), and diff
+      checks pass. The repository contains intentionally malformed security-
+      test fixtures under generated test output; those are excluded from
+      source YAML validation. ADR 0701 records rollback.
   - id: E-1040
     priority: P0
     area: identity-governance

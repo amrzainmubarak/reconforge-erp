@@ -90,6 +90,7 @@ EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS = frozenset(
 EVIDENCE_DRILL_DOWN_LINK_FIELDS = frozenset(
     {"tenant_id", "id", "evidence_id", "object_type", "object_id", "link_type", "created_at"}
 )
+EVIDENCE_LINK_RESPONSE_FIELDS = frozenset({"link", "source"})
 EVIDENCE_REQUIREMENT_FIELDS = frozenset(
     {
         "tenant_id",
@@ -1840,6 +1841,27 @@ def project_evidence_verification(values: Mapping[str, object]) -> FieldProjecti
     """Return a closed projection for a checksum verification response."""
 
     return project_fields(values, allowed_fields=EVIDENCE_VERIFICATION_FIELDS)
+
+
+def project_evidence_link_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for evidence-link mutation responses."""
+
+    record = dict(values)
+    link = record.get("link")
+    if link is not None:
+        if not isinstance(link, Mapping):
+            raise TypeError("evidence link must be a mapping")
+        record["link"] = project_fields(
+            link, allowed_fields=EVIDENCE_DRILL_DOWN_LINK_FIELDS
+        ).visible
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("evidence link source must be a mapping")
+        record["source"] = project_fields(
+            source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
+        ).visible
+    return project_fields(record, allowed_fields=EVIDENCE_LINK_RESPONSE_FIELDS)
 
 
 def project_close_period(values: Mapping[str, object]) -> FieldProjection:

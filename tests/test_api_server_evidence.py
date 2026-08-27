@@ -65,6 +65,7 @@ class _FakeEvidenceRepository:
             "object_type": values["object_type"],
             "object_id": values["object_id"],
             "link_type": values["link_type"],
+            "unknown_future_column": "must-not-leak",
         }
         self.links.append(link)
         return link
@@ -215,6 +216,8 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     assert listed.status_code == 200
     assert fetched.json()["evidence"]["id"] == "evidence-a"
     assert linked.status_code == 200
+    assert linked.json()["link"]["id"] == "link-a"
+    assert "unknown_future_column" not in linked.json()["link"]
     assert requirement.status_code == 200
     assert requirement.json()["requirement"]["field_access"]["denied_fields"] == []
     assert verified.status_code == 200

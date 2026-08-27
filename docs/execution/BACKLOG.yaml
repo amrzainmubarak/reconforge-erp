@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1062
+    priority: P0
+    area: evidence
+    title: Apply fail-closed projection to evidence-link mutation responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1061]
+    exit_evidence: >-
+      The PostgreSQL evidence-link mutation response preserves reviewed
+      evidence identity and object binding while dropping unknown adapter and
+      source-envelope fields through central projections. Focused and full
+      regression plus release quality gates pass; ADR 0722 records rollback.
+      This does not claim evidence-store durability or production
+      readiness.
   - id: E-1061
     priority: P0
     area: finance-close

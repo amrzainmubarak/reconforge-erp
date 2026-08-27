@@ -15,6 +15,7 @@ from reconforge.auth.field_access import (
     project_consolidation_run,
     project_consolidation_summary,
     project_evidence_drill_down_record,
+    project_evidence_link_response,
     project_evidence_requirement,
     project_evidence_verification,
     project_exception,
@@ -1417,4 +1418,32 @@ def test_consolidation_ownership_change_projection_is_closed_through_payload_lin
         {"amount": {"amount": "10", "currency": "USD"}, "line_type": "nci"}
     ]
     assert result.visible["source"] == {"kind": "postgresql-consolidation-ownership-change"}
+    assert "must-not-escape" not in str(result.visible)
+
+
+def test_evidence_link_response_projection_is_closed() -> None:
+    result = project_evidence_link_response(
+        {
+            "link": {
+                "tenant_id": "tenant-a",
+                "id": "link-a",
+                "evidence_id": "evidence-a",
+                "object_type": "close_task",
+                "object_id": "task-a",
+                "link_type": "supports",
+                "unknown_future_column": "must-not-escape",
+            },
+            "source": {"kind": "postgresql-evidence-registry", "server_mode": True, "unknown_source": "x"},
+            "unknown_response": "must-not-escape",
+        }
+    )
+    assert result.visible["link"] == {
+        "evidence_id": "evidence-a",
+        "id": "link-a",
+        "link_type": "supports",
+        "object_id": "task-a",
+        "object_type": "close_task",
+        "tenant_id": "tenant-a",
+    }
+    assert result.visible["source"] == {"kind": "postgresql-evidence-registry", "server_mode": True}
     assert "must-not-escape" not in str(result.visible)

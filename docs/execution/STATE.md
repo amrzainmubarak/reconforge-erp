@@ -2,6 +2,13 @@
 
 Updated: 2026-08-27
 
+## E-1062 - Fail-closed projection for evidence-link mutation responses (2026-08-27)
+
+- The PostgreSQL evidence-link mutation response now uses a closed link/source
+  projection. Focused and full regression/static/security/package gates pass.
+  This is bounded disclosure control, not evidence-store durability or
+  production readiness.
+
 ## E-1061 - Fail-closed projection for consolidation ownership-change artifacts (2026-08-27)
 
 - Consolidation ownership-change prepare/read responses now use a closed

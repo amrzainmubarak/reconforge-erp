@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-889: Evidence-link responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The server evidence-link mutation route exposed the raw
+  PostgreSQL link dictionary.
+- **Decision**: Apply central link and source-envelope projections before the
+  response crosses the authenticated API boundary.
+- **Verification**: Focused server-shaped API and field-access tests inject
+  future fields and prove they do not escape; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1062.
+- **Compatibility**: Preserve reviewed evidence identity and object-binding
+  fields; deny unknown adapter fields.
+- **Rollback**: Revert E-1062 code, tests, ADR 0722, manifest, and execution
+  metadata together; do not restore direct serialization.
+
 ### D-888: Consolidation ownership-change artifacts use fail-closed projection
 
 - **Date**: 2026-08-27

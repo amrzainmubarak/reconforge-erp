@@ -31,6 +31,7 @@ from reconforge.auth.field_access import (
     EVIDENCE_DRILL_DOWN_FIELDS,
     EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
     project_evidence_drill_down_record,
+    project_evidence_link_response,
     project_evidence_requirement,
     project_evidence_verification,
 )
@@ -597,7 +598,16 @@ def link_evidence(
             reason=payload.reason,
         ),
     )
-    return {"link": link, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+    try:
+        return project_evidence_link_response(
+            {"link": link, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+        ).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid link response contract.",
+        ) from exc
 
 
 @router.post("/requirements")

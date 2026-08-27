@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1046: Fail-closed projection for Master Data summary responses
+
+- Code evidence: `/api/v1/master-data/summary` projects the local service
+  result and the explicitly constructed PostgreSQL summary through the same
+  `project_master_summary` allowlist. Known organization, legal-entity,
+  branch, period, currency, source, and unsupported-collection fields remain;
+  unknown future fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers the closed allowlist.
+  `tests/test_api_master_data_projection.py` replaces the local service with a
+  PostgreSQL-independent synthetic service response containing a future field
+  and proves it does not escape. The focused selector, full regression, Ruff,
+  Mypy, Bandit, pip-audit, package build, YAML, and diff gates pass for this
+  slice. pip-audit cannot audit the local distribution because it is not
+  published on PyPI.
+- Boundary: this closes the reviewed Master Data summary response only. It
+  does not establish universal field-level authorization, external IAM,
+  distributed revocation, source authenticity, or production effectiveness.
+  ADR 0706 records rollback.
+
 ## E-1045: Fail-closed projection for Inventory Planning summary responses
 
 - Code evidence: `/api/v1/inventory-planning/summary` now projects both the

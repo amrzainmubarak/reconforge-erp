@@ -44,6 +44,7 @@ from reconforge.auth.field_access import (
     project_inventory_warehouse,
     project_manufacturing_cost_control,
     project_master_snapshot,
+    project_master_summary,
     project_payables_purchase_order,
     project_payables_receipt,
     project_payables_supplier,
@@ -960,6 +961,34 @@ def test_master_data_projection_closes_snapshot_and_nested_resource_fields() -> 
     assert "unknown_summary_field" not in str(result.visible)
     assert "unknown_currency_field" not in str(result.visible)
     assert result.denied_fields == ("unknown_snapshot_field",)
+
+
+def test_master_data_summary_projection_is_closed() -> None:
+    result = project_master_summary(
+        {
+            "workspace": "default",
+            "organizations": 1,
+            "legal_entities": 2,
+            "branches": 3,
+            "periods": 4,
+            "active_currencies": 5,
+            "source": {"kind": "local-sqlite-master-data"},
+            "unsupported_collections": ["exchange_rates"],
+            "unknown_summary_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible == {
+        "workspace": "default",
+        "organizations": 1,
+        "legal_entities": 2,
+        "branches": 3,
+        "periods": 4,
+        "active_currencies": 5,
+        "source": {"kind": "local-sqlite-master-data"},
+        "unsupported_collections": ["exchange_rates"],
+    }
+    assert result.denied_fields == ("unknown_summary_field",)
 
 
 def test_close_projections_drop_unknown_adapter_fields_across_record_shapes() -> None:

@@ -25,6 +25,7 @@ from reconforge.auth.field_access import (
     project_master_organization,
     project_master_period,
     project_master_snapshot,
+    project_master_summary,
 )
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
@@ -241,16 +242,18 @@ def summary(
             request, lambda repository, tenant: repository.summary(tenant_id=tenant)
         )
         return {
-            "summary": {
-                "workspace": None,
-                "organizations": server_result["organizations"],
-                "legal_entities": server_result["legal_entities"],
-                "branches": server_result["branches"],
-                "periods": server_result["periods"],
-                "active_currencies": server_result["active_currencies"],
-                "source": server_result["source"],
-                "unsupported_collections": server_result["unsupported_collections"],
-            }
+            "summary": project_master_summary(
+                {
+                    "workspace": None,
+                    "organizations": server_result["organizations"],
+                    "legal_entities": server_result["legal_entities"],
+                    "branches": server_result["branches"],
+                    "periods": server_result["periods"],
+                    "active_currencies": server_result["active_currencies"],
+                    "source": server_result["source"],
+                    "unsupported_collections": server_result["unsupported_collections"],
+                }
+            ).visible
         }
     try:
         local_result = MasterDataService(_local_connection(connection)).summary(
@@ -258,7 +261,7 @@ def summary(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("master_data_summary_failed", exc) from exc
-    return {"summary": local_result.to_dict()}
+    return {"summary": project_master_summary(local_result.to_dict()).visible}
 
 
 @router.get("/snapshot")

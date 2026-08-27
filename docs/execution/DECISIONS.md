@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-873: Master Data summary API uses one fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Local master-data summary responses were serialized directly,
+  while the PostgreSQL branch assembled a bounded dictionary. The two modes
+  therefore did not share one reviewed disclosure boundary.
+- **Decision**: Apply `project_master_summary` to both backend branches before
+  serialization. Unknown fields are dropped; known counts, source metadata,
+  and unsupported-collection information remain compatible.
+- **Verification**: Focused field and route tests inject a future summary
+  field and prove it is denied. Full Python and release-quality gates pass for
+  E-1046.
+- **Compatibility**: No master-data persistence, relationship, currency,
+  lifecycle, authorization, or audit behavior changes. This is bounded
+  response disclosure control.
+- **Rollback**: Revert E-1046 code, tests, ADR 0706, manifest, and execution
+  metadata together; do not restore unbounded summary serialization.
+
 ### D-872: Inventory Planning summary API uses fail-closed projection
 
 - **Date**: 2026-08-27

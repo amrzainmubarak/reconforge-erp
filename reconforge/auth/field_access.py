@@ -1173,6 +1173,9 @@ MASTER_PERIOD_FIELDS = frozenset(
         "source_backend",
     }
 )
+MASTER_SUMMARY_FIELDS = frozenset(
+    {"workspace", "organizations", "legal_entities", "branches", "periods", "active_currencies", "source", "unsupported_collections"}
+)
 MASTER_SNAPSHOT_FIELDS = frozenset(
     {
         "schema_version",
@@ -2397,6 +2400,10 @@ def project_master_branch(values: Mapping[str, object]) -> FieldProjection:
 
 def project_master_period(values: Mapping[str, object]) -> FieldProjection:
     return project_fields(values, allowed_fields=MASTER_PERIOD_FIELDS)
+
+
+def project_master_summary(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=MASTER_SUMMARY_FIELDS)
 
 
 def project_master_snapshot(values: Mapping[str, object]) -> FieldProjection:

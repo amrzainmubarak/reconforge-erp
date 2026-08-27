@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1046
+    priority: P0
+    area: identity-governance
+    title: Apply one fail-closed projection to Master Data summary API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1027, E-1045]
+    exit_evidence: >-
+      The Master Data summary endpoint now applies one central summary
+      allowlist to local SQLite and tenant-scoped PostgreSQL response shapes.
+      Focused field and route tests inject an unknown future service field and
+      prove it is dropped. Full Python regression and release-quality gates
+      pass; ADR 0706 records rollback. This closes only the reviewed summary
+      response and does not claim universal field-level authorization or
+      production readiness.
   - id: E-1045
     priority: P0
     area: identity-governance

@@ -2,6 +2,17 @@
 
 Updated: 2026-08-27
 
+## E-1046 - Fail-closed projection for Master Data summary responses (2026-08-27)
+
+- The `/api/v1/master-data/summary` response now uses one central
+  `project_master_summary` allowlist on both local SQLite and tenant-scoped
+  PostgreSQL paths. This removes the previous backend-dependent disclosure
+  behavior; unknown future summary fields cannot silently enter the API.
+- Focused field/route tests and the full regression/static/security/package
+  gates pass. ADR 0706 records the decision and rollback boundary. This is a
+  bounded disclosure control, not universal field-level authorization or
+  production readiness.
+
 ## E-1045 - Fail-closed projection for Inventory Planning summary responses (2026-08-27)
 
 - The `/api/v1/inventory-planning/summary` response now applies the central

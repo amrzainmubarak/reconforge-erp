@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1040: Fail-closed projection for Manufacturing Cost Control API responses
+
+- Code evidence: `/api/v1/manufacturing/cost-controls` create, list, and read
+  responses use central top-level and recursive report, money, quantity,
+  decision, and known status-count allowlists in both local SQLite and
+  PostgreSQL branches. Unknown adapter/storage fields are dropped before
+  serialization; malformed nested mappings fail closed and network dispatch,
+  posting, persistence, and workspace scope behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers report, amount tolerance,
+  maximum scrap quantity, decision quantities, decision money, and status-count
+  projection. `tests/test_api_manufacturing_cost_control.py` injects synthetic
+  future fields at top-level and every reviewed nested response level across
+  create/list/read. Focused selectors pass 31 tests plus 1 existing
+  live-PostgreSQL skip; `python -m pytest -q` passes at 100%. Ruff, Mypy (539
+  source files), Bandit, pip-audit, package build, source YAML validation (174
+  files), and diff gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI. Generated test-output fixtures with
+  intentionally malformed or unsafe YAML are excluded from source validation.
+- Boundary: this closes only the reviewed Manufacturing Cost Control response
+  family. It does not establish universal field-level authorization, external
+  IAM, distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0700 records rollback.
+
 ## E-1039: Fail-closed projection for Retail Settlement API responses
 
 - Code evidence: `/api/v1/retail/settlements` create, list, and read responses

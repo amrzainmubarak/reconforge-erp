@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-08-26"
+updated_at: "2026-08-27"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1040
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Manufacturing Cost Control API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1039]
+    exit_evidence: >-
+      Manufacturing Cost Control create, list, and read responses use central
+      top-level and recursive report, money, quantity, decision, and
+      status-count allowlists across local SQLite and PostgreSQL. Synthetic
+      future-field tests prove unknown adapter fields are dropped while
+      evidence envelopes, exact values, workspace scope, and no-network/no-
+      posting behavior remain compatible. Focused selectors pass 31 tests plus
+      1 existing live-PostgreSQL skip; full Python regression, Ruff, Mypy,
+      Bandit, pip-audit, package build, source YAML validation (174 files), and
+      diff checks pass. The repository also contains intentionally malformed
+      security-test fixtures under generated test output; those are excluded
+      from source YAML validation. ADR 0700 records rollback.
   - id: E-1039
     priority: P0
     area: identity-governance

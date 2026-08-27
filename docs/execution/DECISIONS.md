@@ -5,6 +5,30 @@
 
 ## Decisions
 
+### D-867: Manufacturing Cost Control API uses fail-closed recursive projection
+
+- **Date**: 2026-08-27
+- **Context**: Manufacturing cost-control evidence is returned from local
+  SQLite and tenant-scoped PostgreSQL adapters as a run envelope containing
+  canonical money and quantity objects, status counts, and nested production
+  decisions. Future adapter fields could silently expand a financial evidence
+  response.
+- **Decision**: Apply central allowlists to the run envelope and recursively
+  project report, amount tolerance, maximum scrap quantity, every decision
+  quantity and money value, and known status-count keys on create, list, and
+  read responses. Preserve exact values, evidence digests, workspace scope,
+  and the no-network/no-posting boundary; reject malformed nested mappings.
+- **Verification**: Focused field/API tests pass 31 tests plus 1 existing
+  live-PostgreSQL skip, including synthetic future fields at every reviewed
+  nesting level. Full Python regression passes at 100%; Ruff, Mypy (539 source
+  files), Bandit, pip-audit, package build, source YAML validation (174 files),
+  and diff gates pass. The local distribution remains unauditable by pip-audit
+  because it is not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, route,
+  or evidence-digest behavior changes; this is a bounded disclosure control.
+- **Rollback**: Revert E-1040 code/tests/ADR 0700/manifest and execution
+  metadata together; do not restore unbounded adapter-row serialization.
+
 ### D-866: Retail Settlement API uses fail-closed recursive projection
 
 - **Date**: 2026-08-27

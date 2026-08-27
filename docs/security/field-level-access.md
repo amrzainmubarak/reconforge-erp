@@ -4,6 +4,19 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1040 migrated surface
+
+Manufacturing Cost Control create, list, and read responses now use central
+top-level and recursive allowlists across local SQLite and PostgreSQL. The run
+envelope, report, amount tolerance, maximum scrap quantity, canonical money
+and quantity values, status counts, and production decisions are projected
+explicitly; unknown adapter/storage fields are dropped before serialization
+and malformed nested mappings fail closed. Evidence digests, workspace scope,
+and no-network/no-posting behavior remain compatible. This is a bounded
+disclosure control for the reviewed response family, not universal field-level
+authorization, external IAM, or production readiness. ADR 0700 records the
+decision and rollback.
+
 ## E-1039 migrated surface
 
 Retail Settlement create, list, and read responses now use central top-level and

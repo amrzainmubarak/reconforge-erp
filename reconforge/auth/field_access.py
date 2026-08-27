@@ -839,6 +839,65 @@ RETAIL_SETTLEMENT_DECISION_FIELDS = frozenset(
 RETAIL_SETTLEMENT_STATUS_KEYS = frozenset(
     {"matched", "exception", "unmatched_pos", "unmatched_settlement", "ambiguous"}
 )
+MANUFACTURING_COST_CONTROL_FIELDS = frozenset(
+    {
+        "id",
+        "tenant_id",
+        "workspace_id",
+        "decision_digest",
+        "artifact_digest",
+        "algorithm_version",
+        "prepared_by",
+        "prepared_at",
+        "created_at",
+        "report",
+    }
+)
+MANUFACTURING_COST_CONTROL_REPORT_FIELDS = frozenset(
+    {
+        "algorithm_version",
+        "artifact_digest",
+        "artifact_type",
+        "amount_tolerance",
+        "decision_digest",
+        "decisions",
+        "input_digests",
+        "max_scrap_quantity",
+        "schema_version",
+        "status_counts",
+    }
+)
+MANUFACTURING_COST_CONTROL_MONEY_FIELDS = frozenset(
+    {
+        "amount",
+        "currency",
+        "currency_policy_digest",
+        "currency_registry_digest",
+        "currency_registry_version",
+        "minor_units",
+        "rounding_policy",
+        "schema_version",
+    }
+)
+MANUFACTURING_COST_CONTROL_QUANTITY_FIELDS = frozenset({"scale", "unit", "value"})
+MANUFACTURING_COST_CONTROL_DECISION_FIELDS = frozenset(
+    {
+        "actual_material_cost",
+        "completed_quantity",
+        "completion_cost",
+        "completion_cost_variance",
+        "expected_material_cost",
+        "issued_quantity",
+        "material_cost_variance",
+        "order_id",
+        "planned_quantity",
+        "product_id",
+        "reason_codes",
+        "scrap_quantity",
+        "status",
+    }
+)
+MANUFACTURING_COST_CONTROL_STATUS_KEYS = frozenset({"reconciled", "exception", "unmatched"})
 MASTER_CURRENCY_FIELDS = frozenset(
     {"tenant_id", "code", "name", "minor_units", "active", "created_at", "updated_at", "source_backend"}
 )
@@ -1817,6 +1876,79 @@ def project_retail_settlement(values: Mapping[str, object]) -> FieldProjection:
             allowed_fields=RETAIL_SETTLEMENT_REPORT_FIELDS,
         ).visible
     return project_fields(record, allowed_fields=RETAIL_SETTLEMENT_FIELDS)
+
+
+def project_manufacturing_cost_control(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for manufacturing cost evidence."""
+
+    record = dict(values)
+    report = record.get("report")
+    if report is not None:
+        if not isinstance(report, Mapping):
+            raise TypeError("manufacturing cost-control report must be a mapping")
+        report_record = dict(report)
+
+        def project_quantity(value: object, field_name: str) -> dict[str, object]:
+            if not isinstance(value, Mapping):
+                raise TypeError(f"manufacturing cost-control {field_name} must be a mapping")
+            return project_fields(value, allowed_fields=MANUFACTURING_COST_CONTROL_QUANTITY_FIELDS).visible
+
+        def project_money(value: object, field_name: str) -> dict[str, object]:
+            if not isinstance(value, Mapping):
+                raise TypeError(f"manufacturing cost-control {field_name} must be a mapping")
+            return project_fields(value, allowed_fields=MANUFACTURING_COST_CONTROL_MONEY_FIELDS).visible
+
+        for field_name in ("amount_tolerance",):
+            value = report_record.get(field_name)
+            if value is not None:
+                report_record[field_name] = project_money(value, field_name)
+        max_scrap_quantity = report_record.get("max_scrap_quantity")
+        if max_scrap_quantity is not None:
+            report_record["max_scrap_quantity"] = project_quantity(max_scrap_quantity, "max_scrap_quantity")
+        decisions = report_record.get("decisions")
+        if decisions is not None:
+            if not isinstance(decisions, list):
+                raise TypeError("manufacturing cost-control decisions collection must be a list")
+            projected_decisions: list[dict[str, object]] = []
+            for decision in decisions:
+                if not isinstance(decision, Mapping):
+                    raise TypeError("manufacturing cost-control decision must be a mapping")
+                decision_record = dict(decision)
+                for field_name in ("completed_quantity", "issued_quantity", "planned_quantity", "scrap_quantity"):
+                    value = decision_record.get(field_name)
+                    if value is not None:
+                        decision_record[field_name] = project_quantity(value, field_name)
+                for field_name in (
+                    "actual_material_cost",
+                    "completion_cost",
+                    "completion_cost_variance",
+                    "expected_material_cost",
+                    "material_cost_variance",
+                ):
+                    value = decision_record.get(field_name)
+                    if value is not None:
+                        decision_record[field_name] = project_money(value, field_name)
+                projected_decisions.append(
+                    project_fields(
+                        decision_record,
+                        allowed_fields=MANUFACTURING_COST_CONTROL_DECISION_FIELDS,
+                    ).visible
+                )
+            report_record["decisions"] = projected_decisions
+        status_counts = report_record.get("status_counts")
+        if status_counts is not None:
+            if not isinstance(status_counts, Mapping):
+                raise TypeError("manufacturing cost-control status counts must be a mapping")
+            report_record["status_counts"] = {
+                key: status_counts[key]
+                for key in sorted(status_counts)
+                if key in MANUFACTURING_COST_CONTROL_STATUS_KEYS
+            }
+        record["report"] = project_fields(
+            report_record,
+            allowed_fields=MANUFACTURING_COST_CONTROL_REPORT_FIELDS,
+        ).visible
+    return project_fields(record, allowed_fields=MANUFACTURING_COST_CONTROL_FIELDS)
 
 
 def project_master_currency(values: Mapping[str, object]) -> FieldProjection:

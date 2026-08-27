@@ -30,6 +30,7 @@ from reconforge.auth.field_access import (
     project_inventory_valuation_reversal_summary,
     project_inventory_valuation_snapshot,
     project_inventory_warehouse,
+    project_manufacturing_cost_control,
     project_master_snapshot,
     project_payables_purchase_order,
     project_payables_receipt,
@@ -525,6 +526,73 @@ def test_retail_settlement_projection_is_closed_recursively() -> None:
         "schema_version": 1,
         "status_counts": {"matched": 1},
         "tolerance": {"amount": "0.01", "currency": "USD"},
+    }
+    assert result.denied_fields == ("unknown_run_field",)
+    assert "must-not-escape" not in str(result.visible)
+
+
+def test_manufacturing_cost_control_projection_is_closed_recursively() -> None:
+    result = project_manufacturing_cost_control(
+        {
+            "id": "mfg-1",
+            "workspace_id": "plant-a",
+            "unknown_run_field": "must-not-escape",
+            "report": {
+                "schema_version": 1,
+                "decision_digest": "d" * 64,
+                "amount_tolerance": {
+                    "amount": "0.01",
+                    "currency": "EUR",
+                    "unknown_money_field": "must-not-escape",
+                },
+                "max_scrap_quantity": {"scale": 3, "unit": "PCS", "value": "2", "unknown_quantity_field": "must-not-escape"},
+                "decisions": [
+                    {
+                        "order_id": "ORDER-1",
+                        "product_id": "PRODUCT-1",
+                        "status": "reconciled",
+                        "reason_codes": ["MANUFACTURING_ORDER_RECONCILED"],
+                        "planned_quantity": {"scale": 3, "unit": "PCS", "value": "10", "unknown_quantity_field": "must-not-escape"},
+                        "issued_quantity": {"scale": 3, "unit": "PCS", "value": "10"},
+                        "completed_quantity": {"scale": 3, "unit": "PCS", "value": "10"},
+                        "scrap_quantity": {"scale": 3, "unit": "PCS", "value": "0"},
+                        "expected_material_cost": {"amount": "100", "currency": "EUR", "unknown_money_field": "must-not-escape"},
+                        "actual_material_cost": {"amount": "100", "currency": "EUR"},
+                        "completion_cost": {"amount": "100", "currency": "EUR"},
+                        "material_cost_variance": {"amount": "0", "currency": "EUR"},
+                        "completion_cost_variance": {"amount": "0", "currency": "EUR"},
+                        "unknown_decision_field": "must-not-escape",
+                    }
+                ],
+                "status_counts": {"reconciled": 1, "future_status": 99},
+                "unknown_report_field": "must-not-escape",
+            },
+        }
+    )
+
+    assert result.visible["report"] == {
+        "amount_tolerance": {"amount": "0.01", "currency": "EUR"},
+        "decisions": [
+            {
+                "actual_material_cost": {"amount": "100", "currency": "EUR"},
+                "completed_quantity": {"scale": 3, "unit": "PCS", "value": "10"},
+                "completion_cost": {"amount": "100", "currency": "EUR"},
+                "completion_cost_variance": {"amount": "0", "currency": "EUR"},
+                "expected_material_cost": {"amount": "100", "currency": "EUR"},
+                "issued_quantity": {"scale": 3, "unit": "PCS", "value": "10"},
+                "material_cost_variance": {"amount": "0", "currency": "EUR"},
+                "order_id": "ORDER-1",
+                "planned_quantity": {"scale": 3, "unit": "PCS", "value": "10"},
+                "product_id": "PRODUCT-1",
+                "reason_codes": ["MANUFACTURING_ORDER_RECONCILED"],
+                "scrap_quantity": {"scale": 3, "unit": "PCS", "value": "0"},
+                "status": "reconciled",
+            }
+        ],
+        "decision_digest": "d" * 64,
+        "max_scrap_quantity": {"scale": 3, "unit": "PCS", "value": "2"},
+        "schema_version": 1,
+        "status_counts": {"reconciled": 1},
     }
     assert result.denied_fields == ("unknown_run_field",)
     assert "must-not-escape" not in str(result.visible)

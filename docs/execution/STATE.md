@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1054 - Fail-closed projection for Master Currency Registry reconciliation (2026-08-27)
+
+- Master Currency Registry reconciliation now uses one nested projection across
+  local SQLite and tenant-scoped PostgreSQL responses. Focused and full
+  regression/static/security/package gates pass; ADR 0714 records the decision
+  and rollback boundary. This is bounded disclosure control, not registry
+  correctness, live rate sourcing, or production readiness.
+
 ## E-1053 - Explicit financial input policy in risk scoring (2026-08-27)
 
 - Risk scoring now has a typed policy boundary and Stock/Work-order/WIP paths

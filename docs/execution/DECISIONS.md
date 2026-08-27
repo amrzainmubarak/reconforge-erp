@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-881: Master Registry reconciliation uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The Currency Registry reconciliation route returned adapter
+  mappings directly while its snapshot embedding had a bounded projection.
+- **Decision**: Apply one nested master-registry projection to local and
+  PostgreSQL reconciliation responses.
+- **Verification**: Focused route and field-boundary tests inject future
+  top-level/nested fields and prove they are denied; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1054.
+- **Compatibility**: No reconciliation or registry behavior changes; this is
+  bounded response disclosure control.
+- **Rollback**: Revert E-1054 code, tests, ADR 0714, manifest, and execution
+  metadata together; do not restore direct result serialization.
+
 ### D-880: Risk scoring propagates financial input policy
 
 - **Date**: 2026-08-27

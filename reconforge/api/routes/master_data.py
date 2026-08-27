@@ -24,6 +24,7 @@ from reconforge.auth.field_access import (
     project_master_entity,
     project_master_organization,
     project_master_period,
+    project_master_registry,
     project_master_snapshot,
     project_master_summary,
 )
@@ -382,7 +383,11 @@ def currency_registry_reconciliation(
             except CurrencyRegistryGovernanceError as exc:
                 raise PostgresMasterDataValidationError(str(exc)) from exc
 
-        return {"reconciliation": execute_postgres_master_data(request, operation)}
+        return {
+            "reconciliation": project_master_registry(
+                execute_postgres_master_data(request, operation)
+            ).visible
+        }
     try:
         result = MasterDataService(_local_connection(connection)).currency_registry_reconciliation(
             workspace=workspace,
@@ -390,7 +395,7 @@ def currency_registry_reconciliation(
         )
     except (DatabaseError, PlatformError, CurrencyRegistryGovernanceError) as exc:
         raise _api_error("currency_registry_reconciliation_failed", exc) from exc
-    return {"reconciliation": result}
+    return {"reconciliation": project_master_registry(result).visible}
 
 
 @router.post("/currencies/registry-binding")

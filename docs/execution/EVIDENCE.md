@@ -2,6 +2,17 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1054: Fail-closed projection for Master Currency Registry reconciliation
+
+- Code evidence: local and tenant-scoped PostgreSQL reconciliation responses
+  now pass through one central nested master-registry projection.
+- Test evidence: the focused master-data projection suite injects future fields
+  at top-level and in registry, issue, and binding objects and proves they are
+  absent. Full regression and release-quality gates pass. pip-audit cannot
+  audit the local distribution because it is not published on PyPI.
+- Boundary: registry source correctness, live rate sourcing, and production
+  effectiveness remain separate concerns. ADR 0714 records rollback.
+
 ## E-1053: Explicit financial input policy in risk scoring
 
 - Code evidence: risk scoring now validates an explicit `FinancialInputPolicy`

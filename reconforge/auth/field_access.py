@@ -2505,6 +2505,27 @@ def project_master_summary(values: Mapping[str, object]) -> FieldProjection:
     return project_fields(values, allowed_fields=MASTER_SUMMARY_FIELDS)
 
 
+def project_master_registry(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for currency-registry reconciliation."""
+
+    record = dict(values)
+    registry = record.get("registry")
+    if isinstance(registry, Mapping):
+        record["registry"] = project_fields(registry, allowed_fields=MASTER_REGISTRY_DETAILS_FIELDS).visible
+    issues = record.get("issues")
+    if isinstance(issues, list):
+        projected_issues: list[dict[str, object]] = []
+        for issue in issues:
+            if not isinstance(issue, Mapping):
+                raise TypeError("master-data registry issue must be a mapping")
+            projected_issues.append(project_fields(issue, allowed_fields=MASTER_REGISTRY_ISSUE_FIELDS).visible)
+        record["issues"] = projected_issues
+    binding = record.get("binding")
+    if isinstance(binding, Mapping):
+        record["binding"] = project_fields(binding, allowed_fields=MASTER_REGISTRY_BINDING_FIELDS).visible
+    return project_fields(record, allowed_fields=MASTER_REGISTRY_FIELDS)
+
+
 def project_master_snapshot(values: Mapping[str, object]) -> FieldProjection:
     """Return a closed projection for the versioned master-data snapshot."""
 

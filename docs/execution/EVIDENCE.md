@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1064: Fail-closed projection for Finance Core snapshots
+
+- Code evidence: `/api/v1/finance-core/snapshot` now projects both local SQLite
+  and tenant-scoped PostgreSQL snapshots through a central recursive allowlist
+  covering the root, source, summary, master-data collections, entries, and
+  entry lines.
+- Test evidence: field-access and server-shaped API tests inject unknown fields
+  at the root and each nested snapshot boundary and prove they do not escape.
+  The focused suite and full regression pass; Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff gates pass. pip-audit cannot audit the
+  local distribution because it is not published on PyPI.
+- Boundary: this controls API disclosure only; statutory posting, accounting
+  correctness, universal field-level authorization, and production
+  effectiveness remain separately bounded. ADR 0724 records rollback.
+
 ## E-1063: Fail-closed projection for consolidation source-bound artifacts
 
 - Code evidence: Intercompany Elimination, Consolidation Impairment, and

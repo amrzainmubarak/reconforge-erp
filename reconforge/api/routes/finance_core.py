@@ -34,6 +34,7 @@ from reconforge.auth.field_access import (
     project_finance_dimension_value,
     project_finance_entry,
     project_finance_journal,
+    project_finance_snapshot,
     project_finance_summary,
 )
 from reconforge.auth.models import LocalUser
@@ -198,6 +199,17 @@ def _project_dimension_values(values: list[dict[str, object]]) -> list[dict[str,
 
 def _project_journals(values: list[dict[str, object]]) -> list[dict[str, object]]:
     return [project_finance_journal(value).visible for value in values]
+
+
+def _project_snapshot(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_finance_snapshot(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="finance_core_snapshot_projection_failed",
+            message="Finance Core returned an invalid snapshot response contract.",
+        ) from exc
 
 
 def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
@@ -427,12 +439,14 @@ def snapshot(
             request,
             lambda repository: repository.snapshot(workspace=scoped_workspace, actor_label=current_user.id),
         )
-        return {**result, "source": {"kind": "postgres-finance-core"}}
+        return _project_snapshot({**result, "source": {"kind": "postgres-finance-core"}})
     if server_ledger_enabled(request):
         raise _server_unsupported("the full Finance Core snapshot")
     try:
-        return FinanceCoreService(_local_connection(connection)).snapshot(
-            workspace=workspace, actor_label=current_user.username
+        return _project_snapshot(
+            FinanceCoreService(_local_connection(connection)).snapshot(
+                workspace=workspace, actor_label=current_user.username
+            )
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_core_snapshot_failed", exc) from exc

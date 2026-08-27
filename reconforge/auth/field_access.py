@@ -500,6 +500,22 @@ FINANCE_JOURNAL_FIELDS = frozenset(
         "updated_at",
     }
 )
+FINANCE_SNAPSHOT_FIELDS = frozenset(
+    {
+        "schema_version",
+        "generated_at",
+        "source",
+        "workspace",
+        "summary",
+        "charts",
+        "accounts",
+        "dimensions",
+        "dimension_values",
+        "journals",
+        "entries",
+    }
+)
+FINANCE_SNAPSHOT_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
 INVENTORY_VALUATION_DOCUMENT_FIELDS = frozenset(
     {
         # This is the deliberate public union of the local SQLite and
@@ -2188,6 +2204,45 @@ def project_finance_dimension_value(values: Mapping[str, object]) -> FieldProjec
 
 def project_finance_journal(values: Mapping[str, object]) -> FieldProjection:
     return project_fields(values, allowed_fields=FINANCE_JOURNAL_FIELDS)
+
+
+def project_finance_snapshot(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for the complete finance-core snapshot."""
+
+    record = dict(values)
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("finance snapshot source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=FINANCE_SNAPSHOT_SOURCE_FIELDS).visible
+
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("finance snapshot summary must be a mapping")
+        record["summary"] = project_finance_summary(summary).visible
+
+    projectors: tuple[tuple[str, Callable[[Mapping[str, object]], FieldProjection]], ...] = (
+        ("charts", project_finance_chart),
+        ("accounts", project_finance_account),
+        ("dimensions", project_finance_dimension),
+        ("dimension_values", project_finance_dimension_value),
+        ("journals", project_finance_journal),
+        ("entries", project_finance_entry),
+    )
+    for name, projector in projectors:
+        children = record.get(name)
+        if children is None:
+            continue
+        if not isinstance(children, list):
+            raise TypeError(f"finance snapshot {name} collection must be a list")
+        projected_children: list[dict[str, object]] = []
+        for child in children:
+            if not isinstance(child, Mapping):
+                raise TypeError(f"finance snapshot {name} record must be a mapping")
+            projected_children.append(projector(child).visible)
+        record[name] = projected_children
+    return project_fields(record, allowed_fields=FINANCE_SNAPSHOT_FIELDS)
 
 
 def project_inventory_valuation_document(values: Mapping[str, object]) -> FieldProjection:

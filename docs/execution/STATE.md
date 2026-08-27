@@ -2,6 +2,15 @@
 
 Updated: 2026-08-27
 
+## E-1064 - Fail-closed projection for Finance Core snapshots (2026-08-27)
+
+- Finance Core snapshot responses now use a central recursive projection across
+  local SQLite and tenant-scoped PostgreSQL paths. Focused tests and the full
+  regression pass; release gates pass. The projection covers the root contract,
+  source and summary envelopes, chart/account/dimension/journal collections,
+  and nested ledger-entry lines. This is bounded disclosure control, not
+  statutory posting or production readiness.
+
 ## E-1063 - Fail-closed projection for consolidation source-bound artifacts (2026-08-27)
 
 - Intercompany Elimination, Consolidation Impairment, and Acquisition

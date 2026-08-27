@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1064
+    priority: P0
+    area: finance-close
+    title: Apply fail-closed projection to Finance Core snapshot responses
+    status: completed
+    depends_on: [E-1001, E-1002, E-1005, E-1063]
+    exit_evidence: >-
+      Finance Core snapshot responses preserve the reviewed version, source,
+      workspace, summary, master-data collections, and entry records across
+      local SQLite and tenant-scoped PostgreSQL paths while dropping unknown
+      adapter and nested fields through one central projection. Focused tests,
+      full regression, and release quality gates pass; ADR 0724 records
+      rollback. This does not claim statutory posting or production readiness.
   - id: E-1063
     priority: P0
     area: finance-close

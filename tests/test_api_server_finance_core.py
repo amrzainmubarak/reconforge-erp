@@ -317,6 +317,76 @@ def test_finance_core_entry_route_drops_future_adapter_fields(
     }
 
 
+def test_finance_core_snapshot_route_projects_server_adapter_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: True)
+    monkeypatch.setattr(routes, "_server_finance_workspace", lambda *_args, **_kwargs: "workspace-a")
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core",
+        lambda _request, _operation: {
+            "schema_version": 1,
+            "generated_at": "2026-08-27T10:00:00Z",
+            "workspace": "workspace-a",
+            "source": {"kind": "repository", "unknown_source": "must-not-escape"},
+            "summary": {"workspace": "workspace-a", "charts": 1, "unknown_summary": "must-not-escape"},
+            "charts": [{"id": "chart-1", "chart_code": "DEFAULT", "unknown_chart": "must-not-escape"}],
+            "accounts": [],
+            "dimensions": [],
+            "dimension_values": [],
+            "journals": [],
+            "entries": [],
+            "unknown_snapshot": "must-not-escape",
+        },
+    )
+
+    result = routes.snapshot(request, user, None, workspace="default")
+
+    assert result["source"] == {"kind": "postgres-finance-core"}
+    assert result["summary"] == {"workspace": "workspace-a", "charts": 1}
+    assert result["charts"] == [{"chart_code": "DEFAULT", "id": "chart-1"}]
+    assert "must-not-escape" not in str(result)
+
+
+def test_finance_core_snapshot_route_projects_local_adapter_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+
+    class _LocalService:
+        def __init__(self, _connection: object) -> None:
+            pass
+
+        def snapshot(self, **_values: object) -> dict[str, object]:
+            return {
+                "schema_version": 1,
+                "generated_at": "2026-08-27T10:00:00Z",
+                "source": {"kind": "local-finance-core", "unknown_source": "must-not-escape"},
+                "workspace": "default",
+                "summary": {"workspace": "default", "charts": 0},
+                "charts": [],
+                "accounts": [],
+                "dimensions": [],
+                "dimension_values": [],
+                "journals": [],
+                "entries": [],
+                "unknown_snapshot": "must-not-escape",
+            }
+
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: False)
+    monkeypatch.setattr(routes, "server_ledger_enabled", lambda _request: False)
+    monkeypatch.setattr(routes, "FinanceCoreService", _LocalService)
+
+    result = routes.snapshot(request, user, object(), workspace="default")
+
+    assert result["source"] == {"kind": "local-finance-core"}
+    assert "must-not-escape" not in str(result)
+
+
 def test_server_finance_core_entry_does_not_fall_back_to_legacy_ledger(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

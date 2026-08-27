@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-891: Finance Core snapshots use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The authenticated Finance Core snapshot route returned the
+  PostgreSQL repository snapshot directly, while the snapshot contains several
+  financial collections and nested ledger-entry data.
+- **Decision**: Apply one central recursive projection to the snapshot root,
+  source and summary envelopes, master-data collections, entries, and entry
+  lines for both local SQLite and tenant-scoped PostgreSQL responses. Reject
+  malformed collection or envelope shapes at the API boundary.
+- **Verification**: Field-access and server-shaped route tests inject future
+  fields into every reviewed snapshot boundary; focused and full regression,
+  static/security/package, source-YAML, and diff gates pass for E-1064. Live
+  PostgreSQL execution remains environment-skipped.
+- **Compatibility**: Preserve the reviewed snapshot schema, source markers,
+  financial counts, master-data records, and exact entry fields; deny unknown
+  adapter fields without altering repository storage contracts.
+- **Rollback**: Revert E-1064 code, tests, ADR 0724, manifest, and execution
+  metadata together; do not restore direct snapshot serialization.
+
 ### D-890: Consolidation source-bound artifacts use fail-closed projection
 
 - **Date**: 2026-08-27

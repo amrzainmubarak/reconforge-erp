@@ -29,6 +29,7 @@ from reconforge.auth.field_access import (
     project_finance_dimension_value,
     project_finance_entry,
     project_finance_journal,
+    project_finance_snapshot,
     project_finance_summary,
     project_individual_cashflow,
     project_inventory_control_exceptions,
@@ -108,6 +109,48 @@ def test_finance_core_master_projections_are_closed() -> None:
         assert result.visible == {key: value for key, value in record.items() if key != "unknown"}
         assert result.denied_fields == ("unknown",)
         assert "must-not-escape" not in str(result.visible)
+
+
+def test_finance_core_snapshot_projection_is_closed_across_nested_collections() -> None:
+    result = project_finance_snapshot(
+        {
+            "schema_version": 1,
+            "generated_at": "2026-08-27T10:00:00Z",
+            "source": {"kind": "postgres-finance-core", "server_mode": True, "unknown_source": "must-not-escape"},
+            "workspace": "default",
+            "summary": {"workspace": "default", "charts": 1, "unknown_summary": "must-not-escape"},
+            "charts": [{"id": "chart-1", "chart_code": "DEFAULT", "unknown_chart": "must-not-escape"}],
+            "accounts": [{"id": "account-1", "account_code": "1000", "unknown_account": "must-not-escape"}],
+            "dimensions": [{"id": "dimension-1", "dimension_code": "CC", "unknown_dimension": "must-not-escape"}],
+            "dimension_values": [{"id": "value-1", "value_code": "HQ", "unknown_value": "must-not-escape"}],
+            "journals": [{"id": "journal-1", "journal_code": "GENERAL", "unknown_journal": "must-not-escape"}],
+            "entries": [
+                {
+                    "id": "entry-1",
+                    "entry_number": "JE-001",
+                    "status": "Validated",
+                    "unknown_entry": "must-not-escape",
+                    "lines": [{"id": "line-1", "account_code": "1000", "unknown_line": "must-not-escape"}],
+                }
+            ],
+            "unknown_snapshot": "must-not-escape",
+        }
+    )
+
+    assert result.visible["source"] == {"kind": "postgres-finance-core", "server_mode": True}
+    assert result.visible["summary"] == {"workspace": "default", "charts": 1}
+    assert result.visible["charts"] == [{"chart_code": "DEFAULT", "id": "chart-1"}]
+    assert result.visible["accounts"] == [{"account_code": "1000", "id": "account-1"}]
+    assert result.visible["entries"] == [
+        {
+            "entry_number": "JE-001",
+            "id": "entry-1",
+            "lines": [{"account_code": "1000", "id": "line-1"}],
+            "status": "Validated",
+        }
+    ]
+    assert result.denied_fields == ("unknown_snapshot",)
+    assert "must-not-escape" not in str(result.visible)
 
 
 def test_field_projection_is_permutation_stable_and_masking_is_not_authorization() -> None:

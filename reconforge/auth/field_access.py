@@ -257,6 +257,20 @@ EVIDENCE_REQUIREMENT_FIELDS = frozenset(
 EVIDENCE_VERIFICATION_FIELDS = frozenset(
     {"evidence_id", "ok", "expected_sha256", "actual_sha256"}
 )
+EVIDENCE_COVERAGE_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "workspace_id",
+        "object_count",
+        "requirement_count",
+        "covered_object_count",
+        "coverage_pct",
+        "objects",
+    }
+)
+EVIDENCE_COVERAGE_OBJECT_FIELDS = frozenset(
+    {"object_type", "object_id", "requirement_count", "linked_evidence_count"}
+)
 CLOSE_PERIOD_FIELDS = frozenset(
     {
         "tenant_id",
@@ -2454,6 +2468,25 @@ def project_evidence_verification(values: Mapping[str, object]) -> FieldProjecti
     """Return a closed projection for a checksum verification response."""
 
     return project_fields(values, allowed_fields=EVIDENCE_VERIFICATION_FIELDS)
+
+
+def project_evidence_coverage(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for evidence coverage."""
+
+    record = dict(values)
+    objects = record.get("objects")
+    if objects is not None:
+        if not isinstance(objects, (list, tuple)):
+            raise TypeError("evidence coverage objects must be a list or tuple")
+        projected_objects: list[dict[str, object]] = []
+        for item in objects:
+            if not isinstance(item, Mapping):
+                raise TypeError("evidence coverage object must be a mapping")
+            projected_objects.append(
+                project_fields(item, allowed_fields=EVIDENCE_COVERAGE_OBJECT_FIELDS).visible
+            )
+        record["objects"] = projected_objects
+    return project_fields(record, allowed_fields=EVIDENCE_COVERAGE_FIELDS)
 
 
 def project_evidence_link_response(values: Mapping[str, object]) -> FieldProjection:

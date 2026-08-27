@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1069: Fail-closed evidence coverage responses
+
+- Code evidence: The evidence coverage route now projects the tenant/workspace
+  summary and nested per-object requirement counts through a central
+  allowlist for both SQLite and PostgreSQL adapters.
+- Test evidence: field-access tests inject future summary and object fields;
+  the PostgreSQL-shaped and local SQLite route tests prove those fields do not
+  escape. Focused and full pytest checks pass; Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff gates pass. pip-audit cannot audit the
+  local distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; evidence-store durability,
+  universal authorization, live PostgreSQL execution, and production
+  effectiveness remain separately bounded. ADR 0729 records rollback.
+
 ## E-1068: Fail-closed access policy-analysis responses
 
 - Code evidence: The access policy-analysis route now projects deterministic

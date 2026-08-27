@@ -30,6 +30,7 @@ from reconforge.auth import AuthServiceError, LocalAuthService
 from reconforge.auth.field_access import (
     EVIDENCE_DRILL_DOWN_FIELDS,
     EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+    project_evidence_coverage,
     project_evidence_drill_down_record,
     project_evidence_link_response,
     project_evidence_requirement,
@@ -182,6 +183,17 @@ def _project_drill_down_result(result: dict[str, object], *, include_sensitive: 
         "sensitive_record_fields": sorted(EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS),
     }
     return projected
+
+
+def _project_coverage(result: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_evidence_coverage(result).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="evidence_coverage_projection_failed",
+            message="Evidence registry returned an invalid coverage contract.",
+        ) from exc
 
 
 def _project_evidence_record_response(
@@ -416,12 +428,15 @@ def evidence_coverage(
     if server_evidence_enabled(request):
         _enforce_server_evidence_read_access(request)
         result = execute_postgres_evidence(request, lambda repository, tenant: repository.coverage(tenant_id=tenant))
-        return {"coverage": result, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+        return {
+            "coverage": _project_coverage(result),
+            "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+        }
     try:
         result = EvidenceRegistryService(_local_connection(connection)).coverage(actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="evidence_coverage_failed", message=str(exc)) from exc
-    return {"coverage": result}
+    return {"coverage": _project_coverage(result)}
 
 
 @router.get("/records/{evidence_id}")

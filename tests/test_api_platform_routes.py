@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+import reconforge.api.routes.evidence as evidence_routes
 from reconforge.api import create_api_app
 from reconforge.auth import LocalAuthService
 from reconforge.db import connect, run_migrations
@@ -213,6 +214,45 @@ def test_local_evidence_cursor_pagination_is_signed_and_offset_compatible(tmp_pa
     assert {record["id"] for record in first.json()["evidence"] + second.json()["evidence"]} == expected_ids
     assert tampered.status_code == 400
     assert tampered.json()["error"]["code"] == "cursor_context_mismatch"
+
+
+def test_local_evidence_coverage_drops_future_service_fields(tmp_path: Path, monkeypatch: object) -> None:
+    client, _ = _setup(tmp_path)
+    headers = {"Authorization": f"Bearer {_token(client, 'review')}"}
+
+    def fake_coverage(self: object, **_: object) -> dict[str, object]:
+        return {
+            "workspace_id": "workspace-a",
+            "object_count": 1,
+            "requirement_count": 1,
+            "covered_object_count": 1,
+            "coverage_pct": 100.0,
+            "objects": [
+                {
+                    "object_type": "close_task",
+                    "object_id": "task-a",
+                    "requirement_count": 1,
+                    "linked_evidence_count": 1,
+                    "future_object_field": "must-not-escape",
+                }
+            ],
+            "future_coverage_field": "must-not-escape",
+        }
+
+    monkeypatch.setattr(evidence_routes.EvidenceRegistryService, "coverage", fake_coverage)
+    response = client.get("/api/v1/evidence/coverage", headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["coverage"]["objects"] == [
+        {
+            "object_type": "close_task",
+            "object_id": "task-a",
+            "requirement_count": 1,
+            "linked_evidence_count": 1,
+        }
+    ]
+    assert "future_coverage_field" not in response.text
+    assert "future_object_field" not in response.text
 
 
 def test_local_evidence_drill_down_is_redacted_bounded_and_permission_gated(tmp_path: Path) -> None:

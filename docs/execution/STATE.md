@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1069 - Fail-closed evidence coverage responses (2026-08-27)
+
+- Evidence coverage results now have a central nested projection for summary
+  fields and per-object counts across SQLite and PostgreSQL route paths;
+  focused checks, full regression, and release-gate evidence pass. This is
+  bounded response control, not a claim of evidence-store durability or
+  production readiness.
+
 ## E-1068 - Fail-closed access policy-analysis responses (2026-08-27)
 
 - Policy-analysis results now have a central recursive projection for result

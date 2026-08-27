@@ -38,7 +38,16 @@ class _FakeEvidenceRepository:
             "requirement_count": len(self.requirements),
             "covered_object_count": len(self.links),
             "coverage_pct": 100.0 if self.requirements and self.links else 0.0,
-            "objects": [],
+            "objects": [
+                {
+                    "object_type": "close_task",
+                    "object_id": "task-a",
+                    "requirement_count": len(self.requirements),
+                    "linked_evidence_count": len(self.links),
+                    "unknown_future_object_field": "must-not-escape",
+                }
+            ],
+            "unknown_future_coverage_field": "must-not-escape",
         }
 
     def register(self, **values: object) -> dict[str, object]:
@@ -234,6 +243,9 @@ def test_server_evidence_routes_use_tenant_scoped_repository(tmp_path: Path, mon
     assert sensitive_node["field_access"]["masked_fields"] == []
     assert sensitive_node["field_access"]["denied_fields"] == ["unknown_future_column"]
     assert coverage.status_code == 200
+    assert coverage.json()["coverage"]["objects"][0]["object_type"] == "close_task"
+    assert "unknown_future_coverage_field" not in coverage.text
+    assert "unknown_future_object_field" not in coverage.text
     expected_hierarchy = {
         "tenant_id": "tenant-a",
         "workspace_id": "workspace-a",

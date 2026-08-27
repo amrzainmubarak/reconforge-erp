@@ -21,6 +21,7 @@ from reconforge.auth.field_access import (
     project_consolidation_ppa_response,
     project_consolidation_run,
     project_consolidation_summary,
+    project_evidence_coverage,
     project_evidence_drill_down_record,
     project_evidence_link_response,
     project_evidence_requirement,
@@ -526,6 +527,40 @@ def test_evidence_mutation_projections_drop_unknown_adapter_fields() -> None:
     assert requirement.denied_fields == ("unknown_future_column",)
     assert "unknown_future_column" not in verification.visible
     assert verification.denied_fields == ("unknown_future_column",)
+
+
+def test_evidence_coverage_projection_is_closed_across_objects() -> None:
+    result = project_evidence_coverage(
+        {
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "object_count": 1,
+            "requirement_count": 2,
+            "covered_object_count": 1,
+            "coverage_pct": 100.0,
+            "objects": [
+                {
+                    "object_type": "close_task",
+                    "object_id": "task-a",
+                    "requirement_count": 2,
+                    "linked_evidence_count": 2,
+                    "future_object_field": "must-not-escape",
+                }
+            ],
+            "future_coverage_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible["objects"] == [
+        {
+            "object_type": "close_task",
+            "object_id": "task-a",
+            "requirement_count": 2,
+            "linked_evidence_count": 2,
+        }
+    ]
+    assert result.denied_fields == ("future_coverage_field",)
+    assert "future_object_field" not in str(result.visible)
 
 
 def test_finance_entry_projection_is_closed_across_local_and_server_shapes() -> None:

@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1069
+    priority: P0
+    area: evidence-governance
+    title: Apply fail-closed projection to evidence coverage responses
+    status: completed
+    depends_on: [E-1005, E-1068]
+    exit_evidence: >-
+      Evidence coverage results preserve reviewed tenant/workspace summary
+      fields and per-object requirement counts while dropping unknown adapter
+      fields through one central nested projection in SQLite and PostgreSQL
+      route paths. Focused tests, full regression, and release quality gates
+      pass; ADR 0729 records rollback. This does not claim evidence-store
+      durability or production readiness.
   - id: E-1068
     priority: P0
     area: identity-governance

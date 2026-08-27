@@ -2,6 +2,19 @@
 
 Updated: 2026-08-27
 
+## E-1044 - Fail-closed projection for Individual Cashflow API responses (2026-08-27)
+
+- The local-only Individual Cashflow run response now uses a central recursive
+  allowlist for the run envelope, decisions, canonical Money values, input
+  digests, and known status counts. Unknown future result fields cannot
+  silently enter the response.
+- Focused field/API tests pass, and the full Python regression passes 100%.
+  Ruff, Mypy across 539 source files, Bandit, pip-audit, package build, source
+  YAML validation across 174 files, and diff checks also pass. pip-audit
+  cannot audit the local distribution because it is not published on PyPI.
+  ADR 0704 records rollback. This remains a bounded disclosure control, not
+  universal field-level authorization or production readiness.
+
 ## E-1043 - Fail-closed projection for Inventory Planning API responses (2026-08-27)
 
 - Inventory Planning count-session lifecycle, count-session lists, reorder-rule

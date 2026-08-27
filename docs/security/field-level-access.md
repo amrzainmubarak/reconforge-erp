@@ -4,6 +4,16 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1044 migrated surface
+
+The local-only Individual Cashflow run response uses central recursive
+allowlists for the run envelope, decisions, canonical Money values, input
+digests, and known status counts. Unknown future result fields are dropped and
+malformed nested collections fail closed before serialization. This is a
+bounded disclosure control for the reviewed response family, not universal
+field-level authorization, bank authenticity, or production readiness. ADR
+0704 records the decision and rollback.
+
 ## E-1043 migrated surface
 
 Inventory Planning count-session lifecycle, count-session lists, reorder-rule

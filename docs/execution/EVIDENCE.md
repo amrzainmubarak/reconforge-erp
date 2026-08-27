@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1044: Fail-closed projection for Individual Cashflow API responses
+
+- Code evidence: `/api/v1/individual/cashflow-controls/run` projects the
+  local-only control run through central top-level, decision, canonical Money,
+  input-digest, and known status-count allowlists. Unknown result fields are
+  dropped before serialization and malformed nested collections fail closed.
+- Test evidence: `tests/test_field_access.py` covers recursive decisions,
+  Money values, status counts, and future fields. The authenticated route test
+  injects unknown result, decision, Money, and status fields and proves they do
+  not escape. Focused tests pass. Full `python -m pytest -q` passes 100%;
+  `python -m ruff check .`, `python -m mypy reconforge` (539 source files),
+  Bandit, pip-audit, `python -m build --no-isolation`, source YAML validation
+  (174 files), and `git diff --check` pass. pip-audit reports the local
+  distribution as unauditable because it is not published on PyPI. Generated
+  malformed/unsafe YAML fixtures under test output were excluded from source
+  validation by policy.
+- Boundary: this closes only the reviewed local Individual Cashflow response
+  family. It does not establish universal field-level authorization, external
+  IAM, bank authenticity, tax/legal treatment, posting, write-back, or
+  production effectiveness. ADR 0704 records rollback.
+
 ## E-1043: Fail-closed projection for Inventory Planning API responses
 
 - Code evidence: `/api/v1/inventory-planning` count-session lifecycle,

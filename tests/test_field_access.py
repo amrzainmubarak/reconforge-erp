@@ -19,6 +19,7 @@ from reconforge.auth.field_access import (
     project_finance_dimension_value,
     project_finance_entry,
     project_finance_journal,
+    project_individual_cashflow,
     project_inventory_control_exceptions,
     project_inventory_core_snapshot,
     project_inventory_core_summary,
@@ -526,6 +527,49 @@ def test_inventory_planning_projection_is_closed_recursively() -> None:
     }
     assert snapshot.visible["count_sessions"][0]["lines"] == session.visible["lines"]
     assert "must-not-escape" not in str([session.visible, rule.visible, signals.visible, snapshot.visible])
+
+
+def test_individual_cashflow_projection_is_closed_recursively() -> None:
+    result = project_individual_cashflow(
+        {
+            "schema_version": 1,
+            "algorithm_version": "individual-cashflow-control-v1",
+            "input_digests": ["a" * 64],
+            "decision_digest": "b" * 64,
+            "status_counts": {"over_budget": 1, "future_status": 9},
+            "decisions": [
+                {
+                    "period": "2026-07",
+                    "flow_type": "expense",
+                    "category": "food",
+                    "status": "over_budget",
+                    "reason_code": "CASHFLOW_ACTIVITY_EXCEEDS_BUDGET",
+                    "actual": {"amount": "25.00", "currency": "USD", "unknown_money_field": "must-not-escape"},
+                    "budget": None,
+                    "variance": {"amount": "5.00", "currency": "USD"},
+                    "transaction_ids": ["tx-1"],
+                    "unknown_decision_field": "must-not-escape",
+                }
+            ],
+            "unknown_result_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible["status_counts"] == {"over_budget": 1}
+    assert result.visible["decisions"] == [
+        {
+            "actual": {"amount": "25.00", "currency": "USD"},
+            "budget": None,
+            "category": "food",
+            "flow_type": "expense",
+            "period": "2026-07",
+            "reason_code": "CASHFLOW_ACTIVITY_EXCEEDS_BUDGET",
+            "status": "over_budget",
+            "transaction_ids": ["tx-1"],
+            "variance": {"amount": "5.00", "currency": "USD"},
+        }
+    ]
+    assert "must-not-escape" not in str(result.visible)
 
 
 def test_payables_supplier_projection_is_closed() -> None:

@@ -11,6 +11,7 @@ from reconforge.api.dependencies import require_any_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import server_identity_enabled
 from reconforge.application.individual_cashflow_control import run_individual_cashflow_control_records
+from reconforge.auth.field_access import project_individual_cashflow
 from reconforge.auth.models import LocalUser
 from reconforge.domain.individual_cashflow_control import IndividualCashflowControlError
 
@@ -55,7 +56,7 @@ def run_individual_cashflow(
     except IndividualCashflowControlError as exc:
         raise APIError(status_code=400, code="individual_cashflow_control_failed", message=str(exc)) from exc
     return {
-        "individual_cashflow": run.to_dict(),
+        "individual_cashflow": project_individual_cashflow(run.to_dict()).visible,
         "network_dispatch": "disabled",
         "source": {"kind": "local-individual-cashflow-control", "server_mode": False},
     }

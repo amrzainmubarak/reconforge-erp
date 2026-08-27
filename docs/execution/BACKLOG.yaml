@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1044
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Individual Cashflow API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1043]
+    exit_evidence: >-
+      The local-only Individual Cashflow run response uses a central recursive
+      allowlist for the run envelope, decisions, canonical Money values,
+      input digests, and known status counts. Synthetic future-field tests
+      prove unknown result, decision, Money, and status fields are dropped
+      while exact values and non-posting behavior remain compatible. Focused
+      selectors pass; full Python regression passes 100%, and Ruff, Mypy across
+      539 source files, Bandit, pip-audit, package build, source YAML
+      validation across 174 files, and diff checks pass. pip-audit cannot audit
+      the local distribution because it is not published on PyPI. ADR 0704
+      records rollback.
   - id: E-1043
     priority: P0
     area: identity-governance

@@ -762,6 +762,22 @@ INVENTORY_REORDER_SIGNAL_FIELDS = frozenset(
 INVENTORY_PLANNING_SNAPSHOT_FIELDS = frozenset(
     {"schema_version", "generated_at", "source", "workspace", "summary", "count_sessions", "reorder_rules"}
 )
+INDIVIDUAL_CASHFLOW_FIELDS = frozenset(
+    {"schema_version", "algorithm_version", "input_digests", "decisions", "decision_digest", "status_counts"}
+)
+INDIVIDUAL_CASHFLOW_DECISION_FIELDS = frozenset(
+    {
+        "actual", "budget", "budget_id", "category", "flow_type", "period", "reason_code", "status",
+        "transaction_ids", "variance",
+    }
+)
+INDIVIDUAL_CASHFLOW_MONEY_FIELDS = frozenset(
+    {
+        "amount", "currency", "currency_policy_digest", "currency_registry_digest", "currency_registry_version",
+        "minor_units", "rounding_policy", "schema_version",
+    }
+)
+INDIVIDUAL_CASHFLOW_STATUS_FIELDS = frozenset({"no_activity", "over_budget", "unbudgeted", "within_budget"})
 PAYABLES_SUPPLIER_FIELDS = frozenset(
     {
         # Deliberate union for local SQLite and tenant-scoped PostgreSQL
@@ -1929,6 +1945,58 @@ def project_inventory_planning_snapshot(values: Mapping[str, object]) -> FieldPr
             projected_children.append(projector(child).visible)
         record[field_name] = projected_children
     return project_fields(record, allowed_fields=INVENTORY_PLANNING_SNAPSHOT_FIELDS)
+
+
+def project_individual_cashflow(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for individual cashflow results."""
+
+    record = dict(values)
+    decisions = record.get("decisions")
+    if decisions is not None:
+        if not isinstance(decisions, list):
+            raise TypeError("individual cashflow decisions collection must be a list")
+        projected_decisions: list[dict[str, object]] = []
+        for decision in decisions:
+            if not isinstance(decision, Mapping):
+                raise TypeError("individual cashflow decision must be a mapping")
+            decision_record = dict(decision)
+            for field_name in ("actual", "budget", "variance"):
+                money = decision_record.get(field_name)
+                if money is None:
+                    continue
+                if not isinstance(money, Mapping):
+                    raise TypeError(f"individual cashflow decision {field_name} must be a mapping")
+                decision_record[field_name] = project_fields(
+                    money,
+                    allowed_fields=INDIVIDUAL_CASHFLOW_MONEY_FIELDS,
+                ).visible
+            transaction_ids = decision_record.get("transaction_ids")
+            if transaction_ids is not None:
+                if not isinstance(transaction_ids, list):
+                    raise TypeError("individual cashflow transaction IDs must be a list")
+                decision_record["transaction_ids"] = list(transaction_ids)
+            projected_decisions.append(
+                project_fields(
+                    decision_record,
+                    allowed_fields=INDIVIDUAL_CASHFLOW_DECISION_FIELDS,
+                ).visible
+            )
+        record["decisions"] = projected_decisions
+    status_counts = record.get("status_counts")
+    if status_counts is not None:
+        if not isinstance(status_counts, Mapping):
+            raise TypeError("individual cashflow status counts must be a mapping")
+        record["status_counts"] = {
+            str(key): value
+            for key, value in status_counts.items()
+            if str(key) in INDIVIDUAL_CASHFLOW_STATUS_FIELDS
+        }
+    input_digests = record.get("input_digests")
+    if input_digests is not None:
+        if not isinstance(input_digests, list):
+            raise TypeError("individual cashflow input digests must be a list")
+        record["input_digests"] = list(input_digests)
+    return project_fields(record, allowed_fields=INDIVIDUAL_CASHFLOW_FIELDS)
 
 
 def project_payables_supplier(values: Mapping[str, object]) -> FieldProjection:

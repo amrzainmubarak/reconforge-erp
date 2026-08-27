@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-871: Individual Cashflow API uses fail-closed recursive projection
+
+- **Date**: 2026-08-27
+- **Context**: The local-only Individual Cashflow API returned a domain run
+  dictionary containing Money values, decisions, digests, and status counts
+  without a central response disclosure boundary.
+- **Decision**: Project the run envelope, decision records, canonical Money
+  values, input digests, and known status counts through central recursive
+  allowlists. Unknown fields are dropped and malformed nested collections are
+  rejected before response serialization.
+- **Verification**: Focused field/API tests cover synthetic future fields at
+  every reviewed nested level. Full `python -m pytest -q` passes 100%; Ruff,
+  Mypy across 539 source files, Bandit, pip-audit, package build, source YAML
+  validation across 174 files, and diff checks pass. The local distribution is
+  unauditable by pip-audit because it is not published on PyPI.
+- **Compatibility**: Local-only, non-posting behavior and known response
+  fields remain unchanged; this is a bounded disclosure control.
+- **Rollback**: Revert E-1044 code/tests/ADR 0704/manifest and execution
+  metadata together; do not restore unbounded run serialization.
+
 ### D-870: Inventory Planning API uses fail-closed recursive projection
 
 - **Date**: 2026-08-27

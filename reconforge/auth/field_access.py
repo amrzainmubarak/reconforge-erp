@@ -9,6 +9,25 @@ from dataclasses import dataclass
 
 REDACTED_VALUE = "[REDACTED]"
 
+AUTH_ME_FIELDS = frozenset(
+    {
+        "id",
+        "username",
+        "display_name",
+        "email",
+        "disabled",
+        "created_at",
+        "roles",
+        "principal_type",
+        "step_up_active",
+        "step_up_expires_at",
+        "step_up_method",
+        "permissions",
+        "authorized_scopes",
+    }
+)
+AUTH_ME_SCOPE_FIELDS = frozenset({"workspaces", "organizations", "legal_entities"})
+
 # These are response-contract fields, not database columns.  Keeping the
 # allowlist here makes the sensitive evidence boundary explicit and gives
 # every adapter the same fail-closed projection policy.
@@ -1500,6 +1519,20 @@ def project_evidence_drill_down_record(
         masked_fields=masked_fields,
         mask_value=legacy_mask_value,
     )
+
+
+def project_auth_me(values: Mapping[str, object]) -> FieldProjection:
+    """Return the bounded identity snapshot exposed by ``/auth/me``."""
+
+    record = dict(values)
+    scopes = record.get("authorized_scopes")
+    if scopes is not None:
+        if not isinstance(scopes, Mapping):
+            raise TypeError("auth identity authorized scopes must be a mapping")
+        record["authorized_scopes"] = project_fields(
+            scopes, allowed_fields=AUTH_ME_SCOPE_FIELDS
+        ).visible
+    return project_fields(record, allowed_fields=AUTH_ME_FIELDS)
 
 
 def project_audit_event(values: Mapping[str, object]) -> FieldProjection:

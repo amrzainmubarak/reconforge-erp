@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1049
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to auth me identity responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1048]
+    exit_evidence: >-
+      The Auth Me endpoint preserves the existing local, server-user, and
+      service-account identity fields while dropping unknown top-level and
+      authorized-scope fields through a central recursive allowlist. Focused
+      and full regression plus release quality gates pass; ADR 0709 records
+      rollback. This does not claim universal IAM or production readiness.
   - id: E-1048
     priority: P0
     area: identity-governance

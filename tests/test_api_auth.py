@@ -45,6 +45,31 @@ def test_login_me_and_logout_work(tmp_path: Path) -> None:
     assert after_logout.status_code == 401
 
 
+def test_auth_me_drops_future_identity_fields_before_serialization(tmp_path: Path, monkeypatch: object) -> None:
+    import reconforge.api.routes.auth as auth_routes
+
+    client, _, admin_username = _client_with_users(tmp_path)
+
+    def hostile_user_payload(_user: object) -> dict[str, object]:
+        return {
+            "id": "user-admin",
+            "username": admin_username,
+            "display_name": "Admin",
+            "email": None,
+            "disabled": False,
+            "created_at": "2026-08-27T00:00:00Z",
+            "future_identity_field": "must-not-escape",
+        }
+
+    monkeypatch.setattr(auth_routes, "_user_payload", hostile_user_payload)
+    login = client.post("/api/v1/auth/login", json={"username": admin_username, "password": "Secret-123"})
+    response = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {login.json()['access_token']}"})
+
+    assert response.status_code == 200
+    assert response.json()["username"] == admin_username
+    assert "future_identity_field" not in response.text
+
+
 def test_login_fails_with_wrong_password_and_disabled_user(tmp_path: Path) -> None:
     client, _, admin_username = _client_with_users(tmp_path)
 

@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-876: Auth Me uses fail-closed identity projection
+
+- **Date**: 2026-08-27
+- **Context**: The identity snapshot endpoint returned a dynamic dictionary
+  without a central response allowlist, despite exposing roles, permissions,
+  and authorized scope metadata.
+- **Decision**: Project the top-level identity contract and the nested
+  authorized scope envelope through one central allowlist before serialization.
+- **Verification**: Focused identity projector and authenticated HTTP tests
+  inject future fields and prove they are denied; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1049.
+- **Compatibility**: No authentication, session, role lookup, authorization,
+  or token behavior changes; this is bounded disclosure control.
+- **Rollback**: Revert E-1049 code, tests, ADR 0709, manifest, and execution
+  metadata together; do not restore unbounded identity serialization.
+
 ### D-875: Consolidation Close summary API uses fail-closed projection
 
 - **Date**: 2026-08-27

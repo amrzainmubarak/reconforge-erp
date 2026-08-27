@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1049 - Fail-closed projection for Auth Me identity responses (2026-08-27)
+
+- `/api/v1/auth/me` now applies the central `project_auth_me` allowlist before
+  serialization and recursively bounds authorized scopes. Focused and full
+  regression/static/security/package gates pass; ADR 0709 records the decision
+  and rollback boundary. This is bounded disclosure control, not universal IAM
+  or production readiness.
+
 ## E-1048 - Fail-closed projection for Consolidation Close summary responses (2026-08-27)
 
 - The `/api/v1/consolidation-close/summary` response now applies the central

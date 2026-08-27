@@ -2,6 +2,7 @@ from reconforge.auth.field_access import (
     REDACTED_VALUE,
     project_account_reconciliation,
     project_audit_event,
+    project_auth_me,
     project_bank_statement,
     project_close_period,
     project_close_readiness,
@@ -313,6 +314,36 @@ def test_consolidation_summary_projection_is_closed() -> None:
         "reversed_runs": 6,
     }
     assert result.denied_fields == ("unknown_summary_field",)
+
+
+def test_auth_me_projection_is_closed_across_identity_scopes() -> None:
+    result = project_auth_me(
+        {
+            "id": "user-a",
+            "username": "alice",
+            "display_name": "Alice",
+            "email": "alice@example.test",
+            "disabled": False,
+            "created_at": "2026-08-27T00:00:00Z",
+            "roles": ["reviewer"],
+            "principal_type": "user",
+            "authorized_scopes": {
+                "workspaces": ["workspace-a"],
+                "organizations": ["org-a"],
+                "legal_entities": ["entity-a"],
+                "future_scope": ["must-not-escape"],
+            },
+            "future_identity_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible["authorized_scopes"] == {
+        "workspaces": ["workspace-a"],
+        "organizations": ["org-a"],
+        "legal_entities": ["entity-a"],
+    }
+    assert "future_identity_field" in result.denied_fields
+    assert "future_scope" not in str(result.visible["authorized_scopes"])
 
 
 def test_inventory_valuation_document_projection_is_closed_across_nested_financial_shapes() -> None:

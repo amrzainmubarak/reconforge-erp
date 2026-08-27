@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1049: Fail-closed projection for Auth Me identity responses
+
+- Code evidence: `/api/v1/auth/me` now projects its dynamic identity payload
+  through `project_auth_me`; the authorized scope envelope is recursively
+  bounded to workspaces, organizations, and legal entities.
+- Test evidence: Focused identity projector and authenticated route tests
+  inject future top-level and nested fields and prove they are absent. Full
+  regression, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  gates pass. pip-audit cannot audit the local distribution because it is not
+  published on PyPI.
+- Boundary: this is a bounded response disclosure control. It does not
+  establish universal IAM, external identity assurance, distributed revocation,
+  or production effectiveness. ADR 0709 records rollback.
+
 ## E-1048: Fail-closed projection for Consolidation Close summary responses
 
 - Code evidence: `/api/v1/consolidation-close/summary` projects both local

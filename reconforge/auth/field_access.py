@@ -1440,6 +1440,8 @@ AUDIT_EVENT_SENSITIVE_FIELDS = frozenset(
         "metadata",
     }
 )
+AUDIT_VERIFICATION_FIELDS = frozenset({"ok", "checked_events", "head_hash", "issues"})
+AUDIT_VERIFICATION_ISSUE_FIELDS = frozenset({"sequence", "message"})
 
 
 @dataclass(frozen=True)
@@ -1569,6 +1571,25 @@ def project_audit_event(values: Mapping[str, object]) -> FieldProjection:
         allowed_fields=AUDIT_EVENT_FIELDS,
         masked_fields=AUDIT_EVENT_SENSITIVE_FIELDS,
     )
+
+
+def project_audit_verification(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for legacy audit-chain verification."""
+
+    record = dict(values)
+    issues = record.get("issues")
+    if issues is not None:
+        if not isinstance(issues, list):
+            raise TypeError("audit verification issues must be a list")
+        projected_issues: list[dict[str, object]] = []
+        for issue in issues:
+            if not isinstance(issue, Mapping):
+                raise TypeError("audit verification issue must be a mapping")
+            projected_issues.append(
+                project_fields(issue, allowed_fields=AUDIT_VERIFICATION_ISSUE_FIELDS).visible
+            )
+        record["issues"] = projected_issues
+    return project_fields(record, allowed_fields=AUDIT_VERIFICATION_FIELDS)
 
 
 def project_evidence_requirement(values: Mapping[str, object]) -> FieldProjection:

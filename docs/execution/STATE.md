@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1056 - Fail-closed projection for legacy audit verification responses (2026-08-27)
+
+- Legacy audit verification now uses one closed projection for local SQLite and
+  tenant-scoped PostgreSQL results, including nested issue objects. Focused and
+  full regression/static/security/package gates pass; ADR 0716 records the
+  decision and rollback boundary. This is bounded disclosure control, not
+  deployed audit effectiveness or production readiness.
+
 ## E-1055 - Fail-closed projection for Master Currency Registry binding responses (2026-08-27)
 
 - Explicit Currency Registry binding responses now use one nested projection

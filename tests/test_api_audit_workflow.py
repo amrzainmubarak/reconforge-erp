@@ -49,6 +49,8 @@ def test_audit_events_requires_permission_and_verify_works(tmp_path: Path) -> No
         assert event["actor_label"] == "[REDACTED]"
         assert event["object_id"] == "[REDACTED]"
         assert event["metadata"] == "[REDACTED]"
+    assert set(verify.json()) == {"ok", "checked_events", "head_hash", "issues"}
+    assert verify.json()["issues"] == []
     assert "Traceback" not in denied.text + events.text + verify.text
 
 

@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1056: Fail-closed projection for legacy audit verification responses
+
+- Code evidence: `/api/v1/audit/verify` now applies one central nested
+  projection to local SQLite and tenant-scoped PostgreSQL verification output.
+- Test evidence: focused route tests inject unknown result and issue fields into
+  local and PostgreSQL-shaped responses and prove they are absent; the
+  authenticated workflow test verifies the compatible response shape. Full
+  regression and release-quality gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this does not establish deployed audit effectiveness or production
+  assurance. ADR 0716 records rollback.
+
 ## E-1055: Fail-closed projection for Master Currency Registry binding responses
 
 - Code evidence: local and tenant-scoped PostgreSQL Currency Registry binding

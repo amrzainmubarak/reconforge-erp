@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-883: Legacy audit verification uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The legacy audit verification route shaped local output but
+  returned PostgreSQL verification mappings and issue dictionaries directly.
+- **Decision**: Apply one central projection to local and PostgreSQL results,
+  including a nested allowlist for verification issues.
+- **Verification**: Focused local and PostgreSQL-shaped route tests inject
+  future result/issue fields and prove they are denied; full regression,
+  static, security, packaging, YAML, and diff gates pass for E-1056.
+- **Compatibility**: Existing status, count, head hash, issue sequence, and
+  issue message fields remain unchanged; unknown response fields are removed.
+- **Rollback**: Revert E-1056 code, tests, ADR 0716, manifest, and execution
+  metadata together; do not restore direct PostgreSQL serialization.
+
 ### D-882: Master Registry binding uses fail-closed projection
 
 - **Date**: 2026-08-27

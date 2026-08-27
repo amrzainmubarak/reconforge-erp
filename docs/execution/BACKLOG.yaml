@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1056
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to legacy audit verification responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1055]
+    exit_evidence: >-
+      Legacy audit verification responses preserve the reviewed status, event
+      count, head hash, and issue fields across SQLite/PostgreSQL while
+      dropping unknown result and issue fields through one central projection.
+      Focused and full regression plus release quality gates pass; ADR 0716
+      records rollback. This does not claim deployed audit effectiveness or
+      production readiness.
   - id: E-1055
     priority: P0
     area: identity-governance

@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1053: Explicit financial input policy in risk scoring
+
+- Code evidence: risk scoring now validates an explicit `FinancialInputPolicy`
+  and Stock, Work-order, and WIP paths propagate their selected policy.
+- Test evidence: the focused risk, reconciliation, and report suite passes;
+  its policy test proves binary floating-point input is accepted only through
+  an explicitly named legacy policy and is neutral under strict v2. Full
+  regression and release-quality gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: remaining legacy compatibility callers and production financial
+  assurance remain open. ADR 0713 records rollback.
+
 ## E-1052: Fail-closed projection for Inventory movement void responses
 
 - Code evidence: the Inventory Core void endpoint now applies the existing

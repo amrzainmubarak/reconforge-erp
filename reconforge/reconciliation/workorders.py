@@ -82,7 +82,12 @@ def _add_risk(
                 status = "valid"
             except InvalidAmountError:
                 status = "missing_or_invalid"
-        assessment = assess_risk(exception_type, config, amount=amount)
+        assessment = assess_risk(
+            exception_type,
+            config,
+            amount=amount,
+            financial_input_policy=financial_input_policy,
+        )
         scores.append(assessment.score)
         levels.append(assessment.level)
         amount_status.append(status)

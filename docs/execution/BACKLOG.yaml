@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1053
+    priority: P0
+    area: financial-exactness
+    title: Propagate explicit financial input policy through risk scoring
+    status: completed
+    depends_on: [E-1001, E-1002, E-1052]
+    exit_evidence: >-
+      Risk scoring validates and receives strict v2 or an explicitly named
+      legacy v1 policy across Stock/GL, Work-order, and WIP paths. Focused and
+      full regression plus release quality gates pass; ADR 0713 records
+      rollback. This does not close the remaining legacy compatibility callers
+      or prove production financial correctness.
   - id: E-1052
     priority: P0
     area: identity-governance

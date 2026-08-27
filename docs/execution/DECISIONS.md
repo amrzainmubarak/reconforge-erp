@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-880: Risk scoring propagates financial input policy
+
+- **Date**: 2026-08-27
+- **Context**: Risk scoring used the parser default instead of the policy
+  selected by the surrounding reconciliation/report workflow.
+- **Decision**: Require an explicit policy parameter on risk scoring and pass
+  it through Stock, Work-order, and WIP paths; strict v2 is the new default.
+- **Verification**: Focused risk, reconciliation, and report tests cover exact
+  inputs and explicit legacy/strict binary-float behavior; full regression,
+  static, security, packaging, YAML, and diff gates pass for E-1053.
+- **Compatibility**: No exact-input score or stored financial amount changes;
+  implicit parser-policy selection is removed.
+- **Rollback**: Revert E-1053 code, tests, ADR 0713, manifest, and execution
+  metadata together; do not restore implicit parser policy.
+
 ### D-879: Inventory movement void uses fail-closed projection
 
 - **Date**: 2026-08-27

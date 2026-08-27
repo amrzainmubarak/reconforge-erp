@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1053 - Explicit financial input policy in risk scoring (2026-08-27)
+
+- Risk scoring now has a typed policy boundary and Stock/Work-order/WIP paths
+  propagate strict v2 or an explicitly named legacy v1 policy. Focused and full
+  regression/static/security/package gates pass; ADR 0713 records the decision
+  and rollback boundary. This is a bounded exactness slice, not closure of all
+  legacy callers or production financial assurance.
+
 ## E-1052 - Fail-closed projection for Inventory movement void responses (2026-08-27)
 
 - Inventory movement void responses now use the existing central movement

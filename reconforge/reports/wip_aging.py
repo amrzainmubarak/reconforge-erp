@@ -9,6 +9,11 @@ import pandas as pd
 from reconforge.config import ReconForgeConfig
 from reconforge.reconciliation.risk import assess_risk
 from reconforge.utils.dates import aging_days
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+    validate_financial_input_policy,
+)
 
 
 def bucket_for_age(days: int, config: ReconForgeConfig) -> str:
@@ -20,9 +25,16 @@ def bucket_for_age(days: int, config: ReconForgeConfig) -> str:
     return f"{days}+"
 
 
-def generate_wip_aging(work_orders: pd.DataFrame, config: ReconForgeConfig, as_of: date | None = None) -> pd.DataFrame:
+def generate_wip_aging(
+    work_orders: pd.DataFrame,
+    config: ReconForgeConfig,
+    as_of: date | None = None,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> pd.DataFrame:
     """Generate WIP aging grouped by work order and operational owner."""
 
+    input_policy = validate_financial_input_policy(financial_input_policy)
     report_date = as_of or date.today()
     open_statuses = {"open", "in progress", "waiting parts", "pending invoice"}
     frame = work_orders.copy()
@@ -39,6 +51,7 @@ def generate_wip_aging(work_orders: pd.DataFrame, config: ReconForgeConfig, as_o
             config,
             amount=row.get("actual_cost"),
             aging_days=int(row["aging_days"]),
+            financial_input_policy=input_policy,
         )
         scores.append(assessment.score)
         levels.append(assessment.level)

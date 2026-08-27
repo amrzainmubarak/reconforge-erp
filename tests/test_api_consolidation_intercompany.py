@@ -55,10 +55,19 @@ def test_intercompany_api_computes_with_authenticated_actor(tmp_path: Path, monk
             captured["lines"] = lines
             captured["result"] = result
             captured["kwargs"] = kwargs
-            return {"id": "ice-" + "a" * 32, "posting": "not_available"}
+            return {
+                "id": "ice-" + "a" * 32,
+                "posting": "not_available",
+                "future_adapter_field": "must-not-leak",
+            }
 
         def get(self, artifact_id: str, **_: object) -> dict[str, object]:
-            return {"id": artifact_id, "workspace_id": "default", "posting": "not_available"}
+            return {
+                "id": artifact_id,
+                "workspace_id": "default",
+                "posting": "not_available",
+                "future_adapter_field": "must-not-leak",
+            }
 
     repository = Repository()
 
@@ -83,6 +92,7 @@ def test_intercompany_api_computes_with_authenticated_actor(tmp_path: Path, monk
     created = client.post("/api/v1/consolidation-intercompany-eliminations", headers=headers, json=_body())
     assert created.status_code == 200, created.text
     assert created.json()["artifact"]["posting"] == "not_available"
+    assert "future_adapter_field" not in created.json()["artifact"]
     actor_id = client.get("/api/v1/auth/me", headers=headers).json()["id"]
     assert captured["result"].prepared_by == actor_id  # type: ignore[union-attr]
     assert captured["kwargs"]["workspace"] == "default"  # type: ignore[index]
@@ -92,6 +102,7 @@ def test_intercompany_api_computes_with_authenticated_actor(tmp_path: Path, monk
         headers=headers,
     )
     assert loaded.status_code == 200
+    assert "future_adapter_field" not in loaded.json()["artifact"]
     assert scoped_permissions == [
         {
             "permission": "finance_core.manage",

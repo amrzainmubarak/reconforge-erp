@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 from typing import Annotated, Literal
 
@@ -15,6 +16,7 @@ from reconforge.api.server_consolidation_deferred_tax import (
     server_deferred_tax_enabled,
 )
 from reconforge.application.consolidation_deferred_tax import AcquisitionDeferredTaxApplicationService
+from reconforge.auth.field_access import project_consolidation_deferred_tax_response
 from reconforge.auth.models import LocalUser
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_deferred_tax import (
@@ -135,6 +137,14 @@ def _server_only(request: Request) -> None:
         )
 
 
+def _project_artifact_response(
+    artifact: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_deferred_tax_response(
+        {"artifact": artifact, "source": source}
+    ).visible
+
+
 def _enforce_server_policy(
     request: Request,
     *,
@@ -177,10 +187,10 @@ def prepare_deferred_tax(
             actor_label=current_user.id,
         ),
     )
-    return {
-        "artifact": artifact,
-        "source": {"kind": "postgresql-consolidation-deferred-tax", "server_mode": True},
-    }
+    return _project_artifact_response(
+        artifact,
+        {"kind": "postgresql-consolidation-deferred-tax", "server_mode": True},
+    )
 
 
 @router.get("/{artifact_id}")
@@ -197,10 +207,10 @@ def get_deferred_tax(
         request,
         lambda repository, _tenant: repository.get(artifact_id, actor_label=current_user.id),
     )
-    return {
-        "artifact": artifact,
-        "source": {"kind": "postgresql-consolidation-deferred-tax", "server_mode": True},
-    }
+    return _project_artifact_response(
+        artifact,
+        {"kind": "postgresql-consolidation-deferred-tax", "server_mode": True},
+    )
 
 
 __all__ = [

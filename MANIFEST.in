@@ -1066,5 +1066,6 @@ include docs/adr/0719-consolidation-ownership-uses-fail-closed-projection.md
 include docs/adr/0720-consolidation-ppa-uses-fail-closed-projection.md
 include docs/adr/0721-consolidation-ownership-change-uses-fail-closed-projection.md
 include docs/adr/0722-evidence-link-responses-use-fail-closed-projection.md
+include docs/adr/0723-consolidation-source-bound-artifacts-use-fail-closed-projection.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

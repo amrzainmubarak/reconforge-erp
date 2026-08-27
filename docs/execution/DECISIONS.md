@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-890: Consolidation source-bound artifacts use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Three authenticated PostgreSQL finance-evidence APIs exposed
+  raw artifact dictionaries containing nested financial payloads.
+- **Decision**: Apply family-specific central projections for intercompany,
+  impairment, and deferred-tax artifacts, including nested exact Money and
+  source structures.
+- **Verification**: Focused server-shaped API and field-access tests inject
+  future fields at every nested boundary; full regression and release gates
+  pass for E-1063.
+- **Compatibility**: Preserve reviewed lineage, result explanations,
+  non-posting status, and exact-money metadata; deny unknown fields.
+- **Rollback**: Revert E-1063 code, tests, ADR 0723, manifest, and execution
+  metadata together; do not restore direct serialization.
+
 ### D-889: Evidence-link responses use fail-closed projection
 
 - **Date**: 2026-08-27

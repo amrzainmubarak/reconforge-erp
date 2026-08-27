@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1063
+    priority: P0
+    area: finance-close
+    title: Apply fail-closed projection to consolidation source-bound artifacts
+    status: completed
+    depends_on: [E-1001, E-1002, E-1005, E-1062]
+    exit_evidence: >-
+      Intercompany Elimination, Consolidation Impairment, and Acquisition
+      Deferred Tax responses preserve reviewed lineage, exact-money payloads,
+      source lines/items, and result explanations while dropping unknown
+      adapter and nested payload fields through central projections. Focused
+      tests pass; full regression and release quality gates pass; ADR 0723
+      records rollback. This does not claim statutory accounting or
+      production readiness.
   - id: E-1062
     priority: P0
     area: evidence

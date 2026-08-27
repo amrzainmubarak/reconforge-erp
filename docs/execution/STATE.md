@@ -2,6 +2,15 @@
 
 Updated: 2026-08-27
 
+## E-1063 - Fail-closed projection for consolidation source-bound artifacts (2026-08-27)
+
+- Intercompany Elimination, Consolidation Impairment, and Acquisition
+  Deferred Tax responses now use family-specific closed projections through
+  nested Money, lines/items, resolutions, proposals, and source metadata.
+  Focused and full regression/static/security/package gates pass. This is
+  bounded disclosure control, not statutory accounting or production
+  readiness.
+
 ## E-1062 - Fail-closed projection for evidence-link mutation responses (2026-08-27)
 
 - The PostgreSQL evidence-link mutation response now uses a closed link/source

@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1063: Fail-closed projection for consolidation source-bound artifacts
+
+- Code evidence: Intercompany Elimination, Consolidation Impairment, and
+  Acquisition Deferred Tax routes now apply central family-specific artifact
+  projections through nested payloads and source envelopes.
+- Test evidence: focused API fixtures inject unknown artifact fields;
+  field-access tests inject unknown nested Money, line/item, resolution,
+  proposal, and source fields. Target Ruff and Mypy checks pass; full
+  regression passes; Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: this controls API disclosure only; statutory accounting,
+  valuation/tax conclusions, posting, and production effectiveness remain
+  separate concerns. ADR 0723 records rollback.
+
 ## E-1062: Fail-closed projection for evidence-link mutation responses
 
 - Code evidence: the server evidence-link mutation route now applies central

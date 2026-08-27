@@ -7,6 +7,9 @@ from reconforge.auth.field_access import (
     project_close_period,
     project_close_readiness,
     project_close_task,
+    project_consolidation_deferred_tax_response,
+    project_consolidation_impairment_response,
+    project_consolidation_intercompany_response,
     project_consolidation_ownership_change_response,
     project_consolidation_ownership_effective_response,
     project_consolidation_ownership_interest_response,
@@ -1447,3 +1450,95 @@ def test_evidence_link_response_projection_is_closed() -> None:
     }
     assert result.visible["source"] == {"kind": "postgresql-evidence-registry", "server_mode": True}
     assert "must-not-escape" not in str(result.visible)
+
+
+def test_consolidation_source_bound_artifact_family_is_closed_at_nested_boundaries() -> None:
+    intercompany = project_consolidation_intercompany_response(
+        {
+            "artifact": {
+                "id": "ice-1",
+                "posting": "not_available",
+                "request_payload": {
+                    "lines": [
+                        {
+                            "transaction_id": "tx-1",
+                            "amount": {"amount": "10", "currency": "USD", "future_money": "x"},
+                            "future_line": "must-not-escape",
+                        }
+                    ],
+                    "future_request": "must-not-escape",
+                },
+                "result_payload": {
+                    "resolutions": [
+                        {
+                            "group_key": "group-1",
+                            "proposal": {
+                                "lines": [
+                                    {
+                                        "line_id": "line-1",
+                                        "amount": {"amount": "10", "currency": "USD", "future_money": "x"},
+                                        "future_line": "must-not-escape",
+                                    }
+                                ],
+                                "future_proposal": "must-not-escape",
+                            },
+                            "future_resolution": "must-not-escape",
+                        }
+                    ],
+                    "future_result": "must-not-escape",
+                },
+                "future_artifact": "must-not-escape",
+            },
+            "source": {"kind": "postgresql-consolidation-intercompany", "future_source": "x"},
+        }
+    )
+    impairment = project_consolidation_impairment_response(
+        {
+            "artifact": {
+                "id": "imp-1",
+                "result_payload": {
+                    "total_impairment_loss": {"amount": "2", "currency": "USD", "future_money": "x"},
+                    "units": [
+                        {
+                            "unit_id": "unit-1",
+                            "impairment_loss": {"amount": "2", "currency": "USD", "future_money": "x"},
+                            "future_unit": "must-not-escape",
+                        }
+                    ],
+                    "future_result": "must-not-escape",
+                },
+                "future_artifact": "must-not-escape",
+            },
+            "source": {"kind": "postgresql-consolidation-impairment", "future_source": "x"},
+        }
+    )
+    deferred_tax = project_consolidation_deferred_tax_response(
+        {
+            "artifact": {
+                "id": "dtax-1",
+                "result_payload": {
+                    "net_deferred_tax": {"amount": "3", "currency": "USD", "future_money": "x"},
+                    "items": [
+                        {
+                            "item_id": "item-1",
+                            "tax_amount": {"amount": "3", "currency": "USD", "future_money": "x"},
+                            "future_item": "must-not-escape",
+                        }
+                    ],
+                    "future_result": "must-not-escape",
+                },
+                "future_artifact": "must-not-escape",
+            },
+            "source": {"kind": "postgresql-consolidation-deferred-tax", "future_source": "x"},
+        }
+    )
+    assert intercompany.visible["artifact"]["result_payload"]["resolutions"][0]["proposal"]["lines"] == [
+        {"amount": {"amount": "10", "currency": "USD"}, "line_id": "line-1"}
+    ]
+    assert impairment.visible["artifact"]["result_payload"]["units"] == [
+        {"impairment_loss": {"amount": "2", "currency": "USD"}, "unit_id": "unit-1"}
+    ]
+    assert deferred_tax.visible["artifact"]["result_payload"]["items"] == [
+        {"item_id": "item-1", "tax_amount": {"amount": "3", "currency": "USD"}}
+    ]
+    assert all("must-not-escape" not in str(result.visible) for result in (intercompany, impairment, deferred_tax))

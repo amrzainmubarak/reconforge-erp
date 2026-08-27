@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 REDACTED_VALUE = "[REDACTED]"
@@ -1630,6 +1630,206 @@ CONSOLIDATION_OWNERSHIP_CHANGE_LINE_FIELDS = frozenset(
     {"account_code", "line_type", "amount", "source_reference"}
 )
 CONSOLIDATION_OWNERSHIP_CHANGE_RESPONSE_FIELDS = frozenset({"artifact", "source"})
+CONSOLIDATION_INTERCOMPANY_ARTIFACT_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "reporting_currency",
+        "version",
+        "request_digest",
+        "result_digest",
+        "request_payload",
+        "result_payload",
+        "posted",
+        "prepared_by",
+        "prepared_at",
+        "created_at",
+        "posting",
+    }
+)
+CONSOLIDATION_INTERCOMPANY_REQUEST_FIELDS = frozenset(
+    {"lines", "prepared_at", "prepared_by", "reporting_currency", "version"}
+)
+CONSOLIDATION_INTERCOMPANY_LINE_FIELDS = frozenset(
+    {
+        "account_type",
+        "amount",
+        "counterparty_code",
+        "entity_code",
+        "group_account_code",
+        "line_id",
+        "period_name",
+        "reference",
+        "source_digest",
+        "source_reference",
+        "transaction_id",
+    }
+)
+CONSOLIDATION_INTERCOMPANY_RESULT_FIELDS = frozenset(
+    {
+        "algorithm_version",
+        "prepared_at",
+        "prepared_by",
+        "reporting_currency",
+        "request_digest",
+        "resolutions",
+        "result_digest",
+        "schema_version",
+        "version",
+    }
+)
+CONSOLIDATION_INTERCOMPANY_RESOLUTION_FIELDS = frozenset(
+    {"group_key", "proposal", "reason", "source_group_digest", "source_transaction_ids", "status"}
+)
+CONSOLIDATION_INTERCOMPANY_PROPOSAL_FIELDS = frozenset(
+    {"elimination_id", "elimination_type", "lines", "prepared_at", "prepared_by", "rationale", "version"}
+)
+CONSOLIDATION_INTERCOMPANY_PROPOSAL_LINE_FIELDS = frozenset(
+    {"account_type", "amount", "entity_code", "group_account_code", "line_id", "source_digest", "source_reference"}
+)
+CONSOLIDATION_INTERCOMPANY_RESPONSE_FIELDS = frozenset({"artifact", "source"})
+CONSOLIDATION_IMPAIRMENT_ARTIFACT_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "organization_id",
+        "legal_entity_id",
+        "impairment_test_id",
+        "entity_code",
+        "period_id",
+        "reporting_currency",
+        "request_digest",
+        "result_digest",
+        "request_payload",
+        "result_payload",
+        "posted",
+        "prepared_by",
+        "approved_by",
+        "approved_at",
+        "created_at",
+    }
+)
+CONSOLIDATION_IMPAIRMENT_REQUEST_FIELDS = frozenset(
+    {
+        "approved_at",
+        "approved_by",
+        "entity_code",
+        "impairment_test_id",
+        "period_id",
+        "policy_id",
+        "policy_version",
+        "prepared_at",
+        "prepared_by",
+        "reporting_currency",
+        "source_digest",
+        "source_reference",
+        "units",
+    }
+)
+CONSOLIDATION_IMPAIRMENT_UNIT_FIELDS = frozenset(
+    {
+        "account_code",
+        "carrying_amount",
+        "recoverable_amount",
+        "source_digest",
+        "source_reference",
+        "unit_id",
+        "unit_kind",
+    }
+)
+CONSOLIDATION_IMPAIRMENT_RESULT_FIELDS = frozenset(
+    {
+        "algorithm_version",
+        "impairment_test_id",
+        "posted",
+        "reporting_currency",
+        "request_digest",
+        "result_digest",
+        "schema_version",
+        "total_carrying_amount",
+        "total_impairment_loss",
+        "total_recoverable_amount",
+        "units",
+    }
+)
+CONSOLIDATION_IMPAIRMENT_RESULT_UNIT_FIELDS = CONSOLIDATION_IMPAIRMENT_UNIT_FIELDS | frozenset(
+    {"impairment_loss", "recoverable_headroom", "status"}
+)
+CONSOLIDATION_IMPAIRMENT_RESPONSE_FIELDS = frozenset({"artifact", "source"})
+CONSOLIDATION_DEFERRED_TAX_ARTIFACT_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "organization_id",
+        "legal_entity_id",
+        "acquisition_id",
+        "subsidiary_entity_code",
+        "period_id",
+        "acquisition_date",
+        "reporting_currency",
+        "request_digest",
+        "result_digest",
+        "request_payload",
+        "result_payload",
+        "posted",
+        "prepared_by",
+        "approved_by",
+        "approved_at",
+        "created_at",
+    }
+)
+CONSOLIDATION_DEFERRED_TAX_REQUEST_FIELDS = frozenset(
+    {
+        "acquisition_date",
+        "acquisition_id",
+        "approved_at",
+        "approved_by",
+        "deferred_tax_asset_account_code",
+        "deferred_tax_liability_account_code",
+        "items",
+        "period_id",
+        "policy_id",
+        "policy_version",
+        "prepared_at",
+        "prepared_by",
+        "reporting_currency",
+        "source_digest",
+        "source_reference",
+        "subsidiary_entity_code",
+    }
+)
+CONSOLIDATION_DEFERRED_TAX_ITEM_FIELDS = frozenset(
+    {
+        "account_code",
+        "fair_value",
+        "item_id",
+        "item_kind",
+        "source_reference",
+        "tax_basis",
+        "tax_basis_reference",
+        "tax_rate",
+    }
+)
+CONSOLIDATION_DEFERRED_TAX_RESULT_FIELDS = frozenset(
+    {
+        "acquisition_id",
+        "algorithm_version",
+        "deferred_tax_asset",
+        "deferred_tax_liability",
+        "items",
+        "net_deferred_tax",
+        "posted",
+        "reporting_currency",
+        "request_digest",
+        "result_digest",
+        "schema_version",
+    }
+)
+CONSOLIDATION_DEFERRED_TAX_RESULT_ITEM_FIELDS = CONSOLIDATION_DEFERRED_TAX_ITEM_FIELDS | frozenset(
+    {"classification", "tax_amount", "temporary_difference"}
+)
+CONSOLIDATION_DEFERRED_TAX_RESPONSE_FIELDS = frozenset({"artifact", "source"})
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -3200,3 +3400,219 @@ def project_consolidation_ownership_change_response(values: Mapping[str, object]
             source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
         ).visible
     return project_fields(record, allowed_fields=CONSOLIDATION_OWNERSHIP_CHANGE_RESPONSE_FIELDS)
+
+
+def _project_consolidation_collection(
+    value: object,
+    *,
+    item_fields: frozenset[str],
+    money_fields: frozenset[str] = frozenset(),
+) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        raise TypeError("consolidation artifact collection must be a list")
+    projected_items: list[dict[str, object]] = []
+    for item in value:
+        if not isinstance(item, Mapping):
+            raise TypeError("consolidation artifact collection item must be a mapping")
+        projected = project_fields(item, allowed_fields=item_fields).visible
+        for field in money_fields:
+            if field in projected:
+                projected[field] = _project_consolidation_ppa_money(projected[field])
+        projected_items.append(projected)
+    return projected_items
+
+
+def _project_consolidation_intercompany_payload(
+    value: object, *, result: bool
+) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("intercompany payload must be a mapping")
+    payload = project_fields(
+        value,
+        allowed_fields=(
+            CONSOLIDATION_INTERCOMPANY_RESULT_FIELDS
+            if result
+            else CONSOLIDATION_INTERCOMPANY_REQUEST_FIELDS
+        ),
+    ).visible
+    if not result:
+        if "lines" in payload:
+            payload["lines"] = _project_consolidation_collection(
+                payload["lines"],
+                item_fields=CONSOLIDATION_INTERCOMPANY_LINE_FIELDS,
+                money_fields=frozenset({"amount"}),
+            )
+        return payload
+    resolutions = payload.get("resolutions")
+    if resolutions is not None:
+        if not isinstance(resolutions, list):
+            raise TypeError("intercompany resolutions must be a list")
+        projected_resolutions: list[dict[str, object]] = []
+        for resolution in resolutions:
+            if not isinstance(resolution, Mapping):
+                raise TypeError("intercompany resolution must be a mapping")
+            projected = project_fields(
+                resolution, allowed_fields=CONSOLIDATION_INTERCOMPANY_RESOLUTION_FIELDS
+            ).visible
+            proposal = projected.get("proposal")
+            if proposal is not None:
+                if not isinstance(proposal, Mapping):
+                    raise TypeError("intercompany proposal must be a mapping")
+                projected_proposal = project_fields(
+                    proposal, allowed_fields=CONSOLIDATION_INTERCOMPANY_PROPOSAL_FIELDS
+                ).visible
+                if "lines" in projected_proposal:
+                    projected_proposal["lines"] = _project_consolidation_collection(
+                        projected_proposal["lines"],
+                        item_fields=CONSOLIDATION_INTERCOMPANY_PROPOSAL_LINE_FIELDS,
+                        money_fields=frozenset({"amount"}),
+                    )
+                projected["proposal"] = projected_proposal
+            projected_resolutions.append(projected)
+        payload["resolutions"] = projected_resolutions
+    return payload
+
+
+def _project_consolidation_impairment_payload(
+    value: object, *, result: bool
+) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("impairment payload must be a mapping")
+    payload = project_fields(
+        value,
+        allowed_fields=(
+            CONSOLIDATION_IMPAIRMENT_RESULT_FIELDS
+            if result
+            else CONSOLIDATION_IMPAIRMENT_REQUEST_FIELDS
+        ),
+    ).visible
+    money_fields = (
+        frozenset({"total_carrying_amount", "total_impairment_loss", "total_recoverable_amount"})
+        if result
+        else frozenset()
+    )
+    for field in money_fields:
+        if field in payload:
+            payload[field] = _project_consolidation_ppa_money(payload[field])
+    if "units" in payload:
+        payload["units"] = _project_consolidation_collection(
+            payload["units"],
+            item_fields=(
+                CONSOLIDATION_IMPAIRMENT_RESULT_UNIT_FIELDS
+                if result
+                else CONSOLIDATION_IMPAIRMENT_UNIT_FIELDS
+            ),
+            money_fields=(
+                frozenset({"carrying_amount", "recoverable_amount", "impairment_loss", "recoverable_headroom"})
+                if result
+                else frozenset({"carrying_amount", "recoverable_amount"})
+            ),
+        )
+    return payload
+
+
+def _project_consolidation_deferred_tax_payload(
+    value: object, *, result: bool
+) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("deferred-tax payload must be a mapping")
+    payload = project_fields(
+        value,
+        allowed_fields=(
+            CONSOLIDATION_DEFERRED_TAX_RESULT_FIELDS
+            if result
+            else CONSOLIDATION_DEFERRED_TAX_REQUEST_FIELDS
+        ),
+    ).visible
+    money_fields = (
+        frozenset({"deferred_tax_asset", "deferred_tax_liability", "net_deferred_tax"})
+        if result
+        else frozenset()
+    )
+    for field in money_fields:
+        if field in payload:
+            payload[field] = _project_consolidation_ppa_money(payload[field])
+    if "items" in payload:
+        payload["items"] = _project_consolidation_collection(
+            payload["items"],
+            item_fields=(
+                CONSOLIDATION_DEFERRED_TAX_RESULT_ITEM_FIELDS
+                if result
+                else CONSOLIDATION_DEFERRED_TAX_ITEM_FIELDS
+            ),
+            money_fields=(
+                frozenset({"fair_value", "tax_basis", "tax_amount", "temporary_difference"})
+                if result
+                else frozenset({"fair_value", "tax_basis"})
+            ),
+        )
+    return payload
+
+
+def _project_consolidation_artifact_response(
+    values: Mapping[str, object],
+    *,
+    artifact_fields: frozenset[str],
+    request_projector: Callable[[object], dict[str, object]],
+    result_projector: Callable[[object], dict[str, object]],
+    response_fields: frozenset[str],
+) -> FieldProjection:
+    record = dict(values)
+    artifact = record.get("artifact")
+    if artifact is not None:
+        if not isinstance(artifact, Mapping):
+            raise TypeError("consolidation artifact must be a mapping")
+        projected_artifact = project_fields(artifact, allowed_fields=artifact_fields).visible
+        if "request_payload" in projected_artifact:
+            projected_artifact["request_payload"] = request_projector(
+                projected_artifact["request_payload"]
+            )
+        if "result_payload" in projected_artifact:
+            projected_artifact["result_payload"] = result_projector(
+                projected_artifact["result_payload"]
+            )
+        record["artifact"] = projected_artifact
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("consolidation artifact source must be a mapping")
+        record["source"] = project_fields(
+            source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
+        ).visible
+    return project_fields(record, allowed_fields=response_fields)
+
+
+def project_consolidation_intercompany_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for an intercompany artifact response."""
+
+    return _project_consolidation_artifact_response(
+        values,
+        artifact_fields=CONSOLIDATION_INTERCOMPANY_ARTIFACT_FIELDS,
+        request_projector=lambda value: _project_consolidation_intercompany_payload(value, result=False),
+        result_projector=lambda value: _project_consolidation_intercompany_payload(value, result=True),
+        response_fields=CONSOLIDATION_INTERCOMPANY_RESPONSE_FIELDS,
+    )
+
+
+def project_consolidation_impairment_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for an impairment artifact response."""
+
+    return _project_consolidation_artifact_response(
+        values,
+        artifact_fields=CONSOLIDATION_IMPAIRMENT_ARTIFACT_FIELDS,
+        request_projector=lambda value: _project_consolidation_impairment_payload(value, result=False),
+        result_projector=lambda value: _project_consolidation_impairment_payload(value, result=True),
+        response_fields=CONSOLIDATION_IMPAIRMENT_RESPONSE_FIELDS,
+    )
+
+
+def project_consolidation_deferred_tax_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a deferred-tax artifact response."""
+
+    return _project_consolidation_artifact_response(
+        values,
+        artifact_fields=CONSOLIDATION_DEFERRED_TAX_ARTIFACT_FIELDS,
+        request_projector=lambda value: _project_consolidation_deferred_tax_payload(value, result=False),
+        result_projector=lambda value: _project_consolidation_deferred_tax_payload(value, result=True),
+        response_fields=CONSOLIDATION_DEFERRED_TAX_RESPONSE_FIELDS,
+    )

@@ -7,6 +7,8 @@ from reconforge.auth.field_access import (
     project_close_period,
     project_close_readiness,
     project_close_task,
+    project_consolidation_ownership_effective_response,
+    project_consolidation_ownership_interest_response,
     project_consolidation_period,
     project_consolidation_run,
     project_consolidation_summary,
@@ -1291,3 +1293,39 @@ def test_consolidation_projection_drops_unknown_storage_and_child_fields() -> No
     assert period.denied_fields == ("unknown_future_column",)
     assert run.denied_fields == ("unknown_future_run_column",)
     assert "must-not-escape" not in str(period.visible | run.visible)
+
+
+def test_consolidation_ownership_projection_is_closed_for_single_and_effective_shapes() -> None:
+    interest = {
+        "interest_id": "OWN-1",
+        "parent_entity_code": "PARENT",
+        "subsidiary_entity_code": "SUB",
+        "direct_ownership_percentage": "0.8",
+        "effective_from": "2026-01-01",
+        "effective_to": "",
+        "version": "1.0.0",
+        "source_digest": "a" * 64,
+        "prepared_by": "maker",
+        "approved_by": "checker",
+        "approved_at": "2026-01-01T00:00:00Z",
+        "unknown_future_column": "must-not-escape",
+    }
+    single = project_consolidation_ownership_interest_response(
+        {
+            "interest": interest,
+            "source": {"kind": "sqlite", "workspace": "default", "unknown_source": "x"},
+            "unknown_response_field": "must-not-escape",
+        }
+    )
+    effective = project_consolidation_ownership_effective_response(
+        {
+            "interests": [interest],
+            "source": {"kind": "postgresql", "server_mode": True, "unknown_source": "x"},
+            "unknown_response_field": "must-not-escape",
+        }
+    )
+    assert single.visible["interest"]["interest_id"] == "OWN-1"
+    assert single.visible["source"] == {"kind": "sqlite", "workspace": "default"}
+    assert effective.visible["interests"] == [{key: value for key, value in interest.items() if key != "unknown_future_column"}]
+    assert effective.visible["source"] == {"kind": "postgresql", "server_mode": True}
+    assert "must-not-escape" not in str(single.visible | effective.visible)

@@ -1435,6 +1435,30 @@ CONSOLIDATION_EVIDENCE_LINK_FIELDS = frozenset(
     }
 )
 CONSOLIDATION_EVIDENCE_LINK_RESPONSE_FIELDS = frozenset({"link", "source"})
+CONSOLIDATION_OWNERSHIP_INTEREST_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "workspace_id",
+        "workspace",
+        "group_code",
+        "interest_id",
+        "parent_entity_code",
+        "subsidiary_entity_code",
+        "direct_ownership_percentage",
+        "effective_from",
+        "effective_to",
+        "version",
+        "source_digest",
+        "prepared_by",
+        "approved_by",
+        "approved_at",
+        "created_at",
+    }
+)
+CONSOLIDATION_OWNERSHIP_SOURCE_FIELDS = MASTER_SNAPSHOT_SOURCE_FIELDS | frozenset({"workspace"})
+CONSOLIDATION_OWNERSHIP_INTEREST_RESPONSE_FIELDS = frozenset({"interest", "source"})
+CONSOLIDATION_OWNERSHIP_EFFECTIVE_RESPONSE_FIELDS = frozenset({"interests", "source"})
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -2761,3 +2785,47 @@ def project_consolidation_evidence_link_response(values: Mapping[str, object]) -
             source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
         ).visible
     return project_fields(record, allowed_fields=CONSOLIDATION_EVIDENCE_LINK_RESPONSE_FIELDS)
+
+
+def _project_consolidation_ownership_interest(value: Mapping[str, object]) -> dict[str, object]:
+    return project_fields(value, allowed_fields=CONSOLIDATION_OWNERSHIP_INTEREST_FIELDS).visible
+
+
+def _project_consolidation_ownership_source(value: object) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("consolidation ownership source must be a mapping")
+    return project_fields(value, allowed_fields=CONSOLIDATION_OWNERSHIP_SOURCE_FIELDS).visible
+
+
+def project_consolidation_ownership_interest_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for one ownership-interest response."""
+
+    record = dict(values)
+    interest = record.get("interest")
+    if interest is not None:
+        if not isinstance(interest, Mapping):
+            raise TypeError("consolidation ownership interest must be a mapping")
+        record["interest"] = _project_consolidation_ownership_interest(interest)
+    source = record.get("source")
+    if source is not None:
+        record["source"] = _project_consolidation_ownership_source(source)
+    return project_fields(record, allowed_fields=CONSOLIDATION_OWNERSHIP_INTEREST_RESPONSE_FIELDS)
+
+
+def project_consolidation_ownership_effective_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for an effective ownership-set response."""
+
+    record = dict(values)
+    interests = record.get("interests")
+    if interests is not None:
+        if not isinstance(interests, list):
+            raise TypeError("consolidation effective ownership interests must be a list")
+        record["interests"] = [
+            _project_consolidation_ownership_interest(interest)
+            for interest in interests
+            if isinstance(interest, Mapping)
+        ]
+    source = record.get("source")
+    if source is not None:
+        record["source"] = _project_consolidation_ownership_source(source)
+    return project_fields(record, allowed_fields=CONSOLIDATION_OWNERSHIP_EFFECTIVE_RESPONSE_FIELDS)

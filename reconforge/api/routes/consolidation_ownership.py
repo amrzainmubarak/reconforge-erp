@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 from typing import Annotated
 
@@ -22,6 +23,10 @@ from reconforge.api.server_consolidation_ownership import (
 )
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.application.consolidation_ownership import ConsolidationOwnershipApplicationService
+from reconforge.auth.field_access import (
+    project_consolidation_ownership_effective_response,
+    project_consolidation_ownership_interest_response,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.auth.service import AuthServiceError, LocalAuthService
 from reconforge.domain.consolidation import ConsolidationError
@@ -95,6 +100,22 @@ def _server_scope(request: Request, requested_workspace: str) -> RequestExecutio
 
 def _server_source() -> dict[str, object]:
     return {"kind": "postgresql-consolidation-ownership", "server_mode": True}
+
+
+def _project_interest_response(
+    interest: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_ownership_interest_response(
+        {"interest": interest, "source": source}
+    ).visible
+
+
+def _project_effective_response(
+    interests: list[Mapping[str, object]], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_ownership_effective_response(
+        {"interests": interests, "source": source}
+    ).visible
 
 
 def _verify_local_approver(connection: sqlite3.Connection, *, approver_id: str, preparer_id: str) -> None:
@@ -187,7 +208,7 @@ def save_interest(
             request,
             save,
         )
-        return {"interest": saved, "source": _server_source()}
+        return _project_interest_response(saved, _server_source())
 
     interest = payload.to_domain(prepared_by=current_user.username)
     try:
@@ -201,7 +222,9 @@ def save_interest(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise APIError(status_code=400, code="consolidation_ownership_request_invalid", message=str(exc)) from exc
-    return {"interest": saved, "source": {"kind": "sqlite-consolidation-ownership", "workspace": payload.workspace}}
+    return _project_interest_response(
+        saved, {"kind": "sqlite-consolidation-ownership", "workspace": payload.workspace}
+    )
 
 
 @router.get("/effective")
@@ -226,7 +249,9 @@ def resolve_effective(
                 actor_label=current_user.id,
             ),
         )
-        return {"interests": [interest.to_input_dict() for interest in interests], "source": _server_source()}
+        return _project_effective_response(
+            [interest.to_input_dict() for interest in interests], _server_source()
+        )
 
     try:
         interests = ConsolidationOwnershipApplicationService(_repository(connection)).resolve_effective(
@@ -237,10 +262,10 @@ def resolve_effective(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise APIError(status_code=400, code="consolidation_ownership_resolution_failed", message=str(exc)) from exc
-    return {
-        "interests": [interest.to_input_dict() for interest in interests],
-        "source": {"kind": "sqlite-consolidation-ownership", "workspace": workspace},
-    }
+    return _project_effective_response(
+        [interest.to_input_dict() for interest in interests],
+        {"kind": "sqlite-consolidation-ownership", "workspace": workspace},
+    )
 
 
 __all__ = ["OwnershipInterestRequest", "resolve_effective", "router", "save_interest"]

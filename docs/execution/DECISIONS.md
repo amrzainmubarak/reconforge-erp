@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-886: Consolidation ownership responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Ownership save and effective-resolution routes exposed raw
+  adapter-shaped records across local and PostgreSQL paths.
+- **Decision**: Use central nested projections for one interest and effective
+  interest collections, including a reviewed source envelope.
+- **Verification**: Focused API and field-access tests inject future adapter
+  fields and prove they do not cross the response boundary. Full regression,
+  static, security, packaging, YAML, and diff gates pass for E-1059.
+- **Compatibility**: Preserve existing reviewed ownership, approval, date,
+  digest, and source fields; deny unknown fields.
+- **Rollback**: Revert E-1059 code, tests, ADR 0719, manifest, and execution
+  metadata together; do not restore direct serialization.
+
 ### D-885: Consolidation evidence links use fail-closed projection
 
 - **Date**: 2026-08-27

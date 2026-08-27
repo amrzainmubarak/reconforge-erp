@@ -2,6 +2,15 @@
 
 Updated: 2026-08-27
 
+## E-1059 - Fail-closed projection for consolidation ownership responses (2026-08-27)
+
+- The consolidation ownership save and effective-resolution responses now
+  use closed nested projections for local and tenant-scoped PostgreSQL paths,
+  including the local workspace source marker. Focused tests and target
+  static checks pass; full regression and release-quality gates pass. This is
+  bounded disclosure control, not statutory consolidation or production
+  readiness.
+
 ## E-1058 - Fail-closed projection for consolidation evidence-link responses (2026-08-27)
 
 - The five Consolidation Close evidence-link mutation responses now use one

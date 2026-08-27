@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1059: Fail-closed projection for consolidation ownership responses
+
+- Code evidence: ownership save and effective-resolution routes now apply
+  central nested projections to single-interest and collection responses
+  across local SQLite and tenant-scoped PostgreSQL paths.
+- Test evidence: focused API fixtures inject unknown fields into both the
+  PostgreSQL-shaped save and effective-resolution responses; field-access
+  tests cover the response and source shapes. Target Ruff and Mypy checks
+  pass. Full regression passes; Ruff, Mypy, Bandit, pip-audit, package build,
+  source YAML, and diff gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; ownership master
+  correctness, statutory consolidation, and production effectiveness remain
+  separate concerns. ADR 0719 records rollback.
+
 ## E-1058: Fail-closed projection for consolidation evidence-link responses
 
 - Code evidence: all five Consolidation Close evidence-link mutation routes now

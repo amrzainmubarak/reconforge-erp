@@ -5,6 +5,28 @@
 
 ## Decisions
 
+### D-892: Identity administration responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Identity administration routes serialized user and session
+  dataclasses with `asdict(...)` directly. These responses contain sensitive
+  lifecycle metadata and must not depend only on framework response-model
+  filtering.
+- **Decision**: Apply central projections to identity-user and identity-session
+  records, paginated user/session envelopes, user-status transitions, and
+  session revocations. Invalid nested shapes fail closed with bounded API
+  errors; raw credentials, tokens, network values, and future fields are not
+  admitted to the reviewed response contract.
+- **Verification**: Field-access tests inject future fields into user/session
+  records and nested mutation responses. Authenticated API tests inject future
+  fields through the route serialization seam and prove they do not escape.
+  Focused and full regression, static/security/package, source-YAML, and diff
+  gates pass for E-1065. Live PostgreSQL execution remains environment-skipped.
+- **Compatibility**: Preserve the existing response-model fields, lifecycle
+  state, state digests, recorded-value booleans, pagination, and audit IDs.
+- **Rollback**: Revert E-1065 code, tests, ADR 0725, manifest, and execution
+  metadata together; do not restore direct identity serialization.
+
 ### D-891: Finance Core snapshots use fail-closed projection
 
 - **Date**: 2026-08-27

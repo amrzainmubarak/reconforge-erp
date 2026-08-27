@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1065
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projections to identity administration responses
+    status: completed
+    depends_on: [E-1005, E-1064]
+    exit_evidence: >-
+      Identity user and session list, status-change, and revocation responses
+      preserve the reviewed lifecycle and redaction-safe metadata while
+      dropping unknown adapter fields through central nested projections.
+      Focused tests, full regression, and release quality gates pass; ADR 0725
+      records rollback. This does not claim external IAM assurance or
+      production readiness.
   - id: E-1064
     priority: P0
     area: finance-close

@@ -31,6 +31,10 @@ from reconforge.auth.field_access import (
     project_finance_journal,
     project_finance_snapshot,
     project_finance_summary,
+    project_identity_session_page,
+    project_identity_session_revocation,
+    project_identity_user_page,
+    project_identity_user_status,
     project_individual_cashflow,
     project_inventory_control_exceptions,
     project_inventory_core_snapshot,
@@ -151,6 +155,81 @@ def test_finance_core_snapshot_projection_is_closed_across_nested_collections() 
     ]
     assert result.denied_fields == ("unknown_snapshot",)
     assert "must-not-escape" not in str(result.visible)
+
+
+def test_identity_administration_projections_are_closed_and_nested() -> None:
+    user = {
+        "id": "user-1",
+        "username": "alice",
+        "display_name": "Alice",
+        "disabled": False,
+        "lifecycle_version": 1,
+        "roles": ("reviewer",),
+        "active_sessions": 1,
+        "created_at": "2026-08-27T10:00:00Z",
+        "disabled_at": None,
+        "state_digest": "a" * 64,
+        "future_identity_field": "must-not-escape",
+    }
+    session = {
+        "id": "session-1",
+        "user_id": "user-1",
+        "username": "alice",
+        "status": "active",
+        "lifecycle_version": 1,
+        "created_at": "2026-08-27T10:00:00Z",
+        "expires_at": "2026-08-27T11:00:00Z",
+        "last_used_at": None,
+        "revoked_at": None,
+        "revocation_reason_code": None,
+        "client_ip_recorded": True,
+        "user_agent_recorded": True,
+        "state_digest": "b" * 64,
+        "future_session_field": "must-not-escape",
+    }
+    user_page = project_identity_user_page(
+        {
+            "users": [user],
+            "pagination": {"limit": 1, "returned": 1, "next_cursor": None, "future": "must-not-escape"},
+            "future_page_field": "must-not-escape",
+        }
+    )
+    session_page = project_identity_session_page(
+        {
+            "sessions": [session],
+            "pagination": {"limit": 1, "returned": 1, "next_cursor": None, "future": "must-not-escape"},
+            "future_page_field": "must-not-escape",
+        }
+    )
+    status = project_identity_user_status(
+        {
+            "user": user,
+            "transitioned": True,
+            "revoked_sessions": 1,
+            "audit_event_id": "audit-1",
+            "future_status_field": "must-not-escape",
+        }
+    )
+    revocation = project_identity_session_revocation(
+        {
+            "session": session,
+            "transitioned": True,
+            "revoked_current_session": False,
+            "audit_event_id": "audit-2",
+            "future_revocation_field": "must-not-escape",
+        }
+    )
+
+    assert user_page.visible["users"] == [{key: value for key, value in user.items() if key != "future_identity_field"}]
+    assert session_page.visible["sessions"] == [
+        {key: value for key, value in session.items() if key != "future_session_field"}
+    ]
+    assert user_page.visible["pagination"] == {"limit": 1, "returned": 1, "next_cursor": None}
+    assert status.visible["user"] == user_page.visible["users"][0]
+    assert revocation.visible["session"] == session_page.visible["sessions"][0]
+    assert status.denied_fields == ("future_status_field",)
+    assert revocation.denied_fields == ("future_revocation_field",)
+    assert "must-not-escape" not in str([user_page.visible, session_page.visible, status.visible, revocation.visible])
 
 
 def test_field_projection_is_permutation_stable_and_masking_is_not_authorization() -> None:

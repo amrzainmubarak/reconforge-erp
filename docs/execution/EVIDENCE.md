@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1065: Fail-closed identity administration responses
+
+- Code evidence: Identity administration user/session list, status-change, and
+  revocation routes now apply central projections to records, pagination, and
+  nested lifecycle responses before serialization.
+- Test evidence: field-access tests inject unknown identity/session fields at
+  record, pagination, and mutation-envelope levels; authenticated API tests
+  inject future fields through the route serializer. Focused Ruff, Mypy, and
+  pytest checks pass. Full regression, Ruff, Mypy, Bandit, pip-audit, package
+  build, source YAML, and diff gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; external IAM assurance,
+  live PostgreSQL behavior, distributed revocation, and production
+  effectiveness remain separately bounded. ADR 0725 records rollback.
+
 ## E-1064: Fail-closed projection for Finance Core snapshots
 
 - Code evidence: `/api/v1/finance-core/snapshot` now projects both local SQLite

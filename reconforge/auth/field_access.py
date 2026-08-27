@@ -30,6 +30,46 @@ AUTH_ME_SCOPE_FIELDS = frozenset({"workspaces", "organizations", "legal_entities
 SCOPE_GRANT_FIELDS = frozenset(
     {"id", "principal_type", "principal_id", "scope_type", "scope_id", "granted_by", "granted_at"}
 )
+IDENTITY_USER_FIELDS = frozenset(
+    {
+        "id",
+        "username",
+        "display_name",
+        "disabled",
+        "lifecycle_version",
+        "roles",
+        "active_sessions",
+        "created_at",
+        "disabled_at",
+        "state_digest",
+    }
+)
+IDENTITY_SESSION_FIELDS = frozenset(
+    {
+        "id",
+        "user_id",
+        "username",
+        "status",
+        "lifecycle_version",
+        "created_at",
+        "expires_at",
+        "last_used_at",
+        "revoked_at",
+        "revocation_reason_code",
+        "client_ip_recorded",
+        "user_agent_recorded",
+        "state_digest",
+    }
+)
+IDENTITY_PAGINATION_FIELDS = frozenset({"limit", "returned", "next_cursor"})
+IDENTITY_USER_PAGE_FIELDS = frozenset({"users", "pagination"})
+IDENTITY_SESSION_PAGE_FIELDS = frozenset({"sessions", "pagination"})
+IDENTITY_USER_STATUS_FIELDS = frozenset(
+    {"user", "transitioned", "revoked_sessions", "audit_event_id"}
+)
+IDENTITY_SESSION_REVOCATION_FIELDS = frozenset(
+    {"session", "transitioned", "revoked_current_session", "audit_event_id"}
+)
 METRIC_DASHBOARD_FIELDS = frozenset(
     {"id", "workspace_id", "metric_key", "period_name", "value", "value_text", "lineage", "computed_at", "name", "description"}
 )
@@ -2004,6 +2044,90 @@ def project_scope_grant(values: Mapping[str, object]) -> FieldProjection:
     """Return the non-revoked scope-grant fields safe for administration reads."""
 
     return project_fields(values, allowed_fields=SCOPE_GRANT_FIELDS)
+
+
+def project_identity_user(values: Mapping[str, object]) -> FieldProjection:
+    """Return the reviewed identity fields safe for administration responses."""
+
+    return project_fields(values, allowed_fields=IDENTITY_USER_FIELDS)
+
+
+def project_identity_session(values: Mapping[str, object]) -> FieldProjection:
+    """Return the reviewed session metadata without credentials or raw network data."""
+
+    return project_fields(values, allowed_fields=IDENTITY_SESSION_FIELDS)
+
+
+def project_identity_user_page(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed identity-user page with a bounded pagination envelope."""
+
+    record = dict(values)
+    users = record.get("users")
+    if users is not None:
+        if not isinstance(users, (list, tuple)):
+            raise TypeError("identity users collection must be a list or tuple")
+        projected_users = [
+            project_identity_user(user).visible
+            for user in users
+            if isinstance(user, Mapping)
+        ]
+        if len(projected_users) != len(users):
+            raise TypeError("identity user record must be a mapping")
+        record["users"] = projected_users
+    pagination = record.get("pagination")
+    if pagination is not None:
+        if not isinstance(pagination, Mapping):
+            raise TypeError("identity pagination must be a mapping")
+        record["pagination"] = project_fields(pagination, allowed_fields=IDENTITY_PAGINATION_FIELDS).visible
+    return project_fields(record, allowed_fields=IDENTITY_USER_PAGE_FIELDS)
+
+
+def project_identity_session_page(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed identity-session page with bounded pagination metadata."""
+
+    record = dict(values)
+    sessions = record.get("sessions")
+    if sessions is not None:
+        if not isinstance(sessions, (list, tuple)):
+            raise TypeError("identity sessions collection must be a list or tuple")
+        projected_sessions = [
+            project_identity_session(session).visible
+            for session in sessions
+            if isinstance(session, Mapping)
+        ]
+        if len(projected_sessions) != len(sessions):
+            raise TypeError("identity session record must be a mapping")
+        record["sessions"] = projected_sessions
+    pagination = record.get("pagination")
+    if pagination is not None:
+        if not isinstance(pagination, Mapping):
+            raise TypeError("identity pagination must be a mapping")
+        record["pagination"] = project_fields(pagination, allowed_fields=IDENTITY_PAGINATION_FIELDS).visible
+    return project_fields(record, allowed_fields=IDENTITY_SESSION_PAGE_FIELDS)
+
+
+def project_identity_user_status(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed user status transition response."""
+
+    record = dict(values)
+    user = record.get("user")
+    if user is not None:
+        if not isinstance(user, Mapping):
+            raise TypeError("identity status user must be a mapping")
+        record["user"] = project_identity_user(user).visible
+    return project_fields(record, allowed_fields=IDENTITY_USER_STATUS_FIELDS)
+
+
+def project_identity_session_revocation(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed session revocation response."""
+
+    record = dict(values)
+    session = record.get("session")
+    if session is not None:
+        if not isinstance(session, Mapping):
+            raise TypeError("identity revocation session must be a mapping")
+        record["session"] = project_identity_session(session).visible
+    return project_fields(record, allowed_fields=IDENTITY_SESSION_REVOCATION_FIELDS)
 
 
 def project_metric_dashboard(values: Mapping[str, object]) -> FieldProjection:

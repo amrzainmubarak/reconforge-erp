@@ -70,6 +70,38 @@ IDENTITY_USER_STATUS_FIELDS = frozenset(
 IDENTITY_SESSION_REVOCATION_FIELDS = frozenset(
     {"session", "transitioned", "revoked_current_session", "audit_event_id"}
 )
+ACCESS_PERMISSION_FIELDS = frozenset({"name", "description", "active_role_count", "state_digest"})
+ACCESS_ROLE_FIELDS = frozenset(
+    {
+        "id",
+        "name",
+        "description",
+        "active",
+        "lifecycle_version",
+        "permissions",
+        "active_user_count",
+        "created_at",
+        "updated_at",
+        "retired_at",
+        "state_digest",
+    }
+)
+ACCESS_PAGINATION_FIELDS = frozenset({"limit", "returned", "next_cursor"})
+ACCESS_ROLE_PAGE_FIELDS = frozenset({"roles", "pagination"})
+ACCESS_ROLE_CHANGE_FIELDS = frozenset({"role", "transitioned", "revoked_sessions", "audit_event_id"})
+ACCESS_USER_ROLE_ASSIGNMENT_FIELDS = frozenset(
+    {
+        "user_id",
+        "username",
+        "lifecycle_version",
+        "role_ids",
+        "role_names",
+        "transitioned",
+        "revoked_sessions",
+        "audit_event_id",
+        "state_digest",
+    }
+)
 METRIC_DASHBOARD_FIELDS = frozenset(
     {"id", "workspace_id", "metric_key", "period_name", "value", "value_text", "lineage", "computed_at", "name", "description"}
 )
@@ -2128,6 +2160,60 @@ def project_identity_session_revocation(values: Mapping[str, object]) -> FieldPr
             raise TypeError("identity revocation session must be a mapping")
         record["session"] = project_identity_session(session).visible
     return project_fields(record, allowed_fields=IDENTITY_SESSION_REVOCATION_FIELDS)
+
+
+def project_access_permission(values: Mapping[str, object]) -> FieldProjection:
+    """Return the reviewed permission registry fields."""
+
+    return project_fields(values, allowed_fields=ACCESS_PERMISSION_FIELDS)
+
+
+def project_access_role(values: Mapping[str, object]) -> FieldProjection:
+    """Return the reviewed role lifecycle fields."""
+
+    return project_fields(values, allowed_fields=ACCESS_ROLE_FIELDS)
+
+
+def project_access_role_page(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed role page with bounded pagination metadata."""
+
+    record = dict(values)
+    roles = record.get("roles")
+    if roles is not None:
+        if not isinstance(roles, (list, tuple)):
+            raise TypeError("access roles collection must be a list or tuple")
+        projected_roles = [
+            project_access_role(role).visible
+            for role in roles
+            if isinstance(role, Mapping)
+        ]
+        if len(projected_roles) != len(roles):
+            raise TypeError("access role record must be a mapping")
+        record["roles"] = projected_roles
+    pagination = record.get("pagination")
+    if pagination is not None:
+        if not isinstance(pagination, Mapping):
+            raise TypeError("access pagination must be a mapping")
+        record["pagination"] = project_fields(pagination, allowed_fields=ACCESS_PAGINATION_FIELDS).visible
+    return project_fields(record, allowed_fields=ACCESS_ROLE_PAGE_FIELDS)
+
+
+def project_access_role_change(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed role lifecycle mutation response."""
+
+    record = dict(values)
+    role = record.get("role")
+    if role is not None:
+        if not isinstance(role, Mapping):
+            raise TypeError("access role change role must be a mapping")
+        record["role"] = project_access_role(role).visible
+    return project_fields(record, allowed_fields=ACCESS_ROLE_CHANGE_FIELDS)
+
+
+def project_access_user_role_assignment(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed user-role assignment response."""
+
+    return project_fields(values, allowed_fields=ACCESS_USER_ROLE_ASSIGNMENT_FIELDS)
 
 
 def project_metric_dashboard(values: Mapping[str, object]) -> FieldProjection:

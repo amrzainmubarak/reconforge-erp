@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1066 - Fail-closed access administration responses (2026-08-27)
+
+- Access permission, role, pagination, role-change, and user-role assignment
+  routes now use central nested projections. Focused checks, full regression,
+  and release gates pass. Policy-analysis artifacts remain a separate response
+  contract. This is bounded disclosure control, not universal IAM assurance or
+  production readiness.
+
 ## E-1065 - Fail-closed identity administration responses (2026-08-27)
 
 - Identity user/session list and lifecycle mutation routes now use central

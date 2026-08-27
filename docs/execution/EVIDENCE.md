@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1066: Fail-closed access administration responses
+
+- Code evidence: Access administration permission, role list, role mutation,
+  and user-role assignment routes now apply central projections to records,
+  pagination, and nested lifecycle envelopes before serialization.
+- Test evidence: field-access tests inject unknown fields at permission, role,
+  pagination, nested role-change, and assignment levels; authenticated API
+  tests inject future fields through the route serializer. Focused Ruff, Mypy,
+  and pytest checks pass. Full regression, Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff gates pass. pip-audit cannot audit the
+  local distribution because it is not published on PyPI.
+- Boundary: policy-analysis artifacts remain a separate contract. This Slice
+  controls response disclosure only; universal IAM assurance, live PostgreSQL
+  behavior, distributed revocation, and production effectiveness remain
+  separately bounded. ADR 0726 records rollback.
+
 ## E-1065: Fail-closed identity administration responses
 
 - Code evidence: Identity administration user/session list, status-change, and

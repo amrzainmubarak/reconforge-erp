@@ -113,6 +113,20 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
     repository = _Repository()
     user = LocalUser(id="user-admin", username="admin", display_name="Admin")
 
+    original_asdict = routes.asdict
+
+    def future_asdict(value: Any) -> dict[str, object]:
+        result = original_asdict(value)
+        if isinstance(value, AccessPermissionSummary):
+            result["future_permission_field"] = "must-not-escape"
+        if isinstance(value, AccessRoleSummary):
+            result["future_role_field"] = "must-not-escape"
+        if isinstance(value, UserRoleAssignmentChange):
+            result["future_assignment_field"] = "must-not-escape"
+        return result
+
+    monkeypatch.setattr(routes, "asdict", future_asdict)
+
     def authenticate(request: Any, token: str) -> AuthenticatedServerRequest | None:
         assert request_tenant_id(request) == "tenant-a"
         profiles = {
@@ -175,6 +189,7 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
 
     permissions = client.get("/api/v1/admin/access/permissions", headers=headers("human-ok"))
     assert permissions.status_code == 200 and permissions.json()[0]["name"] == "roles.manage"
+    assert "future_permission_field" not in permissions.text
     first = client.get("/api/v1/admin/access/roles?limit=1", headers=headers("human-ok"))
     assert first.status_code == 200, first.text
     cursor = first.json()["pagination"]["next_cursor"]
@@ -182,6 +197,7 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
         "/api/v1/admin/access/roles", params={"limit": 1, "cursor": cursor}, headers=headers("human-ok")
     )
     assert second.status_code == 200 and second.json()["roles"][0]["name"] == "reviewer"
+    assert "future_role_field" not in second.text
     mismatch = client.get(
         "/api/v1/admin/access/roles",
         params={"cursor": cursor, "include_retired": True},
@@ -195,24 +211,28 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
         json={"name": "reviewer", "description": "Reviewer", "permissions": ["audit.read"]},
     )
     assert created.status_code == 200 and created.json()["transitioned"] is True
+    assert "future_role_field" not in created.text
     updated = client.patch(
         "/api/v1/admin/access/roles/role-administrator",
         headers=headers("human-ok"),
         json={"description": "Admin", "expected_lifecycle_version": 1},
     )
     assert updated.status_code == 200 and updated.json()["role"]["lifecycle_version"] == 2
+    assert "future_role_field" not in updated.text
     policy = client.put(
         "/api/v1/admin/access/roles/role-administrator/permissions",
         headers=headers("human-ok"),
         json={"permissions": ["roles.manage"], "expected_lifecycle_version": 1},
     )
     assert policy.status_code == 200 and policy.json()["revoked_sessions"] == 1
+    assert "future_role_field" not in policy.text
     assignment = client.put(
         "/api/v1/admin/access/users/user-reviewer/roles",
         headers=headers("human-ok"),
         json={"role_ids": ["role-reviewer"], "expected_user_lifecycle_version": 1},
     )
     assert assignment.status_code == 200 and assignment.json()["role_names"] == ["reviewer"]
+    assert "future_assignment_field" not in assignment.text
     analysis = client.post(
         "/api/v1/admin/access/policy-analysis",
         headers=headers("human-ok"),

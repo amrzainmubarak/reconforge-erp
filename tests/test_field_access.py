@@ -1,5 +1,8 @@
 from reconforge.auth.field_access import (
     REDACTED_VALUE,
+    project_access_role_change,
+    project_access_role_page,
+    project_access_user_role_assignment,
     project_account_reconciliation,
     project_audit_event,
     project_auth_me,
@@ -230,6 +233,54 @@ def test_identity_administration_projections_are_closed_and_nested() -> None:
     assert status.denied_fields == ("future_status_field",)
     assert revocation.denied_fields == ("future_revocation_field",)
     assert "must-not-escape" not in str([user_page.visible, session_page.visible, status.visible, revocation.visible])
+
+
+def test_access_administration_projections_are_closed_and_nested() -> None:
+    role = {
+        "id": "role-1",
+        "name": "reviewer",
+        "description": "Reviewer",
+        "active": True,
+        "lifecycle_version": 1,
+        "permissions": ("roles.manage",),
+        "active_user_count": 1,
+        "created_at": "2026-08-27T10:00:00Z",
+        "updated_at": "2026-08-27T10:00:00Z",
+        "retired_at": None,
+        "state_digest": "a" * 64,
+        "future_role_field": "must-not-escape",
+    }
+    page = project_access_role_page(
+        {
+            "roles": [role],
+            "pagination": {"limit": 1, "returned": 1, "next_cursor": None, "future": "must-not-escape"},
+            "future_page_field": "must-not-escape",
+        }
+    )
+    change = project_access_role_change(
+        {"role": role, "transitioned": True, "revoked_sessions": 0, "audit_event_id": "audit-1", "future": "x"}
+    )
+    assignment = project_access_user_role_assignment(
+        {
+            "user_id": "user-1",
+            "username": "alice",
+            "lifecycle_version": 2,
+            "role_ids": ("role-1",),
+            "role_names": ("reviewer",),
+            "transitioned": True,
+            "revoked_sessions": 0,
+            "audit_event_id": "audit-2",
+            "state_digest": "b" * 64,
+            "future_assignment_field": "must-not-escape",
+        }
+    )
+
+    assert page.visible["roles"] == [{key: value for key, value in role.items() if key != "future_role_field"}]
+    assert page.visible["pagination"] == {"limit": 1, "returned": 1, "next_cursor": None}
+    assert change.visible["role"] == page.visible["roles"][0]
+    assert change.denied_fields == ("future",)
+    assert assignment.denied_fields == ("future_assignment_field",)
+    assert "must-not-escape" not in str([page.visible, change.visible, assignment.visible])
 
 
 def test_field_projection_is_permutation_stable_and_masking_is_not_authorization() -> None:

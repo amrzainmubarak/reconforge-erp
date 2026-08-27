@@ -23,6 +23,12 @@ from reconforge.application.access_administration import (
 )
 from reconforge.application.pagination import CursorCodec, CursorError, CursorPosition, cursor_scope_digest
 from reconforge.application.policy_analysis import PolicyAnalysisApplicationService
+from reconforge.auth.field_access import (
+    project_access_permission,
+    project_access_role_change,
+    project_access_role_page,
+    project_access_user_role_assignment,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.auth.policy_analysis import PolicyAnalysisError
 from reconforge.infrastructure.postgres_access_administration import PostgresAccessAdministrationRepository
@@ -251,12 +257,34 @@ def _encode_role_cursor(
     )
 
 
+def _project_role_change(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_access_role_change(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="access_role_projection_failed",
+            message="Access administration returned an invalid role response contract.",
+        ) from exc
+
+
+def _project_user_role_assignment(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_access_user_role_assignment(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="access_assignment_projection_failed",
+            message="Access administration returned an invalid assignment response contract.",
+        ) from exc
+
+
 @router.get("/permissions", response_model=tuple[AccessPermissionResponse, ...])
 def list_access_permissions(request: Request, current_user: ManageAccess) -> tuple[dict[str, object], ...]:
     """List the closed tenant permission registry without mutation capability."""
 
     permissions = _service(request, lambda service, _tenant: service.list_permissions())
-    return tuple(asdict(permission) for permission in permissions)
+    return tuple(project_access_permission(asdict(permission)).visible for permission in permissions)
 
 
 @router.get("/roles", response_model=AccessRolePageResponse)
@@ -286,7 +314,9 @@ def list_access_roles(
         name=page.next_name,
         role_id=page.next_role_id,
     )
-    return {"roles": roles, "pagination": {"limit": limit, "returned": len(roles), "next_cursor": next_cursor}}
+    return project_access_role_page(
+        {"roles": roles, "pagination": {"limit": limit, "returned": len(roles), "next_cursor": next_cursor}}
+    ).visible
 
 
 @router.post("/roles", response_model=AccessRoleChangeResponse)
@@ -304,7 +334,7 @@ def create_access_role(
             permissions=payload.permissions,
         ),
     )
-    return asdict(result)
+    return _project_role_change(asdict(result))
 
 
 @router.patch("/roles/{role_id}", response_model=AccessRoleChangeResponse)
@@ -324,7 +354,7 @@ def update_access_role(
             active=payload.active,
         ),
     )
-    return asdict(result)
+    return _project_role_change(asdict(result))
 
 
 @router.put("/roles/{role_id}/permissions", response_model=AccessRoleChangeResponse)
@@ -343,7 +373,7 @@ def replace_access_role_permissions(
             expected_lifecycle_version=payload.expected_lifecycle_version,
         ),
     )
-    return asdict(result)
+    return _project_role_change(asdict(result))
 
 
 @router.put("/users/{user_id}/roles", response_model=UserRoleAssignmentResponse)
@@ -362,7 +392,7 @@ def replace_access_user_roles(
             expected_user_lifecycle_version=payload.expected_user_lifecycle_version,
         ),
     )
-    return asdict(result)
+    return _project_user_role_assignment(asdict(result))
 
 
 @router.post("/policy-analysis", response_model=PolicyAnalysisResponse)

@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-893: Access administration responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Access administration routes serialized permission, role, and
+  user-role assignment dataclasses directly with `asdict(...)`. These
+  authenticated responses define authorization lifecycle state and must not
+  rely only on framework response-model filtering.
+- **Decision**: Apply central projections to permission records, role pages,
+  role lifecycle mutations, and user-role assignment responses. Reject
+  malformed nested role/page shapes at the API boundary. Policy-analysis
+  artifacts remain a separate contract and are not broadened by this Slice.
+- **Verification**: Field-access tests inject future permission, role,
+  pagination, and assignment fields. Authenticated API tests inject future
+  fields through the route serialization seam and prove they do not escape.
+  Focused and full regression, static/security/package, source-YAML, and diff
+  gates pass for E-1066. Live PostgreSQL execution remains environment-skipped.
+- **Compatibility**: Preserve the existing role lifecycle, permission names,
+  assignment state, pagination, and audit identifiers.
+- **Rollback**: Revert E-1066 code, tests, ADR 0726, manifest, and execution
+  metadata together; do not restore direct access-response serialization.
+
 ### D-892: Identity administration responses use fail-closed projection
 
 - **Date**: 2026-08-27

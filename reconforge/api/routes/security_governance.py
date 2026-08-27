@@ -23,6 +23,13 @@ from reconforge.application.security_governance import (
     SecurityGovernanceApplicationService,
     SecurityGovernanceError,
 )
+from reconforge.auth.field_access import (
+    project_security_evidence_retention,
+    project_security_integration_disable,
+    project_security_integration_page,
+    project_security_retention_policy_change,
+    project_security_retention_policy_page,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres_security_governance import PostgresSecurityGovernanceRepository
 
@@ -246,6 +253,28 @@ def _encode_cursor(
     )
 
 
+def _project_integration_disable(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_security_integration_disable(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="security_integration_projection_failed",
+            message="Security governance returned an invalid integration response contract.",
+        ) from exc
+
+
+def _project_retention_policy_change(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_security_retention_policy_change(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="security_retention_projection_failed",
+            message="Security governance returned an invalid retention-policy response contract.",
+        ) from exc
+
+
 @router.get("/integrations", response_model=IntegrationPageResponse)
 def list_integrations(
     request: Request,
@@ -279,10 +308,16 @@ def list_integrations(
         value=page.next_kind,
         tie_breaker=page.next_integration_id,
     )
-    return {
-        "integrations": integrations,
-        "pagination": {"limit": limit, "returned": len(integrations), "next_cursor": next_cursor},
-    }
+    try:
+        return project_security_integration_page(
+            {"integrations": integrations, "pagination": {"limit": limit, "returned": len(integrations), "next_cursor": next_cursor}}
+        ).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="security_integration_projection_failed",
+            message="Security governance returned an invalid integration response contract.",
+        ) from exc
 
 
 @router.post(
@@ -306,7 +341,7 @@ def disable_integration(
             reason_code=payload.reason_code,
         ),
     )
-    return asdict(result)
+    return _project_integration_disable(asdict(result))
 
 
 @router.get("/retention-policies", response_model=RetentionPolicyPageResponse)
@@ -342,10 +377,16 @@ def list_retention_policies(
         value=page.next_name,
         tie_breaker=page.next_policy_id,
     )
-    return {
-        "policies": policies,
-        "pagination": {"limit": limit, "returned": len(policies), "next_cursor": next_cursor},
-    }
+    try:
+        return project_security_retention_policy_page(
+            {"policies": policies, "pagination": {"limit": limit, "returned": len(policies), "next_cursor": next_cursor}}
+        ).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="security_retention_projection_failed",
+            message="Security governance returned an invalid retention-policy response contract.",
+        ) from exc
 
 
 @router.post("/retention-policies", response_model=RetentionPolicyChangeResponse)
@@ -354,7 +395,7 @@ def create_retention_policy(
     request: Request,
     current_user: ManageSecurityPolicy,
 ) -> dict[str, object]:
-    return asdict(
+    return _project_retention_policy_change(asdict(
         _service(
             request,
             lambda service, _tenant: service.create_retention_policy(
@@ -365,7 +406,7 @@ def create_retention_policy(
                 duration_days=payload.duration_days,
             ),
         )
-    )
+    ))
 
 
 @router.patch("/retention-policies/{policy_id}", response_model=RetentionPolicyChangeResponse)
@@ -375,7 +416,7 @@ def update_retention_policy(
     request: Request,
     current_user: ManageSecurityPolicy,
 ) -> dict[str, object]:
-    return asdict(
+    return _project_retention_policy_change(asdict(
         _service(
             request,
             lambda service, _tenant: service.update_retention_policy(
@@ -389,7 +430,7 @@ def update_retention_policy(
                 active=payload.active,
             ),
         )
-    )
+    ))
 
 
 @router.post(
@@ -403,15 +444,24 @@ def apply_retention_policy(
     request: Request,
     current_user: ManageSecurityPolicy,
 ) -> dict[str, object]:
-    return asdict(
-        _service(
-            request,
-            lambda service, _tenant: service.apply_retention_policy(
-                actor_user_id=current_user.id,
-                policy_id=policy_id,
-                evidence_id=evidence_id,
-                expected_retention_version=payload.expected_retention_version,
-                reason_code=payload.reason_code,
-            ),
-        )
-    )
+    try:
+        return project_security_evidence_retention(
+            asdict(
+                _service(
+                    request,
+                    lambda service, _tenant: service.apply_retention_policy(
+                        actor_user_id=current_user.id,
+                        policy_id=policy_id,
+                        evidence_id=evidence_id,
+                        expected_retention_version=payload.expected_retention_version,
+                        reason_code=payload.reason_code,
+                    ),
+                )
+            )
+        ).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="security_retention_projection_failed",
+            message="Security governance returned an invalid evidence-retention response contract.",
+        ) from exc

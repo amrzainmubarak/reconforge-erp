@@ -110,6 +110,18 @@ def test_security_governance_http_is_human_mfa_governed_paginated_and_redacted(
     repository = _Repository()
     user = LocalUser(id="user-admin", username="admin", display_name="Admin")
 
+    original_asdict = routes.asdict
+
+    def future_asdict(value: Any) -> dict[str, object]:
+        result = original_asdict(value)
+        if isinstance(value, IntegrationSummary):
+            result["future_integration_field"] = "must-not-escape"
+        if isinstance(value, RetentionPolicySummary):
+            result["future_policy_field"] = "must-not-escape"
+        return result
+
+    monkeypatch.setattr(routes, "asdict", future_asdict)
+
     def authenticate(request: Any, token: str) -> AuthenticatedServerRequest | None:
         assert request_tenant_id(request) == "tenant-a"
         profiles = {
@@ -177,9 +189,11 @@ def test_security_governance_http_is_human_mfa_governed_paginated_and_redacted(
 
     first = client.get(path, params={"limit": 1}, headers=headers("human-ok"))
     assert first.status_code == 200, first.text
+    assert "future_integration_field" not in first.text
     cursor = first.json()["pagination"]["next_cursor"]
     second = client.get(path, params={"limit": 1, "cursor": cursor}, headers=headers("human-ok"))
     assert second.status_code == 200 and second.json()["integrations"][0]["kind"] == "scim_credential"
+    assert "future_integration_field" not in second.text
     mismatch = client.get(
         path,
         params={"cursor": cursor, "include_inactive": True},
@@ -193,12 +207,14 @@ def test_security_governance_http_is_human_mfa_governed_paginated_and_redacted(
         json={"expected_state_digest": "b" * 64, "reason_code": "security_response"},
     )
     assert disabled.status_code == 200 and disabled.json()["revoked_credentials"] == 1
+    assert "future_integration_field" not in disabled.text
     policies = client.get(
         "/api/v1/admin/security/retention-policies",
         params={"limit": 1},
         headers=headers("human-ok"),
     )
     assert policies.status_code == 200 and policies.json()["policies"][0]["name"] == "audit-evidence"
+    assert "future_policy_field" not in policies.text
     created = client.post(
         "/api/v1/admin/security/retention-policies",
         headers=headers("human-ok"),
@@ -210,18 +226,21 @@ def test_security_governance_http_is_human_mfa_governed_paginated_and_redacted(
         },
     )
     assert created.status_code == 200 and created.json()["transitioned"] is True
+    assert "future_policy_field" not in created.text
     updated = client.patch(
         "/api/v1/admin/security/retention-policies/rtp-" + "a" * 32,
         headers=headers("human-ok"),
         json={"expected_lifecycle_version": 1, "reason_code": "policy_change", "duration_days": 730},
     )
     assert updated.status_code == 200 and updated.json()["policy"]["lifecycle_version"] == 2
+    assert "future_policy_field" not in updated.text
     applied = client.post(
         "/api/v1/admin/security/retention-policies/rtp-" + "a" * 32 + "/evidence/evidence-1",
         headers=headers("human-ok"),
         json={"expected_retention_version": 1, "reason_code": "policy_application"},
     )
     assert applied.status_code == 200 and applied.json()["retention_extended"] is True
+    assert "future_policy_field" not in applied.text
     hostile = client.post(
         "/api/v1/admin/security/retention-policies",
         headers=headers("human-ok"),

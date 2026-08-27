@@ -83,6 +83,11 @@ from reconforge.auth.field_access import (
     project_reconciliation_run,
     project_retail_settlement,
     project_scope_grant,
+    project_security_evidence_retention,
+    project_security_integration_disable,
+    project_security_integration_page,
+    project_security_retention_policy_change,
+    project_security_retention_policy_page,
 )
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
 
@@ -281,6 +286,90 @@ def test_access_administration_projections_are_closed_and_nested() -> None:
     assert change.denied_fields == ("future",)
     assert assignment.denied_fields == ("future_assignment_field",)
     assert "must-not-escape" not in str([page.visible, change.visible, assignment.visible])
+
+
+def test_security_governance_projections_are_closed_and_nested() -> None:
+    integration = {
+        "kind": "service_account",
+        "id": "svc-worker",
+        "status": "active",
+        "lifecycle_version": 1,
+        "credential_count": 2,
+        "active_credential_count": 1,
+        "created_at": "2026-08-27T10:00:00Z",
+        "expires_at": None,
+        "last_used_at": None,
+        "scope_digest": "a" * 64,
+        "state_digest": "b" * 64,
+        "future_integration_field": "must-not-escape",
+    }
+    policy = {
+        "id": "policy-1",
+        "name": "audit-evidence",
+        "description": "Audit evidence",
+        "data_classification": "restricted",
+        "duration_days": 365,
+        "active": True,
+        "lifecycle_version": 1,
+        "created_at": "2026-08-27T10:00:00Z",
+        "updated_at": "2026-08-27T10:00:00Z",
+        "retired_at": None,
+        "state_digest": "c" * 64,
+        "future_policy_field": "must-not-escape",
+    }
+    integration_page = project_security_integration_page(
+        {
+            "integrations": [integration],
+            "pagination": {"limit": 1, "returned": 1, "next_cursor": None, "future": "x"},
+            "future_page": "must-not-escape",
+        }
+    )
+    integration_change = project_security_integration_disable(
+        {
+            "integration": integration,
+            "transitioned": True,
+            "revoked_credentials": 1,
+            "audit_event_id": "audit-1",
+            "future_change": "must-not-escape",
+        }
+    )
+    policy_page = project_security_retention_policy_page(
+        {
+            "policies": [policy],
+            "pagination": {"limit": 1, "returned": 1, "next_cursor": None, "future": "x"},
+            "future_page": "must-not-escape",
+        }
+    )
+    policy_change = project_security_retention_policy_change(
+        {"policy": policy, "transitioned": True, "audit_event_id": "audit-2", "future_change": "x"}
+    )
+    retention = project_security_evidence_retention(
+        {
+            "evidence_id": "evidence-1",
+            "policy_id": "policy-1",
+            "policy_lifecycle_version": 1,
+            "retention_version": 2,
+            "previous_retention_until": None,
+            "policy_retention_until": "2027-08-27T00:00:00Z",
+            "effective_retention_until": "2027-08-27T00:00:00Z",
+            "retention_extended": True,
+            "transitioned": True,
+            "audit_event_id": "audit-3",
+            "state_digest": "d" * 64,
+            "future_retention_field": "must-not-escape",
+        }
+    )
+
+    assert integration_page.visible["integrations"] == [
+        {key: value for key, value in integration.items() if key != "future_integration_field"}
+    ]
+    assert integration_change.visible["integration"] == integration_page.visible["integrations"][0]
+    assert policy_page.visible["policies"] == [{key: value for key, value in policy.items() if key != "future_policy_field"}]
+    assert policy_change.visible["policy"] == policy_page.visible["policies"][0]
+    assert retention.denied_fields == ("future_retention_field",)
+    assert "must-not-escape" not in str(
+        [integration_page.visible, integration_change.visible, policy_page.visible, policy_change.visible, retention.visible]
+    )
 
 
 def test_field_projection_is_permutation_stable_and_masking_is_not_authorization() -> None:

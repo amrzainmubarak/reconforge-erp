@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1067 - Fail-closed Security Governance responses (2026-08-27)
+
+- Security integration, retention-policy, pagination, disable, policy-change,
+  and evidence-retention routes now use central projections. Focused checks,
+  full regression, and release gates pass. Policy-analysis artifacts remain a
+  separate contract. This is bounded response disclosure control, not security
+  certification or production readiness.
+
 ## E-1066 - Fail-closed access administration responses (2026-08-27)
 
 - Access permission, role, pagination, role-change, and user-role assignment

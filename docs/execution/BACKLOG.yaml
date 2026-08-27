@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1067
+    priority: P0
+    area: security
+    title: Apply fail-closed projections to Security Governance responses
+    status: completed
+    depends_on: [E-1005, E-1066]
+    exit_evidence: >-
+      Integration, retention-policy, pagination, disable, policy-change, and
+      evidence-retention responses preserve the reviewed security lifecycle
+      fields while dropping unknown adapter fields through central nested
+      projections. Policy-analysis artifacts remain a separate contract.
+      Focused tests, full regression, and release quality gates pass; ADR 0727
+      records rollback. This does not claim security certification or
+      production readiness.
   - id: E-1066
     priority: P0
     area: identity-governance

@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1067: Fail-closed Security Governance responses
+
+- Code evidence: Security Governance integration, retention-policy,
+  pagination, disable, policy-change, and evidence-retention routes now apply
+  central projections to records and nested lifecycle envelopes.
+- Test evidence: field-access tests inject unknown fields at integration,
+  retention-policy, pagination, nested mutation, and retention-result levels;
+  authenticated API tests inject future fields through the route serializer.
+  Focused Ruff, Mypy, and pytest checks pass. Full regression and release gates
+  pass, including Ruff, Mypy, Bandit, pip-audit, package build, source YAML,
+  and diff checks. pip-audit cannot audit the local distribution because it is
+  not published on PyPI.
+- Boundary: policy-analysis artifacts remain a separate contract. This controls
+  response disclosure only; security certification, external IAM, live
+  PostgreSQL behavior, and production effectiveness remain separately bounded.
+  ADR 0727 records rollback.
+
 ## E-1066: Fail-closed access administration responses
 
 - Code evidence: Access administration permission, role list, role mutation,

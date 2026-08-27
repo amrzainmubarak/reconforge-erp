@@ -102,6 +102,58 @@ ACCESS_USER_ROLE_ASSIGNMENT_FIELDS = frozenset(
         "state_digest",
     }
 )
+SECURITY_INTEGRATION_FIELDS = frozenset(
+    {
+        "kind",
+        "id",
+        "status",
+        "lifecycle_version",
+        "credential_count",
+        "active_credential_count",
+        "created_at",
+        "expires_at",
+        "last_used_at",
+        "scope_digest",
+        "state_digest",
+    }
+)
+SECURITY_PAGINATION_FIELDS = frozenset({"limit", "returned", "next_cursor"})
+SECURITY_INTEGRATION_PAGE_FIELDS = frozenset({"integrations", "pagination"})
+SECURITY_INTEGRATION_DISABLE_FIELDS = frozenset(
+    {"integration", "transitioned", "revoked_credentials", "audit_event_id"}
+)
+SECURITY_RETENTION_POLICY_FIELDS = frozenset(
+    {
+        "id",
+        "name",
+        "description",
+        "data_classification",
+        "duration_days",
+        "active",
+        "lifecycle_version",
+        "created_at",
+        "updated_at",
+        "retired_at",
+        "state_digest",
+    }
+)
+SECURITY_RETENTION_POLICY_PAGE_FIELDS = frozenset({"policies", "pagination"})
+SECURITY_RETENTION_POLICY_CHANGE_FIELDS = frozenset({"policy", "transitioned", "audit_event_id"})
+SECURITY_EVIDENCE_RETENTION_FIELDS = frozenset(
+    {
+        "evidence_id",
+        "policy_id",
+        "policy_lifecycle_version",
+        "retention_version",
+        "previous_retention_until",
+        "policy_retention_until",
+        "effective_retention_until",
+        "retention_extended",
+        "transitioned",
+        "audit_event_id",
+        "state_digest",
+    }
+)
 METRIC_DASHBOARD_FIELDS = frozenset(
     {"id", "workspace_id", "metric_key", "period_name", "value", "value_text", "lineage", "computed_at", "name", "description"}
 )
@@ -2214,6 +2266,96 @@ def project_access_user_role_assignment(values: Mapping[str, object]) -> FieldPr
     """Return a closed user-role assignment response."""
 
     return project_fields(values, allowed_fields=ACCESS_USER_ROLE_ASSIGNMENT_FIELDS)
+
+
+def project_security_integration(values: Mapping[str, object]) -> FieldProjection:
+    """Return reviewed integration metadata without credentials or secrets."""
+
+    return project_fields(values, allowed_fields=SECURITY_INTEGRATION_FIELDS)
+
+
+def project_security_integration_page(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed integration page with bounded pagination."""
+
+    record = dict(values)
+    integrations = record.get("integrations")
+    if integrations is not None:
+        if not isinstance(integrations, (list, tuple)):
+            raise TypeError("security integrations collection must be a list or tuple")
+        projected_integrations = [
+            project_security_integration(item).visible
+            for item in integrations
+            if isinstance(item, Mapping)
+        ]
+        if len(projected_integrations) != len(integrations):
+            raise TypeError("security integration record must be a mapping")
+        record["integrations"] = projected_integrations
+    pagination = record.get("pagination")
+    if pagination is not None:
+        if not isinstance(pagination, Mapping):
+            raise TypeError("security pagination must be a mapping")
+        record["pagination"] = project_fields(pagination, allowed_fields=SECURITY_PAGINATION_FIELDS).visible
+    return project_fields(record, allowed_fields=SECURITY_INTEGRATION_PAGE_FIELDS)
+
+
+def project_security_integration_disable(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed integration-disable response."""
+
+    record = dict(values)
+    integration = record.get("integration")
+    if integration is not None:
+        if not isinstance(integration, Mapping):
+            raise TypeError("security integration change must be a mapping")
+        record["integration"] = project_security_integration(integration).visible
+    return project_fields(record, allowed_fields=SECURITY_INTEGRATION_DISABLE_FIELDS)
+
+
+def project_security_retention_policy(values: Mapping[str, object]) -> FieldProjection:
+    """Return the reviewed evidence-retention policy fields."""
+
+    return project_fields(values, allowed_fields=SECURITY_RETENTION_POLICY_FIELDS)
+
+
+def project_security_retention_policy_page(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed retention-policy page with bounded pagination."""
+
+    record = dict(values)
+    policies = record.get("policies")
+    if policies is not None:
+        if not isinstance(policies, (list, tuple)):
+            raise TypeError("security policies collection must be a list or tuple")
+        projected_policies = [
+            project_security_retention_policy(item).visible
+            for item in policies
+            if isinstance(item, Mapping)
+        ]
+        if len(projected_policies) != len(policies):
+            raise TypeError("security retention policy record must be a mapping")
+        record["policies"] = projected_policies
+    pagination = record.get("pagination")
+    if pagination is not None:
+        if not isinstance(pagination, Mapping):
+            raise TypeError("security pagination must be a mapping")
+        record["pagination"] = project_fields(pagination, allowed_fields=SECURITY_PAGINATION_FIELDS).visible
+    return project_fields(record, allowed_fields=SECURITY_RETENTION_POLICY_PAGE_FIELDS)
+
+
+def project_security_retention_policy_change(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed retention-policy lifecycle response."""
+
+    record = dict(values)
+    policy = record.get("policy")
+    if policy is not None:
+        if not isinstance(policy, Mapping):
+            raise TypeError("security retention policy change must be a mapping")
+        record["policy"] = project_security_retention_policy(policy).visible
+    return project_fields(record, allowed_fields=SECURITY_RETENTION_POLICY_CHANGE_FIELDS)
+
+
+def project_security_evidence_retention(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed evidence-retention application response."""
+
+    return project_fields(values, allowed_fields=SECURITY_EVIDENCE_RETENTION_FIELDS)
 
 
 def project_metric_dashboard(values: Mapping[str, object]) -> FieldProjection:

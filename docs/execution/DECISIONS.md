@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-894: Security Governance responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Security Governance routes serialized integration,
+  retention-policy, and evidence-retention dataclasses directly with
+  `asdict(...)`. These authenticated responses describe credential counts,
+  retention state, and security lifecycle metadata.
+- **Decision**: Apply central projections to integration and retention-policy
+  records, paginated envelopes, disable/policy-change mutations, and
+  evidence-retention applications. Invalid nested shapes fail closed with
+  bounded API errors. Policy-analysis remains a separate contract.
+- **Verification**: Field-access tests inject future fields into records,
+  pagination, nested mutations, and retention results. Authenticated API tests
+  inject future fields through the route serialization seam. Focused and full
+  regression, static/security/package, source-YAML, and diff gates pass for
+  E-1067. Live PostgreSQL execution remains environment-skipped.
+- **Compatibility**: Preserve reviewed security lifecycle fields, state
+  digests, retention dates, credential counts, pagination, and audit IDs.
+- **Rollback**: Revert E-1067 code, tests, ADR 0727, manifest, and execution
+  metadata together; do not restore direct security-response serialization.
+
 ### D-893: Access administration responses use fail-closed projection
 
 - **Date**: 2026-08-27

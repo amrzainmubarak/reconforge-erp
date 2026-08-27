@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1047: Fail-closed projection for Finance summary responses
+
+- Code evidence: `/api/v1/finance-core/summary` now applies
+  `project_finance_summary` to local Finance Core, tenant-scoped PostgreSQL
+  Finance Core, and legacy PostgreSQL ledger response shapes. The deliberate
+  union preserves known chart/account/dimension/journal and entry-status
+  counts, legacy posted-entry counts, and bounded source/unsupported metadata.
+  Unknown summary and nested source fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers the union and nested
+  source allowlists. `tests/test_api_server_finance_core.py` injects a future
+  summary field through the PostgreSQL Finance Core route fixture and proves
+  it is absent. Focused tests, full regression, Ruff, Mypy, Bandit, pip-audit,
+  package build, YAML, and diff gates pass for this slice. pip-audit cannot
+  audit the local distribution because it is not published on PyPI.
+- Boundary: this closes the reviewed Finance summary response family only. It
+  does not establish universal field-level authorization, external IAM,
+  distributed revocation, statutory accounting, posting assurance, or
+  production effectiveness. ADR 0707 records rollback.
+
 ## E-1046: Fail-closed projection for Master Data summary responses
 
 - Code evidence: `/api/v1/master-data/summary` projects the local service

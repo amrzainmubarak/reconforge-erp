@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1047
+    priority: P0
+    area: identity-governance
+    title: Apply one fail-closed projection to Finance summary API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1042, E-1046]
+    exit_evidence: >-
+      The Finance Core summary endpoint applies one compatibility-union
+      projection to local SQLite, tenant-scoped PostgreSQL Finance Core, and
+      bounded legacy PostgreSQL ledger branches. Nested source metadata is
+      separately allowlisted. Focused field/server tests inject unknown
+      summary fields and prove they are dropped; full regression and release
+      quality gates pass; ADR 0707 records rollback. This closes only the
+      reviewed summary family and does not claim universal field-level
+      authorization, statutory posting, or production readiness.
   - id: E-1046
     priority: P0
     area: identity-governance

@@ -10,7 +10,6 @@ from starlette.requests import Request
 from reconforge.api import server_finance_core
 from reconforge.api.routes import finance_core as routes
 from reconforge.api.server_identity import RequestExecutionScope
-from reconforge.application.finance_core import FinanceCoreSummary
 from reconforge.auth.models import LocalUser
 
 
@@ -27,9 +26,22 @@ class _FakeFinanceRepository:
         self.calls.append((operation, values))
         return {"id": f"{operation}-1", "unknown_future_column": "must-not-escape", **values}
 
-    def summary(self, **values: object) -> FinanceCoreSummary:
+    def summary(self, **values: object):
         self.calls.append(("summary", values))
-        return FinanceCoreSummary("workspace-a", 1, 1, 1, 1, 1, 0, 0, 0)
+        return SimpleNamespace(
+            to_dict=lambda: {
+                "workspace": "workspace-a",
+                "charts": 1,
+                "accounts": 1,
+                "dimensions": 1,
+                "dimension_values": 1,
+                "journals": 1,
+                "draft_entries": 0,
+                "validated_entries": 0,
+                "voided_entries": 0,
+                "unknown_summary_field": "must-not-escape",
+            }
+        )
 
     def snapshot(self, **values: object) -> dict[str, object]:
         self.calls.append(("snapshot", values))

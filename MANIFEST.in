@@ -1050,5 +1050,6 @@ include docs/adr/0703-inventory-planning-api-uses-fail-closed-field-projection.m
 include docs/adr/0704-individual-cashflow-api-uses-fail-closed-field-projection.md
 include docs/adr/0705-inventory-planning-summary-api-uses-fail-closed-field-projection.md
 include docs/adr/0706-master-data-summary-api-uses-fail-closed-field-projection.md
+include docs/adr/0707-finance-summary-api-uses-fail-closed-field-projection.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

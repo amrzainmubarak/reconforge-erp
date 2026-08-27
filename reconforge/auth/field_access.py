@@ -368,6 +368,25 @@ FINANCE_ENTRY_LINE_FIELDS = frozenset(
         "created_at",
     }
 )
+FINANCE_SUMMARY_FIELDS = frozenset(
+    {
+        "schema_version",
+        "workspace",
+        "tenant_id",
+        "charts",
+        "accounts",
+        "dimensions",
+        "dimension_values",
+        "journals",
+        "draft_entries",
+        "validated_entries",
+        "voided_entries",
+        "posted_entries",
+        "source",
+        "unsupported_collections",
+    }
+)
+FINANCE_SUMMARY_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
 FINANCE_CHART_FIELDS = frozenset(
     {
         "id",
@@ -1587,6 +1606,16 @@ def project_finance_entry(values: Mapping[str, object]) -> FieldProjection:
             projected_lines.append(project_fields(line, allowed_fields=FINANCE_ENTRY_LINE_FIELDS).visible)
         record["lines"] = projected_lines
     return project_fields(record, allowed_fields=FINANCE_ENTRY_FIELDS)
+
+
+def project_finance_summary(values: Mapping[str, object]) -> FieldProjection:
+    record = dict(values)
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("finance summary source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=FINANCE_SUMMARY_SOURCE_FIELDS).visible
+    return project_fields(record, allowed_fields=FINANCE_SUMMARY_FIELDS)
 
 
 def project_finance_chart(values: Mapping[str, object]) -> FieldProjection:

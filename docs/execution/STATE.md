@@ -2,6 +2,18 @@
 
 Updated: 2026-08-27
 
+## E-1047 - Fail-closed projection for Finance summary responses (2026-08-27)
+
+- Finance Core summary responses now use one central projection across the
+  local SQLite, tenant-scoped PostgreSQL Finance Core, and bounded legacy
+  PostgreSQL ledger branches. The allowlist deliberately covers the union of
+  their known count fields and recursively bounds source metadata, removing
+  backend-dependent future-field disclosure.
+- Focused field/server-route tests and the full regression/static/security/
+  package gates pass. ADR 0707 records the compatibility and rollback boundary.
+  This remains a bounded disclosure control, not universal field-level
+  authorization or production readiness.
+
 ## E-1046 - Fail-closed projection for Master Data summary responses (2026-08-27)
 
 - The `/api/v1/master-data/summary` response now uses one central

@@ -19,6 +19,7 @@ from reconforge.auth.field_access import (
     project_finance_dimension_value,
     project_finance_entry,
     project_finance_journal,
+    project_finance_summary,
     project_individual_cashflow,
     project_inventory_control_exceptions,
     project_inventory_core_snapshot,
@@ -244,6 +245,45 @@ def test_finance_entry_projection_is_closed_across_local_and_server_shapes() -> 
     ]
     assert result.denied_fields == ("unknown_future_column",)
     assert "unknown_line_column" not in str(result.visible)
+
+
+def test_finance_summary_projection_is_closed_across_server_shapes() -> None:
+    result = project_finance_summary(
+        {
+            "workspace": "workspace-a",
+            "charts": 1,
+            "accounts": 2,
+            "dimensions": 3,
+            "dimension_values": 4,
+            "journals": 5,
+            "draft_entries": 6,
+            "validated_entries": 7,
+            "voided_entries": 8,
+            "source": {
+                "kind": "postgres-ledger-control",
+                "server_mode": True,
+                "unknown_source_field": "must-not-escape",
+            },
+            "unsupported_collections": ["journals"],
+            "unknown_summary_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible == {
+        "workspace": "workspace-a",
+        "charts": 1,
+        "accounts": 2,
+        "dimensions": 3,
+        "dimension_values": 4,
+        "journals": 5,
+        "draft_entries": 6,
+        "validated_entries": 7,
+        "voided_entries": 8,
+        "source": {"kind": "postgres-ledger-control", "server_mode": True},
+        "unsupported_collections": ["journals"],
+    }
+    assert result.denied_fields == ("unknown_summary_field",)
+    assert "unknown_source_field" not in str(result.visible)
 
 
 def test_inventory_valuation_document_projection_is_closed_across_nested_financial_shapes() -> None:

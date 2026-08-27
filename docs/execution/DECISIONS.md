@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-874: Finance summary API uses one compatibility union projection
+
+- **Date**: 2026-08-27
+- **Context**: Local Finance Core, hosted Finance Core, and legacy hosted
+  Ledger summary branches expose different known count fields. Direct or
+  branch-specific serialization could create inconsistent future disclosure.
+- **Decision**: Apply `project_finance_summary` to all three branches. Preserve
+  the deliberate union of known count/source fields and recursively project
+  source metadata; drop everything else.
+- **Verification**: Focused projector and server-route tests inject unknown
+  summary/source fields and prove they do not escape. Full Python and
+  release-quality gates pass for E-1047.
+- **Compatibility**: No posting, validation, ledger arithmetic, scope,
+  persistence, or authorization behavior changes. This is bounded response
+  disclosure control.
+- **Rollback**: Revert E-1047 code, tests, ADR 0707, manifest, and execution
+  metadata together; do not restore unbounded summaries.
+
 ### D-873: Master Data summary API uses one fail-closed projection
 
 - **Date**: 2026-08-27

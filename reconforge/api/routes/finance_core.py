@@ -34,6 +34,7 @@ from reconforge.auth.field_access import (
     project_finance_dimension_value,
     project_finance_entry,
     project_finance_journal,
+    project_finance_summary,
 )
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
@@ -385,7 +386,7 @@ def summary(
             request,
             lambda repository: repository.summary(workspace=scoped_workspace, actor_label=current_user.id),
         )
-        return {"summary": result.to_dict()}
+        return {"summary": project_finance_summary(result.to_dict()).visible}
     if server_ledger_enabled(request):
         _server_workspace(workspace)
         _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
@@ -393,14 +394,16 @@ def summary(
             request, lambda repository, tenant: repository.summary(tenant_id=tenant)
         )
         return {
-            "summary": {
-                "workspace": None,
-                "accounts": server_result["accounts"],
-                "draft_entries": server_result["draft_entries"],
-                "posted_entries": server_result["posted_entries"],
-                "source": server_result["source"],
-                "unsupported_collections": server_result["unsupported_collections"],
-            }
+            "summary": project_finance_summary(
+                {
+                    "workspace": None,
+                    "accounts": server_result["accounts"],
+                    "draft_entries": server_result["draft_entries"],
+                    "posted_entries": server_result["posted_entries"],
+                    "source": server_result["source"],
+                    "unsupported_collections": server_result["unsupported_collections"],
+                }
+            ).visible
         }
     try:
         local_result = FinanceCoreService(_local_connection(connection)).summary(
@@ -408,7 +411,7 @@ def summary(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_core_summary_failed", exc) from exc
-    return {"summary": local_result.to_dict()}
+    return {"summary": project_finance_summary(local_result.to_dict()).visible}
 
 
 @router.get("/snapshot")

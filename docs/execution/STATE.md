@@ -2,6 +2,22 @@
 
 Updated: 2026-08-27
 
+## E-1042 - Fail-closed projection for Finance Core master API responses (2026-08-27)
+
+- Finance Core chart, account, dimension, dimension-value, and journal list
+  and mutation responses now use central allowlists across local SQLite,
+  tenant-scoped PostgreSQL, and the bounded legacy ledger adapter. Unknown
+  future adapter/storage fields cannot silently enter accounting master data
+  responses while the existing workspace, permission, pagination, and posting
+  policy shapes remain compatible.
+- Focused field/API tests pass (42 tests). Full Python regression and
+  release-quality gates pass: full Python regression at 100%, Ruff, Mypy (539
+  source files), Bandit, pip-audit, package build, source YAML validation (174
+  files), and diff checks. The local distribution is not auditable by
+  pip-audit because it is not published on PyPI. ADR 0702 records rollback.
+  This remains a bounded disclosure control, not universal field-level
+  authorization or production readiness.
+
 ## E-1041 - Fail-closed projection for Bank Statement Control API responses (2026-08-27)
 
 - Bank Statement Control create, list, and read responses now use central

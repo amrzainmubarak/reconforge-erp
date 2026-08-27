@@ -89,6 +89,7 @@ CLOSE_PERIOD_FIELDS = frozenset(
         "period_name",
         "organization_id",
         "organization_code",
+        "workspace",
         "fiscal_period_name",
         "start_date",
         "end_date",
@@ -365,6 +366,92 @@ FINANCE_ENTRY_LINE_FIELDS = frozenset(
         "credit",
         "dimensions",
         "created_at",
+    }
+)
+FINANCE_CHART_FIELDS = frozenset(
+    {
+        "id",
+        "workspace_id",
+        "organization_id",
+        "organization_code",
+        "workspace",
+        "chart_code",
+        "name",
+        "description",
+        "active",
+        "created_at",
+        "updated_at",
+    }
+)
+FINANCE_ACCOUNT_FIELDS = frozenset(
+    {
+        "id",
+        "workspace_id",
+        "chart_id",
+        "chart_code",
+        "parent_account_id",
+        "parent_account_code",
+        "account_code",
+        "account_name",
+        "account_type",
+        "normal_balance",
+        "allow_posting",
+        "allow_manual_posting",
+        "reconciliation_required",
+        "active",
+        "description",
+        "created_at",
+        "updated_at",
+        "source_backend",
+        "workspace",
+    }
+)
+FINANCE_DIMENSION_FIELDS = frozenset(
+    {
+        "id",
+        "workspace_id",
+        "organization_id",
+        "organization_code",
+        "workspace",
+        "dimension_code",
+        "name",
+        "dimension_type",
+        "required_on_entries",
+        "active",
+        "created_at",
+        "updated_at",
+    }
+)
+FINANCE_DIMENSION_VALUE_FIELDS = frozenset(
+    {
+        "id",
+        "workspace_id",
+        "dimension_id",
+        "dimension_code",
+        "workspace",
+        "value_code",
+        "name",
+        "active",
+        "created_at",
+        "updated_at",
+    }
+)
+FINANCE_JOURNAL_FIELDS = frozenset(
+    {
+        "id",
+        "workspace_id",
+        "organization_id",
+        "organization_code",
+        "workspace",
+        "chart_id",
+        "chart_code",
+        "journal_code",
+        "name",
+        "currency_code",
+        "journal_type",
+        "active",
+        "created_at",
+        "updated_at",
     }
 )
 INVENTORY_VALUATION_DOCUMENT_FIELDS = frozenset(
@@ -1433,6 +1520,26 @@ def project_finance_entry(values: Mapping[str, object]) -> FieldProjection:
             projected_lines.append(project_fields(line, allowed_fields=FINANCE_ENTRY_LINE_FIELDS).visible)
         record["lines"] = projected_lines
     return project_fields(record, allowed_fields=FINANCE_ENTRY_FIELDS)
+
+
+def project_finance_chart(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=FINANCE_CHART_FIELDS)
+
+
+def project_finance_account(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=FINANCE_ACCOUNT_FIELDS)
+
+
+def project_finance_dimension(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=FINANCE_DIMENSION_FIELDS)
+
+
+def project_finance_dimension_value(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=FINANCE_DIMENSION_VALUE_FIELDS)
+
+
+def project_finance_journal(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=FINANCE_JOURNAL_FIELDS)
 
 
 def project_inventory_valuation_document(values: Mapping[str, object]) -> FieldProjection:

@@ -13,7 +13,12 @@ from reconforge.auth.field_access import (
     project_evidence_verification,
     project_exception,
     project_fields,
+    project_finance_account,
+    project_finance_chart,
+    project_finance_dimension,
+    project_finance_dimension_value,
     project_finance_entry,
+    project_finance_journal,
     project_inventory_control_exceptions,
     project_inventory_core_snapshot,
     project_inventory_core_summary,
@@ -63,6 +68,25 @@ def test_field_projection_masks_and_denies_without_leaking_values() -> None:
     assert result.masked_fields == ("amount",)
     assert result.denied_fields == ("secret",)
     assert "do-not-leak" not in str(result.visible)
+
+
+def test_finance_core_master_projections_are_closed() -> None:
+    cases = (
+        (project_finance_chart, {"id": "chart-1", "chart_code": "DEFAULT", "unknown": "must-not-escape"}),
+        (project_finance_account, {"id": "account-1", "account_code": "1000", "unknown": "must-not-escape"}),
+        (project_finance_dimension, {"id": "dimension-1", "dimension_code": "CC", "unknown": "must-not-escape"}),
+        (
+            project_finance_dimension_value,
+            {"id": "value-1", "value_code": "HQ", "unknown": "must-not-escape"},
+        ),
+        (project_finance_journal, {"id": "journal-1", "journal_code": "GENERAL", "unknown": "must-not-escape"}),
+    )
+
+    for projector, record in cases:
+        result = projector(record)
+        assert result.visible == {key: value for key, value in record.items() if key != "unknown"}
+        assert result.denied_fields == ("unknown",)
+        assert "must-not-escape" not in str(result.visible)
 
 
 def test_field_projection_is_permutation_stable_and_masking_is_not_authorization() -> None:

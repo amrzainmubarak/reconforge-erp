@@ -2,6 +2,28 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1042: Fail-closed projection for Finance Core master API responses
+
+- Code evidence: Finance Core chart, account, dimension, dimension-value, and
+  journal list and mutation responses use central allowlists across local
+  SQLite, tenant-scoped PostgreSQL, and the bounded legacy ledger branch.
+  Unknown adapter/storage fields are dropped before serialization while
+  workspace scope, permissions, pagination, and accounting behavior remain
+  unchanged.
+- Test evidence: `tests/test_field_access.py` covers all five master resource
+  projectors. `tests/test_api_server_finance_core.py` injects a synthetic
+  future adapter field into server master mutation responses and proves it is
+  absent from chart and journal output. Focused selectors pass 42 tests; full
+  regression passes at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit,
+  package build, source YAML validation (174 files), and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI. Generated test-output fixtures with intentionally malformed or unsafe
+  YAML are excluded from source validation.
+- Boundary: this closes only the reviewed Finance Core master response family.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, or production effectiveness.
+  ADR 0702 records rollback.
+
 ## E-1041: Fail-closed projection for Bank Statement Control API responses
 
 - Code evidence: `/api/v1/bank/statement-controls` create, list, and read

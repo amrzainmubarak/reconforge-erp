@@ -25,7 +25,7 @@ class _FakeFinanceRepository:
 
     def _record(self, operation: str, **values: object) -> dict[str, object]:
         self.calls.append((operation, values))
-        return {"id": f"{operation}-1", **values}
+        return {"id": f"{operation}-1", "unknown_future_column": "must-not-escape", **values}
 
     def summary(self, **values: object) -> FinanceCoreSummary:
         self.calls.append(("summary", values))
@@ -174,8 +174,10 @@ def test_server_finance_core_routes_use_scoped_adapter_and_never_local_fallback(
     )
     assert summary["summary"]["workspace"] == "workspace-a"
     assert chart["chart"]["workspace"] == "workspace-a"
+    assert "must-not-escape" not in str(chart)
     assert dimensions["pagination"]["returned"] == 0
     assert journal["journal"]["workspace"] == "workspace-a"
+    assert "must-not-escape" not in str(journal)
     assert all(call[1].get("workspace") == "workspace-a" for call in calls if "workspace" in call[1])
     assert ("any", frozenset({"finance_core.read", "finance_core.manage", "finance_core.validate"})) in permission_checks
     assert ("exact", "finance_core.manage") in permission_checks

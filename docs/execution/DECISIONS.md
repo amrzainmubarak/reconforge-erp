@@ -5,6 +5,30 @@
 
 ## Decisions
 
+### D-869: Finance Core master API uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Finance Core charts, accounts, dimensions, dimension values,
+  and journals are returned by local SQLite, tenant-scoped PostgreSQL, and a
+  bounded legacy ledger adapter. Future adapter fields could silently expand
+  accounting master-data responses.
+- **Decision**: Apply central allowlists to every reviewed Finance Core master
+  list and mutation response. Preserve the deliberate local/server/legacy
+  field union, including the server workspace marker, and drop unknown fields
+  before serialization without changing accounting, permission, scope,
+  pagination, or persistence behavior.
+- **Verification**: Focused field/API tests pass 42 tests, including a
+  synthetic future adapter field in server chart and journal responses. Full
+  Python regression passes at 100%; Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, source YAML validation (174 files), and diff gates
+  pass. The local distribution remains unauditable by pip-audit because it is
+  not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, route,
+  pagination, or accounting behavior changes; this is a bounded disclosure
+  control.
+- **Rollback**: Revert E-1042 code/tests/ADR 0702/manifest and execution
+  metadata together; do not restore unbounded master-row serialization.
+
 ### D-868: Bank Statement Control API uses fail-closed recursive projection
 
 - **Date**: 2026-08-27

@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1042
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Finance Core master API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1041]
+    exit_evidence: >-
+      Finance Core chart, account, dimension, dimension-value, and journal list
+      and mutation responses use central allowlists across local SQLite,
+      tenant-scoped PostgreSQL, and the bounded legacy ledger adapter.
+      Synthetic future-field tests prove unknown adapter fields are dropped
+      while accounting fields, workspace scope, permissions, pagination, and
+      persistence behavior remain compatible. Focused selectors pass 42 tests;
+      full Python regression, Ruff, Mypy, Bandit, pip-audit, package build,
+      source YAML validation (174 files), and diff checks pass. The repository
+      contains intentionally malformed security-test fixtures under generated
+      test output; those are excluded from source YAML validation. ADR 0702
+      records rollback.
   - id: E-1041
     priority: P0
     area: identity-governance

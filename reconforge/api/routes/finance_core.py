@@ -27,7 +27,14 @@ from reconforge.api.server_finance_core import (
 )
 from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_ledger import execute_postgres_ledger, server_ledger_enabled
-from reconforge.auth.field_access import project_finance_entry
+from reconforge.auth.field_access import (
+    project_finance_account,
+    project_finance_chart,
+    project_finance_dimension,
+    project_finance_dimension_value,
+    project_finance_entry,
+    project_finance_journal,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
@@ -170,6 +177,26 @@ def _project_entry(value: dict[str, object]) -> dict[str, object]:
 
 def _project_entries(values: list[dict[str, object]]) -> list[dict[str, object]]:
     return [_project_entry(value) for value in values]
+
+
+def _project_charts(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_chart(value).visible for value in values]
+
+
+def _project_accounts(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_account(value).visible for value in values]
+
+
+def _project_dimensions(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_dimension(value).visible for value in values]
+
+
+def _project_dimension_values(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_dimension_value(value).visible for value in values]
+
+
+def _project_journals(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_journal(value).visible for value in values]
 
 
 def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
@@ -428,7 +455,7 @@ def list_charts(
                 actor_label=current_user.id,
             ),
         )
-        return _list_response("charts", records, limit=limit, offset=offset)
+        return _list_response("charts", _project_charts(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("charts of accounts")
     try:
@@ -437,7 +464,7 @@ def list_charts(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_charts_list_failed", exc) from exc
-    return _list_response("charts", records, limit=limit, offset=offset)
+    return _list_response("charts", _project_charts(records), limit=limit, offset=offset)
 
 
 @router.post("/charts")
@@ -453,13 +480,15 @@ def upsert_chart(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "chart": execute_postgres_finance_core_scoped(
-                request,
-                lambda repository, scope: repository.upsert_chart(
-                    **{**values, "organization_code": scope.organization_code}
-                ),
-                organization_code=payload.organization_code,
-            )
+            "chart": project_finance_chart(
+                execute_postgres_finance_core_scoped(
+                    request,
+                    lambda repository, scope: repository.upsert_chart(
+                        **{**values, "organization_code": scope.organization_code}
+                    ),
+                    organization_code=payload.organization_code,
+                )
+            ).visible
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("charts of accounts")
@@ -469,7 +498,7 @@ def upsert_chart(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_chart_save_failed", exc) from exc
-    return {"chart": record}
+    return {"chart": project_finance_chart(record).visible}
 
 
 @router.get("/accounts")
@@ -522,7 +551,7 @@ def list_accounts(
             organization_code=organization,
         )
         page = records[offset : offset + limit]
-        return _list_response("accounts", page, limit=limit, offset=offset)
+        return _list_response("accounts", _project_accounts(page), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         _server_workspace(workspace)
         _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
@@ -540,7 +569,7 @@ def list_accounts(
 
         records = execute_postgres_ledger(request, operation)
         page = records[offset : offset + limit]
-        return _list_response("accounts", page, limit=limit, offset=offset)
+        return _list_response("accounts", _project_accounts(page), limit=limit, offset=offset)
     try:
         records = FinanceCoreService(_local_connection(connection)).list_accounts(
             workspace=workspace,
@@ -552,7 +581,7 @@ def list_accounts(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_accounts_list_failed", exc) from exc
-    return _list_response("accounts", records, limit=limit, offset=offset)
+    return _list_response("accounts", _project_accounts(records), limit=limit, offset=offset)
 
 
 @router.post("/accounts")
@@ -589,11 +618,13 @@ def upsert_account(
             return repository.upsert_account(**values_without_selector)
 
         return {
-            "account": execute_postgres_finance_core_scoped(
-                request,
-                finance_operation,
-                organization_code=payload.organization_code,
-            )
+            "account": project_finance_account(
+                execute_postgres_finance_core_scoped(
+                    request,
+                    finance_operation,
+                    organization_code=payload.organization_code,
+                )
+            ).visible
         }
     if server_ledger_enabled(request):
         _server_workspace(payload.workspace)
@@ -636,7 +667,7 @@ def upsert_account(
                 )
             )
 
-        return {"account": execute_postgres_ledger(request, operation)}
+        return {"account": project_finance_account(execute_postgres_ledger(request, operation)).visible}
     try:
         values = payload.model_dump()
         values.pop("organization_code", None)
@@ -645,7 +676,7 @@ def upsert_account(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_account_save_failed", exc) from exc
-    return {"account": record}
+    return {"account": project_finance_account(record).visible}
 
 
 @router.get("/dimensions")
@@ -668,7 +699,7 @@ def list_dimensions(
                 actor_label=current_user.id,
             ),
         )
-        return _list_response("dimensions", records, limit=limit, offset=offset)
+        return _list_response("dimensions", _project_dimensions(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimensions")
     try:
@@ -677,7 +708,7 @@ def list_dimensions(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_dimensions_list_failed", exc) from exc
-    return _list_response("dimensions", records, limit=limit, offset=offset)
+    return _list_response("dimensions", _project_dimensions(records), limit=limit, offset=offset)
 
 
 @router.post("/dimensions")
@@ -693,13 +724,15 @@ def upsert_dimension(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "dimension": execute_postgres_finance_core_scoped(
-                request,
-                lambda repository, scope: repository.upsert_dimension(
-                    **{**values, "organization_code": scope.organization_code}
-                ),
-                organization_code=payload.organization_code,
-            )
+            "dimension": project_finance_dimension(
+                execute_postgres_finance_core_scoped(
+                    request,
+                    lambda repository, scope: repository.upsert_dimension(
+                        **{**values, "organization_code": scope.organization_code}
+                    ),
+                    organization_code=payload.organization_code,
+                )
+            ).visible
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimensions")
@@ -709,7 +742,7 @@ def upsert_dimension(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_dimension_save_failed", exc) from exc
-    return {"dimension": record}
+    return {"dimension": project_finance_dimension(record).visible}
 
 
 @router.get("/dimension-values")
@@ -734,7 +767,7 @@ def list_dimension_values(
                 actor_label=current_user.id,
             ),
         )
-        return _list_response("dimension_values", records, limit=limit, offset=offset)
+        return _list_response("dimension_values", _project_dimension_values(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimension values")
     try:
@@ -747,7 +780,7 @@ def list_dimension_values(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_dimension_values_list_failed", exc) from exc
-    return _list_response("dimension_values", records, limit=limit, offset=offset)
+    return _list_response("dimension_values", _project_dimension_values(records), limit=limit, offset=offset)
 
 
 @router.post("/dimension-values")
@@ -763,9 +796,9 @@ def upsert_dimension_value(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "dimension_value": execute_postgres_finance_core(
-                request, lambda repository: repository.upsert_dimension_value(**values)
-            )
+            "dimension_value": project_finance_dimension_value(
+                execute_postgres_finance_core(request, lambda repository: repository.upsert_dimension_value(**values))
+            ).visible
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimension values")
@@ -775,7 +808,7 @@ def upsert_dimension_value(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_dimension_value_save_failed", exc) from exc
-    return {"dimension_value": record}
+    return {"dimension_value": project_finance_dimension_value(record).visible}
 
 
 @router.get("/journals")
@@ -801,7 +834,7 @@ def list_journals(
             ),
             organization_code=organization,
         )
-        return _list_response("journals", records, limit=limit, offset=offset)
+        return _list_response("journals", _project_journals(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("finance journals")
     try:
@@ -814,7 +847,7 @@ def list_journals(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_journals_list_failed", exc) from exc
-    return _list_response("journals", records, limit=limit, offset=offset)
+    return _list_response("journals", _project_journals(records), limit=limit, offset=offset)
 
 
 @router.post("/journals")
@@ -830,13 +863,15 @@ def upsert_journal(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "journal": execute_postgres_finance_core_scoped(
-                request,
-                lambda repository, scope: repository.upsert_journal(
-                    **{**values, "organization_code": scope.organization_code}
-                ),
-                organization_code=payload.organization_code,
-            )
+            "journal": project_finance_journal(
+                execute_postgres_finance_core_scoped(
+                    request,
+                    lambda repository, scope: repository.upsert_journal(
+                        **{**values, "organization_code": scope.organization_code}
+                    ),
+                    organization_code=payload.organization_code,
+                )
+            ).visible
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("finance journals")
@@ -846,7 +881,7 @@ def upsert_journal(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_journal_save_failed", exc) from exc
-    return {"journal": record}
+    return {"journal": project_finance_journal(record).visible}
 
 
 @router.get("/trial-balance")

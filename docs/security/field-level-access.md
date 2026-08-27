@@ -4,6 +4,17 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1042 migrated surface
+
+Finance Core chart, account, dimension, dimension-value, and journal list and
+mutation responses now use central allowlists across local SQLite,
+tenant-scoped PostgreSQL, and the bounded legacy ledger adapter. The deliberate
+local/server/legacy field union is retained, including the server workspace
+marker; unknown adapter/storage fields are dropped before serialization. This
+is a bounded disclosure control for the reviewed master-data response family,
+not universal field-level authorization, external IAM, or production
+readiness. ADR 0702 records the decision and rollback.
+
 ## E-1041 migrated surface
 
 Bank Statement Control create, list, and read responses now use central

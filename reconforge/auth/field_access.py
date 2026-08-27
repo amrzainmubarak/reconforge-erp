@@ -1413,6 +1413,28 @@ CONSOLIDATION_CERTIFICATION_FIELDS = frozenset(
     }
 )
 CONSOLIDATION_CERTIFICATION_RESPONSE_FIELDS = frozenset({"certification", "source"})
+CONSOLIDATION_EVIDENCE_LINK_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "run_id",
+        "artifact_id",
+        "artifact_result_digest",
+        "matched_elimination_ids",
+        "unresolved_count",
+        "entity_code",
+        "period_id",
+        "reporting_currency",
+        "total_impairment_loss",
+        "net_deferred_tax",
+        "posted",
+        "link_digest",
+        "actor",
+        "created_at",
+        "posting",
+    }
+)
+CONSOLIDATION_EVIDENCE_LINK_RESPONSE_FIELDS = frozenset({"link", "source"})
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -2718,3 +2740,24 @@ def project_consolidation_certification_response(values: Mapping[str, object]) -
             source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
         ).visible
     return project_fields(record, allowed_fields=CONSOLIDATION_CERTIFICATION_RESPONSE_FIELDS)
+
+
+def project_consolidation_evidence_link_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for consolidation evidence-link responses."""
+
+    record = dict(values)
+    link = record.get("link")
+    if link is not None:
+        if not isinstance(link, Mapping):
+            raise TypeError("consolidation evidence link must be a mapping")
+        record["link"] = project_fields(
+            link, allowed_fields=CONSOLIDATION_EVIDENCE_LINK_FIELDS
+        ).visible
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("consolidation evidence link source must be a mapping")
+        record["source"] = project_fields(
+            source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
+        ).visible
+    return project_fields(record, allowed_fields=CONSOLIDATION_EVIDENCE_LINK_RESPONSE_FIELDS)

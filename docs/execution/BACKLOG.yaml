@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1058
+    priority: P0
+    area: finance-close
+    title: Apply fail-closed projection to consolidation evidence-link responses
+    status: completed
+    depends_on: [E-1001, E-1002, E-1005, E-1057]
+    exit_evidence: >-
+      The five consolidation evidence-link mutation responses preserve their
+      reviewed identity, artifact/run binding, digest, actor, and
+      type-specific fields while dropping unknown PostgreSQL adapter fields
+      through one central projection. Focused and full regression plus release
+      quality gates pass; ADR 0718 records rollback. This does not claim
+      statutory posting or production readiness.
   - id: E-1057
     priority: P0
     area: identity-governance

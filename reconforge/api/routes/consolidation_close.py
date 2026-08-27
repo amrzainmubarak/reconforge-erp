@@ -24,6 +24,7 @@ from reconforge.api.server_identity import RequestExecutionScope, request_execut
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
 from reconforge.auth.field_access import (
     project_consolidation_certification_response,
+    project_consolidation_evidence_link_response,
     project_consolidation_period,
     project_consolidation_run,
     project_consolidation_summary,
@@ -208,6 +209,14 @@ def _project_certification_response(
 ) -> dict[str, object]:
     return project_consolidation_certification_response(
         {"certification": certification, "source": source}
+    ).visible
+
+
+def _project_evidence_link_response(
+    link: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_evidence_link_response(
+        {"link": link, "source": source}
     ).visible
 
 
@@ -703,7 +712,7 @@ def attach_intercompany_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/impairment-evidence")
@@ -737,7 +746,7 @@ def attach_impairment_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/deferred-tax-evidence")
@@ -771,7 +780,7 @@ def attach_deferred_tax_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/ppa-evidence")
@@ -805,7 +814,7 @@ def attach_ppa_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/ownership-change-evidence")
@@ -839,7 +848,7 @@ def attach_ownership_change_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/certification")

@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-885: Consolidation evidence links use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Five Consolidation Close evidence-link mutations returned raw
+  PostgreSQL rows with a shared identity/digest shape and type-specific
+  fields.
+- **Decision**: Apply one central compatibility-union projection to every
+  evidence-link response and independently project its source envelope.
+- **Verification**: Focused server-shaped route tests inject a future link
+  field and prove it is denied; full regression, static, security, packaging,
+  YAML, and diff gates pass for E-1058.
+- **Compatibility**: Existing identity, binding, digest, actor, timestamp,
+  and type-specific evidence fields remain available; unknown fields are
+  removed.
+- **Rollback**: Revert E-1058 code, tests, ADR 0718, manifest, and execution
+  metadata together; do not restore direct link-row serialization.
+
 ### D-884: Consolidation certification uses fail-closed projection
 
 - **Date**: 2026-08-27

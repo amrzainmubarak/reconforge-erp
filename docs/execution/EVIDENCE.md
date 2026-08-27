@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1058: Fail-closed projection for consolidation evidence-link responses
+
+- Code evidence: all five Consolidation Close evidence-link mutation routes now
+  apply one central compatibility-union projection to link and source output.
+- Test evidence: the focused server-shaped route test injects an unknown link
+  field and proves it is absent while the known intercompany link fields stay
+  available. The existing close-link suites cover lifecycle and binding
+  behavior; full regression and release-quality gates pass. pip-audit cannot
+  audit the local distribution because it is not published on PyPI.
+- Boundary: statutory posting, external accounting integration, and production
+  effectiveness remain separate concerns. ADR 0718 records rollback.
+
 ## E-1057: Fail-closed projection for consolidation certification responses
 
 - Code evidence: consolidation-close certification prepare, review, and read

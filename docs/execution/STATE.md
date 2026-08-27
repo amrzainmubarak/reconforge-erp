@@ -2,6 +2,15 @@
 
 Updated: 2026-08-27
 
+## E-1058 - Fail-closed projection for consolidation evidence-link responses (2026-08-27)
+
+- The five Consolidation Close evidence-link mutation responses now use one
+  closed compatibility projection for local route construction and the
+  tenant-scoped PostgreSQL boundary, including type-specific fields. Focused
+  and full regression/static/security/package gates pass; ADR 0718 records the
+  decision and rollback boundary. This is bounded disclosure control, not
+  statutory posting or production readiness.
+
 ## E-1057 - Fail-closed projection for consolidation certification responses (2026-08-27)
 
 - Consolidation certification prepare, review, and read responses now use one

@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1050
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to scope-grant list responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1049]
+    exit_evidence: >-
+      The authenticated scope-grant list now preserves existing grant
+      identity/principal/scope/audit fields and drops unknown repository fields
+      through one central allowlist. Focused and full regression plus release
+      quality gates pass; ADR 0710 records rollback. This does not claim
+      broader authorization or production readiness.
   - id: E-1049
     priority: P0
     area: identity-governance

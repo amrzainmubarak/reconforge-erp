@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1050 - Fail-closed projection for scope-grant list responses (2026-08-27)
+
+- The authenticated scope-grant list now projects repository mappings through
+  the central `project_scope_grant` allowlist before serialization. Focused and
+  full regression/static/security/package gates pass; ADR 0710 records the
+  decision and rollback boundary. This is bounded disclosure control, not
+  broader authorization or production readiness.
+
 ## E-1049 - Fail-closed projection for Auth Me identity responses (2026-08-27)
 
 - `/api/v1/auth/me` now applies the central `project_auth_me` allowlist before

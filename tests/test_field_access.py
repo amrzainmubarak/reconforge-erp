@@ -64,6 +64,7 @@ from reconforge.auth.field_access import (
     project_reconciliation_result,
     project_reconciliation_run,
     project_retail_settlement,
+    project_scope_grant,
 )
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
 
@@ -344,6 +345,24 @@ def test_auth_me_projection_is_closed_across_identity_scopes() -> None:
     }
     assert "future_identity_field" in result.denied_fields
     assert "future_scope" not in str(result.visible["authorized_scopes"])
+
+
+def test_scope_grant_projection_is_closed() -> None:
+    result = project_scope_grant(
+        {
+            "id": "grant-a",
+            "principal_type": "user",
+            "principal_id": "user-a",
+            "scope_type": "workspace",
+            "scope_id": "workspace-a",
+            "granted_by": "admin-a",
+            "granted_at": "2026-08-27T00:00:00Z",
+            "future_scope_grant_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible["scope_id"] == "workspace-a"
+    assert result.denied_fields == ("future_scope_grant_field",)
 
 
 def test_inventory_valuation_document_projection_is_closed_across_nested_financial_shapes() -> None:

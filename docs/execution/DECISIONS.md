@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-877: Scope-grant list uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Scope-grant administration returned repository mappings
+  directly, with no central response boundary for future storage fields.
+- **Decision**: Project each listed grant through one closed allowlist before
+  serialization.
+- **Verification**: Focused unit and authenticated route tests inject a future
+  repository field and prove it is denied; full regression, static, security,
+  packaging, YAML, and diff gates pass for E-1050.
+- **Compatibility**: No grant authorization, tenant enforcement, mutation, or
+  persistence behavior changes; this is bounded disclosure control.
+- **Rollback**: Revert E-1050 code, tests, ADR 0710, manifest, and execution
+  metadata together; do not restore direct repository serialization.
+
 ### D-876: Auth Me uses fail-closed identity projection
 
 - **Date**: 2026-08-27

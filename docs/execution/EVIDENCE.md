@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1050: Fail-closed projection for scope-grant list responses
+
+- Code evidence: the authenticated scope-grant list endpoint now projects each
+  repository mapping through `project_scope_grant` before returning it.
+- Test evidence: Focused allowlist and HTTP boundary tests inject a future
+  repository field and prove it is absent. Full regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML, and diff gates pass. pip-audit cannot audit
+  the local distribution because it is not published on PyPI.
+- Boundary: grant authorization, immutable persistence, tenant enforcement,
+  and production effectiveness remain separate concerns. ADR 0710 records
+  rollback.
+
 ## E-1049: Fail-closed projection for Auth Me identity responses
 
 - Code evidence: `/api/v1/auth/me` now projects its dynamic identity payload

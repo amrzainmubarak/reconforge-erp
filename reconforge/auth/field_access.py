@@ -27,6 +27,9 @@ AUTH_ME_FIELDS = frozenset(
     }
 )
 AUTH_ME_SCOPE_FIELDS = frozenset({"workspaces", "organizations", "legal_entities"})
+SCOPE_GRANT_FIELDS = frozenset(
+    {"id", "principal_type", "principal_id", "scope_type", "scope_id", "granted_by", "granted_at"}
+)
 
 # These are response-contract fields, not database columns.  Keeping the
 # allowlist here makes the sensitive evidence boundary explicit and gives
@@ -1533,6 +1536,12 @@ def project_auth_me(values: Mapping[str, object]) -> FieldProjection:
             scopes, allowed_fields=AUTH_ME_SCOPE_FIELDS
         ).visible
     return project_fields(record, allowed_fields=AUTH_ME_FIELDS)
+
+
+def project_scope_grant(values: Mapping[str, object]) -> FieldProjection:
+    """Return the non-revoked scope-grant fields safe for administration reads."""
+
+    return project_fields(values, allowed_fields=SCOPE_GRANT_FIELDS)
 
 
 def project_audit_event(values: Mapping[str, object]) -> FieldProjection:

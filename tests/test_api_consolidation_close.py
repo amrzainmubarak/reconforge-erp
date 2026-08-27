@@ -299,6 +299,7 @@ def test_consolidation_close_certification_api_is_posted_only_and_maker_checker_
     assert fetched.status_code == 200
     assert fetched.json()["certification"]["reviewed_by"] == "reviewer"
     assert fetched.json()["certification"]["object_type"] == "consolidation_close_run"
+    assert set(fetched.json()) == {"certification", "source"}
 
 
 def test_consolidation_close_server_boundary_binds_workspace_before_exposure(

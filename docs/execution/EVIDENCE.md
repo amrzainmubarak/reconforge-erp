@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1057: Fail-closed projection for consolidation certification responses
+
+- Code evidence: consolidation-close certification prepare, review, and read
+  routes now apply one nested certification/source projection across local
+  SQLite and tenant-scoped PostgreSQL paths.
+- Test evidence: focused tests inject an unknown certification field through
+  local and PostgreSQL-shaped route results and prove it is absent; the full
+  certification workflow remains compatible. Full regression and
+  release-quality gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: statutory close, external accounting integration, and production
+  effectiveness remain separate concerns. ADR 0717 records rollback.
+
 ## E-1056: Fail-closed projection for legacy audit verification responses
 
 - Code evidence: `/api/v1/audit/verify` now applies one central nested

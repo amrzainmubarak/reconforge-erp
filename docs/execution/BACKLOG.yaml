@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1057
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to consolidation certification responses
+    status: completed
+    depends_on: [E-1001, E-1002, E-1005, E-1056]
+    exit_evidence: >-
+      Consolidation certification prepare, review, and read responses preserve
+      the reviewed lifecycle and evidence fields across SQLite/PostgreSQL while
+      dropping unknown nested adapter fields through one central projection.
+      Focused and full regression plus release quality gates pass; ADR 0717
+      records rollback. This does not claim statutory close or production
+      readiness.
   - id: E-1056
     priority: P0
     area: identity-governance

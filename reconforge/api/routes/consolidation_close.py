@@ -23,6 +23,7 @@ from reconforge.api.server_consolidation_close import (
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
 from reconforge.auth.field_access import (
+    project_consolidation_certification_response,
     project_consolidation_period,
     project_consolidation_run,
     project_consolidation_summary,
@@ -200,6 +201,14 @@ def _project_run(value: Mapping[str, object]) -> dict[str, object]:
 
 def _project_runs(values: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
     return [_project_run(value) for value in values]
+
+
+def _project_certification_response(
+    certification: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_certification_response(
+        {"certification": certification, "source": source}
+    ).visible
 
 
 @router.get("/periods")
@@ -862,7 +871,7 @@ def prepare_certification(
             )
 
         certification = execute_postgres_consolidation_close(request, prepare)
-        return {"certification": certification, "source": _server_source()}
+        return _project_certification_response(certification, _server_source())
 
     try:
         certification = _repository(connection).prepare_certification(
@@ -872,7 +881,7 @@ def prepare_certification(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_certification_prepare_failed", exc) from exc
-    return {"certification": certification, "source": {"kind": "sqlite-consolidation-close"}}
+    return _project_certification_response(certification, {"kind": "sqlite-consolidation-close"})
 
 
 @router.post("/runs/{run_id}/certification/review")
@@ -904,7 +913,7 @@ def review_certification(
             )
 
         certification = execute_postgres_consolidation_close(request, review)
-        return {"certification": certification, "source": _server_source()}
+        return _project_certification_response(certification, _server_source())
 
     try:
         certification = _repository(connection).review_certification(
@@ -914,7 +923,7 @@ def review_certification(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_certification_review_failed", exc) from exc
-    return {"certification": certification, "source": {"kind": "sqlite-consolidation-close"}}
+    return _project_certification_response(certification, {"kind": "sqlite-consolidation-close"})
 
 
 @router.get("/runs/{run_id}/certification")
@@ -935,13 +944,13 @@ def get_certification(
             return repository.get_certification(run_id, actor_label=current_user.id)
 
         certification = execute_postgres_consolidation_close(request, fetch)
-        return {"certification": certification, "source": _server_source()}
+        return _project_certification_response(certification, _server_source())
 
     try:
         certification = _repository(connection).get_certification(run_id, actor_label=current_user.username)
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_certification_failed", exc) from exc
-    return {"certification": certification, "source": {"kind": "sqlite-consolidation-close"}}
+    return _project_certification_response(certification, {"kind": "sqlite-consolidation-close"})
 
 
 @router.get("/summary")

@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1057 - Fail-closed projection for consolidation certification responses (2026-08-27)
+
+- Consolidation certification prepare, review, and read responses now use one
+  nested certification/source projection across local SQLite and tenant-scoped
+  PostgreSQL paths. Focused and full regression/static/security/package gates
+  pass; ADR 0717 records the decision and rollback boundary. This is bounded
+  disclosure control, not statutory close or production readiness.
+
 ## E-1056 - Fail-closed projection for legacy audit verification responses (2026-08-27)
 
 - Legacy audit verification now uses one closed projection for local SQLite and

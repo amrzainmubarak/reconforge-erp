@@ -1391,6 +1391,28 @@ CONSOLIDATION_RUN_FIELDS = frozenset(
         "close_bundle",
     }
 )
+CONSOLIDATION_CERTIFICATION_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "object_type",
+        "object_id",
+        "period_name",
+        "entity_code",
+        "status",
+        "prepared_by",
+        "reviewed_by",
+        "note",
+        "evidence_digest",
+        "created_by",
+        "prepared_at",
+        "reviewed_at",
+        "created_at",
+        "updated_at",
+        "row_version",
+    }
+)
+CONSOLIDATION_CERTIFICATION_RESPONSE_FIELDS = frozenset({"certification", "source"})
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -2675,3 +2697,24 @@ def project_consolidation_run(values: Mapping[str, object]) -> FieldProjection:
     if isinstance(effects, list):
         visible["effects"] = [_project_consolidation_effect(effect) for effect in effects if isinstance(effect, Mapping)]
     return FieldProjection(visible, projection.masked_fields, projection.denied_fields, projection.projection_digest)
+
+
+def project_consolidation_certification_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for close-certification responses."""
+
+    record = dict(values)
+    certification = record.get("certification")
+    if certification is not None:
+        if not isinstance(certification, Mapping):
+            raise TypeError("consolidation certification must be a mapping")
+        record["certification"] = project_fields(
+            certification, allowed_fields=CONSOLIDATION_CERTIFICATION_FIELDS
+        ).visible
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("consolidation certification source must be a mapping")
+        record["source"] = project_fields(
+            source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
+        ).visible
+    return project_fields(record, allowed_fields=CONSOLIDATION_CERTIFICATION_RESPONSE_FIELDS)

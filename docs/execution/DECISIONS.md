@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-884: Consolidation certification uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Consolidation-close certification prepare, review, and read
+  routes returned local/PostgreSQL certification mappings directly despite
+  different physical schemas.
+- **Decision**: Apply one nested certification/source projection to all three
+  response paths and preserve only the reviewed compatibility union.
+- **Verification**: Focused local and PostgreSQL-shaped route tests inject a
+  future certification field and prove it is denied; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1057.
+- **Compatibility**: Existing status, actors, evidence digest, timestamps,
+  scope, and version fields remain available; unknown response fields are
+  removed.
+- **Rollback**: Revert E-1057 code, tests, ADR 0717, manifest, and execution
+  metadata together; do not restore direct certification serialization.
+
 ### D-883: Legacy audit verification uses fail-closed projection
 
 - **Date**: 2026-08-27

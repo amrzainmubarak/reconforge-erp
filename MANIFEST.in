@@ -1060,5 +1060,6 @@ include docs/adr/0713-risk-scoring-propagates-financial-input-policy.md
 include docs/adr/0714-master-registry-reconciliation-uses-fail-closed-projection.md
 include docs/adr/0715-master-registry-binding-uses-fail-closed-projection.md
 include docs/adr/0716-audit-verification-uses-fail-closed-projection.md
+include docs/adr/0717-consolidation-certification-uses-fail-closed-projection.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

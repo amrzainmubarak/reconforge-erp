@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-882: Master Registry binding uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The explicit Currency Registry binding mutation returned the
+  local and PostgreSQL binding mappings directly, unlike the bounded
+  reconciliation response.
+- **Decision**: Apply one nested binding/source projection to both local and
+  PostgreSQL binding responses before serialization.
+- **Verification**: Focused local and PostgreSQL-shaped route tests inject a
+  future binding field and prove it is denied; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1055.
+- **Compatibility**: Binding version, digest, timestamps, actor, and the
+  existing server source marker remain available; only unknown response
+  fields are removed.
+- **Rollback**: Revert E-1055 code, tests, ADR 0715, manifest, and execution
+  metadata together; do not restore direct result serialization.
+
 ### D-881: Master Registry reconciliation uses fail-closed projection
 
 - **Date**: 2026-08-27

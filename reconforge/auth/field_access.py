@@ -1262,6 +1262,7 @@ MASTER_REGISTRY_ISSUE_FIELDS = frozenset(
 MASTER_REGISTRY_BINDING_FIELDS = frozenset(
     {"status", "registry_version", "registry_digest", "bound_at", "bound_by"}
 )
+MASTER_REGISTRY_BINDING_RESPONSE_FIELDS = frozenset({"binding", "source"})
 CONSOLIDATION_SUMMARY_FIELDS = frozenset(
     {
         "workspace",
@@ -2524,6 +2525,27 @@ def project_master_registry(values: Mapping[str, object]) -> FieldProjection:
     if isinstance(binding, Mapping):
         record["binding"] = project_fields(binding, allowed_fields=MASTER_REGISTRY_BINDING_FIELDS).visible
     return project_fields(record, allowed_fields=MASTER_REGISTRY_FIELDS)
+
+
+def project_master_registry_binding(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a currency-registry binding response."""
+
+    record = dict(values)
+    binding = record.get("binding")
+    if binding is not None:
+        if not isinstance(binding, Mapping):
+            raise TypeError("master-data registry binding must be a mapping")
+        record["binding"] = project_fields(
+            binding, allowed_fields=MASTER_REGISTRY_BINDING_FIELDS
+        ).visible
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("master-data registry binding source must be a mapping")
+        record["source"] = project_fields(
+            source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
+        ).visible
+    return project_fields(record, allowed_fields=MASTER_REGISTRY_BINDING_RESPONSE_FIELDS)
 
 
 def project_master_snapshot(values: Mapping[str, object]) -> FieldProjection:

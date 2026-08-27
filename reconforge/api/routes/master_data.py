@@ -25,6 +25,7 @@ from reconforge.auth.field_access import (
     project_master_organization,
     project_master_period,
     project_master_registry,
+    project_master_registry_binding,
     project_master_snapshot,
     project_master_summary,
 )
@@ -424,7 +425,9 @@ def bind_currency_registry(
                 metadata={"source": "api"},
             ),
         )
-        return {"binding": record, "source": {"kind": "postgresql-master-data", "server_mode": True}}
+        return project_master_registry_binding(
+            {"binding": record, "source": {"kind": "postgresql-master-data", "server_mode": True}}
+        ).visible
     try:
         record = MasterDataService(_local_connection(connection)).bind_currency_registry(
             workspace=workspace,
@@ -432,7 +435,7 @@ def bind_currency_registry(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _api_error("currency_registry_binding_failed", exc) from exc
-    return {"binding": record}
+    return project_master_registry_binding({"binding": record}).visible
 
 
 @router.post("/currencies")

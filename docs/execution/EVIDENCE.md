@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1055: Fail-closed projection for Master Currency Registry binding responses
+
+- Code evidence: local and tenant-scoped PostgreSQL Currency Registry binding
+  responses now pass through one central nested binding/source projection.
+- Test evidence: focused API projection tests inject an unknown binding field
+  into local and PostgreSQL-shaped route results and prove it is absent while
+  the reviewed binding and source fields remain available. Full regression and
+  release-quality gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: registry source correctness, live rate sourcing, and production
+  effectiveness remain separate concerns. ADR 0715 records rollback.
+
 ## E-1054: Fail-closed projection for Master Currency Registry reconciliation
 
 - Code evidence: local and tenant-scoped PostgreSQL reconciliation responses

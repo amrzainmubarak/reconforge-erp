@@ -121,3 +121,89 @@ def test_master_data_registry_reconciliation_drops_future_nested_fields(monkeypa
     assert payload["issues"] == [{"code": "X", "currency_code": "USD", "message": "synthetic"}]
     assert payload["binding"]["status"] == "current"
     assert "must-not-escape" not in str(payload)
+
+
+def test_master_data_registry_binding_drops_future_nested_fields(monkeypatch) -> None:
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/",
+            "headers": [],
+            "app": SimpleNamespace(state=SimpleNamespace()),
+        }
+    )
+    binding = {
+        "registry_version": "iso-2026-01-01",
+        "registry_digest": "a" * 64,
+        "bound_at": "2026-08-27T00:00:00Z",
+        "bound_by": "controller",
+        "future_binding_field": "must-not-escape",
+    }
+
+    class FakeService:
+        def __init__(self, _connection) -> None:
+            pass
+
+        def bind_currency_registry(self, **_kwargs):
+            return binding
+
+    monkeypatch.setattr(routes, "server_master_data_enabled", lambda _request: False)
+    monkeypatch.setattr(routes, "MasterDataService", FakeService)
+
+    result = routes.bind_currency_registry(
+        request,
+        LocalUser(id="user-a", username="alice", display_name="Alice"),
+        object(),
+    )
+
+    assert result["binding"] == {
+        "registry_version": "iso-2026-01-01",
+        "registry_digest": "a" * 64,
+        "bound_at": "2026-08-27T00:00:00Z",
+        "bound_by": "controller",
+    }
+    assert "future_binding_field" not in str(result)
+
+
+def test_master_data_registry_binding_projects_server_source(monkeypatch) -> None:
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/",
+            "headers": [],
+            "app": SimpleNamespace(state=SimpleNamespace()),
+        }
+    )
+    binding = {
+        "registry_version": "iso-2026-01-01",
+        "registry_digest": "b" * 64,
+        "bound_at": "2026-08-27T00:00:00Z",
+        "bound_by": "controller",
+        "future_binding_field": "must-not-escape",
+    }
+
+    class FakePostgresService:
+        def bind_currency_registry(self, **_kwargs):
+            return binding
+
+    def fake_execute(_request, operation):
+        return operation(FakePostgresService(), "tenant-a")
+
+    monkeypatch.setattr(routes, "server_master_data_enabled", lambda _request: True)
+    monkeypatch.setattr(routes, "execute_postgres_master_data", fake_execute)
+    monkeypatch.setattr(routes, "_enforce_server_manage", lambda _request: None)
+
+    result = routes.bind_currency_registry(
+        request,
+        LocalUser(id="user-a", username="alice", display_name="Alice"),
+        object(),
+    )
+
+    assert result["source"] == {
+        "kind": "postgresql-master-data",
+        "server_mode": True,
+    }
+    assert "future_binding_field" not in str(result)
+    assert "tenant-a" not in str(result)

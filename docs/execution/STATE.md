@@ -2,6 +2,17 @@
 
 Updated: 2026-08-27
 
+## E-1048 - Fail-closed projection for Consolidation Close summary responses (2026-08-27)
+
+- The `/api/v1/consolidation-close/summary` response now applies the central
+  consolidation summary allowlist on local SQLite and tenant-scoped
+  PostgreSQL branches. Declared period/lock/run/reversal counts remain
+  compatible; unknown future fields cannot silently enter the response.
+- Focused field and server-boundary tests plus the full regression/static/
+  security/package gates pass. ADR 0708 records the decision and rollback
+  boundary. This remains a bounded disclosure control, not universal
+  field-level authorization or production readiness.
+
 ## E-1047 - Fail-closed projection for Finance summary responses (2026-08-27)
 
 - Finance Core summary responses now use one central projection across the

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
@@ -325,6 +326,21 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
         def get_run(self, *_: object, **__: object) -> dict[str, object]:
             return {"id": "run-b", "workspace_id": "workspace-b"}
 
+        def summary(self, **_: object) -> SimpleNamespace:
+            return SimpleNamespace(
+                to_dict=lambda: {
+                    "workspace": "workspace-a",
+                    "periods": 1,
+                    "locked_periods": 1,
+                    "prepared_runs": 2,
+                    "approved_runs": 3,
+                    "posted_runs": 4,
+                    "reversal_prepared_runs": 5,
+                    "reversed_runs": 6,
+                    "unknown_summary_field": "must-not-escape",
+                }
+            )
+
         def attach_intercompany_artifact(self, *_: object, **__: object) -> dict[str, object]:
             return {"id": "link-a", "artifact_id": "ice-" + "a" * 32, "matched_elimination_ids": ["ELIM-1"]}
 
@@ -466,3 +482,8 @@ def test_consolidation_close_server_boundary_binds_workspace_before_exposure(
         "tenant_id": "tenant-a",
         "workspace_id": "workspace-a",
     }
+
+    summary = client.get("/api/v1/consolidation-close/summary", headers=headers)
+    assert summary.status_code == 200
+    assert summary.json()["summary"]["workspace"] == "workspace-a"
+    assert "unknown_summary_field" not in summary.text

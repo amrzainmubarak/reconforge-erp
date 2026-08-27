@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-875: Consolidation Close summary API uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Local and PostgreSQL consolidation-close summaries were
+  serialized directly even though related period/run response families used
+  closed projections.
+- **Decision**: Apply the central consolidation summary allowlist to both
+  backends before serialization, retaining lifecycle counts and dropping
+  future fields.
+- **Verification**: Focused field and server-boundary tests inject an unknown
+  summary field and prove it is denied. Full Python and release-quality gates
+  pass for E-1048.
+- **Compatibility**: No lock, run, reversal, scope, persistence, or
+  authorization behavior changes. This is bounded response disclosure
+  control.
+- **Rollback**: Revert E-1048 code, tests, ADR 0708, manifest, and execution
+  metadata together; do not restore unbounded summaries.
+
 ### D-874: Finance summary API uses one compatibility union projection
 
 - **Date**: 2026-08-27

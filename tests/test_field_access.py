@@ -8,6 +8,7 @@ from reconforge.auth.field_access import (
     project_close_task,
     project_consolidation_period,
     project_consolidation_run,
+    project_consolidation_summary,
     project_evidence_drill_down_record,
     project_evidence_requirement,
     project_evidence_verification,
@@ -284,6 +285,34 @@ def test_finance_summary_projection_is_closed_across_server_shapes() -> None:
     }
     assert result.denied_fields == ("unknown_summary_field",)
     assert "unknown_source_field" not in str(result.visible)
+
+
+def test_consolidation_summary_projection_is_closed() -> None:
+    result = project_consolidation_summary(
+        {
+            "workspace": "workspace-a",
+            "periods": 1,
+            "locked_periods": 1,
+            "prepared_runs": 2,
+            "approved_runs": 3,
+            "posted_runs": 4,
+            "reversal_prepared_runs": 5,
+            "reversed_runs": 6,
+            "unknown_summary_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible == {
+        "workspace": "workspace-a",
+        "periods": 1,
+        "locked_periods": 1,
+        "prepared_runs": 2,
+        "approved_runs": 3,
+        "posted_runs": 4,
+        "reversal_prepared_runs": 5,
+        "reversed_runs": 6,
+    }
+    assert result.denied_fields == ("unknown_summary_field",)
 
 
 def test_inventory_valuation_document_projection_is_closed_across_nested_financial_shapes() -> None:

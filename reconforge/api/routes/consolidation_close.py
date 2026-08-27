@@ -22,7 +22,11 @@ from reconforge.api.server_consolidation_close import (
 )
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
-from reconforge.auth.field_access import project_consolidation_period, project_consolidation_run
+from reconforge.auth.field_access import (
+    project_consolidation_period,
+    project_consolidation_run,
+    project_consolidation_summary,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_lifecycle import (
@@ -958,10 +962,13 @@ def summary(
                 actor_label=current_user.id,
             ),
         )
-        return {"summary": value.to_dict(), "source": _server_source()}
+        return {"summary": project_consolidation_summary(value.to_dict()).visible, "source": _server_source()}
 
     try:
         value = _repository(connection).summary(workspace=workspace, actor_label=current_user.username)
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_summary_failed", exc) from exc
-    return {"summary": value.to_dict(), "source": {"kind": "sqlite-consolidation-close", "workspace": workspace}}
+    return {
+        "summary": project_consolidation_summary(value.to_dict()).visible,
+        "source": {"kind": "sqlite-consolidation-close", "workspace": workspace},
+    }

@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1048: Fail-closed projection for Consolidation Close summary responses
+
+- Code evidence: `/api/v1/consolidation-close/summary` projects both local
+  SQLite and tenant-scoped PostgreSQL `ConsolidationCloseSummary` values
+  through the central lifecycle-count allowlist before serialization. The
+  outer source envelope remains the existing bounded static metadata.
+- Test evidence: `tests/test_field_access.py` covers all period, lock, run,
+  and reversal count fields and injects a future field. The server-boundary
+  test in `tests/test_api_consolidation_close.py` injects a future PostgreSQL
+  summary field through HTTP and proves it is absent. Focused tests, full
+  regression, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  gates pass for this slice. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: this closes the reviewed Consolidation Close summary response
+  only. It does not establish universal field-level authorization, external
+  IAM, distributed revocation, statutory consolidation, or production
+  effectiveness. ADR 0708 records rollback.
+
 ## E-1047: Fail-closed projection for Finance summary responses
 
 - Code evidence: `/api/v1/finance-core/summary` now applies

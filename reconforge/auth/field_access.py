@@ -1236,6 +1236,18 @@ MASTER_REGISTRY_ISSUE_FIELDS = frozenset(
 MASTER_REGISTRY_BINDING_FIELDS = frozenset(
     {"status", "registry_version", "registry_digest", "bound_at", "bound_by"}
 )
+CONSOLIDATION_SUMMARY_FIELDS = frozenset(
+    {
+        "workspace",
+        "periods",
+        "locked_periods",
+        "prepared_runs",
+        "approved_runs",
+        "posted_runs",
+        "reversal_prepared_runs",
+        "reversed_runs",
+    }
+)
 CONSOLIDATION_PERIOD_FIELDS = frozenset(
     {
         "tenant_id",
@@ -2504,6 +2516,10 @@ def project_consolidation_period(values: Mapping[str, object]) -> FieldProjectio
     """Return a closed projection for consolidation-close period records."""
 
     return project_fields(values, allowed_fields=CONSOLIDATION_PERIOD_FIELDS)
+
+
+def project_consolidation_summary(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=CONSOLIDATION_SUMMARY_FIELDS)
 
 
 def _project_consolidation_journal_line(value: Mapping[str, object]) -> dict[str, object]:

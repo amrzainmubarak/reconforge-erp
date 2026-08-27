@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1061
+    priority: P0
+    area: finance-close
+    title: Apply fail-closed projection to consolidation ownership-change artifacts
+    status: completed
+    depends_on: [E-1001, E-1002, E-1005, E-1060]
+    exit_evidence: >-
+      Consolidation ownership-change prepare/read responses preserve reviewed
+      lineage, exact-money payloads, and balanced adjustment lines while
+      dropping unknown adapter and nested payload fields through one central
+      projection. Focused and full regression plus release quality gates pass;
+      ADR 0721 records rollback. This does not claim statutory
+      accounting or production readiness.
   - id: E-1060
     priority: P0
     area: finance-close

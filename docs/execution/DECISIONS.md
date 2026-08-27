@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-888: Consolidation ownership-change artifacts use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Ownership-change prepare/read routes exposed raw artifact
+  dictionaries with nested request/result payloads and exact Money values.
+- **Decision**: Use one central nested projection for artifact, source,
+  payload, Money, and adjustment-line response shapes.
+- **Verification**: Focused API and field-access tests inject future fields at
+  every nested boundary and prove they do not cross the response boundary.
+  Full regression, static, security, packaging, YAML, and diff gates pass for
+  E-1061.
+- **Compatibility**: Preserve reviewed lineage, exact-money metadata,
+  non-posting, approval, percentages, and balanced lines; deny unknown fields.
+- **Rollback**: Revert E-1061 code, tests, ADR 0721, manifest, and execution
+  metadata together; do not restore direct serialization.
+
 ### D-887: Consolidation PPA artifacts use fail-closed projection
 
 - **Date**: 2026-08-27

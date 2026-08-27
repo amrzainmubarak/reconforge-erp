@@ -7,6 +7,7 @@ from reconforge.auth.field_access import (
     project_close_period,
     project_close_readiness,
     project_close_task,
+    project_consolidation_ownership_change_response,
     project_consolidation_ownership_effective_response,
     project_consolidation_ownership_interest_response,
     project_consolidation_period,
@@ -1378,4 +1379,42 @@ def test_consolidation_ppa_projection_is_closed_through_nested_money_and_bridge(
         {"amount": {"amount": "10", "currency": "USD"}, "line_type": "consideration"}
     ]
     assert result.visible["source"] == {"kind": "postgresql-consolidation-ppa"}
+    assert "must-not-escape" not in str(result.visible)
+
+
+def test_consolidation_ownership_change_projection_is_closed_through_payload_lines() -> None:
+    result = project_consolidation_ownership_change_response(
+        {
+            "artifact": {
+                "id": "ownchg-1",
+                "posted": False,
+                "request_payload": {
+                    "change_id": "CHANGE-1",
+                    "net_assets": {"amount": "100", "currency": "USD", "future_money": "x"},
+                    "future_request": "must-not-escape",
+                },
+                "result_payload": {
+                    "posted": False,
+                    "lines": [
+                        {
+                            "line_type": "nci",
+                            "amount": {"amount": "10", "currency": "USD", "future_money": "x"},
+                            "future_line": "must-not-escape",
+                        }
+                    ],
+                    "future_result": "must-not-escape",
+                },
+                "future_artifact": "must-not-escape",
+            },
+            "source": {"kind": "postgresql-consolidation-ownership-change", "future_source": "x"},
+            "future_response": "must-not-escape",
+        }
+    )
+    artifact = result.visible["artifact"]
+    assert artifact["id"] == "ownchg-1"
+    assert artifact["request_payload"]["net_assets"] == {"amount": "100", "currency": "USD"}
+    assert artifact["result_payload"]["lines"] == [
+        {"amount": {"amount": "10", "currency": "USD"}, "line_type": "nci"}
+    ]
+    assert result.visible["source"] == {"kind": "postgresql-consolidation-ownership-change"}
     assert "must-not-escape" not in str(result.visible)

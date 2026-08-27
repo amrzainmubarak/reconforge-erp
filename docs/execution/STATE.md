@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1061 - Fail-closed projection for consolidation ownership-change artifacts (2026-08-27)
+
+- Consolidation ownership-change prepare/read responses now use a closed
+  artifact projection through nested request/result Money and adjustment-line
+  payloads. Focused and full regression/static/security/package gates pass.
+  This is bounded disclosure control, not statutory accounting or production
+  readiness.
+
 ## E-1060 - Fail-closed projection for consolidation PPA artifacts (2026-08-27)
 
 - Consolidation PPA prepare/read responses now use a closed artifact

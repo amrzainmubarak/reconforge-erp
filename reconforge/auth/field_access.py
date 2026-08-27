@@ -1565,6 +1565,70 @@ CONSOLIDATION_PPA_RESULT_PAYLOAD_FIELDS = frozenset(
     }
 )
 CONSOLIDATION_PPA_RESPONSE_FIELDS = frozenset({"artifact", "source"})
+CONSOLIDATION_OWNERSHIP_CHANGE_ARTIFACT_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "change_id",
+        "subsidiary_entity_code",
+        "period_id",
+        "effective_date",
+        "reporting_currency",
+        "request_digest",
+        "result_digest",
+        "request_payload",
+        "result_payload",
+        "posted",
+        "prepared_by",
+        "approved_by",
+        "approved_at",
+        "created_at",
+    }
+)
+CONSOLIDATION_OWNERSHIP_CHANGE_REQUEST_FIELDS = frozenset(
+    {
+        "approved_at",
+        "approved_by",
+        "change_id",
+        "consideration_account_code",
+        "consideration_effect",
+        "effective_date",
+        "nci_account_code",
+        "net_assets",
+        "new_group_ownership_percentage",
+        "parent_equity_account_code",
+        "period_id",
+        "policy_id",
+        "policy_version",
+        "prepared_at",
+        "prepared_by",
+        "prior_group_ownership_percentage",
+        "reporting_currency",
+        "source_digest",
+        "source_reference",
+        "subsidiary_entity_code",
+    }
+)
+CONSOLIDATION_OWNERSHIP_CHANGE_RESULT_FIELDS = frozenset(
+    {
+        "algorithm_version",
+        "change_id",
+        "lines",
+        "new_nci_percentage",
+        "nci_rounding_delta",
+        "posted",
+        "prior_nci_percentage",
+        "reporting_currency",
+        "request_digest",
+        "result_digest",
+        "schema_version",
+        "unrounded_nci_effect",
+    }
+)
+CONSOLIDATION_OWNERSHIP_CHANGE_LINE_FIELDS = frozenset(
+    {"account_code", "line_type", "amount", "source_reference"}
+)
+CONSOLIDATION_OWNERSHIP_CHANGE_RESPONSE_FIELDS = frozenset({"artifact", "source"})
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -3037,3 +3101,80 @@ def project_consolidation_ppa_response(values: Mapping[str, object]) -> FieldPro
             source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
         ).visible
     return project_fields(record, allowed_fields=CONSOLIDATION_PPA_RESPONSE_FIELDS)
+
+
+def _project_consolidation_ownership_change_money(value: object) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("consolidation ownership-change money must be a mapping")
+    return project_fields(value, allowed_fields=CONSOLIDATION_PPA_PAYLOAD_MONEY_FIELDS).visible
+
+
+def _project_consolidation_ownership_change_payload(
+    value: object,
+    *,
+    result: bool,
+) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("consolidation ownership-change payload must be a mapping")
+    allowed_fields = (
+        CONSOLIDATION_OWNERSHIP_CHANGE_RESULT_FIELDS
+        if result
+        else CONSOLIDATION_OWNERSHIP_CHANGE_REQUEST_FIELDS
+    )
+    payload = project_fields(value, allowed_fields=allowed_fields).visible
+    money_fields = (
+        ("net_assets", "consideration_effect")
+        if not result
+        else ()
+    )
+    for field in money_fields:
+        if field in payload:
+            payload[field] = _project_consolidation_ownership_change_money(payload[field])
+    lines = payload.get("lines")
+    if lines is not None:
+        if not isinstance(lines, list):
+            raise TypeError("consolidation ownership-change lines must be a list")
+        projected_lines: list[dict[str, object]] = []
+        for line in lines:
+            if not isinstance(line, Mapping):
+                raise TypeError("consolidation ownership-change line must be a mapping")
+            projected_line = project_fields(
+                line, allowed_fields=CONSOLIDATION_OWNERSHIP_CHANGE_LINE_FIELDS
+            ).visible
+            if "amount" in projected_line:
+                projected_line["amount"] = _project_consolidation_ownership_change_money(
+                    projected_line["amount"]
+                )
+            projected_lines.append(projected_line)
+        payload["lines"] = projected_lines
+    return payload
+
+
+def project_consolidation_ownership_change_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a persisted ownership-change artifact."""
+
+    record = dict(values)
+    artifact = record.get("artifact")
+    if artifact is not None:
+        if not isinstance(artifact, Mapping):
+            raise TypeError("consolidation ownership-change artifact must be a mapping")
+        projected_artifact = project_fields(
+            artifact, allowed_fields=CONSOLIDATION_OWNERSHIP_CHANGE_ARTIFACT_FIELDS
+        ).visible
+        if "request_payload" in projected_artifact:
+            projected_artifact["request_payload"] = _project_consolidation_ownership_change_payload(
+                projected_artifact["request_payload"], result=False
+            )
+        if "result_payload" in projected_artifact:
+            projected_artifact["result_payload"] = _project_consolidation_ownership_change_payload(
+                projected_artifact["result_payload"], result=True
+            )
+        record["artifact"] = projected_artifact
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("consolidation ownership-change source must be a mapping")
+        record["source"] = project_fields(
+            source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
+        ).visible
+    return project_fields(record, allowed_fields=CONSOLIDATION_OWNERSHIP_CHANGE_RESPONSE_FIELDS)

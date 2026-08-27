@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 from typing import Annotated, Literal
 
@@ -15,6 +16,7 @@ from reconforge.api.server_consolidation_ownership_change import (
     server_ownership_change_enabled,
 )
 from reconforge.application.consolidation_ownership_change import OwnershipChangeApplicationService
+from reconforge.auth.field_access import project_consolidation_ownership_change_response
 from reconforge.auth.models import LocalUser
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_ownership_changes import OwnershipChangeAdjustmentRequest
@@ -159,6 +161,14 @@ def _enforce_server_policy(
     )
 
 
+def _project_artifact_response(
+    artifact: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_ownership_change_response(
+        {"artifact": artifact, "source": source}
+    ).visible
+
+
 @router.post("")
 def prepare_ownership_change(
     request: Request,
@@ -185,10 +195,10 @@ def prepare_ownership_change(
             actor_label=current_user.id,
         ),
     )
-    return {
-        "artifact": artifact,
-        "source": {"kind": "postgresql-consolidation-ownership-change", "server_mode": True},
-    }
+    return _project_artifact_response(
+        artifact,
+        {"kind": "postgresql-consolidation-ownership-change", "server_mode": True},
+    )
 
 
 @router.get("/{artifact_id}")
@@ -205,10 +215,10 @@ def get_ownership_change(
         request,
         lambda repository, _tenant: repository.get(artifact_id, actor_label=current_user.id),
     )
-    return {
-        "artifact": artifact,
-        "source": {"kind": "postgresql-consolidation-ownership-change", "server_mode": True},
-    }
+    return _project_artifact_response(
+        artifact,
+        {"kind": "postgresql-consolidation-ownership-change", "server_mode": True},
+    )
 
 
 __all__ = [

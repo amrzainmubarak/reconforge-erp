@@ -1278,7 +1278,7 @@ Updated: 2026-08-27
 
 ## E-924 — Strict currency precision at application financial ingress (2026-08-25)
 
-- On feature branch `codex/money-strict-bank-control`, all application-level
+- On feature branch `money-strict-bank-control`, all application-level
   `Money.from_exact` source/tolerance readers now pass
   `strict_precision=True`. The bounded domain calculation readers retain their
   explicit rounding boundaries.

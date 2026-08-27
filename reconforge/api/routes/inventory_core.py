@@ -753,14 +753,14 @@ def void_movement(
             ),
             movement_id=movement_id,
         )
-        return {"movement": record}
+        return {"movement": project_inventory_movement(record).visible}
     try:
         record = InventoryCoreService(_local_connection(connection)).void_movement(
             movement_id, reason=payload.reason, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_movement_void_failed", exc) from exc
-    return {"movement": record}
+    return {"movement": project_inventory_movement(record).visible}
 
 
 @router.get("/on-hand")

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from reconforge.api import create_api_app
 from reconforge.api.dependencies import get_db, get_local_db
 from reconforge.api.routes.inventory_core import router
-from reconforge.api.server_identity import RequestExecutionScope, request_tenant_id
+from reconforge.api.server_identity import AuthenticatedServerRequest, RequestExecutionScope, request_tenant_id
 from reconforge.application.inventory_core import InventoryCoreSummary
 from reconforge.auth.models import LocalUser
 
@@ -45,6 +45,7 @@ def test_server_inventory_routes_bind_scope_and_use_postgres_adapter(tmp_path: P
     from reconforge.api.server_inventory_core import InventoryExecutionScope
 
     user = LocalUser(id="inventory-user", username="inventory-user", display_name="Inventory User")
+    checker = LocalUser(id="inventory-checker", username="inventory-checker", display_name="Inventory Checker")
     permissions = frozenset({"inventory.read", "inventory.manage", "inventory.post"})
     calls: list[tuple[str, dict[str, object]]] = []
 
@@ -129,9 +130,19 @@ def test_server_inventory_routes_bind_scope_and_use_postgres_adapter(tmp_path: P
                 "unknown_controls_field": "must-not-escape",
             }
 
-    def authenticate(request: Any, token: str) -> tuple[LocalUser, frozenset[str]] | None:
+    def authenticate(request: Any, token: str) -> AuthenticatedServerRequest | tuple[LocalUser, frozenset[str]] | None:
         assert request_tenant_id(request) == "tenant-a"
-        return (user, permissions) if token == "inventory-token" else None
+        if token == "inventory-token":
+            return (user, permissions)
+        if token == "inventory-checker-token":
+            return AuthenticatedServerRequest(
+                user=checker,
+                permissions=permissions,
+                principal_type="user",
+                step_up_active=True,
+                step_up_method="webauthn_user_verified",
+            )
+        return None
 
     def execute(request: Any, operation: Any, **kwargs: object) -> Any:
         assert request_tenant_id(request) == "tenant-a"
@@ -193,6 +204,11 @@ def test_server_inventory_routes_bind_scope_and_use_postgres_adapter(tmp_path: P
         },
     )
     movement_detail = client.get("/api/v1/inventory/movements/movement-1", headers=headers)
+    voided_movement = client.post(
+        "/api/v1/inventory/movements/movement-1/void",
+        headers={**headers, "Authorization": "Bearer inventory-checker-token"},
+        json={"reason": "Test void"},
+    )
     on_hand = client.get("/api/v1/inventory/on-hand?organization=ORG&entity=ENTITY", headers=headers)
     controls = client.get(
         "/api/v1/inventory/control-exceptions?organization=ORG&entity=ENTITY",
@@ -206,6 +222,7 @@ def test_server_inventory_routes_bind_scope_and_use_postgres_adapter(tmp_path: P
     assert movements.status_code == 200, movements.text
     assert created_movement.status_code == 200, created_movement.text
     assert movement_detail.status_code == 200, movement_detail.text
+    assert voided_movement.status_code == 200, voided_movement.text
     assert on_hand.status_code == 200, on_hand.text
     assert controls.status_code == 200, controls.text
     assert "unknown_future_column" not in saved.text
@@ -217,6 +234,7 @@ def test_server_inventory_routes_bind_scope_and_use_postgres_adapter(tmp_path: P
             movements,
             created_movement,
             movement_detail,
+            voided_movement,
             on_hand,
             controls,
         )

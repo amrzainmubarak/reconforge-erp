@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-879: Inventory movement void uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Inventory movement void responses bypassed the projection used
+  by the other movement lifecycle endpoints.
+- **Decision**: Project local and PostgreSQL-shaped void records through the
+  existing central movement allowlist.
+- **Verification**: Focused authenticated route coverage injects a future
+  movement field and proves it is denied; full regression, static, security,
+  packaging, YAML, and diff gates pass for E-1052.
+- **Compatibility**: No movement validation, authorization, persistence, or
+  audit behavior changes; this is bounded disclosure control.
+- **Rollback**: Revert E-1052 code, tests, ADR 0712, manifest, and execution
+  metadata together; do not restore direct adapter serialization.
+
 ### D-878: Metrics API uses fail-closed projections
 
 - **Date**: 2026-08-27

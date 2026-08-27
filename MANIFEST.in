@@ -1055,5 +1055,6 @@ include docs/adr/0708-consolidation-summary-api-uses-fail-closed-field-projectio
 include docs/adr/0709-auth-me-uses-fail-closed-identity-projection.md
 include docs/adr/0710-scope-grant-list-uses-fail-closed-field-projection.md
 include docs/adr/0711-metrics-api-uses-fail-closed-field-projection.md
+include docs/adr/0712-inventory-void-api-uses-fail-closed-field-projection.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1052
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Inventory movement void responses
+    status: completed
+    depends_on: [E-1001, E-1002, E-1005, E-1051]
+    exit_evidence: >-
+      Inventory movement void responses preserve the existing lifecycle fields
+      across SQLite/PostgreSQL while dropping unknown adapter fields through
+      the central movement allowlist. Focused and full regression plus release
+      quality gates pass; ADR 0712 records rollback. This does not claim
+      inventory posting correctness or production readiness.
   - id: E-1051
     priority: P0
     area: identity-governance

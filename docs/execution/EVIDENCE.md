@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1052: Fail-closed projection for Inventory movement void responses
+
+- Code evidence: the Inventory Core void endpoint now applies the existing
+  central `project_inventory_movement` allowlist in both local SQLite and
+  tenant-scoped PostgreSQL branches.
+- Test evidence: the authenticated server route test exercises voiding with a
+  synthetic future movement field and proves it is absent. Focused, full
+  regression, static, security, packaging, YAML, and diff gates pass.
+- Boundary: this does not establish inventory posting correctness, source
+  authenticity, broader authorization, or production effectiveness. ADR 0712
+  records rollback.
+
 ## E-1051: Fail-closed projection for Metrics dashboard and lineage responses
 
 - Code evidence: the Metrics dashboard and lineage endpoints now apply

@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1052 - Fail-closed projection for Inventory movement void responses (2026-08-27)
+
+- Inventory movement void responses now use the existing central movement
+  allowlist across local SQLite and tenant-scoped PostgreSQL paths. Focused and
+  full regression/static/security/package gates pass; ADR 0712 records the
+  decision and rollback boundary. This is disclosure control, not inventory
+  posting correctness or production readiness.
+
 ## E-1051 - Fail-closed projection for Metrics dashboard and lineage responses (2026-08-27)
 
 - Metrics dashboard and lineage responses now use separate central allowlists

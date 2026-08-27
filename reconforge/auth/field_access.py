@@ -30,6 +30,10 @@ AUTH_ME_SCOPE_FIELDS = frozenset({"workspaces", "organizations", "legal_entities
 SCOPE_GRANT_FIELDS = frozenset(
     {"id", "principal_type", "principal_id", "scope_type", "scope_id", "granted_by", "granted_at"}
 )
+METRIC_DASHBOARD_FIELDS = frozenset(
+    {"id", "workspace_id", "metric_key", "period_name", "value", "value_text", "lineage", "computed_at", "name", "description"}
+)
+METRIC_LINEAGE_FIELDS = frozenset({"metric_key", "name", "description", "lineage"})
 
 # These are response-contract fields, not database columns.  Keeping the
 # allowlist here makes the sensitive evidence boundary explicit and gives
@@ -1542,6 +1546,18 @@ def project_scope_grant(values: Mapping[str, object]) -> FieldProjection:
     """Return the non-revoked scope-grant fields safe for administration reads."""
 
     return project_fields(values, allowed_fields=SCOPE_GRANT_FIELDS)
+
+
+def project_metric_dashboard(values: Mapping[str, object]) -> FieldProjection:
+    """Return the bounded dashboard snapshot fields exposed by the API."""
+
+    return project_fields(values, allowed_fields=METRIC_DASHBOARD_FIELDS)
+
+
+def project_metric_lineage(values: Mapping[str, object]) -> FieldProjection:
+    """Return the bounded metric definition and lineage fields exposed by the API."""
+
+    return project_fields(values, allowed_fields=METRIC_LINEAGE_FIELDS)
 
 
 def project_audit_event(values: Mapping[str, object]) -> FieldProjection:

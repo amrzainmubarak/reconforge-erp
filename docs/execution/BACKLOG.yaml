@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1051
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Metrics dashboard and lineage responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1050]
+    exit_evidence: >-
+      Metrics dashboard and lineage responses preserve current fields across
+      SQLite/PostgreSQL while dropping unknown adapter fields through separate
+      central allowlists. Focused and full regression plus release quality gates
+      pass; ADR 0711 records rollback. This does not claim production
+      observability or SLO readiness.
   - id: E-1050
     priority: P0
     area: identity-governance

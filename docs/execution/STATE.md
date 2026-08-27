@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1051 - Fail-closed projection for Metrics dashboard and lineage responses (2026-08-27)
+
+- Metrics dashboard and lineage responses now use separate central allowlists
+  across local SQLite and tenant-scoped PostgreSQL paths. Focused and full
+  regression/static/security/package gates pass; ADR 0711 records the decision
+  and rollback boundary. This is bounded disclosure control, not production
+  observability or SLO readiness.
+
 ## E-1050 - Fail-closed projection for scope-grant list responses (2026-08-27)
 
 - The authenticated scope-grant list now projects repository mappings through

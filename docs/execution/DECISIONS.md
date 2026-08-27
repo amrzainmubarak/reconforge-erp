@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-878: Metrics API uses fail-closed projections
+
+- **Date**: 2026-08-27
+- **Context**: Local and PostgreSQL metric adapters exposed different row
+  shapes, and the local dashboard used a `SELECT *` response path.
+- **Decision**: Apply separate dashboard and lineage allowlists centrally at
+  the API boundary.
+- **Verification**: Focused unit and authenticated route tests inject future
+  fields into both response families and prove they are denied; full
+  regression, static, security, packaging, YAML, and diff gates pass for
+  E-1051.
+- **Compatibility**: No metric computation, lineage, tenant policy, or
+  persistence behavior changes; this is bounded disclosure control.
+- **Rollback**: Revert E-1051 code, tests, ADR 0711, manifest, and execution
+  metadata together; do not restore direct adapter serialization.
+
 ### D-877: Scope-grant list uses fail-closed projection
 
 - **Date**: 2026-08-27

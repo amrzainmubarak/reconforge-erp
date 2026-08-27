@@ -51,7 +51,26 @@ def test_server_metrics_routes_bind_tenant_policy_without_workspace(
         calls.append((permissions, tenant_id, workspace_id))
 
     monkeypatch.setattr(routes, "server_metrics_enabled", lambda _request: True)
-    monkeypatch.setattr(routes, "execute_postgres_metrics", lambda _request, _operation: {"bounded": True})
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_metrics",
+        lambda _request, _operation: [
+            {
+                "id": "metric-a",
+                "workspace_id": "workspace-a",
+                "metric_key": "match_rate",
+                "period_name": "2026-08",
+                "value": "100.00",
+                "value_text": "100.00",
+                "lineage": "reconciliation_results",
+                "computed_at": "2026-08-27T00:00:00Z",
+                "name": "Match rate",
+                "description": "Matched results percentage",
+                "future_metric_field": "must-not-escape",
+                "future_lineage_field": "must-not-escape",
+            }
+        ],
+    )
     monkeypatch.setattr(routes, "enforce_server_scoped_permissions", enforce)
     headers = {**headers, "X-ReconForge-Tenant": "tenant-a"}
 
@@ -60,6 +79,8 @@ def test_server_metrics_routes_bind_tenant_policy_without_workspace(
 
     assert dashboard.status_code == 200
     assert lineage.status_code == 200
+    assert "future_metric_field" not in dashboard.text
+    assert "future_lineage_field" not in lineage.text
     assert calls == [
         (frozenset({"metrics.read"}), "tenant-a", None),
         (frozenset({"metrics.read"}), "tenant-a", None),

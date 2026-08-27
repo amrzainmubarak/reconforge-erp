@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1051: Fail-closed projection for Metrics dashboard and lineage responses
+
+- Code evidence: the Metrics dashboard and lineage endpoints now apply
+  separate central allowlists to local SQLite and tenant-scoped PostgreSQL
+  rows before serialization.
+- Test evidence: Focused metric projection and authenticated server-route tests
+  inject future dashboard/lineage fields and prove they are absent. Full
+  regression, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  gates pass. pip-audit cannot audit the local distribution because it is not
+  published on PyPI.
+- Boundary: this does not establish production observability, SLOs, or
+  independent backend runtime assurance. ADR 0711 records rollback.
+
 ## E-1050: Fail-closed projection for scope-grant list responses
 
 - Code evidence: the authenticated scope-grant list endpoint now projects each

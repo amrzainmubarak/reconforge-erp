@@ -48,6 +48,8 @@ from reconforge.auth.field_access import (
     project_manufacturing_cost_control,
     project_master_snapshot,
     project_master_summary,
+    project_metric_dashboard,
+    project_metric_lineage,
     project_payables_purchase_order,
     project_payables_receipt,
     project_payables_supplier,
@@ -363,6 +365,38 @@ def test_scope_grant_projection_is_closed() -> None:
 
     assert result.visible["scope_id"] == "workspace-a"
     assert result.denied_fields == ("future_scope_grant_field",)
+
+
+def test_metric_projections_are_closed() -> None:
+    dashboard = project_metric_dashboard(
+        {
+            "id": "metric-a",
+            "workspace_id": "workspace-a",
+            "metric_key": "match_rate",
+            "period_name": "2026-08",
+            "value": "100.00",
+            "value_text": "100.00",
+            "lineage": "reconciliation_results",
+            "computed_at": "2026-08-27T00:00:00Z",
+            "name": "Match rate",
+            "description": "Matched results percentage",
+            "future_metric_field": "must-not-escape",
+        }
+    )
+    lineage = project_metric_lineage(
+        {
+            "metric_key": "match_rate",
+            "name": "Match rate",
+            "description": "Matched results percentage",
+            "lineage": "reconciliation_results",
+            "future_lineage_field": "must-not-escape",
+        }
+    )
+
+    assert dashboard.visible["metric_key"] == "match_rate"
+    assert dashboard.denied_fields == ("future_metric_field",)
+    assert lineage.visible["lineage"] == "reconciliation_results"
+    assert lineage.denied_fields == ("future_lineage_field",)
 
 
 def test_inventory_valuation_document_projection_is_closed_across_nested_financial_shapes() -> None:

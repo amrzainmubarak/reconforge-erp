@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1070: Fail-closed connector write-back responses
+
+- Code evidence: Connector write-back intent and recovery-observation response
+  paths now use central projections for lifecycle fields and nested approval,
+  acknowledgement, and provider-observation data.
+- Test evidence: field-access tests inject future fields at each nested
+  lifecycle boundary; existing connector API and observation suites pass with
+  the shared helpers. Focused and full pytest checks pass; Ruff, Mypy, Bandit,
+  pip-audit, package build, source YAML, and diff gates pass. pip-audit cannot
+  audit the local distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; provider correctness,
+  external connector behavior, live PostgreSQL execution, and production
+  effectiveness remain separately bounded. ADR 0730 records rollback.
+
 ## E-1069: Fail-closed evidence coverage responses
 
 - Code evidence: The evidence coverage route now projects the tenant/workspace

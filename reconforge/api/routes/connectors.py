@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from reconforge.api.dependencies import enforce_server_scoped_permission, get_local_db, require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.server_writeback import execute_postgres_writeback, server_writeback_enabled
+from reconforge.auth.field_access import project_writeback_intent, project_writeback_recovery_observation
 from reconforge.auth.models import LocalUser
 from reconforge.connectors.writeback import (
     WritebackIntent,
@@ -161,7 +162,7 @@ def propose_writeback_intent(
     if current is None:
         raise APIError(status_code=500, code="writeback_intent_not_persisted", message="Intent was not persisted.")
     return {
-        "intent": current["intent"].model_dump(mode="json"),
+        "intent": _project_writeback_intent(current["intent"]),
         "version": current["version"],
         "digest": current["intent"].digest,
         "proposal_digest": current["intent"].proposal_digest,
@@ -241,7 +242,7 @@ def approve_writeback_intent(
     except (ValueError, WritebackPersistenceError) as exc:
         raise APIError(status_code=409, code="writeback_approval_conflict", message=str(exc)) from exc
     return {
-        "intent": stored.model_dump(mode="json"),
+        "intent": _project_writeback_intent(stored),
         "version": int(current["version"]) + 1,
         "digest": stored.digest,
         "proposal_digest": stored.proposal_digest,
@@ -320,7 +321,7 @@ def dispatch_writeback_intent(
     if marked["already_acknowledged"]:
         acknowledged = marked["intent"]
         return {
-            "intent": acknowledged.model_dump(mode="json"),
+            "intent": _project_writeback_intent(acknowledged),
             "version": marked["version"],
             "digest": acknowledged.digest,
             "proposal_digest": acknowledged.proposal_digest,
@@ -360,7 +361,7 @@ def dispatch_writeback_intent(
     persisted: _PersistedAcknowledgement = execute_postgres_writeback(request, persist_acknowledgement)
     intent = cast(WritebackIntent, persisted["intent"])
     return {
-        "intent": intent.model_dump(mode="json"),
+        "intent": _project_writeback_intent(intent),
         "version": persisted["version"],
         "digest": intent.digest,
         "proposal_digest": intent.proposal_digest,
@@ -427,7 +428,7 @@ def recover_writeback_intent(
     if marked["already_acknowledged"]:
         acknowledged = marked["intent"]
         return {
-            "intent": acknowledged.model_dump(mode="json"),
+            "intent": _project_writeback_intent(acknowledged),
             "version": marked["version"],
             "digest": acknowledged.digest,
             "proposal_digest": acknowledged.proposal_digest,
@@ -502,7 +503,7 @@ def recover_writeback_intent(
         acknowledged = cast(WritebackIntent, persisted["intent"])
         record = cast(WritebackRecoveryObservationRecord, persisted["observation"])
         return {
-            "intent": acknowledged.model_dump(mode="json"),
+            "intent": _project_writeback_intent(acknowledged),
             "version": persisted["version"],
             "digest": acknowledged.digest,
             "proposal_digest": acknowledged.proposal_digest,
@@ -513,7 +514,7 @@ def recover_writeback_intent(
     recovery = cast(WritebackNetworkDispatch, persisted["recovery"])
     intent = cast(WritebackIntent, persisted["intent"])
     return {
-        "intent": intent.model_dump(mode="json"),
+        "intent": _project_writeback_intent(intent),
         "version": persisted["version"],
         "digest": intent.digest,
         "proposal_digest": intent.proposal_digest,
@@ -578,7 +579,7 @@ def list_writeback_recovery_observations(
         "intent_id": intent_id,
         "tenant_id": tenant_id,
         "workspace_id": workspace_id,
-        "observations": [observation.model_dump(mode="json") for observation in observations],
+        "observations": [_project_writeback_observation(observation) for observation in observations],
         "count": len(observations),
     }
 
@@ -648,7 +649,7 @@ def acknowledge_writeback_intent(
     except (ValueError, WritebackPersistenceError) as exc:
         raise APIError(status_code=409, code="writeback_acknowledgement_conflict", message=str(exc)) from exc
     return {
-        "intent": stored.model_dump(mode="json"),
+        "intent": _project_writeback_intent(stored),
         "version": int(current["version"]) + 1,
         "digest": stored.digest,
         "proposal_digest": stored.proposal_digest,
@@ -798,7 +799,7 @@ def dispatch_writeback_compensation(
     if bool(marked["already_compensated"]):
         intent = cast(WritebackIntent, marked["intent"])
         return {
-            "intent": intent.model_dump(mode="json"),
+            "intent": _project_writeback_intent(intent),
             "version": int(cast(int, marked["version"])),
             "digest": intent.digest,
             "proposal_digest": intent.proposal_digest,
@@ -861,7 +862,7 @@ def dispatch_writeback_compensation(
     persisted = execute_postgres_writeback(request, persist)
     persisted_intent = cast(WritebackIntent, persisted["intent"])
     return {
-        "intent": persisted_intent.model_dump(mode="json"),
+        "intent": _project_writeback_intent(persisted_intent),
         "version": int(cast(int, persisted["version"])),
         "digest": persisted_intent.digest,
         "proposal_digest": persisted_intent.proposal_digest,
@@ -900,13 +901,47 @@ def _recheck_provider_permission(
 
 def _writeback_response(intent: WritebackIntent, version: int, *, server_mode: bool) -> dict[str, object]:
     return {
-        "intent": intent.model_dump(mode="json"),
+        "intent": _project_writeback_intent(intent),
         "version": version,
         "digest": intent.digest,
         "proposal_digest": intent.proposal_digest,
         "network_dispatch": "disabled",
         "source": {"kind": "postgresql-writeback-intent" if server_mode else "sqlite-writeback-intent", "server_mode": server_mode},
     }
+
+
+def _project_writeback_intent(intent: object) -> dict[str, object]:
+    if not isinstance(intent, WritebackIntent):
+        raise APIError(
+            status_code=503,
+            code="writeback_intent_projection_failed",
+            message="Write-back repository returned an invalid intent contract.",
+        )
+    try:
+        return project_writeback_intent(intent.model_dump(mode="json")).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="writeback_intent_projection_failed",
+            message="Write-back repository returned an invalid intent contract.",
+        ) from exc
+
+
+def _project_writeback_observation(observation: object) -> dict[str, object]:
+    if not isinstance(observation, WritebackRecoveryObservationRecord):
+        raise APIError(
+            status_code=503,
+            code="writeback_observation_projection_failed",
+            message="Write-back repository returned an invalid recovery-observation contract.",
+        )
+    try:
+        return project_writeback_recovery_observation(observation.model_dump(mode="json")).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="writeback_observation_projection_failed",
+            message="Write-back repository returned an invalid recovery-observation contract.",
+        ) from exc
 
 
 def _network_registration(

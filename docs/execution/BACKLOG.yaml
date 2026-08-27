@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1070
+    priority: P0
+    area: connector-governance
+    title: Apply fail-closed projection to connector write-back responses
+    status: completed
+    depends_on: [E-1005, E-1069]
+    exit_evidence: >-
+      Connector write-back intent and recovery-observation responses preserve
+      the reviewed lifecycle, digest, approval, acknowledgement, and provider
+      observation fields while dropping unknown nested model fields through
+      central projections across local and server paths. Focused tests, full
+      regression, and release quality gates pass; ADR 0730 records rollback.
+      This does not claim provider correctness or production readiness.
   - id: E-1069
     priority: P0
     area: evidence-governance

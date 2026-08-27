@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-897: Connector write-back responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Several connector write-back routes serialized immutable intent
+  and recovery models directly with `model_dump`, making response shape depend
+  on future model additions rather than a reviewed API contract.
+- **Decision**: Apply central nested projections to every write-back intent
+  response and recovery-observation list response across local and server
+  paths. Malformed nested contracts fail closed with bounded API errors.
+- **Verification**: Field-access tests inject future fields into intent,
+  approval, acknowledgement, recovery-record, and provider-observation
+  boundaries; connector API and observation suites pass. Focused and full
+  regression checks plus Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- **Compatibility**: Preserve the existing lifecycle, identity, digest,
+  approval, acknowledgement, compensation, and recovery-observation fields.
+- **Rollback**: Revert E-1070 code, tests, ADR 0730, manifest, and execution
+  metadata together; do not restore direct model serialization.
+
 ### D-896: Evidence coverage responses use fail-closed projection
 
 - **Date**: 2026-08-27

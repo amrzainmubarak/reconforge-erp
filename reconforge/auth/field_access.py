@@ -271,6 +271,57 @@ EVIDENCE_COVERAGE_FIELDS = frozenset(
 EVIDENCE_COVERAGE_OBJECT_FIELDS = frozenset(
     {"object_type", "object_id", "requirement_count", "linked_evidence_count"}
 )
+WRITEBACK_APPROVAL_FIELDS = frozenset({"actor_id", "approved_at", "assurance", "reason"})
+WRITEBACK_ACKNOWLEDGEMENT_FIELDS = frozenset(
+    {"provider_reference", "acknowledged_at", "response_digest", "idempotency_key", "accepted"}
+)
+WRITEBACK_INTENT_FIELDS = frozenset(
+    {
+        "schema_version",
+        "intent_id",
+        "tenant_id",
+        "workspace_id",
+        "connector_id",
+        "operation",
+        "payload_digest",
+        "idempotency_key",
+        "requested_by",
+        "requested_at",
+        "feature_enabled",
+        "status",
+        "approval",
+        "acknowledgement",
+        "compensation_reason",
+        "compensation_requested_by",
+        "compensation_requested_at",
+    }
+)
+WRITEBACK_RECOVERY_OBSERVATION_FIELDS = frozenset(
+    {
+        "schema_version",
+        "observation_id",
+        "evidence_node_id",
+        "intent_id",
+        "tenant_id",
+        "workspace_id",
+        "connector_id",
+        "proposal_digest",
+        "observation_digest",
+        "observed_by",
+        "observed_at",
+        "observation",
+    }
+)
+WRITEBACK_RECOVERY_OBSERVATION_DETAIL_FIELDS = frozenset(
+    {
+        "outcome",
+        "idempotency_key",
+        "http_status",
+        "body_digest",
+        "provider_reference",
+        "provider_response_digest",
+    }
+)
 CLOSE_PERIOD_FIELDS = frozenset(
     {
         "tenant_id",
@@ -2487,6 +2538,38 @@ def project_evidence_coverage(values: Mapping[str, object]) -> FieldProjection:
             )
         record["objects"] = projected_objects
     return project_fields(record, allowed_fields=EVIDENCE_COVERAGE_FIELDS)
+
+
+def project_writeback_intent(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a connector write-back intent."""
+
+    record = dict(values)
+    for name, allowed_fields in (
+        ("approval", WRITEBACK_APPROVAL_FIELDS),
+        ("acknowledgement", WRITEBACK_ACKNOWLEDGEMENT_FIELDS),
+    ):
+        nested = record.get(name)
+        if nested is None:
+            continue
+        if not isinstance(nested, Mapping):
+            raise TypeError(f"write-back intent {name} must be a mapping")
+        record[name] = project_fields(nested, allowed_fields=allowed_fields).visible
+    return project_fields(record, allowed_fields=WRITEBACK_INTENT_FIELDS)
+
+
+def project_writeback_recovery_observation(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a provider recovery observation."""
+
+    record = dict(values)
+    observation = record.get("observation")
+    if observation is not None:
+        if not isinstance(observation, Mapping):
+            raise TypeError("write-back recovery observation detail must be a mapping")
+        record["observation"] = project_fields(
+            observation,
+            allowed_fields=WRITEBACK_RECOVERY_OBSERVATION_DETAIL_FIELDS,
+        ).visible
+    return project_fields(record, allowed_fields=WRITEBACK_RECOVERY_OBSERVATION_FIELDS)
 
 
 def project_evidence_link_response(values: Mapping[str, object]) -> FieldProjection:

@@ -2,6 +2,13 @@
 
 Updated: 2026-08-27
 
+## E-1070 - Fail-closed connector write-back responses (2026-08-27)
+
+- Connector write-back intent and recovery-observation responses now use
+  central nested projections across local and server paths; focused checks,
+  full regression, and release-gate evidence pass. This is bounded response
+  control, not a claim of provider correctness or production readiness.
+
 ## E-1069 - Fail-closed evidence coverage responses (2026-08-27)
 
 - Evidence coverage results now have a central nested projection for summary

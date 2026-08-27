@@ -90,6 +90,8 @@ from reconforge.auth.field_access import (
     project_security_integration_page,
     project_security_retention_policy_change,
     project_security_retention_policy_page,
+    project_writeback_intent,
+    project_writeback_recovery_observation,
 )
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
 
@@ -561,6 +563,69 @@ def test_evidence_coverage_projection_is_closed_across_objects() -> None:
     ]
     assert result.denied_fields == ("future_coverage_field",)
     assert "future_object_field" not in str(result.visible)
+
+
+def test_writeback_projections_are_closed_across_nested_lifecycle_contracts() -> None:
+    intent = project_writeback_intent(
+        {
+            "schema_version": "connector-writeback-intent-v1",
+            "intent_id": "intent-1",
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "connector_id": "connector-1",
+            "operation": "payment.create",
+            "payload_digest": "a" * 64,
+            "idempotency_key": "key-1",
+            "requested_by": "user-1",
+            "requested_at": "2026-08-27T12:00:00Z",
+            "feature_enabled": True,
+            "status": "approved",
+            "approval": {
+                "actor_id": "checker-1",
+                "approved_at": "2026-08-27T12:01:00Z",
+                "assurance": "mfa",
+                "reason": "independent review",
+                "future_approval_field": "must-not-escape",
+            },
+            "acknowledgement": None,
+            "compensation_reason": None,
+            "compensation_requested_by": None,
+            "compensation_requested_at": None,
+            "future_intent_field": "must-not-escape",
+        }
+    )
+    observation = project_writeback_recovery_observation(
+        {
+            "schema_version": "connector-writeback-recovery-observation-v1",
+            "observation_id": "observation-1",
+            "evidence_node_id": "evidence-1",
+            "intent_id": "intent-1",
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
+            "connector_id": "connector-1",
+            "proposal_digest": "b" * 64,
+            "observation_digest": "c" * 64,
+            "observed_by": "checker-1",
+            "observed_at": "2026-08-27T12:02:00Z",
+            "observation": {
+                "outcome": "accepted",
+                "idempotency_key": "key-1",
+                "http_status": 200,
+                "body_digest": "d" * 64,
+                "provider_reference": "provider-1",
+                "provider_response_digest": "e" * 64,
+                "future_observation_field": "must-not-escape",
+            },
+            "future_record_field": "must-not-escape",
+        }
+    )
+
+    assert "future_intent_field" not in str(intent.visible)
+    assert "future_approval_field" not in str(intent.visible)
+    assert intent.visible["approval"]["actor_id"] == "checker-1"
+    assert "future_record_field" not in str(observation.visible)
+    assert "future_observation_field" not in str(observation.visible)
+    assert observation.visible["observation"]["outcome"] == "accepted"
 
 
 def test_finance_entry_projection_is_closed_across_local_and_server_shapes() -> None:

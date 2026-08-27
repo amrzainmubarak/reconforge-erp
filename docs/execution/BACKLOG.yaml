@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1060
+    priority: P0
+    area: finance-close
+    title: Apply fail-closed projection to consolidation PPA artifacts
+    status: completed
+    depends_on: [E-1001, E-1002, E-1005, E-1059]
+    exit_evidence: >-
+      Consolidation PPA prepare/read responses preserve reviewed artifact
+      lineage, exact-money payloads, valuation items, and bridge fields while
+      dropping unknown adapter and nested payload fields through one central
+      projection. Focused and full regression plus release quality gates pass;
+      ADR 0720 records rollback. This does not claim statutory
+      acquisition accounting or production readiness.
   - id: E-1059
     priority: P0
     area: finance-close

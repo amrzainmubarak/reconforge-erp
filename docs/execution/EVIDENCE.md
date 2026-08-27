@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1060: Fail-closed projection for consolidation PPA artifacts
+
+- Code evidence: PPA prepare/read routes now apply a central artifact
+  projection covering request/result payloads, canonical Money, valuation
+  items, goodwill bridge, bridge lines, and source metadata.
+- Test evidence: focused API and field-access tests inject unknown fields at
+  artifact and nested payload boundaries. Target Ruff and Mypy checks pass;
+  full regression passes; Ruff, Mypy, Bandit, pip-audit, package build,
+  source YAML, and diff gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this controls API disclosure only; PPA accounting correctness,
+  statutory treatment, posting, and production effectiveness remain separate
+  concerns. ADR 0720 records rollback.
+
 ## E-1059: Fail-closed projection for consolidation ownership responses
 
 - Code evidence: ownership save and effective-resolution routes now apply

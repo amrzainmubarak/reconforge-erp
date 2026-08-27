@@ -1459,6 +1459,112 @@ CONSOLIDATION_OWNERSHIP_INTEREST_FIELDS = frozenset(
 CONSOLIDATION_OWNERSHIP_SOURCE_FIELDS = MASTER_SNAPSHOT_SOURCE_FIELDS | frozenset({"workspace"})
 CONSOLIDATION_OWNERSHIP_INTEREST_RESPONSE_FIELDS = frozenset({"interest", "source"})
 CONSOLIDATION_OWNERSHIP_EFFECTIVE_RESPONSE_FIELDS = frozenset({"interests", "source"})
+CONSOLIDATION_PPA_ARTIFACT_FIELDS = frozenset(
+    {
+        "tenant_id",
+        "id",
+        "organization_id",
+        "legal_entity_id",
+        "acquisition_id",
+        "subsidiary_entity_code",
+        "period_id",
+        "reporting_currency",
+        "request_digest",
+        "result_digest",
+        "request_payload",
+        "result_payload",
+        "posted",
+        "prepared_by",
+        "approved_by",
+        "approved_at",
+        "created_at",
+    }
+)
+CONSOLIDATION_PPA_PAYLOAD_MONEY_FIELDS = frozenset(
+    {
+        "amount",
+        "currency",
+        "currency_policy_digest",
+        "currency_registry_digest",
+        "currency_registry_version",
+        "minor_units",
+        "rounding_policy",
+        "schema_version",
+    }
+)
+CONSOLIDATION_PPA_ITEM_FIELDS = frozenset(
+    {
+        "account_code",
+        "book_value",
+        "class_code",
+        "fair_value",
+        "fair_value_adjustment",
+        "item_id",
+        "item_kind",
+        "source_reference",
+        "valuation_reference",
+    }
+)
+CONSOLIDATION_PPA_BRIDGE_LINE_FIELDS = frozenset(
+    {"account_code", "amount", "line_type", "source_reference"}
+)
+CONSOLIDATION_PPA_BRIDGE_FIELDS = frozenset(
+    {
+        "acquisition_id",
+        "algorithm_version",
+        "bargain_purchase",
+        "goodwill",
+        "lines",
+        "posted",
+        "reporting_currency",
+        "request_digest",
+        "result_digest",
+        "schema_version",
+    }
+)
+CONSOLIDATION_PPA_REQUEST_PAYLOAD_FIELDS = frozenset(
+    {
+        "acquisition_date",
+        "acquisition_id",
+        "allow_bargain_purchase",
+        "approved_at",
+        "approved_by",
+        "bargain_purchase_account_code",
+        "consideration",
+        "consideration_account_code",
+        "goodwill_account_code",
+        "identifiable_net_assets_account_code",
+        "items",
+        "nci_account_code",
+        "nci_fair_value",
+        "period_id",
+        "policy_id",
+        "policy_version",
+        "prepared_at",
+        "prepared_by",
+        "reporting_currency",
+        "source_digest",
+        "source_reference",
+        "subsidiary_entity_code",
+    }
+)
+CONSOLIDATION_PPA_RESULT_PAYLOAD_FIELDS = frozenset(
+    {
+        "acquisition_id",
+        "algorithm_version",
+        "book_net_assets",
+        "bridge",
+        "fair_value_adjustment",
+        "fair_value_net_assets",
+        "items",
+        "posted",
+        "reporting_currency",
+        "request_digest",
+        "result_digest",
+        "schema_version",
+    }
+)
+CONSOLIDATION_PPA_RESPONSE_FIELDS = frozenset({"artifact", "source"})
 
 # Legacy audit events have two physical response shapes: the local SQLite
 # ledger uses ``id``/``actor_label``/``object_id`` while the PostgreSQL ledger
@@ -2829,3 +2935,105 @@ def project_consolidation_ownership_effective_response(values: Mapping[str, obje
     if source is not None:
         record["source"] = _project_consolidation_ownership_source(source)
     return project_fields(record, allowed_fields=CONSOLIDATION_OWNERSHIP_EFFECTIVE_RESPONSE_FIELDS)
+
+
+def _project_consolidation_ppa_money(value: object) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("consolidation PPA money must be a mapping")
+    return project_fields(value, allowed_fields=CONSOLIDATION_PPA_PAYLOAD_MONEY_FIELDS).visible
+
+
+def _project_consolidation_ppa_item(value: object) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("consolidation PPA item must be a mapping")
+    item = project_fields(value, allowed_fields=CONSOLIDATION_PPA_ITEM_FIELDS).visible
+    for field in ("book_value", "fair_value", "fair_value_adjustment"):
+        if field in item:
+            item[field] = _project_consolidation_ppa_money(item[field])
+    return item
+
+
+def _project_consolidation_ppa_bridge(value: object) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("consolidation PPA bridge must be a mapping")
+    bridge = project_fields(value, allowed_fields=CONSOLIDATION_PPA_BRIDGE_FIELDS).visible
+    for field in ("bargain_purchase", "goodwill"):
+        if field in bridge:
+            bridge[field] = _project_consolidation_ppa_money(bridge[field])
+    lines = bridge.get("lines")
+    if lines is not None:
+        if not isinstance(lines, list):
+            raise TypeError("consolidation PPA bridge lines must be a list")
+        projected_lines: list[dict[str, object]] = []
+        for line in lines:
+            if not isinstance(line, Mapping):
+                raise TypeError("consolidation PPA bridge line must be a mapping")
+            projected_line = project_fields(
+                line, allowed_fields=CONSOLIDATION_PPA_BRIDGE_LINE_FIELDS
+            ).visible
+            if "amount" in projected_line:
+                projected_line["amount"] = _project_consolidation_ppa_money(projected_line["amount"])
+            projected_lines.append(projected_line)
+        bridge["lines"] = projected_lines
+    return bridge
+
+
+def _project_consolidation_ppa_payload(
+    value: object,
+    *,
+    allowed_fields: frozenset[str],
+    result: bool,
+) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise TypeError("consolidation PPA payload must be a mapping")
+    payload = project_fields(value, allowed_fields=allowed_fields).visible
+    money_fields = (
+        ("consideration", "nci_fair_value")
+        if not result
+        else ("book_net_assets", "fair_value_adjustment", "fair_value_net_assets")
+    )
+    for field in money_fields:
+        if field in payload:
+            payload[field] = _project_consolidation_ppa_money(payload[field])
+    items = payload.get("items")
+    if items is not None:
+        if not isinstance(items, list):
+            raise TypeError("consolidation PPA items must be a list")
+        payload["items"] = [_project_consolidation_ppa_item(item) for item in items]
+    if result and "bridge" in payload:
+        payload["bridge"] = _project_consolidation_ppa_bridge(payload["bridge"])
+    return payload
+
+
+def project_consolidation_ppa_response(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a persisted PPA artifact response."""
+
+    record = dict(values)
+    artifact = record.get("artifact")
+    if artifact is not None:
+        if not isinstance(artifact, Mapping):
+            raise TypeError("consolidation PPA artifact must be a mapping")
+        projected_artifact = project_fields(
+            artifact, allowed_fields=CONSOLIDATION_PPA_ARTIFACT_FIELDS
+        ).visible
+        if "request_payload" in projected_artifact:
+            projected_artifact["request_payload"] = _project_consolidation_ppa_payload(
+                projected_artifact["request_payload"],
+                allowed_fields=CONSOLIDATION_PPA_REQUEST_PAYLOAD_FIELDS,
+                result=False,
+            )
+        if "result_payload" in projected_artifact:
+            projected_artifact["result_payload"] = _project_consolidation_ppa_payload(
+                projected_artifact["result_payload"],
+                allowed_fields=CONSOLIDATION_PPA_RESULT_PAYLOAD_FIELDS,
+                result=True,
+            )
+        record["artifact"] = projected_artifact
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("consolidation PPA source must be a mapping")
+        record["source"] = project_fields(
+            source, allowed_fields=MASTER_SNAPSHOT_SOURCE_FIELDS
+        ).visible
+    return project_fields(record, allowed_fields=CONSOLIDATION_PPA_RESPONSE_FIELDS)

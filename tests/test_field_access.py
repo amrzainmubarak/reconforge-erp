@@ -10,6 +10,7 @@ from reconforge.auth.field_access import (
     project_consolidation_ownership_effective_response,
     project_consolidation_ownership_interest_response,
     project_consolidation_period,
+    project_consolidation_ppa_response,
     project_consolidation_run,
     project_consolidation_summary,
     project_evidence_drill_down_record,
@@ -1329,3 +1330,52 @@ def test_consolidation_ownership_projection_is_closed_for_single_and_effective_s
     assert effective.visible["interests"] == [{key: value for key, value in interest.items() if key != "unknown_future_column"}]
     assert effective.visible["source"] == {"kind": "postgresql", "server_mode": True}
     assert "must-not-escape" not in str(single.visible | effective.visible)
+
+
+def test_consolidation_ppa_projection_is_closed_through_nested_money_and_bridge() -> None:
+    result = project_consolidation_ppa_response(
+        {
+            "artifact": {
+                "id": "ppa-1",
+                "posted": False,
+                "result_payload": {
+                    "posted": False,
+                    "book_net_assets": {"amount": "10", "currency": "USD", "future_money": "x"},
+                    "items": [
+                        {
+                            "item_id": "item-1",
+                            "fair_value": {"amount": "10", "currency": "USD", "future_money": "x"},
+                            "future_item": "must-not-escape",
+                        }
+                    ],
+                    "bridge": {
+                        "posted": False,
+                        "lines": [
+                            {
+                                "line_type": "consideration",
+                                "amount": {"amount": "10", "currency": "USD", "future_money": "x"},
+                                "future_line": "must-not-escape",
+                            }
+                        ],
+                        "future_bridge": "must-not-escape",
+                    },
+                    "future_result": "must-not-escape",
+                },
+                "future_artifact": "must-not-escape",
+            },
+            "source": {"kind": "postgresql-consolidation-ppa", "future_source": "x"},
+            "future_response": "must-not-escape",
+        }
+    )
+    artifact = result.visible["artifact"]
+    payload = artifact["result_payload"]
+    assert artifact["id"] == "ppa-1"
+    assert payload["book_net_assets"] == {"amount": "10", "currency": "USD"}
+    assert payload["items"] == [
+        {"item_id": "item-1", "fair_value": {"amount": "10", "currency": "USD"}}
+    ]
+    assert payload["bridge"]["lines"] == [
+        {"amount": {"amount": "10", "currency": "USD"}, "line_type": "consideration"}
+    ]
+    assert result.visible["source"] == {"kind": "postgresql-consolidation-ppa"}
+    assert "must-not-escape" not in str(result.visible)

@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-887: Consolidation PPA artifacts use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: PPA prepare/read routes exposed raw artifact dictionaries with
+  nested request/result payloads and canonical financial values.
+- **Decision**: Use one central nested projection for the artifact, source,
+  payload, Money, item, bridge, and bridge-line response shapes.
+- **Verification**: Focused API and field-access tests inject future fields at
+  every nested boundary and prove they do not cross the response boundary.
+  Full regression, static, security, packaging, YAML, and diff gates pass for
+  E-1060.
+- **Compatibility**: Preserve reviewed lineage, exact-money metadata,
+  non-posting, approval, valuation, and bridge fields; deny unknown fields.
+- **Rollback**: Revert E-1060 code, tests, ADR 0720, manifest, and execution
+  metadata together; do not restore direct serialization.
+
 ### D-886: Consolidation ownership responses use fail-closed projection
 
 - **Date**: 2026-08-27

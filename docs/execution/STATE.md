@@ -2,6 +2,14 @@
 
 Updated: 2026-08-27
 
+## E-1060 - Fail-closed projection for consolidation PPA artifacts (2026-08-27)
+
+- Consolidation PPA prepare/read responses now use a closed artifact
+  projection through nested request/result Money, item, and goodwill-bridge
+  payloads. Focused and full regression/static/security/package gates pass.
+  This is bounded disclosure control, not statutory acquisition accounting or
+  production readiness.
+
 ## E-1059 - Fail-closed projection for consolidation ownership responses (2026-08-27)
 
 - The consolidation ownership save and effective-resolution responses now

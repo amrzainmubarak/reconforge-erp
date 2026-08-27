@@ -2,6 +2,35 @@
 
 Updated: 2026-08-27
 
+## E-1045 - Fail-closed projection for Inventory Planning summary responses (2026-08-27)
+
+- The `/api/v1/inventory-planning/summary` response now applies the central
+  `project_inventory_planning_summary` allowlist on both local SQLite and
+  tenant-scoped PostgreSQL branches. Unknown future aggregate fields cannot
+  silently enter the response while the existing workspace and count fields
+  remain compatible.
+- Focused field and server-route tests pass, including a synthetic future
+  summary field. Full regression, static/security/package, YAML, and diff gates
+  are recorded with the slice commit. This remains a bounded disclosure
+  control, not universal field-level authorization or production readiness.
+- ADR 0705 records the decision and rollback boundary.
+
+## E-824 current-image verification attempt (2026-08-27)
+
+- A clean `linux/amd64` Docker build of the current tree succeeded with image
+  config `sha256:0564d0392cc1a2f44346afef40e45343a2b734d3c8a1f145ce1b84cb69b6cf0d`
+  and manifest `sha256:51d8c46ced833ae6f0a6d00d3bae8fec8fb3775d54fc212ab79a7a7a1e259b67`.
+  Hardened no-network/read-only/non-root `reconforge doctor` also exited 0.
+- Syft 1.51.0 and Grype 0.117.0 binaries matched the CI-pinned commits on
+  this Windows host. Syft produced a subject-bound native SBOM and Grype
+  exited 0 using the cached v6.1.9 database, but the database was older than
+  the 120-hour policy ceiling. Refresh failed with a TLS handshake timeout to
+  `grype.anchore.io`; the fail-closed validator therefore rejected the local
+  evidence because the scan configuration was intentionally not weakened.
+- E-824 remains `in_progress`. This attempt is diagnostic evidence only; it
+  does not replace the required fresh database, hosted clean-build, release
+  provenance, or publication evidence.
+
 ## E-1044 - Fail-closed projection for Individual Cashflow API responses (2026-08-27)
 
 - The local-only Individual Cashflow run response now uses a central recursive

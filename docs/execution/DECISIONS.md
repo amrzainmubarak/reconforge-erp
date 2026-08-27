@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-872: Inventory Planning summary API uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The Inventory Planning summary endpoint returned aggregate
+  service/repository dictionaries directly on local and PostgreSQL paths.
+  Future adapter fields could therefore expand the disclosed response without
+  a reviewed field decision.
+- **Decision**: Apply the central inventory-planning summary allowlist on both
+  backend branches before serialization. Unknown fields are dropped and the
+  operation remains read-only with its existing counts and scope envelope.
+- **Verification**: Focused projector and server-route tests inject unknown
+  summary fields and prove they do not escape. Full Python and release-quality
+  gates pass for E-1045.
+- **Compatibility**: No known response field, quantity, lifecycle,
+  authorization, or persistence behavior changes. This is a bounded disclosure
+  control.
+- **Rollback**: Revert E-1045 code, tests, ADR 0705, manifest, and execution
+  metadata together; do not restore unbounded summary serialization.
+
 ### D-871: Individual Cashflow API uses fail-closed recursive projection
 
 - **Date**: 2026-08-27

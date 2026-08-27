@@ -2,6 +2,46 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1045: Fail-closed projection for Inventory Planning summary responses
+
+- Code evidence: `/api/v1/inventory-planning/summary` now projects both the
+  local SQLite service result and the tenant-scoped PostgreSQL repository
+  result through `project_inventory_planning_summary` before serialization.
+  The existing aggregate workspace/session/reorder fields remain visible;
+  unknown future summary fields are denied.
+- Test evidence: `tests/test_field_access.py` injects an unknown aggregate
+  field into the projector input. `tests/test_api_server_inventory_planning.py`
+  injects the same kind of future field through the PostgreSQL-shaped route
+  result and proves it is absent. The focused selector passes; full Python,
+  Ruff, Mypy, Bandit, pip-audit, build, YAML, and diff gates pass for this
+  commit. pip-audit cannot audit the local distribution because it is not
+  published on PyPI.
+- Boundary: this closes the reviewed Inventory Planning summary response only.
+  It does not establish universal field-level authorization, external IAM,
+  source authenticity, distributed revocation, or production effectiveness.
+  ADR 0705 records rollback.
+
+## E-824: Current-image scanner refresh was blocked by stale local database (2026-08-27)
+
+- Docker evidence: `docker build --pull --no-cache --platform linux/amd64`
+  succeeded. The built image subject was config
+  `sha256:0564d0392cc1a2f44346afef40e45343a2b734d3c8a1f145ce1b84cb69b6cf0d`
+  with manifest
+  `sha256:51d8c46ced833ae6f0a6d00d3bae8fec8fb3775d54fc212ab79a7a7a1e259b67`.
+  The hardened no-network/read-only/non-root `reconforge doctor` smoke test
+  exited 0.
+- Tool identity evidence: Syft 1.51.0 commit
+  `2293641e3bd628a01bb37639318d62c0ebe89b39` and Grype 0.117.0 commit
+  `b5fa92bbcbef655497e3be840a2f718380e2cdd3` matched the pinned releases on
+  the Windows host. Syft emitted a native subject-bound SBOM and Grype
+  exited 0 against the cached v6.1.9 database.
+- Failure evidence: `grype db update` failed with a TLS handshake timeout to
+  `grype.anchore.io`. The cached database was built on 2026-08-22 and was
+  outside the closed 120-hour age bound on 2026-08-27. Disabling age/update
+  validation was used only for diagnosis; the official validator rejected
+  that configuration as expected. No current scanner result was promoted to
+  release evidence and E-824 remains open.
+
 ## E-1044: Fail-closed projection for Individual Cashflow API responses
 
 - Code evidence: `/api/v1/individual/cashflow-controls/run` projects the

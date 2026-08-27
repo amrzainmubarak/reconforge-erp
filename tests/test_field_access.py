@@ -31,6 +31,7 @@ from reconforge.auth.field_access import (
     project_inventory_on_hand,
     project_inventory_planning_session,
     project_inventory_planning_snapshot,
+    project_inventory_planning_summary,
     project_inventory_reorder_rule,
     project_inventory_reorder_signals,
     project_inventory_uom,
@@ -527,6 +528,32 @@ def test_inventory_planning_projection_is_closed_recursively() -> None:
     }
     assert snapshot.visible["count_sessions"][0]["lines"] == session.visible["lines"]
     assert "must-not-escape" not in str([session.visible, rule.visible, signals.visible, snapshot.visible])
+
+
+def test_inventory_planning_summary_projection_is_closed() -> None:
+    result = project_inventory_planning_summary(
+        {
+            "workspace": "default",
+            "count_sessions": 2,
+            "counting_sessions": 1,
+            "submitted_sessions": 1,
+            "approved_sessions": 0,
+            "reorder_rules": 3,
+            "active_reorder_rules": 2,
+            "unknown_summary_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible == {
+        "workspace": "default",
+        "count_sessions": 2,
+        "counting_sessions": 1,
+        "submitted_sessions": 1,
+        "approved_sessions": 0,
+        "reorder_rules": 3,
+        "active_reorder_rules": 2,
+    }
+    assert result.denied_fields == ("unknown_summary_field",)
 
 
 def test_individual_cashflow_projection_is_closed_recursively() -> None:

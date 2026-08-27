@@ -71,6 +71,16 @@ def test_inventory_planning_routes_drop_future_adapter_fields(monkeypatch: pytes
         "signals": [{"signal_id": "signal-1", "rule_id": "rule-1", "risk_rating": "medium", "unknown": "must-not-escape"}],
         "unknown_signals_field": "must-not-escape",
     }
+    summary = {
+        "workspace": "default",
+        "count_sessions": 2,
+        "counting_sessions": 1,
+        "submitted_sessions": 1,
+        "approved_sessions": 0,
+        "reorder_rules": 3,
+        "active_reorder_rules": 2,
+        "unknown_summary_field": "must-not-escape",
+    }
     snapshot = {
         "schema_version": 1,
         "source": {"kind": "local-inventory-planning", "unknown": "must-not-escape"},
@@ -80,11 +90,12 @@ def test_inventory_planning_routes_drop_future_adapter_fields(monkeypatch: pytes
         "reorder_rules": [rule],
         "unknown_snapshot_field": "must-not-escape",
     }
-    responses: list[Any] = [session, [session], session, snapshot, rule, [rule], signals]
+    responses: list[Any] = [SimpleNamespace(to_dict=lambda: summary), session, [session], session, snapshot, rule, [rule], signals]
 
     monkeypatch.setattr(routes, "server_inventory_planning_enabled", lambda _request: True)
     monkeypatch.setattr(routes, "_server_call", lambda *_args, **_kwargs: responses.pop(0))
 
+    summarized = routes.summary(request, user, None, workspace="default")
     created = routes.create_count_session(
         request,
         routes.CountSessionRequest(
@@ -128,6 +139,17 @@ def test_inventory_planning_routes_drop_future_adapter_fields(monkeypatch: pytes
         raise AssertionError(f"Unexpected response shape for {key}")
 
     assert resource_id(created, "count_session") == "count-1"
+    assert summarized == {
+        "summary": {
+            "workspace": "default",
+            "count_sessions": 2,
+            "counting_sessions": 1,
+            "submitted_sessions": 1,
+            "approved_sessions": 0,
+            "reorder_rules": 3,
+            "active_reorder_rules": 2,
+        }
+    }
     assert resource_id(listed, "count_sessions") == "count-1"
     assert resource_id(fetched, "count_session") == "count-1"
     assert resource_id(planned, "count_sessions") == "count-1"

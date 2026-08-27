@@ -27,6 +27,7 @@ from reconforge.api.server_inventory_planning import (
 from reconforge.auth.field_access import (
     project_inventory_planning_session,
     project_inventory_planning_snapshot,
+    project_inventory_planning_summary,
     project_inventory_reorder_rule,
     project_inventory_reorder_signals,
 )
@@ -198,7 +199,7 @@ def summary(
             frozenset({"inventory.read", "inventory.count.manage", "inventory.count.approve", "inventory.reorder.manage"}),
             lambda repository, scope: repository.summary(workspace=scope.workspace_id, actor_label=current_user.id),
         )
-        return {"summary": result.to_dict()}
+        return {"summary": project_inventory_planning_summary(result.to_dict()).visible}
     try:
         result = InventoryPlanningService(_local_connection(connection)).summary(
             workspace=workspace,
@@ -206,7 +207,7 @@ def summary(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_planning_summary_failed", exc) from exc
-    return {"summary": result.to_dict()}
+    return {"summary": project_inventory_planning_summary(result.to_dict()).visible}
 
 
 @router.get("/snapshot")

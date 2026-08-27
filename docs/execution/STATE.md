@@ -2,6 +2,21 @@
 
 Updated: 2026-08-27
 
+## E-1043 - Fail-closed projection for Inventory Planning API responses (2026-08-27)
+
+- Inventory Planning count-session lifecycle, count-session lists, reorder-rule
+  mutation/list, reorder signals, and snapshots now use central recursive
+  allowlists across local SQLite and tenant-scoped PostgreSQL adapter paths.
+  Unknown future adapter/storage fields cannot silently enter inventory count
+  or reorder-control responses.
+- Focused field/API tests pass (37 tests plus 1 existing live-PostgreSQL skip),
+  and the full Python regression passes 100%. Ruff, Mypy across 539 source
+  files, Bandit, pip-audit, package build, source YAML validation across 174
+  files, and diff checks also pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI. ADR 0703 records
+  rollback. This remains a bounded disclosure control, not universal
+  field-level authorization or production readiness.
+
 ## E-1042 - Fail-closed projection for Finance Core master API responses (2026-08-27)
 
 - Finance Core chart, account, dimension, dimension-value, and journal list

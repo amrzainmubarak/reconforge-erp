@@ -1046,5 +1046,6 @@ include docs/adr/0699-retail-settlement-api-uses-fail-closed-field-projection.md
 include docs/adr/0700-manufacturing-cost-control-api-uses-fail-closed-field-projection.md
 include docs/adr/0701-bank-statement-api-uses-fail-closed-field-projection.md
 include docs/adr/0702-finance-core-master-api-uses-fail-closed-field-projection.md
+include docs/adr/0703-inventory-planning-api-uses-fail-closed-field-projection.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

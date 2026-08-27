@@ -5,6 +5,29 @@
 
 ## Decisions
 
+### D-870: Inventory Planning API uses fail-closed recursive projection
+
+- **Date**: 2026-08-27
+- **Context**: Inventory Planning exposes physical-count sessions and lines,
+  reorder rules, deterministic reorder signals, and snapshots through local
+  SQLite and tenant-scoped PostgreSQL adapters. Future adapter fields could
+  silently expand quantities, approval metadata, or operational risk output.
+- **Decision**: Apply central allowlists to count-session lifecycle and list
+  responses, reorder-rule mutation/list responses, reorder signals, and
+  snapshots. Recursively project count lines, session summaries, source and
+  pagination metadata, signal objects, and snapshot collections while
+  preserving exact quantities, workspace scope, and lifecycle behavior.
+- **Verification**: Focused field/API tests pass 37 tests plus 1 existing
+  live-PostgreSQL skip, including synthetic future fields across all reviewed
+  route families. Full `python -m pytest -q` passes 100%; Ruff, Mypy across
+  539 source files, Bandit, pip-audit, package build, source YAML validation
+  across 174 files, and diff checks pass. The local distribution remains
+  unauditable by pip-audit because it is not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, or
+  inventory lifecycle behavior changes; this is a bounded disclosure control.
+- **Rollback**: Revert E-1043 code/tests/ADR 0703/manifest and execution
+  metadata together; do not restore unbounded planning-row serialization.
+
 ### D-869: Finance Core master API uses fail-closed projection
 
 - **Date**: 2026-08-27

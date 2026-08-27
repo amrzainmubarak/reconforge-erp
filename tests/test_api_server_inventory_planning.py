@@ -5,13 +5,16 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from reconforge.api import create_api_app
+from reconforge.api.routes import inventory_planning as routes
 from reconforge.api.server_identity import AuthenticatedServerRequest, PrincipalScopeSnapshot
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres import (
@@ -33,6 +36,105 @@ from reconforge.infrastructure.postgres_master_data import (
     POSTGRES_MASTER_DATA_SCHEMA_SQL,
 )
 from reconforge.infrastructure.postgres_master_data_application import install_postgres_master_data_application_schema
+
+
+def test_inventory_planning_routes_drop_future_adapter_fields(monkeypatch: pytest.MonkeyPatch) -> None:
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [],
+            "app": SimpleNamespace(state=SimpleNamespace()),
+        }
+    )
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+    session = {
+        "id": "count-1",
+        "status": "Counting",
+        "lines": [{"id": "line-1", "item_code": "ITEM-1", "expected_quantity": "2.500", "unknown": "must-not-escape"}],
+        "summary": {"lines": 1, "counted_lines": 0, "variance_lines": 0, "unknown": "must-not-escape"},
+        "unknown_session_field": "must-not-escape",
+    }
+    rule = {
+        "id": "rule-1",
+        "item_code": "ITEM-1",
+        "minimum_quantity": "3.000",
+        "target_quantity": "5.000",
+        "unknown_rule_field": "must-not-escape",
+    }
+    signals = {
+        "schema_version": 1,
+        "source": {"kind": "local-inventory-reorder-controls", "unknown": "must-not-escape"},
+        "summary": {"total": 1, "high": 0, "medium": 1, "unknown": "must-not-escape"},
+        "pagination": {"limit": 100, "offset": 0, "returned": 1, "unknown": "must-not-escape"},
+        "signals": [{"signal_id": "signal-1", "rule_id": "rule-1", "risk_rating": "medium", "unknown": "must-not-escape"}],
+        "unknown_signals_field": "must-not-escape",
+    }
+    snapshot = {
+        "schema_version": 1,
+        "source": {"kind": "local-inventory-planning", "unknown": "must-not-escape"},
+        "workspace": "default",
+        "summary": {"workspace": "default", "sessions": 1, "unknown": "must-not-escape"},
+        "count_sessions": [session],
+        "reorder_rules": [rule],
+        "unknown_snapshot_field": "must-not-escape",
+    }
+    responses: list[Any] = [session, [session], session, snapshot, rule, [rule], signals]
+
+    monkeypatch.setattr(routes, "server_inventory_planning_enabled", lambda _request: True)
+    monkeypatch.setattr(routes, "_server_call", lambda *_args, **_kwargs: responses.pop(0))
+
+    created = routes.create_count_session(
+        request,
+        routes.CountSessionRequest(
+            count_number="COUNT-1",
+            organization_code="ORG",
+            entity_code="ENTITY",
+            period_id="PERIOD",
+            warehouse_code="MAIN",
+            location_code="STOCK",
+            count_date="2026-07-28",
+        ),
+        user,
+        None,
+    )
+    listed = routes.list_count_sessions(request, user, None, workspace="default", limit=10, offset=0)
+    fetched = routes.get_count_session("count-1", request, user, None)
+    planned = routes.snapshot(request, user, None, workspace="default")
+    saved_rule = routes.upsert_reorder_rule(
+        request,
+        routes.ReorderRuleRequest(
+            organization_code="ORG",
+            entity_code="ENTITY",
+            item_code="ITEM-1",
+            warehouse_code="MAIN",
+            location_code="STOCK",
+            minimum_quantity="3.000",
+            target_quantity="5.000",
+        ),
+        user,
+        None,
+    )
+    rules = routes.list_reorder_rules(request, user, None, workspace="default", limit=10, offset=0)
+    reorder = routes.reorder_signals("ORG", "ENTITY", request, user, None, workspace="default", limit=10, offset=0)
+
+    def resource_id(response: dict[str, object], key: str, field: str = "id") -> str:
+        value = response[key]
+        if isinstance(value, dict):
+            return str(value[field])
+        if isinstance(value, list) and value and isinstance(value[0], dict):
+            return str(value[0][field])
+        raise AssertionError(f"Unexpected response shape for {key}")
+
+    assert resource_id(created, "count_session") == "count-1"
+    assert resource_id(listed, "count_sessions") == "count-1"
+    assert resource_id(fetched, "count_session") == "count-1"
+    assert resource_id(planned, "count_sessions") == "count-1"
+    assert resource_id(saved_rule, "reorder_rule") == "rule-1"
+    assert resource_id(rules, "reorder_rules") == "rule-1"
+    assert resource_id(reorder, "signals", "signal_id") == "signal-1"
+    assert "must-not-escape" not in str([created, listed, fetched, planned, saved_rule, rules, reorder])
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")

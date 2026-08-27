@@ -28,6 +28,10 @@ from reconforge.auth.field_access import (
     project_inventory_lot,
     project_inventory_movement,
     project_inventory_on_hand,
+    project_inventory_planning_session,
+    project_inventory_planning_snapshot,
+    project_inventory_reorder_rule,
+    project_inventory_reorder_signals,
     project_inventory_uom,
     project_inventory_valuation_document,
     project_inventory_valuation_policy,
@@ -434,6 +438,94 @@ def test_inventory_core_operational_projection_is_closed_recursively() -> None:
     assert snapshot.visible["summary"] == {"workspace": "default"}
     assert snapshot.visible["movements"] == [{"id": "movement-1"}]
     assert "must-not-escape" not in str([movement.visible, on_hand.visible, controls.visible, snapshot.visible])
+
+
+def test_inventory_planning_projection_is_closed_recursively() -> None:
+    session = project_inventory_planning_session(
+        {
+            "id": "count-1",
+            "status": "Counting",
+            "lines": [
+                {
+                    "id": "line-1",
+                    "item_code": "ITEM-1",
+                    "expected_quantity": "2.500",
+                    "counted_quantity": "2.000",
+                    "variance_quantity": "-0.500",
+                    "unknown_line_field": "must-not-escape",
+                }
+            ],
+            "summary": {"lines": 1, "counted_lines": 1, "variance_lines": 1, "unknown_summary_field": "must-not-escape"},
+            "unknown_session_field": "must-not-escape",
+        }
+    )
+    rule = project_inventory_reorder_rule(
+        {
+            "id": "rule-1",
+            "item_code": "ITEM-1",
+            "minimum_quantity": "3.000",
+            "target_quantity": "5.000",
+            "unknown_rule_field": "must-not-escape",
+        }
+    )
+    signals = project_inventory_reorder_signals(
+        {
+            "schema_version": 1,
+            "source": {"kind": "local-inventory-reorder-controls", "unknown_source_field": "must-not-escape"},
+            "summary": {"total": 1, "high": 0, "medium": 1, "unknown_summary_field": "must-not-escape"},
+            "pagination": {"limit": 100, "offset": 0, "returned": 1, "unknown_pagination_field": "must-not-escape"},
+            "signals": [
+                {
+                    "signal_id": "signal-1",
+                    "rule_id": "rule-1",
+                    "risk_rating": "medium",
+                    "item_code": "ITEM-1",
+                    "suggested_quantity": "3.000",
+                    "unknown_signal_field": "must-not-escape",
+                }
+            ],
+            "unknown_signals_payload_field": "must-not-escape",
+        }
+    )
+    snapshot = project_inventory_planning_snapshot(
+        {
+            "schema_version": 1,
+            "source": {"kind": "local-inventory-planning", "unknown_source_field": "must-not-escape"},
+            "workspace": "default",
+            "summary": {
+                "workspace": "default",
+                "count_sessions": 1,
+                "counting_sessions": 0,
+                "submitted_sessions": 0,
+                "approved_sessions": 0,
+                "reorder_rules": 1,
+                "active_reorder_rules": 1,
+                "unknown_summary_field": "must-not-escape",
+            },
+            "count_sessions": [session.visible],
+            "reorder_rules": [rule.visible],
+            "unknown_snapshot_field": "must-not-escape",
+        }
+    )
+
+    assert session.visible["lines"] == [
+        {"expected_quantity": "2.500", "counted_quantity": "2.000", "variance_quantity": "-0.500", "id": "line-1", "item_code": "ITEM-1"}
+    ]
+    assert session.visible["summary"] == {"lines": 1, "counted_lines": 1, "variance_lines": 1}
+    assert rule.visible == {"id": "rule-1", "item_code": "ITEM-1", "minimum_quantity": "3.000", "target_quantity": "5.000"}
+    assert signals.visible["source"] == {"kind": "local-inventory-reorder-controls"}
+    assert signals.visible["signals"] == [{"item_code": "ITEM-1", "risk_rating": "medium", "rule_id": "rule-1", "signal_id": "signal-1", "suggested_quantity": "3.000"}]
+    assert snapshot.visible["summary"] == {
+        "workspace": "default",
+        "count_sessions": 1,
+        "counting_sessions": 0,
+        "submitted_sessions": 0,
+        "approved_sessions": 0,
+        "reorder_rules": 1,
+        "active_reorder_rules": 1,
+    }
+    assert snapshot.visible["count_sessions"][0]["lines"] == session.visible["lines"]
+    assert "must-not-escape" not in str([session.visible, rule.visible, signals.visible, snapshot.visible])
 
 
 def test_payables_supplier_projection_is_closed() -> None:

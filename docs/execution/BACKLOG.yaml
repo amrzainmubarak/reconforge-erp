@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1043
+    priority: P0
+    area: identity-governance
+    title: Apply fail-closed projection to Inventory Planning API responses
+    status: completed
+    depends_on: [E-1001, E-1005, E-1042]
+    exit_evidence: >-
+      Inventory Planning count-session lifecycle/list, reorder-rule
+      mutation/list, reorder signals, and snapshot responses use central
+      recursive allowlists across local SQLite and PostgreSQL. Synthetic
+      future-field tests prove unknown adapter fields are dropped while exact
+      quantities, approval metadata, workspace scope, and lifecycle behavior
+      remain compatible. Focused selectors pass 37 tests plus 1 existing
+      live-PostgreSQL skip; full Python regression passes 100%, and Ruff,
+      Mypy across 539 source files, Bandit, pip-audit, package build, source
+      YAML validation across 174 files, and diff checks pass. pip-audit cannot
+      audit the local distribution because it is not published on PyPI. ADR
+      0703 records rollback.
   - id: E-1042
     priority: P0
     area: identity-governance

@@ -2,6 +2,31 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1043: Fail-closed projection for Inventory Planning API responses
+
+- Code evidence: `/api/v1/inventory-planning` count-session lifecycle,
+  count-session list, reorder-rule mutation/list, reorder signals, and
+  snapshot responses use central top-level and recursive session, line,
+  summary, rule, source, pagination, and signal allowlists across local SQLite
+  and PostgreSQL branches. Unknown adapter/storage fields are dropped before
+  serialization while quantities, approval metadata, workspace scope, and
+  lifecycle behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers recursive session lines
+  and summaries, reorder rules, signals, and snapshots.
+  `tests/test_api_server_inventory_planning.py` injects synthetic future fields
+  through create/read/list/snapshot/rule/signal route paths. Focused selectors
+  pass 37 tests plus 1 existing live-PostgreSQL skip. Full `python -m pytest
+  -q` passes 100%; `python -m ruff check .`, `python -m mypy reconforge`
+  (539 source files), Bandit, pip-audit, `python -m build --no-isolation`,
+  source YAML validation (174 files), and `git diff --check` pass. pip-audit
+  reports the local distribution as unauditable because it is not published on
+  PyPI. Generated malformed/unsafe YAML fixtures under test output were
+  excluded from source validation by policy.
+- Boundary: this closes only the reviewed Inventory Planning response family.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0703 records rollback.
+
 ## E-1042: Fail-closed projection for Finance Core master API responses
 
 - Code evidence: Finance Core chart, account, dimension, dimension-value, and

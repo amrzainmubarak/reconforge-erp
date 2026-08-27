@@ -24,6 +24,12 @@ from reconforge.api.server_inventory_planning import (
     execute_postgres_inventory_planning,
     server_inventory_planning_enabled,
 )
+from reconforge.auth.field_access import (
+    project_inventory_planning_session,
+    project_inventory_planning_snapshot,
+    project_inventory_reorder_rule,
+    project_inventory_reorder_signals,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_inventory_planning import PostgresInventoryPlanningRepository
@@ -163,6 +169,22 @@ def _list_response(
     return {key: records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}}
 
 
+def _project_sessions(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_inventory_planning_session(value).visible for value in values]
+
+
+def _project_rules(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_inventory_reorder_rule(value).visible for value in values]
+
+
+def _project_session(value: dict[str, object]) -> dict[str, object]:
+    return project_inventory_planning_session(value).visible
+
+
+def _project_rule(value: dict[str, object]) -> dict[str, object]:
+    return project_inventory_reorder_rule(value).visible
+
+
 @router.get("/summary")
 def summary(
     request: Request,
@@ -195,16 +217,20 @@ def snapshot(
     workspace: str = "default",
 ) -> dict[str, object]:
     if server_inventory_planning_enabled(request):
-        return _server_call(
-            request,
-            frozenset({"inventory.read", "inventory.count.manage", "inventory.count.approve", "inventory.reorder.manage"}),
-            lambda repository, scope: repository.snapshot(workspace=scope.workspace_id, actor_label=current_user.id),
-        )
+        return project_inventory_planning_snapshot(
+            _server_call(
+                request,
+                frozenset({"inventory.read", "inventory.count.manage", "inventory.count.approve", "inventory.reorder.manage"}),
+                lambda repository, scope: repository.snapshot(workspace=scope.workspace_id, actor_label=current_user.id),
+            )
+        ).visible
     try:
-        return InventoryPlanningService(_local_connection(connection)).snapshot(
-            workspace=workspace,
-            actor_label=current_user.username,
-        )
+        return project_inventory_planning_snapshot(
+            InventoryPlanningService(_local_connection(connection)).snapshot(
+                workspace=workspace,
+                actor_label=current_user.username,
+            )
+        ).visible
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_planning_snapshot_failed", exc) from exc
 
@@ -227,7 +253,7 @@ def list_count_sessions(
                 workspace=scope.workspace_id, status=status, limit=limit, offset=offset, actor_label=current_user.id
             ),
         )
-        return _list_response("count_sessions", records, limit=limit, offset=offset)
+        return _list_response("count_sessions", _project_sessions(records), limit=limit, offset=offset)
     try:
         records = InventoryPlanningService(_local_connection(connection)).list_count_sessions(
             workspace=workspace,
@@ -238,7 +264,7 @@ def list_count_sessions(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_counts_list_failed", exc) from exc
-    return _list_response("count_sessions", records, limit=limit, offset=offset)
+    return _list_response("count_sessions", _project_sessions(records), limit=limit, offset=offset)
 
 
 @router.post("/counts")
@@ -251,7 +277,7 @@ def create_count_session(
     if server_inventory_planning_enabled(request):
         values = payload.model_dump()
         values["actor_label"] = current_user.id
-        return {"count_session": _server_call(
+        return {"count_session": _project_session(_server_call(
             request,
             frozenset({"inventory.count.manage"}),
             lambda repository, scope: repository.create_count_session(
@@ -259,7 +285,7 @@ def create_count_session(
             ),
             organization_code=payload.organization_code,
             entity_code=payload.entity_code,
-        )}
+        ))}
     try:
         record = InventoryPlanningService(_local_connection(connection)).create_count_session(
             **payload.model_dump(),
@@ -267,7 +293,7 @@ def create_count_session(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_count_create_failed", exc) from exc
-    return {"count_session": record}
+    return {"count_session": _project_session(record)}
 
 
 @router.get("/counts/{session_id}")
@@ -278,12 +304,12 @@ def get_count_session(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_planning_enabled(request):
-        return {"count_session": _server_call(
+        return {"count_session": _project_session(_server_call(
             request,
             frozenset({"inventory.read", "inventory.count.manage", "inventory.count.approve", "inventory.reorder.manage"}),
             lambda repository, _scope: repository.get_count_session(session_id, actor_label=current_user.id),
             object_refs=(("count_session", session_id),),
-        )}
+        ))}
     try:
         record = InventoryPlanningService(_local_connection(connection)).get_count_session(
             session_id,
@@ -291,7 +317,7 @@ def get_count_session(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_count_not_found", exc, status_code=404) from exc
-    return {"count_session": record}
+    return {"count_session": _project_session(record)}
 
 
 @router.post("/counts/{session_id}/start")
@@ -302,12 +328,12 @@ def start_count_session(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_planning_enabled(request):
-        return {"count_session": _server_call(
+        return {"count_session": _project_session(_server_call(
             request,
             frozenset({"inventory.count.manage"}),
             lambda repository, _scope: repository.start_count_session(session_id, actor_label=current_user.id),
             object_refs=(("count_session", session_id),),
-        )}
+        ))}
     try:
         record = InventoryPlanningService(_local_connection(connection)).start_count_session(
             session_id,
@@ -315,7 +341,7 @@ def start_count_session(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_count_start_failed", exc) from exc
-    return {"count_session": record}
+    return {"count_session": _project_session(record)}
 
 
 @router.post("/counts/{session_id}/lines/{line_id}")
@@ -328,14 +354,14 @@ def record_counted_quantity(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_planning_enabled(request):
-        return {"count_session": _server_call(
+        return {"count_session": _project_session(_server_call(
             request,
             frozenset({"inventory.count.manage"}),
             lambda repository, _scope: repository.record_counted_quantity(
                 session_id, line_id, **payload.model_dump(), actor_label=current_user.id
             ),
             object_refs=(("count_session", session_id),),
-        )}
+        ))}
     try:
         record = InventoryPlanningService(_local_connection(connection)).record_counted_quantity(
             session_id,
@@ -345,7 +371,7 @@ def record_counted_quantity(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_count_quantity_failed", exc) from exc
-    return {"count_session": record}
+    return {"count_session": _project_session(record)}
 
 
 @router.post("/counts/{session_id}/submit")
@@ -357,14 +383,14 @@ def submit_count_session(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_planning_enabled(request):
-        return {"count_session": _server_call(
+        return {"count_session": _project_session(_server_call(
             request,
             frozenset({"inventory.count.manage"}),
             lambda repository, _scope: repository.submit_count_session(
                 session_id, reason=payload.reason, actor_label=current_user.id
             ),
             object_refs=(("count_session", session_id),),
-        )}
+        ))}
     try:
         record = InventoryPlanningService(_local_connection(connection)).submit_count_session(
             session_id,
@@ -373,7 +399,7 @@ def submit_count_session(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_count_submit_failed", exc) from exc
-    return {"count_session": record}
+    return {"count_session": _project_session(record)}
 
 
 @router.post("/counts/{session_id}/approve")
@@ -385,14 +411,14 @@ def approve_count_session(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_planning_enabled(request):
-        return {"count_session": _server_call(
+        return {"count_session": _project_session(_server_call(
             request,
             frozenset({"inventory.count.approve"}),
             lambda repository, _scope: repository.approve_count_session(
                 session_id, reason=payload.reason, actor_label=current_user.id
             ),
             object_refs=(("count_session", session_id),),
-        )}
+        ))}
     try:
         record = InventoryPlanningService(_local_connection(connection)).approve_count_session(
             session_id,
@@ -401,7 +427,7 @@ def approve_count_session(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_count_approve_failed", exc) from exc
-    return {"count_session": record}
+    return {"count_session": _project_session(record)}
 
 
 @router.post("/counts/{session_id}/cancel")
@@ -413,14 +439,14 @@ def cancel_count_session(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_inventory_planning_enabled(request):
-        return {"count_session": _server_call(
+        return {"count_session": _project_session(_server_call(
             request,
             frozenset({"inventory.count.manage", "inventory.count.approve"}),
             lambda repository, _scope: repository.cancel_count_session(
                 session_id, reason=payload.reason, actor_label=current_user.id
             ),
             object_refs=(("count_session", session_id),),
-        )}
+        ))}
     try:
         record = InventoryPlanningService(_local_connection(connection)).cancel_count_session(
             session_id,
@@ -429,7 +455,7 @@ def cancel_count_session(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_count_cancel_failed", exc) from exc
-    return {"count_session": record}
+    return {"count_session": _project_session(record)}
 
 
 @router.get("/reorder-rules")
@@ -450,7 +476,7 @@ def list_reorder_rules(
                 workspace=scope.workspace_id, active_only=active_only, limit=limit, offset=offset, actor_label=current_user.id
             ),
         )
-        return _list_response("reorder_rules", records, limit=limit, offset=offset)
+        return _list_response("reorder_rules", _project_rules(records), limit=limit, offset=offset)
     try:
         records = InventoryPlanningService(_local_connection(connection)).list_reorder_rules(
             workspace=workspace,
@@ -461,7 +487,7 @@ def list_reorder_rules(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_reorder_rules_list_failed", exc) from exc
-    return _list_response("reorder_rules", records, limit=limit, offset=offset)
+    return _list_response("reorder_rules", _project_rules(records), limit=limit, offset=offset)
 
 
 @router.post("/reorder-rules")
@@ -474,7 +500,7 @@ def upsert_reorder_rule(
     if server_inventory_planning_enabled(request):
         values = payload.model_dump()
         values["actor_label"] = current_user.id
-        return {"reorder_rule": _server_call(
+        return {"reorder_rule": _project_rule(_server_call(
             request,
             frozenset({"inventory.reorder.manage"}),
             lambda repository, scope: repository.upsert_reorder_rule(
@@ -482,7 +508,7 @@ def upsert_reorder_rule(
             ),
             organization_code=payload.organization_code,
             entity_code=payload.entity_code,
-        )}
+        ))}
     try:
         record = InventoryPlanningService(_local_connection(connection)).upsert_reorder_rule(
             **payload.model_dump(),
@@ -490,7 +516,7 @@ def upsert_reorder_rule(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_reorder_rule_save_failed", exc) from exc
-    return {"reorder_rule": record}
+    return {"reorder_rule": _project_rule(record)}
 
 
 @router.get("/reorder-signals")
@@ -505,28 +531,32 @@ def reorder_signals(
     offset: PageOffset = 0,
 ) -> dict[str, object]:
     if server_inventory_planning_enabled(request):
-        return _server_call(
-            request,
-            frozenset({"inventory.read", "inventory.count.manage", "inventory.count.approve", "inventory.reorder.manage"}),
-            lambda repository, scope: repository.reorder_signals(
-                workspace=scope.workspace_id,
-                organization_code=scope.organization_code or organization,
-                entity_code=scope.entity_code or entity,
+        return project_inventory_reorder_signals(
+            _server_call(
+                request,
+                frozenset({"inventory.read", "inventory.count.manage", "inventory.count.approve", "inventory.reorder.manage"}),
+                lambda repository, scope: repository.reorder_signals(
+                    workspace=scope.workspace_id,
+                    organization_code=scope.organization_code or organization,
+                    entity_code=scope.entity_code or entity,
+                    limit=limit,
+                    offset=offset,
+                    actor_label=current_user.id,
+                ),
+                organization_code=organization,
+                entity_code=entity,
+            )
+        ).visible
+    try:
+        return project_inventory_reorder_signals(
+            InventoryPlanningService(_local_connection(connection)).reorder_signals(
+                workspace=workspace,
+                organization_code=organization,
+                entity_code=entity,
                 limit=limit,
                 offset=offset,
-                actor_label=current_user.id,
-            ),
-            organization_code=organization,
-            entity_code=entity,
-        )
-    try:
-        return InventoryPlanningService(_local_connection(connection)).reorder_signals(
-            workspace=workspace,
-            organization_code=organization,
-            entity_code=entity,
-            limit=limit,
-            offset=offset,
-            actor_label=current_user.username,
-        )
+                actor_label=current_user.username,
+            )
+        ).visible
     except (DatabaseError, PlatformError) as exc:
         raise _error("inventory_reorder_signals_failed", exc) from exc

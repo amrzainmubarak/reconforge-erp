@@ -4,6 +4,19 @@
 
 This does not claim that all existing routes or UI components have migrated. Integrators must supply field sets from a versioned policy and test each sensitive surface.
 
+## E-1043 migrated surface
+
+Inventory Planning count-session lifecycle, count-session lists, reorder-rule
+mutation/list, reorder signals, and snapshots now use central recursive
+allowlists across local SQLite and PostgreSQL. Count lines, session summaries,
+reorder rules, source metadata, pagination, signals, and snapshot collections
+are projected explicitly; unknown adapter/storage fields are dropped before
+serialization. Exact quantities, approval metadata, workspace scope, and
+lifecycle behavior remain compatible. This is a bounded disclosure control
+for the reviewed response family, not universal field-level authorization,
+external IAM, or production readiness. ADR 0703 records the decision and
+rollback.
+
 ## E-1042 migrated surface
 
 Finance Core chart, account, dimension, dimension-value, and journal list and

@@ -714,6 +714,54 @@ INVENTORY_CORE_SNAPSHOT_FIELDS = frozenset(
     }
 )
 INVENTORY_CORE_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
+INVENTORY_PLANNING_SESSION_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "period_id", "location_id",
+        "count_number", "count_date", "description", "status", "created_by", "started_by", "started_at",
+        "submitted_by", "submitted_at", "submit_reason", "approved_by", "approved_at", "approval_reason",
+        "cancelled_by", "cancelled_at", "cancel_reason", "adjustment_movement_id", "created_at", "updated_at",
+        "row_version", "organization_code", "entity_code", "period_name", "warehouse_code", "location_code",
+        "location_name", "adjustment_movement_number", "lines", "summary",
+    }
+)
+INVENTORY_PLANNING_LINE_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "session_id", "line_number", "item_id", "uom_id", "inventory_lot_id",
+        "expected_quantity_scaled", "counted_quantity_scaled", "quantity_precision", "count_note", "counted_by",
+        "counted_at", "created_at", "row_version", "item_code", "item_name", "uom_code", "lot_serial_code",
+        "expected_quantity", "counted_quantity", "variance_quantity_scaled", "variance_quantity",
+    }
+)
+INVENTORY_PLANNING_SESSION_SUMMARY_FIELDS = frozenset({"lines", "counted_lines", "variance_lines"})
+INVENTORY_PLANNING_SUMMARY_FIELDS = frozenset(
+    {"workspace", "count_sessions", "counting_sessions", "submitted_sessions", "approved_sessions", "reorder_rules", "active_reorder_rules"}
+)
+INVENTORY_REORDER_RULE_FIELDS = frozenset(
+    {
+        "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "item_id", "location_id",
+        "minimum_quantity_scaled", "target_quantity_scaled", "quantity_precision", "lead_time_days", "active",
+        "created_by", "created_at", "updated_at", "row_version", "organization_code", "entity_code", "item_code",
+        "item_name", "warehouse_code", "location_code", "uom_code", "on_hand_quantity_scaled",
+        "minimum_quantity", "target_quantity", "on_hand_quantity",
+    }
+)
+INVENTORY_REORDER_SIGNALS_FIELDS = frozenset(
+    {"schema_version", "generated_at", "source", "workspace", "organization_code", "entity_code", "summary", "pagination", "signals"}
+)
+INVENTORY_REORDER_SOURCE_FIELDS = frozenset({"kind", "local_first", "external_calls", "server_mode"})
+INVENTORY_REORDER_SUMMARY_FIELDS = frozenset({"total", "high", "medium"})
+INVENTORY_REORDER_PAGINATION_FIELDS = frozenset({"limit", "offset", "returned"})
+INVENTORY_REORDER_SIGNAL_FIELDS = frozenset(
+    {
+        "signal_id", "rule_id", "risk_rating", "item_code", "item_name", "warehouse_code", "location_code",
+        "uom_code", "quantity_precision", "on_hand_quantity_scaled", "on_hand_quantity", "minimum_quantity_scaled",
+        "minimum_quantity", "target_quantity_scaled", "target_quantity", "suggested_quantity_scaled",
+        "suggested_quantity", "lead_time_days", "description",
+    }
+)
+INVENTORY_PLANNING_SNAPSHOT_FIELDS = frozenset(
+    {"schema_version", "generated_at", "source", "workspace", "summary", "count_sessions", "reorder_rules"}
+)
 PAYABLES_SUPPLIER_FIELDS = frozenset(
     {
         # Deliberate union for local SQLite and tenant-scoped PostgreSQL
@@ -1787,6 +1835,100 @@ def project_inventory_core_snapshot(values: Mapping[str, object]) -> FieldProjec
             projected_children.append(projector(child).visible)
         record[name] = projected_children
     return project_fields(record, allowed_fields=INVENTORY_CORE_SNAPSHOT_FIELDS)
+
+
+def project_inventory_planning_summary(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_PLANNING_SUMMARY_FIELDS)
+
+
+def project_inventory_planning_session(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for physical-count sessions."""
+
+    record = dict(values)
+    lines = record.get("lines")
+    if lines is not None:
+        if not isinstance(lines, list):
+            raise TypeError("inventory planning count-session lines collection must be a list")
+        projected_lines: list[dict[str, object]] = []
+        for line in lines:
+            if not isinstance(line, Mapping):
+                raise TypeError("inventory planning count-session line must be a mapping")
+            projected_lines.append(project_fields(line, allowed_fields=INVENTORY_PLANNING_LINE_FIELDS).visible)
+        record["lines"] = projected_lines
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("inventory planning count-session summary must be a mapping")
+        record["summary"] = project_fields(summary, allowed_fields=INVENTORY_PLANNING_SESSION_SUMMARY_FIELDS).visible
+    return project_fields(record, allowed_fields=INVENTORY_PLANNING_SESSION_FIELDS)
+
+
+def project_inventory_reorder_rule(values: Mapping[str, object]) -> FieldProjection:
+    return project_fields(values, allowed_fields=INVENTORY_REORDER_RULE_FIELDS)
+
+
+def project_inventory_reorder_signals(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for deterministic reorder signals."""
+
+    record = dict(values)
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("inventory reorder signals source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=INVENTORY_REORDER_SOURCE_FIELDS).visible
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("inventory reorder signals summary must be a mapping")
+        record["summary"] = project_fields(summary, allowed_fields=INVENTORY_REORDER_SUMMARY_FIELDS).visible
+    pagination = record.get("pagination")
+    if pagination is not None:
+        if not isinstance(pagination, Mapping):
+            raise TypeError("inventory reorder signals pagination must be a mapping")
+        record["pagination"] = project_fields(pagination, allowed_fields=INVENTORY_REORDER_PAGINATION_FIELDS).visible
+    signals = record.get("signals")
+    if signals is not None:
+        if not isinstance(signals, list):
+            raise TypeError("inventory reorder signals collection must be a list")
+        projected_signals: list[dict[str, object]] = []
+        for signal in signals:
+            if not isinstance(signal, Mapping):
+                raise TypeError("inventory reorder signal must be a mapping")
+            projected_signals.append(project_fields(signal, allowed_fields=INVENTORY_REORDER_SIGNAL_FIELDS).visible)
+        record["signals"] = projected_signals
+    return project_fields(record, allowed_fields=INVENTORY_REORDER_SIGNALS_FIELDS)
+
+
+def project_inventory_planning_snapshot(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed recursive projection for the inventory planning snapshot."""
+
+    record = dict(values)
+    source = record.get("source")
+    if source is not None:
+        if not isinstance(source, Mapping):
+            raise TypeError("inventory planning snapshot source must be a mapping")
+        record["source"] = project_fields(source, allowed_fields=INVENTORY_REORDER_SOURCE_FIELDS).visible
+    summary = record.get("summary")
+    if summary is not None:
+        if not isinstance(summary, Mapping):
+            raise TypeError("inventory planning snapshot summary must be a mapping")
+        record["summary"] = project_fields(summary, allowed_fields=INVENTORY_CORE_SUMMARY_FIELDS | INVENTORY_PLANNING_SUMMARY_FIELDS).visible
+    for field_name, projector in (
+        ("count_sessions", project_inventory_planning_session),
+        ("reorder_rules", project_inventory_reorder_rule),
+    ):
+        children = record.get(field_name)
+        if children is None:
+            continue
+        if not isinstance(children, list):
+            raise TypeError(f"inventory planning snapshot {field_name} collection must be a list")
+        projected_children: list[dict[str, object]] = []
+        for child in children:
+            if not isinstance(child, Mapping):
+                raise TypeError(f"inventory planning snapshot {field_name} record must be a mapping")
+            projected_children.append(projector(child).visible)
+        record[field_name] = projected_children
+    return project_fields(record, allowed_fields=INVENTORY_PLANNING_SNAPSHOT_FIELDS)
 
 
 def project_payables_supplier(values: Mapping[str, object]) -> FieldProjection:

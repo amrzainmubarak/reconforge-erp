@@ -25,6 +25,7 @@ from reconforge.application.pagination import CursorCodec, CursorError, CursorPo
 from reconforge.application.policy_analysis import PolicyAnalysisApplicationService
 from reconforge.auth.field_access import (
     project_access_permission,
+    project_access_policy_analysis,
     project_access_role_change,
     project_access_role_page,
     project_access_user_role_assignment,
@@ -279,6 +280,17 @@ def _project_user_role_assignment(value: dict[str, object]) -> dict[str, object]
         ) from exc
 
 
+def _project_policy_analysis(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_access_policy_analysis(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="access_policy_analysis_projection_failed",
+            message="Access administration returned an invalid policy-analysis response contract.",
+        ) from exc
+
+
 @router.get("/permissions", response_model=tuple[AccessPermissionResponse, ...])
 def list_access_permissions(request: Request, current_user: ManageAccess) -> tuple[dict[str, object], ...]:
     """List the closed tenant permission registry without mutation capability."""
@@ -422,4 +434,4 @@ def analyze_access_policy(
         ),
         permission="security.policy.manage",
     )
-    return result.to_dict()
+    return _project_policy_analysis(result.to_dict())

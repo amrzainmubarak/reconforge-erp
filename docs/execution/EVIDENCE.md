@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1068: Fail-closed access policy-analysis responses
+
+- Code evidence: The access policy-analysis route now projects deterministic
+  result fields and nested conflict findings through a central allowlist before
+  serialization.
+- Test evidence: field-access tests inject future result and finding fields;
+  the authenticated access-administration test injects future fields through
+  a route-shaped analysis result. Focused and full pytest checks pass; Ruff,
+  Mypy, Bandit, pip-audit, package build, source YAML, and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI.
+- Boundary: this controls response disclosure only; policy correctness,
+  external IAM, live PostgreSQL execution, and production effectiveness remain
+  separately bounded. ADR 0728 records rollback.
+
 ## E-1067: Fail-closed Security Governance responses
 
 - Code evidence: Security Governance integration, retention-policy,

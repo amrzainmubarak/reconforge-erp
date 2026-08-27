@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -233,6 +234,41 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
     )
     assert assignment.status_code == 200 and assignment.json()["role_names"] == ["reviewer"]
     assert "future_assignment_field" not in assignment.text
+
+    class _PolicyAnalysisService:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def analyze(self, **_kwargs: object) -> SimpleNamespace:
+            return SimpleNamespace(
+                to_dict=lambda: {
+                    "schema_version": 1,
+                    "algorithm_version": "policy-analysis-v1",
+                    "request_digest": "a" * 64,
+                    "result_digest": "b" * 64,
+                    "policy_id": "policy-1",
+                    "policy_version": "1.0.0",
+                    "status": "conflicts",
+                    "findings": [
+                        {
+                            "code": "sod_permission_overlap",
+                            "conflict_id": "c" * 64,
+                            "grant_ids": ["grant-1", "grant-2"],
+                            "permissions": ["roles.manage", "security.policy.manage"],
+                            "principal_id": "user-admin",
+                            "reason": "Preparation and approval overlap",
+                            "scope_digests": ["d" * 64],
+                            "severity": "critical",
+                            "future_finding_field": "must-not-escape",
+                        }
+                    ],
+                    "active_grant_count": 2,
+                    "revoked_grant_count": 0,
+                    "future_analysis_field": "must-not-escape",
+                }
+            )
+
+    monkeypatch.setattr(routes, "PolicyAnalysisApplicationService", _PolicyAnalysisService)
     analysis = client.post(
         "/api/v1/admin/access/policy-analysis",
         headers=headers("human-ok"),
@@ -240,6 +276,8 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
     )
     assert analysis.status_code == 200, analysis.text
     assert analysis.json()["status"] == "conflicts"
+    assert "future_analysis_field" not in analysis.text
+    assert "future_finding_field" not in analysis.text
     assert "sod_permission_overlap" in {finding["code"] for finding in analysis.json()["findings"]}
     hostile = client.post(
         "/api/v1/admin/access/roles",

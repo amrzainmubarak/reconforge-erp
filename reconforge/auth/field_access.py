@@ -102,6 +102,32 @@ ACCESS_USER_ROLE_ASSIGNMENT_FIELDS = frozenset(
         "state_digest",
     }
 )
+ACCESS_POLICY_ANALYSIS_FINDING_FIELDS = frozenset(
+    {
+        "code",
+        "conflict_id",
+        "grant_ids",
+        "permissions",
+        "principal_id",
+        "reason",
+        "scope_digests",
+        "severity",
+    }
+)
+ACCESS_POLICY_ANALYSIS_FIELDS = frozenset(
+    {
+        "active_grant_count",
+        "algorithm_version",
+        "findings",
+        "policy_id",
+        "policy_version",
+        "request_digest",
+        "result_digest",
+        "revoked_grant_count",
+        "schema_version",
+        "status",
+    }
+)
 SECURITY_INTEGRATION_FIELDS = frozenset(
     {
         "kind",
@@ -2266,6 +2292,25 @@ def project_access_user_role_assignment(values: Mapping[str, object]) -> FieldPr
     """Return a closed user-role assignment response."""
 
     return project_fields(values, allowed_fields=ACCESS_USER_ROLE_ASSIGNMENT_FIELDS)
+
+
+def project_access_policy_analysis(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed, explainable policy-conflict analysis result."""
+
+    record = dict(values)
+    findings = record.get("findings")
+    if findings is not None:
+        if not isinstance(findings, (list, tuple)):
+            raise TypeError("access policy findings collection must be a list or tuple")
+        projected_findings = [
+            project_fields(finding, allowed_fields=ACCESS_POLICY_ANALYSIS_FINDING_FIELDS).visible
+            for finding in findings
+            if isinstance(finding, Mapping)
+        ]
+        if len(projected_findings) != len(findings):
+            raise TypeError("access policy finding must be a mapping")
+        record["findings"] = projected_findings
+    return project_fields(record, allowed_fields=ACCESS_POLICY_ANALYSIS_FIELDS)
 
 
 def project_security_integration(values: Mapping[str, object]) -> FieldProjection:

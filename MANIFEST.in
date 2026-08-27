@@ -1071,5 +1071,6 @@ include docs/adr/0724-finance-core-snapshots-use-fail-closed-projection.md
 include docs/adr/0725-identity-administration-responses-use-fail-closed-projection.md
 include docs/adr/0726-access-administration-responses-use-fail-closed-projection.md
 include docs/adr/0727-security-governance-responses-use-fail-closed-projection.md
+include docs/adr/0728-access-policy-analysis-responses-use-fail-closed-projection.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

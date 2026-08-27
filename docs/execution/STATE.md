@@ -2,6 +2,13 @@
 
 Updated: 2026-08-27
 
+## E-1068 - Fail-closed access policy-analysis responses (2026-08-27)
+
+- Policy-analysis results now have a central recursive projection for result
+  fields and conflict findings; focused checks, full regression, and
+  release-gate evidence pass. This is bounded response control, not a claim of
+  policy correctness or production readiness.
+
 ## E-1067 - Fail-closed Security Governance responses (2026-08-27)
 
 - Security integration, retention-policy, pagination, disable, policy-change,

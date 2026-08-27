@@ -1,5 +1,6 @@
 from reconforge.auth.field_access import (
     REDACTED_VALUE,
+    project_access_policy_analysis,
     project_access_role_change,
     project_access_role_page,
     project_access_user_role_assignment,
@@ -370,6 +371,51 @@ def test_security_governance_projections_are_closed_and_nested() -> None:
     assert "must-not-escape" not in str(
         [integration_page.visible, integration_change.visible, policy_page.visible, policy_change.visible, retention.visible]
     )
+
+
+def test_access_policy_analysis_projection_is_closed_across_findings() -> None:
+    result = project_access_policy_analysis(
+        {
+            "schema_version": 1,
+            "algorithm_version": "policy-analysis-v1",
+            "request_digest": "a" * 64,
+            "result_digest": "b" * 64,
+            "policy_id": "policy-1",
+            "policy_version": "1.0.0",
+            "status": "conflicts",
+            "findings": [
+                {
+                    "code": "sod_permission_overlap",
+                    "conflict_id": "c" * 64,
+                    "grant_ids": ["grant-1", "grant-2"],
+                    "permissions": ["close.prepare", "close.approve"],
+                    "principal_id": "user-1",
+                    "reason": "Preparation and approval overlap",
+                    "scope_digests": ["d" * 64],
+                    "severity": "critical",
+                    "future_finding_field": "must-not-escape",
+                }
+            ],
+            "active_grant_count": 2,
+            "revoked_grant_count": 0,
+            "future_analysis_field": "must-not-escape",
+        }
+    )
+
+    assert result.visible["findings"] == [
+        {
+            "code": "sod_permission_overlap",
+            "conflict_id": "c" * 64,
+            "grant_ids": ["grant-1", "grant-2"],
+            "permissions": ["close.prepare", "close.approve"],
+            "principal_id": "user-1",
+            "reason": "Preparation and approval overlap",
+            "scope_digests": ["d" * 64],
+            "severity": "critical",
+        }
+    ]
+    assert result.denied_fields == ("future_analysis_field",)
+    assert "must-not-escape" not in str(result.visible)
 
 
 def test_field_projection_is_permutation_stable_and_masking_is_not_authorization() -> None:

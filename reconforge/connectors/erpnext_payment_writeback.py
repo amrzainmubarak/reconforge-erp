@@ -11,16 +11,17 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, InvalidOperation
 from typing import Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from reconforge.connectors.amounts import canonical_connector_amount
 from reconforge.connectors.writeback_network import (
     WritebackNetworkError,
     WritebackNetworkRegistration,
 )
+from reconforge.utils.money import parse_exact_amount
 
 ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_PATH = "/api/resource/Payment%20Entry"
 ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_ENDPOINT = (
@@ -30,13 +31,14 @@ ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_OPERATION = "payment-entry.create-draft"
 
 
 def _exact_non_negative_decimal(value: str, field_name: str) -> str:
-    try:
-        parsed = Decimal(value)
-    except InvalidOperation as exc:
-        raise ValueError(f"{field_name} must be exact Decimal text") from exc
-    if not parsed.is_finite() or parsed < 0:
+    canonical = canonical_connector_amount(
+        value,
+        invalid_message=f"{field_name} must be exact Decimal text",
+        nonfinite_message=f"{field_name} must be finite non-negative Decimal text",
+    )
+    if parse_exact_amount(canonical) < 0:
         raise ValueError(f"{field_name} must be finite non-negative Decimal text")
-    return value
+    return canonical
 
 
 def _currency(value: str, field_name: str) -> str:
@@ -84,8 +86,8 @@ class ErpNextPaymentEntryDraft(BaseModel):
 
     @model_validator(mode="after")
     def validate_single_positive_side(self) -> ErpNextPaymentEntryDraft:
-        paid = Decimal(self.paid_amount)
-        received = Decimal(self.received_amount)
+        paid = parse_exact_amount(self.paid_amount)
+        received = parse_exact_amount(self.received_amount)
         if (paid > 0) == (received > 0):
             raise ValueError("Payment Entry must have exactly one positive paid or received amount")
         if paid > 0 and self.paid_from == self.paid_to:

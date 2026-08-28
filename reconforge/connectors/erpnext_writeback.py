@@ -11,16 +11,18 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from reconforge.connectors.amounts import canonical_connector_amount
 from reconforge.connectors.writeback_network import (
     WritebackNetworkError,
     WritebackNetworkRegistration,
 )
+from reconforge.utils.money import parse_exact_amount
 
 ERP_NEXT_JOURNAL_ENTRY_PATH = "/api/resource/Journal%20Entry"
 ERP_NEXT_JOURNAL_ENTRY_ENDPOINT = "https://erpnext.example.test" + ERP_NEXT_JOURNAL_ENTRY_PATH
@@ -28,13 +30,14 @@ ERP_NEXT_JOURNAL_ENTRY_OPERATION = "journal-entry.create-draft"
 
 
 def _exact_non_negative_decimal(value: str, field_name: str) -> str:
-    try:
-        parsed = Decimal(value)
-    except InvalidOperation as exc:
-        raise ValueError(f"{field_name} must be exact Decimal text") from exc
-    if not parsed.is_finite() or parsed < 0:
+    canonical = canonical_connector_amount(
+        value,
+        invalid_message=f"{field_name} must be exact Decimal text",
+        nonfinite_message=f"{field_name} must be finite non-negative Decimal text",
+    )
+    if parse_exact_amount(canonical) < 0:
         raise ValueError(f"{field_name} must be finite non-negative Decimal text")
-    return value
+    return canonical
 
 
 class ErpNextJournalEntryLine(BaseModel):
@@ -60,8 +63,8 @@ class ErpNextJournalEntryLine(BaseModel):
 
     @model_validator(mode="after")
     def validate_single_side(self) -> ErpNextJournalEntryLine:
-        debit = Decimal(self.debit)
-        credit = Decimal(self.credit)
+        debit = parse_exact_amount(self.debit)
+        credit = parse_exact_amount(self.credit)
         if (debit > 0) == (credit > 0):
             raise ValueError("each Journal Entry line must have exactly one positive side")
         return self
@@ -80,8 +83,8 @@ class ErpNextJournalEntryDraft(BaseModel):
 
     @model_validator(mode="after")
     def validate_balanced(self) -> ErpNextJournalEntryDraft:
-        debit_total = sum((Decimal(line.debit) for line in self.accounts), Decimal("0"))
-        credit_total = sum((Decimal(line.credit) for line in self.accounts), Decimal("0"))
+        debit_total = sum((parse_exact_amount(line.debit) for line in self.accounts), Decimal("0"))
+        credit_total = sum((parse_exact_amount(line.credit) for line in self.accounts), Decimal("0"))
         if debit_total != credit_total:
             raise ValueError("Journal Entry debit and credit totals must balance exactly")
         return self

@@ -2,6 +2,14 @@
 
 Updated: 2026-08-28
 
+## E-1105 - Enforce strict canonical ERPNext write-back amounts (2026-08-28)
+
+- ERPNext Journal Entry and Payment Entry drafts now canonicalize financial
+  fields and use strict parsed values before payload digest construction.
+- This is draft/payload integrity evidence only. Feature-disabled default,
+  governed approval and dispatch remain; live posting, provider authenticity,
+  settlement, and production assurance remain open.
+
 ## E-1104 - Enforce strict canonical ERPNext read amounts (2026-08-28)
 
 - ERPNext GL Entry and Payment Entry read models now use the shared strict

@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1016: Strict canonical ERPNext write-back amounts
+
+- **Date**: 2026-08-28
+- **Context**: ERPNext write-back drafts retained source amount formatting and
+  used local `Decimal` validation, so equivalent proposals could receive
+  different approval-bound payload digests.
+- **Decision**: Canonicalize Journal Entry and Payment Entry draft amounts
+  through the shared helper and use strict parsed values for balance checks.
+- **Rationale**: One financial proposal must have one deterministic payload
+  identity before human approval and governed dispatch.
+- **Verification**: Write-back, provider TLS, full regression, and release
+  gates pass; evidence is recorded in E-1105.
+- **Compatibility**: Payload schema and operations remain unchanged, but newly
+  built equivalent drafts converge to canonical bytes and may have new
+  digests. Existing persisted intent bytes are not rewritten.
+- **Rollback**: Revert E-1105, ADR 0765, write-back connector/test changes,
+  manifest entry, and execution records together.
+
 ### D-1015: Strict canonical ERPNext read amounts
 
 - **Date**: 2026-08-28

@@ -770,8 +770,8 @@ def test_erpnext_payment_writeback_api_dispatches_one_sided_payload_and_replays_
     assert headers["Authorization"] == "token synthetic-erpnext-payment-api-token"
     assert headers["X-ReconForge-Operation"] == ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_OPERATION
     assert headers["Idempotency-Key"] == intent_payload["idempotency_key"]
-    assert json.loads(body)["paid_amount"] == "42.00"
-    assert json.loads(body)["received_amount"] == "0.00"
+    assert json.loads(body)["paid_amount"] == "42"
+    assert json.loads(body)["received_amount"] == "0"
     assert json.loads(body)["docstatus"] == 0
     assert body == payload.payload
     assert b"synthetic-erpnext-payment-api-token" not in dispatched.content

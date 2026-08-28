@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1105: Enforce strict canonical ERPNext write-back amounts (2026-08-28)
+
+- Code evidence: ERPNext Journal Entry and Payment Entry draft amounts use the
+  shared strict canonical helper; balance and one-sided arithmetic uses parsed
+  values before deterministic payload and digest construction.
+- Test evidence: Write-back suites cover canonical payloads, equivalent-input
+  digest convergence, invalid-value refusal, approval, feature-disabled
+  default, idempotent dispatch, TLS retry, secret isolation, and provider
+  payload identity.
+- Gate evidence: focused write-back/provider tests pass; full regression, Ruff,
+  Mypy, Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this proves draft/payload integrity only. It does not establish
+  live posting, provider acknowledgement authenticity, settlement,
+  production compensation, or production assurance.
+
 ## E-1104: Enforce strict canonical ERPNext read amounts (2026-08-28)
 
 - Code evidence: ERPNext GL Entry and Payment Entry read models use the shared

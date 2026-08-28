@@ -122,8 +122,8 @@ def test_erpnext_draft_payload_is_balanced_exact_and_deterministic() -> None:
     assert payload.operation == ERP_NEXT_JOURNAL_ENTRY_OPERATION
     assert json.loads(payload.payload) == {
         "accounts": [
-            {"account": "1100 - Cash", "account_currency": "USD", "credit": "0.00", "debit": "100.00"},
-            {"account": "4000 - Revenue", "account_currency": "USD", "credit": "100.00", "debit": "0.00"},
+            {"account": "1100 - Cash", "account_currency": "USD", "credit": "0", "debit": "100"},
+            {"account": "4000 - Revenue", "account_currency": "USD", "credit": "100", "debit": "0"},
         ],
         "company": "Acme",
         "docstatus": 0,
@@ -140,6 +140,8 @@ def test_erpnext_draft_payload_is_balanced_exact_and_deterministic() -> None:
         {"account": "Cash", "debit": "1", "credit": "1"},
         {"account": "Cash", "debit": "0", "credit": "0"},
         {"account": "Cash", "debit": "NaN", "credit": "0"},
+        {"account": "Cash", "debit": "1e2", "credit": "0"},
+        {"account": "Cash", "debit": "-1", "credit": "0"},
     ],
 )
 def test_erpnext_journal_lines_reject_ambiguous_amounts(line: dict[str, str]) -> None:
@@ -157,6 +159,26 @@ def test_erpnext_draft_rejects_unbalanced_documents() -> None:
                 ErpNextJournalEntryLine(account="Revenue", debit="0", credit="99"),
             ),
         )
+
+
+def test_erpnext_draft_canonicalizes_equivalent_amounts_before_payload_digest() -> None:
+    formatted = ErpNextJournalEntryDraft(
+        company="Acme",
+        posting_date="2026-08-07",
+        accounts=(
+            ErpNextJournalEntryLine(account="Cash", debit="100.00", credit="0.00"),
+            ErpNextJournalEntryLine(account="Revenue", debit="0.00", credit="100.0"),
+        ),
+    )
+    canonical = ErpNextJournalEntryDraft(
+        company="Acme",
+        posting_date="2026-08-07",
+        accounts=(
+            ErpNextJournalEntryLine(account="Cash", debit="100", credit="0"),
+            ErpNextJournalEntryLine(account="Revenue", debit="0", credit="100"),
+        ),
+    )
+    assert build_erpnext_journal_entry_payload(formatted).payload == build_erpnext_journal_entry_payload(canonical).payload
 
 
 def test_erpnext_writeback_registration_is_disabled_and_endpoint_hardened() -> None:

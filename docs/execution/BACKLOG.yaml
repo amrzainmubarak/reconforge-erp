@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1105
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict canonical ERPNext write-back amounts
+    status: completed
+    depends_on: [E-1104]
+    exit_evidence: >-
+      ERPNext Journal Entry and Payment Entry write-back drafts now use
+      canonical_connector_amount and strict parsed arithmetic before payload
+      digest construction. Equivalent amounts converge to one payload/digest;
+      binary floats, scientific notation, malformed/non-finite values, and
+      invalid negative amounts fail closed. Approval, feature-disabled default,
+      idempotency, scope, TLS retry, and provider-payload contracts remain
+      intact. Focused write-back/provider tests, full regression,
+      static/security gates, package build, YAML, and diff checks pass. This is
+      draft/payload evidence, not live posting or production assurance.
   - id: E-1104
     priority: P0
     area: financial-exactness

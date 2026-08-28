@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1105 - Strict canonical ERPNext write-back amounts (2026-08-28)
+
+ERPNext Journal Entry and Payment Entry draft payloads now use strict canonical
+amounts and converge equivalent inputs to the same approval-bound digest.
+Feature-disabled default, human approval, idempotency, and governed dispatch
+remain intact. Focused and full gates pass; live posting and production
+assurance remain open.
+
 ## E-1104 - Strict canonical ERPNext read amounts (2026-08-28)
 
 ERPNext GL Entry and Payment Entry read models now share strict canonical

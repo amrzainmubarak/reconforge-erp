@@ -11,6 +11,7 @@ import csv
 import json
 import tempfile
 from dataclasses import dataclass
+from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -30,7 +31,7 @@ from reconforge.platform.journals import JournalControlService
 from reconforge.platform.matching import MatchingService
 from reconforge.platform.metrics import MetricsService
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY
-from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY
+from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, Money
 
 SYNTHETIC_DATA_MARKER = "SYNTHETIC_ENTERPRISE_DEMO_ONLY"
 DEMO_GENERATED_AT = "2026-06-01T09:00:00Z"
@@ -186,15 +187,19 @@ def _build_synthetic_records() -> dict[str, list[dict[str, Any]]]:
         },
     ]
     account_catalog = [
-        ("1000", "Cash and bank", 428500.0, "medium"),
-        ("1200", "Trade receivables", 265000.0, "medium"),
-        ("1300", "Inventory valuation", 710000.0, "high"),
-        ("2000", "Accounts payable", -318000.0, "medium"),
-        ("3999", "Intercompany clearing", 84000.0, "high"),
-        ("5000", "Cost of goods sold", 925000.0, "high"),
+        ("1000", "Cash and bank", Decimal("428500.00"), "medium"),
+        ("1200", "Trade receivables", Decimal("265000.00"), "medium"),
+        ("1300", "Inventory valuation", Decimal("710000.00"), "high"),
+        ("2000", "Accounts payable", Decimal("-318000.00"), "medium"),
+        ("3999", "Intercompany clearing", Decimal("84000.00"), "high"),
+        ("5000", "Cost of goods sold", Decimal("925000.00"), "high"),
     ]
-    entity_factors = {"SYN-US01": 1.0, "SYN-UK01": 0.62, "SYN-MX01": 0.48}
-    period_factors = {DEMO_PRIOR_PERIOD: 0.97, DEMO_PERIOD: 1.0}
+    entity_factors = {
+        "SYN-US01": Decimal("1.00"),
+        "SYN-UK01": Decimal("0.62"),
+        "SYN-MX01": Decimal("0.48"),
+    }
+    period_factors = {DEMO_PRIOR_PERIOD: Decimal("0.97"), DEMO_PERIOD: Decimal("1.00")}
     currencies = {record["entity_code"]: record["currency"] for record in entities}
     trial_balance: list[dict[str, Any]] = []
     for period in periods:
@@ -207,9 +212,11 @@ def _build_synthetic_records() -> dict[str, list[dict[str, Any]]]:
                         "entity_code": entity_code,
                         "account_code": account_code,
                         "account_name": account_name,
-                        "balance": round(
-                            base_balance * entity_factors[entity_code] * period_factors[str(period["period_name"])], 2
-                        ),
+                        "balance": Money.from_exact(
+                            base_balance * entity_factors[entity_code] * period_factors[str(period["period_name"])],
+                            currency=currencies[entity_code],
+                            strict_precision=True,
+                        ).amount,
                         "currency": currencies[entity_code],
                         "risk_rating": risk_rating,
                         "synthetic_data_marker": SYNTHETIC_DATA_MARKER,

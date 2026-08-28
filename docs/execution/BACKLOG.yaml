@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1075
+    priority: P0
+    area: financial-exactness
+    title: Generate enterprise demo trial balances with exact currency-bound money
+    status: completed
+    depends_on: [E-1053]
+    exit_evidence: >-
+      Enterprise-demo account bases and scaling factors are Decimal values and
+      each trial-balance amount is constructed through Money.from_exact under
+      the entity currency's strict precision policy. A regression test rejects
+      binary-float balances and checks USD/GBP exact outputs. Enterprise-demo,
+      full Python, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+      gates pass; ADR 0735 records the compatibility and rollback boundary.
+      This is synthetic input integrity, not statutory or production assurance.
   - id: E-1074
     priority: P0
     area: container-security

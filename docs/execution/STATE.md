@@ -2,6 +2,17 @@
 
 Updated: 2026-08-28
 
+## E-1075 - Exact currency-bound enterprise demo trial balances (2026-08-28)
+
+- Enterprise-demo trial-balance source records now use Decimal account bases
+  and factors and construct each balance through `Money.from_exact` under the
+  entity currency's strict precision policy. The demo no longer introduces a
+  binary floating-point amount before the strict account-import boundary.
+- The exact-money regression and enterprise-demo tests pass. Full regression,
+  Ruff, Mypy, Bandit, pip-audit, package build, YAML validation, and diff checks
+  are required evidence for this slice. This improves synthetic input
+  integrity; it does not establish statutory or production assurance.
+
 ## E-1074 - Bind CI image scans to Syft configuration subject (2026-08-28)
 
 - The security and release workflows now derive `IMAGE_CONFIG_DIGEST` from

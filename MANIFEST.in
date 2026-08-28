@@ -1079,6 +1079,7 @@ include docs/adr/0731-local-workflow-responses-use-fail-closed-projection.md
 include docs/adr/0732-local-role-responses-use-fail-closed-projection.md
 include docs/adr/0733-checksum-bound-alpine-security-apks.md
 include docs/adr/0734-ci-image-scan-uses-syft-config-subject.md
+include docs/adr/0735-enterprise-demo-uses-exact-trial-balance-money.md
 include docs/execution/CONTAINER_SECURITY_LOCAL_2026-08-28.json
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

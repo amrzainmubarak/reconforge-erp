@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1075: Exact currency-bound enterprise demo trial balances (2026-08-28)
+
+- Code evidence: `reconforge/enterprise_demo.py` now stores account bases and
+  demo scaling factors as Decimal values and constructs each trial-balance
+  balance through `Money.from_exact` with the entity's currency and strict
+  precision. The CSV schema and field names remain compatible.
+- Test evidence: `tests/test_enterprise_demo.py` verifies that all generated
+  in-memory trial-balance balances are Decimal values and checks exact USD and
+  GBP outputs. The enterprise-demo suite and the full Python regression pass;
+  Ruff, Mypy, Bandit, pip-audit, package build, source YAML validation, and
+  diff checks also pass.
+- Boundary: this removes binary-float introduction from synthetic trial-balance
+  generation. It does not establish statutory accounting correctness, source
+  authenticity, live-rate correctness, or production assurance.
+
 ## E-1074: Syft-derived CI image subject (2026-08-28)
 
 - Root cause evidence: on the fresh local BuildKit image, Docker's local

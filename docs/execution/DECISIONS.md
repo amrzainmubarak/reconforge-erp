@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-904: Generate enterprise-demo trial balances with exact Money values
+
+- **Date**: 2026-08-28
+- **Context**: The synthetic enterprise demo used binary floating-point
+  literals and `round` for trial-balance amounts before writing the CSV that
+  feeds the strict account-import path.
+- **Decision**: Use Decimal literals and factors, then construct every balance
+  through `Money.from_exact` with the entity currency and strict precision.
+- **Verification**: The new exact-money regression and enterprise-demo suite
+  pass; the full Python and release-quality gates are required for closure.
+- **Compatibility**: CSV field names and textual balance outputs remain
+  unchanged for existing consumers; the in-memory values are now exact
+  Decimals instead of floats.
+- **Rollback**: Revert E-1075, ADR 0735, and the focused test together; never
+  restore float-based monetary fixture generation.
+
 ### D-903: Derive the CI image subject from the native Syft SBOM
 
 - **Date**: 2026-08-28

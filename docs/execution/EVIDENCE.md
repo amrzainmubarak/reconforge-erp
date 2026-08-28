@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1107: Content-bound deployment-readiness evidence (2026-08-28)
+
+- Code evidence: `load_deployment_readiness_matrix()` now requires a closed
+  digest manifest covering every referenced evidence path and recomputes each
+  SHA-256 from the repository bytes. Path safety and regular-file checks remain
+  enforced before hashing.
+- Test evidence: the readiness suite validates the v1 JSON Schema, exact matrix
+  path coverage, stable CLI digest, tampered-file digest rejection, missing
+  digest rejection, and the existing fail-closed scalar boundaries.
+- Gate evidence: the focused deployment profile/readiness/runtime selection
+  passed 38/38 tests (19 matrix, 11 profile, 8 runtime-evidence tests). The
+  locked full Python 3.11 regression reached 100% with exit 0; Ruff, Mypy,
+  Bandit, pip-audit, package build, and diff checks also exited successfully.
+  Existing warnings and declared skips remain visible.
+- Boundary: this binds review references to exact repository content. It is not
+  a signature, independent assurance, proof of the underlying runtime event,
+  or deployment/production readiness.
+
 ## E-824: Exact local container security disposition (2026-08-28)
 
 - Syft 1.51.0 generated the native SBOM for the Python 3.12.14 linux/amd64

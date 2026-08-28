@@ -14,6 +14,16 @@
   provenance, registry publication, legal license compatibility, independent
   reachability, and production security effectiveness remain open.
 
+## E-1107 Content-bound deployment-readiness evidence (2026-08-28)
+
+- The readiness matrix binds all 25 referenced repository evidence files to
+  lowercase SHA-256 digests. The offline reader checks exact coverage and file
+  bytes before the matrix or CLI digest is returned.
+- Focused profile/readiness/runtime tests pass 38/38; the full locked Python
+  3.11 regression and static/security/package/diff gates pass. This detects
+  repository evidence drift but does not authenticate runtime events, sign
+  artifacts, provide independent assurance, or establish production readiness.
+
 ## E-884 Python 3.12 Alpine candidate (2026-08-28)
 
 - The digest-pinned two-stage runtime now uses Python 3.12 Alpine. The

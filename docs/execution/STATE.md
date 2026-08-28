@@ -2,6 +2,18 @@
 
 Updated: 2026-08-28
 
+## E-1107 - Bind deployment-readiness evidence to exact content digests (2026-08-28)
+
+- The closed deployment-readiness matrix now contains one SHA-256 digest for
+  every referenced repository evidence file. The offline reader verifies exact
+  coverage and file bytes before returning the matrix or CLI digest.
+- Missing, extra, malformed, duplicate, escaped, or tampered evidence bindings
+  fail closed. Focused readiness tests cover schema closure, tampering, and
+  coverage gaps.
+- This is evidence-integrity and review-binding control only. It does not
+  authenticate artifacts, prove the underlying runtime event, establish
+  independent assurance, or close production-readiness gaps.
+
 ## E-824 - Close local exact container security disposition (2026-08-28)
 
 - The exact candidate image scan now uses checksum-verified Syft 1.51.0 and

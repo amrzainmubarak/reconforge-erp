@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-1019: Content-bound deployment-readiness evidence
+
+- **Date**: 2026-08-28
+- **Context**: Readiness gates required evidence paths, but an unchanged path
+  could point to changed bytes without changing the matrix digest.
+- **Decision**: Require a closed lowercase SHA-256 manifest covering every
+  referenced evidence file and verify the bytes offline before exposing the
+  matrix through the reader or CLI.
+- **Rationale**: Reviewers need deterministic evidence identity and immediate
+  fail-closed drift detection without network calls, signatures, or hidden
+  runtime assumptions.
+- **Verification**: ADR 0769, schema validation, tamper/coverage tests, and
+  the E-1107 execution gates.
+- **Rollback**: Revert the reader, schema, matrix manifest, tests, ADR, and
+  execution records together; no deployment or database state changes.
+
 ### D-1018: Move the bounded runtime base to Python 3.12 Alpine
 
 - **Date**: 2026-08-28

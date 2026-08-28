@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "matrix_id", "reviewed_on", "claim_boundary", "status_values", "required_gates", "editions"],
+  "required": ["schema_version", "matrix_id", "reviewed_on", "claim_boundary", "status_values", "required_gates", "evidence_digests", "editions"],
   "properties": {
     "schema_version": {"const": 1},
     "matrix_id": {"const": "reconforge-deployment-readiness"},
@@ -10,6 +10,17 @@
     "claim_boundary": {"type": "string", "minLength": 80},
     "status_values": {"type": "array", "const": ["verified_scoped", "partial", "open"]},
     "required_gates": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}},
+    "evidence_digests": {
+      "type": "array", "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
     "editions": {
       "type": "array", "minItems": 4, "maxItems": 4,
       "items": {

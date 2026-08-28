@@ -1,6 +1,6 @@
 schema_version: 1
 matrix_id: reconforge-deployment-readiness
-reviewed_on: "2026-08-26"
+reviewed_on: "2026-08-28"
 claim_boundary: >-
   This matrix consolidates repository-visible and disposable local evidence for
   deployment modes. It is not a production-readiness, compliance, certification,
@@ -17,6 +17,57 @@ required_gates:
   - failure_domain_and_dr
   - sovereign_air_gap
   - customer_managed_keys
+evidence_digests:
+  - path: compose.yaml
+    sha256: b51172c918518b2ea44d0b01c2514d71492fa8b4bdff74771b8897d5431b9001
+  - path: docs/adr/0561-cli-worker-permission-manifest-verification.md
+    sha256: 9f95dc77c3a0680ca8344fbdaec3e5a8d601ac29e50a3c3dc16a3ce15f06a4dd
+  - path: docs/adr/0562-digest-bound-deployment-runtime-evidence.md
+    sha256: 5c93ce4439501087be76365ef67dea7ef4c41cff0933435df9710100719bbcab
+  - path: docs/adr/0662-community-compose-local-profile.md
+    sha256: 3408ee1217c2a755f5a50e73a633625de14690bb3b1572e4535031cb4b8170c7
+  - path: docs/adr/0667-sqlite-retention-floor-guard.md
+    sha256: e34da6580ac2c4a06de8487b0afa1317a39414c980eefd9bc36f23a9009a0413
+  - path: docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
+    sha256: a24841a6f0a0dbbb1fbe8e29452d17b4567158daf6a11d68c378267834fb535a
+  - path: docs/execution/P3_ENT_006_EXIT_AUDIT.yaml
+    sha256: 87892a599e31ef126e045f2fc27c35a8f51f8c3a51d10d2b81968a7c0a612500
+  - path: docs/execution/P3_ENT_009_EXIT_AUDIT.yaml
+    sha256: 6605a2e55b7bb5f379535b91a71cf3b4cf60f2f2aeb9a55008e3b19d2bc1d17a
+  - path: docs/execution/P3_ENT_010_EXIT_AUDIT.yaml
+    sha256: aac0127e62ca663fb0654d1981905e4b75dce7340b13f234d395f57d86a8a3ae
+  - path: docs/execution/P3_ENT_011_EXIT_AUDIT.yaml
+    sha256: 0df579c60b5cbc696b0d1a505218cad5d46b7d52d4a0c536ed3bf671b32ede26
+  - path: docs/execution/P3_ENT_012_EXIT_AUDIT.yaml
+    sha256: fb359b7bec95f3f27394877bb1b93817b7503d3c5818d90a72d226200b8135fe
+  - path: docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json
+    sha256: 62f5e14296b0f5335ffcae3c35809b547d562a824edda146ffd3e2e865029931
+  - path: docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json
+    sha256: 44c258a5c558516e37990b8fdcc807de7d6b5354fb1da026d8185278b7fec498
+  - path: reconforge/db/schema.py
+    sha256: a7658d25705b9e10b67503f8e925a35e06fe35ba6966b97c9ae3841d3d2f3212
+  - path: reconforge/deployment/profiles.py
+    sha256: c867a79508581e8c3914688f16c23c9d76dedb22e2a521dbd7e8690e27bff1ec
+  - path: reconforge/infrastructure/object_storage.py
+    sha256: 11771a12840c11e5d829c3f0f994ec29560cb2cc03119302ffa6ac921d975d81
+  - path: reconforge/infrastructure/sqlite_evidence.py
+    sha256: 464803ca25f9e59e216eb5bb1b0834e3b2775ba693158cf0f7bdfe23c2168a57
+  - path: tests/test_cli_evidence_local_object_store.py
+    sha256: 97bb0d2c9ac5325680cdf055eec5c93c1d370c588bab2530763b9749365b9e7f
+  - path: tests/test_compose_profile.py
+    sha256: 5554713e762f9d764d5df1a63a92e5d4e916e202bb225dd448bcfc303ec8c392
+  - path: tests/test_current_community_compose_runtime_report.py
+    sha256: 7cba30ac7c3ad383145f6713333f2be78e869b33fea3494d365cab0946487525
+  - path: tests/test_current_postgres_governance_runtime_report.py
+    sha256: 3a1d236a9805cd7d9e131040ca7bfe243bde4e84431f7c2b5d6014a5f846ae82
+  - path: tests/test_deployment_runtime_evidence.py
+    sha256: 1cce2e298f5cde796cc665f8d30324153ad5278771b09b24314de7988d7416e3
+  - path: tests/test_evidence_object_storage.py
+    sha256: 3cca82cd11ef7540d44d6bed48cc740cd439279ca86ed6fad70116819be7973d
+  - path: tests/test_ha_dr_repeated_drill.py
+    sha256: 6c06702d76710d95bc3f12f53157b92b8363d16e99c2eca5c1f22700bcbe77ad
+  - path: tests/test_postgres_identity_administration.py
+    sha256: e05e972f454fa70dea8c1c8246016cd8676df10a505abbcc12ae0faec00bce85
 editions:
   - id: community
     readiness_status: partial

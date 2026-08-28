@@ -12,6 +12,17 @@ to the current image configuration and manifest in
 publication, legal license review, and production security effectiveness are
 not implied. ADR 0768 records the reproducible import boundary.
 
+## E-1107 - Content-bound deployment-readiness evidence (2026-08-28)
+
+The deployment-readiness matrix now contains 25 exact SHA-256 bindings covering
+every referenced evidence file. The offline reader and CLI reject missing,
+extra, malformed, duplicate, escaped, or mismatched bindings before exposing a
+matrix digest. The focused profile/readiness/runtime suite passes 38/38; the
+locked full Python 3.11 regression reaches 100% with exit 0, and Ruff, Mypy,
+Bandit, pip-audit, package build, and diff checks pass. This is repository
+evidence integrity and review binding, not artifact signature, independent
+assurance, runtime-event authentication, or production readiness.
+
 ## E-884 - Python 3.12 Alpine candidate matrix (2026-08-28)
 
 The candidate Docker image was built from the digest-pinned Python 3.12 Alpine

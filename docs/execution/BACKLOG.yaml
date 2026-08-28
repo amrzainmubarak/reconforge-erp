@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1107
+    priority: P1
+    area: deployment-governance
+    title: Bind deployment-readiness evidence to exact content digests
+    status: completed
+    depends_on: [E-1006]
+    exit_evidence: >-
+      The closed deployment-readiness matrix now carries one lowercase SHA-256
+      digest for every referenced repository evidence file. The offline reader
+      rejects missing, extra, malformed, duplicate, escaped, or mismatched
+      evidence bindings before the CLI exposes the matrix. Schema, tamper,
+      coverage, focused readiness, full regression, static/security, package,
+      YAML, and diff gates pass. This proves repository evidence integrity and
+      review binding only; it does not prove the underlying runtime event,
+      signatures, independent assurance, or production readiness.
   - id: E-1106
     priority: P0
     area: financial-exactness

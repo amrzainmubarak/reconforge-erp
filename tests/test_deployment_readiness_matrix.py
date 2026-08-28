@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from copy import deepcopy
 from pathlib import Path
 
@@ -47,7 +48,8 @@ def test_matrix_preserves_unresolved_regulated_key_and_failure_domain_gates() ->
 
 def test_matrix_tracks_the_current_community_compose_boundary() -> None:
     matrix = yaml.safe_load(MATRIX_PATH.read_text(encoding="utf-8"))
-    assert matrix["reviewed_on"] == "2026-08-26"
+    assert matrix["reviewed_on"] == "2026-08-28"
+    assert len(matrix["evidence_digests"]) == 25
     community = next(edition for edition in matrix["editions"] if edition["id"] == "community")
     gate = next(gate for gate in community["gates"] if gate["id"] == "external_dependency_boundary")
     assert {
@@ -56,6 +58,69 @@ def test_matrix_tracks_the_current_community_compose_boundary() -> None:
         "docs/adr/0662-community-compose-local-profile.md",
     } <= set(gate["evidence"])
     assert "not host firewall" in gate["boundary"]
+
+
+def _copy_matrix_fixture(tmp_path: Path) -> tuple[Path, dict[str, object]]:
+    source = yaml.safe_load(MATRIX_PATH.read_text(encoding="utf-8"))
+    fixture_root = tmp_path / "repo"
+    matrix_path = fixture_root / "docs" / "execution" / MATRIX_PATH.name
+    matrix_path.parent.mkdir(parents=True)
+    copied: set[str] = set()
+    for edition in source["editions"]:
+        for gate in edition["gates"]:
+            for evidence_path in gate["evidence"]:
+                if evidence_path in copied:
+                    continue
+                copied.add(evidence_path)
+                target = fixture_root / evidence_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / evidence_path, target)
+    matrix_path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+    return matrix_path, source
+
+
+def test_runtime_reader_rejects_tampered_evidence_digest(tmp_path: Path) -> None:
+    matrix_path, source = _copy_matrix_fixture(tmp_path)
+    source["evidence_digests"][0]["sha256"] = "0" * 64
+    matrix_path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+    with pytest.raises(DeploymentReadinessError, match="evidence digest mismatch"):
+        load_deployment_readiness_matrix(matrix_path)
+
+
+def test_runtime_reader_requires_digest_for_every_referenced_evidence(tmp_path: Path) -> None:
+    matrix_path, source = _copy_matrix_fixture(tmp_path)
+    source["evidence_digests"] = source["evidence_digests"][1:]
+    matrix_path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+    with pytest.raises(DeploymentReadinessError, match="evidence digest coverage"):
+        load_deployment_readiness_matrix(matrix_path)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "error_message"),
+    [
+        ("malformed", "evidence digest sha256 is invalid"),
+        ("duplicate", "evidence digest paths must be unique"),
+        ("absolute", "evidence digest paths must be relative"),
+        ("extra", "evidence digest coverage does not match"),
+    ],
+)
+def test_runtime_reader_rejects_invalid_evidence_digest_manifest(
+    tmp_path: Path,
+    mutation: str,
+    error_message: str,
+) -> None:
+    matrix_path, source = _copy_matrix_fixture(tmp_path)
+    if mutation == "malformed":
+        source["evidence_digests"][0]["sha256"] = "A" * 64
+    elif mutation == "duplicate":
+        source["evidence_digests"][1]["path"] = source["evidence_digests"][0]["path"]
+    elif mutation == "absolute":
+        source["evidence_digests"][0]["path"] = "C:\\outside-evidence.txt"
+    else:
+        source["evidence_digests"].append({"path": "extra-evidence.txt", "sha256": "0" * 64})
+    matrix_path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+    with pytest.raises(DeploymentReadinessError, match=error_message):
+        load_deployment_readiness_matrix(matrix_path)
 
 
 def test_runtime_reader_produces_stable_digest_and_selects_one_edition() -> None:

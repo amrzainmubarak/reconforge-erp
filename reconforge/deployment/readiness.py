@@ -25,10 +25,20 @@ _GATES = (
 )
 _STATUSES = frozenset({"verified_scoped", "partial", "open"})
 _TOP_LEVEL = frozenset(
-    {"schema_version", "matrix_id", "reviewed_on", "claim_boundary", "status_values", "required_gates", "editions"}
+    {
+        "schema_version",
+        "matrix_id",
+        "reviewed_on",
+        "claim_boundary",
+        "status_values",
+        "required_gates",
+        "evidence_digests",
+        "editions",
+    }
 )
 _EDITION_FIELDS = frozenset({"id", "readiness_status", "profile_command", "gates"})
 _GATE_FIELDS = frozenset({"id", "status", "evidence", "boundary"})
+_EVIDENCE_DIGEST_FIELDS = frozenset({"path", "sha256"})
 
 
 class DeploymentReadinessError(ValueError):
@@ -83,6 +93,41 @@ def _relative_evidence_path(value: object, *, root: Path) -> None:
         raise DeploymentReadinessError("evidence path does not resolve to a regular file")
 
 
+def _verify_evidence_digests(
+    value: object,
+    *,
+    referenced_paths: set[str],
+    root: Path,
+) -> None:
+    if not isinstance(value, list):
+        raise DeploymentReadinessError("evidence_digests must be an array")
+    declared: dict[str, str] = {}
+    for raw_digest in value:
+        digest = _mapping(raw_digest, "evidence digest")
+        if set(digest) != _EVIDENCE_DIGEST_FIELDS:
+            raise DeploymentReadinessError("evidence digest fields do not match the closed contract")
+        path = digest["path"]
+        sha256 = digest["sha256"]
+        if not isinstance(path, str) or not path or Path(path).is_absolute():
+            raise DeploymentReadinessError("evidence digest paths must be relative")
+        if (
+            not isinstance(sha256, str)
+            or len(sha256) != 64
+            or any(character not in "0123456789abcdef" for character in sha256)
+        ):
+            raise DeploymentReadinessError("evidence digest sha256 is invalid")
+        if path in declared:
+            raise DeploymentReadinessError("evidence digest paths must be unique")
+        declared[path] = sha256
+
+    if set(declared) != referenced_paths:
+        raise DeploymentReadinessError("evidence digest coverage does not match referenced evidence")
+    for path, expected in declared.items():
+        actual = hashlib.sha256((root / path).read_bytes()).hexdigest()
+        if actual != expected:
+            raise DeploymentReadinessError(f"evidence digest mismatch: {path}")
+
+
 def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
     top = _mapping(payload, "readiness matrix")
     if set(top) != _TOP_LEVEL:
@@ -119,6 +164,7 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
     required_gates = top["required_gates"]
     if not isinstance(required_gates, list) or tuple(cast(list[object], required_gates)) != _GATES:
         raise DeploymentReadinessError("readiness matrix gate contract is invalid")
+    referenced_evidence_paths: set[str] = set()
     editions = top["editions"]
     if not isinstance(editions, list) or len(editions) != len(_EDITIONS):
         raise DeploymentReadinessError("readiness matrix editions are invalid")
@@ -163,8 +209,14 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
                 raise DeploymentReadinessError("verified_scoped gates require evidence paths")
             for evidence_path in evidence:
                 _relative_evidence_path(evidence_path, root=root)
+                referenced_evidence_paths.add(cast(str, evidence_path))
     if seen_editions != set(_EDITIONS):
         raise DeploymentReadinessError("readiness matrix must contain every edition")
+    _verify_evidence_digests(
+        top["evidence_digests"],
+        referenced_paths=referenced_evidence_paths,
+        root=root,
+    )
     return top
 
 

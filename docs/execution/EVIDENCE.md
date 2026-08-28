@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1081: Bind PostgreSQL scheduler workers to verified permission manifests (2026-08-28)
+
+- Code evidence: policy-supplier-backed `PostgresSchedulerWorkerSettings`
+  now requires a `WorkerPermissionManifest`, binds worker/principal identity,
+  and requires explicit discovery and execution permissions to match the
+  manifest. The pre-connection policy decision uses the discovery grant and
+  the immediate pre-dispatch recheck uses the execution grant.
+- Test evidence: `tests/test_postgres_scheduler_worker.py` passes 10/10,
+  covering manifestless no-connection rejection, configuration drift,
+  discovery/execution separation, scope propagation, and revocation before
+  dispatch. Full pytest, Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff checks are the release gates for this slice.
+- Boundary: this is local synthetic scheduler-worker policy evidence only. It
+  does not prove external IAM provisioning, universal worker adoption,
+  distributed revocation, provider behavior, HA/DR, or production
+  authorization effectiveness.
+
 ## E-1080: Bind PostgreSQL reconciliation workers to verified permission manifests (2026-08-28)
 
 - Code evidence: policy-supplier-backed `PostgresReconciliationWorkerSettings`

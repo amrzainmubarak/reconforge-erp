@@ -1085,6 +1085,7 @@ include docs/adr/0737-bind-emergency-mutations-to-tenant-policy.md
 include docs/adr/0738-canonical-matching-requires-explicit-currency.md
 include docs/adr/0739-governed-workers-consume-verified-permission-manifests.md
 include docs/adr/0740-postgres-reconciliation-workers-consume-verified-permission-manifests.md
+include docs/adr/0741-postgres-scheduler-workers-consume-verified-permission-manifests.md
 include docs/execution/CONTAINER_SECURITY_LOCAL_2026-08-28.json
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

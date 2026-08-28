@@ -2,6 +2,20 @@
 
 Updated: 2026-08-28
 
+## E-1081 - Bind PostgreSQL scheduler workers to verified manifests (2026-08-28)
+
+- `PostgresSchedulerWorkerSettings` now consumes a verified
+  `WorkerPermissionManifest` whenever a policy supplier is configured. Worker
+  identity, audit principal, `schedule.discover`, and `schedule.run` must
+  remain bound to the manifest; the pre-connection lane check uses discovery
+  permission and the post-connection dispatch recheck uses execution
+  permission.
+- Missing manifests and manifest/configuration drift fail before database
+  access. The existing explicit unbound local compatibility mode remains
+  named and bounded. Focused scheduler tests pass 10/10; full regression and
+  release gates are required as final evidence. This does not establish
+  external IAM or universal production-worker coverage.
+
 ## E-1080 - Bind PostgreSQL reconciliation workers to verified manifests (2026-08-28)
 
 - `PostgresReconciliationWorkerSettings` now accepts a verified

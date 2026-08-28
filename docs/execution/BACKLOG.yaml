@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1081
+    priority: P0
+    area: identity-governance
+    title: Bind PostgreSQL scheduler workers to verified permission manifests
+    status: completed
+    depends_on: [E-1005, E-1080]
+    exit_evidence: >-
+      PostgresSchedulerWorkerSettings now binds configured policy workers to a
+      verified WorkerPermissionManifest and separates schedule discovery from
+      schedule execution. Worker/principal identity and both permission names
+      must match the manifest; missing manifests and configuration drift fail
+      before connection access, and each cycle uses discovery permission before
+      connection and execution permission before dispatch. Focused scheduler
+      tests pass 10/10, with full regression and release-quality gates. This
+      closes the PostgreSQL scheduler configuration boundary only; external
+      IAM, universal worker adoption, distributed revocation, and production
+      effectiveness remain open.
   - id: E-1080
     priority: P0
     area: identity-governance

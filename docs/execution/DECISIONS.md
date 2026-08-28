@@ -5,6 +5,30 @@
 
 ## Decisions
 
+### D-910: Bind PostgreSQL scheduler workers to permission manifests
+
+- **Date**: 2026-08-28
+- **Context**: The scheduler worker performed a policy check before opening a
+  connection and a second check before dispatch, but both checks used the
+  same independently configured execution permission. Its service identity
+  and permission configuration were not bound to the reviewed manifest.
+- **Decision**: Add verified `WorkerPermissionManifest` binding to
+  `PostgresSchedulerWorkerSettings` for policy-supplier-backed workers. Match
+  worker ID and audit principal, add an explicit discovery permission, and use
+  the manifest's discovery grant for lane enumeration and execution grant for
+  dispatch. Reject missing manifests or permission/configuration drift before
+  database access; retain the explicit unbound local compatibility mode.
+- **Rationale**: Scheduler enumeration and dispatch are distinct trust steps.
+  A fixed artifact contract prevents identity or privilege substitution while
+  retaining the existing dynamic policy and scope checks.
+- **Verification**: E-1081 focused scheduler tests, full regression, Ruff,
+  Mypy, Bandit, pip-audit, package build, YAML, and diff checks.
+- **Compatibility**: The change is stricter only for policy-supplier-backed
+  PostgreSQL scheduler workers. No schema or migration changes; local
+  unbound mode and existing scheduler application contracts remain intact.
+- **Rollback**: Revert E-1081, ADR 0741, scheduler settings/tests, manifest
+  entry, and execution records together.
+
 ### D-909: Bind PostgreSQL reconciliation worker settings to permission manifests
 
 - **Date**: 2026-08-28

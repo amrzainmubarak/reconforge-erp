@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-1023: Strict canonical-money replay consumers
+
+- **Date**: 2026-08-29
+- **Context**: Translation, worksheet, impairment, and intercompany replay
+  consumers still used the compatibility Money reader at persisted-data
+  boundaries where producer serialization identity is part of the evidence.
+- **Decision**: Use `Money.from_strict_canonical_dict()` for those four bounded
+  replay consumers while retaining compatibility readers for API and other
+  explicitly compatible restoration boundaries.
+- **Rationale**: One exact serialization policy must cover every persisted
+  financial replay boundary in scope; re-signed normalized text must fail
+  closed before arithmetic or artifact reproduction.
+- **Verification**: ADR 0773, focused 40/40 replay tests, full regression, and
+  release gates are recorded in E-1111.
+- **Rollback**: Revert E-1111, ADR 0773, use-site/tests, manifest, and
+  execution records together; no financial data or deployment state changes.
+
 ### D-1022: Strict canonical-money replay reader
 
 - **Date**: 2026-08-29

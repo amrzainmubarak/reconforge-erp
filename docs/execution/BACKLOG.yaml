@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-08-28"
+updated_at: "2026-08-29"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1111
+    priority: P0
+    area: financial-exactness
+    title: Extend strict canonical-money decoding to replay consumers
+    status: completed
+    depends_on: [E-1110]
+    exit_evidence: >-
+      Translation-result replay, worksheet replay, impairment-bridge replay,
+      and intercompany source-line decoding use the additive strict Money
+      reader while API and compatibility restoration boundaries remain
+      unchanged. Re-signed padded amount text fails closed before arithmetic
+      or reproduction acceptance. The focused translation/lifecycle/
+      impairment/intercompany selection passes 40/40; full regression,
+      static/security, package, YAML, and diff gates pass. This is bounded
+      non-posting replay-integrity evidence, not statutory accounting or
+      production readiness.
   - id: E-1110
     priority: P0
     area: financial-exactness

@@ -1,5 +1,15 @@
 # Security Baseline
 
+## E-1111 Strict canonical-money replay consumers (2026-08-29)
+
+- Four additional persisted-money consumers fail closed on mapping drift:
+  translation-result replay, worksheet replay, impairment-bridge replay, and
+  intercompany source-line decoding. Compatibility/API restoration remains
+  unchanged.
+- Re-signed padded amount text is covered before arithmetic/reproduction; the
+  focused 40/40 selection and full static/security/package/diff gates pass.
+  This is artifact-integrity evidence, not statutory or production assurance.
+
 ## E-1110 Strict canonical-money replay reader (2026-08-29)
 
 - The additive strict reader rejects mapping drift after policy-aware Money

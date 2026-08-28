@@ -300,7 +300,7 @@ def prepare_consolidation_impairment_bridge(
 
 def _canonical_money(value: object, currency: str, field: str) -> Money:
     try:
-        result = Money.from_canonical_dict(value)  # type: ignore[arg-type]
+        result = Money.from_strict_canonical_dict(value)  # type: ignore[arg-type]
     except (TypeError, ValueError, KeyError) as exc:
         raise ConsolidationError(f"Impairment {field} money is invalid.") from exc
     return _money(result, currency, field)

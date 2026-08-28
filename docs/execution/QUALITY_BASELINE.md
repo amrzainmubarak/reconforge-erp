@@ -1,5 +1,15 @@
 # Quality Baseline
 
+## E-1111 - Extend strict canonical-money decoding to replay consumers (2026-08-29)
+
+Translation-result, worksheet, impairment-bridge, and intercompany source-line
+replay consumers now reject non-canonical Money serialization through the
+shared strict reader before arithmetic or reproduction. Compatibility readers
+remain unchanged. The focused selection passes 40/40; full locked regression,
+static/security, package, YAML/schema, and diff gates pass. This is bounded
+non-posting replay-integrity evidence, not statutory accounting or production
+readiness.
+
 ## E-1110 - Add a strict canonical-money replay reader (2026-08-29)
 
 The additive strict money reader validates the existing policy/registry

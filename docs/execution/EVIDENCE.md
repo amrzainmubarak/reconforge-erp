@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1111: Extend strict canonical-money decoding to replay consumers (2026-08-29)
+
+- Code evidence: translation-result, worksheet, impairment-bridge, and
+  intercompany source-line replay consumers use
+  `Money.from_strict_canonical_dict()`; API request and compatibility readers
+  remain on the existing reader.
+- Test evidence: the focused translation/lifecycle/impairment/intercompany
+  selection passes 40/40, including re-signed padded-money refusal before
+  arithmetic or reproduction acceptance.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this is deterministic serialization and replay-integrity evidence
+  for non-posting artifacts. It is not statutory accounting, valuation,
+  posting, provider, or production-readiness evidence.
+
 ## E-1110: Add a strict canonical-money replay reader (2026-08-29)
 
 - Code evidence: `Money.from_strict_canonical_dict()` delegates to the existing

@@ -1090,7 +1090,7 @@ def verify_consolidation_worksheet_payload(
                         entity_code=cast(str, line["entity_code"]),
                         group_account_code=cast(str, line["group_account_code"]),
                         account_type=cast(ConsolidationAccountType, line["account_type"]),
-                        amount=Money.from_canonical_dict(cast(Mapping[str, object], line["amount"])),
+                        amount=Money.from_strict_canonical_dict(cast(Mapping[str, object], line["amount"])),
                         source_reference=cast(str, line["source_reference"]),
                         source_digest=cast(str, line["source_digest"]),
                     )

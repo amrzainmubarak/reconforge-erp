@@ -2,6 +2,16 @@
 
 Updated: 2026-08-29
 
+## E-1111 - Extend strict canonical-money decoding to replay consumers (2026-08-29)
+
+- Translation-result replay, worksheet replay, impairment-bridge replay, and
+  intercompany source-line decoding now use the additive strict Money reader.
+  API request models and compatibility restoration boundaries remain unchanged.
+- Re-signed padded amount text is rejected before financial arithmetic or
+  artifact reproduction acceptance. The focused selection passes 40/40. This
+  is bounded non-posting replay integrity, not statutory or production
+  assurance.
+
 ## E-1110 - Add a strict canonical-money replay reader (2026-08-29)
 
 - `Money.from_strict_canonical_dict()` applies the existing schema, currency

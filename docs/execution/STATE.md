@@ -2,6 +2,20 @@
 
 Updated: 2026-08-28
 
+## E-1082 - Bind PostgreSQL outbox workers to verified manifests (2026-08-28)
+
+- Policy-supplier-backed `PostgresOutboxWorkerSettings` now consumes a
+  verified `WorkerPermissionManifest`. Worker identity, audit principal,
+  discovery permission, and execution permission must match the manifest;
+  configuration drift fails closed before database access.
+- The pre-connection discovery/claim lane uses the manifest discovery grant,
+  while publishing and failure lifecycle mutations use the execution grant.
+  The local SQLite `OutboxWorker` rejects hosted-only manifest/discovery
+  configuration. Focused outbox tests pass 21/21 with two declared live-
+  PostgreSQL skips; full regression and release gates are required as final
+  evidence. This is not external IAM, universal worker coverage, distributed
+  revocation, or production authorization assurance.
+
 ## E-1081 - Bind PostgreSQL scheduler workers to verified manifests (2026-08-28)
 
 - `PostgresSchedulerWorkerSettings` now consumes a verified

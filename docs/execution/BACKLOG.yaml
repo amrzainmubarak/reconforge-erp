@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1082
+    priority: P0
+    area: identity-governance
+    title: Bind PostgreSQL outbox workers to verified permission manifests
+    status: completed
+    depends_on: [E-1005, E-1081]
+    exit_evidence: >-
+      Policy-supplier-backed PostgreSQL outbox workers now require a verified
+      WorkerPermissionManifest, bind worker/principal identity and both
+      discovery and execution permissions, and reject configuration drift
+      before database access. Discovery/claim uses the manifest discovery
+      permission; publishing and failure lifecycle mutations recheck the
+      manifest execution permission. The local SQLite OutboxWorker rejects
+      hosted-only manifest configuration. Focused outbox tests pass 21/21
+      with two declared live-PostgreSQL skips; full regression and release
+      gates are recorded separately. This closes the PostgreSQL outbox
+      configuration boundary only; external IAM, universal worker adoption,
+      distributed revocation, and production effectiveness remain open.
   - id: E-1081
     priority: P0
     area: identity-governance

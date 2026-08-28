@@ -5,6 +5,36 @@
 
 ## Decisions
 
+### D-911: Bind PostgreSQL outbox workers to permission manifests
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL outbox worker already performed a discovery
+  policy check before claiming events and a second check before publishing,
+  but its worker identity and permission names were independently configured.
+  The local SQLite worker shares the settings type and must not accidentally
+  accept hosted deployment controls.
+- **Decision**: For policy-supplier-backed PostgreSQL outbox workers, require
+  a verified `WorkerPermissionManifest`; match its worker ID, audit principal,
+  discovery permission, and execution permission to the settings. Use the
+  discovery grant before connection/claim and the execution grant immediately
+  before publisher and failure lifecycle side effects. Reject missing or
+  mismatched manifests before database access. Reject manifest/discovery
+  configuration in the local SQLite worker boundary.
+- **Rationale**: Discovery and publishing are separate privilege steps. A
+  reviewed, immutable capability contract prevents per-call permission
+  substitution while the existing central policy guard remains authoritative
+  for current tenant/workspace/organization scope and revocation.
+- **Verification**: E-1082 focused outbox tests pass 21/21 with two declared
+  live-PostgreSQL skips; full pytest, Ruff, Mypy, Bandit, pip-audit, package
+  build, YAML, and diff checks are the release gates for this slice.
+- **Compatibility**: The stricter contract applies only to PostgreSQL workers
+  using a policy supplier. Explicit unbound compatibility remains available
+  only through its existing named flag; local SQLite workers retain their
+  existing policy-free behavior and reject hosted-only settings.
+- **Rollback**: Revert E-1082, ADR 0742, the outbox settings/worker/tests,
+  manifest entry, and execution records together. Do not restore per-call
+  permission substitution without a replacement artifact-binding design.
+
 ### D-910: Bind PostgreSQL scheduler workers to permission manifests
 
 - **Date**: 2026-08-28

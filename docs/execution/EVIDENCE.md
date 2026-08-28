@@ -2,6 +2,35 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1082: Bind PostgreSQL outbox workers to verified permission manifests (2026-08-28)
+
+- Code evidence: policy-supplier-backed `PostgresOutboxWorkerSettings` now
+  requires a `WorkerPermissionManifest` and binds worker ID, audit principal,
+  discovery permission, and execution permission at configuration time. The
+  discovery/claim policy check uses the manifest discovery grant before
+  connection access; publishing and failure lifecycle checks use the execution
+  grant before their side effects. Local SQLite `OutboxWorker` rejects these
+  hosted-only settings.
+- Test evidence: `tests/test_postgres_outbox.py` and
+  `tests/test_outbox_worker.py` pass 21/21, with two declared skips because a
+  live PostgreSQL service is not configured. Coverage includes manifestless
+  no-connection rejection, configuration drift, discovery/execution
+  separation, scope propagation, and revocation before publish. Full pytest,
+  Ruff, Mypy, Bandit, pip-audit, package build, source YAML, and diff checks
+  are the release gates for this slice.
+- Gate evidence observed on 2026-08-28: full `pytest -q --tb=short
+  --maxfail=1` completed at 100%; `ruff check .` passed; Mypy reported no
+  issues in 539 source files; Bandit exited successfully with existing
+  `nosec`/comment warnings; pip-audit reported no known vulnerabilities and
+  explicitly noted that the local `reconforge-erp` distribution is not on
+  PyPI; `python -m build --no-isolation` produced wheel and sdist artifacts;
+  the 0.7.1 sdist contains ADR 0742; source YAML parsing and `git diff
+  --check` passed.
+- Boundary: this proves the reviewed PostgreSQL outbox configuration and
+  policy boundary using local synthetic fixtures. It does not prove external
+  IAM provisioning, universal worker adoption, distributed revocation,
+  provider behavior, HA/DR, or production authorization effectiveness.
+
 ## E-1081: Bind PostgreSQL scheduler workers to verified permission manifests (2026-08-28)
 
 - Code evidence: policy-supplier-backed `PostgresSchedulerWorkerSettings`

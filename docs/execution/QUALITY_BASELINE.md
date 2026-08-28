@@ -1,5 +1,16 @@
 # Quality Baseline
 
+## E-1110 - Add a strict canonical-money replay reader (2026-08-29)
+
+The additive strict money reader validates the existing policy/registry
+provenance and requires the complete supplied mapping to reproduce the
+producer's canonical serialization. Acquisition, PPA, deferred-tax, and
+ownership-change replay paths now share it; compatibility restoration is
+unchanged. The focused money/consolidation selection passes 66/66 and the full
+locked regression, static/security, package, YAML/schema, and diff gates pass.
+This is non-posting replay-integrity evidence, not statutory accounting or
+production readiness.
+
 ## E-1109 - Strict PPA and deferred-tax replay money (2026-08-28)
 
 PPA and acquisition deferred-tax replay now reject amounts and currency codes

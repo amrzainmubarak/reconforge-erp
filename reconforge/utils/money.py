@@ -1229,6 +1229,27 @@ class Money:
         )
         return cls._from_resolved(data["amount"], historical_resolution, strict_precision=True)
 
+    @classmethod
+    def from_strict_canonical_dict(
+        cls,
+        data: Mapping[str, object],
+        *,
+        registry_context: CurrencyRegistryContext | None = None,
+    ) -> Money:
+        """Restore a canonical value only when its serialized form is exact.
+
+        ``from_canonical_dict`` remains a compatibility reader for values whose
+        financial policy is valid but whose text can be normalized during
+        restoration. This stricter boundary is for persisted evidence and
+        replay paths that must prove the supplied bytes reproduce the producer's
+        deterministic serialization.
+        """
+
+        value = cls.from_canonical_dict(data, registry_context=registry_context)
+        if dict(data) != value.to_canonical_dict():
+            raise InvalidAmountError("canonical money dictionary is not deterministic canonical serialization")
+        return value
+
     def _check_currency(self, other: Money) -> None:
         if not isinstance(other, Money):
             raise CurrencyMismatchError("Operation requires a Money object")

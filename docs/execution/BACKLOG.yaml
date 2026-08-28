@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1110
+    priority: P0
+    area: financial-exactness
+    title: Add a strict canonical-money replay reader
+    status: completed
+    depends_on: [E-1109]
+    exit_evidence: >-
+      Money.from_strict_canonical_dict provides an additive exact
+      serialization boundary over the existing policy/registry-aware reader.
+      Acquisition, PPA, deferred-tax, and ownership-change replay verifiers
+      use it; compatibility restoration remains unchanged. Re-signed
+      padded/scientific amount text, lowercase currency, and other mapping
+      drift fail closed. The focused money/consolidation selection passes
+      66/66; full regression, static/security, package, YAML, and diff gates
+      pass. This is replay-integrity evidence for non-posting artifacts, not
+      statutory accounting or production readiness.
   - id: E-1109
     priority: P0
     area: financial-exactness

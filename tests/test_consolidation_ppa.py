@@ -149,7 +149,7 @@ def test_ppa_rejects_resigned_noncanonical_money() -> None:
     payload = result.to_dict()
     payload["items"][0]["book_value"]["currency"] = "usd"  # type: ignore[index]
     _resign(payload)
-    with pytest.raises(ConsolidationError, match="canonical currency code"):
+    with pytest.raises(ConsolidationError, match="canonical exact decimal text"):
         verify_acquisition_purchase_price_allocation_payload(payload)
 
 

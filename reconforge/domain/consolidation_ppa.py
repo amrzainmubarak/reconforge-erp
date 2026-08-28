@@ -383,13 +383,9 @@ def prepare_acquisition_purchase_price_allocation(
 
 def _canonical_money(payload: object, currency: str, field: str, *, non_negative: bool = False) -> Money:
     try:
-        value = Money.from_canonical_dict(payload)  # type: ignore[arg-type]
+        value = Money.from_strict_canonical_dict(payload)  # type: ignore[arg-type]
     except (TypeError, ValueError, KeyError) as exc:
         raise ConsolidationError(f"Acquisition PPA {field} money must use canonical exact decimal text.") from exc
-    if not isinstance(payload, dict) or payload.get("amount") != str(value.amount):
-        raise ConsolidationError(f"Acquisition PPA {field} money must use canonical exact decimal text.")
-    if payload.get("currency") != value.currency:
-        raise ConsolidationError(f"Acquisition PPA {field} money must use a canonical currency code.")
     return _money(value, currency, field, non_negative=non_negative)
 
 

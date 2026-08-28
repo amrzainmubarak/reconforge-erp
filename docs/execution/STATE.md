@@ -1,6 +1,17 @@
 ﻿# Execution State
 
-Updated: 2026-08-28
+Updated: 2026-08-29
+
+## E-1110 - Add a strict canonical-money replay reader (2026-08-29)
+
+- `Money.from_strict_canonical_dict()` applies the existing schema, currency
+  policy, registry provenance, and precision checks, then requires the input
+  mapping to equal `Money.to_canonical_dict()` field-for-field.
+- The acquisition bridge, PPA, deferred-tax, and ownership-change replay
+  verifiers use the additive strict reader. Existing compatibility restoration
+  remains unchanged.
+- The focused money/consolidation selection passes 66/66. This is a
+  non-posting replay-integrity control, not statutory or production assurance.
 
 ## E-1109 - Enforce strict PPA and deferred-tax replay money (2026-08-28)
 

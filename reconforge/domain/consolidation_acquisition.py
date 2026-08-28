@@ -83,13 +83,9 @@ def _money(value: object, currency: str, field: str) -> Money:
 
 def _canonical_money(value: object, currency: str, field: str, *, non_negative: bool = False) -> Money:
     try:
-        money = Money.from_canonical_dict(value)  # type: ignore[arg-type]
+        money = Money.from_strict_canonical_dict(value)  # type: ignore[arg-type]
     except (TypeError, ValueError, KeyError) as exc:
         raise ConsolidationError(f"Acquisition {field} money must use canonical exact decimal text.") from exc
-    if not isinstance(value, dict) or value.get("amount") != str(money.amount):
-        raise ConsolidationError(f"Acquisition {field} money must use canonical exact decimal text.")
-    if value.get("currency") != money.currency:
-        raise ConsolidationError(f"Acquisition {field} money must use a canonical currency code.")
     if money.currency != currency:
         raise ConsolidationError(f"Acquisition {field} money must use the reporting currency.")
     if not money.amount.is_finite():

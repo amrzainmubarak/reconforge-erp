@@ -135,6 +135,7 @@ def test_ownership_change_payload_verification_requires_exact_balance() -> None:
     ("field", "value"),
     [
         ("lines", "1e2"),
+        ("lines", "0100.00"),
         ("new_nci_percentage", "0.300"),
         ("nci_rounding_delta", "NaN"),
         ("prior_nci_percentage", "0.20"),
@@ -171,6 +172,20 @@ def test_ownership_change_payload_rejects_re_signed_mismatched_line_currency() -
     ).hexdigest()
 
     with pytest.raises(ConsolidationError, match="line currency is invalid"):
+        verify_ownership_change_adjustment_payload(payload)
+
+
+def test_ownership_change_payload_rejects_re_signed_noncanonical_line_currency() -> None:
+    result = prepare_ownership_change_adjustment(_request())
+    payload = result.to_dict()
+    payload["lines"][0]["amount"]["currency"] = "usd"  # type: ignore[index]
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    payload["result_digest"] = sha256(
+        json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+
+    with pytest.raises(ConsolidationError, match="canonical exact decimal"):
         verify_ownership_change_adjustment_payload(payload)
 
 

@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-1022: Strict canonical-money replay reader
+
+- **Date**: 2026-08-29
+- **Context**: Multiple financial replay verifiers needed to reject values
+  that `Money.from_canonical_dict()` could normalize while preserving valid
+  policy/provenance and arithmetic.
+- **Decision**: Add `Money.from_strict_canonical_dict()` as an additive reader
+  that requires the complete input mapping to equal the reconstructed
+  `to_canonical_dict()`. Use it in acquisition, PPA, deferred-tax, and
+  ownership-change replay; retain the compatibility reader unchanged.
+- **Rationale**: One shared deterministic serialization boundary prevents
+  verifier drift and keeps equivalent financial evidence from acquiring
+  multiple persisted representations.
+- **Verification**: ADR 0772, focused strict-reader/replay tests, full
+  regression, and release gates are recorded in E-1110.
+- **Rollback**: Revert E-1110, ADR 0772, strict-reader use sites/tests,
+  manifest, and execution records together; no financial data or deployment
+  state changes.
+
 ### D-1021: Strict PPA and deferred-tax replay money
 
 - **Date**: 2026-08-28

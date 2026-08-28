@@ -176,7 +176,7 @@ def test_acquisition_bridge_rejects_resigned_noncanonical_currency_code() -> Non
         json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
     ).hexdigest()
 
-    with pytest.raises(ConsolidationError, match="canonical currency code"):
+    with pytest.raises(ConsolidationError, match="canonical exact decimal text"):
         verify_acquisition_fair_value_bridge_payload(payload)
 
 

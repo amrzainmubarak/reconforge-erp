@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1110: Add a strict canonical-money replay reader (2026-08-29)
+
+- Code evidence: `Money.from_strict_canonical_dict()` delegates to the existing
+  policy/registry-aware restoration and then compares the complete supplied
+  mapping with `to_canonical_dict()`. Four financial replay verifiers use it;
+  the compatibility reader remains unchanged.
+- Test evidence: the focused money/acquisition/PPA/deferred-tax/impairment/
+  ownership-change selection passes 66/66, including padded/scientific amount,
+  lowercase-currency, and re-signed replay refusal cases.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this is deterministic serialization and replay-integrity evidence
+  for non-posting artifacts. It is not statutory accounting, tax treatment,
+  valuation assurance, posting, or production readiness evidence.
+
 ## E-1109: Strict PPA and deferred-tax replay money (2026-08-28)
 
 - Code evidence: PPA and acquisition deferred-tax replay restore each money

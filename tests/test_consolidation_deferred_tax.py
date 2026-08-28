@@ -144,7 +144,7 @@ def test_deferred_tax_rejects_resigned_noncanonical_money() -> None:
     payload = result.to_dict()
     payload["items"][0]["fair_value"]["currency"] = "usd"  # type: ignore[index]
     _resign(payload)
-    with pytest.raises(ConsolidationError, match="canonical currency code"):
+    with pytest.raises(ConsolidationError, match="canonical exact decimal text"):
         verify_acquisition_deferred_tax_bridge_payload(payload)
 
 

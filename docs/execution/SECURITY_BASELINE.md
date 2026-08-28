@@ -1,5 +1,15 @@
 # Security Baseline
 
+## E-1110 Strict canonical-money replay reader (2026-08-29)
+
+- The additive strict reader rejects mapping drift after policy-aware Money
+  restoration; four non-posting financial replay verifiers use it. Existing
+  compatibility restoration is not changed.
+- Padded/scientific amounts, lowercase currency, and altered canonical fields
+  are covered by focused tests. The full regression and static/security,
+  package, and diff gates pass. This is artifact-integrity evidence, not
+  statutory, valuation, posting, or production assurance.
+
 ## E-1109 Strict PPA and deferred-tax replay money (2026-08-28)
 
 - PPA and deferred-tax replay reject re-signed padded decimal text and

@@ -326,7 +326,7 @@ def verify_ownership_change_adjustment_payload(payload: object) -> dict[str, obj
         if not isinstance(line, dict) or not isinstance(line.get("amount"), Mapping):
             raise ConsolidationError("Ownership-change adjustment line is invalid.")
         try:
-            money = Money.from_canonical_dict(line["amount"])
+            money = Money.from_strict_canonical_dict(line["amount"])
         except (CurrencyMismatchError, InvalidAmountError, TypeError, ValueError) as exc:
             raise ConsolidationError(
                 "Ownership-change adjustment amount must be canonical exact decimal text."

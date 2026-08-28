@@ -5,15 +5,20 @@ from __future__ import annotations
 import json
 
 import pytest
+from fastapi import FastAPI, Request
 
 import reconforge.api.dependencies as dependencies_module
 from reconforge.api.dependencies import (
     _server_policy_audit_sink,
     get_cursor_pagination,
     get_idempotency_key,
+    require_any_permission,
+    require_permission,
 )
 from reconforge.api.errors import APIError
+from reconforge.auth.models import LocalUser
 from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
+from reconforge.platform.common import ServerPrincipal
 
 
 def test_cursor_pagination_defaults() -> None:
@@ -53,6 +58,49 @@ def test_idempotency_key_rejects_blank() -> None:
         get_idempotency_key("   ", None)
     assert exc_info.value.status_code == 400
     assert exc_info.value.code == "invalid_idempotency_key"
+
+
+@pytest.mark.parametrize("dependency_mode", ["all", "any"])
+def test_server_permission_dependency_binds_authenticated_tenant_scope(
+    monkeypatch: pytest.MonkeyPatch,
+    dependency_mode: str,
+) -> None:
+    app = FastAPI()
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/users",
+            "headers": [(b"x-reconforge-tenant", b"tenant-a")],
+            "app": app,
+        }
+    )
+    principal = ServerPrincipal(
+        user=LocalUser(id="user-a", username="alice", display_name="Alice"),
+        permissions=frozenset({"db.read"}),
+        authorized_tenant_ids=frozenset({"tenant-b"}),
+    )
+    request.state.server_principal = principal
+    monkeypatch.setattr(dependencies_module, "server_identity_enabled", lambda _request: True)
+    decisions = []
+    monkeypatch.setattr(
+        dependencies_module,
+        "audit_policy_decision",
+        lambda decision, **_kwargs: decisions.append(decision),
+    )
+
+    dependency = (
+        require_permission("db.read")
+        if dependency_mode == "all"
+        else require_any_permission({"db.read"})
+    )
+    with pytest.raises(APIError) as denied:
+        dependency(request, current_user=principal.user, connection=None)
+
+    assert denied.value.status_code == 403
+    assert denied.value.code == "permission_denied"
+    assert len(decisions) == 1
+    assert decisions[0].reason_code == "tenant_scope_denied"
 
 
 def test_server_policy_audit_sink_persists_only_closed_redacted_evidence(

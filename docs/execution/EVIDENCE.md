@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1088: Bind generic server permission dependencies to tenant scope (2026-08-28)
+
+- Code evidence: the server branches of `require_permission` and
+  `require_any_permission` now include the validated request tenant and the
+  authenticated principal's bound tenant grant in `PolicyEvaluationContext`.
+  The explicit fallback for legacy unbound injected principals is limited to
+  that compatibility seam.
+- Test evidence: the new dependency regression proves that a principal bound
+  to `tenant-b` cannot satisfy a generic `db.read` dependency for a
+  `tenant-a` request. Focused dependency, scope, server-identity, operations,
+  and foundation tests plus the full Python and release gates are recorded for
+  this slice.
+- Packaging evidence: `python -m build --no-isolation` succeeds, and direct
+  inspection of `reconforge_erp-0.7.1.tar.gz` confirms that ADR 0748 is included
+  in the source distribution.
+- Boundary: this closes a local generic-dependency context gap. It does not
+  prove external IAM, independent tenant membership, distributed revocation,
+  hosted enforcement, or production authorization effectiveness.
+
 ## E-1087: Bind authenticated server principals to tenant scope (2026-08-28)
 
 - Code evidence: `authenticate_server_request` records the validated request

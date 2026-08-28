@@ -24,6 +24,7 @@ from reconforge.api.server_audit import execute_postgres_policy_audit, server_au
 from reconforge.api.server_identity import (
     authenticate_server_request,
     record_emergency_authority_use,
+    request_tenant_id,
     server_identity_enabled,
     server_principal_from_authentication,
 )
@@ -515,6 +516,7 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
+            tenant_id = request_tenant_id(request)
             policy_context = PolicyEvaluationContext(
                 user_id=current_user.id if principal is not None else "",
                 username=current_user.username,
@@ -524,6 +526,12 @@ def require_permission(permission: str) -> Callable[..., LocalUser]:
                 step_up_enforced=True,
                 required_step_up_method=_required_step_up_method(request),
                 step_up_method=principal.step_up_method if principal is not None else None,
+                tenant_id=tenant_id,
+                authorized_tenant_ids=(
+                    principal.authorized_tenant_ids
+                    if principal is not None and principal.authorized_tenant_ids
+                    else frozenset({tenant_id}) if principal is not None else frozenset()
+                ),
             )
             decision = _evaluate_policy(
                 request,
@@ -608,6 +616,7 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
             principal = getattr(request.state, "server_principal", None)
             if not isinstance(principal, ServerPrincipal):
                 principal = current_server_principal()
+            tenant_id = request_tenant_id(request)
             policy_context = PolicyEvaluationContext(
                 user_id=current_user.id if principal is not None else "",
                 username=current_user.username,
@@ -617,6 +626,12 @@ def require_any_permission(permissions: set[str]) -> Callable[..., LocalUser]:
                 step_up_enforced=True,
                 required_step_up_method=_required_step_up_method(request),
                 step_up_method=principal.step_up_method if principal is not None else None,
+                tenant_id=tenant_id,
+                authorized_tenant_ids=(
+                    principal.authorized_tenant_ids
+                    if principal is not None and principal.authorized_tenant_ids
+                    else frozenset({tenant_id}) if principal is not None else frozenset()
+                ),
             )
             decision = _evaluate_any_policy(
                 request,

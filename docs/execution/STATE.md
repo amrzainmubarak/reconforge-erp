@@ -2,6 +2,15 @@
 
 Updated: 2026-08-28
 
+## E-1088 - Bind generic server permission dependencies to tenant scope (2026-08-28)
+
+- The central `require_permission` and `require_any_permission` server paths
+  now pass the validated tenant header and the principal's bound tenant grant
+  into policy evaluation. A sibling-tenant principal is denied before the route
+  handler; legacy injected principals without the optional binding use an
+  explicit compatibility fallback. This closes the generic dependency context
+  gap only, not external IAM, distributed revocation, or production assurance.
+
 ## E-1087 - Bind authenticated server principals to tenant scope (2026-08-28)
 
 - `AuthenticatedServerRequest` now carries the tenant used during PostgreSQL

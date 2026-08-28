@@ -5,6 +5,30 @@
 
 ## Decisions
 
+### D-913: Bind generic server permission dependencies to tenant scope
+
+- **Date**: 2026-08-28
+- **Context**: The generic server-mode `require_permission` and
+  `require_any_permission` dependencies evaluated authenticated permissions
+  without passing the validated request tenant into the policy context. More
+  specific server-scoped dependencies already carried tenant provenance.
+- **Decision**: Include the validated request tenant and the principal's bound
+  `authorized_tenant_ids` in both generic server dependency policy contexts.
+  Preserve the named fallback for legacy injected principals with no optional
+  tenant binding, and retain the sanitized API denial while recording the exact
+  tenant-scope reason in policy evidence.
+- **Rationale**: Every authorization dependency is a policy boundary. Tenant
+  provenance must not depend on a later route-specific check or on a request
+  header being treated as an independent grant.
+- **Verification**: Both dependency modes have a sibling-tenant regression;
+  focused tests, full regression, Ruff, Mypy, Bandit, package build, YAML, and
+  diff checks pass for the slice.
+- **Compatibility**: Local SQLite behavior is unchanged. Real server-mode
+  authentication already requires the tenant header; the fallback is only for
+  legacy injected/test seams without the new binding.
+- **Rollback**: Revert E-1088, ADR 0748, the dependency/test changes, manifest
+  entry, and execution records together.
+
 ### D-912: Bind authenticated server principals to tenant scope
 
 - **Date**: 2026-08-28

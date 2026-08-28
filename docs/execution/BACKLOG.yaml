@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1073
+    priority: P0
+    area: container-security
+    title: Bind Alpine security APK retrieval to exact checksums
+    status: completed
+    depends_on: [E-824]
+    exit_evidence: >-
+      Both digest-pinned Docker stages retrieve the reviewed linux/amd64
+      libcrypto3/libssl3 3.5.8-r0 APKs with checksum-bound ADD instructions,
+      install them locally, and remove temporary files. Fresh pull/no-cache
+      build, hardened networkless non-root doctor smoke, exact package
+      inspection, focused supply-chain/container tests, full pytest, and
+      quality gates pass. This resolves package-index drift only; E-824 remains
+      open for current scanner, hosted provenance, signed publication, and
+      independent production evidence.
   - id: E-1072
     priority: P1
     area: auth-governance

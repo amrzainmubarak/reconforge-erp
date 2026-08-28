@@ -2,6 +2,17 @@
 
 Updated: 2026-08-28
 
+## E-1073 - Checksum-bound Alpine security APK retrieval (2026-08-28)
+
+- The digest-pinned container now retrieves the reviewed OpenSSL runtime APKs
+  by exact URL plus SHA-256 and installs them in both stages, so a stale Alpine
+  index cannot select the old package or weaken the pin. The fresh
+  linux/amd64 build and hardened networkless/non-root doctor smoke pass with
+  `3.5.8-r0`; the OpenSSL CLI is absent.
+- E-824 remains open for current Syft/Grype, hosted clean-build/provenance,
+  signed publication, and independent production evidence. The package
+  retrieval fix does not make those claims.
+
 ## E-1072 - Fail-closed local role responses (2026-08-28)
 
 - Local `/api/v1/roles` and role-permission responses now use central

@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-900: Bind Alpine security APK retrieval to reviewed checksums
+
+- **Date**: 2026-08-28
+- **Context**: The digest-pinned Alpine base could fail at the package index
+  when `3.5.8-r0` was present as an artifact but the current index selected
+  only `3.5.7-r0`.
+- **Decision**: Fetch exact `linux/amd64` APK URLs with BuildKit checksums and
+  install the local files in both stages; preserve `apk` verification and the
+  no-CLI runtime boundary.
+- **Verification**: Fresh pull/no-cache Docker build and hardened runtime
+  smoke pass with exact `3.5.8-r0` packages. E-824 remains open for scanner,
+  hosted provenance, and publication evidence.
+- **Rollback**: Revert E-1073 Dockerfile/tests, ADR 0733, manifest, and
+  execution metadata together; never restore unbounded package lookup.
+
 ### D-899: Local role responses use fail-closed projection
 
 - **Date**: 2026-08-28

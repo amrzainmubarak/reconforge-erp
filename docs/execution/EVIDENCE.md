@@ -44,6 +44,38 @@ This file records commands and observed results. It does not convert a dirty wor
   scanner/provenance evidence. The previously retained image evidence is not
   promoted as evidence for this source revision.
 
+## E-1073: Checksum-bound Alpine security APK retrieval (2026-08-28)
+
+- Code evidence: Both Docker stages now fetch the reviewed Alpine
+  `libcrypto3-3.5.8-r0.apk` and `libssl3-3.5.8-r0.apk` artifacts with
+  BuildKit checksum-bound `ADD` instructions, install the local APKs, and
+  remove the temporary files. The Dockerfile remains digest-pinned and does
+  not add the OpenSSL CLI.
+- Artifact evidence: The recorded SHA-256 values are
+  `161223a16f042b8e469e9441291e071464fd91d4f4bbe6f496ee8d0abd4e0701` for
+  libcrypto3 (1,978,546 bytes) and
+  `aca521e5ae4a321322a9d47ed64a1775f5ab1ffd215d1e9fc0433c58f7bfd037` for
+  libssl3 (379,265 bytes). A disposable base-image test installed both
+  artifacts successfully and upgraded the libraries from `3.5.7-r0` to
+  `3.5.8-r0`.
+- Docker evidence: `docker build --pull --no-cache --platform linux/amd64 -t
+  reconforge:current .` exited `0` and produced manifest list
+  `sha256:a4e1b425a341d03ebb7d2d5017b4e2df183e5daf31a6e8e4f8f89e14b9d8e7b2`.
+  Hardened `reconforge doctor` exited `0`; the image ran as UID/GID
+  `10001:10001`, with network disabled, a read-only root, all capabilities
+  dropped, and `no-new-privileges`. Installed packages were exactly
+  `libcrypto3-3.5.8-r0` and `libssl3-3.5.8-r0`; the OpenSSL CLI was absent.
+- Test evidence: Supply-chain and container-hardening suites pass. Full
+  pytest, Ruff over Python sources, Mypy, Bandit, pip-audit, package build,
+  source YAML validation, and diff checks pass. A prior diagnostic run that
+  applied Ruff to the Dockerfile itself is not a repository quality result;
+  Ruff is a Python linter and the Dockerfile was subsequently validated by
+  the real Docker build.
+- Boundary: this closes resilient retrieval of the reviewed local container
+  packages, not the E-824 release gate. Fresh Syft/Grype evidence for this
+  exact image, hosted clean-build/provenance, signed publication, and
+  independent production assurance remain required.
+
 ## E-1072: Fail-closed local role responses (2026-08-28)
 
 - Code evidence: Local role inspection and role-permission responses now pass

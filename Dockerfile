@@ -4,10 +4,17 @@ FROM python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402b
 # The pinned Python index is intentionally retained, but Alpine security
 # packages must be refreshed independently of the slower Python image cadence.
 # Keep the builder inside the same fixed-component boundary as the runtime and
-# fail closed if the reviewed fixed package version is unavailable.
+# fetch the reviewed APK artifacts by URL and checksum. The repository index
+# can lag a fixed security package; an unverified or unavailable artifact must
+# fail the build closed.
+ADD --checksum=sha256:161223a16f042b8e469e9441291e071464fd91d4f4bbe6f496ee8d0abd4e0701 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcrypto3-3.5.8-r0.apk /tmp/libcrypto3.apk
+ADD --checksum=sha256:aca521e5ae4a321322a9d47ed64a1775f5ab1ffd215d1e9fc0433c58f7bfd037 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.8-r0.apk /tmp/libssl3.apk
 RUN apk add --no-cache --upgrade \
-    libcrypto3=3.5.8-r0 \
-    libssl3=3.5.8-r0
+    /tmp/libcrypto3.apk \
+    /tmp/libssl3.apk \
+    && rm -f /tmp/libcrypto3.apk /tmp/libssl3.apk
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -35,12 +42,17 @@ RUN uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy \
 
 FROM python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1 AS runtime
 
-# The official index can lag an Alpine security fix. Install only the named,
-# reviewed OpenSSL runtime versions so the final image contains the fixed
-# packages without adding the OpenSSL CLI to the trimmed runtime.
+# The official index can lag an Alpine security fix. Install only the
+# checksum-bound, reviewed OpenSSL runtime APKs so the final image contains
+# the fixed packages without adding the OpenSSL CLI to the trimmed runtime.
+ADD --checksum=sha256:161223a16f042b8e469e9441291e071464fd91d4f4bbe6f496ee8d0abd4e0701 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcrypto3-3.5.8-r0.apk /tmp/libcrypto3.apk
+ADD --checksum=sha256:aca521e5ae4a321322a9d47ed64a1775f5ab1ffd215d1e9fc0433c58f7bfd037 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.8-r0.apk /tmp/libssl3.apk
 RUN apk add --no-cache --upgrade \
-    libcrypto3=3.5.8-r0 \
-    libssl3=3.5.8-r0
+    /tmp/libcrypto3.apk \
+    /tmp/libssl3.apk \
+    && rm -f /tmp/libcrypto3.apk /tmp/libssl3.apk
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

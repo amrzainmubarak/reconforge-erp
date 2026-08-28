@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,14 @@ runner = CliRunner()
 
 def _money(value: str) -> Money:
     return Money.from_exact(Decimal(value), "USD", strict_precision=True)
+
+
+def _resign(payload: dict[str, object]) -> None:
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    payload["result_digest"] = sha256(
+        json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
 
 
 def _request(**overrides: object) -> AcquisitionDeferredTaxBridgeRequest:
@@ -120,6 +129,22 @@ def test_deferred_tax_tamper_detection_rechecks_arithmetic() -> None:
     payload = result.to_dict()
     payload["items"][0]["tax_amount"]["amount"] = "99.00"  # type: ignore[index]
     with pytest.raises(ConsolidationError, match="digest mismatch"):
+        verify_acquisition_deferred_tax_bridge_payload(payload)
+
+
+def test_deferred_tax_rejects_resigned_noncanonical_money() -> None:
+    result = prepare_acquisition_deferred_tax_bridge(_request())
+
+    payload = result.to_dict()
+    payload["deferred_tax_asset"]["amount"] = "05.00"  # type: ignore[index]
+    _resign(payload)
+    with pytest.raises(ConsolidationError, match="canonical exact decimal text"):
+        verify_acquisition_deferred_tax_bridge_payload(payload)
+
+    payload = result.to_dict()
+    payload["items"][0]["fair_value"]["currency"] = "usd"  # type: ignore[index]
+    _resign(payload)
+    with pytest.raises(ConsolidationError, match="canonical currency code"):
         verify_acquisition_deferred_tax_bridge_payload(payload)
 
 

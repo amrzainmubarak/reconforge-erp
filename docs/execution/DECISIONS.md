@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-1021: Strict PPA and deferred-tax replay money
+
+- **Date**: 2026-08-28
+- **Context**: PPA and deferred-tax replay restored money for arithmetic but
+  could normalize a padded decimal or lowercase currency code from a
+  re-signed payload before comparing it with the reported result.
+- **Decision**: Require every PPA and deferred-tax money object's raw amount
+  and currency to equal its reconstructed canonical `Money` representation,
+  and require canonical top-level reporting currency syntax.
+- **Rationale**: Equivalent arithmetic must not make non-canonical persisted
+  financial evidence acceptable once its outer digest is recomputed.
+- **Verification**: ADR 0771, focused re-signed payload tests, full
+  regression, and release gates are recorded in E-1109.
+- **Rollback**: Revert E-1109, ADR 0771, verifier/tests, manifest, and
+  execution records together; no financial data or deployment state changes.
+
 ### D-1020: Strict acquisition bridge replay amounts
 
 - **Date**: 2026-08-28

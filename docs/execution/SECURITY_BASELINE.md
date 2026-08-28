@@ -1,5 +1,15 @@
 # Security Baseline
 
+## E-1109 Strict PPA and deferred-tax replay money (2026-08-28)
+
+- PPA and deferred-tax replay reject re-signed padded decimal text and
+  lowercase currency codes before financial arithmetic. Policy/registry
+  provenance and the canonical producer serialization must agree.
+- The focused acquisition/PPA/deferred-tax/impairment suite passes 31/31, with
+  full regression and static/security/package/diff gates passing. This is
+  local non-posting artifact integrity, not statutory, tax, valuation, or
+  production assurance.
+
 ## E-1108 Strict acquisition bridge replay amounts (2026-08-28)
 
 - Acquisition replay now fails closed when a re-signed summary or line amount

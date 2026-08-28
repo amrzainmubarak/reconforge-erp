@@ -385,7 +385,11 @@ def _canonical_money(payload: object, currency: str, field: str, *, non_negative
     try:
         value = Money.from_canonical_dict(payload)  # type: ignore[arg-type]
     except (TypeError, ValueError, KeyError) as exc:
-        raise ConsolidationError(f"Acquisition PPA {field} money is invalid.") from exc
+        raise ConsolidationError(f"Acquisition PPA {field} money must use canonical exact decimal text.") from exc
+    if not isinstance(payload, dict) or payload.get("amount") != str(value.amount):
+        raise ConsolidationError(f"Acquisition PPA {field} money must use canonical exact decimal text.")
+    if payload.get("currency") != value.currency:
+        raise ConsolidationError(f"Acquisition PPA {field} money must use a canonical currency code.")
     return _money(value, currency, field, non_negative=non_negative)
 
 
@@ -409,7 +413,11 @@ def verify_acquisition_purchase_price_allocation_payload(payload: object) -> dic
         raise ConsolidationError("Acquisition PPA cannot be posted.")
     acquisition_id = payload.get("acquisition_id")
     currency = payload.get("reporting_currency")
-    if not isinstance(acquisition_id, str) or not isinstance(currency, str):
+    if (
+        not isinstance(acquisition_id, str)
+        or not isinstance(currency, str)
+        or not re.fullmatch(r"[A-Z][A-Z0-9]{2,5}", currency)
+    ):
         raise ConsolidationError("Acquisition PPA identity is invalid.")
     book_net = _canonical_money(payload.get("book_net_assets"), currency, "book net assets")
     fair_net = _canonical_money(payload.get("fair_value_net_assets"), currency, "fair-value net assets", non_negative=True)

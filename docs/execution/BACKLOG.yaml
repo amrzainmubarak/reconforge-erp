@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1109
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict PPA and deferred-tax replay money
+    status: completed
+    depends_on: [E-1108]
+    exit_evidence: >-
+      PPA and acquisition deferred-tax replay now require every restored Money
+      amount string and currency code to reproduce the canonical producer
+      representation, while the reporting currency is uppercase and syntax
+      validated before financial arithmetic. Re-signed padded-decimal and
+      lowercase-currency payloads fail closed. The focused acquisition/PPA/
+      deferred-tax/impairment suite passes 31/31; full regression,
+      static/security, package, YAML, and diff gates pass. This protects
+      non-posting artifact replay only and does not establish statutory tax or
+      acquisition accounting, valuation, posting, or production readiness.
   - id: E-1108
     priority: P0
     area: financial-exactness

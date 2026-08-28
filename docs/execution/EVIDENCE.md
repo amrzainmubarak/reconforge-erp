@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1109: Strict PPA and deferred-tax replay money (2026-08-28)
+
+- Code evidence: PPA and acquisition deferred-tax replay restore each money
+  object through `Money.from_canonical_dict()`, then compare raw amount and
+  currency text to the canonical producer representation before totals and
+  per-item arithmetic are accepted. Top-level reporting currency syntax is
+  explicitly fail-closed.
+- Test evidence: the acquisition/PPA/deferred-tax/impairment focused selection
+  passes 31/31, including re-signed padded-decimal and lowercase-currency PPA
+  and deferred-tax payload rejection.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this protects local non-posting artifact replay. It is not
+  statutory acquisition accounting or tax treatment, tax advice, valuation,
+  journal posting, or production-readiness evidence.
+
 ## E-1108: Strict acquisition bridge replay amounts (2026-08-28)
 
 - Code evidence: acquisition bridge replay restores goodwill, bargain-purchase,

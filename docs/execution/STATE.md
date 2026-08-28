@@ -2,6 +2,17 @@
 
 Updated: 2026-08-28
 
+## E-1109 - Enforce strict PPA and deferred-tax replay money (2026-08-28)
+
+- PPA and deferred-tax replay now compare every persisted Money amount string
+  and currency code with the canonical result reconstructed through its policy
+  and registry provenance, before accepting the financial arithmetic.
+- Re-signed padded decimal and lowercase currency payloads fail closed; the
+  top-level reporting currency must also be canonical uppercase text.
+- The focused acquisition/PPA/deferred-tax/impairment suite passes 31/31. This
+  is a local non-posting replay integrity control, not statutory accounting,
+  tax treatment, valuation assurance, or production assurance.
+
 ## E-1108 - Enforce strict acquisition bridge replay amounts (2026-08-28)
 
 - Acquisition fair-value/goodwill bridge replay now restores every summary and

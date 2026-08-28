@@ -1,5 +1,15 @@
 # Quality Baseline
 
+## E-1109 - Strict PPA and deferred-tax replay money (2026-08-28)
+
+PPA and acquisition deferred-tax replay now reject amounts and currency codes
+that do not exactly reproduce their canonical `Money` serialization, even when
+the outer artifact digest is recomputed. Top-level reporting currency syntax
+is also fail-closed. The focused acquisition/PPA/deferred-tax/impairment suite
+passes 31/31; full locked regression, static/security, package, YAML/schema,
+and diff gates pass. This is a non-posting artifact-integrity control, not
+statutory accounting, tax treatment, valuation, or production readiness.
+
 ## E-1108 - Strict acquisition bridge replay amounts (2026-08-28)
 
 Acquisition fair-value/goodwill replay now restores all summary and line

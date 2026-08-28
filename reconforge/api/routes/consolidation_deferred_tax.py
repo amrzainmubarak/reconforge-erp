@@ -78,7 +78,7 @@ class DeferredTaxPrepareRequest(BaseModel):
     @staticmethod
     def _money(value: CanonicalMoneyRequest) -> Money:
         try:
-            return Money.from_canonical_dict(value.model_dump(mode="python"))
+            return Money.from_strict_canonical_dict(value.model_dump(mode="python"))
         except (TypeError, ValueError, KeyError) as exc:
             raise APIError(
                 status_code=400,

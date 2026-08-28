@@ -2,6 +2,15 @@
 
 Updated: 2026-08-29
 
+## E-1113 - Strict canonical API and CLI Money inputs (2026-08-29)
+
+- Five consolidation API Money adapters and the intercompany CLI now require
+  exact canonical Money serialization at input. The legacy ownership-change
+  CLI two-field contract remains unchanged and explicitly non-canonical.
+- Padded amount text is rejected before domain arithmetic. Focused interface /
+  domain tests and the full locked Python 3.11 regression pass. This is input
+  contract evidence, not statutory or production assurance.
+
 ## E-1112 - Strict PostgreSQL ownership-change Money hydration (2026-08-29)
 
 - PostgreSQL ownership-change persisted request hydration now uses

@@ -1,5 +1,13 @@
 # Security Baseline
 
+## E-1113 Strict canonical API and CLI Money inputs (2026-08-29)
+
+- Canonical Money request adapters fail closed on padded/scientific amount
+  text, lowercase currency, and altered provenance before domain arithmetic;
+  the legacy ownership-change CLI contract is explicitly excluded.
+- Focused interface/domain tests and full locked static/security/package/diff
+  gates pass. This is input-integrity evidence, not production assurance.
+
 ## E-1112 Strict PostgreSQL ownership-change Money hydration (2026-08-29)
 
 - Persisted ownership-change Money fields now fail closed on non-canonical

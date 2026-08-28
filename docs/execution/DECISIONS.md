@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-1025: Strict canonical API and CLI Money inputs
+
+- **Date**: 2026-08-29
+- **Context**: Declared canonical Money request boundaries still used the
+  compatibility reader and could normalize padded or otherwise non-canonical
+  serialized values before domain construction.
+- **Decision**: Use the strict reader in five consolidation API adapters and
+  the intercompany CLI; retain the explicitly legacy ownership-change CLI
+  two-field input contract and other compatibility readers.
+- **Rationale**: Canonical input contracts should reject representation drift
+  at ingress instead of accepting it and relying on later canonical output.
+- **Verification**: ADR 0775, focused interface/domain tests, full regression,
+  and release gates are recorded in E-1113.
+- **Rollback**: Revert E-1113, ADR 0775, interface/test changes, manifest, and
+  execution records; no schema, financial data, or deployment state changes.
+
 ### D-1024: Strict PostgreSQL ownership-change Money hydration
 
 - **Date**: 2026-08-29

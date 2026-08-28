@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1113: Strict canonical API and CLI Money inputs (2026-08-29)
+
+- Code evidence: the five consolidation API request adapters and the
+  intercompany elimination CLI use `Money.from_strict_canonical_dict()`;
+  the legacy ownership-change CLI two-field input remains unchanged.
+- Test evidence: focused API Money model, intercompany line, CLI, and domain
+  tests cover canonical success and padded amount refusal at the interface.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this is exact input-contract evidence. It is not statutory
+  accounting, provider, posting, or production-readiness evidence.
+
 ## E-1112: Strict PostgreSQL ownership-change Money hydration (2026-08-29)
 
 - Code evidence: the PostgreSQL ownership-change request hydration helper

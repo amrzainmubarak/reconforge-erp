@@ -4638,7 +4638,7 @@ def consolidation_intercompany_eliminations_command(
             if not isinstance(amount, dict):
                 raise PlatformError(f"Intercompany elimination line {index} amount must be canonical Money.")
             values = dict(raw_line)
-            values["amount"] = Money.from_canonical_dict(cast(dict[str, object], amount))
+            values["amount"] = Money.from_strict_canonical_dict(cast(dict[str, object], amount))
             lines.append(IntercompanyEliminationInputLine(**values))
         result = IntercompanyEliminationApplicationService.prepare(
             tuple(lines),

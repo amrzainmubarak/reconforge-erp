@@ -1,5 +1,14 @@
 # Quality Baseline
 
+## E-1113 - Strict canonical API and CLI Money inputs (2026-08-29)
+
+The five consolidation API Money adapters and intercompany CLI now reject
+non-canonical Money mappings at input while canonical producer requests remain
+compatible. The focused interface/domain selection and full locked Python
+3.11 regression, static/security, package, YAML/schema, and diff gates pass.
+This is input-contract integrity evidence, not statutory accounting or
+production readiness.
+
 ## E-1112 - Strict PostgreSQL ownership-change Money hydration (2026-08-29)
 
 PostgreSQL ownership-change persisted request Money fields now require exact

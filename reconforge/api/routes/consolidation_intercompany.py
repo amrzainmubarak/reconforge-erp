@@ -65,7 +65,7 @@ class IntercompanyLineRequest(BaseModel):
                 reference=self.reference,
                 group_account_code=self.group_account_code,
                 account_type=self.account_type,
-                amount=Money.from_canonical_dict(self.amount.model_dump(mode="python")),
+                amount=Money.from_strict_canonical_dict(self.amount.model_dump(mode="python")),
                 source_reference=self.source_reference,
                 source_digest=self.source_digest,
             )

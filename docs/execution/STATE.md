@@ -2,6 +2,21 @@
 
 Updated: 2026-08-28
 
+## E-1079 - Bind governed durable workers to verified permission manifests (2026-08-28)
+
+- `GovernedDurableJobWorkerService` now requires a verified
+  `WorkerPermissionManifest`. Claim and all lease/lifecycle rechecks bind the
+  logical worker ID, service-account principal ID, exact tenant/workspace/
+  organization/entity namespace, and the manifest's non-human execution
+  permission before the repository is touched.
+- The manifest's separate discovery permission cannot be supplied as an
+  execution grant, preventing per-call permission substitution. The generic
+  `DurableJobWorkerService` remains unchanged for Community compatibility.
+  Focused worker/manifest tests pass 22/22; full regression and release gates
+  are required as final slice evidence. This is opt-in local policy evidence,
+  not external IAM provisioning, universal worker adoption, distributed
+  revocation, or production authorization assurance.
+
 ## E-1078 - Canonical matching requires explicit currency (2026-08-28)
 
 - The deterministic engine now treats missing currency as a visible

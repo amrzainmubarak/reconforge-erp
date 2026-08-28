@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1079
+    priority: P0
+    area: identity-governance
+    title: Bind governed durable workers to verified permission manifests
+    status: completed
+    depends_on: [E-1005, E-1008, E-1078]
+    exit_evidence: >-
+      GovernedDurableJobWorkerService requires a verified WorkerPermissionManifest
+      and rejects worker/principal identity drift, namespace drift, and any
+      requested permission other than the manifest's non-human execution
+      permission before repository access. Claim and every lease/lifecycle
+      boundary therefore use the same digestable execution contract; the
+      manifest's discovery permission cannot be used as an execution grant.
+      Focused worker/manifest tests pass 22/22, with full regression and
+      release-quality gates required for the slice. This closes the opt-in
+      governed facade boundary only; unwrapped workers, external IAM
+      provisioning, distributed revocation, and production effectiveness
+      remain open.
   - id: E-1078
     priority: P0
     area: financial-exactness

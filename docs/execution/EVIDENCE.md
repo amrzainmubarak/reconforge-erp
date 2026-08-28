@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1079: Bind governed durable workers to verified permission manifests (2026-08-28)
+
+- Code evidence: `GovernedDurableJobWorkerService` now requires a
+  `WorkerPermissionManifest` and validates its worker ID, service-account
+  principal ID, exact canonical tenant/workspace/organization/entity scope,
+  and execution permission before delegating to the durable-job repository.
+  The discovery permission is intentionally not accepted by the execution
+  facade. The backend-neutral worker primitive remains unchanged.
+- Test evidence: `tests/test_governed_worker_policy.py` and
+  `tests/test_worker_permission_manifest.py` pass 22/22. The regression covers
+  manifest-bound identity, principal, namespace, and permission substitution
+  denials, plus existing policy re-evaluation and lifecycle audit behavior.
+  Full pytest, Ruff, Mypy, Bandit, pip-audit, package build, source YAML, and
+  diff checks are the release gates for this slice.
+- Boundary: this proves the opt-in local governed facade consumes a verified
+  manifest. It does not prove every worker uses the facade, external IAM
+  provisioning, distributed revocation, provider behavior, HA/DR, or
+  production authorization effectiveness.
+
 ## E-1078: Canonical matching requires explicit currency (2026-08-28)
 
 - Code evidence: `DeterministicMatchingEngine._ordered_records` now marks a

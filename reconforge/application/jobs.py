@@ -13,6 +13,7 @@ from reconforge.auth.policy import (
     PolicyEvaluationContext,
     audit_policy_decision,
 )
+from reconforge.deployment.worker_permissions import WorkerPermissionManifest
 from reconforge.domain.jobs import (
     DurableJob,
     DurableJobBackpressureError,
@@ -884,9 +885,11 @@ class GovernedDurableJobWorkerService:
         self,
         worker: DurableJobWorkerService,
         *,
+        permission_manifest: WorkerPermissionManifest,
         policy_engine: CentralPolicyEngine | None = None,
     ) -> None:
         self._worker = worker
+        self._permission_manifest = permission_manifest
         self._policy = policy_engine or CentralPolicyEngine()
 
     def claim(
@@ -905,6 +908,7 @@ class GovernedDurableJobWorkerService:
     ) -> LeasedJob | None:
         """Authorize one scoped claim, then delegate to the lease primitive."""
 
+        self._validate_manifest_identity(worker_id=worker_id, context=policy_context)
         self._authorize(
             policy_context,
             worker_id=worker_id,
@@ -1189,6 +1193,7 @@ class GovernedDurableJobWorkerService:
         """Bind a lifecycle decision to the exact leased job before delegation."""
 
         job = leased_job.job
+        self._validate_manifest_identity(worker_id=leased_job.lease.owner_id, context=policy_context)
         return self._authorize(
             policy_context,
             worker_id=leased_job.lease.owner_id,
@@ -1216,12 +1221,23 @@ class GovernedDurableJobWorkerService:
         action: str,
         object_id: str | None = None,
     ) -> PolicyDecision:
+        if required_permission.strip() != self._permission_manifest.execution_permission:
+            raise JobAuthorizationError("worker permission does not match verified execution permission")
+        if context.user_id != self._permission_manifest.principal_id:
+            raise JobAuthorizationError("worker principal does not match verified permission manifest")
+        if worker_id != self._permission_manifest.worker_id:
+            raise JobAuthorizationError("worker identity does not match verified permission manifest")
+        if self._permission_manifest.scope != _durable_worker_scope(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            organization_id=organization_id,
+            entity_id=entity_id,
+        ):
+            raise JobAuthorizationError("worker scope does not match verified permission manifest")
         if not required_permission.strip():
             raise JobAuthorizationError("worker permission contract is missing")
         if context.principal_type != "service_account":
             raise JobAuthorizationError("durable workers require a service-account principal")
-        if context.user_id != worker_id:
-            raise JobAuthorizationError("worker actor does not match policy identity")
         if context.tenant_id != tenant_id or context.workspace_id != workspace_id:
             raise JobAuthorizationError("worker policy scope does not match claim scope")
         if context.organization_id != organization_id:
@@ -1252,6 +1268,39 @@ class GovernedDurableJobWorkerService:
         if not decision.allowed:
             raise JobAuthorizationError(f"worker policy denied: {decision.reason_code}")
         return decision
+
+    def _validate_manifest_identity(
+        self,
+        *,
+        worker_id: str,
+        context: PolicyEvaluationContext,
+    ) -> None:
+        """Reject a worker/principal pair that is outside the verified manifest."""
+
+        if worker_id != self._permission_manifest.worker_id:
+            raise JobAuthorizationError("worker identity does not match verified permission manifest")
+        if context.user_id != self._permission_manifest.principal_id:
+            raise JobAuthorizationError("worker principal does not match verified permission manifest")
+
+
+def _durable_worker_scope(
+    *,
+    tenant_id: str,
+    workspace_id: str | None,
+    organization_id: str | None,
+    entity_id: str | None,
+) -> str:
+    """Serialize the worker namespace in the manifest's canonical order."""
+
+    parts = [f"tenant:{tenant_id}"]
+    for name, value in (
+        ("workspace", workspace_id),
+        ("organization", organization_id),
+        ("entity", entity_id),
+    ):
+        if value is not None:
+            parts.append(f"{name}:{value}")
+    return "/".join(parts)
 
 
 class RoundRobinDurableJobScheduler:

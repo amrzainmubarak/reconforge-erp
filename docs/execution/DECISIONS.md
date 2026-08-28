@@ -5,6 +5,33 @@
 
 ## Decisions
 
+### D-908: Bind governed durable workers to verified permission manifests
+
+- **Date**: 2026-08-28
+- **Context**: The offline worker-permission verifier already separated
+  discovery and execution grants and produced a deterministic digest, but the
+  opt-in governed worker facade accepted a caller-supplied permission on every
+  lifecycle call without consuming that contract.
+- **Decision**: Require `GovernedDurableJobWorkerService` to receive a verified
+  `WorkerPermissionManifest`. Before repository access, bind the manifest's
+  worker ID, principal ID, and canonical tenant/workspace/organization/entity
+  namespace. Require the manifest's non-human execution permission for claim,
+  lease, checkpoint, effect, and terminal lifecycle actions; reject the
+  separate discovery permission at this execution boundary.
+- **Rationale**: A verified deployment artifact must constrain runtime input,
+  otherwise an operator can present one reviewed manifest and execute through
+  a different per-call permission or scope. Keeping the raw worker primitive
+  unchanged preserves the local Community adapter while making the governed
+  adoption boundary fail closed.
+- **Verification**: E-1079 focused worker/manifest tests, full regression,
+  Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff checks.
+- **Compatibility**: The governed facade constructor is intentionally stricter;
+  existing callers must provide a verified manifest. The backend-neutral
+  `DurableJobWorkerService` API and storage schemas are unchanged.
+- **Rollback**: Revert E-1079, ADR 0739, the focused tests, and execution
+  evidence together; do not restore unbound per-call permissions on the
+  governed facade without a replacement binding contract.
+
 ### D-907: Require explicit currency in canonical matching
 
 - **Date**: 2026-08-28

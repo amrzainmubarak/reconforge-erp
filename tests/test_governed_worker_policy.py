@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,7 @@ from reconforge.application.jobs import (
 )
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.db import connect, run_migrations
+from reconforge.deployment import WorkerPermissionManifest
 from reconforge.domain.jobs import JobOutputManifest
 from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository
 
@@ -45,8 +47,8 @@ def _context(
     entity: str | None = "entity-a",
 ) -> PolicyEvaluationContext:
     return PolicyEvaluationContext(
-        user_id="svc-match-worker",
-        username="svc-match-worker",
+        user_id="svc-reconciliation-a",
+        username="svc-reconciliation-a",
         user_permissions=permissions,
         principal_type=principal_type,  # type: ignore[arg-type]
         tenant_id=tenant,
@@ -63,7 +65,17 @@ def _services(tmp_path: Path) -> tuple[DurableJobApplicationService, GovernedDur
     run_migrations(path)
     repository = SQLiteDurableJobRepository(connect(path, require_exists=True))
     application = DurableJobApplicationService(repository)
-    governed = GovernedDurableJobWorkerService(DurableJobWorkerService(repository))
+    governed = GovernedDurableJobWorkerService(
+        DurableJobWorkerService(repository),
+        permission_manifest=WorkerPermissionManifest(
+            worker_id="reconciliation-worker-a",
+            principal_id="svc-reconciliation-a",
+            discovery_permission="match.discover",
+            execution_permission="match.run",
+            granted_permissions=("match.discover", "match.run"),
+            scope="tenant:tenant-a/workspace:workspace-a/entity:entity-a",
+        ),
+    )
     return application, governed, repository
 
 
@@ -76,7 +88,7 @@ def test_governed_worker_denies_missing_permission_before_claim(tmp_path: Path) 
             tenant_id="tenant-a",
             workspace_id="workspace-a",
             entity_id="entity-a",
-            worker_id="svc-match-worker",
+            worker_id="reconciliation-worker-a",
             occurred_at="2026-08-05T10:00:01Z",
             lease_expires_at="2026-08-05T10:05:01Z",
             policy_context=_context(permissions=set()),
@@ -96,7 +108,7 @@ def test_governed_worker_requires_service_identity_and_matching_scope(tmp_path: 
         tenant_id="tenant-a",
         workspace_id="workspace-a",
         entity_id="entity-a",
-        worker_id="svc-match-worker",
+        worker_id="reconciliation-worker-a",
         occurred_at="2026-08-05T10:00:01Z",
         lease_expires_at="2026-08-05T10:05:01Z",
         required_permission="match.run",
@@ -113,6 +125,50 @@ def test_governed_worker_requires_service_identity_and_matching_scope(tmp_path: 
     assert repository.list_lease_events(tenant_id="tenant-a", job_id="JOB-GOVERNED-WORKER-1") == []
 
 
+def test_governed_worker_binds_manifest_identity_scope_and_execution_permission(tmp_path: Path) -> None:
+    application, worker, repository = _services(tmp_path)
+    application.submit(_submission(), actor_id="scheduler")
+    common = dict(
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
+        entity_id="entity-a",
+        worker_id="reconciliation-worker-a",
+        occurred_at="2026-08-05T10:00:01Z",
+        lease_expires_at="2026-08-05T10:05:01Z",
+    )
+
+    with pytest.raises(JobAuthorizationError, match="verified permission manifest"):
+        worker.claim(
+            **{**common, "worker_id": "reconciliation-worker-other"},
+            policy_context=_context(permissions={"match.run"}),
+            required_permission="match.run",
+        )
+    with pytest.raises(JobAuthorizationError, match="verified permission manifest"):
+        worker.claim(
+            **common,
+            policy_context=replace(_context(permissions={"match.run"}), user_id="svc-other"),
+            required_permission="match.run",
+        )
+    with pytest.raises(JobAuthorizationError, match="verified permission manifest"):
+        worker.claim(
+            **{**common, "workspace_id": "workspace-other"},
+            policy_context=replace(
+                _context(permissions={"match.run"}),
+                workspace_id="workspace-other",
+                authorized_workspace_ids=frozenset({"workspace-other"}),
+            ),
+            required_permission="match.run",
+        )
+    with pytest.raises(JobAuthorizationError, match="execution permission"):
+        worker.claim(
+            **common,
+            policy_context=_context(permissions={"match.discover"}),
+            required_permission="match.discover",
+        )
+
+    assert repository.list_lease_events(tenant_id="tenant-a", job_id="JOB-GOVERNED-WORKER-1") == []
+
+
 def test_governed_worker_claims_only_after_scoped_service_policy_allows(tmp_path: Path) -> None:
     application, worker, repository = _services(tmp_path)
     application.submit(_submission(), actor_id="scheduler")
@@ -121,7 +177,7 @@ def test_governed_worker_claims_only_after_scoped_service_policy_allows(tmp_path
         tenant_id="tenant-a",
         workspace_id="workspace-a",
         entity_id="entity-a",
-        worker_id="svc-match-worker",
+        worker_id="reconciliation-worker-a",
         occurred_at="2026-08-05T10:00:01Z",
         lease_expires_at="2026-08-05T10:05:01Z",
         policy_context=_context(permissions={"match.run"}),
@@ -143,7 +199,7 @@ def test_governed_worker_rechecks_policy_before_lease_extension_and_completion(t
         tenant_id="tenant-a",
         workspace_id="workspace-a",
         entity_id="entity-a",
-        worker_id="svc-match-worker",
+        worker_id="reconciliation-worker-a",
         occurred_at="2026-08-05T10:00:01Z",
         lease_expires_at="2026-08-05T10:05:01Z",
         policy_context=allowed,
@@ -216,7 +272,7 @@ def test_governed_worker_audit_binds_actual_job_and_lifecycle_action(
         tenant_id="tenant-a",
         workspace_id="workspace-a",
         entity_id="entity-a",
-        worker_id="svc-match-worker",
+        worker_id="reconciliation-worker-a",
         occurred_at="2026-08-05T10:00:01Z",
         lease_expires_at="2026-08-05T10:05:01Z",
         policy_context=_context(permissions={"match.run"}),

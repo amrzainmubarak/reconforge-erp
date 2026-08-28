@@ -2,6 +2,32 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1086: Bound policy-decision cache freshness (2026-08-28)
+
+- Code evidence: `PolicyDecisionCache` validates a bounded `cache_ttl_seconds`
+  setting (1 to 3,600 seconds), timestamps each allowed entry with a monotonic
+  clock, and refuses to reuse an entry at or beyond its TTL. Denials and
+  delegated evaluations continue to bypass storage, while the shared-version
+  store remains the cross-process invalidation mechanism.
+- Test evidence: `tests/test_policy_cache.py` passes 8/8, including deterministic
+  expiry at the TTL boundary and invalid configuration rejection. Existing
+  shared-generation, scope-invalidation, denial, delegation, and outage
+  fallback tests remain green.
+- Full-gate evidence: `python -m pytest -q --tb=short --maxfail=1` passes
+  100% with no failures; Ruff passes; Mypy reports no issues in 539 source
+  files; Bandit exits successfully with its existing reviewed `nosec`/comment
+  warnings; and `pip-audit` reports no known vulnerabilities while skipping the
+  unpublished local package.
+- Packaging evidence: `python -m build --no-isolation` successfully produces
+  `reconforge_erp-0.7.1.tar.gz` and
+  `reconforge_erp-0.7.1-py3-none-any.whl`; a direct archive inspection verifies
+  the new ADR and `tests/test_policy_cache.py` are included in the sdist;
+  `BACKLOG.yaml` parses successfully and `git diff --check` passes.
+- Boundary: TTL is defense in depth for the opt-in local cache. It does not
+  replace request-time policy checks or shared-generation invalidation, and it
+  does not prove distributed IAM, instant revocation, hosted enforcement,
+  cross-region behavior, or production effectiveness.
+
 ## E-1085: Prove cross-process engine replay stability (2026-08-28)
 
 - Code evidence: `tests/test_engine_process_replay.py` creates a bounded

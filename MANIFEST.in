@@ -405,6 +405,7 @@ include docs/adr/0283-postgres-consolidation-ppa-evidence-is-non-posting.md
 include docs/adr/0251-ha-dr-operational-profile-bounds.md
 include reconforge/auth/policy_cache.py
 include tests/test_policy_cache.py
+include docs/adr/0746-policy-decision-cache-ttl.md
 include docs/adr/0252-policy-decision-cache-is-explicit-and-scope-aware.md
 include docs/adr/0221-reference-rest-connector-is-read-only-and-schema-closed.md
 include reconforge/connectors/writeback.py

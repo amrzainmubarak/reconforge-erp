@@ -2,6 +2,16 @@
 
 Updated: 2026-08-28
 
+## E-1086 - Bound policy-decision cache freshness (2026-08-28)
+
+- The opt-in `PolicyDecisionCache` now gives allowed decisions a validated
+  maximum age of 30 seconds by default. Expired entries are removed before
+  reuse; denials and delegated decisions remain uncached, and the existing
+  shared-generation invalidation remains the primary cross-process control.
+- Focused policy-cache tests pass. This is bounded local freshness defense in
+  depth only; it does not prove distributed IAM, instant revocation, hosted
+  enforcement, or production effectiveness.
+
 ## E-1085 - Prove cross-process engine replay stability (2026-08-28)
 
 - A new test creates a 500-record synthetic dataset and executes Pandas plus

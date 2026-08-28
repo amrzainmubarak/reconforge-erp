@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1086
+    priority: P0
+    area: identity-governance
+    title: Bound policy-decision cache freshness
+    status: completed
+    depends_on: [E-1005]
+    exit_evidence: >-
+      The opt-in policy-decision cache stores allowed decisions for at most a
+      validated 30-second default TTL, expires entries at the boundary, and
+      retains explicit shared-generation invalidation as the primary
+      cross-process mechanism. Denials and delegated decisions remain
+      uncached. Focused policy-cache tests, full regression, static/security
+      gates, package build, and evidence documentation pass. This is a local
+      bounded freshness control, not distributed IAM or production assurance.
   - id: E-1085
     priority: P0
     area: matching
@@ -3171,6 +3185,13 @@ tasks:
       checks for creator-vs-approver flows, and auditable policy decisions with stable identity
       canonicalization and namespace scopes.
     completed_slices:
+      - >
+        E-1086 bounds the opt-in allowed-decision cache with a validated
+        30-second default TTL and an injectable monotonic clock for deterministic
+        testing. Expiry is defense in depth; shared-generation invalidation,
+        request-time policy evaluation, and uncached denials/delegations remain
+        required. This is bounded cache-freshness evidence, not distributed IAM
+        or production effectiveness.
       - E-1084 freezes the reviewed mode and exact permission tuple for selected
         critical financial API mutations. Full application construction now
         requires every selected critical route and fails closed on contract

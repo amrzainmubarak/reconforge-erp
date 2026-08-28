@@ -3218,6 +3218,21 @@ tasks:
       canonicalization and namespace scopes.
     completed_slices:
       - >
+        E-1088 closes the generic server permission-context gap: both
+        `require_permission` and `require_any_permission` pass the validated
+        request tenant and the principal's bound tenant grant into central
+        policy evaluation. A sibling tenant is denied before the route handler
+        in both dependency modes. This is bounded local authorization-context
+        evidence; external IAM, distributed revocation, and production
+        effectiveness remain open.
+      - >
+        E-1087 carries the tenant used by PostgreSQL credential verification
+        through `AuthenticatedServerRequest` into `ServerPrincipal`, and
+        server-scoped policy/operations contexts reuse that grant. A bound
+        sibling tenant is rejected before policy or repository work. This is
+        provenance hardening only; independent membership, distributed IAM,
+        and production effectiveness remain open.
+      - >
         E-1086 bounds the opt-in allowed-decision cache with a validated
         30-second default TTL and an injectable monotonic clock for deterministic
         testing. Expiry is defense in depth; shared-generation invalidation,

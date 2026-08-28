@@ -1,5 +1,16 @@
 # Security Baseline
 
+## E-1108 Strict acquisition bridge replay amounts (2026-08-28)
+
+- Acquisition replay now fails closed when a re-signed summary or line amount
+  is malformed, non-canonical, non-finite, policy-inconsistent, or in a
+  different or non-canonical currency. The verifier restores the embedded
+  canonical money policy before balance evaluation.
+- The focused acquisition suite passes 13/13 and the locked full regression
+  plus static/security/package/diff gates pass. The control protects local
+  artifact integrity; it does not provide statutory, valuation, or production
+  assurance.
+
 ## E-824 Exact local container security disposition (2026-08-28)
 
 - The current Python 3.12.14 linux/amd64 candidate passes the exact

@@ -1,5 +1,17 @@
 # Quality Baseline
 
+## E-1108 - Strict acquisition bridge replay amounts (2026-08-28)
+
+Acquisition fair-value/goodwill replay now restores all summary and line
+amounts through canonical `Money` dictionaries, checks the exact persisted
+decimal text, validates policy/registry provenance and canonical currency,
+and then
+balances the bridge. The focused acquisition suite passes 13/13, including
+re-signed scientific and non-canonical amount rejection. Full locked
+regression, static/security, package, YAML/schema, and diff gates pass. This
+remains a non-posting financial integrity control, not statutory accounting or
+production readiness.
+
 ## E-824 - Exact local container security disposition (2026-08-28)
 
 Checksum-verified Syft 1.51.0 and Grype 0.117.0 passed the exact candidate

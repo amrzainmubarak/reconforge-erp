@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1108: Strict acquisition bridge replay amounts (2026-08-28)
+
+- Code evidence: acquisition bridge replay restores goodwill, bargain-purchase,
+  and every line amount through `Money.from_canonical_dict()`, checks canonical
+  exact decimal text and currency code against the normalized producer
+  representation, enforces reporting-currency equality, and retains exact
+  zero-sum checks.
+- Test evidence: `tests/test_consolidation_acquisition.py` passes 13/13,
+  including re-signed scientific and non-canonical summary/line payloads that
+  fail closed before arithmetic acceptance.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this protects replay integrity of a local non-posting artifact. It
+  is not statutory acquisition accounting, valuation assurance, journal
+  posting, or production readiness evidence.
+
 ## E-1107: Content-bound deployment-readiness evidence (2026-08-28)
 
 - Code evidence: `load_deployment_readiness_matrix()` now requires a closed

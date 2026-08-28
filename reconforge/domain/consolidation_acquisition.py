@@ -81,6 +81,24 @@ def _money(value: object, currency: str, field: str) -> Money:
     return value
 
 
+def _canonical_money(value: object, currency: str, field: str, *, non_negative: bool = False) -> Money:
+    try:
+        money = Money.from_canonical_dict(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError, KeyError) as exc:
+        raise ConsolidationError(f"Acquisition {field} money must use canonical exact decimal text.") from exc
+    if not isinstance(value, dict) or value.get("amount") != str(money.amount):
+        raise ConsolidationError(f"Acquisition {field} money must use canonical exact decimal text.")
+    if value.get("currency") != money.currency:
+        raise ConsolidationError(f"Acquisition {field} money must use a canonical currency code.")
+    if money.currency != currency:
+        raise ConsolidationError(f"Acquisition {field} money must use the reporting currency.")
+    if not money.amount.is_finite():
+        raise ConsolidationError(f"Acquisition {field} money must be finite.")
+    if non_negative and money.amount < 0:
+        raise ConsolidationError(f"Acquisition {field} money must not be negative.")
+    return money
+
+
 def _decimal_text(value: Decimal) -> str:
     if not value.is_finite():
         raise ConsolidationError("Acquisition bridge decimals must be finite.")
@@ -334,20 +352,15 @@ def verify_acquisition_fair_value_bridge_payload(payload: object) -> dict[str, o
     if payload.get("posted") is not False:
         raise ConsolidationError("Acquisition bridge cannot be posted.")
     currency = payload.get("reporting_currency")
-    if not isinstance(currency, str):
-        raise ConsolidationError("Acquisition bridge reporting currency is missing.")
+    if not isinstance(currency, str) or not re.fullmatch(r"[A-Z][A-Z0-9]{2,5}", currency):
+        raise ConsolidationError("Acquisition bridge reporting currency is invalid.")
     lines = payload.get("lines")
     if not isinstance(lines, list) or len(lines) not in {3, 4, 5}:
         raise ConsolidationError("Acquisition bridge requires three to five lines.")
     summary_values: dict[str, Decimal] = {}
     for field in ("goodwill", "bargain_purchase"):
-        summary = payload.get(field)
-        if not isinstance(summary, dict) or summary.get("currency") != currency or not isinstance(summary.get("amount"), str):
-            raise ConsolidationError(f"Acquisition bridge {field} summary is invalid.")
-        summary_amount = Decimal(summary["amount"])
-        if summary_amount < 0:
-            raise ConsolidationError(f"Acquisition bridge {field} summary cannot be negative.")
-        summary_values[field] = summary_amount
+        summary = _canonical_money(payload.get(field), currency, f"bridge {field} summary", non_negative=True)
+        summary_values[field] = summary.amount
     seen: set[str] = set()
     line_values: dict[str, Decimal] = {}
     total = Decimal("0")
@@ -365,11 +378,9 @@ def verify_acquisition_fair_value_bridge_payload(payload: object) -> dict[str, o
             raise ConsolidationError("Acquisition bridge line types must be unique and known.")
         seen.add(line_type)
         amount = line.get("amount")
-        if not isinstance(amount, dict) or amount.get("currency") != currency or not isinstance(amount.get("amount"), str):
-            raise ConsolidationError("Acquisition bridge line amount is invalid.")
-        line_amount = Decimal(amount["amount"])
-        line_values[line_type] = line_amount
-        total += line_amount
+        line_money = _canonical_money(amount, currency, f"bridge {line_type} line")
+        line_values[line_type] = line_money.amount
+        total += line_money.amount
     if {"consideration", "nci", "identifiable_net_assets"} - seen:
         raise ConsolidationError("Acquisition bridge core lines are missing.")
     if "goodwill" in seen and "bargain_purchase" in seen:

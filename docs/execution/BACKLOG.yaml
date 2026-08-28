@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1108
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict acquisition bridge replay amounts
+    status: completed
+    depends_on: [E-1107]
+    exit_evidence: >-
+      Acquisition fair-value/goodwill bridge replay now restores every summary
+      and line amount through Money.from_canonical_dict, verifies canonical
+      exact decimal text, canonical uppercase currency codes, embedded currency
+      policy/registry provenance, and reporting-currency equality before balance evaluation. Re-signed
+      scientific, non-canonical, non-finite, malformed, and mismatched-money
+      payloads fail closed. The focused acquisition suite passes 13/13; full
+      regression, static/security, package, YAML, and diff gates pass. This
+      remains a non-posting calculation artifact and does not prove statutory
+      acquisition accounting or production readiness.
   - id: E-1107
     priority: P1
     area: deployment-governance

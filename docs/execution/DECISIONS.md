@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1020: Strict acquisition bridge replay amounts
+
+- **Date**: 2026-08-28
+- **Context**: Acquisition bridge replay used `Decimal(text)` for persisted
+  summary and line amounts. A caller able to recompute the outer digest could
+  therefore submit scientific or non-canonical decimal text.
+- **Decision**: Restore every persisted money payload through
+  `Money.from_canonical_dict()`, require its amount text and currency code to
+  equal the canonical producer representation, bind it to the reporting
+  currency, and apply
+  non-negative validation to goodwill and bargain-purchase summaries.
+- **Rationale**: A valid digest must not turn semantically invalid financial
+  serialization into an acceptable replay artifact.
+- **Verification**: ADR 0770, acquisition replay tests, full regression, and
+  release gates are recorded in E-1108.
+- **Rollback**: Revert E-1108, ADR 0770, verifier/tests, manifest, and
+  execution records together; no financial data or deployment state changes.
+
 ### D-1019: Content-bound deployment-readiness evidence
 
 - **Date**: 2026-08-28

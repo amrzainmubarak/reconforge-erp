@@ -2,6 +2,18 @@
 
 Updated: 2026-08-28
 
+## E-1108 - Enforce strict acquisition bridge replay amounts (2026-08-28)
+
+- Acquisition fair-value/goodwill bridge replay now restores every summary and
+  line amount through `Money.from_canonical_dict()` and compares the persisted
+  amount text and currency code with the producer's canonical representation
+  before arithmetic.
+- Embedded currency policy/registry provenance and reporting-currency equality
+  are enforced; re-signed scientific, non-canonical, malformed, non-finite, or
+  mismatched-money payloads fail closed.
+- The focused acquisition suite passes 13/13. This is a non-posting financial
+  integrity control, not statutory accounting or production assurance.
+
 ## E-1107 - Bind deployment-readiness evidence to exact content digests (2026-08-28)
 
 - The closed deployment-readiness matrix now contains one SHA-256 digest for

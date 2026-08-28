@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1096
+    priority: P0
+    area: financial-exactness
+    title: Bind PostgreSQL matching input persistence to the financial policy
+    status: completed
+    depends_on: [E-1095]
+    exit_evidence: >-
+      PostgreSQL matching input registration now uses the same financial input
+      policy as the deterministic engine for both source sides. Strict mode
+      refuses binary floating-point, malformed, non-finite, and missing amounts
+      by persisting no usable amount and marking the input invalid; explicit
+      legacy mode retains compatibility conversion. Focused matching-application
+      tests, full regression, static/security gates, package build, YAML, and
+      diff checks pass. This is adapter-level input-integrity evidence, not
+      driver, provider, cross-engine, capacity, or production assurance.
   - id: E-1095
     priority: P0
     area: financial-exactness

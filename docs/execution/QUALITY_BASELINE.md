@@ -1,5 +1,14 @@
 # Quality Baseline
 
+## E-1096 - PostgreSQL matching persistence follows the financial policy (2026-08-28)
+
+Focused PostgreSQL matching application tests pass with one declared live-
+PostgreSQL capability skip. Strict source hydration rejects binary-float amounts
+before they become usable persisted evidence, while explicit legacy mode remains
+compatible. Full regression and release-quality gates pass for this
+adapter-level slice; provider, capacity, cross-engine, and production evidence
+remain open.
+
 ## E-1095 - Strict PostgreSQL financial hydration (2026-08-28)
 
 Focused PostgreSQL policy-analysis and ledger repository tests pass, and the

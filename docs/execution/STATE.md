@@ -2,6 +2,18 @@
 
 Updated: 2026-08-28
 
+## E-1096 - Bind PostgreSQL matching input persistence to the financial policy (2026-08-28)
+
+- PostgreSQL matching input registration now hydrates source amounts through the
+  same `financial_input_policy` passed to the deterministic engine. Strict mode
+  refuses binary floating-point, malformed, non-finite, and missing amounts by
+  storing no usable amount and marking the source input invalid; the explicit
+  legacy policy retains compatibility conversion.
+- This aligns persisted source evidence with the decision boundary. It is
+  adapter-level input-integrity evidence only; PostgreSQL driver behavior,
+  provider authenticity, cross-engine parity, capacity, and production
+  financial assurance remain open.
+
 ## E-1095 - Enforce strict PostgreSQL financial hydration (2026-08-28)
 
 - PostgreSQL policy-analysis scope amount bounds and trial-balance debit/credit

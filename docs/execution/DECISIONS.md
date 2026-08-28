@@ -5,6 +5,28 @@
 
 ## Decisions
 
+### D-1007: PostgreSQL matching input persistence follows the financial policy
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL matching adapter passed a financial input policy to
+  the deterministic engine, while `_register_inputs()` independently used
+  `Decimal(str(value))` for persisted source amounts. This could make a binary
+  float appear exact in stored evidence even when strict matching rejected it.
+- **Decision**: Hydrate source amounts through `parse_amount()` with the same
+  policy used by the engine on both source sides. Strict mode records no usable
+  amount and marks the input invalid; explicit legacy mode retains compatibility
+  conversion.
+- **Rationale**: The decision and evidence boundaries must share one versioned
+  financial-input contract; invalid amounts cannot become valid through a
+  persistence-only conversion.
+- **Verification**: Strict-rejection, legacy-compatibility, lineage, and full
+  matching-application tests pass; full regression and release gates are
+  recorded in E-1096.
+- **Compatibility**: Exact valid inputs are unchanged. Only strict binary-float
+  source hydration changes from an apparently valid Decimal to invalid input.
+- **Rollback**: Revert E-1096, ADR 0756, the adapter/test changes, manifest
+  entry, and execution records together.
+
 ### D-1006: Strict PostgreSQL financial hydration
 
 - **Date**: 2026-08-28

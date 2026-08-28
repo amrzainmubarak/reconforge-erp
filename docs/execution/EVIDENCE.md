@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1096: Bind PostgreSQL matching input persistence to the financial policy (2026-08-28)
+
+- Code evidence: `PostgresMatchingRepository._run_records()` passes the selected
+  `financial_input_policy` to both source-registration calls, and
+  `_register_inputs()` uses `parse_amount()` with that policy. Strict invalid
+  amounts are persisted as no usable amount and `valid=False`; explicit legacy
+  mode retains its compatibility conversion.
+- Test evidence: `tests/test_postgres_matching_application.py::test_source_record_hydration_applies_financial_input_policy`
+  proves strict binary-float rejection and legacy compatibility; the existing
+  complete-run, lineage, schema, and no-SQLite-dependency tests remain green.
+- Gate evidence: the focused PostgreSQL matching application suite passes with
+  one declared live-PostgreSQL capability skip; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this proves one adapter-level input/evidence consistency contract.
+  It does not establish driver certification, provider authenticity,
+  cross-engine parity, capacity, or production financial assurance.
+
 ## E-1095: Enforce strict PostgreSQL financial hydration (2026-08-28)
 
 - Code evidence: PostgreSQL policy-analysis scope amount bounds and ledger

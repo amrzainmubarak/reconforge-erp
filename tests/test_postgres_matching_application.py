@@ -4,6 +4,7 @@ import importlib.util
 import inspect
 import os
 import re
+from decimal import Decimal
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Literal
@@ -28,6 +29,7 @@ from reconforge.infrastructure.postgres_matching import (
 from reconforge.infrastructure.postgres_reconciliation import POSTGRES_RECONCILIATION_SCHEMA_SQL
 from reconforge.platform.common import PlatformError
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY, SOURCE_POSITION_COLUMN
+from reconforge.utils.money import LEGACY_FINANCIAL_INPUT_POLICY, STRICT_FINANCIAL_INPUT_POLICY
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -174,6 +176,44 @@ def test_source_records_are_registered_with_exact_zero_and_no_internal_lineage()
     assert saved["amount"] == 0
     assert saved["amount_original"] == "0"
     assert SOURCE_POSITION_COLUMN not in saved["attributes"]
+
+
+def test_source_record_hydration_applies_financial_input_policy() -> None:
+    connection = _Connection()
+    repository = PostgresMatchingRepository(connection, "tenant_a")
+    persistence = _Persistence()
+    repository.persistence = persistence  # type: ignore[assignment]
+    record = {"id": "L-1", "amount": 100.0, "date": "2026-07-28", "reference": "FLOAT"}
+
+    repository._register_inputs(
+        "match-strict",
+        "Left",
+        [record],
+        {1: ("L-1", "f" * 64)},
+        "amount",
+        "date",
+        "reference",
+        False,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
+    strict_saved = persistence.inputs[-1]
+    assert strict_saved["amount"] is None
+    assert strict_saved["valid"] is False
+
+    repository._register_inputs(
+        "match-legacy",
+        "Left",
+        [record],
+        {1: ("L-1", "f" * 64)},
+        "amount",
+        "date",
+        "reference",
+        False,
+        financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+    )
+    legacy_saved = persistence.inputs[-1]
+    assert legacy_saved["amount"] == Decimal("100.0")
+    assert legacy_saved["valid"] is True
 
 
 def test_runtime_module_has_no_sqlite_dependency() -> None:

@@ -131,6 +131,49 @@ def test_ownership_change_payload_verification_requires_exact_balance() -> None:
         verify_ownership_change_adjustment_payload(payload)
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("lines", "1e2"),
+        ("new_nci_percentage", "0.300"),
+        ("nci_rounding_delta", "NaN"),
+        ("prior_nci_percentage", "0.20"),
+        ("unrounded_nci_effect", "100.00"),
+    ],
+)
+def test_ownership_change_payload_rejects_noncanonical_financial_text_after_redigest(
+    field: str, value: str
+) -> None:
+    result = prepare_ownership_change_adjustment(_request())
+    payload = result.to_dict()
+    if field == "lines":
+        payload["lines"][0]["amount"]["amount"] = value  # type: ignore[index]
+    else:
+        payload[field] = value
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    payload["result_digest"] = sha256(
+        json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+
+    with pytest.raises(ConsolidationError, match="canonical exact decimal"):
+        verify_ownership_change_adjustment_payload(payload)
+
+
+def test_ownership_change_payload_rejects_re_signed_mismatched_line_currency() -> None:
+    result = prepare_ownership_change_adjustment(_request())
+    payload = result.to_dict()
+    payload["reporting_currency"] = "EUR"
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    payload["result_digest"] = sha256(
+        json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+
+    with pytest.raises(ConsolidationError, match="line currency is invalid"):
+        verify_ownership_change_adjustment_payload(payload)
+
+
 def test_ownership_change_schema_accepts_the_typed_result() -> None:
     schema = json.loads(
         (ROOT / "docs/schemas/ownership_change_adjustment_v1.schema.json").read_text(encoding="utf-8")

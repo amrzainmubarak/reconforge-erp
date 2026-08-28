@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-1017: Strict ownership-change result replay
+
+- **Date**: 2026-08-28
+- **Context**: Result replay checked a digest and `Decimal(text)` balance only;
+  a freshly re-signed payload could bypass semantic amount validation.
+- **Decision**: Strict-parse and canonicalize scalar result fields, restore
+  line amounts through `Money.from_canonical_dict()`, and require line
+  currencies to match the reporting currency before summing.
+- **Rationale**: Persisted financial evidence must fail closed on semantic
+  corruption even when its outer digest is internally consistent.
+- **Verification**: Ownership-change domain, PostgreSQL, API, full regression,
+  and release gates are recorded in E-1106.
+- **Compatibility**: Valid typed results and fixed currency-precision strings
+  remain supported; invalid re-signed payloads now fail closed.
+- **Rollback**: Revert E-1106, ADR 0766, verifier/tests, manifest, and
+  execution records together.
+
 ### D-1016: Strict canonical ERPNext write-back amounts
 
 - **Date**: 2026-08-28

@@ -2,6 +2,18 @@
 
 Updated: 2026-08-28
 
+## E-1106 - Enforce strict ownership-change result replay amounts (2026-08-28)
+
+- Ownership-change result replay now validates scalar financial fields as
+  strict canonical decimal text and restores line amounts through
+  `Money.from_canonical_dict()` with reporting-currency and registry-policy
+  checks before balance evaluation.
+- Re-signed scientific, non-finite, non-canonical, and mismatched-currency
+  payloads fail closed. The focused suite collected 23 tests with 22 passes
+  and one declared capability skip; full regression and release gates pass.
+  This remains non-posting replay evidence; statutory accounting, provider,
+  settlement, and production assurance remain open.
+
 ## E-1105 - Enforce strict canonical ERPNext write-back amounts (2026-08-28)
 
 - ERPNext Journal Entry and Payment Entry drafts now canonicalize financial

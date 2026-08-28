@@ -12,13 +12,14 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal, localcontext
 from typing import Literal
 
 from reconforge.domain.consolidation import ConsolidationError
-from reconforge.utils.money import Money
+from reconforge.utils.money import CurrencyMismatchError, InvalidAmountError, Money, parse_exact_amount
 
 OWNERSHIP_CHANGE_SCHEMA_VERSION = 1
 OWNERSHIP_CHANGE_ALGORITHM_VERSION = "ownership-change-adjustment-v1"
@@ -87,6 +88,20 @@ def _multiply(left: Decimal, right: Decimal) -> Decimal:
     with localcontext() as context:
         context.prec = max(28, len(left.as_tuple().digits) + len(right.as_tuple().digits) + 4)
         return left * right
+
+
+def _canonical_decimal(value: object, field: str) -> Decimal:
+    """Parse a persisted financial field and require its canonical text form."""
+
+    if not isinstance(value, str):
+        raise ConsolidationError(f"{field} must be canonical exact decimal text.")
+    try:
+        parsed = parse_exact_amount(value)
+    except (InvalidAmountError, TypeError, ValueError) as exc:
+        raise ConsolidationError(f"{field} must be canonical exact decimal text.") from exc
+    if _decimal_text(parsed) != value:
+        raise ConsolidationError(f"{field} must be canonical exact decimal text.")
+    return parsed
 
 
 @dataclass(frozen=True)
@@ -285,7 +300,7 @@ def prepare_ownership_change_adjustment(
 
 
 def verify_ownership_change_adjustment_payload(payload: object) -> dict[str, object]:
-    """Verify a serialized result's digest and balanced Decimal line effects."""
+    """Verify a serialized result's digest and canonical balanced line effects."""
 
     if not isinstance(payload, dict):
         raise ConsolidationError("Ownership-change adjustment payload must be an object.")
@@ -296,17 +311,29 @@ def verify_ownership_change_adjustment_payload(payload: object) -> dict[str, obj
     unsigned.pop("result_digest", None)
     if _digest(unsigned) != expected_digest:
         raise ConsolidationError("Ownership-change adjustment result digest mismatch.")
+    for field in (
+        "new_nci_percentage",
+        "nci_rounding_delta",
+        "prior_nci_percentage",
+        "unrounded_nci_effect",
+    ):
+        _canonical_decimal(payload.get(field), f"Ownership-change {field}")
     lines = payload.get("lines")
     if not isinstance(lines, list) or len(lines) != 3:
         raise ConsolidationError("Ownership-change adjustment requires exactly three lines.")
     total = Decimal("0")
     for line in lines:
-        if not isinstance(line, dict) or not isinstance(line.get("amount"), dict):
+        if not isinstance(line, dict) or not isinstance(line.get("amount"), Mapping):
             raise ConsolidationError("Ownership-change adjustment line is invalid.")
-        amount = line["amount"].get("amount")
-        if not isinstance(amount, str):
-            raise ConsolidationError("Ownership-change adjustment amount is invalid.")
-        total += Decimal(amount)
+        try:
+            money = Money.from_canonical_dict(line["amount"])
+        except (CurrencyMismatchError, InvalidAmountError, TypeError, ValueError) as exc:
+            raise ConsolidationError(
+                "Ownership-change adjustment amount must be canonical exact decimal text."
+            ) from exc
+        if money.currency != payload.get("reporting_currency"):
+            raise ConsolidationError("Ownership-change adjustment line currency is invalid.")
+        total += money.amount
     if total != 0:
         raise ConsolidationError("Ownership-change adjustment lines must balance exactly.")
     return dict(payload)

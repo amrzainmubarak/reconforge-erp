@@ -1,5 +1,14 @@
 # Quality Baseline
 
+## E-1106 - Strict ownership-change result replay amounts (2026-08-28)
+
+Ownership-change serialized results now enforce strict canonical scalar
+financial text and restore line Money values through their embedded currency
+policy before balance evaluation. The focused domain/PostgreSQL/API suite
+collected 23 tests with 22 passes and one declared capability skip; full quality
+gates pass. This is non-posting replay evidence, not statutory or production
+assurance.
+
 ## E-1105 - Strict canonical ERPNext write-back amounts (2026-08-28)
 
 ERPNext Journal Entry and Payment Entry draft payloads now use strict canonical

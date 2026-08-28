@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1106
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict ownership-change result replay amounts
+    status: completed
+    depends_on: [E-1105]
+    exit_evidence: >-
+      Ownership-change result replay validates scalar percentage and derived
+      financial fields with strict canonical decimal text and restores every
+      line through Money.from_canonical_dict before balance evaluation,
+      including currency precision and embedded policy/registry provenance.
+      Re-signed scientific, non-finite, non-canonical, and mismatched-currency
+      payloads fail closed. The focused ownership-change suite collected 23
+      tests with 22 passes and one declared PostgreSQL capability skip; full
+      regression reached 100% with exit 0, and static/security, package, YAML,
+      and diff gates passed. This is non-posting replay evidence, not statutory
+      treatment, provider behavior, or production assurance.
   - id: E-1105
     priority: P0
     area: financial-exactness

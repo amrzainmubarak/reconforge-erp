@@ -1115,3 +1115,4 @@ include docs/adr/0762-strict-camt053-decimal-lexical-boundary.md
 include docs/adr/0763-shared-strict-connector-amount-validation.md
 include docs/adr/0764-strict-canonical-erpnext-read-amounts.md
 include docs/adr/0765-strict-canonical-erpnext-writeback-amounts.md
+include docs/adr/0766-strict-ownership-change-result-replay.md

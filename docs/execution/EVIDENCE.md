@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1106: Enforce strict ownership-change result replay amounts (2026-08-28)
+
+- Code evidence: ownership-change replay now strict-parses canonical scalar
+  percentage/derived fields and restores each line through
+  `Money.from_canonical_dict()` before currency-checked Decimal summation.
+- Test evidence: domain tests cover valid replay and re-signed scientific,
+  non-finite, non-canonical, and mismatched-currency financial payloads;
+  PostgreSQL and API ownership-change replay remain covered.
+- Gate evidence: the focused ownership-change suite collected 23 tests with 22
+  passes and one declared PostgreSQL capability skip; full regression reached
+  100% with exit 0 and empty stderr. Ruff, Mypy, Bandit, pip-audit, package
+  build, YAML, diff, and sdist membership gates pass.
+- Boundary: this is non-posting replay-integrity evidence only. It does not
+  establish statutory accounting treatment, journal posting, provider
+  behavior, settlement, or production assurance.
+
 ## E-1105: Enforce strict canonical ERPNext write-back amounts (2026-08-28)
 
 - Code evidence: ERPNext Journal Entry and Payment Entry draft amounts use the

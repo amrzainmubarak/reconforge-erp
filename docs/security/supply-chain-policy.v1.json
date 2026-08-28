@@ -39,8 +39,8 @@
   },
   "container_resolution": {
     "dockerfile": "Dockerfile",
-    "base_image": "python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1",
-    "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy",
+    "base_image": "python:3.12-alpine@sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31",
+    "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.12 --link-mode copy",
     "service_images": {
       "airgap_python": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
       "postgres_16_ci": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
@@ -71,7 +71,7 @@
       "fail_severities": ["Critical", "High"],
       "unknown_severity_policy": "fail",
       "vex_document": "docs/security/container-runtime.openvex.json",
-      "vex_document_sha256": "3263ae100c4b89aff8737a11ab708fadd4105c8d3aed7ba9514bbcc0df352d95",
+      "vex_document_sha256": "fb8ddf9e58a3b28c861f1ab25fde9d975272bce0745912cbe2ec0712509e690e",
       "vex_context": "https://openvex.dev/ns/v0.2.0",
       "vex_allowed_statuses": ["fixed"],
       "vex_max_review_age_days": 30

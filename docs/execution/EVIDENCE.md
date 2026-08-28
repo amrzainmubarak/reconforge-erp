@@ -2,6 +2,34 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-884: Gate Python 3.12 Alpine base-image upgrade (2026-08-28)
+
+- Code evidence: both Docker stages use the official digest-pinned Python 3.12
+  Alpine base, the locked Python 3.12 dependency command, and runtime cleanup
+  for Python 3.12 global pip/build paths. The reviewed base index digest is
+  `sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31`.
+- Runtime evidence: the no-cache linux/amd64 candidate build passed with image
+  digest `sha256:a96d87d994852b9fc7b9f647977413e37f5959a95f0e7d36bc66584a8b529e52`
+  and config digest
+  `sha256:08723531122c50615c42860fd299b9bb797ba67c231b7f1cb5b1cc8b3822cf0f`.
+  Hardened Doctor, sample validation, and demo generation passed with network
+  disabled, read-only root, dropped capabilities, and bounded tmpfs.
+- Matrix evidence: full locked all-extra Python 3.11 and 3.12 regressions both
+  exited 0; package build, air-gap/rollback drills, API foundation/scope,
+  engine parity, web install/typecheck/tests/build also exited 0. The previous
+  Python 3.11.16 `reconforge:current` image passed Doctor as the rollback
+  smoke.
+- Security evidence: Docker Scout 1.24.0 reported 82 candidate packages and
+  zero Critical/High/Medium/Low findings with exit 0. The exact release
+  Syft/Grype path was attempted; Syft produced the candidate SBOM, but Grype's
+  database refresh remained stale/blocked and was stopped. It is not reported
+  as a successful release gate.
+- Boundary: E-884 closes the local Python 3.12 candidate decision only. E-824
+  remains open for a fresh valid Grype database, hosted clean build, registry
+  publication, signed provenance, legal license review, and production proof.
+  ADR 0767 and `CONTAINER_SECURITY_PY312_CANDIDATE_2026-08-28.md` retain the
+  evidence and rollback procedure.
+
 ## E-1106: Enforce strict ownership-change result replay amounts (2026-08-28)
 
 - Code evidence: ownership-change replay now strict-parses canonical scalar

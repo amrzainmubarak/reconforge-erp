@@ -2,6 +2,21 @@
 
 Updated: 2026-08-28
 
+## E-884 - Gate Python 3.12 Alpine base-image upgrade (2026-08-28)
+
+- The two-stage Dockerfile now uses the official Python 3.12 Alpine index
+  digest `sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31`
+  and installs the locked runtime with the Python 3.12 interpreter.
+- Candidate image build, hardened networkless/read-only Doctor, sample
+  validation, demo generation, Docker Scout, full locked Python 3.11/3.12
+  regressions, web gates, package build, API/parity tests, and air-gap rollback
+  drills pass. The candidate image is `sha256:a96d87d994852b9fc7b9f647977413e37f5959a95f0e7d36bc66584a8b529e52`.
+- The previous Python 3.11 image was smoke-tested successfully as the rollback
+  target. Exact release-integrated Syft/Grype evidence was not falsely closed:
+  Syft generated the candidate SBOM, while the Grype database refresh remained
+  stale/blocked. Hosted clean-build, publication, provenance, and production
+  claims remain open under E-824. ADR 0767 records the decision and limits.
+
 ## E-1106 - Enforce strict ownership-change result replay amounts (2026-08-28)
 
 - Ownership-change result replay now validates scalar financial fields as

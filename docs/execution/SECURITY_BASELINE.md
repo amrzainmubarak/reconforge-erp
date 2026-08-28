@@ -1,5 +1,22 @@
 # Security Baseline
 
+## E-884 Python 3.12 Alpine candidate (2026-08-28)
+
+- The digest-pinned two-stage runtime now uses Python 3.12 Alpine. The
+  linux/amd64 candidate build, hardened networkless/read-only/capability-dropped
+  runtime smoke, sample validation, and demo output all pass.
+- Docker Scout 1.24.0 reports 82 packages and zero Critical/High/Medium/Low
+  findings for the candidate. This is fresh local candidate evidence, not a
+  hosted release scan.
+- Full locked Python 3.11/3.12 application regressions, web gates, package
+  build, API/parity, and air-gap rollback drills pass. The existing Python 3.11
+  image passed Doctor as the rollback smoke.
+- The exact Syft/Grype release-integrated scan is deliberately not claimed as
+  passed: Syft generated the candidate SBOM, but the Grype database refresh
+  remained stale/blocked. E-824 stays open for a fresh valid database, hosted
+  build, signed provenance, and publication. License legality, reachability,
+  cross-platform behavior, and production security effectiveness remain open.
+
 ## E-853 regulated admission gate (2026-08-23)
 
 - Composite verification rejects unresolved profile findings and local key
@@ -215,7 +232,7 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 | `npm.cmd --prefix apps/web audit --package-lock-only --audit-level=high` | Exit 0; 0 vulnerabilities reported | Covers the exact-version npm lock; all 211 current non-root entries have HTTPS registry resolution and embedded SRI |
 | Gitleaks 8.30.1 full history | Exit 0; 602 commits and about 22.49 MB scanned after two exact historical fingerprints were recorded for synthetic test fixtures | Checksum-verified binary and default rules; exact fingerprints are limited to known non-secret test literals; detection is not proof that no secret existed or that external credentials are safe |
 | Gitleaks 8.30.1 checked tree | Exit 0 across a clean 25.12 MB `git archive` checkout; the workspace scan is not evidence because generated environments caused a 6.30 GB/120-second timeout | Only generated/tool-owned paths are excluded; output is 100% redacted and every suppression is an exact commit/path/rule/line or path/rule/line fingerprint |
-| Hardened Docker CLI and exact-image gate | E-822 local exit 0: two official-digest-pinned Python 3.11 Alpine stages, closed context, runtime-only assets, UID/GID 10001, no uv/global pip/source/build manifests/docs; E-959 refreshes both stages to libcrypto3/libssl3 3.5.8-r0 without adding the OpenSSL CLI. Hardened Doctor passes without networking on a read-only root. E-823/E-824 add exact Syft/Grype subject binding and fixed-only hash-bound VEX for three source-proven CPython fixes; E-1074 derives the CI config subject from Syft's native image metadata. | `CONTAINER_SECURITY_LOCAL_2026-08-28.json` records the exact local gate passing with current database v6.1.9, zero blockers, zero active exceptions, and 95.58% license metadata coverage. One Windows/Docker Desktop host and time-bounded databases only; no hosted OCI reproducibility, independent reachability review, license legal review, signature/provenance, production volume ownership, or deployed hardening assurance. |
+| Hardened Docker CLI and exact-image gate | E-884 local exit 0: two official-digest-pinned Python 3.12 Alpine stages, closed context, runtime-only assets, UID/GID 10001, no uv/global pip/source/build manifests/docs; E-959 refreshes both stages to libcrypto3/libssl3 3.5.8-r0 without adding the OpenSSL CLI. Hardened Doctor passes without networking on a read-only root. E-823/E-824 retain exact Syft/Grype subject binding and fixed-only hash-bound VEX contracts; E-1074 derives the CI config subject from Syft's native image metadata. | Fresh Docker Scout 1.24.0 candidate scan reports 82 packages and zero Critical/High/Medium/Low findings. Syft generated the candidate SBOM, but the exact Grype release path is not marked green because database refresh remained stale/blocked. One Windows/Docker Desktop host; no hosted OCI reproducibility, independent reachability review, license legal review, signature/provenance, production volume ownership, or deployed hardening assurance. |
 
 ## Controls observed
 

@@ -8,6 +8,19 @@
 > machine/session. "Passed/blocked" entries are environment-scoped and should not
 > be interpreted as cross-platform production evidence.
 
+## E-884 Python 3.12 container candidate (2026-08-28)
+
+- The Dockerfile now pins both stages to the official Python 3.12 Alpine index
+  digest `sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31`.
+- A clean linux/amd64 no-cache build produced candidate digest
+  `sha256:a96d87d994852b9fc7b9f647977413e37f5959a95f0e7d36bc66584a8b529e52`.
+  Hardened Doctor, sample validation, demo generation, and Docker Scout passed;
+  Scout reported 82 packages and zero Critical/High/Medium/Low findings.
+- Full locked all-extra Python 3.11 and 3.12 regressions, package build,
+  air-gap/rollback, API/parity, and web gates passed. The prior Python 3.11.16
+  image passed Doctor as rollback smoke. Exact fresh Syft/Grype release
+  evidence and hosted publication remain open and are not inferred from Scout.
+
 ## E-831 local refresh (2026-08-22)
 
 - The provider-neutral PostgreSQL write-back recovery/compensation matrix

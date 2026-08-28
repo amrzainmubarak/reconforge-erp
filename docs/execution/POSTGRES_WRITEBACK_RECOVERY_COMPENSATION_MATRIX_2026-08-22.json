@@ -20,7 +20,7 @@
     ]
   },
   "profile": "provider-neutral-writeback-recovery-compensation-parity",
-  "report_digest": "21f7fad80c52bd24f2377361a0496eb5e61b7d6b3e61fcb9a0ae887a955b873e",
+  "report_digest": "37df2c10122e6ae306a68290c9c33fa03f3e2aa97bd165ab517db9095e4ef151",
   "runs": [
     {
       "checks": {
@@ -705,7 +705,7 @@
     "migration_source_sha256": "92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0",
     "postgres_persistence_source_sha256": "d5fd26473a7ada5a89d6aef6ec68a68fe9d8e9eddb115167012284fba10f98d4",
     "sqlite_persistence_source_sha256": "867c198d170e8efda78ccd672a1f7fbd2228ca39cc44ea63415b99eb0ac3bd46",
-    "supply_chain_policy_sha256": "15675362650f9b2691251da77dd01538d72b3a7249c7a60c7591b7bbe0a48cae",
+    "supply_chain_policy_sha256": "d9474480aab505346e9cdb1164e3a74c5d51eee1796c7fa886a732929f6bafe1",
     "writeback_source_sha256": "81da111e8b32adec2c7d90e3bf45d7acc8161f60e7f483ac501f711323cef01c"
   }
 }

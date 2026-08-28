@@ -207,7 +207,7 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 - `docs/security/slsa-provenance-plan.v1.yaml`: Approved-SLSA-1.2-pinned plan for five artifact identities, seven trust boundaries, attestation/verification/failure/rollback contracts, and 12 gates; both tracks remain UNEVALUATED.
 - `.github/workflows/`: CI, CodeQL, Docker, security, release candidate with integrated exact-subject SBOMs, and OpenSSF Scorecard workflows; action references observed in the workflows are pinned by full commit SHA.
 - `Dockerfile` + `.dockerignore`: two stages use the reviewed official-digest-
-  pinned Python 3.11 Alpine base; checksum/version-pinned uv musl creates the locked
+  pinned Python 3.12 Alpine base; checksum/version-pinned uv musl creates the locked
   non-editable environment only in the builder. The runtime omits build
   tooling/source/manifests/documentation, runs as fixed UID/GID 10001, and the policy
   validator closes the deny-by-default build-context allowlist. E-822 verifies

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1 AS builder
+FROM python:3.12-alpine@sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31 AS builder
 
 # The pinned Python index is intentionally retained, but Alpine security
 # packages must be refreshed independently of the slower Python image cadence.
@@ -37,10 +37,10 @@ COPY control-packs ./control-packs
 COPY alembic.ini .
 COPY alembic ./alembic
 
-RUN uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy \
+RUN uv sync --locked --no-dev --no-editable --python 3.12 --link-mode copy \
     && rm -rf /root/.cache/uv
 
-FROM python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1 AS runtime
+FROM python:3.12-alpine@sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31 AS runtime
 
 # The official index can lag an Alpine security fix. Install only the
 # checksum-bound, reviewed OpenSSL runtime APKs so the final image contains
@@ -60,8 +60,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN rm -rf /usr/local/lib/python3.11/site-packages/* \
-    /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.11 \
+RUN rm -rf /usr/local/lib/python3.12/site-packages/* \
+    /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.12 \
     && addgroup -g 10001 -S reconforge \
     && adduser -u 10001 -S -D -H -G reconforge -s /sbin/nologin reconforge \
     && mkdir -p /app/output /data \

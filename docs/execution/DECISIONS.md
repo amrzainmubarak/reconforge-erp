@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1018: Move the bounded runtime base to Python 3.12 Alpine
+
+- **Date**: 2026-08-28
+- **Context**: The Docker runtime remained on Python 3.11 although the locked
+  application matrix supported Python 3.12; a base upgrade needed exact
+  runtime, rollback, matrix, and scan evidence.
+- **Decision**: Accept the official digest-pinned Python 3.12 Alpine base for
+  the local candidate runtime, with the prior Python 3.11 digest retained as a
+  rollback target. Keep hosted publication and the exact fresh Syft/Grype gate
+  separately open.
+- **Rationale**: The candidate build, hardened smoke, full 3.11/3.12 matrix,
+  web/API/package/air-gap checks, rollback smoke, and Docker Scout result pass;
+  the stale scanner database is not converted into a false success.
+- **Verification**: ADR 0767, E-884 evidence, candidate scanner record, and
+  execution quality/security baselines.
+- **Rollback**: Restore the previous Dockerfile base/uv interpreter references
+  and revert the single implementation slice; no data migration is required.
+
 ### D-1017: Strict ownership-change result replay
 
 - **Date**: 2026-08-28

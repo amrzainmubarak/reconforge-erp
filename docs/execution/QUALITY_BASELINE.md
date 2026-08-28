@@ -1,5 +1,19 @@
 # Quality Baseline
 
+## E-884 - Python 3.12 Alpine candidate matrix (2026-08-28)
+
+The candidate Docker image was built from the digest-pinned Python 3.12 Alpine
+base and passed hardened Doctor, sample validation, demo generation, and the
+fresh Docker Scout scan (82 packages, zero Critical/High/Medium/Low findings).
+The complete locked all-extra pytest suite passed on both Python 3.11 and
+Python 3.12 after updating the digest-bound retained PostgreSQL reports.
+Package build, air-gap/rollback drills, API/parity selectors, and web install,
+typecheck, 75 tests, and production build passed. The prior Python 3.11 image
+also passed Doctor as the rollback smoke. The exact Syft/Grype release path is
+not marked green because the fresh Grype database download remained stale or
+blocked; hosted clean-build and publication remain outside this local quality
+result. ADR 0767 records the reproducible commands and boundaries.
+
 ## E-1106 - Strict ownership-change result replay amounts (2026-08-28)
 
 Ownership-change serialized results now enforce strict canonical scalar

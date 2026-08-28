@@ -2324,13 +2324,21 @@ tasks:
     priority: P1
     area: deployment
     title: Gate Python 3.12 Alpine base-image upgrade behind matrix evidence
-    status: planned
+    status: completed
     depends_on: [E-883]
     exit_evidence: >-
-      Planned only. Upgrade the digest-pinned Docker base from Python 3.11
-      Alpine after refreshed Scout evidence, Python/engine parity, package and
-      air-gap verification, Docker/API/web smoke, and a tested rollback. The
-      current 3.11 base remains unchanged until those gates pass.
+      Both Docker stages now use the official Python 3.12 Alpine index digest
+      sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31
+      with the locked Python 3.12 dependency command. The linux/amd64
+      no-cache candidate build produced image digest
+      sha256:a96d87d994852b9fc7b9f647977413e37f5959a95f0e7d36bc66584a8b529e52.
+      Hardened Doctor, sample validation, demo, Docker Scout (82 packages and
+      zero Critical/High/Medium/Low findings), full locked Python 3.11/3.12
+      regressions, package build, API/parity, web, and air-gap/rollback drills
+      pass. The previous Python 3.11.16 image passed Doctor as rollback smoke.
+      Exact fresh Syft/Grype release evidence is explicitly not claimed because
+      the Grype database refresh remained stale/blocked; hosted clean build,
+      publication, provenance, and production assurance remain under E-824.
   - id: E-883
     priority: P1
     area: security

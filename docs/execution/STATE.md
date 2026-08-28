@@ -2,6 +2,15 @@
 
 Updated: 2026-08-29
 
+## E-1114 - Current supply-chain claims follow zero npm SRI gap (2026-08-29)
+
+- Current gap, whitepaper, and documentation-drift surfaces now state the
+  validator-backed result of 211 npm registry entries and zero integrity gaps.
+  Historical records retain their earlier revision context.
+- A regression contract executes the current policy validator and rejects the
+  retired current-surface wording. Hosted provenance and external package
+  assurance remain open.
+
 ## E-1113 - Strict canonical API and CLI Money inputs (2026-08-29)
 
 - Five consolidation API Money adapters and the intercompany CLI now require

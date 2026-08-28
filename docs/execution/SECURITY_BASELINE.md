@@ -1,5 +1,14 @@
 # Security Baseline
 
+## E-1114 Current supply-chain claims follow zero npm SRI gap (2026-08-29)
+
+- Current policy and documentation agree on 211 npm registry entries and zero
+  local integrity gaps; the retired 155-entry statement remains only in dated
+  historical records where it describes an earlier revision.
+- The validator/documentation regression and full locked security/package
+  gates pass. Local SRI metadata is not package-safety, provenance, or hosted
+  enforcement evidence.
+
 ## E-1113 Strict canonical API and CLI Money inputs (2026-08-29)
 
 - Canonical Money request adapters fail closed on padded/scientific amount

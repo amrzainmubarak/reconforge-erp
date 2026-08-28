@@ -2,6 +2,18 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1114: Current supply-chain claims follow zero npm SRI gap (2026-08-29)
+
+- Code/documentation evidence: the current policy validator reports 211 npm
+  registry entries and zero integrity gaps; current gap, whitepaper, and drift
+  surfaces no longer repeat the retired 155-entry wording. Historical records
+  remain dated evidence for earlier revisions.
+- Test evidence: `tests/test_current_supply_chain_claims.py` executes the
+  validator and checks the current surfaces.
+- Boundary: local lock integrity metadata does not prove package safety,
+  maintainer provenance, reachability, license suitability, hosted enforcement,
+  or external assurance.
+
 ## E-1113: Strict canonical API and CLI Money inputs (2026-08-29)
 
 - Code evidence: the five consolidation API request adapters and the

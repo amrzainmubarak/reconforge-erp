@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-1026: Current supply-chain claims follow the zero npm SRI-gap result
+
+- **Date**: 2026-08-29
+- **Context**: The current policy validator reported zero npm integrity gaps,
+  while current-facing documentation still repeated the historical 155-entry
+  gap.
+- **Decision**: Align current gap, whitepaper, and documentation-drift
+  surfaces with the validator-backed zero-gap result; retain historical records
+  as dated evidence and preserve hosted provenance/package-assurance limits.
+- **Rationale**: Release and security decisions require one current truth, and
+  a closed local metadata control must not obscure the remaining trust gaps.
+- **Verification**: ADR 0776, the validator/documentation regression, full
+  regression, and release gates are recorded in E-1114.
+- **Rollback**: Revert E-1114, ADR 0776, current documentation/test changes,
+  manifest, and execution records; no dependency or runtime state changes.
+
 ### D-1025: Strict canonical API and CLI Money inputs
 
 - **Date**: 2026-08-29

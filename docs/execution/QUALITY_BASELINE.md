@@ -1,5 +1,12 @@
 # Quality Baseline
 
+## E-1114 - Current supply-chain claims follow zero npm SRI gap (2026-08-29)
+
+Current supply-chain surfaces now agree with the validator-backed 211 npm
+registry entries and zero integrity gaps, while preserving hosted provenance
+and external package-assurance limitations. The focused documentation/policy
+test and full locked regression/static/security/package/diff gates pass.
+
 ## E-1113 - Strict canonical API and CLI Money inputs (2026-08-29)
 
 The five consolidation API Money adapters and intercompany CLI now reject

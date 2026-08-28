@@ -8,7 +8,24 @@ import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
+from reconforge.api.routes import emergency_access as emergency_routes
 from reconforge.db import run_migrations
+
+
+def test_emergency_server_permission_helper_binds_to_request_tenant(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[object, str, str]] = []
+    monkeypatch.setattr(emergency_routes, "server_identity_enabled", lambda _request: True)
+    monkeypatch.setattr(emergency_routes, "request_tenant_id", lambda _request: "tenant-a")
+    monkeypatch.setattr(
+        emergency_routes,
+        "enforce_server_tenant_permission",
+        lambda request, *, permission, tenant_id: calls.append((request, permission, tenant_id)),
+    )
+
+    request = object()
+    emergency_routes._enforce_server_emergency_permission(request, "security.emergency.request")  # type: ignore[arg-type]
+
+    assert calls == [(request, "security.emergency.request", "tenant-a")]
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL service")

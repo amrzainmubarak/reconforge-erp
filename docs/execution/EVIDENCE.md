@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1077: Tenant-bound emergency mutation policy (2026-08-28)
+
+- Code evidence: named emergency mutations re-evaluate their explicit
+  permissions through `enforce_server_tenant_permission` using the validated
+  request tenant immediately before repository work. Self-service activation
+  and target ending retain their existing human-session and repository guards;
+  only administrator ending receives the named administrative re-evaluation.
+- Test evidence: the focused helper test proves the exact permission and tenant
+  passed to the central boundary. Full pytest, Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff checks pass; live PostgreSQL evidence is
+  conditional on the declared DSN and is not inferred from skipped tests.
+- Boundary: this proves bounded tenant-bound policy provenance for the
+  emergency route. It does not establish PAM, external IAM, universal MFA,
+  distributed invalidation, or production effectiveness.
+
 ## E-1076: Explicit emergency-access request authorization (2026-08-28)
 
 - Code evidence: the PostgreSQL emergency-access request route now depends on

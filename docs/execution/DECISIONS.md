@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-906: Bind emergency mutations to the authenticated tenant policy
+
+- **Date**: 2026-08-28
+- **Context**: Emergency route dependencies checked permissions and assurance,
+  and the PostgreSQL repository used forced RLS, but the policy decision
+  evidence for named emergency mutations was unbound to the request tenant.
+- **Decision**: Re-evaluate `security.emergency.request`,
+  `security.emergency.approve`, and `security.emergency.review` through the
+  central tenant-scoped helper immediately before the corresponding repository
+  mutation. Re-evaluate `security.emergency.approve` for administrator-driven
+  ending. Preserve self-service target activation/end without a synthetic
+  administrative scope and retain all repository guards.
+- **Verification**: E-1077 helper and emergency tests, full regression, Ruff,
+  Mypy, Bandit, pip-audit, package build, YAML, and diff checks.
+- **Compatibility**: No schema or public payload change. Server emergency
+  mutations gain an additional fail-closed policy check; local SQLite remains
+  unavailable for this route family.
+- **Rollback**: Revert E-1077, ADR 0737, helper calls/test, and evidence
+  together. Do not weaken tenant-bound authorization provenance by default.
+
 ### D-905: Require explicit human authorization to request emergency access
 
 - **Date**: 2026-08-28

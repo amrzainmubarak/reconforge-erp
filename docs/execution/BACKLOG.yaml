@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1077
+    priority: P0
+    area: identity-governance
+    title: Bind emergency mutations to tenant policy context
+    status: completed
+    depends_on: [E-1005, E-1076]
+    exit_evidence: >-
+      Emergency request, approval, rejection, review, and administrator-end
+      mutations re-evaluate their explicit permissions through the central
+      tenant-scoped policy boundary before repository work. Target self-service
+      activation/end paths retain their human-session and repository guards.
+      Focused helper/emergency tests, full regression, and release-quality
+      gates pass; ADR 0737 records the compatibility and rollback boundary.
+      This is bounded policy-context evidence, not PAM, external IAM, or
+      production effectiveness.
   - id: E-1076
     priority: P0
     area: identity-governance

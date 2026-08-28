@@ -2,6 +2,16 @@
 
 Updated: 2026-08-28
 
+## E-1077 - Tenant-bound emergency mutation policy (2026-08-28)
+
+- Emergency request, approval, rejection, review, and administrator-end
+  mutations now perform a second central policy evaluation carrying the
+  validated tenant scope. Target self-service activation/end behavior keeps
+  its existing human-session, state, version, and repository protections.
+- The helper test and full regression/release gates are the local evidence;
+  PostgreSQL live tests remain conditional on the declared DSN. This is bounded
+  ABAC provenance hardening, not PAM, external IAM, or production assurance.
+
 ## E-1076 - Explicit emergency-access request authorization (2026-08-28)
 
 - The PostgreSQL emergency-access request mutation now requires the explicit

@@ -1,5 +1,14 @@
 # Security Baseline
 
+## E-1112 Strict PostgreSQL ownership-change Money hydration (2026-08-29)
+
+- Persisted ownership-change Money fields now fail closed on non-canonical
+  amount, currency, or provenance mappings during typed hydration, before
+  replay and digest-lineage acceptance.
+- Canonical requests remain compatible; ownership-change persistence/domain
+  tests and full locked static/security/package/diff gates pass. This is
+  artifact-integrity evidence, not production assurance.
+
 ## E-1111 Strict canonical-money replay consumers (2026-08-29)
 
 - Four additional persisted-money consumers fail closed on mapping drift:

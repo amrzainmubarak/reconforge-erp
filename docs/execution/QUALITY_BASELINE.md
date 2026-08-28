@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1112 - Strict PostgreSQL ownership-change Money hydration (2026-08-29)
+
+PostgreSQL ownership-change persisted request Money fields now require exact
+canonical producer serialization during hydration. The focused persistence /
+domain selection and full locked Python 3.11 regression, static/security,
+package, YAML/schema, and diff gates pass. This is bounded persisted-artifact
+integrity evidence, not statutory accounting or production readiness.
+
 ## E-1111 - Extend strict canonical-money decoding to replay consumers (2026-08-29)
 
 Translation-result, worksheet, impairment-bridge, and intercompany source-line

@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1112: Strict PostgreSQL ownership-change Money hydration (2026-08-29)
+
+- Code evidence: the PostgreSQL ownership-change request hydration helper
+  restores persisted Money through `Money.from_strict_canonical_dict()` before
+  request replay and row-level digest lineage checks.
+- Test evidence: the ownership-change persistence/domain selection covers
+  canonical hydration, binary-float percentage refusal, and non-canonical
+  persisted Money refusal.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this is persisted-artifact integrity evidence. It is not statutory
+  accounting, provider, posting, or production-readiness evidence.
+
 ## E-1111: Extend strict canonical-money decoding to replay consumers (2026-08-29)
 
 - Code evidence: translation-result, worksheet, impairment-bridge, and

@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1112
+    priority: P0
+    area: financial-exactness
+    title: Require strict Money serialization during PostgreSQL ownership-change hydration
+    status: completed
+    depends_on: [E-1111]
+    exit_evidence: >-
+      PostgreSQL ownership-change persisted request hydration uses the shared
+      strict Money reader; canonical requests remain compatible while
+      non-canonical amount/currency/provenance mappings fail closed before
+      replay. The focused ownership-change persistence/domain selection,
+      full locked Python 3.11 regression, static/security, package, YAML, and
+      diff gates pass. This is bounded persisted-artifact integrity evidence,
+      not statutory accounting or production readiness.
   - id: E-1111
     priority: P0
     area: financial-exactness

@@ -2,6 +2,16 @@
 
 Updated: 2026-08-29
 
+## E-1112 - Strict PostgreSQL ownership-change Money hydration (2026-08-29)
+
+- PostgreSQL ownership-change persisted request hydration now uses
+  `Money.from_strict_canonical_dict()` for Money fields. Canonical requests
+  remain compatible; non-canonical amount/currency/provenance mappings fail
+  closed before replay.
+- The focused ownership-change persistence/domain selection and full locked
+  Python 3.11 regression pass. This is persisted-artifact integrity evidence,
+  not statutory or production assurance.
+
 ## E-1111 - Extend strict canonical-money decoding to replay consumers (2026-08-29)
 
 - Translation-result replay, worksheet replay, impairment-bridge replay, and

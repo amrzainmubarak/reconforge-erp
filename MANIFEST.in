@@ -1123,4 +1123,5 @@ include docs/adr/0770-strict-acquisition-bridge-replay.md
 include docs/adr/0771-strict-ppa-deferred-tax-replay.md
 include docs/adr/0772-strict-canonical-money-reader.md
 include docs/adr/0773-strict-canonical-replay-consumers.md
+include docs/adr/0774-strict-postgres-ownership-change-money-hydration.md
 include docs/execution/CONTAINER_SECURITY_PY312_CANDIDATE_2026-08-28.md

@@ -77,3 +77,13 @@ def test_postgres_ownership_change_replay_rejects_binary_float_percentage() -> N
     payload["prior_group_ownership_percentage"] = 0.80
     with pytest.raises(PostgresConsolidationOwnershipChangeError, match="replay verification"):
         _request_from_payload(payload)
+
+
+def test_postgres_ownership_change_replay_rejects_noncanonical_money_text() -> None:
+    from tests.test_consolidation_ownership_changes import _request
+
+    payload = _request().to_dict()
+    payload["net_assets"]["amount"] = "0100.00"  # type: ignore[index]
+
+    with pytest.raises(PostgresConsolidationOwnershipChangeError, match="replay verification"):
+        _request_from_payload(payload)

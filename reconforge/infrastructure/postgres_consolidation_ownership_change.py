@@ -109,7 +109,7 @@ def _money(payload: Mapping[str, object], field: str) -> Money:
     value = payload.get(field)
     if not isinstance(value, Mapping):
         raise ConsolidationError(f"Ownership-change {field} is invalid.")
-    return Money.from_canonical_dict(value)
+    return Money.from_strict_canonical_dict(value)
 
 
 def _request_from_payload(payload: Mapping[str, object]) -> OwnershipChangeAdjustmentRequest:

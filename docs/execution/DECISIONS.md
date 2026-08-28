@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-1024: Strict PostgreSQL ownership-change Money hydration
+
+- **Date**: 2026-08-29
+- **Context**: PostgreSQL ownership-change request hydration restored
+  persisted Money through the compatibility reader before the immutable row
+  digest lineage check.
+- **Decision**: Use `Money.from_strict_canonical_dict()` for persisted request
+  Money fields while keeping API and explicitly compatible readers unchanged.
+- **Rationale**: A persisted financial request must not be normalized into a
+  typed object before replay verification; fail closed at the Money boundary.
+- **Verification**: ADR 0774, ownership-change persistence/domain tests, full
+  regression, and release gates are recorded in E-1112.
+- **Rollback**: Revert E-1112, ADR 0774, the hydration/test changes, manifest,
+  and execution records; no schema, financial data, or deployment state
+  changes.
+
 ### D-1023: Strict canonical-money replay consumers
 
 - **Date**: 2026-08-29

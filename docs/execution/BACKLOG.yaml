@@ -9,6 +9,18 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1071
+    priority: P1
+    area: workflow-governance
+    title: Apply fail-closed projection to local workflow responses
+    status: completed
+    depends_on: [E-1005, E-1070]
+    exit_evidence: >-
+      Workflow object, transition, and history responses preserve the reviewed
+      local state-machine fields while dropping unknown model fields through
+      central projections. Focused tests, full regression, and release quality
+      gates pass; ADR 0731 records rollback. This does not claim PostgreSQL
+      workflow availability or production readiness.
   - id: E-1070
     priority: P0
     area: connector-governance

@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-898: Local workflow responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Local workflow routes serialized state-machine models directly
+  with `model_dump`, allowing future model fields to change the API response
+  without a reviewed boundary contract.
+- **Decision**: Apply central projections to workflow objects, allowed
+  transitions, and history events. Invalid model response shapes fail closed
+  with a bounded API error.
+- **Verification**: Field-access tests inject future object, transition, and
+  event fields; workflow API/state-machine/schema suites pass. Focused and full
+  regression checks plus Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- **Compatibility**: Preserve the existing object lifecycle, transition
+  permissions, SoD metadata, and history audit fields.
+- **Rollback**: Revert E-1071 code, tests, ADR 0731, manifest, and execution
+  metadata together; do not restore direct workflow serialization.
+
 ### D-897: Connector write-back responses use fail-closed projection
 
 - **Date**: 2026-08-27

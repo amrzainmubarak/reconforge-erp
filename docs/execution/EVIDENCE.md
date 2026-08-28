@@ -2,6 +2,19 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1071: Fail-closed local workflow responses
+
+- Code evidence: Local workflow object, allowed-transition, and history routes
+  now apply central projections to the reviewed state-machine fields.
+- Test evidence: field-access tests inject future object, transition, and event
+  fields; the workflow API/state-machine/schema suites pass. Focused Ruff,
+  Mypy, and pytest checks pass; full regression, Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff gates pass. pip-audit cannot audit the
+  local distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; PostgreSQL workflow
+  availability and production effectiveness remain separately bounded. ADR
+  0731 records rollback.
+
 ## E-1070: Fail-closed connector write-back responses
 
 - Code evidence: Connector write-back intent and recovery-observation response

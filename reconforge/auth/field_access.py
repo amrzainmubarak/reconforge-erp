@@ -322,6 +322,15 @@ WRITEBACK_RECOVERY_OBSERVATION_DETAIL_FIELDS = frozenset(
         "provider_response_digest",
     }
 )
+WORKFLOW_OBJECT_FIELDS = frozenset(
+    {"id", "object_type", "object_id", "status", "created_at", "updated_at"}
+)
+WORKFLOW_TRANSITION_FIELDS = frozenset(
+    {"id", "object_type", "from_status", "to_status", "required_permission", "sod_rule", "reason_required", "active"}
+)
+WORKFLOW_EVENT_FIELDS = frozenset(
+    {"id", "workflow_object_id", "from_status", "to_status", "actor_user_id", "actor_label", "reason", "created_at"}
+)
 CLOSE_PERIOD_FIELDS = frozenset(
     {
         "tenant_id",
@@ -2570,6 +2579,24 @@ def project_writeback_recovery_observation(values: Mapping[str, object]) -> Fiel
             allowed_fields=WRITEBACK_RECOVERY_OBSERVATION_DETAIL_FIELDS,
         ).visible
     return project_fields(record, allowed_fields=WRITEBACK_RECOVERY_OBSERVATION_FIELDS)
+
+
+def project_workflow_object(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a workflow object response."""
+
+    return project_fields(values, allowed_fields=WORKFLOW_OBJECT_FIELDS)
+
+
+def project_workflow_transition(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for an allowed workflow transition."""
+
+    return project_fields(values, allowed_fields=WORKFLOW_TRANSITION_FIELDS)
+
+
+def project_workflow_event(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for a workflow history event."""
+
+    return project_fields(values, allowed_fields=WORKFLOW_EVENT_FIELDS)
 
 
 def project_evidence_link_response(values: Mapping[str, object]) -> FieldProjection:

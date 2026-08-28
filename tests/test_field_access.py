@@ -90,6 +90,9 @@ from reconforge.auth.field_access import (
     project_security_integration_page,
     project_security_retention_policy_change,
     project_security_retention_policy_page,
+    project_workflow_event,
+    project_workflow_object,
+    project_workflow_transition,
     project_writeback_intent,
     project_writeback_recovery_observation,
 )
@@ -626,6 +629,50 @@ def test_writeback_projections_are_closed_across_nested_lifecycle_contracts() ->
     assert "future_record_field" not in str(observation.visible)
     assert "future_observation_field" not in str(observation.visible)
     assert observation.visible["observation"]["outcome"] == "accepted"
+
+
+def test_workflow_projections_drop_future_model_fields() -> None:
+    object_projection = project_workflow_object(
+        {
+            "id": "wf-1",
+            "object_type": "reconciliation",
+            "object_id": "rec-1",
+            "status": "Prepared",
+            "created_at": "2026-08-27T12:00:00Z",
+            "updated_at": "2026-08-27T12:01:00Z",
+            "future_object_field": "must-not-escape",
+        }
+    )
+    transition_projection = project_workflow_transition(
+        {
+            "id": 1,
+            "object_type": "reconciliation",
+            "from_status": "Prepared",
+            "to_status": "In Review",
+            "required_permission": "reconciliation.review",
+            "sod_rule": None,
+            "reason_required": False,
+            "active": True,
+            "future_transition_field": "must-not-escape",
+        }
+    )
+    event_projection = project_workflow_event(
+        {
+            "id": "wfe-1",
+            "workflow_object_id": "wf-1",
+            "from_status": "Prepared",
+            "to_status": "In Review",
+            "actor_user_id": "user-1",
+            "actor_label": "reviewer",
+            "reason": "Reviewed",
+            "created_at": "2026-08-27T12:02:00Z",
+            "future_event_field": "must-not-escape",
+        }
+    )
+
+    assert "future_object_field" not in str(object_projection.visible)
+    assert "future_transition_field" not in str(transition_projection.visible)
+    assert "future_event_field" not in str(event_projection.visible)
 
 
 def test_finance_entry_projection_is_closed_across_local_and_server_shapes() -> None:

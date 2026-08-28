@@ -2,6 +2,13 @@
 
 Updated: 2026-08-27
 
+## E-1071 - Fail-closed local workflow responses (2026-08-27)
+
+- Workflow object, transition, and history responses now use central
+  projections; focused checks, full regression, and release-gate evidence
+  pass. This is bounded response control, not a claim of PostgreSQL workflow
+  availability or production readiness.
+
 ## E-1070 - Fail-closed connector write-back responses (2026-08-27)
 
 - Connector write-back intent and recovery-observation responses now use

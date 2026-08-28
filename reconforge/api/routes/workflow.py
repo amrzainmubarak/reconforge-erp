@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -12,6 +13,12 @@ from reconforge.api.dependencies import get_local_db, require_any_permission, re
 from reconforge.api.errors import APIError
 from reconforge.api.server_identity import server_identity_enabled
 from reconforge.auth import AuthRepositoryError
+from reconforge.auth.field_access import (
+    FieldProjection,
+    project_workflow_event,
+    project_workflow_object,
+    project_workflow_transition,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.workflow import WorkflowRepositoryError, WorkflowService, WorkflowServiceError
@@ -55,6 +62,26 @@ def _local_connection(request: Request, connection: sqlite3.Connection | None) -
     return connection
 
 
+def _project_workflow(
+    value: object,
+    projector: Callable[[dict[str, object]], FieldProjection],
+) -> dict[str, object]:
+    if not isinstance(value, BaseModel):
+        raise APIError(
+            status_code=503,
+            code="workflow_projection_failed",
+            message="Workflow repository returned an invalid response contract.",
+        )
+    try:
+        return projector(value.model_dump(mode="json")).visible
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise APIError(
+            status_code=503,
+            code="workflow_projection_failed",
+            message="Workflow repository returned an invalid response contract.",
+        ) from exc
+
+
 @router.get("/transitions")
 def list_transitions(
     object_type: str,
@@ -66,7 +93,7 @@ def list_transitions(
 
     try:
         transitions = [
-            transition.model_dump(mode="json")
+            _project_workflow(transition, project_workflow_transition)
             for transition in WorkflowService(_local_connection(request, connection)).list_allowed_transitions(object_type=object_type)
         ]
     except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
@@ -91,7 +118,7 @@ def create_object(
         )
     except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
         raise APIError(status_code=400, code="workflow_object_create_failed", message=str(exc)) from exc
-    return {"object": workflow_object.model_dump(mode="json")}
+    return {"object": _project_workflow(workflow_object, project_workflow_object)}
 
 
 @router.get("/objects/{object_type}/{object_id}")
@@ -108,7 +135,7 @@ def get_object(
         workflow_object = WorkflowService(_local_connection(request, connection)).get_status(object_type=object_type, object_id=object_id)
     except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
         raise APIError(status_code=404, code="workflow_object_not_found", message=str(exc)) from exc
-    return {"object": workflow_object.model_dump(mode="json")}
+    return {"object": _project_workflow(workflow_object, project_workflow_object)}
 
 
 @router.post("/objects/{object_type}/{object_id}/transition")
@@ -132,7 +159,7 @@ def transition_object(
         )
     except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:
         raise APIError(status_code=400, code="workflow_transition_failed", message=str(exc)) from exc
-    return {"object": workflow_object.model_dump(mode="json")}
+    return {"object": _project_workflow(workflow_object, project_workflow_object)}
 
 
 @router.get("/objects/{object_type}/{object_id}/history")
@@ -147,7 +174,7 @@ def object_history(
 
     try:
         history = [
-            event.model_dump(mode="json")
+            _project_workflow(event, project_workflow_event)
             for event in WorkflowService(_local_connection(request, connection)).list_history(object_type=object_type, object_id=object_id)
         ]
     except (DatabaseError, AuthRepositoryError, WorkflowRepositoryError, WorkflowServiceError) as exc:

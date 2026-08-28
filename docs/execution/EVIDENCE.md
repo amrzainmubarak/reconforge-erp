@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1078: Canonical matching requires explicit currency (2026-08-28)
+
+- Code evidence: `DeterministicMatchingEngine._ordered_records` now marks a
+  missing currency as `MISSING_CURRENCY` under
+  `canonical-multiset-occurrence-v1`; the quality boundary emits a bounded
+  high-severity data-quality exception and the candidate builder excludes the
+  record. The legacy compatibility identity path is intentionally unchanged.
+- Test evidence: the focused regression passes and proves that matching two
+  same-amount, same-reference records without currency returns two invalid
+  results, two `MISSING_CURRENCY` exceptions, and no matched result. Full
+  pytest passes at 100%; Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML validation, and diff checks also pass. The pip-audit run reports that
+  the local distribution name is not published on PyPI, so that package-name
+  limitation remains explicit.
+- Boundary: this closes a canonical missing-currency fail-open path. It does
+  not establish complete currency-registry coverage, FX correctness, provider
+  authenticity, production assurance, statutory accounting, or compliance.
+
 ## E-1077: Tenant-bound emergency mutation policy (2026-08-28)
 
 - Code evidence: named emergency mutations re-evaluate their explicit

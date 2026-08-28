@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1078
+    priority: P0
+    area: financial-exactness
+    title: Require explicit currency for canonical deterministic matching
+    status: completed
+    depends_on: [E-1003, E-1075]
+    exit_evidence: >-
+      Under canonical-multiset-occurrence-v1, missing currency is classified as
+      MISSING_CURRENCY, emitted as visible data-quality evidence, and excluded
+      from candidate selection. The legacy stock/GL compatibility reader is
+      unchanged. Focused and full matching/regression tests, Ruff, Mypy,
+      Bandit, pip-audit, package build, YAML, and diff gates pass; ADR 0738
+      records the compatibility and rollback boundary. This closes one
+      canonical-input fail-open path and does not establish production,
+      statutory, provider, or compliance assurance.
   - id: E-1077
     priority: P0
     area: identity-governance

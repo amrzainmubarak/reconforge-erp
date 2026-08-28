@@ -582,17 +582,22 @@ class DeterministicMatchingEngine:
                 }
 
             if currency_issue:
-                title = (
-                    "Unknown currency reference"
-                    if currency_issue == "UNKNOWN_CURRENCY"
-                    else "Inactive currency reference"
+                title = {
+                    "MISSING_CURRENCY": "Missing currency reference",
+                    "UNKNOWN_CURRENCY": "Unknown currency reference",
+                    "INACTIVE_CURRENCY": "Inactive currency reference",
+                }.get(currency_issue, "Invalid currency reference")
+                explanation = (
+                    "Reconciliation was blocked because the source record did not provide an explicit currency."
+                    if currency_issue == "MISSING_CURRENCY"
+                    else "Reconciliation was blocked because the currency reference was not known or inactive."
                 )
                 add_data_quality_exception(
                     side=side,
                     source_id=source_id,
                     code=currency_issue,
                     title=title,
-                    explanation="Reconciliation was blocked because the currency reference was not known or inactive.",
+                    explanation=explanation,
                     severity="High",
                     risk_score="0.8",
                     evidence=with_lineage(
@@ -1010,17 +1015,25 @@ class DeterministicMatchingEngine:
         currency_issue_by_index: dict[int, str | None] = {}
         for index, record in enumerate(records):
             currency_code = _extract_currency_code(record)
-            try:
-                resolved_currency, precision = _resolve_currency_precision(
-                    self.currency_precision_resolver,
-                    currency_lookup_cache,
-                    currency_code,
-                )
-                currency_issue: str | None = None
-            except InvalidAmountError as exc:
-                resolved_currency = currency_code
+            if not currency_code and record_identity_policy == RECORD_IDENTITY_POLICY:
+                # The canonical identity contract is the strict reader for new
+                # persisted/server runs. Do not let a missing currency enter
+                # the matcher as an unscoped amount or inherit USD semantics.
+                resolved_currency = ""
                 precision = None
-                currency_issue = str(exc)
+                currency_issue = "MISSING_CURRENCY"
+            else:
+                try:
+                    resolved_currency, precision = _resolve_currency_precision(
+                        self.currency_precision_resolver,
+                        currency_lookup_cache,
+                        currency_code,
+                    )
+                    currency_issue = None
+                except InvalidAmountError as exc:
+                    resolved_currency = currency_code
+                    precision = None
+                    currency_issue = str(exc)
             parsed_amount = _parse_amount(
                 record.get(amount_field),
                 precision=precision,

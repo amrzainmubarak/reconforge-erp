@@ -300,15 +300,15 @@ def _build_synthetic_records() -> dict[str, list[dict[str, Any]]]:
         },
     ]
     matching_left = [
-        _match_row("LED-SYN-001", "REF-MATCH-SYN-001", "1250.00", "2026-05-05"),
-        _match_row("LED-SYN-002", "REF-MATCH-SYN-002", "2500.00", "2026-05-07"),
-        _match_row("LED-SYN-003", "REF-MATCH-SYN-003", "4000.00", "2026-05-09"),
-        _match_row("LED-SYN-004", "REF-MATCH-SYN-004", "750.00", "2026-05-12"),
+        _match_row("LED-SYN-001", "REF-MATCH-SYN-001", "1250.00", "2026-05-05", "USD"),
+        _match_row("LED-SYN-002", "REF-MATCH-SYN-002", "2500.00", "2026-05-07", "USD"),
+        _match_row("LED-SYN-003", "REF-MATCH-SYN-003", "4000.00", "2026-05-09", "USD"),
+        _match_row("LED-SYN-004", "REF-MATCH-SYN-004", "750.00", "2026-05-12", "USD"),
     ]
     matching_right = [
-        _match_row("BANK-SYN-001", "REF-MATCH-SYN-001", "1250.00", "2026-05-05"),
-        _match_row("BANK-SYN-002", "REF-MATCH-SYN-002", "2499.50", "2026-05-08"),
-        _match_row("BANK-SYN-003", "REF-MATCH-SYN-003", "4000.00", "2026-05-09"),
+        _match_row("BANK-SYN-001", "REF-MATCH-SYN-001", "1250.00", "2026-05-05", "USD"),
+        _match_row("BANK-SYN-002", "REF-MATCH-SYN-002", "2499.50", "2026-05-08", "USD"),
+        _match_row("BANK-SYN-003", "REF-MATCH-SYN-003", "4000.00", "2026-05-09", "USD"),
     ]
     close_tasks = [
         _close_task("CLOSE-SYN-001", "Load synthetic trial balance exports", "Complete", "Synthetic Accounting Lead"),
@@ -601,11 +601,12 @@ def _intercompany_row(
     }
 
 
-def _match_row(row_id: str, reference: str, amount: str, date_text: str) -> dict[str, str]:
+def _match_row(row_id: str, reference: str, amount: str, date_text: str, currency: str) -> dict[str, str]:
     return {
         "id": row_id,
         "reference": reference,
         "amount": amount,
+        "currency": currency,
         "date": date_text,
         "synthetic_data_marker": SYNTHETIC_DATA_MARKER,
     }

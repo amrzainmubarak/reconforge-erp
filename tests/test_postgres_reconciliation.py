@@ -886,6 +886,7 @@ def test_local_matcher_uses_persisted_financial_input_policy() -> None:
             "attributes_json": {
                 "id": "left-1",
                 "amount": 10.5,
+                "currency": "USD",
                 "date": "2026-07-25",
                 "reference": "INV-1",
             },
@@ -899,6 +900,7 @@ def test_local_matcher_uses_persisted_financial_input_policy() -> None:
             "attributes_json": {
                 "id": "right-1",
                 "amount": 10.5,
+                "currency": "USD",
                 "date": "2026-07-25",
                 "reference": "INV-1",
             },

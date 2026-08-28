@@ -140,8 +140,8 @@ def test_postgres_matching_persists_complete_engine_output_without_sqlite() -> N
     repository.persistence = persistence  # type: ignore[assignment]
 
     result = repository._run_records(
-        left_records=_located_records([{"id": "L-1", "amount": "10.00", "date": "2026-07-28", "reference": "INV-1"}], "left.json"),
-        right_records=_located_records([{"id": "R-1", "amount": "10.00", "date": "2026-07-28", "reference": "INV-1"}], "right.json"),
+        left_records=_located_records([{"id": "L-1", "amount": "10.00", "currency": "USD", "date": "2026-07-28", "reference": "INV-1"}], "left.json"),
+        right_records=_located_records([{"id": "R-1", "amount": "10.00", "currency": "USD", "date": "2026-07-28", "reference": "INV-1"}], "right.json"),
         workspace="default", name="match", left_source="left.json", right_source="right.json",
         left_checksum="a" * 64, right_checksum="b" * 64,
         left_id_field="id", right_id_field="id", amount_field="amount", date_field="date",

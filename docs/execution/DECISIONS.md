@@ -5,6 +5,29 @@
 
 ## Decisions
 
+### D-907: Require explicit currency in canonical matching
+
+- **Date**: 2026-08-28
+- **Context**: The deterministic engine accepted a valid amount with no
+  currency under the current canonical record-identity policy. Because empty
+  currency bypassed the resolver, two incomplete records could be selected as
+  a valid match.
+- **Decision**: Under `canonical-multiset-occurrence-v1`, classify missing
+  currency as `MISSING_CURRENCY`, emit the normal data-quality exception and
+  invalid result, and exclude the record from candidate selection. Preserve
+  the legacy stock/GL reader behavior until a versioned compatibility
+  migration is approved.
+- **Verification**: The focused deterministic-engine regression proves both
+  sides are invalid, both exceptions are visible, and no result is matched;
+  full pytest, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  checks are release gates for the slice.
+- **Compatibility**: Only the current canonical identity contract becomes
+  stricter. The legacy identity policy remains a compatibility reader, so no
+  existing local stock/GL contract is silently changed.
+- **Rollback**: Revert E-1078, ADR 0738, the focused regression, and execution
+  evidence together. Never reintroduce implicit currency semantics into the
+  canonical contract without a versioned decision.
+
 ### D-906: Bind emergency mutations to the authenticated tenant policy
 
 - **Date**: 2026-08-28

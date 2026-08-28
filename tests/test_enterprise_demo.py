@@ -30,6 +30,13 @@ def test_enterprise_demo_trial_balance_uses_exact_currency_bound_amounts() -> No
     ) == Decimal("265670.00")
 
 
+def test_enterprise_demo_matching_inputs_declare_currency_for_canonical_runs() -> None:
+    data = _build_synthetic_records()
+
+    assert all(row["currency"] == "USD" for row in data["matching_left"])
+    assert all(row["currency"] == "USD" for row in data["matching_right"])
+
+
 def test_enterprise_demo_command_creates_expected_local_package(tmp_path: Path) -> None:
     output = tmp_path / "enterprise_demo"
 

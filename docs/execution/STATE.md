@@ -2,6 +2,18 @@
 
 Updated: 2026-08-28
 
+## E-1078 - Canonical matching requires explicit currency (2026-08-28)
+
+- The deterministic engine now treats missing currency as a visible
+  `MISSING_CURRENCY` data-quality exception whenever the current
+  `canonical-multiset-occurrence-v1` identity policy is selected. Such records
+  cannot enter candidate selection or produce a financial match.
+- The legacy identity reader remains unchanged for the documented stock/GL
+  compatibility contract. Focused matching tests, full regression, static
+  checks, package/security gates, and diff validation pass as local evidence.
+  This closes one canonical-input safety gap; it does not establish provider,
+  production, statutory, or compliance assurance.
+
 ## E-1077 - Tenant-bound emergency mutation policy (2026-08-28)
 
 - Emergency request, approval, rejection, review, and administrator-end

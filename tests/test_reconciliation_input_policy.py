@@ -52,8 +52,8 @@ def _stock_gl_frames(amount: object) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def _matching_records(amount: object) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    left = [{"id": "L-1", "amount": amount, "reference": "INV-1", "date": "2026-07-25"}]
-    right = [{"id": "R-1", "amount": amount, "reference": "INV-1", "date": "2026-07-25"}]
+    left = [{"id": "L-1", "amount": amount, "currency": "USD", "reference": "INV-1", "date": "2026-07-25"}]
+    right = [{"id": "R-1", "amount": amount, "currency": "USD", "reference": "INV-1", "date": "2026-07-25"}]
     return left, right
 
 

@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1087
+    priority: P0
+    area: identity-governance
+    title: Bind authenticated server principals to tenant scope
+    status: completed
+    depends_on: [E-1005]
+    exit_evidence: >-
+      Authenticated server requests carry the tenant on which the credential was
+      verified, the resulting ServerPrincipal preserves it as an authorized
+      tenant grant, and server-scoped policy contexts reuse that bound grant
+      instead of reconstructing it from the request alone. A sibling-tenant
+      principal is rejected before policy/repository work. Focused scope,
+      operations, identity, and foundation tests plus static gates pass. Legacy
+      tuple/test seams without the new optional binding retain explicit
+      compatibility fallback; this is provenance hardening, not independent
+      tenant-membership or distributed IAM assurance.
   - id: E-1086
     priority: P0
     area: identity-governance

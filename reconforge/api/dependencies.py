@@ -383,6 +383,9 @@ def enforce_server_scoped_permissions(
         principal = current_server_principal()
     if principal is None:
         raise APIError(status_code=401, code="auth_required", message="Authentication required.")
+    if principal.authorized_tenant_ids and tenant_id not in principal.authorized_tenant_ids:
+        raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
+    authorized_tenant_ids = principal.authorized_tenant_ids or frozenset({tenant_id})
     context = PolicyEvaluationContext(
         user_id=principal.user.id,
         username=principal.user.username,
@@ -396,7 +399,7 @@ def enforce_server_scoped_permissions(
         workspace_id=workspace_id,
         organization_id=organization_id,
         entity_id=entity_id,
-        authorized_tenant_ids=frozenset({tenant_id}),
+        authorized_tenant_ids=authorized_tenant_ids,
         authorized_workspace_ids=principal.authorized_workspace_ids,
         authorized_organization_ids=principal.authorized_organization_ids,
         authorized_entity_ids=principal.authorized_legal_entity_ids,

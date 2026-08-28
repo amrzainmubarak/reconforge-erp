@@ -2,6 +2,19 @@
 
 Updated: 2026-08-28
 
+## E-1087 - Bind authenticated server principals to tenant scope (2026-08-28)
+
+- `AuthenticatedServerRequest` now carries the tenant used during PostgreSQL
+  credential verification, and `ServerPrincipal` preserves it as an explicit
+  authorized tenant grant. Server-scoped policy contexts and the operations
+  queue facade reuse that grant rather than deriving authorization solely from
+  the request header.
+- A bound principal for a sibling tenant is rejected before policy evaluation or
+  repository access. Legacy tuple/test seams without the optional binding retain
+  their named compatibility fallback. This is tenant-context provenance
+  hardening, not independent tenant-membership, distributed IAM, or production
+  effectiveness evidence.
+
 ## E-1086 - Bound policy-decision cache freshness (2026-08-28)
 
 - The opt-in `PolicyDecisionCache` now gives allowed decisions a validated

@@ -2,6 +2,32 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1087: Bind authenticated server principals to tenant scope (2026-08-28)
+
+- Code evidence: `authenticate_server_request` records the validated request
+  tenant in `AuthenticatedServerRequest`; `server_principal_from_authentication`
+  carries it into `ServerPrincipal.authorized_tenant_ids`. Server-scoped policy
+  evaluation and the operations queue policy context now reject a bound sibling
+  tenant and reuse the authenticated tenant grant. Older tuple/test seams with
+  no tenant binding retain an explicit compatibility fallback.
+- Test evidence: the focused scope, operations, server-identity, and API
+  foundation suite passes with two declared capability skips; the new regression
+  proves that a principal bound to `tenant-b` cannot authorize a `tenant-a`
+  server mutation. Ruff and Mypy pass for all changed Python files.
+- Full-gate evidence: `python -m pytest -q --tb=short --maxfail=1` reaches
+  100% with no executed failure; full Ruff passes; Mypy reports no issues in
+  539 source files; Bandit exits successfully with its existing reviewed
+  `nosec`/comment warnings; and `pip-audit` reports no known vulnerabilities
+  while skipping the unpublished local package.
+- Packaging evidence: `python -m build --no-isolation` exits 0 and a direct
+  sdist inspection verifies ADR 0747 and `tests/test_api_execution_scope.py`
+  are included. `BACKLOG.yaml` parses successfully and `git diff --check`
+  passes.
+- Boundary: the binding strengthens provenance after the configured PostgreSQL
+  identity backend authenticates a tenant-scoped credential. It does not provide
+  independent tenant-membership evidence, external IAM, distributed revocation,
+  cross-region behavior, or production authorization effectiveness.
+
 ## E-1086: Bound policy-decision cache freshness (2026-08-28)
 
 - Code evidence: `PolicyDecisionCache` validates a bounded `cache_ttl_seconds`

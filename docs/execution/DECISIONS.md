@@ -5,6 +5,33 @@
 
 ## Decisions
 
+### D-912: Bind authenticated server principals to tenant scope
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL identity operation already authenticated a
+  credential against the request tenant, but the resulting server principal did
+  not preserve that tenant as a typed authorization input. Several scoped policy
+  contexts therefore reconstructed the tenant grant from the request boundary.
+- **Decision**: Carry the validated tenant through
+  `AuthenticatedServerRequest` into `ServerPrincipal.authorized_tenant_ids`.
+  Server-scoped policy contexts must use the bound grant and reject a bound
+  sibling tenant before evaluation or repository access. Keep an explicit
+  fallback for legacy tuple/test seams that cannot supply the optional binding.
+- **Rationale**: Authentication provenance and authorization scope should remain
+  connected in the typed request principal. This makes the tenant input visible
+  in policy evidence and prevents a future caller from treating a selected
+  request header as an independent grant. The fallback is isolated compatibility
+  behavior, not a production authentication path.
+- **Verification**: Focused scope, operations, server-identity, and foundation
+  tests pass with two declared capability skips; Ruff and Mypy pass for changed
+  files. Full regression and release-quality gates remain required for the
+  slice.
+- **Compatibility**: The new field is optional for existing injected test and
+  tuple seams. Real PostgreSQL-authenticated requests populate it from the
+  tenant used by credential verification; no database migration is required.
+- **Rollback**: Revert E-1087, ADR 0747, the principal/context changes, tests,
+  manifest entry, and execution records together.
+
 ### D-911: Bind PostgreSQL outbox workers to permission manifests
 
 - **Date**: 2026-08-28

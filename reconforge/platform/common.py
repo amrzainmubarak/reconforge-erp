@@ -53,6 +53,7 @@ class ServerPrincipal:
     base_permissions: frozenset[str] = frozenset()
     emergency_permissions: frozenset[str] = frozenset()
     emergency_access_id_by_permission: tuple[tuple[str, str], ...] = ()
+    authorized_tenant_ids: frozenset[str] = frozenset()
     authorized_workspace_ids: frozenset[str] = frozenset()
     authorized_organization_ids: frozenset[str] = frozenset()
     authorized_legal_entity_ids: frozenset[str] = frozenset()

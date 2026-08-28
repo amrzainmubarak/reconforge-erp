@@ -31,6 +31,7 @@ def _principal() -> ServerPrincipal:
     return ServerPrincipal(
         user=LocalUser(id="user-a", username="alice", display_name="Alice"),
         permissions=frozenset({"reconciliation.read"}),
+        authorized_tenant_ids=frozenset({"tenant-a"}),
         authorized_workspace_ids=frozenset({"workspace-a"}),
         authorized_organization_ids=frozenset({"organization-a"}),
         authorized_legal_entity_ids=frozenset({"entity-a"}),
@@ -107,6 +108,7 @@ def test_authenticated_scope_snapshot_is_bound_to_server_principal() -> None:
             user=LocalUser(id="user-a", username="alice", display_name="Alice"),
             permissions=frozenset({"evidence.read"}),
             principal_type="user",
+            tenant_id="tenant-a",
             scope_authority=PrincipalScopeSnapshot(
                 workspace_ids=frozenset({"workspace-a"}),
                 organization_ids=frozenset({"organization-a"}),
@@ -114,6 +116,7 @@ def test_authenticated_scope_snapshot_is_bound_to_server_principal() -> None:
             ),
         )
     )
+    assert principal.authorized_tenant_ids == frozenset({"tenant-a"})
     assert principal.authorized_workspace_ids == frozenset({"workspace-a"})
     assert principal.authorized_organization_ids == frozenset({"organization-a"})
     assert principal.authorized_legal_entity_ids == frozenset({"entity-a"})
@@ -147,6 +150,31 @@ def test_server_scoped_permission_denies_sibling_workspace_before_repository_use
             workspace_id="workspace-b",
         )
     assert denied.value.code == "workspace_scope_denied"
+
+
+def test_server_scoped_permission_rejects_authenticated_sibling_tenant(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    app.state.policy_decision_cache = None
+    import reconforge.api.dependencies as dependencies
+
+    monkeypatch.setattr(dependencies, "server_identity_enabled", lambda _request: True)
+    request = _request(
+        {"X-ReconForge-Tenant": "tenant-a"},
+        ServerPrincipal(
+            user=LocalUser(id="user-a", username="alice", display_name="Alice"),
+            permissions=frozenset({"roles.manage"}),
+            step_up_active=True,
+            authorized_tenant_ids=frozenset({"tenant-b"}),
+        ),
+    )
+    request.scope["app"] = app
+    with pytest.raises(APIError) as denied:
+        enforce_server_tenant_permission(request, permission="roles.manage", tenant_id="tenant-a")
+    assert denied.value.code == "tenant_scope_denied"
 
 
 def test_server_scoped_permission_allows_granted_workspace_and_audits_without_raw_scope(

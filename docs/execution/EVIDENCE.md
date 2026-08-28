@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1102: Enforce strict CAMT.053 decimal lexical boundary (2026-08-28)
+
+- Code evidence: CAMT.053 amount text is checked against the source decimal
+  lexical boundary, then parsed with `parse_exact_amount()` and serialized with
+  `canonical_decimal_text()` before signed amounts and source digests are
+  produced.
+- Test evidence: `tests/test_connector_camt053.py` covers equivalent decimal
+  formatting, scientific/separator/parenthesis refusal, non-finite refusal,
+  XML hardening, bounds, schema output, and payment-statement projection.
+- Gate evidence: focused CAMT.053 tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is offline synthetic ISO source-boundary evidence. It does
+  not establish bank dialect support, provider authentication, source
+  authenticity, settlement behavior, payment initiation, or production
+  assurance.
+
 ## E-1101: Enforce strict canonical database-reference amounts (2026-08-28)
 
 - Code evidence: `DatabaseRecordRow.amount` uses `parse_exact_amount()` and

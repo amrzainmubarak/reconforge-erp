@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1102 - Strict CAMT.053 decimal lexical boundary (2026-08-28)
+
+The bounded offline CAMT.053 parser now enforces an ISO-shaped decimal source
+lexical boundary before strict exact parsing and canonical serialization.
+Scientific notation, separators, accounting parentheses, malformed values, and
+non-finite tokens fail closed. Focused and full quality gates pass; bank dialect,
+provider, settlement, and production evidence remain open.
+
 ## E-1101 - Strict canonical database-reference amounts (2026-08-28)
 
 Shared database-reference connector tests pass. Amounts now use the strict

@@ -5,6 +5,25 @@
 
 ## Decisions
 
+### D-1013: Strict CAMT.053 decimal lexical boundary
+
+- **Date**: 2026-08-28
+- **Context**: CAMT.053 amount parsing used `Decimal(value)`, which admitted
+  scientific notation and display-oriented separators at an ISO source
+  boundary.
+- **Decision**: Enforce the ISO decimal lexical shape before
+  `parse_exact_amount()` and serialize accepted values with
+  `canonical_decimal_text()`.
+- **Rationale**: Source-format validation, exact financial parsing, and
+  deterministic digest serialization must be separate and explicit.
+- **Verification**: CAMT.053 replay, rejection, projection, schema, and
+  hardening tests pass; full gates are recorded in E-1102.
+- **Compatibility**: Ordinary signed decimal text remains accepted and is
+  canonicalized; scientific, locale-formatted, accounting-parenthesized, and
+  non-finite values fail closed.
+- **Rollback**: Revert E-1102, ADR 0762, CAMT.053 code/tests, manifest entry,
+  and execution records together.
+
 ### D-1012: Strict canonical database-reference amounts
 
 - **Date**: 2026-08-28

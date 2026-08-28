@@ -12,19 +12,23 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass, replace
 from datetime import date
-from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from defusedxml import ElementTree
 from defusedxml.common import DefusedXmlException
+
+from reconforge.io.writers import canonical_decimal_text
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 CAMT053_SCHEMA_VERSION = "camt.053.001-bounded-v1"
 MAX_CAMT053_BYTES = 8 * 1024 * 1024
 MAX_CAMT053_LINES = 100_000
 MAX_TEXT_BYTES = 8_192
 MAX_PAYMENT_STATEMENT_PAGE_LINES = 10_000
+_CAMT053_DECIMAL_PATTERN = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)")
 
 
 class Camt053Error(ValueError):
@@ -115,22 +119,31 @@ def _text(element: Any | None, field: str, *, required: bool = True, maximum_byt
 
 
 def _canonical_decimal(value: str, field: str) -> str:
+    text = value.strip()
+    if _CAMT053_DECIMAL_PATTERN.fullmatch(text) is None:
+        if text.casefold() in {
+            "nan",
+            "inf",
+            "+inf",
+            "-inf",
+            "infinity",
+            "+infinity",
+            "-infinity",
+        }:
+            raise Camt053Error(f"camt053_{field}_non_finite")
+        raise Camt053Error(f"camt053_{field}_invalid")
     try:
-        parsed = Decimal(value)
-    except (InvalidOperation, ValueError) as exc:
+        parsed = parse_exact_amount(text)
+    except InvalidAmountError as exc:
         raise Camt053Error(f"camt053_{field}_invalid") from exc
-    if not parsed.is_finite():
-        raise Camt053Error(f"camt053_{field}_non_finite")
-    if parsed == 0:
-        return "0"
-    normalized = format(parsed.normalize(), "f")
-    if normalized.endswith(".0"):
-        normalized = normalized[:-2]
-    return normalized
+    return canonical_decimal_text(parsed)
 
 
 def _signed_amount(amount: str, direction: str, field: str) -> str:
-    parsed = Decimal(amount)
+    try:
+        parsed = parse_exact_amount(amount)
+    except InvalidAmountError as exc:  # pragma: no cover - amount is locally canonical
+        raise Camt053Error(f"camt053_{field}_invalid") from exc
     signed = parsed if direction == "CRDT" else -parsed
     return _canonical_decimal(str(signed), field)
 

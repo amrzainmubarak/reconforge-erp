@@ -2,6 +2,16 @@
 
 Updated: 2026-08-28
 
+## E-1102 - Enforce strict CAMT.053 decimal lexical boundary (2026-08-28)
+
+- The bounded offline CAMT.053 parser now rejects scientific notation,
+  separators, accounting parentheses, malformed values, and non-finite tokens
+  at the source boundary, then uses the strict parser and canonical serializer
+  for signed amounts and source digests.
+- This is synthetic offline ISO-boundary evidence only. Bank dialect support,
+  provider authentication, source authenticity, settlement, payment
+  initiation, and production assurance remain open.
+
 ## E-1101 - Enforce strict canonical database-reference amounts (2026-08-28)
 
 - The shared `DatabaseRecordRow` validator now uses `parse_exact_amount()` and

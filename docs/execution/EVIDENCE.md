@@ -2,6 +2,31 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1084: Freeze critical financial route permission contracts (2026-08-28)
+
+- Code evidence: `reconforge/api/authorization.py` defines the reviewed
+  critical route contract set. `validate_authorization_surface` rejects mode
+  or permission drift for those routes, and the full application invokes it
+  with `require_critical_routes=True`, refusing a missing critical route
+  before the application is served.
+- Test evidence: `tests/test_api_authorization_inventory.py` passes 7 tests,
+  including full application inventory construction, missing/unclassified
+  route refusal, mutating-handler boundary coverage, and explicit rejection of
+  a tampered finance-validation permission. The broader API dependency and
+  server-identity focused suite also passes 18 tests with one declared
+  capability skip.
+- Gate evidence observed on 2026-08-28: full `pytest -q --tb=short
+  --maxfail=1` completes at 100% with no failures; Ruff passes; Mypy reports
+  no issues in 539 source files; Bandit exits successfully with the existing
+  `nosec`/comment warnings; pip-audit reports no known vulnerabilities and
+  records the local distribution-not-on-PyPI note; package build produces
+  wheel and sdist artifacts; the 0.7.1 sdist contains ADR 0744; YAML parsing
+  and `git diff --check` pass.
+- Boundary: this freezes local route authorization contracts and supports
+  fail-closed review of RBAC/ABAC entry points; it does not authenticate an
+  external IdP, provide distributed permission revocation, prove hosted
+  enforcement, or establish production effectiveness.
+
 ## E-1083: Keep CI service-container identity immutable and documentation-aligned (2026-08-28)
 
 - Code/workflow evidence: `.github/workflows/ci.yml` executes the

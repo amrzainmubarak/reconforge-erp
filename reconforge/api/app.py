@@ -478,6 +478,6 @@ def create_api_app(
         (scim.router,), prefix="", public_routes=frozenset(), identity_routes=frozenset()
     )
     app.state.authorization_contracts = tuple(sorted((*core_contracts, *scim_contracts)))
-    validate_authorization_surface(app.state.authorization_contracts)
+    validate_authorization_surface(app.state.authorization_contracts, require_critical_routes=True)
     app.state.authorization_contract_digest = authorization_inventory_digest(app.state.authorization_contracts)
     return app

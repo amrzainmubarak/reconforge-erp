@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1084
+    priority: P0
+    area: identity-governance
+    title: Freeze critical financial route permission contracts
+    status: completed
+    depends_on: [E-1005, E-1083]
+    exit_evidence: >-
+      The central API authorization validator now freezes the reviewed mode and
+      exact permission tuple for high-risk reconciliation, close, write-back,
+      financial validation, inventory posting, consolidation, evidence, and
+      emergency-access mutations. Application construction requires every
+      critical route to be present; contract drift fails closed before the app
+      is served. Focused authorization tests, full regression, static/security
+      gates, package build, and diff/YAML checks pass. This is a local route
+      contract and policy-boundary control only; it does not prove external IAM,
+      distributed revocation, hosted enforcement, or production effectiveness.
   - id: E-1083
     priority: P1
     area: supply-chain
@@ -3134,6 +3150,12 @@ tasks:
       checks for creator-vs-approver flows, and auditable policy decisions with stable identity
       canonicalization and namespace scopes.
     completed_slices:
+      - E-1084 freezes the reviewed mode and exact permission tuple for selected
+        critical financial API mutations. Full application construction now
+        requires every selected critical route and fails closed on contract
+        drift. This is local route-contract evidence; external IAM,
+        distributed revocation, hosted enforcement, and production
+        authorization effectiveness remain open.
       - E-1025 applies one central fail-closed projection to reconciliation
         runs and child response paths. This is bounded disclosure evidence;
         universal route/job/UI enforcement and production IAM effectiveness

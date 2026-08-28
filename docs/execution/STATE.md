@@ -2,6 +2,19 @@
 
 Updated: 2026-08-28
 
+## E-1084 - Freeze critical financial route permission contracts (2026-08-28)
+
+- The central API authorization validator now keeps an explicit reviewed
+  mode/permission tuple for high-risk account reconciliation, close,
+  reconciliation, connector write-back, finance validation, inventory posting,
+  consolidation, evidence verification, and emergency-access mutations.
+- Full application construction requires each critical route to remain
+  registered, while any mode or permission drift fails closed before serving
+  requests. Focused tests cover both full-inventory presence and a tampered
+  critical permission contract. This is local route-contract evidence only; it
+  does not prove external IAM, distributed revocation, hosted enforcement, or
+  production authorization effectiveness.
+
 ## E-1083 - Keep CI service-container identity immutable and documentation-aligned (2026-08-28)
 
 - The server-boundary CI job executes PostgreSQL 16 Alpine and Redis 7.4

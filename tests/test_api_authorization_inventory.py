@@ -198,3 +198,17 @@ def test_mutating_authorization_surface_fails_closed_outside_explicit_handshakes
             RouteAuthorizationContract("POST", "/api/v1/workflow/objects/{object_type}/{object_id}/transition", "dynamic"),
         )
     )
+
+
+def test_critical_financial_route_permission_contract_cannot_drift() -> None:
+    with pytest.raises(ValueError, match="Critical API route authorization contract drifted"):
+        validate_authorization_surface(
+            (
+                RouteAuthorizationContract(
+                    "POST",
+                    "/api/v1/finance-core/entries/{entry_id}/validate",
+                    "all",
+                    ("finance_core.manage",),
+                ),
+            )
+        )

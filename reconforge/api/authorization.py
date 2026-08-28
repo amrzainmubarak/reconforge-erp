@@ -43,6 +43,79 @@ _IDENTITY_MUTATION_ALLOWLIST = frozenset(
     }
 )
 
+# These are the financial-control mutations whose permission must not drift to
+# a broader or merely adjacent capability while still looking "protected".
+# The route inventory validates this contract at application construction time.
+_CRITICAL_ROUTE_CONTRACTS: dict[tuple[str, str], tuple[str, tuple[str, ...]]] = {
+    ("POST", "/api/v1/accounts/reconciliations"): ("all", ("accounts.prepare",)),
+    ("POST", "/api/v1/accounts/reconciliations/{reconciliation_id}/prepare"): ("all", ("accounts.prepare",)),
+    ("POST", "/api/v1/accounts/reconciliations/{reconciliation_id}/submit"): ("all", ("accounts.prepare",)),
+    ("POST", "/api/v1/accounts/reconciliations/{reconciliation_id}/review"): ("all", ("accounts.review",)),
+    ("POST", "/api/v1/accounts/reconciliations/{reconciliation_id}/complete"): ("all", ("accounts.complete",)),
+    ("POST", "/api/v1/close/periods"): ("all", ("close.manage",)),
+    ("POST", "/api/v1/close/periods/{period_id}/lock"): ("all", ("close.manage",)),
+    ("POST", "/api/v1/close/periods/{period_id}/reopen"): ("all", ("close.manage",)),
+    ("POST", "/api/v1/close/tasks/{task_id}/status"): ("all", ("close.manage",)),
+    ("POST", "/api/v1/reconciliations/runs"): ("any", ("match.run", "reconciliation.manage")),
+    ("POST", "/api/v1/reconciliations/runs/{run_id}/cancel"): ("any", ("match.run", "reconciliation.manage")),
+    ("POST", "/api/v1/reconciliations/runs/{run_id}/requeue"): ("any", ("match.run", "reconciliation.manage")),
+    ("POST", "/api/v1/connectors/writeback/intents"): ("all", ("connectors.writeback.propose",)),
+    ("POST", "/api/v1/connectors/writeback/intents/{intent_id}/approve"): (
+        "all",
+        ("connectors.writeback.approve",),
+    ),
+    ("POST", "/api/v1/connectors/writeback/intents/{intent_id}/dispatch"): (
+        "all",
+        ("connectors.writeback.dispatch",),
+    ),
+    ("POST", "/api/v1/connectors/writeback/intents/{intent_id}/compensate"): (
+        "all",
+        ("connectors.writeback.compensate",),
+    ),
+    ("POST", "/api/v1/connectors/writeback/intents/{intent_id}/compensate/dispatch"): (
+        "all",
+        ("connectors.writeback.dispatch",),
+    ),
+    ("POST", "/api/v1/connectors/writeback/intents/{intent_id}/acknowledge"): (
+        "all",
+        ("connectors.writeback.reconcile",),
+    ),
+    ("POST", "/api/v1/connectors/writeback/intents/{intent_id}/recover"): (
+        "all",
+        ("connectors.writeback.reconcile",),
+    ),
+    ("POST", "/api/v1/finance-core/entries/{entry_id}/validate"): ("all", ("finance_core.validate",)),
+    ("POST", "/api/v1/finance-core/entries/{entry_id}/void"): ("all", ("finance_core.validate",)),
+    ("POST", "/api/v1/inventory/movements/{movement_id}/post"): ("all", ("inventory.post",)),
+    ("POST", "/api/v1/inventory/movements/{movement_id}/void"): ("all", ("inventory.post",)),
+    ("POST", "/api/v1/consolidation-close/periods/{period_id}/lock"): ("all", ("finance_core.validate",)),
+    ("POST", "/api/v1/consolidation-close/periods/{period_id}/reopen"): ("all", ("finance_core.validate",)),
+    ("POST", "/api/v1/consolidation-close/runs/{run_id}/approve"): ("all", ("finance_core.validate",)),
+    ("POST", "/api/v1/consolidation-close/runs/{run_id}/post"): ("all", ("finance_core.validate",)),
+    ("POST", "/api/v1/consolidation-close/runs/{run_id}/reversal/approve"): (
+        "all",
+        ("finance_core.validate",),
+    ),
+    ("POST", "/api/v1/consolidation-close/runs/{run_id}/reversal/request"): (
+        "all",
+        ("finance_core.manage",),
+    ),
+    ("POST", "/api/v1/evidence/records/{evidence_id}/verify"): ("all", ("evidence.verify",)),
+    ("POST", "/api/v1/auth/emergency-access/requests"): ("all", ("security.emergency.request",)),
+    ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/approve"): (
+        "all",
+        ("security.emergency.approve",),
+    ),
+    ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/reject"): (
+        "all",
+        ("security.emergency.approve",),
+    ),
+    ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/review"): (
+        "all",
+        ("security.emergency.review",),
+    ),
+}
+
 
 def _dependency_contract(route: APIRoute) -> tuple[str, tuple[str, ...]] | None:
     found: set[tuple[str, tuple[str, ...]]] = set()
@@ -109,7 +182,11 @@ def authorization_inventory_digest(contracts: Iterable[RouteAuthorizationContrac
     return hashlib.sha256(payload).hexdigest()
 
 
-def validate_authorization_surface(contracts: Iterable[RouteAuthorizationContract]) -> None:
+def validate_authorization_surface(
+    contracts: Iterable[RouteAuthorizationContract],
+    *,
+    require_critical_routes: bool = False,
+) -> None:
     """Fail closed when a mutating route escapes its declared policy boundary.
 
     Public and identity-only mutations are deliberately limited to the small
@@ -118,7 +195,13 @@ def validate_authorization_surface(contracts: Iterable[RouteAuthorizationContrac
     carry a permission-bearing or dynamic policy contract.
     """
 
-    for contract in contracts:
+    normalized_contracts = tuple(contracts)
+    actual_by_route = {(contract.method, contract.path): contract for contract in normalized_contracts}
+    missing_critical = sorted(set(_CRITICAL_ROUTE_CONTRACTS) - set(actual_by_route))
+    if require_critical_routes and missing_critical:
+        raise ValueError(f"Critical authorization routes are not registered: {missing_critical}.")
+
+    for contract in normalized_contracts:
         key = (contract.method, contract.path)
         if contract.method not in _MUTATING_METHODS:
             continue
@@ -130,3 +213,10 @@ def validate_authorization_surface(contracts: Iterable[RouteAuthorizationContrac
             raise ValueError(f"Mutating API route lacks a permission contract: {contract.method} {contract.path}.")
         if contract.mode not in {"all", "any", "dynamic", "identity", "public", "scim"}:
             raise ValueError(f"Mutating API route has unsupported authorization mode: {contract.method} {contract.path}.")
+        expected = _CRITICAL_ROUTE_CONTRACTS.get(key)
+        if expected is not None and (contract.mode, contract.permissions) != expected:
+            raise ValueError(
+                "Critical API route authorization contract drifted: "
+                f"{contract.method} {contract.path} expected {expected}, "
+                f"got {(contract.mode, contract.permissions)}."
+            )

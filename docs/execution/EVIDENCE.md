@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1103: Share strict canonical amount validation across reference connectors (2026-08-28)
+
+- Code evidence: `canonical_connector_amount()` is the shared response-model
+  boundary for REST, ERP, payment-statement, and generic database-reference
+  connectors. It applies `parse_exact_amount()` and
+  `canonical_decimal_text()` before digest serialization.
+- Test evidence: Connector and SDK suites cover canonical output,
+  scientific/non-finite refusal, account/entity/tenant scope, cursor and digest
+  replay, TLS sandbox behavior, and manifest inventory.
+- Gate evidence: focused connector tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is provider-neutral read-only connector evidence. It does not
+  establish live bank/ERP provider authenticity, settlement, payment
+  initiation, write-back, or production assurance.
+
 ## E-1102: Enforce strict CAMT.053 decimal lexical boundary (2026-08-28)
 
 - Code evidence: CAMT.053 amount text is checked against the source decimal

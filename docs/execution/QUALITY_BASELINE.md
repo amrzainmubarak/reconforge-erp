@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1103 - Shared strict canonical reference-connector amounts (2026-08-28)
+
+REST, ERP, payment-statement, and generic database-reference response models
+now share one strict parser and canonical serializer. Scientific notation,
+binary-float inputs, malformed values, and non-finite tokens fail closed before
+response digest construction. Connector and full quality gates pass; live
+provider, settlement, write-back, and production evidence remain open.
+
 ## E-1102 - Strict CAMT.053 decimal lexical boundary (2026-08-28)
 
 The bounded offline CAMT.053 parser now enforces an ISO-shaped decimal source

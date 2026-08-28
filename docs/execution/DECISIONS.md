@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-1014: Shared strict connector amount validation
+
+- **Date**: 2026-08-28
+- **Context**: Four read-only reference response models duplicated permissive
+  `Decimal` validation and returned non-canonical amount text.
+- **Decision**: Use the shared `canonical_connector_amount()` helper across
+  REST, ERP, payment-statement, and generic database-reference models.
+- **Rationale**: A single strict parser and canonical serializer makes
+  connector financial boundaries consistent and response fingerprints stable.
+- **Verification**: The four connector suites, SDK inventory, full regression,
+  and release gates pass; evidence is recorded in E-1103.
+- **Compatibility**: Exact finite values remain valid, field contracts and
+  error vocabulary remain stable, and output is canonicalized.
+- **Rollback**: Revert E-1103, ADR 0763, the shared helper, migrated
+  connector/test changes, manifest entry, and execution records together.
+
 ### D-1013: Strict CAMT.053 decimal lexical boundary
 
 - **Date**: 2026-08-28

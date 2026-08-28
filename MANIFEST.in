@@ -331,6 +331,7 @@ include tests/test_reversal_matching.py
 include docs/adr/0219-bounded-reversal-pairing-is-explicit-and-non-posting.md
 include docs/adr/0220-portfolio-partial-settlement-requires-explicit-policy.md
 include reconforge/connectors/rest_reference.py
+include reconforge/connectors/amounts.py
 include reconforge/connectors/erp_reference.py
 include reconforge/connectors/erpnext_reference.py
 include reconforge/connectors/erpnext_payment_reference.py
@@ -1111,3 +1112,4 @@ include docs/adr/0759-strict-postgres-worker-tolerance-hydration.md
 include docs/adr/0760-strict-postgres-database-connector-amount-hydration.md
 include docs/adr/0761-strict-canonical-database-reference-amounts.md
 include docs/adr/0762-strict-camt053-decimal-lexical-boundary.md
+include docs/adr/0763-shared-strict-connector-amount-validation.md

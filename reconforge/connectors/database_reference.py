@@ -17,6 +17,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from reconforge.connectors.amounts import canonical_connector_amount
 from reconforge.connectors.manifest import (
     AuthenticationMethod,
     ConnectorCapability,
@@ -32,8 +33,6 @@ from reconforge.connectors.network import (
     ConnectorNetworkError,
     ConnectorSecretResolver,
 )
-from reconforge.io.writers import canonical_decimal_text
-from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 DATABASE_REFERENCE_ENDPOINT = "https://db-gateway.example.test/reconforge"
 
@@ -112,21 +111,7 @@ class DatabaseRecordRow(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, value: str) -> str:
-        try:
-            amount = parse_exact_amount(value)
-        except InvalidAmountError as exc:
-            if str(value).strip().casefold() in {
-                "nan",
-                "inf",
-                "+inf",
-                "-inf",
-                "infinity",
-                "+infinity",
-                "-infinity",
-            }:
-                raise ValueError("amount must be finite") from exc
-            raise ValueError("amount must be exact Decimal text") from exc
-        return canonical_decimal_text(amount)
+        return canonical_connector_amount(value)
 
 
 class DatabaseTransport(Protocol):

@@ -2,6 +2,15 @@
 
 Updated: 2026-08-28
 
+## E-1103 - Share strict canonical amount validation across reference connectors (2026-08-28)
+
+- REST, ERP, payment-statement, and generic database-reference response models
+  now use `canonical_connector_amount()`, which applies strict parsing and
+  canonical serialization before response digest construction.
+- This is provider-neutral read-only evidence only. Live provider
+  authenticity, settlement, payment initiation, write-back, and production
+  assurance remain open.
+
 ## E-1102 - Enforce strict CAMT.053 decimal lexical boundary (2026-08-28)
 
 - The bounded offline CAMT.053 parser now rejects scientific notation,

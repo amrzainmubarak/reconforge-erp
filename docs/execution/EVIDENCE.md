@@ -44,6 +44,24 @@ This file records commands and observed results. It does not convert a dirty wor
   scanner/provenance evidence. The previously retained image evidence is not
   promoted as evidence for this source revision.
 
+## E-1072: Fail-closed local role responses (2026-08-28)
+
+- Code evidence: Local role inspection and role-permission responses now pass
+  through central allowlists. The role projector preserves only `id` and
+  `name`; the permission projector validates a string collection and preserves
+  only `role` and `permissions`. Malformed repository shapes return the
+  bounded `roles_projection_failed` API error.
+- Test evidence: Field-access tests inject future role and permission fields;
+  the authenticated local roles route injects a future repository field and
+  proves it is absent from the response. Focused tests and the full pytest
+  regression pass at `100%`; Ruff, Mypy (`539` source files), Bandit,
+  pip-audit, package build, source YAML validation (`139` files), and
+  `git diff --check` also pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: this slice controls local API response disclosure only. It does
+  not establish enterprise PostgreSQL role administration, authorization
+  correctness, or production effectiveness. ADR 0732 records rollback.
+
 ## E-1071: Fail-closed local workflow responses
 
 - Code evidence: Local workflow object, allowed-transition, and history routes

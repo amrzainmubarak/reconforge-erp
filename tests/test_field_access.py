@@ -63,6 +63,8 @@ from reconforge.auth.field_access import (
     project_inventory_valuation_reversal_summary,
     project_inventory_valuation_snapshot,
     project_inventory_warehouse,
+    project_local_role,
+    project_local_role_permissions,
     project_manufacturing_cost_control,
     project_master_snapshot,
     project_master_summary,
@@ -109,6 +111,25 @@ def test_field_projection_masks_and_denies_without_leaking_values() -> None:
     assert result.masked_fields == ("amount",)
     assert result.denied_fields == ("secret",)
     assert "do-not-leak" not in str(result.visible)
+
+
+def test_local_role_projections_are_closed_and_validate_permissions() -> None:
+    role = project_local_role(
+        {"id": "role-1", "name": "reviewer", "future_role_field": "must-not-escape"}
+    )
+    permissions = project_local_role_permissions(
+        {
+            "role": "reviewer",
+            "permissions": ("audit.read",),
+            "future_permission_field": "must-not-escape",
+        }
+    )
+
+    assert role.visible == {"id": "role-1", "name": "reviewer"}
+    assert role.denied_fields == ("future_role_field",)
+    assert permissions.visible == {"permissions": ["audit.read"], "role": "reviewer"}
+    assert permissions.denied_fields == ("future_permission_field",)
+    assert "must-not-escape" not in str(role.visible) + str(permissions.visible)
 
 
 def test_finance_core_master_projections_are_closed() -> None:

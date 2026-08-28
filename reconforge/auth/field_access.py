@@ -70,6 +70,8 @@ IDENTITY_USER_STATUS_FIELDS = frozenset(
 IDENTITY_SESSION_REVOCATION_FIELDS = frozenset(
     {"session", "transitioned", "revoked_current_session", "audit_event_id"}
 )
+LOCAL_ROLE_FIELDS = frozenset({"id", "name"})
+LOCAL_ROLE_PERMISSIONS_FIELDS = frozenset({"role", "permissions"})
 ACCESS_PERMISSION_FIELDS = frozenset({"name", "description", "active_role_count", "state_digest"})
 ACCESS_ROLE_FIELDS = frozenset(
     {
@@ -2312,6 +2314,25 @@ def project_identity_session_revocation(values: Mapping[str, object]) -> FieldPr
             raise TypeError("identity revocation session must be a mapping")
         record["session"] = project_identity_session(session).visible
     return project_fields(record, allowed_fields=IDENTITY_SESSION_REVOCATION_FIELDS)
+
+
+def project_local_role(values: Mapping[str, object]) -> FieldProjection:
+    """Return the closed local-role inspection fields."""
+
+    return project_fields(values, allowed_fields=LOCAL_ROLE_FIELDS)
+
+
+def project_local_role_permissions(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed local-role permission listing."""
+
+    record = dict(values)
+    permissions = record.get("permissions")
+    if not isinstance(permissions, (list, tuple)) or not all(isinstance(item, str) for item in permissions):
+        raise TypeError("local role permissions must be a list or tuple of strings")
+    record["permissions"] = list(permissions)
+    if not isinstance(record.get("role"), str):
+        raise TypeError("local role name must be a string")
+    return project_fields(record, allowed_fields=LOCAL_ROLE_PERMISSIONS_FIELDS)
 
 
 def project_access_permission(values: Mapping[str, object]) -> FieldProjection:

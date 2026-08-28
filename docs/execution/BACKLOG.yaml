@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-08-27"
+updated_at: "2026-08-28"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1072
+    priority: P1
+    area: auth-governance
+    title: Apply fail-closed projection to local role responses
+    status: completed
+    depends_on: [E-1005, E-1071]
+    exit_evidence: >-
+      Local role and role-permission responses preserve their reviewed
+      compatibility fields through central projections, reject malformed
+      repository shapes with a bounded API error, and drop future fields.
+      Focused tests, full regression, Ruff, Mypy, Bandit, pip-audit, package
+      build, source YAML, and diff gates pass; ADR 0732 records rollback. This
+      does not claim enterprise PostgreSQL role administration or production
+      effectiveness.
   - id: E-1071
     priority: P1
     area: workflow-governance

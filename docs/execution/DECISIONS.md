@@ -5,6 +5,21 @@
 
 ## Decisions
 
+### D-899: Local role responses use fail-closed projection
+
+- **Date**: 2026-08-28
+- **Context**: Local role inspection serialized role models directly and the
+  role-permission response had no shared shape validation.
+- **Decision**: Use central projections for local roles and role permissions;
+  reject malformed role or permission collections with a bounded API error.
+- **Verification**: Focused field-access and authenticated API tests inject
+  future fields and pass, with Ruff and Mypy clean. Full regression and
+  release gates are required before E-1072 closure.
+- **Compatibility**: Preserve the existing local role route paths, keys, and
+  values.
+- **Rollback**: Revert E-1072 code, tests, ADR 0732, manifest, and execution
+  metadata together.
+
 ### D-898: Local workflow responses use fail-closed projection
 
 - **Date**: 2026-08-27

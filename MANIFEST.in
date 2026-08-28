@@ -1075,5 +1075,6 @@ include docs/adr/0728-access-policy-analysis-responses-use-fail-closed-projectio
 include docs/adr/0729-evidence-coverage-responses-use-fail-closed-projection.md
 include docs/adr/0730-connector-writeback-responses-use-fail-closed-projection.md
 include docs/adr/0731-local-workflow-responses-use-fail-closed-projection.md
+include docs/adr/0732-local-role-responses-use-fail-closed-projection.md
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

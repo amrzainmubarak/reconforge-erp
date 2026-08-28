@@ -2,6 +2,15 @@
 
 Updated: 2026-08-28
 
+## E-1072 - Fail-closed local role responses (2026-08-28)
+
+- Local `/api/v1/roles` and role-permission responses now use central
+  allowlists and reject malformed repository output with a bounded API error.
+  Focused tests, full pytest regression, Ruff, Mypy, Bandit, pip-audit, package
+  build, source YAML validation, and diff checks pass. ADR 0732 records the
+  compatibility and rollback boundary. This is response-control evidence,
+  not enterprise PostgreSQL or production-effectiveness evidence.
+
 ## Current local runtime and release-gate refresh (2026-08-28)
 
 - The current branch is `money-strict-bank-control`; it contains no Codex

@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1100
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict PostgreSQL database-connector amount hydration
+    status: completed
+    depends_on: [E-1099]
+    exit_evidence: >-
+      The read-only PostgreSQL named-query connector now uses parse_exact_amount
+      before constructing DatabaseRecordRow, preserving safe error categories
+      and canonical exact output. Binary floating-point, boolean, malformed,
+      non-finite, and disallowed representations fail closed. Connector tests,
+      full regression, static/security gates, package build, YAML, and diff
+      checks pass. This is adapter input-integrity evidence, not provider,
+      driver, parity, capacity, or production assurance.
   - id: E-1099
     priority: P0
     area: financial-exactness

@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1100: Enforce strict PostgreSQL database-connector amount hydration (2026-08-28)
+
+- Code evidence: `_canonical_amount()` in the read-only PostgreSQL named-query
+  connector uses `parse_exact_amount()` and sends accepted values through the
+  existing canonical decimal serializer; safe type, non-finite, and malformed
+  connector error categories remain explicit.
+- Test evidence: `tests/test_postgres_database_reference.py` covers normal
+  read-only transport plus binary-float, scientific-text, boolean, and
+  non-finite Decimal rejection at `_row_from_values()`.
+- Gate evidence: focused connector tests pass with one declared live-
+  PostgreSQL capability skip; full regression, Ruff, Mypy, Bandit, pip-audit,
+  package build, YAML, and diff checks pass.
+- Boundary: this is connector input-integrity evidence. It does not establish
+  provider authenticity, driver certification, cross-engine parity, capacity,
+  or production financial assurance.
+
 ## E-1099: Enforce strict PostgreSQL worker tolerance hydration (2026-08-28)
 
 - Code evidence: grouped and sequential PostgreSQL worker request builders use

@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1100 - Strict PostgreSQL database-connector amount hydration (2026-08-28)
+
+The PostgreSQL read-only connector suite passes with one declared live-
+PostgreSQL capability skip. Connector amounts now share the strict parser and
+canonical serialization contract, refusing inexact or malformed adapter values
+before typed row construction. Full regression and release-quality gates pass;
+provider, driver, parity, capacity, and production evidence remain open.
+
 ## E-1099 - Strict PostgreSQL worker tolerance hydration (2026-08-28)
 
 Grouped and sequential PostgreSQL worker suites pass. Their tolerance values

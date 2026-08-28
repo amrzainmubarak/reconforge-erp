@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1011: Strict PostgreSQL database-connector amount hydration
+
+- **Date**: 2026-08-28
+- **Context**: The read-only PostgreSQL named-query connector used direct
+  `Decimal(str(value))` parsing after a partial float check, creating a
+  different amount contract from the platform parser.
+- **Decision**: Use `parse_exact_amount()` for connector amount hydration,
+  preserve existing safe error categories, and keep canonical decimal output.
+- **Rationale**: Database results are adapter input and must be exact before
+  entering the typed connector row and reconciliation pipeline.
+- **Verification**: Connector hydration tests cover float, scientific text,
+  boolean, non-finite, and valid read behavior; full regression and release
+  gates are recorded in E-1100.
+- **Compatibility**: Exact values and public error codes remain compatible;
+  invalid/inexact values fail closed.
+- **Rollback**: Revert E-1100, ADR 0760, connector/test changes, manifest
+  entry, and execution records together.
+
 ### D-1010: Strict PostgreSQL worker tolerance hydration
 
 - **Date**: 2026-08-28

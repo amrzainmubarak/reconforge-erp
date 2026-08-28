@@ -2,6 +2,17 @@
 
 Updated: 2026-08-28
 
+## E-1100 - Enforce strict PostgreSQL database-connector amount hydration (2026-08-28)
+
+- The read-only PostgreSQL named-query connector now uses
+  `parse_exact_amount()` before constructing `DatabaseRecordRow`. Binary
+  floating-point, boolean, malformed, non-finite, and disallowed amount
+  representations fail closed while existing safe error categories and exact
+  canonical outputs remain compatible.
+- This is connector input-integrity evidence only. Provider authenticity,
+  database-driver certification, cross-engine parity, capacity, and production
+  financial assurance remain open.
+
 ## E-1099 - Enforce strict PostgreSQL worker tolerance hydration (2026-08-28)
 
 - PostgreSQL grouped and sequential worker adapters now parse

@@ -721,6 +721,7 @@ include docs/execution/benchmarks/grouped-matching-10k-domain-diverse-v1.md
 include docs/execution/benchmarks/grouped-matching-10k-domain-diverse-v1.json
 include reconforge/benchmark/evidence_index.py
 include tests/test_benchmark_evidence_index.py
+include tests/test_engine_process_replay.py
 include .github/scripts/verify_benchmark_index.py
 include docs/execution/benchmarks/INDEX.v1.json
 include apps/web/src/components/BankStatementStudio.tsx
@@ -1089,6 +1090,7 @@ include docs/adr/0741-postgres-scheduler-workers-consume-verified-permission-man
 include docs/adr/0742-postgres-outbox-workers-consume-verified-permission-manifests.md
 include docs/adr/0743-ci-service-containers-remain-digest-pinned.md
 include docs/adr/0744-critical-route-permission-contracts.md
+include docs/adr/0745-cross-process-engine-replay.md
 include docs/execution/CONTAINER_SECURITY_LOCAL_2026-08-28.json
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

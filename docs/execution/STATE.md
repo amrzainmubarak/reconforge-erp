@@ -2,6 +2,16 @@
 
 Updated: 2026-08-28
 
+## E-1085 - Prove cross-process engine replay stability (2026-08-28)
+
+- A new test creates a 500-record synthetic dataset and executes Pandas plus
+  forced-partitioned DuckDB in four fresh subprocesses under hash seeds 1 and
+  2. It compares canonical result envelopes, reconciliation signatures,
+  policies, counts, and summary rows across processes and engines.
+- The focused process-replay test passes. This is bounded local process/replay
+  evidence only; it does not close supported Python-version, hosted,
+  PostgreSQL, provider, capacity, or production assurance.
+
 ## E-1084 - Freeze critical financial route permission contracts (2026-08-28)
 
 - The central API authorization validator now keeps an explicit reviewed

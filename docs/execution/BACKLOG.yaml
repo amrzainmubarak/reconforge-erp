@@ -9,6 +9,19 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1085
+    priority: P0
+    area: matching
+    title: Prove cross-process engine replay stability
+    status: completed
+    depends_on: [E-1003]
+    exit_evidence: >-
+      Fresh subprocess executions under distinct PYTHONHASHSEED values produce
+      identical Pandas and forced-partitioned DuckDB result envelopes, and both
+      engines produce the same canonical result payload for a 500-record
+      synthetic dataset. This is bounded local process/replay evidence;
+      supported Python matrix, hosted execution, live providers, PostgreSQL
+      scale, and production readiness remain separate.
   - id: E-1084
     priority: P0
     area: identity-governance
@@ -2970,6 +2983,14 @@ tasks:
       behavior, explicit strategy/version/digest records, and cross-engine reproducibility
       replay checks under open and synthetic profiles.
     completed_slices:
+      - >
+        E-1085 adds fresh-process replay checks across Pandas and
+        forced-partitioned DuckDB with distinct hash seeds. The serialized
+        result envelopes, policy fields, summary rows, and reconciliation
+        signatures remain identical within each engine and across both engines
+        for the bounded 500-record synthetic profile. Supported-version,
+        hosted, live-provider, PostgreSQL-scale, and production evidence remain
+        open.
       - E-1025 applies closed allowlists to PostgreSQL reconciliation run,
         canonical-input, deterministic-result, and exception API responses,
         including nested run collections. Unknown adapter fields are covered

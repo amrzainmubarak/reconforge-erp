@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1085: Prove cross-process engine replay stability (2026-08-28)
+
+- Code evidence: `tests/test_engine_process_replay.py` creates a bounded
+  500-record synthetic dataset and runs Pandas plus forced-partitioned DuckDB
+  in fresh subprocesses under `PYTHONHASHSEED=1` and `PYTHONHASHSEED=2`.
+  Each child serializes counts, summary rows, policy fields, and the
+  reconciliation signature into a closed comparison envelope.
+- Test evidence: `python -m pytest tests/test_engine_process_replay.py -q
+  --tb=short` passes 1/1; the focused engine-parity/matching suite passes
+  36/36; and `python -m pytest -q --tb=short --maxfail=1` reaches 100% with no
+  failures. Existing optional capability skips and the repository's known
+  deprecation/legacy-input warnings remain declared.
+- Quality and packaging evidence: Ruff passes; Mypy reports no issues in 539
+  source files; Bandit exits successfully with its existing `nosec`/comment
+  warnings; pip-audit reports no known vulnerabilities and records the local
+  distribution-not-on-PyPI note; package build produces wheel and sdist; the
+  sdist contains both ADR 0745 and `tests/test_engine_process_replay.py`;
+  `BACKLOG.yaml` parses successfully and `git diff --check` passes.
+- Boundary: this is bounded local subprocess replay evidence across the
+  declared Pandas and partitioned DuckDB paths. It does not prove every
+  supported Python/dependency version, hosted execution, PostgreSQL parity,
+  live-provider behavior, capacity, or production readiness.
+
 ## E-1084: Freeze critical financial route permission contracts (2026-08-28)
 
 - Code evidence: `reconforge/api/authorization.py` defines the reviewed

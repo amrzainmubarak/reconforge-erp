@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1093
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict financial inputs in sequential strategy adapters
+    status: completed
+    depends_on: [E-1092]
+    exit_evidence: >-
+      Carry-forward and reversal-pairing strategy adapters now parse record
+      amounts and tolerances through parse_exact_amount and refuse binary
+      floating-point values before domain matching. Exact text, integer, and
+      Decimal inputs retain their existing behavior. The new adapter regression,
+      sequential worker coverage, full regression, static/security gates,
+      package build, and diff checks pass. This closes an adapter input seam;
+      it does not close E-1003 cross-engine, hosted, capacity, provider, or
+      production evidence.
   - id: E-1092
     priority: P0
     area: bank-control
@@ -3089,6 +3104,13 @@ tasks:
       behavior, explicit strategy/version/digest records, and cross-engine reproducibility
       replay checks under open and synthetic profiles.
     completed_slices:
+      - >
+        E-1093 routes carry-forward and reversal-pairing record amounts and
+        tolerances through the strict exact-financial parser, so binary floats
+        are rejected before matching while valid exact inputs retain their
+        result/digest behavior. Adapter regression, sequential worker, full
+        regression, and release gates pass. Broader E-1003 parity, hosted,
+        capacity, provider, and production evidence remain open.
       - >
         E-1091 enforces the persisted `partition_max_records` ceiling while
         PostgreSQL input partitions are accumulated, caps cursor fetch batches

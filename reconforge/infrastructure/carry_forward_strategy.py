@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import asdict
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import InvalidOperation
 
 from reconforge.application.matching_strategies import (
     MatchingStrategyContractError,
@@ -24,6 +24,7 @@ from reconforge.domain.carry_forward import (
     allocate_carry_forward,
     allocate_sequence_window,
 )
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 CARRY_FORWARD_FIFO_MANIFEST = MatchingStrategyManifest(
     id="bounded-carry-forward-fifo",
@@ -61,7 +62,7 @@ class CarryForwardFifoStrategy:
         try:
             obligations = tuple(self._record(item, request, request.left_id_field) for item in request.left_records)
             settlements = tuple(self._record(item, request, request.right_id_field) for item in request.right_records)
-            tolerance = Decimal(str(request.amount_tolerance))
+            tolerance = parse_exact_amount(request.amount_tolerance)
             if not tolerance.is_finite() or tolerance < 0:
                 raise MatchingStrategyContractError("Carry-forward amount tolerance is invalid.")
             policy = CarryForwardPolicy(
@@ -74,6 +75,8 @@ class CarryForwardFifoStrategy:
                 decision = allocate_sequence_window(obligations, settlements, policy)
             else:
                 decision = allocate_carry_forward(obligations, settlements, policy)
+        except InvalidAmountError as exc:
+            raise MatchingStrategyContractError(str(exc)) from exc
         except (CarryForwardError, KeyError, TypeError, ValueError, InvalidOperation) as exc:
             raise MatchingStrategyContractError(str(exc)) from exc
         results = (asdict(decision),)
@@ -96,11 +99,13 @@ class CarryForwardFifoStrategy:
     @staticmethod
     def _record(item: Mapping[str, object], request: MatchingStrategyRequest, id_field: str) -> CarryForwardRecord:
         try:
-            amount = Decimal(str(item[request.amount_field]))
+            amount = parse_exact_amount(item[request.amount_field])
             record_date = date.fromisoformat(str(item[request.date_field]))
             record_id = str(item[id_field])
             currency = str(item.get(request.currency_field, ""))
             partition = str(item.get(request.partition_field, ""))
+        except InvalidAmountError as exc:
+            raise MatchingStrategyContractError(str(exc)) from exc
         except (KeyError, TypeError, ValueError, InvalidOperation) as exc:
             raise MatchingStrategyContractError("Carry-forward record fields are invalid.") from exc
         return CarryForwardRecord(record_id, amount, currency, record_date, partition)

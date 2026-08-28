@@ -2,6 +2,17 @@
 
 Updated: 2026-08-28
 
+## E-1093 - Enforce strict financial inputs in sequential strategy adapters (2026-08-28)
+
+- Carry-forward and reversal-pairing adapters now parse record amounts and
+  tolerances through `parse_exact_amount()`. Binary floating-point values are
+  rejected before domain matching, closing an adapter-level conversion seam
+  that could have turned a `float` into an apparently exact Decimal.
+- Exact text, integer, and Decimal callers retain their existing behavior and
+  digests. This is strict input-boundary evidence only; broader E-1003
+  cross-engine, hosted, capacity, provider, and production evidence remains
+  open.
+
 ## E-1092 - Bound bank-control duplicate-reference evaluation (2026-08-28)
 
 - The bank-statement control now rejects direct inputs above 250,000 records

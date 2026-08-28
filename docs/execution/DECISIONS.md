@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-1004: Strategy adapters enforce strict financial inputs
+
+- **Date**: 2026-08-28
+- **Context**: Carry-forward and reversal-pairing adapters converted public
+  record amounts with `Decimal(str(value))`, allowing a binary float to cross
+  the adapter boundary even though the domain models require exact Decimal
+  values.
+- **Decision**: Parse amounts and tolerances through `parse_exact_amount()`
+  and reject binary floating-point values before matching. Preserve exact text,
+  integer, and Decimal inputs and the existing result/digest contract.
+- **Rationale**: Every financial adapter boundary must enforce the same strict
+  input policy. A textual conversion of a float is not evidence that the
+  original financial value was exact.
+- **Verification**: The new sequential adapter regression plus existing
+  carry-forward, reversal, worker, replay, and strategy-contract suites pass;
+  full regression and release gates are recorded in E-1093.
+- **Compatibility**: Only binary floating-point inputs change from accepted to
+  refused. Valid exact-text requests are unchanged.
+- **Rollback**: Revert E-1093, ADR 0753, the two adapter changes, the
+  regression test, manifest entry, and execution records together.
+
 ### D-1003: Bound bank-control duplicate-reference evaluation
 
 - **Date**: 2026-08-28

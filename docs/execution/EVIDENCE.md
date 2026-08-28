@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1093: Enforce strict financial inputs in sequential strategy adapters (2026-08-28)
+
+- Code evidence: `CarryForwardFifoStrategy` and `ReversalPairingStrategy` use
+  `parse_exact_amount()` for record amounts and strategy tolerances. The
+  adapters reject binary floating-point input before constructing domain
+  records or running matching, while exact text, integers, and Decimal values
+  remain supported.
+- Test evidence: `tests/test_matching_strategy_contract.py::test_sequential_strategy_adapters_reject_binary_float_amounts`
+  covers both adapters; the existing carry-forward, reversal, sequential
+  worker, replay, and strategy-contract tests remain green.
+- Gate evidence: the focused matching-strategy and sequential-worker suite
+  passes 47/47; `python -m pytest -q --tb=short --maxfail=1` reaches 100% with
+  exit 0; Ruff passes; Mypy reports no issues in 539 source files; Bandit exits
+  0 with reviewed existing suppression warnings; pip-audit reports no known
+  vulnerabilities while noting the local package is not on PyPI; the 0.7.1
+  wheel and sdist build successfully; the sdist contains ADR 0753 and both
+  changed adapters; and YAML/diff checks pass.
+- Boundary: this is strict adapter input evidence. It does not establish
+  posting correctness, provider authenticity, cross-engine parity, hosted
+  enforcement, capacity, or production financial assurance.
+
 ## E-1092: Bound bank-control duplicate-reference evaluation (2026-08-28)
 
 - Code evidence: `run_bank_statement_control()` declares and validates limits

@@ -1,5 +1,14 @@
 # Quality Baseline
 
+## E-1093 - Strict financial inputs at sequential strategy adapters (2026-08-28)
+
+Focused matching-strategy and PostgreSQL sequential-worker tests pass 47/47;
+the full Python regression reaches 100% with exit 0. Both carry-forward and
+reversal-pairing adapters reject binary floating-point record amounts before
+matching. Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff gates
+pass, with the existing Bandit suppressions and local-package PyPI audit note
+retained as previously bounded observations.
+
 ## E-853 regulated admission gate (2026-08-23)
 
 Admission/key/deployment/inventory tests pass 50/50; Ruff, Mypy, and whitespace

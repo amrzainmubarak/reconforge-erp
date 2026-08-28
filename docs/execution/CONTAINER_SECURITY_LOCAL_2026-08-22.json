@@ -1,0 +1,138 @@
+{
+  "$schema": "../schemas/container_security_evidence.schema.json",
+  "active_exception_count": 0,
+  "blockers": [
+    "unexcepted high finding CVE-2026-14456 for libcrypto3@3.5.7-r0",
+    "unexcepted high finding CVE-2026-14456 for libssl3@3.5.7-r0"
+  ],
+  "database": {
+    "age_seconds_at_scan": 23391,
+    "built_at": "2026-08-22T06:14:16Z",
+    "schema_version": "v6.1.9"
+  },
+  "evaluated_at": "2026-08-22T12:44:07Z",
+  "image": {
+    "config_digest": "sha256:a39843a5a48d3c071aa8988f0254456753d93bb6735e1648b4734eeb48c3ac1f",
+    "distro": {
+      "id": "alpine",
+      "version": "3.24.1"
+    },
+    "local_manifest_digest": "sha256:b89e9912efa6d274d850ecfbe701b9d44b7b8f041e2c8ed68c939f673cd3bea5",
+    "platform": "linux/amd64",
+    "source_name": "ghcr.io/amrzainmubarak/reconforge-erp",
+    "source_version": "0.7.1"
+  },
+  "license_inventory": {
+    "coverage_basis_points": 9411,
+    "legal_compatibility_assessed": false,
+    "licensed_packages": 64,
+    "minimum_coverage_basis_points": 9000,
+    "missing_license_packages": [
+      ".python-rundeps@20260813.194431",
+      "markdown-it-py@4.2.0",
+      "mdurl@0.1.2",
+      "python@3.11.16"
+    ],
+    "total_packages": 68
+  },
+  "policy_id": "reconforge-supply-chain",
+  "schema_version": 2,
+  "status": "blocked",
+  "tools": {
+    "grype": "grype@0.117.0",
+    "syft": "syft@1.51.0"
+  },
+  "vex": {
+    "applied_fixed_findings": 3,
+    "author": "ReconForge automated security review",
+    "document_id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+    "document_sha256": "3263ae100c4b89aff8737a11ab708fadd4105c8d3aed7ba9514bbcc0df352d95",
+    "last_updated": "2026-08-22T12:30:00Z",
+    "review_age_days": 0,
+    "reviewed_fixed_statements": 3
+  },
+  "vulnerabilities": {
+    "counts": {
+      "critical": 0,
+      "high": 5,
+      "low": 2,
+      "medium": 12,
+      "negligible": 1,
+      "unknown": 0
+    },
+    "critical_or_high_findings": [
+      {
+        "exception_id": null,
+        "fix_state": "unknown",
+        "id": "CVE-2026-14456",
+        "match_types": [
+          "cpe-match"
+        ],
+        "namespace": "nvd:cpe",
+        "package": "libcrypto3",
+        "severity": "High",
+        "version": "3.5.7-r0",
+        "vex_document_id": null,
+        "vex_status": null
+      },
+      {
+        "exception_id": null,
+        "fix_state": "unknown",
+        "id": "CVE-2026-14456",
+        "match_types": [
+          "cpe-match"
+        ],
+        "namespace": "nvd:cpe",
+        "package": "libssl3",
+        "severity": "High",
+        "version": "3.5.7-r0",
+        "vex_document_id": null,
+        "vex_status": null
+      },
+      {
+        "exception_id": null,
+        "fix_state": "fixed",
+        "id": "CVE-2026-3644",
+        "match_types": [
+          "cpe-match"
+        ],
+        "namespace": "nvd:cpe",
+        "package": "python",
+        "severity": "High",
+        "version": "3.11.16",
+        "vex_document_id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+        "vex_status": "fixed"
+      },
+      {
+        "exception_id": null,
+        "fix_state": "fixed",
+        "id": "CVE-2026-4224",
+        "match_types": [
+          "cpe-match"
+        ],
+        "namespace": "nvd:cpe",
+        "package": "python",
+        "severity": "High",
+        "version": "3.11.16",
+        "vex_document_id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+        "vex_status": "fixed"
+      },
+      {
+        "exception_id": null,
+        "fix_state": "fixed",
+        "id": "CVE-2026-7210",
+        "match_types": [
+          "cpe-match"
+        ],
+        "namespace": "nvd:cpe",
+        "package": "python",
+        "severity": "High",
+        "version": "3.11.16",
+        "vex_document_id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+        "vex_status": "fixed"
+      }
+    ],
+    "grype_report_sha256": "332ce9ba8552cee7a2f1054bf29202e792d049437146216e163b2ed808d1337a",
+    "syft_inventory_sha256": "027e289b1f45bc3b5d446299d714c0d271616d89fd2e171dfca872651987c05f"
+  }
+}

@@ -82,6 +82,37 @@ def test_certification_evidence_binding_migration_is_versioned_and_reversible() 
     assert "refusing to discard certification evidence bindings" in migration
 
 
+def test_writeback_proposal_identity_migration_is_versioned_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0089_postgres_writeback_proposal_identity.py").read_text(
+        encoding="utf-8"
+    )
+    schema = (ROOT / "reconforge/infrastructure/postgres_writeback.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0089_pg_writeback_identity"' in migration
+    assert 'down_revision = "0088_pg_currency_snapshot"' in migration
+    assert "POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_AUDIT_SQL" in migration
+    assert "POSTGRES_WRITEBACK_PROPOSAL_IDENTITY_SQL" in migration
+    assert "BEFORE INSERT OR UPDATE OR DELETE" in schema
+    assert "proposal identity is immutable" in schema
+    assert "BEFORE UPDATE OR DELETE" in migration
+
+
+def test_writeback_recovery_observation_migration_is_versioned_scoped_and_reversible() -> None:
+    migration = (ROOT / "alembic/versions/0090_postgres_writeback_recovery_observations.py").read_text(
+        encoding="utf-8"
+    )
+    schema = (ROOT / "reconforge/infrastructure/postgres_writeback.py").read_text(encoding="utf-8")
+
+    assert 'revision = "0090_pg_writeback_observations"' in migration
+    assert 'down_revision = "0089_pg_writeback_identity"' in migration
+    assert "POSTGRES_WRITEBACK_RECOVERY_OBSERVATIONS_SCHEMA_SQL" in migration
+    assert "connector_writeback_recovery_observations" in schema
+    assert "FORCE ROW LEVEL SECURITY" in schema
+    assert "BEFORE INSERT OR UPDATE OR DELETE" in schema
+    assert "recovery observation intent binding is invalid" in schema
+    assert "DROP TABLE IF EXISTS reconforge.connector_writeback_recovery_observations" in migration
+
+
 def test_reconciliation_entity_scope_migration_is_versioned_and_reversible() -> None:
     migration = (ROOT / "alembic/versions/0072_postgres_reconciliation_entity_scope.py").read_text(
         encoding="utf-8"

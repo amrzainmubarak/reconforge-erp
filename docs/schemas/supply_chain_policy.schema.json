@@ -14,6 +14,7 @@
     "python_resolution",
     "javascript_resolution",
     "container_resolution",
+    "container_audits",
     "secret_scanning",
     "dependency_audits",
     "updates",
@@ -31,6 +32,7 @@
     "python_resolution": {"$ref": "#/$defs/pythonResolution"},
     "javascript_resolution": {"$ref": "#/$defs/javascriptResolution"},
     "container_resolution": {"$ref": "#/$defs/containerResolution"},
+    "container_audits": {"$ref": "#/$defs/containerAudits"},
     "secret_scanning": {"$ref": "#/$defs/secretScanning"},
     "dependency_audits": {"$ref": "#/$defs/dependencyAudits"},
     "updates": {"$ref": "#/$defs/updates"},
@@ -78,11 +80,66 @@
     "containerResolution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["dockerfile", "base_image", "dependency_command"],
+      "required": ["dockerfile", "base_image", "dependency_command", "service_images"],
       "properties": {
         "dockerfile": {"const": "Dockerfile"},
-        "base_image": {"type": "string", "pattern": "^python:3\\.11-slim@sha256:[0-9a-f]{64}$"},
-        "dependency_command": {"const": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy"}
+        "base_image": {"type": "string", "pattern": "^python:3\\.11-alpine@sha256:[0-9a-f]{64}$"},
+        "dependency_command": {"const": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy"},
+        "service_images": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["airgap_python", "postgres_16_ci", "postgres_drills"],
+          "properties": {
+            "airgap_python": {"const": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"},
+            "postgres_16_ci": {"const": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"},
+            "postgres_drills": {"const": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"}
+          }
+        }
+      }
+    },
+    "containerAudits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sbom", "vulnerability"],
+      "properties": {
+        "sbom": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool", "version", "commit", "linux_x86_64_archive_sha256", "windows_x86_64_archive_sha256", "native_schema_version", "scan_scope", "license_content_coverage", "minimum_license_coverage_percent"],
+          "properties": {
+            "tool": {"const": "syft"},
+            "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "commit": {"$ref": "#/$defs/commit"},
+            "linux_x86_64_archive_sha256": {"$ref": "#/$defs/sha256"},
+            "windows_x86_64_archive_sha256": {"$ref": "#/$defs/sha256"},
+            "native_schema_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "scan_scope": {"const": "squashed"},
+            "license_content_coverage": {"type": "integer", "minimum": 0, "maximum": 100},
+            "minimum_license_coverage_percent": {"type": "integer", "minimum": 90, "maximum": 100}
+          }
+        },
+        "vulnerability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool", "version", "commit", "linux_x86_64_archive_sha256", "windows_x86_64_archive_sha256", "supported_db_schema", "max_database_age_hours", "scan_input_format", "fail_severities", "unknown_severity_policy", "vex_document", "vex_document_sha256", "vex_context", "vex_allowed_statuses", "vex_max_review_age_days"],
+          "properties": {
+            "tool": {"const": "grype"},
+            "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "commit": {"$ref": "#/$defs/commit"},
+            "linux_x86_64_archive_sha256": {"$ref": "#/$defs/sha256"},
+            "windows_x86_64_archive_sha256": {"$ref": "#/$defs/sha256"},
+            "supported_db_schema": {"type": "integer", "minimum": 1},
+            "max_database_age_hours": {"type": "integer", "minimum": 1, "maximum": 168},
+            "scan_input_format": {"const": "syft-json"},
+            "fail_severities": {"type": "array", "const": ["Critical", "High"]},
+            "unknown_severity_policy": {"const": "fail"},
+            "vex_document": {"const": "docs/security/container-runtime.openvex.json"},
+            "vex_document_sha256": {"$ref": "#/$defs/sha256"},
+            "vex_context": {"const": "https://openvex.dev/ns/v0.2.0"},
+            "vex_allowed_statuses": {"type": "array", "const": ["fixed"]},
+            "vex_max_review_age_days": {"type": "integer", "minimum": 1, "maximum": 30}
+          }
+        }
       }
     },
     "secretScanning": {
@@ -157,7 +214,7 @@
       "properties": {
         "workflow": {"const": ".github/workflows/release.yml"},
         "must_run_before_external_write": {"const": true},
-        "required_checks": {"type": "array", "const": ["policy-validation", "lock-current", "python-audit", "javascript-audit", "git-secret-scan", "tree-secret-scan"]}
+        "required_checks": {"type": "array", "const": ["policy-validation", "lock-current", "python-audit", "javascript-audit", "git-secret-scan", "tree-secret-scan", "container-sbom", "container-vulnerability-audit", "container-license-inventory"]}
       }
     }
   }

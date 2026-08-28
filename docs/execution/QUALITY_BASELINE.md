@@ -1,5 +1,302 @@
 # Quality Baseline
 
+## E-853 regulated admission gate (2026-08-23)
+
+Admission/key/deployment/inventory tests pass 50/50; Ruff, Mypy, and whitespace
+checks pass. Local-provider and unresolved-profile refusal are covered.
+
+## E-852 managed-key custody evidence (2026-08-23)
+
+Key/deployment/inventory tests pass 44/44; Ruff, Mypy, and whitespace checks
+pass. Secret-material absence and strict contract refusal are covered.
+
+## E-851 profile digest binding (2026-08-23)
+
+Runtime/readiness tests pass 12/12; Ruff, Mypy, and whitespace checks pass.
+Profile drift and mismatched digest cases are covered.
+
+## E-850 readiness CLI (2026-08-23)
+
+Focused readiness/runtime/profile/worker/inventory tests pass 36/36; Ruff,
+Mypy, and whitespace checks pass. Safe-YAML and path-containment checks are
+exercised through the reader and CLI.
+
+## E-849 deployment readiness matrix (2026-08-23)
+
+Schema/path matrix tests pass 2/2; Ruff, Mypy, and whitespace checks pass.
+The matrix preserves partial/open statuses rather than promoting scoped drills.
+
+## E-848 runtime evidence manifest (2026-08-23)
+
+Runtime/profile/worker/inventory tests pass 31/31; Ruff, Mypy, and whitespace
+checks pass. The new CLI is deterministic and offline by contract.
+
+## E-847 worker manifest verification CLI (2026-08-23)
+
+Focused CLI/manifest/profile/inventory tests pass 18/18; Ruff, Mypy, and
+whitespace checks pass. Full `python -m pytest -q` exits 0 on the resulting
+tree.
+
+## E-846 worker permission manifest verifier (2026-08-23)
+
+The new strict offline manifest verifier produces deterministic permission
+evidence and rejects malformed, incomplete, equal, or human-governed grants.
+Focused manifest/profile tests pass 15/15; Ruff, Mypy, and whitespace checks
+pass. Full `python -m pytest -q` on the resulting tree exits 0 over 3,119
+tests.
+
+## E-845 hosted worker permission separation gate (2026-08-23)
+
+Hosted deployment profiles now require an explicit runtime fact proving worker
+discovery/execution permission separation. Community remains local-compatible.
+Focused profile tests pass 9/9; Ruff, Mypy, and whitespace checks pass.
+Full `python -m pytest -q` on the resulting tree exits 0 over 3,119 tests.
+
+## E-844 reconciliation discovery/execution permission split (2026-08-23)
+
+Workers can now use a dedicated least-privilege discovery permission while
+retaining `match.run` for claim/execution; the legacy fallback remains explicit.
+Focused tests pass 33/33 with one live-PostgreSQL skip; Ruff, Mypy, and
+whitespace checks pass. Full `python -m pytest -q` on commit `7f44db68` exits 0
+over the 3,119-test collection.
+
+## E-843 reconciliation worker amount-policy propagation (2026-08-23)
+
+The worker now receives the persisted exact exposure from run rule metadata and
+passes it through tenant and pre-claim scoped policy checks. Focused API/worker/
+policy tests pass 32/32 with one live-PostgreSQL skip; Ruff, Mypy, and
+whitespace checks pass. Full `python -m pytest -q` also exits 0 over the
+3,119-test collection. Discovery-lane universal coverage remains open.
+
+## E-842 reconciliation submission amount ABAC (2026-08-23)
+
+Reconciliation run submission now passes the gross absolute exact Decimal sum
+of complete canonical input amounts before server authorization. Missing input
+amounts remain `None` for bounded-policy fail-closed behavior. Focused API tests
+pass 3/3; Ruff, Mypy, and whitespace checks pass. A full pre-slice regression
+completed with exit code 0 over 3,119 collected tests.
+
+## E-841 ownership-change route amount ABAC (2026-08-23)
+
+Ownership-change preparation supplies exact gross exposure before persistence:
+absolute ownership-delta effect plus consideration effect. Focused tests pass
+19/19 with one live-PostgreSQL skip; Ruff, Mypy, and whitespace checks pass.
+This is not universal adoption.
+
+## E-840 PPA route amount ABAC (2026-08-23)
+
+PPA preparation now supplies consideration plus NCI fair value as exact gross
+Decimal exposure before persistence, without double-counting allocation items.
+Focused route/domain tests pass 16/16; this is not universal adoption.
+
+## E-839 deferred-tax route amount ABAC (2026-08-23)
+
+Deferred-tax preparation now supplies gross absolute fair-value exposure as an
+exact Decimal to server policy before persistence, without double-counting tax
+basis. Focused route/domain tests pass 15/15; this is not universal adoption.
+
+## E-838 intercompany route amount ABAC (2026-08-23)
+
+Intercompany preparation now supplies gross absolute typed Money exposure as an
+exact Decimal to server policy before persistence. Focused route/domain tests
+pass 15/15; this is not universal route adoption.
+
+## E-837 Finance Core route amount ABAC (2026-08-23)
+
+The two PostgreSQL Finance Core entry branches now pass an exact gross debit
+Decimal into server policy before adapter access and reject malformed/negative
+amounts. Focused server-core/dependency tests pass 11 cases with one declared
+capability skip. This is not universal route adoption.
+
+## E-836 route-level amount ABAC (2026-08-23)
+
+The PostgreSQL consolidation impairment prepare route now supplies the exact
+Decimal total of typed carrying amounts to server policy evaluation before
+persistence. Route/policy/dependency focused tests pass 90/90. This is one
+high-risk route binding, not universal route adoption.
+
+## E-835 bounded amount ABAC (2026-08-23)
+
+The central policy engine now fails closed when an amount floor or ceiling is
+configured without an exact finite Decimal amount. The focused policy suite
+passes 80/80, with exact boundary behavior retained. This is a primitive-level
+authorization improvement, not universal enterprise IAM evidence.
+
+## E-834 durable recovery observation persistence (2026-08-22)
+
+The recovery observation is now a versioned, digest-bound durable record with
+SQLite migration 43 and PostgreSQL revision 0090. Focused connector/API,
+migration, and repository tests pass 66/66; `mypy reconforge` passes across 526
+source files. The SQLite/PostgreSQL 16.14/17.10 disposable matrix produced one
+identical records digest and verified replay idempotency, append-only refusal,
+scope isolation, and role restrictions. This is bounded synthetic quality on
+one Docker host, not live-provider or production quality.
+
+The post-fix full Python gate passes 2996/2996 executed tests with 115 declared
+skips. Mypy, build, Bandit, Ruff, diff-check, and pip-audit are green; pip-audit
+was rerun after upgrading the local tool from 26.1.2 to 26.2.
+
+## E-833 provider status taxonomy (2026-08-22)
+
+Recovery status evidence is now explicit and non-mutating. The classifier
+distinguishes accepted, rejected, pending, not-found, and unknown responses;
+only accepted can create an acknowledgement. Frozen observations bind the
+original key and raw/response/observation digests. The focused connector
+transport/domain selector passes 55/55, including legacy response compatibility,
+pending refusal, key mismatch, retries, TLS, and sandbox paths. This is bounded
+synthetic quality, not live-provider or production quality.
+
+## E-832 negative provider outcome guard (2026-08-22)
+
+The original dispatch and idempotency-status recovery paths now refuse a
+well-formed provider response with `accepted=false` before any lifecycle state
+can advance. The intent remains `DISPATCHED` and has no acknowledgement; the
+compensation rejection guard remains unchanged. The focused connector
+transport/domain selector passes 46/46, including TLS, retry, digest, secret,
+idempotency, recovery, and compensation contracts. This is local synthetic
+transport quality, not provider or production quality.
+
+## E-831 write-back recovery and compensation parity (2026-08-22)
+
+The closed runner proves the six-version append-only lifecycle on a SQLite
+reference and exact PostgreSQL 16.14/17.10 cells. Two spawned acceptance-before-
+persistence crash windows recover through the original and distinct compensation
+idempotency keys exactly once. Sixteen checks per PostgreSQL cell and thirteen
+SQLite checks pass, including direct mutation refusal, tenant isolation,
+non-privileged role flags, history parity, schema/source binding, cleanup, and
+six negative evidence mutations. The focused report/supply-policy selector
+passes 37/37. This is bounded synthetic single-host quality, not live-provider,
+accounting, settlement, distributed HA, or production quality.
+
+## E-830 synchronous receiver failover verification (2026-08-22)
+
+One closed runner executes the same receiver fault sequence on exact
+PostgreSQL 16.14/17.10 two-node topologies. Direct `SyncRep` observation,
+fencing-before-promotion, response-loss replay, controller-paused re-seed,
+synchronous rejoin, uncertain identity resolution, promoted-primary restart,
+endpoint rediscovery, and SQLite parity pass. Every cell has 23 true checks,
+two receipts/effects, non-privileged role flags, RPO 0 for its acknowledged
+synthetic effect, and local RTO below 60 seconds. The schema and six negative
+mutations refuse false, expanded, or drifted evidence. Five failed development
+attempts produced no retained report and exposed verifier flaws that are now
+bounded and regression-tested through the final full rerun. The focused
+report/supply-policy selector passes 37 tests; Ruff, Mypy, Bandit, JSON/YAML,
+closed policy, and whitespace gates pass. An initial full regression exposed
+and rejected an invalid E-228 standalone backlog dependency; the corrected
+15-test selector passed, followed by a fresh full run of 2,970 passed, 115
+declared capability skips, and 23 existing warnings across 3,085 tests in
+531.47 seconds. Full Ruff, 525-file Mypy, Bandit, supply policy, lock, isolated
+Python 3.12 audit, JSON/YAML, build, package membership, and whitespace gates
+pass. The 1,768-entry sdist contains all five E-830 evidence assets; the
+runtime-only wheel remains 625 entries. Ambient pip-audit separately retains
+the host pip vulnerability. Gitleaks 8.30.1 reports no findings across 663
+commits / 25.28 MB or a clean 27.71 MB implementation archive; the exact
+temporary artifacts were removed. This is bounded single-host topology
+quality, not automatic or production HA quality.
+
+## E-829 PostgreSQL receiver idempotency parity (2026-08-22)
+
+The additive PostgreSQL backend shares the exact closed E-828 request,
+response, conflict, and canonical-history logic. Constructor tests close DSN
+and timeout boundaries; structural tests bind the unambiguous receiver/key lock
+identity, digest-only schema, composite keys, foreign key, immutable triggers,
+and lazy dependency failure. The live 16.14/17.10 matrix passes 17 checks per
+cell under non-privileged roles, including eight-process contention,
+crash-after-commit, direct mutation/malformed-input refusal, native backup,
+independent restore, and exact cleanup. Both PostgreSQL histories equal the
+SQLite canonical history. The retained report passes its closed schema,
+canonical/source/policy/image binding, package/workflow contracts, and negative
+mutations. The focused 33 tests pass. The final full regression collects 3,075
+tests: 2,960 pass, 115 declared capability skips remain visible, and 23 existing
+warnings remain visible in 716.62 seconds. Full-tree Ruff, Mypy across 525
+source files, Bandit, closed policy, lock, isolated Python 3.12 audit,
+JSON/YAML, build, package membership, and whitespace gates pass. The 1,763-entry
+sdist and 625-entry wheel contain all intended E-829 assets. Ambient pip-audit
+separately retains the host pip vulnerability rather than replacing the clean
+locked audit. Gitleaks 8.30.1 reports no findings across 662 commits / 25.18 MB
+or the clean 27.62 MB implementation archive. This is bounded single-host
+synthetic conformance, not provider, distributed, accounting, HA/DR, or
+production quality.
+
+## E-828 receiver-side idempotency conformance (2026-08-22)
+
+The additive receiver model is closed and digest-deterministic. Unit and
+property tests cover malformed identities, permutation-stable request digests,
+payload separation, exact sequential replay, key retargeting refusal, database
+immutability, six-process contention, and crash-after-commit replay. The closed
+runtime drill strengthens contention to eight spawned processes, validates an
+independent backup/restore, binds source and report digests, and verifies exact
+cleanup. The 85-test receiver/report/network/SDK/package selector, Ruff, and
+Mypy pass. The full regression collected 3,058 tests: 2,943 passed, 115 declared
+capability skips, and 23 existing warnings in 396.97 seconds. Ruff, Mypy across
+524 source files, Bandit, policy/lock/isolated-audit gates, JSON/YAML parsing,
+build, package membership, and whitespace checks pass. The 1,756-entry sdist
+and 624-entry wheel contain the receiver assets. Ambient pip-audit separately
+reports the host's pip vulnerability; the locked audit reports zero findings.
+This is same-host SQLite correctness evidence, not distributed or provider
+production quality.
+
+## E-827 PostgreSQL migration matrix verification (2026-08-22)
+
+The same strict observation function passes on digest-pinned PostgreSQL 16.14
+and 17.10 in 24.178 seconds. Each cell passes all ten checks and cleanup; their
+canonical valid and invalid histories are identical. The retained matrix passes
+its closed Draft 2020-12 schema, canonical report digest, source/policy binding,
+cross-cell parity, negative-schema cases, package manifest, and CI workflow
+contracts. The final regression collected 3,042 tests: 2,927 passed and 115
+declared capability skips, with 23 existing warnings in 410.54 seconds. Ruff,
+Mypy across 523 source files, Bandit, JSON/YAML parsing, the closed policy
+validator, `uv lock --check`, isolated Python 3.12 locked dependency audit,
+build, package membership, and whitespace checks pass. The 1,749-entry sdist
+contains the new matrix materials; the 623-entry wheel retains Alembic 0089.
+Ambient `python -m pip_audit` separately reports host-installed `pip 26.1.2`
+under `PYSEC-2026-3721`; the isolated locked audit reports zero findings.
+
+## E-826 migration failure/recovery verification (2026-08-22)
+
+The retained PostgreSQL 17.10 Docker drill passes all ten closed checks: native
+pre-drift dump listing, drifted-history upgrade refusal, unchanged revision,
+history and trigger after refusal, independent restore, successful 0089 upgrade,
+unchanged valid history, enhanced direct-INSERT refusal, and exact-container
+cleanup. Its Draft 2020-12 schema, canonical report digest, runner/migration
+source binding, runtime identity tests, Ruff, and Bandit pass. Three earlier
+runner attempts exposed missing synthetic `created_at`, tenant, and migration
+path fixtures, failed without replacing the retained artifact, and cleaned their
+disposable containers; they are retained as development findings rather than
+converted into successful evidence. The final full suite collects 3,032 tests:
+2,917 pass, 115 declared capability skips remain visible, and 23 existing
+warnings remain visible. The focused E-825/E-826 selector passes 88 tests with
+four declared live-service skips; the report/policy/parity selector passes
+44/44. Ruff, Mypy across 523 files, Bandit, the closed supply-chain policy,
+lock check, isolated locked audit, build, package-content checks, changed
+JSON/YAML validation, and whitespace checks pass.
+
+## E-825 write-back proposal identity verification (2026-08-22)
+
+Focused domain, SQLite runtime, PostgreSQL contract, Alembic-chain, operations,
+and authenticated API tests pass, including adversarial proposal-field drift,
+direct INSERT state jumps, and fail-closed SQLite upgrade. A digest-pinned
+PostgreSQL 17.10 runtime passes both live write-back histories under a
+non-superuser/NOBYPASSRLS role, and a separate isolated database passes three
+head upgrades around two deep downgrades. Ruff, Mypy, and whitespace gates
+pass. A temporary-table regression proves the SQLite audit does not collide
+with same-named main-database data. The full post-slice regression collects
+3,027 tests and passes 2,912 with 115 declared capability skips; Bandit, the
+closed supply-chain policy, lock check, and package build pass. Provider
+behavior is not promoted by this local contract evidence.
+
+## Current developer bootstrap verification (2026-08-22)
+
+E-821 adds a read-only developer Doctor and a non-destructive, locked,
+platform-specific bootstrap. On the current Windows host it detected and
+preserved a foreign Linux `.venv`, created an ignored Python 3.12
+`.venv-windows`, ran product Doctor, passed a repeated idempotent bootstrap, and
+then reported `DEVENV-READY`. Its interpreter collected 2,981 tests and carried
+the full suite to 100% with every executed test passing and capability skips
+remaining explicit. This is local developer-environment evidence only; it does
+not replace clean-host, hosted, macOS/Linux, proxy/private-index, air-gap,
+installer, or production deployment verification.
+
 ## Current post-E-400 verification (2026-08-05)
 
 The current head has a full local post-IAM gate: `uv run pytest -q --tb=short`
@@ -53,7 +350,7 @@ Measured through 2026-07-27 on the dirty snapshot in `BASELINE.md` and `STATE.md
 
 ## Release consequence
 
-The applicable local Python and web quality gates are now green, but the worktree must not be called release-ready. Same-machine artifact parity, deterministic clean-HEAD package/source SBOMs, and one supported local locked profile are bounded evidence only. Docker/OCI inventory and reproducibility, live server services, hosted Python 3.11/3.12 execution, clean-tree hosted artifacts, signatures/provenance, immutable publication, npm SRI completeness, and rollback drills remain outside this local proof.
+The applicable local Python and web quality gates are now green, but the worktree must not be called release-ready. Same-machine artifact parity, deterministic clean-HEAD package/source SBOMs, one supported local locked profile, E-822's bounded non-root/no-network/read-only-root Docker CLI, and E-824's time-bounded fixed-only VEX evidence are local proof only. The exact image still has two release-blocking OpenSSL High matches. Recurring/signed image vulnerability and license inventory, Docker/OCI reproducibility, live server services, hosted Python 3.11/3.12 execution, clean-tree hosted artifacts, signatures/provenance, immutable publication, and broader rollback drills remain outside this proof.
 
 ## E-658 current regression note (2026-08-10)
 

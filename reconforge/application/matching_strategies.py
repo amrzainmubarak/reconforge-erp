@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
@@ -115,8 +116,23 @@ class MatchingStrategyManifest:
     limits: StrategyLimits
 
     def __post_init__(self) -> None:
-        if not self.id or not self.version or not self.algorithm or not self.supported_modes:
+        if not all(isinstance(value, str) and value.strip() for value in (self.id, self.version, self.algorithm)):
             raise MatchingStrategyContractError("Strategy manifest is incomplete.")
+        if re.fullmatch(r"[a-z0-9][a-z0-9-]{2,79}", self.id) is None:
+            raise MatchingStrategyContractError("Strategy id must use the published slug format.")
+        if re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", self.version) is None:
+            raise MatchingStrategyContractError("Strategy version must use semantic versioning.")
+        if self.maturity not in {"experimental", "beta", "stable"}:
+            raise MatchingStrategyContractError("Strategy maturity is not supported.")
+        if not all(
+            isinstance(value, str) and value.strip()
+            for value in (self.deterministic_tie_break, self.explanation_schema)
+        ):
+            raise MatchingStrategyContractError(
+                "Strategy manifest must declare a deterministic tie-break and explanation schema."
+            )
+        if not self.supported_modes or not all(isinstance(mode, str) and mode.strip() for mode in self.supported_modes):
+            raise MatchingStrategyContractError("Strategy modes must be non-empty text values.")
         if tuple(sorted(set(self.supported_modes))) != self.supported_modes:
             raise MatchingStrategyContractError("Strategy modes must be unique and canonically sorted.")
 
@@ -134,6 +150,20 @@ class MatchingStrategyManifest:
                 "version": self.version,
             }
         )
+
+
+@dataclass(frozen=True)
+class MatchingStrategyCoverage:
+    """Deterministic coverage report for a caller-declared mode inventory."""
+
+    required_modes: tuple[str, ...]
+    registered_modes: tuple[str, ...]
+    missing_modes: tuple[str, ...]
+    mode_strategies: tuple[tuple[str, tuple[str, ...]], ...]
+
+    @property
+    def complete(self) -> bool:
+        return not self.missing_modes
 
 
 @dataclass(frozen=True)
@@ -162,6 +192,8 @@ class MatchingStrategyRequest:
 
 @dataclass(frozen=True)
 class MatchingStrategyResult:
+    strategy_id: str
+    strategy_version: str
     manifest_digest: str
     input_digest: str
     decision_digest: str
@@ -169,7 +201,82 @@ class MatchingStrategyResult:
     exceptions: tuple[Mapping[str, object], ...]
     explanation_schema: str
 
-    def verify_against(self, request: MatchingStrategyRequest, *, manifest_digest: str) -> None:
+    def __post_init__(self) -> None:
+        if not self.strategy_id.strip() or not self.strategy_version.strip():
+            raise MatchingStrategyContractError("Strategy result must identify its strategy and version.")
+
+    def to_payload(self) -> dict[str, object]:
+        """Return the closed, JSON-safe transport envelope for one result.
+
+        The envelope is deliberately independent of a persistence backend so a
+        worker can persist and replay the exact strategy evidence without
+        relying on Python tuple/Decimal representations.
+        """
+
+        return {
+            "decision_digest": self.decision_digest,
+            "exceptions": canonical_payload(self.exceptions),
+            "explanation_schema": self.explanation_schema,
+            "input_digest": self.input_digest,
+            "manifest_digest": self.manifest_digest,
+            "results": canonical_payload(self.results),
+            "schema_version": 1,
+            "strategy_id": self.strategy_id,
+            "strategy_version": self.strategy_version,
+        }
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, object]) -> MatchingStrategyResult:
+        """Rebuild one result from a strict JSON-safe transport envelope."""
+
+        expected = {
+            "decision_digest",
+            "exceptions",
+            "explanation_schema",
+            "input_digest",
+            "manifest_digest",
+            "results",
+            "schema_version",
+            "strategy_id",
+            "strategy_version",
+        }
+        if set(payload) != expected:
+            raise MatchingStrategyContractError("Strategy result envelope fields are not closed.")
+        if payload["schema_version"] != 1:
+            raise MatchingStrategyContractError("Unsupported strategy result envelope schema version.")
+        text_fields = ("strategy_id", "strategy_version", "manifest_digest", "input_digest", "decision_digest", "explanation_schema")
+        text_values = {field: payload[field] for field in text_fields}
+        if any(not isinstance(value, str) or not value.strip() for value in text_values.values()):
+            raise MatchingStrategyContractError("Strategy result envelope text fields are invalid.")
+        for field in ("manifest_digest", "input_digest", "decision_digest"):
+            value = text_values[field]
+            if not isinstance(value, str) or len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
+                raise MatchingStrategyContractError("Strategy result envelope digest fields are invalid.")
+        results = payload["results"]
+        exceptions = payload["exceptions"]
+        if not isinstance(results, list) or not isinstance(exceptions, list):
+            raise MatchingStrategyContractError("Strategy result envelope collections must be JSON arrays.")
+        if any(not isinstance(item, Mapping) for item in (*results, *exceptions)):
+            raise MatchingStrategyContractError("Strategy result envelope collections must contain objects.")
+        return cls(
+            strategy_id=str(text_values["strategy_id"]),
+            strategy_version=str(text_values["strategy_version"]),
+            manifest_digest=str(text_values["manifest_digest"]),
+            input_digest=str(text_values["input_digest"]),
+            decision_digest=str(text_values["decision_digest"]),
+            results=tuple(dict(item) for item in results),
+            exceptions=tuple(dict(item) for item in exceptions),
+            explanation_schema=str(text_values["explanation_schema"]),
+        )
+
+    def verify_against(
+        self,
+        request: MatchingStrategyRequest,
+        *,
+        manifest_digest: str,
+        strategy_id: str | None = None,
+        strategy_version: str | None = None,
+    ) -> None:
         """Fail closed when a strategy result is detached from its inputs.
 
         Strategy adapters cross persistence and worker boundaries, so the
@@ -180,6 +287,10 @@ class MatchingStrategyResult:
 
         if self.manifest_digest != manifest_digest:
             raise MatchingStrategyContractError("Strategy result manifest digest does not match the executing manifest.")
+        if strategy_id is not None and self.strategy_id != strategy_id:
+            raise MatchingStrategyContractError("Strategy result identity does not match the executing manifest.")
+        if strategy_version is not None and self.strategy_version != strategy_version:
+            raise MatchingStrategyContractError("Strategy result version does not match the executing manifest.")
         expected_input = request_digest(request, manifest_digest)
         if self.input_digest != expected_input:
             raise MatchingStrategyContractError("Strategy result input digest does not match the canonical request.")
@@ -191,6 +302,23 @@ class MatchingStrategyResult:
         )
         if self.decision_digest != expected_result:
             raise MatchingStrategyContractError("Strategy result decision digest does not match its output.")
+
+    def verify_payload(
+        self,
+        request: MatchingStrategyRequest,
+        *,
+        manifest_digest: str,
+        strategy_id: str,
+        strategy_version: str,
+    ) -> None:
+        """Verify this result after a JSON transport round trip."""
+
+        self.verify_against(
+            request,
+            manifest_digest=manifest_digest,
+            strategy_id=strategy_id,
+            strategy_version=strategy_version,
+        )
 
 
 class MatchingStrategy(Protocol):
@@ -221,6 +349,29 @@ class MatchingStrategyRegistry:
     @property
     def manifests(self) -> tuple[MatchingStrategyManifest, ...]:
         return tuple(self._entries[key].manifest for key in sorted(self._entries))
+
+    def coverage_report(self, required_modes: tuple[str, ...]) -> MatchingStrategyCoverage:
+        """Report mode coverage without treating mode coverage as family proof."""
+
+        if not isinstance(required_modes, tuple) or not all(isinstance(mode, str) for mode in required_modes):
+            raise MatchingStrategyContractError("Required matching modes must be a tuple of text values.")
+        required = tuple(sorted(set(mode.strip() for mode in required_modes if mode.strip())))
+        supported: dict[str, list[str]] = {}
+        for manifest in self.manifests:
+            identity = f"{manifest.id}@{manifest.version}"
+            for mode in manifest.supported_modes:
+                supported.setdefault(mode, []).append(identity)
+        registered = tuple(sorted(supported))
+        missing = tuple(mode for mode in required if mode not in supported)
+        mode_strategies = tuple(
+            (mode, tuple(sorted(supported.get(mode, [])))) for mode in sorted(set(required) | set(registered))
+        )
+        return MatchingStrategyCoverage(
+            required_modes=required,
+            registered_modes=registered,
+            missing_modes=missing,
+            mode_strategies=mode_strategies,
+        )
 
 
 def canonical_payload(value: object) -> object:
@@ -295,3 +446,44 @@ def result_digest(*, manifest_digest: str, input_digest: str, results: object, e
             "results": results,
         }
     )
+
+
+def replay_result_envelope(
+    result: MatchingStrategyResult,
+    request: MatchingStrategyRequest,
+    *,
+    manifest: MatchingStrategyManifest,
+) -> MatchingStrategyResult:
+    """Round-trip a result through JSON and fail closed on any drift.
+
+    This is the shared process-boundary check used by worker adapters before
+    projecting strategy output into backend-specific result rows.
+    """
+
+    encoded = json.dumps(result.to_payload(), ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    payload = json.loads(encoded)
+    if not isinstance(payload, Mapping):
+        raise MatchingStrategyContractError("Strategy result replay envelope must decode to an object.")
+    replayed = MatchingStrategyResult.from_payload(payload)
+    replayed.verify_payload(
+        request,
+        manifest_digest=manifest.digest,
+        strategy_id=manifest.id,
+        strategy_version=manifest.version,
+    )
+    return replayed
+
+
+def replay_strategy_result(
+    strategy: MatchingStrategy,
+    request: MatchingStrategyRequest,
+    result: MatchingStrategyResult,
+) -> MatchingStrategyResult:
+    """Re-execute a strategy and require byte-equivalent canonical evidence."""
+
+    replayed = replay_result_envelope(result, request, manifest=strategy.manifest)
+    expected = strategy.execute(request)
+    expected = replay_result_envelope(expected, request, manifest=strategy.manifest)
+    if expected.to_payload() != replayed.to_payload():
+        raise MatchingStrategyContractError("Strategy replay result differs from the supplied evidence envelope.")
+    return replayed

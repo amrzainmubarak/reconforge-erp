@@ -42,8 +42,20 @@ def _json(path: Path) -> dict[str, Any]:
 def _copy_policy_project(tmp_path: Path) -> Path:
     relative_paths = (
         ".github/dependabot.yml",
+        ".github/scripts/run_locked_python_audit.py",
+        ".github/scripts/validate_container_security.py",
+        ".github/scripts/verify_airgap_install.py",
+        ".github/scripts/verify_postgres_ha_dr.py",
+        ".github/scripts/verify_postgres_writeback_identity_migration.py",
+        ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
+        ".github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py",
+        ".github/scripts/verify_postgres_writeback_receiver_failover_matrix.py",
+        ".github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py",
+        ".github/scripts/verify_postgres_reliability.py",
+        ".github/scripts/verify_postgres_upgrade.py",
         ".github/workflows/release.yml",
         ".github/workflows/security.yml",
+        ".dockerignore",
         ".gitleaksignore",
         ".gitleaks.toml",
         "Dockerfile",
@@ -51,6 +63,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         "apps/web/package.json",
         "docs/security/supply-chain-exceptions.v1.json",
         "docs/security/supply-chain-policy.v1.json",
+        "docs/security/container-runtime.openvex.json",
         "pyproject.toml",
         "uv.lock",
     )
@@ -103,6 +116,10 @@ def test_repository_policy_closes_resolution_and_exception_inputs() -> None:
 
     assert policy["python_resolution"]["manager_version"] == "0.11.32"
     assert policy["secret_scanning"]["version"] == "8.30.1"
+    assert policy["container_audits"]["sbom"]["version"] == "1.51.0"
+    assert policy["container_audits"]["vulnerability"]["version"] == "0.117.0"
+    assert policy["container_audits"]["vulnerability"]["vex_allowed_statuses"] == ["fixed"]
+    assert policy["container_resolution"]["service_images"]["postgres_16_ci"].startswith("postgres:16-alpine@sha256:")
     assert active == []
     assert python_packages == 128
     assert npm_packages == 211
@@ -124,11 +141,124 @@ def _mutate_docker_base(root: Path) -> None:
     path.write_text(re.sub(r"@sha256:[0-9a-f]{64}", "", path.read_text(encoding="utf-8"), count=1), encoding="utf-8")
 
 
+def _mutate_docker_context(root: Path) -> None:
+    path = root / ".dockerignore"
+    path.write_text(path.read_text(encoding="utf-8").replace("*\n", "", 1), encoding="utf-8")
+
+
+def _mutate_service_image(root: Path) -> None:
+    path = root / ".github" / "scripts" / "verify_postgres_upgrade.py"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+            "0" * 64,
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_vex(root: Path) -> None:
+    path = root / "docs" / "security" / "container-runtime.openvex.json"
+    path.write_text(path.read_text(encoding="utf-8").replace("fixed", "not_affected", 1), encoding="utf-8")
+
+
 def test_docker_uv_version_check_accepts_only_the_pinned_version_with_optional_build_metadata() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert "uv --version | grep -Eq '^uv 0\\.11\\.32( |$)'" in dockerfile
     assert 'test "$(uv --version)" = "uv 0.11.32"' not in dockerfile
+
+
+def test_docker_runtime_is_multistage_and_non_root() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert " AS builder" in dockerfile
+    assert " AS runtime" in dockerfile
+    assert "COPY --from=builder /app/.venv /app/.venv" in dockerfile
+    assert "/app/docs" not in dockerfile
+    assert "USER 10001:10001" in dockerfile
+    assert "chown 10001:10001 /app/output" in dockerfile
+    assert dockerfile.index("USER 10001:10001") < dockerfile.index('CMD ["reconforge", "doctor"]')
+
+
+def test_docker_context_is_deny_by_default() -> None:
+    rules = [
+        line.strip()
+        for line in (ROOT / ".dockerignore").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+    assert rules[0] == "*"
+    assert {
+        "!.dockerignore",
+        "!Dockerfile",
+        "!LICENSE",
+        "!README.md",
+        "!alembic.ini",
+        "!pyproject.toml",
+        "!setup.py",
+        "!uv.lock",
+        "!alembic/**",
+        "!config/**",
+        "!control-packs/**",
+        "!examples/**",
+        "!reconforge/**",
+    } <= set(rules)
+    assert not any(rule.startswith("!.git") or "venv" in rule or "output" in rule for rule in rules)
+
+
+def test_disposable_drill_images_execute_by_reviewed_digest() -> None:
+    postgres_digest = "742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+    python_digest = "b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e"
+    postgres_scripts = (
+        "verify_postgres_ha_dr.py",
+        "verify_postgres_upgrade.py",
+        "verify_postgres_reliability.py",
+    )
+    for name in postgres_scripts:
+        text = (ROOT / ".github" / "scripts" / name).read_text(encoding="utf-8")
+        assert f'IMAGE_REFERENCE = f"{{IMAGE}}@sha256:{postgres_digest}"' in text
+        assert re.search(r"docker.{0,500}IMAGE_REFERENCE", text, re.DOTALL)
+
+    observation_runner = (
+        ROOT / ".github" / "scripts" / "verify_postgres_writeback_identity_migration.py"
+    ).read_text(encoding="utf-8")
+    assert f'IMAGE_REFERENCE = f"{{IMAGE}}@sha256:{postgres_digest}"' in observation_runner
+    assert "image_reference=IMAGE_REFERENCE" in observation_runner
+    assert re.search(r'"docker".{0,500}image_reference', observation_runner, re.DOTALL)
+
+    matrix = (ROOT / ".github" / "scripts" / "verify_postgres_writeback_identity_migration_matrix.py").read_text(
+        encoding="utf-8"
+    )
+    assert "POSTGRES_16_IMAGE_REFERENCE" in matrix
+    assert (
+        "{POSTGRES_16_IMAGE}@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+        in matrix
+    )
+    assert "POSTGRES_17_IMAGE_REFERENCE" in matrix
+    assert f"POSTGRES_17_IMAGE}}@sha256:{postgres_digest}" in matrix
+
+    for receiver_matrix_name in (
+        "verify_postgres_writeback_receiver_idempotency_matrix.py",
+        "verify_postgres_writeback_receiver_failover_matrix.py",
+        "verify_postgres_writeback_recovery_compensation_matrix.py",
+    ):
+        receiver_matrix = (ROOT / ".github" / "scripts" / receiver_matrix_name).read_text(
+            encoding="utf-8"
+        )
+        assert "POSTGRES_16_IMAGE_REFERENCE" in receiver_matrix
+        assert (
+            "{POSTGRES_16_IMAGE}@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+            in receiver_matrix
+        )
+        assert "POSTGRES_17_IMAGE_REFERENCE" in receiver_matrix
+        assert f"POSTGRES_17_IMAGE}}@sha256:{postgres_digest}" in receiver_matrix
+
+    airgap = (ROOT / ".github" / "scripts" / "verify_airgap_install.py").read_text(
+        encoding="utf-8"
+    )
+    assert f'IMAGE_REFERENCE = f"{{IMAGE}}@sha256:{python_digest}"' in airgap
+    assert "docker_argv.extend((IMAGE_REFERENCE" in airgap
 
 
 def _mutate_dependabot(root: Path) -> None:
@@ -161,17 +291,76 @@ def _mutate_release_fail_open(root: Path) -> None:
     path.write_text(path.read_text(encoding="utf-8") + "\ncontinue-on-error: true\n", encoding="utf-8")
 
 
+def _mutate_locked_audit_runner(root: Path) -> None:
+    path = root / ".github" / "scripts" / "run_locked_python_audit.py"
+    path.write_text(path.read_text(encoding="utf-8").replace('"--require-hashes",', ""), encoding="utf-8")
+
+
+def _mutate_container_gate_runner(root: Path) -> None:
+    path = root / ".github" / "scripts" / "validate_container_security.py"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("ignoredMatches", "suppressedMatches"),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_unlocked_audit_environment(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "uv sync --locked --extra dev --no-editable --python",
+            "uv sync --extra dev --no-editable --python",
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_container_scanner(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace('SYFT_VERSION: "1.51.0"', 'SYFT_VERSION: "latest"'),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_container_gate_order(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    text = path.read_text(encoding="utf-8")
+    gate = "Build and enforce the local container security gate"
+    path.write_text(text.replace(gate, "Container evidence policy step", 1), encoding="utf-8")
+
+
+def _mutate_release_post_push_binding(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "published manifest bytes do not match the registry digest",
+            "registry digest check unavailable",
+        ),
+        encoding="utf-8",
+    )
+
+
 @pytest.mark.parametrize(
     "mutator",
     [
         _mutate_pyproject,
         _mutate_uv_source,
         _mutate_docker_base,
+        _mutate_docker_context,
+        _mutate_service_image,
+        _mutate_vex,
         _mutate_dependabot,
         _mutate_gitleaks,
         _mutate_gitleaks_ignore,
         _mutate_npm_root,
         _mutate_release_fail_open,
+        _mutate_locked_audit_runner,
+        _mutate_container_gate_runner,
+        _mutate_release_unlocked_audit_environment,
+        _mutate_release_container_scanner,
+        _mutate_release_container_gate_order,
+        _mutate_release_post_push_binding,
     ],
 )
 def test_policy_validator_rejects_resolution_or_gate_drift(
@@ -287,6 +476,7 @@ def test_security_and_release_workflows_pin_tools_and_fail_before_registry_write
     policy = _json(POLICY_PATH)
     release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     security = (ROOT / ".github" / "workflows" / "security.yml").read_text(encoding="utf-8")
+    audit_runner = SCRIPT_PATH.with_name("run_locked_python_audit.py").read_text(encoding="utf-8")
 
     for workflow in (release, security):
         assert "continue-on-error" not in workflow
@@ -294,12 +484,19 @@ def test_security_and_release_workflows_pin_tools_and_fail_before_registry_write
         assert f'version: "{policy["python_resolution"]["manager_version"]}"' in workflow
         assert policy["secret_scanning"]["linux_x86_64_archive_sha256"] in workflow
         assert "--redact=100" in workflow
-        assert "--pip-audit-exit-code" in workflow
+        assert ".github/scripts/run_locked_python_audit.py" in workflow
         assert "--npm-audit-exit-code" in workflow
+        assert f'SYFT_VERSION: "{policy["container_audits"]["sbom"]["version"]}"' in workflow
+        assert f'GRYPE_VERSION: "{policy["container_audits"]["vulnerability"]["version"]}"' in workflow
+        assert ".github/scripts/validate_container_security.py" in workflow
+
+    assert '"--require-hashes"' in audit_runner
+    assert '"--disable-pip"' in audit_runner
+    assert '"--pip-audit-exit-code"' in audit_runner
 
     assert "required-security-context:" in security
     assert "name: python-security" in security
-    assert "needs: [python-security, repository-security]" in security
+    assert "needs: [python-security, repository-security, container-security]" in security
     assert "if: ${{ always() }}" in security
     assert "needs.python-security.result" in security
     assert "needs.repository-security.result" in security
@@ -311,8 +508,14 @@ def test_security_and_release_workflows_pin_tools_and_fail_before_registry_write
         "Scan full Git history with redacted output",
         "Scan checked-out tree with redacted output",
         "Audit the npm lock",
+        "Generate exact-image SBOM and vulnerability inputs",
+        "Build and enforce the local container security gate",
     ):
         assert 0 <= release.index(gate) < registry_login
+
+    assert "name: Exact-image SBOM, vulnerability, and license gate" in security
+    assert "needs: [python-security, repository-security, container-security]" in security
+    assert "needs.container-security.result" in security
 
     for workflow in ROOT.joinpath(".github", "workflows").glob("*.yml"):
         text = workflow.read_text(encoding="utf-8")

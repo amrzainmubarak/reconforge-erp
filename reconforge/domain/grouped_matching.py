@@ -10,7 +10,7 @@ from decimal import Decimal
 from itertools import combinations
 from typing import Literal
 
-GroupedMatchMode = Literal["one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"]
+GroupedMatchMode = Literal["one-to-one", "one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"]
 GroupedNettingMode = Literal["gross", "net"]
 GroupedMatchStatus = Literal["matched", "unmatched", "ambiguous"]
 GroupedMatchCandidateSet = tuple[tuple[str, ...], tuple[str, ...]]
@@ -52,7 +52,7 @@ class GroupedMatchPolicy:
     portfolio_allow_partial_settlement: bool = False
 
     def __post_init__(self) -> None:
-        if self.mode not in {"one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"}:
+        if self.mode not in {"one-to-one", "one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"}:
             raise GroupedMatchingError("Grouped-match mode is not supported.")
         if not isinstance(self.amount_tolerance, Decimal) or not self.amount_tolerance.is_finite():
             raise GroupedMatchingError("Grouped-match tolerance must be a finite Decimal.")
@@ -150,6 +150,8 @@ class _CandidateGroup:
 
 
 def _cardinalities(policy: GroupedMatchPolicy) -> tuple[range, range]:
+    if policy.mode == "one-to-one":
+        return range(1, 2), range(1, 2)
     if policy.mode == "one-to-many":
         return range(1, 2), range(2, policy.max_right_cardinality + 1)
     if policy.mode == "many-to-one":

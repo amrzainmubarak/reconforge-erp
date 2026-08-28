@@ -1,6 +1,11 @@
 # Docker Deployment
 
-ReconForge ERP can be packaged in a local Docker image for repeatable command-line use. The Dockerfile is intentionally simple: it installs the local package and includes the repository's config, examples, docs, and control packs.
+ReconForge ERP can be packaged in a local Docker image for repeatable command-line use. The Dockerfile installs the locked local package and includes only runtime config, examples, control packs, and migration assets. Documentation remains in the source/release surfaces and is intentionally excluded from the executable image.
+
+The current image uses a separate builder and a fixed non-root runtime identity
+(`10001:10001`). Its deny-by-default build-context policy sends only declared
+Dockerfile inputs to BuildKit. The runtime does not include uv, the source tree,
+project build manifests, or repository documentation.
 
 This page documents commands for local verification. If Docker is not available in the environment, treat this as an inspection and manual verification checklist rather than a runtime-verified result.
 
@@ -46,6 +51,9 @@ docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge demo run 
 ```
 
 Generated files will appear under the local `output/` folder mounted into the container.
+The host folder must be writable by UID/GID `10001:10001`, or the operator must
+choose and document an explicit host-user mapping. On Linux, inspect ownership
+before running; do not make a sensitive export directory broadly writable.
 
 ## Docker Desktop Notes
 
@@ -77,6 +85,11 @@ docker compose up dashboard
 - Review generated evidence folders before sharing them outside the engagement team.
 - The container does not add authentication or access control.
 - Local host file permissions still matter.
+- The image defaults to non-root; do not override it with `--user 0` to bypass
+  a bind-mount ownership problem.
+- For a bounded CLI smoke test, prefer `--network none --read-only` plus
+  UID/GID-owned `tmpfs` mounts for `/tmp` and `/app/output` as documented in
+  [Docker verification](docker-verification.md).
 
 ## Verification Checklist
 

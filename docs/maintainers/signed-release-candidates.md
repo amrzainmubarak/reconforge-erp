@@ -16,7 +16,10 @@ Before the first registry authentication, the same job validates the closed
 supply-chain/exception contracts, checks `uv.lock` against `pyproject.toml`,
 audits the hash-exported all-extra Python/server resolution, audits the npm lock,
 and runs checksum-verified Gitleaks 8.30.1 over all Git history and the checked
-tree with 100% redaction. Operational scanner errors fail closed. An active
+tree with 100% redaction. It then builds the image without registry credentials,
+generates subject-bound Syft native/CycloneDX inventories, scans the native
+inventory with a current bounded Grype database, and enforces vulnerability and
+license-inventory policy before the first GHCR login. Operational scanner errors fail closed. An active
 exception must meet the exact subject, issue, ownership, two-approver, and expiry
 contract; a critical npm finding cannot be excepted for release.
 
@@ -34,14 +37,26 @@ The candidate contains:
 - separate Sigstore bundles for file/image provenance and each of the four SBOM
   predicates.
 
-Build tools, uv/Gitleaks installers, and every action are pinned by exact
+Build tools, uv/Gitleaks/Syft/Grype installers, and every action are pinned by exact
 version/hash or full commit.
-The image scanner is Syft 1.49.0 at commit
-`29fd7d0dec81cf03e0a1194a1985c7c893bb2396`; its Linux AMD64 archive must match
-the published SHA-256 before execution. Python package SBOMs describe declared,
+The image inventory scanner is Syft 1.51.0 at commit
+`2293641e3bd628a01bb37639318d62c0ebe89b39`; the vulnerability scanner is Grype
+0.117.0 at commit `b5fa92bbcbef655497e3be840a2f718380e2cdd3`. Their Linux AMD64 archives must
+match the policy SHA-256 values before execution. The local scan is bound to the
+image configuration digest, and the post-push registry manifest must reference
+that same configuration before release metadata is created. Python package SBOMs describe declared,
 unresolved constraints. The source SBOM additionally inventories versions from
 the matching npm lock, and the image SBOM describes Syft-observed installed
 components. All four declare `unknown` completeness.
+
+The container gate rejects all Critical findings, High findings without an exact
+active exception or reviewed fixed disposition, Unknown severities, ungoverned
+ignored matches, stale or invalid databases, subject drift, and package-license
+coverage below 90%. Fixed VEX is hash-bound, product-exact, 30-day reviewed,
+and remains in total counts; no other VEX status is allowed. This coverage does
+not establish license compatibility. The locally built 2026-08-22 image records
+three source-proven fixed CPython matches and remains blocked by two OpenSSL
+High matches; no release readiness follows from the workflow definition.
 
 GitHub keyless attestations use SLSA provenance v1 or the CycloneDX predicate
 type `https://cyclonedx.org/bom`, as applicable. The same job then verifies

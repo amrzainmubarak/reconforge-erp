@@ -152,7 +152,7 @@ def _raw_image_sbom(*, variable: str, forbidden_path: str | None = None, duplica
                     "type": "application",
                     "author": "anchore",
                     "name": "syft",
-                    "version": "1.49.0",
+                    "version": "1.51.0",
                 }
             ]
         },
@@ -261,7 +261,7 @@ def test_release_sboms_are_deterministic_subject_bound_and_schema_valid(tmp_path
         "container-image",
     ]
     assert {entry["completeness"] for entry in left_manifest["sboms"]} == {"unknown"}
-    assert left_manifest["generator_policy"]["image_generator"] == "syft@1.49.0"
+    assert left_manifest["generator_policy"]["image_generator"] == "syft@1.51.0"
 
     for entry in left_manifest["sboms"]:
         sbom_path = left / entry["sbom"]["name"]
@@ -378,12 +378,16 @@ def test_release_workflow_pins_scans_attests_and_verifies_each_sbom_subject() ->
     raw = WORKFLOW.read_text(encoding="utf-8")
     assert not LEGACY_SBOM_WORKFLOW.exists()
     for required in [
-        'SYFT_VERSION: "1.49.0"',
-        "SYFT_COMMIT: 29fd7d0dec81cf03e0a1194a1985c7c893bb2396",
-        "SYFT_LINUX_AMD64_SHA256: 7aa2f03ee92739cf643279ba3990548b9925d4e22cae13f46831ee62821147fe",
+        'SYFT_VERSION: "1.51.0"',
+        "SYFT_COMMIT: 2293641e3bd628a01bb37639318d62c0ebe89b39",
+        "SYFT_LINUX_AMD64_SHA256: 2a2e837a2c8d59ec9af5472ee22d3b04ee463c4e44476ecf993fd1e5ab6ebc7f",
         'curl --fail --location --silent --show-error --proto \'=https\' --tlsv1.2 --retry 3',
-        'printf \'%s  %s\\n\' "$SYFT_LINUX_AMD64_SHA256" "$archive_path" | sha256sum --check --strict',
-        '"registry:${IMAGE_NAME}@${IMAGE_DIGEST}"',
+        'printf \'%s  %s\\n\' "$SYFT_LINUX_AMD64_SHA256" "$syft_archive_path" | sha256sum --check --strict',
+        'GRYPE_VERSION: "0.117.0"',
+        "GRYPE_COMMIT: b5fa92bbcbef655497e3be840a2f718380e2cdd3",
+        "GRYPE_LINUX_AMD64_SHA256: 38525dab1e06f162ebaa02f94d82d1f807076b011a44180cf2777edf1a7b9c26",
+        '"sbom:${RUNNER_TEMP}/image.syft.json"',
+        "python .github/scripts/validate_container_security.py",
         'cyclonedx-json=${RUNNER_TEMP}/image-syft.raw.cdx.json',
         "python .github/scripts/build_release_sboms.py",
         "--forbidden-path-prefix \"$RUNNER_TEMP\"",

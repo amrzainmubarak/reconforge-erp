@@ -174,7 +174,24 @@ from reconforge.connectors.writeback_network import (
     WritebackNetworkRegistration,
     WritebackNetworkResponse,
     WritebackProviderResponse,
+    WritebackRecoveryObservation,
+    WritebackRecoveryObservationRecord,
 )
+from reconforge.connectors.writeback_observations import (
+    WritebackObservationPersistenceError,
+    WritebackRecoveryObservationRepository,
+)
+from reconforge.connectors.writeback_receiver import (
+    SQLiteWritebackReceiverStore,
+    WritebackReceiverCounts,
+    WritebackReceiverDisposition,
+    WritebackReceiverError,
+    WritebackReceiverRequest,
+    WritebackReceiverResult,
+    build_writeback_receiver_response,
+    replay_writeback_receiver_result,
+)
+from reconforge.connectors.writeback_receiver_postgres import PostgresWritebackReceiverStore
 
 __all__ = [
     "AuthenticationMethod",
@@ -209,6 +226,19 @@ __all__ = [
     "WritebackNetworkRegistration",
     "WritebackNetworkResponse",
     "WritebackProviderResponse",
+    "WritebackRecoveryObservation",
+    "WritebackRecoveryObservationRecord",
+    "SQLiteWritebackReceiverStore",
+    "WritebackReceiverCounts",
+    "WritebackReceiverDisposition",
+    "WritebackReceiverError",
+    "WritebackReceiverRequest",
+    "WritebackReceiverResult",
+    "build_writeback_receiver_response",
+    "replay_writeback_receiver_result",
+    "PostgresWritebackReceiverStore",
+    "WritebackObservationPersistenceError",
+    "WritebackRecoveryObservationRepository",
     "WORLD_BANK_PUBLIC_MANIFEST",
     "WorldBankPublicConnector",
     "WorldBankPublicPage",

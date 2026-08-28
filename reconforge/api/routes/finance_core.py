@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -34,6 +35,7 @@ from reconforge.infrastructure.postgres_ledger import (
 )
 from reconforge.platform.common import PlatformError
 from reconforge.platform.finance_core import DEFAULT_LIST_LIMIT, FinanceCoreService
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 router = APIRouter(prefix="/finance-core", tags=["finance-core"])
 MAX_API_LIST_LIMIT = 1_000
@@ -193,7 +195,13 @@ def _enforce_server_legacy_finance_permission(request: Request, *, permission: s
     enforce_server_tenant_permission(request, permission=permission, tenant_id=scope.tenant_id)
 
 
-def _server_finance_workspace(request: Request, workspace: str, *, permission: str) -> str:
+def _server_finance_workspace(
+    request: Request,
+    workspace: str,
+    *,
+    permission: str,
+    amount: Decimal | None = None,
+) -> str:
     """Validate the requested workspace against the authenticated hierarchy."""
 
     scope = request_execution_scope(request)
@@ -214,6 +222,7 @@ def _server_finance_workspace(request: Request, workspace: str, *, permission: s
             permissions=frozenset({"finance_core.read", "finance_core.manage", "finance_core.validate"}),
             tenant_id=scope.tenant_id,
             workspace_id=scope.workspace_id,
+            amount=amount,
         )
     else:
         enforce_server_scoped_permission(
@@ -221,6 +230,7 @@ def _server_finance_workspace(request: Request, workspace: str, *, permission: s
             permission=permission,
             tenant_id=scope.tenant_id,
             workspace_id=scope.workspace_id,
+            amount=amount,
         )
     return scope.workspace_id
 
@@ -300,6 +310,28 @@ def _server_entry(
         source_type=payload.source_type,
         source_id=payload.external_reference or None,
     )
+
+
+def _entry_policy_amount(payload: LedgerEntryRequest) -> Decimal:
+    """Return the exact gross debit amount used for server ABAC evaluation."""
+
+    total = Decimal("0")
+    try:
+        for line in payload.lines:
+            debit = parse_exact_amount(line.debit)
+            credit = parse_exact_amount(line.credit)
+            if debit < 0 or credit < 0:
+                raise InvalidAmountError("ledger amounts must be non-negative")
+            total += debit
+            # Parse both sides before authorization; the balanced-entry
+            # invariant makes gross debit the single non-duplicated effect.
+    except (InvalidAmountError, TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=400,
+            code="finance_entry_amount_invalid",
+            message="Ledger entry amounts must be exact non-negative decimals.",
+        ) from exc
+    return total
 
 
 @router.get("/summary")
@@ -904,7 +936,13 @@ def create_entry(
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
     if server_finance_core_enabled(request) and payload.entity_code.strip() and payload.period_id.strip() and payload.journal_code.strip():
-        scoped_workspace = _server_finance_workspace(request, payload.workspace, permission="finance_core.manage")
+        policy_amount = _entry_policy_amount(payload)
+        scoped_workspace = _server_finance_workspace(
+            request,
+            payload.workspace,
+            permission="finance_core.manage",
+            amount=policy_amount,
+        )
         values = payload.model_dump()
         values["workspace"] = scoped_workspace
         values.pop("currency_code", None)
@@ -916,12 +954,14 @@ def create_entry(
             )
         }
     if server_ledger_enabled(request):
+        policy_amount = _entry_policy_amount(payload)
         scope = request_execution_scope(request)
         enforce_server_scoped_permission(
             request,
             permission="finance_core.manage",
             tenant_id=scope.tenant_id,
             workspace_id=scope.workspace_id,
+            amount=policy_amount,
         )
         record = execute_postgres_ledger(
             request,

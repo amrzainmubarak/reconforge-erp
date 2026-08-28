@@ -17,3 +17,12 @@ tests/test_observability.py:generic-api-key:127
 db48dad77c29debf8b09bc44d41f0f0f702fc479:docs/adr/0512-erpnext-payment-entry-api-replay-fence.md:generic-api-key:17
 db48dad77c29debf8b09bc44d41f0f0f702fc479:docs/execution/STATE.md:generic-api-key:12
 79cfbf8702cac19a61c16c16c59c574130e0e9d4:docs/adr/0438-gitleaks-synthetic-observability-fingerprint.md:generic-api-key:11
+# Historical synthetic writeback observation key; current tree uses a neutral token.
+90b0cfba2702372dcc8e10ef618b44be40eee5ba:docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json:generic-api-key:28
+90b0cfba2702372dcc8e10ef618b44be40eee5ba:docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json:generic-api-key:49
+90b0cfba2702372dcc8e10ef618b44be40eee5ba:docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json:generic-api-key:85
+90b0cfba2702372dcc8e10ef618b44be40eee5ba:docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json:generic-api-key:106
+90b0cfba2702372dcc8e10ef618b44be40eee5ba:docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json:generic-api-key:149
+90b0cfba2702372dcc8e10ef618b44be40eee5ba:docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json:generic-api-key:170
+c88b8c03666e1f61ac34a58ebe7591e07b878561:.github/scripts/verify_postgres_writeback_observation_matrix.py:generic-api-key:106
+c88b8c03666e1f61ac34a58ebe7591e07b878561:.github/scripts/verify_postgres_writeback_observation_matrix.py:generic-api-key:117

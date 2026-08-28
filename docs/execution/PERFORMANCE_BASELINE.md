@@ -1,5 +1,27 @@
 # Performance Baseline
 
+## E-831 write-back recovery matrix timing (2026-08-22)
+
+The exact two-version matrix, including migrations, two spawned crash/recovery
+windows per cell, history parity, and cleanup, took 20.803 seconds on one
+Docker Desktop host. This is a local regression observation for synthetic
+payloads and provider-acceptance markers, not a capacity result, provider
+latency, production SLO, RPO/RTO, or cross-host benchmark.
+
+## E-830 bounded receiver recovery timing (2026-08-22)
+
+The exact two-node synchronous receiver topology measured fencing start through
+promotion and exact replay of the already remote-applied identity. PostgreSQL
+16.14 measured 6.168 seconds and PostgreSQL 17.10 measured 6.199 seconds; both
+were below the explicit 60-second drill ceiling. The complete two-version
+matrix, including topology creation, two base backups per version, partition,
+re-seed, restart, verification, and cleanup, took 64.067 seconds. Acknowledged
+synthetic-effect RPO was zero transactions in both cells. These measurements
+come from one Docker Desktop host and one failure domain with manual control;
+they are regression ceilings and local observations, not production capacity,
+availability, RPO/RTO commitments, automatic-failover SLOs, or cross-host
+benchmarks.
+
 Measured 2026-07-27. This is a deterministic reconciliation harness baseline, not
 a full production capacity claim.
 

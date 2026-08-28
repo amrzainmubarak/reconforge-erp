@@ -1,14 +1,1089 @@
 ﻿schema_version: 2
-updated_at: "2026-08-20"
+updated_at: "2026-08-24"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
-  evidence_base_commit: "5d401e70c3a0e3cf507c2c7cf635dfc99b01a9af"
+  evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
   policy_change_commit: "the commit containing this file"
   published: false
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-907
+    priority: P0
+    area: release_operations
+    title: Cancel stale same-ref quality runs
+    status: completed
+    depends_on: [E-906]
+    exit_evidence: >-
+      CI, CodeQL, Security, and Docker use per-ref concurrency groups with
+      cancel-in-progress enabled. Ten focused workflow/HA-DR tests, Ruff, and
+      diff checks pass; cancellation is not evidence for a superseded run.
+  - id: E-906
+    priority: P0
+    area: security_supply_chain
+    title: Bound CodeQL analysis job
+    status: completed
+    depends_on: [E-903]
+    exit_evidence: >-
+      CodeQL analyze has a 30-minute timeout enforced by workflow tests. Nine
+      focused tests, Ruff, and diff checks pass; timeout remains a failed
+      security gate.
+  - id: E-905
+    priority: P0
+    area: reconciliation
+    title: Fail closed on non-text manifest declarations
+    status: completed
+    depends_on: [E-902]
+    exit_evidence: >-
+      Non-text or blank tie-break/explanation-schema values fail with the
+      public contract error. Focused 43-test run, Ruff, and diff checks pass.
+  - id: E-904
+    priority: P1
+    area: quality
+    title: Run full local regression after CI timeout hardening
+    status: completed
+    depends_on: [E-903]
+    exit_evidence: >-
+      python -m pytest -q --tb=short -ra exits 0 with no failures on the
+      current Windows/Python 3.14 environment. Explicit service/privilege
+      skips remain uncounted and hosted parity is not inferred.
+  - id: E-903
+    priority: P0
+    area: release_operations
+    title: Bound long-running CI and HA/DR jobs
+    status: completed
+    depends_on: [E-902]
+    exit_evidence: >-
+      CI test and PostgreSQL HA/DR jobs have finite 45/30 minute timeouts,
+      enforced by workflow contract tests. Eight focused tests pass; timeout
+      remains a failure signal, not evidence of success.
+  - id: E-902
+    priority: P0
+    area: reconciliation
+    title: Enforce runtime strategy ID slug parity
+    status: completed
+    depends_on: [E-900]
+    exit_evidence: >-
+      Runtime manifest IDs enforce the published lowercase bounded slug
+      pattern. Focused 42-test run, Ruff, and diff checks pass; no ownership or
+      compatibility claim is made.
+  - id: E-901
+    priority: P1
+    area: release_operations
+    title: Rebuild package after matching manifest contract hardening
+    status: completed
+    depends_on: [E-900]
+    exit_evidence: >-
+      python -m build --no-isolation produced the existing 0.7.1 sdist and
+      wheel successfully. Local package evidence only; signing and hosted
+      provenance remain separate gates.
+  - id: E-900
+    priority: P0
+    area: reconciliation
+    title: Require semantic versions in matching manifests
+    status: completed
+    depends_on: [E-899]
+    exit_evidence: >-
+      MatchingStrategyManifest rejects malformed and leading-zero versions
+      before registry admission/digesting. Focused 41-test run, Ruff, and diff
+      checks pass; semantic compatibility remains a separate gate.
+  - id: E-899
+    priority: P0
+    area: reconciliation
+    title: Add permutation replay for fee and FX one-to-one matching
+    status: completed
+    depends_on: [E-898]
+    exit_evidence: >-
+      Reversed FX-rate input order produces identical fee/FX one-to-one input
+      and decision digests, results, and explanations. Focused 60-test run,
+      Ruff, and diff checks pass; evidence is local synthetic only.
+  - id: E-898
+    priority: P0
+    area: reconciliation
+    title: Add bounded fee-aware and FX-aware one-to-one matching
+    status: completed
+    depends_on: [E-897, E-712]
+    exit_evidence: >-
+      Grouped matching supports one-to-one cardinality with Decimal fee
+      netting and explicit FX conversion. Golden synthetic cases and 59
+      focused grouped/matching tests pass with Ruff and diff checks; external
+      providers and production claims remain out of scope.
+  - id: E-897
+    priority: P0
+    area: reconciliation
+    title: Align indexed mode declaration with runtime behavior
+    status: completed
+    depends_on: [E-896]
+    exit_evidence: >-
+      Indexed one-to-one runtime, architecture manifest, digest, and tests now
+      all declare one-to-one consistently. Focused matching tests, Ruff, and
+      diff checks pass; advanced family completeness remains open.
+  - id: E-896
+    priority: P0
+    area: reconciliation
+    title: Fail closed on malformed matching mode metadata
+    status: completed
+    depends_on: [E-895]
+    exit_evidence: >-
+      Matching manifests and registry coverage reports reject blank or
+      non-text mode metadata. Focused matching tests, Ruff, and diff checks
+      pass; no capability expansion is inferred.
+  - id: E-895
+    priority: P0
+    area: reconciliation
+    title: Expose deterministic matching mode coverage
+    status: completed
+    depends_on: [E-894]
+    exit_evidence: >-
+      MatchingStrategyRegistry.coverage_report emits deterministic sorted
+      required/registered/missing modes and strategy identities. Focused
+      matching tests, Ruff, and diff checks pass; missing modes remain explicit.
+  - id: E-894
+    priority: P0
+    area: reconciliation
+    title: Fail closed on incomplete matching strategy declarations
+    status: completed
+    depends_on: [E-860]
+    exit_evidence: >-
+      MatchingStrategyManifest rejects unsupported maturity and blank
+      deterministic tie-break/explanation-schema declarations. Focused matching
+      contract, budget, and ambiguity tests pass with Ruff and diff checks.
+  - id: E-893
+    priority: P0
+    area: database_migrations
+    title: Bind restore drill to current Alembic head
+    status: completed
+    depends_on: [E-892]
+    exit_evidence: >-
+      The identity migration restore runner, schemas, and retained reports
+      all declare 0090_pg_writeback_observations, focused local tests pass,
+      and a hosted server-boundaries rerun passes on the pushed commit.
+  - id: E-892
+    priority: P0
+    area: release_operations
+    title: Fetch complete history for retained evidence CI contracts
+    status: completed
+    depends_on: [E-891]
+    exit_evidence: >-
+      The Python test matrix now uses checkout fetch-depth 0, allowing
+      retained digest-bound artifacts to verify their exact historical source
+      and migration commits in hosted CI. A focused workflow contract test
+      enforces the setting.
+  - id: E-891
+    priority: P0
+    area: security_supply_chain
+    title: Close hosted synthetic writeback-key finding
+    status: completed
+    depends_on: [E-890]
+    exit_evidence: >-
+      Hosted run 32642926377 identified eight generic-api-key findings for a
+      deterministic synthetic writeback idempotency value. The current tree
+      now uses a neutral token, eight exact immutable historical fingerprints
+      are recorded, and local Gitleaks 8.30.1 history/tree scans plus policy
+      validation pass with zero findings. No live credential was identified.
+  - id: E-890
+    priority: P1
+    area: security
+    title: Add offline boundary to hardened container smoke
+    status: completed
+    depends_on: [E-889]
+    exit_evidence: >-
+      The required CI and release-candidate image smoke runs with
+      network=none in addition to read-only root, dropped capabilities, and
+      no-new-privileges. The current image passes the full local command with
+      zero network access; workflow contract tests require the flag.
+  - id: E-889
+    priority: P1
+    area: release_operations
+    title: Protect hardened image gates with workflow contract tests
+    status: completed
+    depends_on: [E-888]
+    exit_evidence: >-
+      A focused test parses both CI and release workflows, requires the three
+      hardened runtime flags and doctor command, and verifies the release
+      smoke precedes registry login and image push. Ruff, pytest, and diff
+      checks pass for the contract.
+  - id: E-888
+    priority: P1
+    area: release_operations
+    title: Gate release candidates on hardened image execution
+    status: completed
+    depends_on: [E-887]
+    exit_evidence: >-
+      The signed release-candidate workflow runs the exact scanned local image
+      under read-only root, all capabilities dropped, and
+      no-new-privileges before registry login, push, or attestation. This is a
+      hosted Linux smoke and does not prove multi-architecture, host,
+      registry-availability, or production orchestration assurance.
+  - id: E-887
+    priority: P1
+    area: deployment
+    title: Enforce hardened container smoke in CI
+    status: completed
+    depends_on: [E-882, E-879]
+    exit_evidence: >-
+      The required docker-parity job now runs reconforge doctor under a
+      read-only root filesystem with all Linux capabilities dropped and
+      no-new-privileges, matching the local hardening evidence. This remains
+      a GitHub-runner smoke and does not prove host, multi-architecture,
+      registry, or production orchestration assurance.
+  - id: E-886
+    priority: P1
+    area: supply_chain
+    title: Record local Docker image SBOM inventory evidence
+    status: completed
+    depends_on: [E-885]
+    exit_evidence: >-
+      Docker Scout emits a valid CycloneDX SBOM for the explicit local image,
+      containing 82 components. The generated output hash and command are
+      recorded; this remains local inventory evidence and does not replace
+      signed release SBOM/provenance verification.
+  - id: E-885
+    priority: P1
+    area: security
+    title: Refresh Docker Scout base-layer scan boundary
+    status: completed
+    depends_on: [E-884]
+    exit_evidence: >-
+      Docker Scout base-only scan of the explicit local image indexes the
+      current base layer and reports zero critical/high/medium/low findings with
+      exit code zero. The Python 3.12 alternative remains an optional
+      compatibility upgrade, not an urgent vulnerability remediation.
+  - id: E-884
+    priority: P1
+    area: deployment
+    title: Gate Python 3.12 Alpine base-image upgrade behind matrix evidence
+    status: planned
+    depends_on: [E-883]
+    exit_evidence: >-
+      Planned only. Upgrade the digest-pinned Docker base from Python 3.11
+      Alpine after refreshed Scout evidence, Python/engine parity, package and
+      air-gap verification, Docker/API/web smoke, and a tested rollback. The
+      current 3.11 base remains unchanged until those gates pass.
+  - id: E-883
+    priority: P1
+    area: security
+    title: Refresh local Docker Scout vulnerability scan evidence
+    status: completed
+    depends_on: [E-882]
+    exit_evidence: >-
+      Docker Scout v1.24.0 scans the explicit local reconforge:current image,
+      indexes 82 packages, reports zero critical/high/medium/low vulnerabilities,
+      and exits zero. The result remains local scanner evidence and does not
+      claim hosted provenance, registry signing, malware, license, or production
+      security assurance.
+  - id: E-882
+    priority: P1
+    area: security
+    title: Verify hardened local Docker runtime smoke boundary
+    status: completed
+    depends_on: [E-881]
+    exit_evidence: >-
+      The current image metadata and runtime prove user 10001:10001, /app
+      working directory, and successful doctor execution under read-only root,
+      all Linux capabilities dropped, and no-new-privileges. This is a local
+      hardening smoke, not image scanning or production container assurance.
+  - id: E-881
+    priority: P1
+    area: deployment
+    title: Refresh current Docker image parity and runtime smoke evidence
+    status: completed
+    depends_on: [E-880]
+    exit_evidence: >-
+      The current Docker image builds successfully and runs doctor, sample-data
+      validation, and audit-basic control-pack validation with exit code zero.
+      Doctor reports zero errors and ten known synthetic sample warnings;
+      warnings remain visible and are not treated as silently clean data.
+  - id: E-880
+    priority: P1
+    area: release_operations
+    title: Refresh package membership after CI and evidence governance additions
+    status: completed
+    depends_on: [E-879]
+    exit_evidence: >-
+      python -m build --no-isolation succeeds and SOURCES.txt contains ADRs
+      0585-0587 plus the current PostgreSQL durable-job benchmark artifacts;
+      benchmark index, release SBOM, signed-release, SLSA, and maturity tests
+      pass.
+  - id: E-879
+    priority: P0
+    area: quality
+    title: Propagate web gate failure to operational CI cells
+    status: completed
+    depends_on: [E-878]
+    exit_evidence: >-
+      Docker parity and live server-boundaries jobs now require both Python
+      test and web jobs, preventing downstream operational success from masking
+      a failed browser quality gate. Independent engine/object-storage/HA cells
+      remain parallel assurance boundaries.
+  - id: E-878
+    priority: P0
+    area: release_operations
+    title: Recheck web artifact in signed-tag release workflow
+    status: completed
+    depends_on: [E-877]
+    exit_evidence: >-
+      The signed-tag release workflow now installs locked web dependencies and
+      runs web typecheck, Vitest, production build, Chromium installation, and
+      standard Playwright E2E before Python/package/image publication. Live API
+      and HTTPS scenarios remain explicitly opt-in.
+  - id: E-877
+    priority: P0
+    area: quality
+    title: Make web client verification a required pull-request CI gate
+    status: completed
+    depends_on: [E-876]
+    exit_evidence: >-
+      The CI workflow now has a pinned Node 22 web job that installs from the
+      npm lockfile, runs typecheck, Vitest, production build, Chromium install,
+      and standard browser/accessibility E2E. Live API-session and HTTPS
+      scenarios remain explicit opt-ins; local execution of the same commands
+      passed before publication.
+  - id: E-876
+    priority: P1
+    area: connectors
+    title: Refresh provider-neutral transport and network conformance evidence
+    status: completed
+    depends_on: [E-875]
+    exit_evidence: >-
+      Provider TLS sandbox, write-back network, and connector network suites
+      pass 70 tests locally, covering certificate pinning, retry/backoff,
+      idempotency, acknowledgement binding, public-egress rejection, and
+      synthetic failure injection. No external provider or production egress
+      claim is made.
+  - id: E-875
+    priority: P1
+    area: scale
+    title: Refresh current PostgreSQL durable-job backpressure and soak evidence
+    status: completed
+    depends_on: [E-874]
+    exit_evidence: >-
+      The non-privileged local PostgreSQL runtime passes the backpressure and
+      repeated-small-soak profiles: 64/64 jobs and 256/256 effects with zero
+      duplicates and drained queues, plus 3/3 repeated iterations with
+      192/192 jobs, 768/768 effects, zero duplicates/residue, and identical
+      effect digests. Evidence is packaged in the dated benchmark artifact and
+      benchmark index; distributed HA, capacity, and production claims remain
+      explicitly open.
+  - id: E-874
+    priority: P1
+    area: quality
+    title: Close current web client verification and configurable E2E runtime port
+    status: completed
+    depends_on: [E-873]
+    exit_evidence: >-
+      npm ci, TypeScript typecheck, 75 Vitest tests, production build, and a
+      Playwright run pass with 16 tests and 5 explicit opt-in live-service
+      skips. The E2E web-server port is configurable through
+      RECONFORGE_WEB_PORT while retaining 4173 as the default; live browser
+      session and HTTPS production-bundle scenarios remain explicitly gated.
+  - id: E-873
+    priority: P0
+    area: security
+    title: Refresh static security and dependency gate evidence
+    status: completed
+    depends_on: [E-872]
+    exit_evidence: >-
+      Bandit reports no failed findings, local pip-audit reports no known
+      vulnerabilities for auditable installed distributions, and focused
+      deployment/security tests pass 17 tests. The project package is not on
+      PyPI and is explicitly not counted as audited; hosted/provenance,
+      reachability, malware, license, and penetration assurance remain open.
+  - id: E-872
+    priority: P0
+    area: supply-chain
+    title: Refresh release manifest and SBOM pipeline contract evidence
+    status: completed
+    depends_on: [E-871]
+    exit_evidence: >-
+      The local release SBOM, signed-release, and SLSA-plan contract suites pass
+      28 tests, covering exact release identity, subject digests, deterministic
+      CycloneDX 1.7 normalization, source/package/image binding, tamper and
+      forbidden-path rejection, and workflow gate ordering. This is builder
+      contract evidence only, not signed hosted provenance.
+  - id: E-871
+    priority: P0
+    area: sovereign-deployment
+    title: Refresh current air-gapped identity recovery and upgrade rollback
+    status: completed
+    depends_on: [E-870]
+    exit_evidence: >-
+      The full airgap installer completed with network none and read-only root,
+      restored two local users with zero old sessions, rejected a wrong key,
+      preserved a valid audit chain, and verified exact 0.7.0 to 0.7.1 cutover
+      plus rollback with zero network inputs. This is one Linux synthetic run.
+  - id: E-870
+    priority: P0
+    area: sovereign-deployment
+    title: Refresh current offline base-install drill evidence
+    status: completed
+    depends_on: [E-869]
+    exit_evidence: >-
+      `verify_airgap_install.py --base-install-only` builds and installs a
+      wheel-only uv.lock bundle with pip no-index/no-deps/require-hashes inside
+      a digest-pinned Linux container using network none and a read-only root;
+      reconforge doctor exits zero and cleanup completes. The current bundle
+      has 68 entries and 100627876 bytes. This is base-install evidence only.
+  - id: E-869
+    priority: P0
+    area: identity-governance
+    title: Refresh current PostgreSQL identity and scope governance runtime
+    status: completed
+    depends_on: [E-868]
+    exit_evidence: >-
+      Eleven focused tests pass against PostgreSQL 16.14 under
+      reconforge_app, covering tenant-isolated identity administration,
+      session invalidation and last-administrator guards, append-only
+      password step-up, deterministic scope grants/revocation, and policy
+      scope analysis. This is bounded synthetic IAM evidence, not production
+      IAM or external-IdP assurance.
+  - id: E-868
+    priority: P0
+    area: connectors
+    title: Refresh current PostgreSQL write-back receiver failover matrix
+    status: completed
+    depends_on: [E-867]
+    exit_evidence: >-
+      The current failover matrix passes on digest-pinned PostgreSQL 16.14 and
+      17.10 with 23/23 checks per cell, zero acknowledged-effect RPO, replay
+      without duplicate effects after response loss and promotion, uncertain
+      commit applied once after rejoin, endpoint rediscovery after restart,
+      equal SQLite/PostgreSQL canonical history, and complete cleanup. This is
+      a single-host synthetic matrix and not production exactly-once evidence.
+  - id: E-867
+    priority: P0
+    area: finance-close
+    title: Refresh current PostgreSQL consolidation-close runtime evidence
+    status: completed
+    depends_on: [E-866, E-1002]
+    exit_evidence: >-
+      The PostgreSQL close, consolidation-close, and server HTTP lifecycle
+      suites pass 32 tests against PostgreSQL 16.14 using reconforge_app with
+      rolsuper=false and rolbypassrls=false. The runtime covers replay identity,
+      tenant/RLS isolation, maker-checker certification and period reopen,
+      reversal controls, digest-bound close evidence, and server route scope.
+      It remains synthetic single-host evidence and makes no statutory,
+      production, hosted-parity, or HA/DR claim.
+  - id: E-866
+    priority: P0
+    area: reliability
+    title: Refresh current bounded PostgreSQL HA/DR drill evidence
+    status: completed
+    depends_on: [E-865]
+    exit_evidence: >-
+      A disposable Docker PostgreSQL 17.10 synchronous primary/standby drill
+      completed on 2026-08-23 with encrypted isolated restore, exact-ID fencing,
+      zero acknowledged sentinel loss, failover RTO 11.093 seconds, and
+      failback RTO 1.041 seconds. Evidence is single-host synthetic runtime
+      only and explicitly excludes production RPO/RTO, host loss, and
+      enterprise-readiness claims.
+  - id: E-865
+    priority: P0
+    area: identity-governance
+    title: Refresh live PostgreSQL security governance and policy analysis evidence
+    status: completed
+    depends_on: [E-864]
+    exit_evidence: >-
+      Current PostgreSQL runtime tests pass under the non-privileged role for
+      atomic security-governance retention/resource boundaries, tenant isolation,
+      and policy-analysis maker-checker scope enforcement. This is bounded
+      runtime control evidence and makes no compliance or certification claim.
+  - id: E-864
+    priority: P0
+    area: connectors
+    title: Add live PostgreSQL receiver idempotency gate
+    status: completed
+    depends_on: [E-863]
+    exit_evidence: >-
+      An optional live gate initializes the digest-only PostgreSQL receiver,
+      proves one atomic receipt/effect for a request, exact replay without a
+      second effect, stable history digest, and deletion refusal under the
+      application role; it passes when the declared PostgreSQL DSN is present.
+  - id: E-863
+    priority: P0
+    area: connectors
+    title: Refresh live PostgreSQL write-back append-only evidence
+    status: completed
+    depends_on: [E-862]
+    exit_evidence: >-
+      The current PostgreSQL 16.14 service passes the write-back schema and both
+      live history tests under `reconforge_app`: scoped idempotent append-only
+      history and ERPNext payment history replay. Secrets/provider dispatch are
+      not exercised and no production write-back claim is made.
+  - id: E-862
+    priority: P0
+    area: matching
+    title: Refresh live PostgreSQL grouped matching 500/10K scale evidence
+    status: completed
+    depends_on: [E-861]
+    exit_evidence: >-
+      The current PostgreSQL 16.14 service passes the declared 500-partition
+      and 10K-partition grouped scale profiles with zero failed runs, duplicate
+      result identities, or active runs; both are bounded synthetic local Docker
+      measurements under the non-privileged application role.
+  - id: E-861
+    priority: P0
+    area: matching
+    title: Refresh live PostgreSQL grouped matching replay evidence
+    status: completed
+    depends_on: [E-860]
+    exit_evidence: >-
+      On the local digest-pinned PostgreSQL 16.14 container
+      `sha256:57c72fd2...07777`, the grouped worker runtime and process-crash
+      resume tests pass under `reconforge_app` with `rolsuper=false` and
+      `rolbypassrls=false`; the full grouped runtime/application file passes.
+      Evidence is synthetic, single-host, and not a production/HA claim.
+  - id: E-860
+    priority: P0
+    area: matching
+    title: Replay-test every registered matching strategy family
+    status: completed
+    depends_on: [E-859]
+    exit_evidence: >-
+      A deterministic replay matrix exercises indexed one-to-one, grouped
+      many-to-many, duplicate detection, carry-forward, and reversal pairing
+      through their public adapters; every family reproduces the canonical
+      envelope exactly under the local SQLite/ pure-strategy boundary.
+  - id: E-859
+    priority: P0
+    area: matching
+    title: Add deterministic strategy re-execution replay verifier
+    status: completed
+    depends_on: [E-858]
+    exit_evidence: >-
+      A strategy replay helper re-executes the original request, round-trips
+      both supplied and recomputed results through the closed envelope, and
+      rejects any canonical evidence drift. Contract tests cover successful
+      replay and tampered output; no provider or network call is involved.
+  - id: E-858
+    priority: P1
+    area: matching
+    title: Expose offline matching result envelope validation CLI
+    status: completed
+    depends_on: [E-857]
+    exit_evidence: >-
+      `reconforge match validate-result-envelope` reads one operator-selected
+      local JSON envelope, performs strict schema/identity/digest-shape parsing
+      without network or execution, and explicitly states that a replay request
+      is required for input/result verification. CLI and inventory contracts pass.
+  - id: E-857
+    priority: P0
+    area: matching
+    title: Publish versioned matching result envelope schema
+    status: completed
+    depends_on: [E-856]
+    exit_evidence: >-
+      A Draft 2020-12 closed schema versions the strategy result envelope and
+      constrains strategy identity/version, lowercase SHA-256 digests, and JSON
+      object collections; runtime output validates against it and unsupported
+      schema versions fail closed.
+  - id: E-856
+    priority: P0
+    area: matching
+    title: Enforce replay envelope at PostgreSQL worker boundaries
+    status: completed
+    depends_on: [E-855]
+    exit_evidence: >-
+      Grouped and sequential PostgreSQL worker adapters round-trip every direct
+      strategy result through the closed JSON envelope and verify strategy
+      identity/version plus all digests before projection. Contract suites pass;
+      this proves a local worker boundary, not hosted cross-engine readiness.
+  - id: E-855
+    priority: P0
+    area: matching
+    title: Add closed JSON replay envelope for strategy results
+    status: completed
+    depends_on: [E-854]
+    exit_evidence: >-
+      MatchingStrategyResult exposes a JSON-safe closed envelope and strict
+      reconstruction/replay verification. Extra fields, non-object collections,
+      strategy identity drift, version drift, and digest tampering fail closed;
+      the contract suite passes with no backend-specific serialization.
+  - id: E-854
+    priority: P0
+    area: matching
+    title: Bind strategy identity and version to matching results
+    status: completed
+    depends_on: [E-1003]
+    exit_evidence: >-
+      Every reviewed matching strategy result carries its immutable strategy ID,
+      semantic version, manifest digest, input digest, and decision digest; the
+      replay verifier rejects identity/version drift. Five strategy adapters and
+      PostgreSQL worker contracts pass, with no change to financial behavior.
+  - id: E-853
+    priority: P0
+    area: security-and-deployment-governance
+    title: Compose regulated profile and managed-key admission evidence
+    status: completed
+    depends_on: [E-852]
+    exit_evidence: >-
+      A strict composite envelope requires regulated runtime facts with no
+      profile findings and a non-local customer-managed key manifest, then
+      emits child and composite digests through an offline CLI. Focused
+      admission/key/deployment/inventory tests pass 50/50, Ruff and Mypy pass.
+      KMS/HSM runtime enforcement and production readiness remain unproven.
+  - id: E-852
+    priority: P0
+    area: security-and-deployment-governance
+    title: Add provider-neutral managed-key custody evidence
+    status: completed
+    depends_on: [E-851]
+    exit_evidence: >-
+      A strict non-secret managed-key manifest verifies provider/key identity,
+      active status, customer ownership, AES-256-GCM purpose, scope, and bounded
+      rotation interval; CLI verification is offline and digest-bound. Focused
+      key/deployment/inventory tests pass 44/44, Ruff and Mypy pass. This is a
+      custody metadata contract only and does not prove KMS/HSM runtime control.
+  - id: E-851
+    priority: P0
+    area: deployment-governance
+    title: Bind runtime evidence to the immutable profile digest
+    status: completed
+    depends_on: [E-850]
+    exit_evidence: >-
+      Runtime evidence manifests require a SHA-256 profile_digest matching the
+      selected immutable deployment profile; missing, malformed, or drifted
+      digests fail closed before findings are returned. Focused runtime/readiness
+      tests pass 12/12, Ruff and Mypy pass. This proves local evidence identity,
+      not external runtime enforcement.
+  - id: E-850
+    priority: P0
+    area: deployment-governance
+    title: Expose deployment readiness evidence through the CLI
+    status: completed
+    depends_on: [E-849]
+    exit_evidence: >-
+      `deployment readiness` consumes the centralized bounded YAML ingress,
+      validates the closed matrix and repository-contained evidence paths,
+      computes a deterministic digest, supports edition selection, and fails
+      closed on unknown editions or missing/expanded inputs. Focused
+      readiness/runtime/profile/worker/inventory tests pass 36/36; Ruff and
+      Mypy pass. It reports evidence only and never claims readiness.
+  - id: E-849
+    priority: P0
+    area: deployment-governance
+    title: Consolidate mode-specific deployment readiness evidence
+    status: completed
+    depends_on: [E-848]
+    exit_evidence: >-
+      A closed schema-validated matrix covers all four deployment editions and
+      eight common gates, binds evidence references to existing repository paths,
+      and permits only verified_scoped/partial/open gate states with partial/open
+      edition status. Matrix tests pass 2/2. The artifact is an evidence index,
+      not production readiness, compliance, or independent assurance.
+  - id: E-848
+    priority: P0
+    area: deployment-governance
+    title: Add digest-bound deployment runtime evidence manifest
+    status: completed
+    depends_on: [E-847]
+    exit_evidence: >-
+      A strict offline JSON manifest binds one deployment edition to the exact
+      runtime facts consumed by profile validation, rejects missing/extra fields
+      and wrong types, returns deterministic findings and SHA-256 digest, and is
+      exposed through `deployment verify-runtime-evidence`. Focused
+      runtime/profile/worker/inventory tests pass 31/31; Ruff and Mypy pass.
+      It does not probe or provision external systems and does not prove
+      deployment readiness.
+  - id: E-847
+    priority: P0
+    area: deployment-governance
+    title: Expose worker permission manifest verification through the CLI
+    status: completed
+    depends_on: [E-846]
+    exit_evidence: >-
+      The CLI verifies a local closed JSON worker permission manifest, prints
+      its canonical digest, and returns a non-zero safe error for malformed or
+      closed-contract input. Focused CLI/manifest/profile/inventory tests pass
+      18/18, with Ruff and Mypy passing. The command performs no network or IAM
+      mutation and does not prove production enforcement.
+  - id: E-846
+    priority: P0
+    area: deployment-governance
+    title: Add offline digest-bound worker permission manifest verifier
+    status: completed
+    depends_on: [E-845]
+    exit_evidence: >-
+      A strict network-free manifest verifier validates worker/principal IDs,
+      distinct non-human discovery/execution permissions, granted permission
+      membership, scope, closed fields, and canonical SHA-256 digest. Focused
+      manifest/profile tests pass 15/15, Ruff and Mypy pass. It produces
+      evidence input only; it does not provision or mutate IAM.
+  - id: E-845
+    priority: P0
+    area: deployment-governance
+    title: Gate hosted deployment profiles on worker discovery separation
+    status: completed
+    depends_on: [E-844]
+    exit_evidence: >-
+      Team, Enterprise, and Regulated deployment profiles now require an
+      explicit runtime fact proving reconciliation discovery/execution
+      permission separation; Community remains local-compatible. Deployment
+      profile tests pass 9/9, Ruff and Mypy pass. This is a descriptive gate,
+      not proof of production IAM rollout.
+  - id: E-844
+    priority: P0
+    area: identity-governance
+    title: Separate reconciliation discovery and execution permissions
+    status: completed
+    depends_on: [E-843]
+    exit_evidence: >-
+      Worker settings support an explicit discovery_policy_permission so queue
+      enumeration can use a least-privileged permission while claim and
+      execution retain match.run; compatibility falls back to the existing
+      permission. Focused API/worker/policy tests pass 33/33 with one live
+      PostgreSQL skip; universal deployment configuration remains open.
+  - id: E-843
+    priority: P0
+    area: identity-governance
+    title: Propagate reconciliation exposure into worker policy rechecks
+    status: completed
+    depends_on: [E-842]
+    exit_evidence: >-
+      Reconciliation submission persists policy_amount in the immutable rule
+      metadata and worker process_run passes the exact Decimal exposure through
+      tenant and pre-claim scoped policy checks. Focused API/worker/policy tests
+      pass 32/32 with one live-PostgreSQL skip; discovery-lane universal policy
+      and production IAM evidence remain open.
+  - id: E-842
+    priority: P0
+    area: identity-governance
+    title: Bind reconciliation run submission to amount-bounded ABAC
+    status: completed
+    depends_on: [E-841]
+    exit_evidence: >-
+      Reconciliation submission computes gross absolute exact Decimal exposure
+      from canonical inputs before server authorization; missing amounts remain
+      None so bounded policies fail closed. Focused API tests pass 3/3, Ruff and
+      Mypy pass. Universal route/job adoption and production IAM remain open.
+  - id: E-841
+    priority: P0
+    area: identity-governance
+    title: Bind ownership-change preparation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-840]
+    exit_evidence: >-
+      Typed ownership-change inputs pass exact gross exposure into server
+      authorization before PostgreSQL persistence; focused tests pass 19/19
+      with Decimal 220.00. Universal route and production IAM remain open.
+  - id: E-840
+    priority: P0
+    area: identity-governance
+    title: Bind PPA preparation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-839]
+    exit_evidence: >-
+      Typed PPA preparation passes consideration plus NCI fair value as the
+      exact gross Decimal acquisition exposure before PostgreSQL persistence;
+      allocation items are not double-counted. Focused route/domain/dependency
+      tests pass 16/16 with exact 200.00 synthetic exposure. Universal route
+      and production IAM evidence remain open.
+  - id: E-839
+    priority: P0
+    area: identity-governance
+    title: Bind deferred-tax preparation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-838]
+    exit_evidence: >-
+      Typed deferred-tax items are converted before policy and their gross
+      absolute fair-value Decimal exposure is passed to server authorization
+      before persistence. Focused route/domain/dependency tests pass 15/15 with
+      exact 270.00 synthetic exposure. Universal route and production IAM
+      evidence remain open.
+  - id: E-838
+    priority: P0
+    area: identity-governance
+    title: Bind intercompany elimination preparation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-837]
+    exit_evidence: >-
+      Typed intercompany Money lines are converted before policy; their gross
+      absolute Decimal amount is passed to server scope evaluation before
+      persistence. Focused route/domain/dependency tests pass 15/15 with exact
+      200.00 synthetic exposure. Universal route and production IAM evidence
+      remain open.
+  - id: E-837
+    priority: P0
+    area: identity-governance
+    title: Bind Finance Core entry creation to amount-bounded ABAC
+    status: completed
+    depends_on: [E-836]
+    exit_evidence: >-
+      Both PostgreSQL Finance Core entry paths parse debit and credit values as
+      exact non-negative decimals and pass the gross debit total into server
+      policy evaluation before adapter access. Invalid amounts fail closed with
+      a safe API error. Route, dependency, Ruff, and Mypy tests pass. Other
+      financial routes and production IAM remain outside this slice.
+  - id: E-836
+    priority: P0
+    area: identity-governance
+    title: Bind a high-risk financial route to amount-bounded ABAC
+    status: completed
+    depends_on: [E-835]
+    exit_evidence: >-
+      The PostgreSQL consolidation impairment prepare route converts canonical
+      Money inputs into its typed domain request, sums carrying amounts with
+      Decimal arithmetic, and passes the exact total to central server-scope
+      policy evaluation before persistence. Route, policy, dependency, Ruff,
+      and Mypy tests pass. Universal route adoption and production IAM remain
+      outside this slice.
+  - id: E-835
+    priority: P0
+    area: identity-governance
+    title: Fail closed when bounded ABAC policy omits the financial amount
+    status: completed
+    depends_on: [E-1005]
+    exit_evidence: >-
+      CentralPolicyEngine now denies a context with minimum_amount or
+      maximum_amount when amount is absent, returning
+      amount_missing_for_bounded_policy. Exact Decimal below-floor,
+      above-ceiling, and in-range behavior is preserved. Focused policy tests,
+      Ruff, and Mypy pass. This closes the primitive omission gap but does not
+      prove universal route adoption or production IAM effectiveness.
+  - id: E-834
+    priority: P0
+    area: connector-reliability
+    title: Persist durable write-back recovery observations and evidence references
+    status: completed
+    depends_on: [E-833]
+    exit_evidence: >-
+      WritebackRecoveryObservationRecord binds scope, intent, connector,
+      immutable proposal digest, actor, timezone-aware timestamp, provider
+      outcome, raw/response/observation digests, and a deterministic evidence
+      node id. SQLite migration 43 and PostgreSQL Alembic 0090 implement
+      append-only, idempotent, RLS/tenant-scoped storage with direct mutation
+      refusal. The recovery API persists observations before accepted state
+      advancement and exposes reviewer drill-down. The SQLite/PostgreSQL
+      runtime matrix passes with identical record digest on exact PostgreSQL
+      16.14/17.10 cells and a non-privileged role. Evidence is synthetic and
+      single-host; live vendor, accounting, settlement, distributed HA, and
+      production assurance remain outside the claim.
+  - id: E-833
+    priority: P0
+    area: connector-reliability
+    title: Classify provider status outcomes without lifecycle mutation
+    status: completed
+    depends_on: [E-832]
+    exit_evidence: >-
+      The recovery boundary exposes an additive provider-outcome taxonomy of
+      accepted, rejected, pending, not_found, and unknown. A non-mutating
+      observation carries the original idempotency key, HTTP status, raw-body
+      digest, provider reference/digest when present, and its own deterministic
+      observation digest. Only accepted observations can become an immutable
+      acknowledgement; all other outcomes remain outside the lifecycle and
+      require a later governed reconciliation decision. This is synthetic local
+      transport evidence, not live provider semantics or production assurance.
+  - id: E-832
+    priority: P0
+    area: connector-reliability
+    title: Reject negative provider outcomes before acknowledgement
+    status: completed
+    depends_on: [E-831]
+    exit_evidence: >-
+      The provider-neutral network executor treats an explicit `accepted=false`
+      response as a safe failure rather than an acknowledgement for both the
+      original mutation and idempotency-status recovery. The immutable intent
+      remains in its prior state, the compensation path retains its existing
+      rejection guard, and focused transport/domain tests cover response schema,
+      idempotency binding, and no-state-advance behavior. This is local synthetic
+      transport evidence, not a provider contract, posting, settlement, or
+      production assurance.
+  - id: E-831
+    priority: P0
+    area: connector-reliability
+    title: Prove PostgreSQL write-back crash recovery and compensation parity
+    status: completed
+    depends_on: [E-830]
+    exit_evidence: >-
+      A closed provider-neutral matrix stages the append-only proposal,
+      approval, dispatch, acknowledgement, compensation-request, and
+      compensation-complete lifecycle on a same-input SQLite reference and
+      exact PostgreSQL 16.14/17.10 cells. A spawned process records synthetic
+      provider acceptance and exits before acknowledgement persistence; recovery
+      persists the original key exactly once. A second crash window after
+      synthetic compensation acceptance recovers through the distinct
+      `<original-key>:compensation` key exactly once. The six-version history
+      digest matches SQLite, direct UPDATE/DELETE is refused, tenant scope is
+      isolated, and the application role has no elevated flags. This is
+      provider-neutral synthetic evidence on one Docker host, not live provider,
+      accounting, settlement, cross-host HA, exactly-once, or production RPO/RTO
+      evidence.
+  - id: E-830
+    priority: P0
+    area: connector-reliability
+    title: Prove receiver replay across bounded synchronous PostgreSQL failover
+    status: completed
+    depends_on: [E-829]
+    exit_evidence: >-
+      Exact digest-pinned PostgreSQL 16.14 and 17.10 cells each create a
+      two-node physical-streaming topology with synchronous remote-apply. An
+      acknowledged receipt/effect is visible on standby before failure; a
+      second client is terminated only after PostgreSQL reports its COMMIT in
+      SyncRep wait. The exact primary is stopped and removed before promotion.
+      The acknowledged identity replays with no effect, mutations pause during
+      re-seed, synchronous redundancy is restored, and the uncertain identity
+      applies once. Rejoined and restarted histories equal SQLite with RPO 0
+      for the acknowledged synthetic effect and local RTO 6.168/6.199 seconds.
+      This is one Docker Desktop host and one failure domain with manual
+      control, not cross-host HA, automatic failover, provider, accounting,
+      settlement, production RPO/RTO, or exactly-once assurance.
+  - id: E-829
+    priority: P0
+    area: connector-security
+    title: Prove PostgreSQL receiver idempotency parity with the SQLite contract
+    status: completed
+    depends_on: [E-828, E-827]
+    exit_evidence: >-
+      An additive psycopg-backed reference receiver uses a transaction-scoped
+      advisory lock and one transaction for the immutable receipt and synthetic
+      effect while preserving the digest-only E-828 contract. One closed runner
+      passes the same sequential, conflict, eight-process, crash-after-commit,
+      mutation-refusal, and restore cases on exact digest-pinned PostgreSQL
+      16.14 and 17.10 images under a non-privileged role. Native dumps restore
+      independently and both canonical histories equal the retained SQLite
+      history. This remains one-host, sequential, single-node, synthetic
+      conformance evidence; no live provider, cross-host consensus/failover,
+      posting, settlement, HA/DR, or production exactly-once claim follows.
+  - id: E-828
+    priority: P0
+    area: connector-security
+    title: Prove bounded receiver-side write-back idempotency conformance
+    status: completed
+    depends_on: [E-827, E-660]
+    exit_evidence: >-
+      A provider-neutral digest-only receiver contract and SQLite reference
+      store atomically commit one immutable receipt and one synthetic effect per
+      receiver/idempotency-key identity without retaining payloads or secrets.
+      A closed source-bound drill proves exact sequential replay, refusal of
+      same-key payload retargeting, one apply plus seven replays across eight
+      spawned processes, replay after process exit immediately following
+      commit, database-level receipt/effect immutability, independent backup
+      restore, canonical-history equality, and cleanup. This is one-host SQLite
+      conformance evidence, not a live vendor, cross-host consensus, database
+      failover, accounting posting, or production exactly-once claim.
+  - id: E-827
+    priority: P0
+    area: connector-security
+    title: Prove the write-back identity migration across the declared PostgreSQL version matrix
+    status: completed
+    depends_on: [E-826]
+    exit_evidence: >-
+      One shared fail-closed observation runner executes the complete drifted
+      audit-refusal and independent native-restore path sequentially on the
+      digest-pinned PostgreSQL 16.14 CI image and PostgreSQL 17.10 drill image.
+      Both cells retain identical canonical valid and invalid histories, pass
+      all ten checks, and verify cleanup. A closed matrix report binds migration,
+      runner, and supply-chain-policy sources. CI is configured to run and
+      preserve the matrix before the broader live server boundary. This remains
+      two-version, one-host, synthetic, sequential evidence; no provider,
+      posting, rolling upgrade, HA/DR, or production assurance follows.
+  - id: E-826
+    priority: P0
+    area: connector-security
+    title: Prove PostgreSQL write-back identity migration refusal and independent restore
+    status: completed
+    depends_on: [E-825]
+    exit_evidence: >-
+      A digest-pinned PostgreSQL 17.10 Docker drill creates valid history at
+      0088, captures and lists a native pre-drift backup, introduces proposal
+      drift permitted by the legacy trigger, and proves 0089 refuses the
+      upgrade without changing the revision, history digest, or trigger. The
+      backup restores into an independent database, preserves its history
+      digest, upgrades to 0089, and rejects a drifted direct INSERT. A closed
+      schema and canonical report digest bind every check and limitation;
+      container cleanup is verified. This is single-node synthetic migration
+      evidence, not provider, posting, HA/DR, or production assurance.
+  - id: E-825
+    priority: P0
+    area: connector-security
+    title: Bind every write-back lifecycle version to one immutable proposal identity
+    status: completed
+    depends_on: [E-1004, E-1005]
+    exit_evidence: >-
+      One canonical proposal digest binds scope, connector, operation, payload
+      digest, idempotency key, requester, request time, and feature decision.
+      Shared repository validation plus SQLite migration 42 and PostgreSQL
+      Alembic 0089 reject retargeted or non-adjacent versions, including direct
+      INSERTs, and fail closed when upgrading drifted history. Additive API
+      evidence exposes the stable proposal digest. A digest-pinned PostgreSQL
+      17.10 non-superuser drill verifies the trigger and repeated head
+      upgrade/downgrade path. Live provider behavior, production operation, and
+      autonomous approval remain excluded.
+  - id: E-824
+    priority: P0
+    area: container-security
+    title: Remediate or independently disposition current exact-image High findings
+    status: blocked
+    depends_on: [E-823]
+    exit_evidence: >-
+      The signed CPython 3.11.16 tag and official security records independently
+      establish CVE-2026-3644, CVE-2026-4224, and CVE-2026-7210 as fixed. A
+      hash-bound, 30-day-reviewed OpenVEX document records only those exact
+      fixed product decisions, and the gate verifies all ignored matches while
+      retaining them in the five-High total. CVE-2026-14456 remains a real
+      blocker on libcrypto3/libssl3 3.5.7-r0; current supported Alpine images
+      do not offer upstream-fixed OpenSSL 3.5.8. No not-affected disposition,
+      severity override, or exception was approved. Resume when a supported
+      fixed base is available or independent security reviewers approve a
+      policy-governed disposition; Critical findings remain non-exceptable.
+  - id: E-823
+    priority: P0
+    area: supply-chain
+    title: Gate container publication on exact SBOM, CVE, and license evidence
+    status: completed
+    depends_on: [E-822]
+    exit_evidence: >-
+      Closed policy and schemas pin Syft 1.51.0, Grype 0.117.0, scanner archive
+      hashes/commits/platform, native subject identity, database age/schema,
+      ungoverned ignored-match refusal, fixed-only VEX validation,
+      Critical/High/Unknown behavior, exact exceptions, and 90 percent
+      license-inventory coverage. Release scans before GHCR
+      authentication and verifies the pushed configuration binding; weekly or
+      manual security runs repeat the local-image gate. Checked local evidence
+      records five High matches, three source-proven fixed Python dispositions,
+      and two OpenSSL blockers while inventorying 68 packages and 94.11 percent
+      license metadata. No publication or readiness claim is made, and final
+      remediation remains blocked under E-824.
+  - id: E-822
+    priority: P0
+    area: container-security
+    title: Harden and verify the bounded local container runtime
+    status: completed
+    depends_on: [E-820]
+    exit_evidence: >-
+      A deny-by-default build context, two digest-pinned stages, runtime-only
+      dependency copy, and fixed non-root UID/GID are enforced by the closed
+      supply-chain validator. On the disclosed Docker Desktop host, Doctor,
+      validation, control-pack validation, and the complete demo pass without
+      networking on a read-only root with bounded writable tmpfs mounts. The
+      same gate exposed and regression-fixed relative client-pack publication.
+      This is local runtime evidence, not OCI reproducibility, image-vulnerability
+      assurance, or production deployment readiness.
+  - id: E-821
+    priority: P1
+    area: developer-experience
+    title: Add non-destructive platform-specific developer environment bootstrap and doctor
+    status: completed
+    depends_on: [E-820]
+    exit_evidence: >-
+      A read-only Doctor detects missing, foreign, malformed, linked, mismatched,
+      and ready environments with stable codes. Bootstrap restricts targets to
+      direct `.venv-*` project children, synchronizes the universal lock with a
+      supported Python, runs product Doctor, preserves legacy `.venv`, and is
+      idempotent on the local Windows profile. Focused tests and static gates pass.
+  - id: E-820
+    priority: P0
+    area: supply-chain
+    title: Remediate PYSEC-2026-3721 and unify the fail-closed locked Python audit
+    status: completed
+    depends_on: []
+    exit_evidence: >-
+      `uv.lock` resolves the first fixed pip release inside the existing cutoff;
+      local, CI, release, and Makefile paths use one hash-exported audit runner;
+      focused policy/runner tests, the actual isolated audit, static analysis,
+      full regression, package build, and diff checks pass. Hosted Python 3.11
+      and 3.12 execution remains a separate external gate under D-485.
   - id: E-806
     priority: P1
     area: durable-jobs
@@ -117,6 +1192,107 @@ tasks:
       have bounded candidate-generation budgets, deterministic tie-breaks, unresolved-ambiguity
       behavior, explicit strategy/version/digest records, and cross-engine reproducibility
       replay checks under open and synthetic profiles.
+    completed_slices:
+      - E-908 publishes explicit bounded fee-aware and FX-aware one-to-one
+        strategy identities, fail-closed financial preconditions, architecture
+        inventory entries, and permutation/digest regression coverage. Live
+        rate validation, write-back, cross-engine parity, and production
+        throughput remain open.
+      - E-909 adds a registry-wide replay profile with an exact seven-family
+        fixture inventory, JSON envelope verification, permutation replay, and
+        a stable profile digest. PostgreSQL parity, hosted execution, and
+        production-scale evidence remain open.
+      - E-910 adds an in-process PostgreSQL worker projection parity profile
+        over five grouped and three sequential modes; all eight lineage
+        digests equal direct strategy digests. Live PostgreSQL runtime,
+        crash recovery, and scale evidence remain open.
+      - E-911 records a current local PostgreSQL 16.14 grouped 500-partition
+        runtime = 250/250 runs, 500/500 partitions, 1,200/1,200 rows, zero
+        duplicates/failures/active runs, and 50 runs per mode. This remains
+        one-host synthetic runtime evidence, not a capacity or production
+        claim.
+      - E-912 records a current local PostgreSQL 16.14 grouped 10K-partition
+        runtime = 1,000/1,000 runs, 10,000/10,000 partitions, 24,000/24,000
+        rows, zero duplicates/failures/active runs, and 200 runs per mode.
+        This remains one-host synthetic runtime evidence, not a capacity or
+        production claim.
+      - E-913 records hosted CI `32680807591` green on head `9771d7cc`,
+        including server-boundaries job `97298199908`, Docker, Security,
+        CodeQL, both Python versions, engine parity, web, object storage,
+        PostgreSQL HA/DR, and docker parity. This closes hosted verification
+        for that exact head only; the overall E-1003 exit remains open.
+      - E-914 records hosted CI `32682775174` green on the current docs head
+        `1be76bdd`, including server-boundaries job `97303290224` and the
+        Docker, Security, and CodeQL workflows for the same commit. This
+        confirms the evidence documentation change is CI-clean; the overall
+        E-1003 exit remains open.
+      - >
+        E-915 adds `postgres-grouped-matching/10k-domain-diverse-v1`: 16
+        workers, 250 runs, 2,500 partitions, exactly 10,000 synthetic source
+        records, and six explicit grouped shapes covering cardinality,
+        fee-netting, FX, and unresolved partial settlement. The local
+        PostgreSQL 16.14 run completed 250/250 runs, 2,500/2,500 partitions,
+        and 9,160/9,160 result rows with zero duplicate identities, failed
+        runs, or final active runs; observed runtime was 63.9503s. The live
+        attempt also fixed a stale terminal-claim race and a bounded fixture
+        allowance error. This remains one-host synthetic runtime evidence,
+        not throughput, capacity, soak, provider, posting, write-back, HA/DR,
+        or production-sizing evidence; the overall E-1003 exit remains open.
+      - >
+        E-916 records hosted CI `32696819965` green on code head `eb24d519`,
+        including server-boundaries `97342100366` with the 500-partition,
+        homogeneous 10K-partition, and new domain-diverse 10K-record selectors.
+        This closes hosted verification for that exact code head only; the
+        overall E-1003 exit remains open and no capacity, provider, posting,
+        write-back, HA/DR, or production-sizing claim is permitted.
+      - >
+        E-917 indexes the current PostgreSQL domain-diverse JSON artifact in
+        `benchmark-evidence-index-v1` with its canonical-LF SHA-256, digest
+        allowlist, `partial` status, and explicit single-host synthetic claim
+        boundary. The verifier now covers 13 selected artifacts; E-1003 still
+        remains open for cross-engine parity, soak, and broader performance
+        evidence.
+      - >
+        E-918 replaces truthiness-based fallback in the grouped and sequential
+        PostgreSQL matching adapters with explicit `None` checks. Present
+        canonical values, including exact zero amounts, remain authoritative
+        over legacy columns and JSON attributes. Focused regression suites,
+        Ruff, and Mypy pass; this fixes input integrity but does not close the
+        broader E-1003 parity, scale, provider, or production evidence gates.
+      - >
+        E-919 removes the implicit `USD` fallback from grouped and sequential
+        PostgreSQL matching adapters. Missing or empty currency now fails
+        closed before strategy execution, while present canonical/legacy
+        values remain supported. Focused regression suites, Ruff, and Mypy
+        pass; E-1003 remains open for live-rate, parity, scale, provider, and
+        production evidence.
+      - >
+        E-920 records hosted CI `32713536013` green on exact head
+        `21697476d4ea2f426ebe20a836d24c27435f8131`, including the complete
+        Python, engine-parity, web, object-storage, PostgreSQL HA/DR,
+        docker-parity, Docker, Security, CodeQL, and live `server-boundaries`
+        gates. The server-boundaries job `97392182901` passed in 20m03s after
+        the E-918/E-919 adapter integrity fixes. This is exact-head hosted
+        integration evidence only; E-1003 remains open for broader parity,
+        live-rate/provider, capacity/soak, posting/write-back, HA/DR, and
+        production evidence.
+      - >
+        E-921 adds the additive `postgres-worker-domain-diverse-parity-v1`
+        profile over six grouped shapes: one-to-many, many-to-one, true
+        many-to-many, fee/net-aware portfolio, FX-aware many-to-many, and
+        partial settlement. All 6/6 direct/projected digests match and remain
+        permutation-invariant; the artifact is indexed with `partial` status
+        and its deterministic profile digest. This closes an in-process
+        adapter-parity gap only; live PostgreSQL replay, cross-engine parity,
+        capacity/soak, provider, posting, and production evidence remain open.
+      - >
+        E-922 records hosted CI `32720224211` green on exact head
+        `f45e81e7effbc37e000eecc3e7ac9c9da4ca97a3`, including
+        server-boundaries `97411960661` in 19m07s, Security, CodeQL, Docker,
+        and every aggregate job. The bounded Gitleaks policy validator also
+        passes. This is exact-head hosted integration evidence only; E-1003
+        remains open for provider/live-rate, broader parity, capacity/soak,
+        posting/write-back, and production evidence.
   - id: E-1004
     priority: P0
     area: connectors
@@ -136,6 +1312,34 @@ tasks:
       append-only, policy-gated, actor-separated, and digest-replayable; network transport is
       bounded, secrets are resolved at execution time only, and provider outcomes are recorded
       with immutable idempotency and compensation/reconciliation checkpoints.
+    completed_slices:
+      - E-825 binds every SQLite/PostgreSQL lifecycle version to the immutable
+        original proposal at application and INSERT boundaries, with fail-closed
+        migration audits and an additive API proposal digest.
+      - E-826 proves on digest-pinned PostgreSQL 17.10 that drifted history is
+        refused without mutation and that a native pre-drift backup restores
+        independently, upgrades to 0089, and activates the stronger guard.
+      - E-827 reuses that exact observation path across the declared
+        digest-pinned PostgreSQL 16.14 and 17.10 profiles, requires canonical
+        history parity, and adds a retained CI artifact contract.
+      - E-828 adds a digest-only receiver conformance contract with atomic
+        effect/receipt persistence, concurrent process convergence, conflict
+        refusal, crash replay, and independent restore evidence. Cross-host and
+        live-vendor receiver semantics remain open.
+      - E-831 adds server-backed recovery and compensation parity over the same
+        lifecycle. PostgreSQL 16.14/17.10 and SQLite retain identical six-version
+        histories; two spawned acceptance-before-persistence crash windows,
+        original-key recovery, distinct compensation-key recovery, direct
+        mutation refusal, tenant isolation, and non-privileged role flags pass.
+      - E-832 rejects an explicit negative provider outcome before it can become
+        `acknowledged` or `compensated`; original dispatch, idempotency-status
+        recovery, and compensation remain state-preserving on `accepted=false`.
+      - E-833 adds explicit accepted/rejected/pending/not_found/unknown recovery
+        observations with raw-response and observation digests; only accepted
+        status can advance the intent, and all other outcomes remain non-mutating.
+      - E-834 persists those observations as immutable, scoped SQLite/PostgreSQL
+        records with deterministic evidence-node ids, API reviewer drill-down,
+        migration/restore boundaries, and exact 16.14/17.10 runtime parity.
   - id: E-1005
     priority: P0
     area: identity-governance
@@ -157,11 +1361,14 @@ tasks:
       - E-817 centralizes trim+casefold identity/action comparisons for SoD and
         ownership checks, with property tests proving formatting cannot bypass
         approval/review/certification self-approval or prior-action conflicts.
+      - E-825 preserves the canonical requester and captured feature decision
+        across maker-checker write-back versions and rejects retargeting before
+        any later provider-facing effect.
   - id: E-1006
     priority: P1
     area: global-expansion
     title: Produce mode-specific deployment-readiness evidence for Community/Team/Enterprise/Regulated
-    status: planned
+    status: in_progress
     depends_on:
       - E-1005
       - E-806
@@ -181,6 +1388,12 @@ tasks:
       - E-819 bounds the hosted live server-boundary job so hung dependency
         processes fail closed and release the runner; a fresh successful run
         remains required as evidence.
+      - E-849 consolidates all four editions and eight readiness gates into a
+        schema/path-validated matrix that preserves partial/open boundaries.
+      - E-850 exposes that matrix through a bounded safe-YAML CLI with digest
+        and edition selection; it performs no external probes or mutation.
+      - E-851 binds runtime evidence to the exact immutable profile digest,
+        preventing stale or retargeted local facts from being reused.
   - id: E-1007
     priority: P1
     area: global-expansion
@@ -1997,10 +3210,9 @@ tasks:
     priority: P0
     area: release_operations
     title: Hosted PostgreSQL native-tool bootstrap for backup gate
-    status: in_progress
+    status: completed
     depends_on: [E-454]
-    exit_evidence: The server-boundaries workflow installs the PostgreSQL 16 client package matching its pinned PostgreSQL 16 service before live tests, checks the `pg_config` and `pg_dump` major versions fail-closed, runs a real service-backed custom-format `pg_dump` plus `pg_restore --list` smoke probe, and asserts that the versioned `pg_config` bindir contains `pg_dump`, `pg_restore`, `createdb`, `dropdb`, and `psql`. Local unit coverage in `E-600` verifies that `PostgresNativeBackupAdapter.create_backup` retries fallback `--file` argument forms (`--file`, `-f`, `--file=`) before failing closed. A reproducible local Linux/WSL proof path has now passed
-      `test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup` with a disposable PostgreSQL 16 service using a local wrapper shimming path. A fresh hosted run must still pass the encrypted backup/isolated restore gate for release evidence.
+    exit_evidence: The server-boundaries workflow installs the PostgreSQL 16 client package matching its pinned PostgreSQL 16 service before live tests, checks the `pg_config` and `pg_dump` major versions fail-closed, runs a real service-backed custom-format `pg_dump` plus `pg_restore --list` smoke probe, and asserts that the versioned `pg_config` bindir contains `pg_dump`, `pg_restore`, `createdb`, `dropdb`, and `psql`. Local unit coverage in `E-600` verifies that `PostgresNativeBackupAdapter.create_backup` retries fallback `--file` argument forms (`--file`, `-f`, `--file=`) before failing closed. Hosted CI `32645427870` passed the encrypted backup/isolated restore gate in `server-boundaries`. Evidence remains limited to the pinned disposable PostgreSQL 16 service and synthetic CI data; it is not a production RPO/RTO claim.
 
   - id: E-462
     priority: P0

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "profile_id": "postgres-grouped-matching/10k-domain-diverse-v1",
+  "workers": 16,
+  "runs": 250,
+  "partitions_per_run": 10,
+  "declared_partitions": 2500,
+  "completed_runs": 250,
+  "completed_partitions": 2500,
+  "result_rows": 9160,
+  "expected_result_rows": 9160,
+  "duplicate_result_identities": 0,
+  "failed_runs": 0,
+  "final_active_runs": 0,
+  "per_mode_completed": {
+    "domain-fx-many-to-many": 41,
+    "domain-many-to-many": 42,
+    "domain-many-to-one": 42,
+    "domain-one-to-many": 42,
+    "domain-portfolio-net": 42,
+    "domain-portfolio-partial": 41
+  },
+  "effect_set_digest": "78168229e37a78bb859e664a75098890e0671f9a502c8f6f04c30380ee9b3681",
+  "observed_runtime_seconds": 63.9503,
+  "environment": {
+    "python": "3.14.6",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "cpu_count": 16,
+    "database": "PostgreSQL 16.14"
+  },
+  "manifest_digest": "c4d3461885fd3626b66a787caf8b3800706d1505d84169375885cc001e4a133a",
+  "limitations": [
+    "Synthetic one-tenant PostgreSQL 16 service with bounded independent worker connections.",
+    "The domain-diverse tier cycles six synthetic grouped shapes with exact USD, EUR/USD FX, fee-netting, and deliberate partial-settlement ambiguity; no provider or statutory posting is exercised.",
+    "Observed runtime is an environment observation, not a throughput, capacity, SLO, soak, or production-sizing claim.",
+    "Cross-host scheduling, queue HA, automatic failover, and HA/DR remain unverified."
+  ]
+}

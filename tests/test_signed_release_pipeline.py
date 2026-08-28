@@ -302,9 +302,8 @@ def test_release_workflow_is_tag_only_least_privilege_and_full_sha_pinned() -> N
             "astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9": 1,
             "docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7": 1,
             "docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c": 1,
-            "docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a": 1,
             "actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6": 6,
-            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a": 1,
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a": 2,
         }
     )
     assert all(re.fullmatch(r"[^@]+@[0-9a-f]{40}", ref) for ref in action_refs)
@@ -341,9 +340,11 @@ def test_release_workflow_fails_closed_on_source_attestation_and_runner_identity
     ]:
         assert required in raw
     assert raw.count("gh attestation verify") == 6
-    assert "provenance: false" in raw
-    assert "sbom: false" in raw
-    assert "candidate-${{ github.sha }}" in raw
+    assert "docker build --pull --no-cache --platform linux/amd64" in raw
+    assert 'docker push "$LOCAL_IMAGE"' in raw
+    assert "docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}'" in raw
+    assert "published manifest is not bound to the scanned image configuration" in raw
+    assert 'local_image="${IMAGE_NAME}:candidate-${GITHUB_SHA}"' in raw
 
 
 def test_release_workflow_enforces_the_active_publication_freeze() -> None:

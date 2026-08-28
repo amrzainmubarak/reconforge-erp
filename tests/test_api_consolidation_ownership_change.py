@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -104,10 +105,17 @@ def test_ownership_change_server_routes_re_evaluate_tenant_policy_without_worksp
     tmp_path: Path, monkeypatch: Any
 ) -> None:
     client, headers = _client(tmp_path)
-    captured: list[tuple[frozenset[str], str, None]] = []
+    captured: list[tuple[frozenset[str], str, None, object]] = []
 
-    def enforce(_request: object, *, permissions: frozenset[str], tenant_id: str, workspace_id: None) -> None:
-        captured.append((permissions, tenant_id, workspace_id))
+    def enforce(
+        _request: object,
+        *,
+        permissions: frozenset[str],
+        tenant_id: str,
+        workspace_id: None,
+        amount: object = None,
+    ) -> None:
+        captured.append((permissions, tenant_id, workspace_id, amount))
 
     monkeypatch.setattr(routes, "server_ownership_change_enabled", lambda _request: True)
     monkeypatch.setattr(
@@ -120,14 +128,14 @@ def test_ownership_change_server_routes_re_evaluate_tenant_policy_without_worksp
 
     created = client.post("/api/v1/consolidation-ownership-change", headers=headers, json=_body())
     assert created.status_code == 200
-    assert captured == [(frozenset({"finance_core.manage"}), "tenant-a", None)]
+    assert captured == [(frozenset({"finance_core.manage"}), "tenant-a", None, Decimal("220.00"))]
 
     loaded = client.get(
         "/api/v1/consolidation-ownership-change/ownchg-" + "a" * 32,
         headers=headers,
     )
     assert loaded.status_code == 200
-    assert captured[-1] == (frozenset({"finance_core.read", "finance_core.manage"}), "tenant-a", None)
+    assert captured[-1] == (frozenset({"finance_core.read", "finance_core.manage"}), "tenant-a", None, None)
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires a live PostgreSQL service")

@@ -21,7 +21,7 @@ INDEXED_ONE_TO_ONE_MANIFEST = MatchingStrategyManifest(
     version="1.0.0",
     maturity="beta",
     algorithm="range-indexed-candidate-generation-plus-deterministic-min-cost-assignment-v1",
-    supported_modes=("amount-tolerance", "date-window", "exact-fields", "reference-normalized"),
+    supported_modes=("amount-tolerance", "date-window", "exact-fields", "one-to-one", "reference-normalized"),
     deterministic_tie_break="record-fingerprint-cost-right-fingerprint-left-id-right-id-v1",
     explanation_schema="matching-explanation-v1",
     limits=StrategyLimits(
@@ -70,6 +70,8 @@ class IndexedOneToOneStrategy:
             exceptions=output.exceptions,
         )
         result = MatchingStrategyResult(
+            strategy_id=self.manifest.id,
+            strategy_version=self.manifest.version,
             manifest_digest=manifest_digest,
             input_digest=input_digest,
             decision_digest=decision_digest,
@@ -77,7 +79,7 @@ class IndexedOneToOneStrategy:
             exceptions=output.exceptions,
             explanation_schema=self.manifest.explanation_schema,
         )
-        result.verify_against(request, manifest_digest=manifest_digest)
+        result.verify_against(request, manifest_digest=manifest_digest, strategy_id=self.manifest.id, strategy_version=self.manifest.version)
         return result
 
     def _validate_request(self, request: MatchingStrategyRequest) -> None:

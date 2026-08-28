@@ -813,6 +813,38 @@ surfaces:
       - The verifier reads only repository-selected JSON reports and requires exact paths, regular files, SHA-256 hashes, profile IDs, and declared digest fields before returning an index result.
       - Hashes and report digests provide artifact integrity and replay references; they do not authenticate benchmark origin, hardware, workload truth, provider data, or production capacity.
     next_action: Add signed release provenance and independently rerun selected profiles on supported hosted engine matrices before promoting performance claims.
+  - id: FI-041
+    name: Worker permission manifest verification CLI
+    module_ids: [platform.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/cli.py::deployment_verify_worker_manifest_command
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_deployment_profiles.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The command verifies a bounded closed worker manifest and its digest locally; it does not provision IAM, contact a provider, or prove production runtime state.
+    next_action: Add signed release-attached manifests and an independently exercised hosted deployment admission integration before expanding the claim beyond offline verification.
+  - id: FI-042
+    name: Deployment runtime evidence verification CLI
+    module_ids: [platform.core]
+    trust: untrusted-local
+    entrypoints:
+      - reconforge/cli.py::deployment_verify_runtime_evidence_command
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_deployment_runtime_evidence.py, tests/test_file_ingestion_inventory.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - The command verifies operator-supplied runtime facts and profile findings locally; it does not probe storage, identity, queue, object-store, key, or backup systems.
+    next_action: Bind signed runtime evidence to an independently exercised deployment admission workflow before making mode-readiness claims.
 direct_tabular_parser_allowlist:
   - path: reconforge/io/ingress.py
     parser: csv.reader
@@ -897,7 +929,7 @@ direct_json_parser_allowlist:
     rationale: Parses only the canonical permission array returned by PostgreSQL JSONB; the typed grant validator rejects malformed or unsafe stored authority before it can influence policy evaluation.
   - path: reconforge/infrastructure/sqlite_writeback.py
     parser: json.loads
-    call_count: 1
+    call_count: 3
     surface_id: FI-026
     rationale: Parses only the append-only canonical write-back intent contract after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted status can be returned.
   - path: reconforge/infrastructure/postgres_consolidation_close.py
@@ -912,7 +944,7 @@ direct_json_parser_allowlist:
     rationale: Parses only the canonical PostgreSQL JSONB PPA result before closed replay verification, immutable posted=false enforcement, and tenant-scoped evidence return; malformed or tampered persisted data fails closed.
   - path: reconforge/infrastructure/postgres_writeback.py
     parser: json.loads
-    call_count: 1
+    call_count: 2
     surface_id: FI-032
     rationale: Parses only the canonical PostgreSQL JSONB write-back intent after tenant/workspace selection; Pydantic validation and digest comparison fail closed before a persisted lifecycle state is returned.
   - path: reconforge/infrastructure/postgres_intercompany_elimination.py
@@ -985,6 +1017,16 @@ direct_json_parser_allowlist:
     call_count: 1
     surface_id: FI-022
     rationale: Parses only the closed offline bundle manifest after strict size and path checks, before manifest/entry hash checks and deterministic install-argument derivation.
+  - path: reconforge/cli.py
+    parser: json.loads
+    surface_id: FI-042
+    call_count: 5
+    rationale: Parses only selected local manifests before strict fields, types, schema versions, and digest checks; commands make no external probe or mutation.
+  - path: reconforge/application/matching_strategies.py
+    parser: json.loads
+    surface_id: FI-042
+    call_count: 1
+    rationale: Parses only the in-process strategy-result envelope emitted by the canonical serializer; the decoded object is immediately checked for closed fields, JSON collection types, digest shape, strategy identity/version, and replay digests before worker projection.
 direct_yaml_parser_allowlist:
   - path: reconforge/io/structured.py
     parser: yaml.parse

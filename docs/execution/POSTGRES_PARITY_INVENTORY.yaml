@@ -1,20 +1,54 @@
 schema_version: 1
-updated_at: "2026-08-11"
+updated_at: "2026-08-22"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0088_pg_currency_snapshot"
+current_source_migration_head: "0089_pg_writeback_identity"
 currency_registry_binding_contract:
   id: E-711
   executed_at: "2026-08-11"
   database: "SQLite local plus PostgreSQL adapter/schema contract"
-  focused_tests: 2
+  focused_tests: 5
   focused_result: passed
   migration_head: "0088_pg_currency_snapshot"
   migration_path: "alembic_upgrade_head_contract"
   covered_boundaries: [MasterDataService, PostgresMasterDataRepository, PostgresMasterDataApplicationRepository]
   limitations: [no_configured_live_postgresql_runtime, synthetic_data, no_live_fx, no_statutory_posting, no_production_claim]
+writeback_proposal_identity_contract:
+  id: E-825
+  executed_at: "2026-08-22"
+  database: "SQLite runtime plus disposable PostgreSQL 17.10 Alpine"
+  focused_result: passed
+  migration_head: "0089_pg_writeback_identity"
+  migration_path: "alembic_upgrade_head_contract"
+  covered_boundaries: [WritebackIntent, SQLiteWritebackIntentRepository, PostgresWritebackIntentRepository]
+  limitations: [single_node, synthetic_data, no_live_provider, no_accounting_posting, no_ha, no_production_claim]
+writeback_identity_migration_recovery_drill:
+  id: E-826
+  executed_at: "2026-08-22"
+  database: "Digest-pinned PostgreSQL 17.10 Alpine; isolated source and restored databases"
+  focused_tests: 2
+  focused_result: passed
+  migration_head: "0089_pg_writeback_identity"
+  migration_path: "0088 drifted audit refusal plus independent native pre-drift restore and 0089 upgrade"
+  retained_report: "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.json"
+  report_digest: "b143c756a27b914ae92a32c3a1595529bd87fc4d64784afee1710a817a44674e"
+  covered_boundaries: [AlembicHistoryAudit, NativePgDumpRestore, ConnectorWritebackIntentGuard]
+  limitations: [single_node, one_postgresql_version, synthetic_data_and_credentials, no_live_provider, no_accounting_posting, no_cross_host_ha_dr, no_production_claim]
+writeback_identity_migration_version_matrix:
+  id: E-827
+  executed_at: "2026-08-22"
+  database: "Digest-pinned PostgreSQL 16.14 and 17.10 Alpine; sequential isolated source and restored databases"
+  focused_tests: 7
+  focused_result: passed
+  migration_head: "0089_pg_writeback_identity"
+  migration_path: "shared 0088 drifted audit refusal plus independent native restore and 0089 upgrade per version"
+  retained_report: "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-08-22.json"
+  report_digest: "6c9e41dd55ef0ff9292a52aacd15030766660db85c5ddda78391aeeb4ecb73f3"
+  postgresql_versions: ["16.14", "17.10"]
+  covered_boundaries: [AlembicHistoryAudit, NativePgDumpRestore, ConnectorWritebackIntentGuard, CrossVersionCanonicalHistoryParity]
+  limitations: [single_host, two_versions_only, sequential_single_node_runs, synthetic_data_and_credentials, no_hosted_run, no_live_provider, no_accounting_posting, no_cross_host_ha_dr, no_production_claim]
 current_live_gate:
   id: E-163
   executed_at: "2026-07-28"

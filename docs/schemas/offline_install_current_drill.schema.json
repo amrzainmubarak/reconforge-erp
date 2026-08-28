@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/offline_install_current_drill.schema.json",
+  "title": "ReconForge current offline install drill",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "executed_at", "application_version", "runtime", "bundle", "installation", "scope_status", "limitations"],
+  "properties": {
+    "schema": {"const": "reconforge-offline-install-current-drill-v1"},
+    "executed_at": {"type": "string", "format": "date"},
+    "application_version": {"const": "0.7.1"},
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["image", "platform", "network_mode", "root_filesystem"],
+      "properties": {
+        "image": {"pattern": "^python:3\\.14\\.1-slim@sha256:[a-f0-9]{64}$"},
+        "platform": {"const": "linux/amd64"},
+        "network_mode": {"const": "none"},
+        "root_filesystem": {"const": "read-only"}
+      }
+    },
+    "bundle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["manifest_sha256", "entry_count", "total_bytes", "source_lock", "wheel_only"],
+      "properties": {
+        "manifest_sha256": {"pattern": "^[a-f0-9]{64}$"},
+        "entry_count": {"type": "integer", "minimum": 1},
+        "total_bytes": {"type": "integer", "minimum": 1},
+        "source_lock": {"const": "uv.lock"},
+        "wheel_only": {"const": true}
+      }
+    },
+    "installation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bundle_mount", "pip_no_index", "pip_no_deps", "pip_require_hashes", "doctor_exit_zero", "cleanup_complete"],
+      "properties": {
+        "bundle_mount": {"const": "read-only"},
+        "pip_no_index": {"const": true},
+        "pip_no_deps": {"const": true},
+        "pip_require_hashes": {"const": true},
+        "doctor_exit_zero": {"const": true},
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "scope_status": {"const": "verified-single-linux-runtime-install"},
+    "limitations": {"type": "array", "minItems": 8, "uniqueItems": true, "items": {"type": "string"}}
+  }
+}

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from typer.testing import CliRunner
 
@@ -21,6 +23,8 @@ def test_deployment_profiles_are_ordered_digest_bound_and_conservative() -> None
     assert profiles[0].network_default == "disabled"
     assert profiles[0].writeback_default == "disabled"
     assert profiles[-1].requires_customer_managed_keys is True
+    assert profiles[0].requires_worker_discovery_execution_separation is False
+    assert all(profile.requires_worker_discovery_execution_separation for profile in profiles[1:])
     assert all(isinstance(profile.to_dict()["claim_boundary"], str) for profile in profiles)
 
 
@@ -55,6 +59,7 @@ def test_regulated_profile_requires_customer_keys_and_failure_domains() -> None:
     assert validate_deployment_profile("regulated", facts) == (
         "customer_managed_keys_required",
         "independent_failure_domains_required",
+        "worker_discovery_execution_separation_required",
         "backup_restore_evidence_required",
         "rollback_evidence_required",
         "retention_privacy_evidence_required",
@@ -85,6 +90,32 @@ def test_writeback_always_requires_human_approval() -> None:
     )
 
     assert "writeback_requires_human_approval" in validate_deployment_profile("team", facts)
+
+
+def test_hosted_profiles_require_discovery_execution_separation_evidence() -> None:
+    facts = DeploymentRuntimeFacts(
+        storage_backend="postgresql",
+        identity_provider="local-or-oidc",
+        queue_backend="redis",
+        object_store="s3-compatible",
+        backup_restore_verified=True,
+        rollback_verified=True,
+        retention_privacy_verified=True,
+    )
+    findings = validate_deployment_profile("team", facts)
+    assert findings == ("worker_discovery_execution_separation_required",)
+
+    verified = DeploymentRuntimeFacts(
+        storage_backend="postgresql",
+        identity_provider="local-or-oidc",
+        queue_backend="redis",
+        object_store="s3-compatible",
+        worker_discovery_execution_separation_verified=True,
+        backup_restore_verified=True,
+        rollback_verified=True,
+        retention_privacy_verified=True,
+    )
+    assert validate_deployment_profile("team", verified) == ()
 
 
 def test_invalid_edition_and_runtime_facts_fail_closed() -> None:
@@ -119,3 +150,36 @@ def test_cli_rejects_unknown_edition() -> None:
 
     assert result.exit_code == 1
     assert "deployment edition is unsupported" in result.stdout
+
+
+def test_cli_verifies_worker_permission_manifest(tmp_path: Path) -> None:
+    import json
+
+    manifest_path = tmp_path / "worker-permissions.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "worker_id": "reconciliation-worker-a",
+                "principal_id": "svc-reconciliation-a",
+                "discovery_permission": "match.discover",
+                "execution_permission": "match.run",
+                "granted_permissions": ["match.discover", "match.run"],
+                "scope": "tenant:tenant-a/workspace:workspace-a",
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(app, ["deployment", "verify-worker-manifest", str(manifest_path)])
+    assert result.exit_code == 0
+    assert "discovery_execution_separated" in result.stdout
+    assert "match.discover" in result.stdout
+
+
+def test_cli_rejects_invalid_worker_permission_manifest(tmp_path: Path) -> None:
+    import json
+
+    manifest_path = tmp_path / "invalid-worker-permissions.json"
+    manifest_path.write_text(json.dumps({"worker_id": "bad"}), encoding="utf-8")
+    result = CliRunner().invoke(app, ["deployment", "verify-worker-manifest", str(manifest_path)])
+    assert result.exit_code == 1
+    assert "closed contract" in result.stdout

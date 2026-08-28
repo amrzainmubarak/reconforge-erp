@@ -8,6 +8,10 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
 
+concurrency:
+  group: reconforge-security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -49,22 +53,11 @@ jobs:
         run: uv run --no-sync bandit -q -r reconforge
 
       - name: Audit the hash-locked Python and server resolution
-        shell: bash
-        run: |
-          set -euo pipefail
-          requirements="${RUNNER_TEMP}/reconforge-all-extras-${{ matrix.python-version }}.txt"
-          report="${RUNNER_TEMP}/pip-audit-${{ matrix.python-version }}.json"
-          uv export --locked --all-extras --no-emit-project \
-            --format requirements.txt --quiet --output-file "$requirements"
-          set +e
-          uv run --no-sync pip-audit --require-hashes --disable-pip \
-            --requirement "$requirements" --format json --output "$report"
-          audit_exit=$?
-          set -e
-          python .github/scripts/validate_supply_chain_policy.py \
-            --project-root . \
-            --pip-audit-report "$report" \
-            --pip-audit-exit-code "$audit_exit"
+        run: >-
+          python .github/scripts/run_locked_python_audit.py
+          --project-root .
+          --python-version "${{ matrix.python-version }}"
+          --execution-mode current
 
   repository-security:
     name: Secret and npm policy gates
@@ -135,11 +128,125 @@ jobs:
             --npm-audit-report "$report" \
             --npm-audit-exit-code "$audit_exit"
 
+  container-security:
+    name: Exact-image SBOM, vulnerability, and license gate
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      IMAGE_NAME: ghcr.io/amrzainmubarak/reconforge-erp
+      SYFT_VERSION: "1.51.0"
+      SYFT_COMMIT: 2293641e3bd628a01bb37639318d62c0ebe89b39
+      SYFT_LINUX_AMD64_SHA256: 2a2e837a2c8d59ec9af5472ee22d3b04ee463c4e44476ecf993fd1e5ab6ebc7f
+      GRYPE_VERSION: "0.117.0"
+      GRYPE_COMMIT: b5fa92bbcbef655497e3be840a2f718380e2cdd3
+      GRYPE_LINUX_AMD64_SHA256: 38525dab1e06f162ebaa02f94d82d1f807076b011a44180cf2777edf1a7b9c26
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up supported Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.11"
+
+      - name: Validate the closed scanner policy
+        run: python .github/scripts/validate_supply_chain_policy.py --project-root .
+
+      - name: Install checksum-verified Syft and Grype
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_scanner() {
+            local tool="$1"
+            local version="$2"
+            local checksum="$3"
+            local archive="${tool}_${version}_linux_amd64.tar.gz"
+            local archive_path="${RUNNER_TEMP}/${archive}"
+            local install_dir="${RUNNER_TEMP}/${tool}-bin"
+            mkdir -p "$install_dir"
+            curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 --retry 3 \
+              --output "$archive_path" \
+              "https://github.com/anchore/${tool}/releases/download/v${version}/${archive}"
+            printf '%s  %s\n' "$checksum" "$archive_path" | sha256sum --check --strict
+            tar --extract --gzip --file "$archive_path" --directory "$install_dir" "$tool"
+            chmod 0755 "$install_dir/$tool"
+          }
+          install_scanner syft "$SYFT_VERSION" "$SYFT_LINUX_AMD64_SHA256"
+          install_scanner grype "$GRYPE_VERSION" "$GRYPE_LINUX_AMD64_SHA256"
+
+          syft_version_json="$("${RUNNER_TEMP}/syft-bin/syft" version --output json)"
+          grype_version_json="$("${RUNNER_TEMP}/grype-bin/grype" version -o json)"
+          SYFT_VERSION_JSON="$syft_version_json" GRYPE_VERSION_JSON="$grype_version_json" python - <<'PY'
+          import json
+          import os
+
+          expected = {
+              "syft": (os.environ["SYFT_VERSION"], os.environ["SYFT_COMMIT"]),
+              "grype": (os.environ["GRYPE_VERSION"], os.environ["GRYPE_COMMIT"]),
+          }
+          for tool, variable in (("syft", "SYFT_VERSION_JSON"), ("grype", "GRYPE_VERSION_JSON")):
+              actual = json.loads(os.environ[variable])
+              version, commit = expected[tool]
+              if (
+                  actual.get("application") != tool
+                  or actual.get("version") != version
+                  or actual.get("gitCommit") != commit
+                  or actual.get("platform") != "linux/amd64"
+              ):
+                  raise SystemExit(f"pinned {tool} binary identity mismatch")
+          PY
+          printf 'SYFT_PATH=%s\n' "${RUNNER_TEMP}/syft-bin/syft" >> "$GITHUB_ENV"
+          printf 'GRYPE_PATH=%s\n' "${RUNNER_TEMP}/grype-bin/grype" >> "$GITHUB_ENV"
+
+      - name: Build and scan the exact local image
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python -c 'import pathlib,tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
+          local_image="reconforge-security:${GITHUB_SHA}"
+          docker build --pull --no-cache --platform linux/amd64 --tag "$local_image" .
+          image_config_digest="$(docker image inspect --format '{{.Id}}' "$local_image")"
+          [[ "$image_config_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          "$SYFT_PATH" scan "$local_image" \
+            --source-name "$IMAGE_NAME" \
+            --source-version "$version" \
+            --scope squashed \
+            --output "syft-json=${RUNNER_TEMP}/image.syft.json"
+          "$GRYPE_PATH" db update
+          "$GRYPE_PATH" "sbom:${RUNNER_TEMP}/image.syft.json" \
+            --vex docs/security/container-runtime.openvex.json \
+            --output json \
+            --file "${RUNNER_TEMP}/image.grype.json"
+          printf 'IMAGE_CONFIG_DIGEST=%s\n' "$image_config_digest" >> "$GITHUB_ENV"
+
+      - name: Enforce fail-closed container policy
+        run: >-
+          python .github/scripts/validate_container_security.py
+          --project-root .
+          --syft-json "${RUNNER_TEMP}/image.syft.json"
+          --grype-report "${RUNNER_TEMP}/image.grype.json"
+          --grype-exit-code 0
+          --image-config-digest "${IMAGE_CONFIG_DIGEST}"
+          --output "${RUNNER_TEMP}/container-security-evidence.json"
+
+      - name: Preserve recurring scan evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: recurring-container-security-${{ github.sha }}
+          path: ${{ runner.temp }}/container-security-evidence.json
+          if-no-files-found: ignore
+          retention-days: 14
+
   required-security-context:
     name: python-security
     runs-on: ubuntu-24.04
     if: ${{ always() }}
-    needs: [python-security, repository-security]
+    needs: [python-security, repository-security, container-security]
     permissions: {}
     steps:
       - name: Require every security job to pass
@@ -148,3 +255,8 @@ jobs:
           set -euo pipefail
           test '${{ needs.python-security.result }}' = 'success'
           test '${{ needs.repository-security.result }}' = 'success'
+          if [[ '${{ github.event_name }}' = 'schedule' || '${{ github.event_name }}' = 'workflow_dispatch' ]]; then
+            test '${{ needs.container-security.result }}' = 'success'
+          else
+            test '${{ needs.container-security.result }}' = 'skipped'
+          fi

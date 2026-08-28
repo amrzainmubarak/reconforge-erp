@@ -27,9 +27,12 @@ jobs:
       SBOM_PREDICATE_TYPE: https://cyclonedx.org/bom
       GITLEAKS_VERSION: "8.30.1"
       GITLEAKS_LINUX_X64_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
-      SYFT_VERSION: "1.49.0"
-      SYFT_COMMIT: 29fd7d0dec81cf03e0a1194a1985c7c893bb2396
-      SYFT_LINUX_AMD64_SHA256: 7aa2f03ee92739cf643279ba3990548b9925d4e22cae13f46831ee62821147fe
+      SYFT_VERSION: "1.51.0"
+      SYFT_COMMIT: 2293641e3bd628a01bb37639318d62c0ebe89b39
+      SYFT_LINUX_AMD64_SHA256: 2a2e837a2c8d59ec9af5472ee22d3b04ee463c4e44476ecf993fd1e5ab6ebc7f
+      GRYPE_VERSION: "0.117.0"
+      GRYPE_COMMIT: b5fa92bbcbef655497e3be840a2f718380e2cdd3
+      GRYPE_LINUX_AMD64_SHA256: 38525dab1e06f162ebaa02f94d82d1f807076b011a44180cf2777edf1a7b9c26
     steps:
       - name: Check out the signed tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -99,22 +102,11 @@ jobs:
         run: uv sync --locked --extra dev --no-editable --python 3.11
 
       - name: Audit the hash-locked Python and server resolution
-        shell: bash
-        run: |
-          set -euo pipefail
-          requirements="${RUNNER_TEMP}/reconforge-all-extras.txt"
-          report="${RUNNER_TEMP}/pip-audit.json"
-          uv export --locked --all-extras --no-emit-project \
-            --format requirements.txt --quiet --output-file "$requirements"
-          set +e
-          uv run --no-sync pip-audit --require-hashes --disable-pip \
-            --requirement "$requirements" --format json --output "$report"
-          audit_exit=$?
-          set -e
-          python .github/scripts/validate_supply_chain_policy.py \
-            --project-root . \
-            --pip-audit-report "$report" \
-            --pip-audit-exit-code "$audit_exit"
+        run: >-
+          python .github/scripts/run_locked_python_audit.py
+          --project-root .
+          --python-version "3.11"
+          --execution-mode current
 
       - name: Install checksum-verified Gitleaks
         shell: bash
@@ -157,6 +149,26 @@ jobs:
             --npm-audit-report "$report" \
             --npm-audit-exit-code "$audit_exit"
 
+      - name: Install locked web dependencies for release verification
+        run: npm --prefix apps/web ci
+
+      - name: Typecheck web release source
+        run: npm --prefix apps/web run typecheck
+
+      - name: Run web release component tests
+        run: npm --prefix apps/web run test:run
+
+      - name: Build web release bundle
+        run: npm --prefix apps/web run build
+
+      - name: Install Chromium for release E2E verification
+        run: npx --prefix apps/web playwright install --with-deps chromium
+
+      - name: Run standard web release E2E verification
+        env:
+          RECONFORGE_WEB_PORT: "4173"
+        run: npm --prefix apps/web run e2e
+
       - name: Install hash-locked release build tools
         run: >-
           python -m pip install --disable-pip-version-check --only-binary=:all:
@@ -175,56 +187,22 @@ jobs:
             --path "release/reconforge_erp-${version}.tar.gz" \
             --source-date-epoch "$SOURCE_DATE_EPOCH"
 
-      - name: Log in to the candidate image registry
-        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
-
-      - name: Build and push digest-addressed image candidate
-        id: image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64
-          pull: true
-          no-cache: true
-          push: true
-          tags: ${{ env.IMAGE_NAME }}:candidate-${{ github.sha }}
-          provenance: false
-          sbom: false
-
-      - name: Build and validate the release identity manifest
-        run: >-
-          python .github/scripts/build_release_manifest.py
-          --project-root .
-          --release-dir release
-          --tag "${GITHUB_REF_NAME}"
-          --source-revision "${GITHUB_SHA}"
-          --source-date-epoch "${SOURCE_DATE_EPOCH}"
-          --image-subject "${IMAGE_NAME}@${{ steps.image.outputs.digest }}"
-
-      - name: Install the pinned Syft image scanner
+      - name: Install the pinned container security scanners
         shell: bash
         run: |
           set -euo pipefail
-          archive="syft_${SYFT_VERSION}_linux_amd64.tar.gz"
-          archive_path="${RUNNER_TEMP}/${archive}"
-          install_dir="${RUNNER_TEMP}/syft-bin"
-          mkdir -p "$install_dir"
+          syft_archive="syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          syft_archive_path="${RUNNER_TEMP}/${syft_archive}"
+          syft_install_dir="${RUNNER_TEMP}/syft-bin"
+          mkdir -p "$syft_install_dir"
           curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 --retry 3 \
-            --output "$archive_path" \
-            "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/${archive}"
-          printf '%s  %s\n' "$SYFT_LINUX_AMD64_SHA256" "$archive_path" | sha256sum --check --strict
-          tar --extract --gzip --file "$archive_path" --directory "$install_dir" syft
-          chmod 0755 "$install_dir/syft"
+            --output "$syft_archive_path" \
+            "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/${syft_archive}"
+          printf '%s  %s\n' "$SYFT_LINUX_AMD64_SHA256" "$syft_archive_path" | sha256sum --check --strict
+          tar --extract --gzip --file "$syft_archive_path" --directory "$syft_install_dir" syft
+          chmod 0755 "$syft_install_dir/syft"
 
-          syft_version_json="$("$install_dir/syft" version --output json)"
+          syft_version_json="$("$syft_install_dir/syft" version --output json)"
           SYFT_VERSION_JSON="$syft_version_json" python - <<'PY'
           import json
           import os
@@ -239,18 +217,147 @@ jobs:
           if any(actual.get(key) != value for key, value in expected.items()):
               raise SystemExit("pinned Syft binary identity mismatch")
           PY
-          printf 'SYFT_PATH=%s\n' "$install_dir/syft" >> "$GITHUB_ENV"
+          printf 'SYFT_PATH=%s\n' "$syft_install_dir/syft" >> "$GITHUB_ENV"
 
-      - name: Scan the exact image manifest and build per-artifact SBOMs
+          grype_archive="grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          grype_archive_path="${RUNNER_TEMP}/${grype_archive}"
+          grype_install_dir="${RUNNER_TEMP}/grype-bin"
+          mkdir -p "$grype_install_dir"
+          curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 --retry 3 \
+            --output "$grype_archive_path" \
+            "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/${grype_archive}"
+          printf '%s  %s\n' "$GRYPE_LINUX_AMD64_SHA256" "$grype_archive_path" | sha256sum --check --strict
+          tar --extract --gzip --file "$grype_archive_path" --directory "$grype_install_dir" grype
+          chmod 0755 "$grype_install_dir/grype"
+
+          grype_version_json="$("$grype_install_dir/grype" version -o json)"
+          GRYPE_VERSION_JSON="$grype_version_json" python - <<'PY'
+          import json
+          import os
+
+          actual = json.loads(os.environ["GRYPE_VERSION_JSON"])
+          expected = {
+              "application": "grype",
+              "gitCommit": os.environ["GRYPE_COMMIT"],
+              "platform": "linux/amd64",
+              "version": os.environ["GRYPE_VERSION"],
+          }
+          if any(actual.get(key) != value for key, value in expected.items()):
+              raise SystemExit("pinned Grype binary identity mismatch")
+          PY
+          printf 'GRYPE_PATH=%s\n' "$grype_install_dir/grype" >> "$GITHUB_ENV"
+
+      - name: Build the local image subject without registry credentials
         shell: bash
-        env:
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
         run: |
           set -euo pipefail
-          "$SYFT_PATH" scan "registry:${IMAGE_NAME}@${IMAGE_DIGEST}" \
+          local_image="${IMAGE_NAME}:candidate-${GITHUB_SHA}"
+          docker build --pull --no-cache --platform linux/amd64 --tag "$local_image" .
+          image_config_digest="$(docker image inspect --format '{{.Id}}' "$local_image")"
+          [[ "$image_config_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          printf 'LOCAL_IMAGE=%s\n' "$local_image" >> "$GITHUB_ENV"
+          printf 'IMAGE_CONFIG_DIGEST=%s\n' "$image_config_digest" >> "$GITHUB_ENV"
+
+      - name: Generate exact-image SBOM and vulnerability inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$SYFT_PATH" scan "$LOCAL_IMAGE" \
             --source-name "$IMAGE_NAME" \
             --source-version "$RELEASE_VERSION" \
+            --scope squashed \
+            --output "syft-json=${RUNNER_TEMP}/image.syft.json" \
             --output "cyclonedx-json=${RUNNER_TEMP}/image-syft.raw.cdx.json"
+          "$GRYPE_PATH" db update
+          "$GRYPE_PATH" "sbom:${RUNNER_TEMP}/image.syft.json" \
+            --vex docs/security/container-runtime.openvex.json \
+            --output json \
+            --file "${RUNNER_TEMP}/image.grype.json"
+
+      - name: Build and enforce the local container security gate
+        shell: bash
+        run: >-
+          python .github/scripts/validate_container_security.py
+          --project-root .
+          --syft-json "${RUNNER_TEMP}/image.syft.json"
+          --grype-report "${RUNNER_TEMP}/image.grype.json"
+          --grype-exit-code 0
+          --image-config-digest "${IMAGE_CONFIG_DIGEST}"
+          --output "${RUNNER_TEMP}/container-security-evidence.json"
+
+      - name: Run hardened candidate image smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network=none --read-only --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            "$LOCAL_IMAGE" reconforge doctor
+
+      - name: Preserve container security evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: container-security-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/container-security-evidence.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Log in to the candidate image registry
+        uses: docker/login-action@abd2ef45e78c5afb21d64d4ca52ee8550d9572c7 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Push and verify the scanned image subject
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker push "$LOCAL_IMAGE"
+          repository_subject="$(
+            docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$LOCAL_IMAGE" \
+              | grep -E "^${IMAGE_NAME}@sha256:[0-9a-f]{64}$" \
+              | tail -n 1
+          )"
+          digest="${repository_subject#*@}"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          docker buildx imagetools inspect --raw "${IMAGE_NAME}@${digest}" \
+            > "${RUNNER_TEMP}/published-image-manifest.json"
+          IMAGE_DIGEST="$digest" python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["RUNNER_TEMP"]) / "published-image-manifest.json"
+          raw = path.read_bytes()
+          if f"sha256:{hashlib.sha256(raw).hexdigest()}" != os.environ["IMAGE_DIGEST"]:
+              raise SystemExit("published manifest bytes do not match the registry digest")
+          manifest = json.loads(raw)
+          config = manifest.get("config")
+          if not isinstance(config, dict) or config.get("digest") != os.environ["IMAGE_CONFIG_DIGEST"]:
+              raise SystemExit("published manifest is not bound to the scanned image configuration")
+          PY
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Build and validate the release identity manifest
+        run: >-
+          python .github/scripts/build_release_manifest.py
+          --project-root .
+          --release-dir release
+          --tag "${GITHUB_REF_NAME}"
+          --source-revision "${GITHUB_SHA}"
+          --source-date-epoch "${SOURCE_DATE_EPOCH}"
+          --image-subject "${IMAGE_NAME}@${{ steps.image.outputs.digest }}"
+
+      - name: Build per-artifact SBOMs from the scanned image inventory
+        shell: bash
+        run: |
+          set -euo pipefail
           python .github/scripts/build_release_sboms.py \
             --project-root . \
             --release-dir release \

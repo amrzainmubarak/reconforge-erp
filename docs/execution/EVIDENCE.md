@@ -2,6 +2,1724 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-923: Current publication branch uses a neutral name (2026-08-24)
+
+- The local checkout and GitHub remote now publish from
+  `e830-postgres-receiver-failover`; its upstream is configured and the active
+  PR is #87. The remote branch inventory confirms the current ref exists under
+  that name and the prior ref is no longer present.
+- The branch rename changed only publication metadata; no schema, API, CLI,
+  matching, or financial behavior changed. The user-modified
+  `docs/execution/P3_ENT_013_EXIT_AUDIT.yaml` remains outside all commits.
+
+## E-922: Hosted exact-head verification after domain-diverse parity and security correction (2026-08-24)
+
+- Hosted CI run `32720224211` passed on exact head
+  `f45e81e7effbc37e000eecc3e7ac9c9da4ca97a3` of the current publication
+  branch. Python 3.11/3.12, engine-parity lower/current bounds, web,
+  object-storage, PostgreSQL HA/DR, docker-parity, Docker, Security, CodeQL,
+  and live `server-boundaries` were all green.
+- `server-boundaries` job `97411960661` ran from `11:15:24Z` to `11:34:31Z`
+  (`19m07s`). Security `32720224117`, CodeQL `32720224125`, and Docker
+  `32720224090` also passed for the same head. The bounded Gitleaks policy
+  validator passed after restoring its explicit generated-directory exclusion.
+- This is exact-head hosted integration evidence only. It does not establish
+  provider interoperability, distributed capacity, soak/SLO behavior, posting,
+  write-back, HA/DR effectiveness, compliance, certification, or production
+  readiness.
+
+## E-921: Domain-diverse PostgreSQL worker projection parity profile (2026-08-24)
+
+- Added `postgres-worker-domain-diverse-parity-v1`, an in-process synthetic
+  profile covering six grouped shapes: one-to-many, many-to-one, true
+  many-to-many, fee/net-aware portfolio, FX-aware many-to-many, and partial
+  settlement portfolio.
+- All `6/6` observations matched the direct
+  `bounded-grouped-subset-sum` decision digest and remained invariant under
+  left/right record permutation. The profile digest is
+  `0b0e875542be3a3d6d56fc7c3bf03e74dae21868ea0b55c9071c867246a57feb`; the
+  checked-in artifact is indexed with canonical-LF SHA-256
+  `6535bff126ce90b285c0dbe9d7375d2af776a6bf0248dd078f5c586e9b69c6fa`.
+- The focused replay suite passes `7/7`; Ruff and Mypy pass. ADR 0620 records
+  the additive profile and keeps the existing eight-case v1 profile unchanged.
+  This is in-process adapter evidence only, not live PostgreSQL execution,
+  cross-engine parity, capacity, provider, or production evidence.
+
+## E-920: Hosted exact-head verification after PostgreSQL adapter input-integrity fixes (2026-08-24)
+
+- Hosted CI run `32713536013` passed on the exact code head
+  `21697476d4ea2f426ebe20a836d24c27435f8131`; every job was green,
+  including Python 3.11/3.12, engine-parity lower/current bounds, web,
+  object-storage, PostgreSQL HA/DR, docker-parity, Docker, Security, CodeQL,
+  and the live `server-boundaries` matrix.
+- The `server-boundaries` job `97392182901` ran from `09:57:49Z` to
+  `10:17:52Z` (`20m03s`) and therefore verifies the current grouped/sequential
+  PostgreSQL adapter code in the hosted PostgreSQL/Redis boundary environment,
+  including E-918 canonical-zero precedence and E-919 explicit-currency refusal.
+- This is exact-head hosted integration evidence only. It does not establish
+  live provider interoperability, exchange-rate correctness beyond the tested
+  fixtures, cross-host capacity, soak/SLO behavior, posting, write-back,
+  HA/DR effectiveness, compliance, certification, or production readiness.
+
+## E-919: PostgreSQL matching adapters require explicit currency (2026-08-24)
+
+- Removed the implicit `USD` fallback from grouped and sequential PostgreSQL
+  adapters. Missing or empty currency now raises a typed adapter validation
+  error before strategy execution; present canonical values retain precedence.
+- Focused grouped/sequential suites pass `23/23`; Ruff and Mypy pass for both
+  adapters. This is a request-boundary data-quality contract, not live provider,
+  cross-host, exchange-rate, or production evidence.
+- ADR 0619 records the decision. No schema, API version, matching strategy, or
+  public readiness claim changed.
+
+## E-918: PostgreSQL matching adapters preserve canonical zero values (2026-08-24)
+
+- Grouped and sequential PostgreSQL adapters now use explicit `None` checks
+  for canonical source identity, amount, date, and currency fields. A present
+  `Decimal("0")` remains zero and cannot be shadowed by `attributes_json`.
+- Focused grouped/sequential suites pass `21/21`; Ruff and Mypy pass for both
+  adapters. The regression is request-level and does not claim live provider,
+  cross-host, or production behavior.
+- ADR 0618 records the fail-closed precedence decision. No schema, API version,
+  matching strategy, or public readiness claim changed.
+
+## E-917: Index current PostgreSQL domain-diverse artifact (2026-08-24)
+
+- Added `postgres-grouped-matching-10k-domain-diverse-current-2026-08-24.json`
+  to `benchmark-evidence-index-v1` with canonical-LF SHA-256
+  `7cb954af66ede3d19296907d7beb595fba12a81a004a8039cb088b7bf13c9720`.
+- The index entry allows only `effect_set_digest` and `manifest_digest`,
+  declares `postgresql_matching`, and remains `partial` with explicit
+  single-host/synthetic/non-capacity boundaries.
+- `verify_benchmark_index` now verifies 13 selected artifacts; no runtime or
+  public claim was widened. ADR 0617 records the provenance decision.
+
+## E-916: Hosted PostgreSQL/domain-diverse CI gate for current code head (2026-08-24)
+
+- Hosted CI run `32696819965` passed on code head `eb24d519`; the complete
+  Python 3.11/3.12, engine-parity, web, object-storage, PostgreSQL HA/DR,
+  docker-parity, Docker, Security, and CodeQL gates were green.
+- The `server-boundaries` job `97342100366` completed in `17m28s` and passed
+  the live PostgreSQL/Redis boundary matrix, including the 500-partition,
+  homogeneous 10K-partition, and new
+  `test_live_postgres_grouped_matching_10k_domain_diverse_profile` selectors.
+- This is hosted verification for the exact code head only. It does not turn
+  the synthetic domain-diverse run into a throughput, capacity, SLO, soak,
+  provider, posting, write-back, HA/DR, or production-sizing claim.
+
+## E-915: Current local PostgreSQL 10K-record domain-diverse grouped runtime (2026-08-24)
+
+- PostgreSQL 16.14 with the non-privileged `reconforge_app` role completed
+  `250/250` runs, `2500/2500` partitions, and `9160/9160` expected result
+  rows across six explicit domain-diverse grouped shapes: one-to-many,
+  many-to-one, true many-to-many, fee-aware portfolio netting, FX-aware
+  many-to-many, and portfolio partial-settlement ambiguity. Completion counts
+  were 42/42/42/42/41/41 respectively; duplicate identities, failed runs,
+  and final active runs were all zero.
+- Observed runtime was `63.9503s` on Windows 11/Python 3.14.6/AMD64 with 16
+  workers. Effect digest:
+  `78168229e37a78bb859e664a75098890e0671f9a502c8f6f04c30380ee9b3681`.
+  Manifest digest:
+  `c4d3461885fd3626b66a787caf8b3800706d1505d84169375885cc001e4a133a`.
+- The live run exposed and the focused regression now covers a stale claim
+  race where terminal execution state must win over a stale `Running` status;
+  the bounded fixture also records the three projected edges required by its
+  one-to-many/many-to-one shapes.
+- The machine-readable report, benchmark note, ADR 0616, source-manifest
+  entries, and hosted selector are retained. This is one-host synthetic
+  runtime evidence, not throughput, capacity, soak, HA/DR, provider, posting,
+  write-back, or production-sizing evidence.
+
+## E-914: Hosted full CI cycle for current evidence head (2026-08-24)
+
+- Hosted CI run `32682775174` passed on head `1be76bdd`; its
+  `server-boundaries` job `97303290224` completed successfully at
+  `02:40:44Z` after the live PostgreSQL/Redis boundary matrix.
+- The same head also passed Docker `32682775164`, Security `32682775187`, and
+  CodeQL `32682775218`. The aggregate CI jobs for Python 3.11/3.12,
+  engine-parity, web, object-storage, PostgreSQL HA/DR, and docker-parity all
+  completed successfully.
+- This closes hosted verification for this exact evidence head only. It does
+  not convert synthetic runtime observations into production capacity,
+  compliance, certification, or HA/DR claims.
+
+## E-913: Hosted full CI cycle for current evidence head (2026-08-24)
+
+- Hosted CI run `32680807591` passed on head `9771d7cc`; its
+  `server-boundaries` job `97298199908` completed successfully after the live
+  PostgreSQL/Redis boundary matrix, and the aggregate CI conclusion is
+  `success`.
+- The same head also passed Docker `32680807558`, Security `32680807552`, and
+  CodeQL `32680807547`, alongside Python 3.11/3.12, engine-parity,
+  object-storage, web, postgres-ha-dr, and docker-parity jobs.
+- This closes hosted verification for this exact evidence head only. It does
+  not convert synthetic runtime observations into production capacity,
+  compliance, certification, or HA/DR claims.
+
+## E-912: Current local PostgreSQL grouped 10K runtime (2026-08-24)
+
+- PostgreSQL 16.14 with the non-privileged `reconforge_app` role completed
+  `1000/1000` runs, `10000/10000` partitions, and `24000/24000` expected
+  result rows across all five grouped modes. Each mode completed 200 runs;
+  duplicate identities, failed runs, and final active runs were all zero.
+- Observed runtime was `220.3637s` on Windows 11/Python 3.14.6/AMD64 with 16
+  workers. Effect digest:
+  `1276abceb444abdf83ca62ba13a2d37f039a5326e8d7b29ed267215b5d3294b2`.
+- The machine-readable report and benchmark note are included in the source
+  distribution. This is one-host synthetic runtime evidence, not throughput,
+  capacity, soak, HA/DR, or production evidence.
+
+## E-911: Current local PostgreSQL grouped 500-partition runtime (2026-08-23)
+
+- On PostgreSQL 16.14 with the non-privileged `reconforge_app` role, the live
+  grouped worker profile completed `250/250` runs and `500/500` partitions,
+  produced `1200/1200` expected rows, and recorded zero duplicate identities,
+  failed runs, or active runs. Each of the five modes completed 50 runs.
+- Observed runtime was `20.7293s` on Windows 11/Python 3.14.6/AMD64 with 16
+  workers. Effect digest:
+  `d788a36aa4bd41c1b113b40da5161a68900999e642496b0c55c3d4fd1de41535`.
+- The companion runtime/application suite passed `8/8` against the same local
+  service. This is bounded one-host synthetic runtime evidence, not a
+  throughput, capacity, HA/DR, or production claim.
+- The focused manifest/package contract passed, and
+  `python -m build --no-isolation` completed successfully with the new ADR and
+  benchmark artifact included in the source distribution.
+
+## E-910: PostgreSQL worker strategy projection parity (2026-08-23)
+
+- Added `run_postgres_worker_matching_parity_profile` covering five grouped
+  modes and three sequential modes.
+- All `8/8` observations matched the direct strategy `decision_digest` through
+  worker lineage and remained equal after input permutation; stable profile
+  digest:
+  `29b72fdf33fbc4405ad898d5049715900ff1ad0766e11e79ea240ce42dfee72d`.
+- Focused replay/parity tests: 3 passed; Ruff, Mypy, and diff checks passed.
+  This is in-process adapter evidence only, not live PostgreSQL or production
+  runtime evidence.
+
+## E-909: Registry-wide deterministic matching replay (2026-08-23)
+
+- Added `run_matching_strategy_replay_profile`, which requires an exact
+  synthetic fixture for every published registry manifest, re-executes each
+  strategy under record/rate permutation, and verifies both JSON result
+  envelopes through the shared replay verifier.
+- Seven of seven strategy families passed; all permutation and envelope flags
+  are true. Stable profile digest:
+  `b0af87bf60e5a438b4073d2f2dc601589d7f75cdcdcc551d172ae590b18b698e`.
+- Focused profile tests: 2 passed; Ruff, Mypy, and diff checks passed. This is
+  bounded synthetic evidence only; PostgreSQL parity, hosted execution, live
+  rates, and production scale remain open.
+
+## E-908: Explicit fee-aware and FX-aware strategy identities (2026-08-23)
+
+- Added `bounded-fee-aware-one-to-one@1.0.0` and
+  `bounded-fx-aware-one-to-one@1.0.0` adapters to the reviewed registry and
+  architecture inventory.
+- Fee-aware execution requires fee fields and forces net-fee arithmetic;
+  FX-aware execution requires a target currency and explicit rates. Both
+  delegate to the bounded grouped one-to-one implementation and emit their own
+  manifest/input/decision digests.
+- Matching strategy contract focus: 38 passed, including missing-input,
+  result-digest, and record-permutation cases. This is bounded synthetic
+  evidence only; live-rate validation, write-back, and production throughput
+  remain open.
+
+## E-907: Cancel stale same-ref quality runs (2026-08-23)
+
+- CI, CodeQL, Security, and Docker workflow contracts now require per-ref
+  concurrency groups and `cancel-in-progress: true`.
+- Focused workflow/HA-DR command: 10 passed; Ruff and `git diff --check` passed.
+- This reduces redundant runner consumption; cancellation is not a pass/fail
+  result for the superseded run.
+
+## E-906: Finite CodeQL job timeout (2026-08-23)
+
+- `.github/workflows/codeql.yml` sets `analyze.timeout-minutes: 30`, enforced
+  by the workflow contract test.
+- Focused workflow/HA-DR command: 9 passed; Ruff and `git diff --check` passed.
+- This bounds runner liveness only; it does not prove vulnerability absence.
+
+## E-905: Fail-closed manifest text declarations (2026-08-23)
+
+- Manifest construction rejects non-text/blank tie-break and explanation-schema
+  values with `MatchingStrategyContractError`.
+- Focused matching command: 43 passed; Ruff and `git diff --check` passed.
+- This is input-contract evidence only, not semantic correctness evidence.
+
+## E-904: Full local regression after CI timeout hardening (2026-08-23)
+
+- Command: `python -m pytest -q --tb=short -ra`
+- Result: exit code 0 with no failures on the current Windows/Python 3.14
+  environment. Explicit skips require live PostgreSQL/S3/Redis, symlink
+  privilege, or opt-in public network and are not counted as passes.
+- Scope: local regression evidence only; it does not replace hosted CI or
+  cross-engine runtime evidence.
+
+## E-903: Finite CI timeouts for long-running gates (2026-08-23)
+
+- `.github/workflows/ci.yml` sets `test.timeout-minutes: 45` and
+  `postgres-ha-dr.timeout-minutes: 30`.
+- Workflow/HA-DR focused command: 8 passed; Ruff and `git diff --check` passed.
+- This bounds runner consumption and does not prove the timed jobs' underlying
+  test or recovery claims.
+
+## E-902: Runtime strategy ID slug parity (2026-08-23)
+
+- `MatchingStrategyManifest` now applies the same lowercase bounded slug
+  pattern as `matching_strategy_manifest.schema.json`.
+- Focused matching command: 42 passed; Ruff and `git diff --check` passed.
+- This proves format parity only, not ownership or semantic compatibility.
+
+## E-901: Package build after manifest contract hardening (2026-08-23)
+
+- `python -m build --no-isolation`: passed; sdist and wheel were built for the
+  existing package version `0.7.1`.
+- Existing setuptools warnings report pyproject metadata override behavior;
+  they did not fail the build. This is local package evidence, not a signed or
+  hosted release/provenance claim.
+
+## E-900: Semantic versions for matching manifests (2026-08-23)
+
+- `MatchingStrategyManifest` rejects malformed versions and leading-zero
+  components before registry admission/digesting.
+- Focused matching command: 41 passed; Ruff and `git diff --check` passed.
+- This is syntax/identity evidence only; release compatibility and migration
+  policy remain separate gates.
+
+## E-899: Fee/FX one-to-one permutation replay (2026-08-23)
+
+- Reversing the caller-supplied FX-rate tuple produces identical input and
+  decision digests, results, and explanations for the bounded one-to-one case.
+- Focused matching/grouped command: 60 passed; Ruff and `git diff --check`
+  passed. The evidence is local synthetic and does not establish source
+  authenticity, cross-engine parity, market valuation, or production scale.
+
+## E-898: Bounded one-to-one fee and FX matching (2026-08-23)
+
+- `GroupedMatchMode` and the grouped strategy manifest now include
+  `one-to-one`; the domain enumerator fixes both cardinalities to one.
+- Golden tests cover net fee matching (`100 - 2 = 98`) and explicit EUR→USD
+  conversion (`100 × 1.1 = 110`) with deterministic result envelopes.
+- Focused command over matching contract and grouped application/domain suites:
+  59 passed. Ruff and `git diff --check` passed.
+- Scope is synthetic and bounded; no external rate provider, posting,
+  production throughput, or financial valuation claim is made.
+
+## E-897: Indexed one-to-one mode declaration aligned (2026-08-23)
+
+- The indexed adapter's runtime guard accepts only `one-to-one`; its manifest
+  now declares that mode, and `docs/architecture/matching-strategies.v1.json`
+  plus the pinned digest are updated in lockstep.
+- Focused matching suites: 39 passed. Ruff and `git diff --check` passed.
+- This is declaration-drift evidence only, not complete advanced matching or
+  production evidence.
+
+## E-896: Fail-closed matching mode inputs (2026-08-23)
+
+- `MatchingStrategyManifest` rejects blank/non-text supported modes and
+  `coverage_report` rejects non-tuple or non-text required modes.
+- Focused matching suites: 39 passed; Ruff and `git diff --check` passed.
+- No strategy-family, financial-correctness, or production claim is made.
+
+## E-895: Deterministic matching mode coverage report (2026-08-23)
+
+- `MatchingStrategyRegistry.coverage_report()` reports required/registered/
+  missing modes and deterministic strategy identities without relying on
+  caller ordering.
+- Focused command over matching contract, budget, and ambiguity suites:
+  39 passed. Ruff and `git diff --check` passed. The current synthetic report
+  deliberately exposes missing `one-to-one` and `unimplemented-mode` entries;
+  no completeness claim is inferred.
+- This is coverage inventory evidence only, not strategy-family correctness,
+  engine parity, scale, or production evidence.
+
+## E-894: Fail-closed matching strategy declarations (2026-08-23)
+
+- `MatchingStrategyManifest` rejects unsupported maturity values and blank
+  deterministic tie-break or explanation-schema declarations at construction.
+- `python -m pytest -q tests/test_matching_strategy_contract.py tests/test_matching_candidate_budgets.py tests/test_matching_ambiguity.py`:
+  38 passed. Ruff and `git diff --check` passed. The unrelated user-modified
+  `docs/execution/P3_ENT_013_EXIT_AUDIT.yaml` remains outside this slice.
+- The evidence is contract-level only; it does not claim complete strategy
+  family coverage, domain correctness, performance, or production readiness.
+
+## E-461: Hosted PostgreSQL native-tool bootstrap (2026-08-23)
+
+- CI `32645427870` passed the complete `server-boundaries` job, including the
+  PostgreSQL 16 native-client bootstrap, fail-closed tool/version checks,
+  custom-format `pg_dump`/`pg_restore --list` smoke, and the encrypted
+  isolated-restore live test.
+- The evidence is limited to the pinned disposable PostgreSQL service and
+  synthetic CI data; it is not a production backup/restore or RPO/RTO claim.
+
+## E-893: Restore drill follows current Alembic head (2026-08-23)
+
+- Hosted CI run `32644742254` passed both Python jobs, all four engine-parity
+  cells, Docker parity, and PostgreSQL HA/DR. Its `server-boundaries` job
+  failed only because the retained identity-restore contract expected the
+  superseded `0089_pg_writeback_identity` head while the repository head is
+  `0090_pg_writeback_observations`.
+- The runner, JSON Schemas, and retained drill/matrix reports now agree on
+  `0090_pg_writeback_observations`; focused local migration tests pass.
+- Hosted rerun `32645427870` passed all jobs, including `server-boundaries`
+  after the runner began targeting `0090_pg_writeback_observations`.
+  Security `32645427850`, Docker `32645427846`, and CodeQL `32645427858` also
+  passed for the same code head.
+
+## E-892: Full history for retained evidence CI contracts (2026-08-23)
+
+- Hosted CI run `32643148675` reached 3043 passing tests but failed retained
+  evidence checks because the test job used a shallow checkout; exact source
+  and migration commits were unavailable.
+- The Python test matrix now uses `fetch-depth: 0`, and the focused workflow
+  contract test enforces it. This addresses commit availability without
+  weakening report/source digest checks.
+
+## E-891: Hosted synthetic Gitleaks finding closed (2026-08-23)
+
+- Hosted run `32642926377` failed the full-history scan with eight findings,
+  all for the same deterministic synthetic writeback idempotency value.
+- The current value was changed to `synthetic-recovery-idempotency`; the eight
+  immutable historical fingerprints are recorded exactly in `.gitleaksignore`.
+- Local Gitleaks 8.30.1 history scan: zero findings. Local clean-tree scan
+  with the bounded generated-directory exclusions: zero findings. Supply-chain
+  policy validation and `tests/test_supply_chain_policy.py` pass.
+- This was a false positive, not a credential exposure; no secret rotation is
+  claimed.
+
+## E-890: Offline boundary for hardened image smoke (2026-08-23)
+
+- The local Docker command with `--network=none`, `--read-only`,
+  `--cap-drop=ALL`, and `--security-opt=no-new-privileges` passed
+  `reconforge doctor` with exit code 0, zero errors, and ten visible synthetic
+  warnings.
+- Both CI and release workflows now require `--network=none`; the focused
+  workflow contract test covers the flag. This is not production network
+  segmentation evidence.
+
+## E-889: Workflow contract protects hardened image gates (2026-08-23)
+
+- `python -m pytest -q tests/test_container_hardening_workflow.py` passed 2/2.
+- `python -m ruff check tests/test_container_hardening_workflow.py` passed.
+- The test parses both workflow files, checks the three hardening flags and
+  doctor invocation, and enforces smoke-before-login/push ordering. A hosted
+  run remains required for actual CI/release evidence.
+
+## E-888: Release candidate hardened image gate (2026-08-23)
+
+- The signed release-candidate workflow now runs the exact scanned image with
+  `--read-only --cap-drop=ALL --security-opt=no-new-privileges` before registry
+  login, push, and attestation.
+- The workflow contract is locally reviewable; a fresh tag-triggered hosted run
+  is required for actual release evidence. Multi-architecture, host,
+  registry-availability, and production claims remain outside the boundary.
+
+## E-887: Hardened container smoke required in CI (2026-08-23)
+
+- `.github/workflows/ci.yml` now requires the `docker-parity` job to run:
+  `docker run --rm --read-only --cap-drop=ALL --security-opt=no-new-privileges
+  reconforge:ci-baseline reconforge doctor`.
+- The workflow syntax and command contract are locally reviewable; a fresh
+  hosted run is still required for CI evidence. The boundary excludes host,
+  seccomp, multi-arch, registry, and production assurance.
+
+## E-886: Local Docker Scout CycloneDX SBOM (2026-08-23)
+
+- `docker scout sbom local://reconforge:current --format cyclonedx
+  --output output/docker-scout-current-sbom.json` exited 0.
+- JSON parsing confirmed CycloneDX top-level fields and 82 components. The
+  generated file is 331,173 bytes with SHA-256
+  `41af050007ebf534ebd42d4354c5e5c4fb7ad0606002e38bd7076354f2195c7e`.
+- This is local inventory evidence only; it does not prove signed SBOM
+  provenance, registry attestation, license policy, scanner freshness, or
+  hosted release artifact parity.
+- A subsequent `python -m build --no-isolation` completed successfully and
+  `reconforge_erp.egg-info/SOURCES.txt` includes
+  `docs/adr/0592-local-docker-scout-sbom-evidence.md`.
+
+## E-885: Docker Scout base-layer scan (2026-08-23)
+
+- `docker scout cves local://reconforge:current --only-base --format packages
+  --output output/docker-scout-current-base.txt` indexed the local image and
+  returned exit code 0 with `0C 0H 0M 0L`.
+- This separates current base-layer evidence from the optional Python 3.12
+  compatibility recommendation. It does not prove hosted scanner parity,
+  registry provenance/signing, malware/license analysis, or production security.
+
+## E-884: Python base-image upgrade decision (2026-08-23)
+
+- `docker scout recommendations local://reconforge:current` exited 0 and
+  reported the current `python:3.11-alpine` line as up to date, while listing
+  `3.12-alpine` as a smaller alternative with fewer packages and fewer reported
+  vulnerabilities in the recommendation view.
+- The runtime was intentionally not changed. A Python 3.12 base upgrade needs
+  a refreshed digest, full 3.11/3.12 and engine-parity matrix, package/air-gap
+  checks, Docker/API/web smoke, and rollback evidence. This is a planned risk
+  decision, not an unresolved scanner failure.
+
+## E-883: Current Docker Scout local image scan (2026-08-23)
+
+- Docker Scout `v1.24.0` scanned the explicit `local://reconforge:current`
+  image (digest prefix `e86d4871981c`) and indexed 82 packages.
+- The scan reported `0C 0H 0M 0L` and returned exit code 0. The raw report was
+  written to `output/docker-scout-current-high-critical.txt` during the run;
+  the reproducible command and bounded result are retained in
+  `docs/execution/security/docker-scout-current-2026-08-23.md`.
+- The local reference prevents accidental registry fallback. This does not
+  prove hosted scanner parity, signed provenance, malware/license analysis,
+  source reachability, runtime behavior, or production security.
+
+## E-882: Hardened Docker runtime smoke (2026-08-23)
+
+- `docker image inspect reconforge:current` reports `User=10001:10001`,
+  `WorkingDir=/app`, and the expected `reconforge doctor` command. A plain
+  `docker run ... id` confirms `uid=10001(reconforge)`.
+- The hardened command
+  `docker run --rm --read-only --cap-drop=ALL
+  --security-opt=no-new-privileges reconforge:current reconforge doctor`
+  returned exit code 0 and retained the expected visible sample warnings.
+- This proves only a local non-root/read-only/capability-drop smoke. It does
+  not prove image CVE scanning, signature/provenance, seccomp policy review,
+  multi-arch behavior, or production orchestration.
+
+## E-881: Current Docker image parity and runtime smoke (2026-08-23)
+
+- `docker build -t reconforge:current .` passed using the pinned Dockerfile
+  inputs. The local manifest list digest was
+  `sha256:e86d4871981ce2e466c257428b906a9d3e9929bce61fb1224f67cd3fc90ffb6e`.
+- The built container returned exit code 0 for `reconforge doctor`,
+  `reconforge validate examples/sample_data`, and
+  `reconforge rules validate --pack control-packs/audit-basic`.
+- Doctor showed `0 errors, 10 warnings`; validation showed zero errors and ten
+  visible synthetic sample-data warnings (duplicate references, invalid cost,
+  and missing references). Warnings were preserved as warnings. This is local
+  image/runtime parity evidence only; no registry signature, hosted provenance,
+  or production operation is claimed.
+
+## E-880: Package membership after release-governance additions (2026-08-23)
+
+- `python -m build --no-isolation` succeeded after the latest workflow/ADR and
+  benchmark additions.
+- `reconforge_erp.egg-info/SOURCES.txt` includes
+  `docs/adr/0585-web-client-is-a-required-ci-quality-gate.md`,
+  `docs/adr/0586-release-rechecks-web-artifact.md`,
+  `docs/adr/0587-ci-operational-gates-wait-for-web.md`, and the current
+  PostgreSQL durable-job benchmark JSON/Markdown artifacts.
+- `tests/test_benchmark_evidence_index.py`, release SBOM/signed-release/SLSA,
+  and maturity-policy tests pass (38 tests). This proves local package
+  membership and contract consistency only; hosted provenance remains open.
+
+## E-879: CI operational gates depend on web quality (2026-08-23)
+
+- `.github/workflows/ci.yml` now requires both `test` and `web` for
+  `docker-parity` and `server-boundaries`.
+- YAML parsing and the workflow/phase contract suite pass locally. This is
+  status propagation evidence; hosted runner execution remains required for a
+  real CI result.
+
+## E-878: Release workflow web artifact recheck (2026-08-23)
+
+- The signed-tag release workflow now performs locked npm installation,
+  typecheck, Vitest, production Vite build, Chromium installation, and
+  standard Playwright E2E after npm audit and before release artifact/image
+  publication.
+- The local E-874 run supplies current command evidence: 75 Vitest tests,
+  successful typecheck/build, and 16 Playwright passes with five explicit
+  live-service skips. Hosted signed-tag execution remains required to promote
+  this from workflow contract evidence to hosted release evidence.
+- Live API-session/HTTPS tests remain opt-in and no external credentials or
+  providers are contacted by the standard release gate.
+
+## E-877: Web client required CI gate (2026-08-23)
+
+- Added a dedicated `web` job to `.github/workflows/ci.yml` with pinned
+  checkout/setup-node actions, Node 22, npm lockfile installation, typecheck,
+  Vitest, production build, Playwright Chromium installation, and standard
+  browser/accessibility E2E.
+- The same local commands were already verified in E-874: 75 Vitest tests,
+  successful typecheck/build, and 16 Playwright passes with five explicit
+  live-service skips. The workflow now prevents Python-only PRs from bypassing
+  browser quality checks.
+- Live browser API sessions and HTTPS production-bundle tests remain opt-in;
+  this CI gate is not a live provider, external IdP, production HTTPS, or
+  release-readiness claim.
+
+## E-876: Current provider-neutral transport conformance (2026-08-23)
+
+- `python -m pytest -q -rs tests/test_connector_provider_tls_sandbox.py
+  tests/test_connector_writeback_network.py tests/test_connector_network.py`
+  passed 70 tests with no skips.
+- The suites cover certificate and pin validation, transient retry/backoff,
+  stable idempotency propagation, acknowledgement binding, public-address
+  egress refusal, and deterministic synthetic failure injection.
+- This is loopback/provider-neutral evidence only. It does not prove live ERP
+  or bank schemas, external authentication/vaults, provider SLA behavior,
+  production egress, or production write-back.
+
+## E-875: Current PostgreSQL durable-job backpressure and repeated soak (2026-08-23)
+
+- With the local PostgreSQL DSN and the non-privileged `reconforge_app` role,
+  `tests/test_postgres_durable_jobs.py -s -q -k
+  "live_postgres_durable_job_soak_profile or
+  live_postgres_durable_job_backpressure_profile"` passed both tests without
+  skips.
+- Backpressure completed 64/64 jobs and 256/256 partition effects, observed a
+  maximum queue depth of four, rejected 20 bounded-submit attempts, and ended
+  with zero queue/running residue. Effect and manifest digests are recorded in
+  the dated JSON artifact.
+- Repeated soak completed three iterations (192/192 jobs, 768/768 effects),
+  with zero duplicate effects, zero non-drained runs, and one identical effect
+  digest across all iterations.
+- Artifact:
+  `docs/execution/benchmarks/postgres-durable-job-current-2026-08-23.json`;
+  SHA-256:
+  `58a0c17824725d472b961b04117bcd9efe1bcf3fb335d5f5dbaff2db7852963e`.
+  This remains single-host synthetic evidence and does not claim distributed
+  queue HA, capacity/SLO, host-loss recovery, RPO/RTO, or production readiness.
+
+## E-874: Current web client verification and E2E runtime portability (2026-08-23)
+
+- `npm --prefix apps/web ci` completed successfully and npm reported zero
+  vulnerabilities. TypeScript typecheck passed; `vitest run` passed 15 files and
+  75 tests; and the Vite production build completed successfully.
+- `RECONFORGE_WEB_PORT=5180 npm --prefix apps/web run e2e` passed 16 Playwright
+  tests in 39.7 seconds. Coverage includes English/Arabic accessibility,
+  keyboard focus, redaction boundaries, responsive/mobile routes, screenshot
+  flows, and synthetic financial-control views. Five tests were skipped because
+  they require explicit local API-proxy or HTTPS production-bundle opt-in.
+- The first E2E attempt failed before test execution because the default 4173
+  loopback port returned `EACCES`. `playwright.config.ts` now derives both the
+  Vite command and Playwright base URL from `RECONFORGE_WEB_PORT`, defaulting to
+  4173 for backward compatibility. This fixes test-runner portability, not the
+  missing live API/HTTPS environment.
+
+## Current full local regression gate (2026-08-23)
+
+- `python -m pytest -q` completed with exit code 0 after the execution-contract
+  fix. The first run caught four failures caused by duplicate short entries for
+  `E-870` through `E-872` in `docs/execution/BACKLOG.yaml`; the corrected
+  backlog passed `tests/test_phase4_execution_contract.py` and
+  `tests/test_phase_1_3_execution_contract.py` (14 tests), then the complete
+  repository suite completed successfully.
+- Declared capability skips and existing FastAPI/SAML/legacy-financial-input
+  warnings remain visible. This is local regression evidence only; no hosted
+  Python matrix, provider, production, or release claim is made.
+
+## E-865: Current PostgreSQL security governance/policy runtime (2026-08-23)
+
+- With PostgreSQL 16.14 and `reconforge_app` (`rolsuper=false`,
+  `rolbypassrls=false`), the governance and policy-analysis runtime files pass
+  5/5 with no skips.
+- Evidence covers tenant isolation, atomic security-governance retention/resource
+  controls, and maker-checker policy scope. It does not assert compliance,
+  certification, external IdP behavior, HA/DR, or production assurance.
+
+## E-864: Current PostgreSQL receiver idempotency runtime (2026-08-23)
+
+- With the local PostgreSQL DSN and `reconforge_app` role,
+  `tests/test_connector_writeback_receiver_postgres.py` passed 9/9.
+- The live gate proves digest-only receipt/effect atomicity, exact replay,
+  stable history digest, and application-role deletion refusal. It does not
+  contact a provider or prove cross-host/production behavior.
+
+## E-863: Current PostgreSQL write-back append-only runtime (2026-08-23)
+
+- With the digest-pinned PostgreSQL 16.14 local service and
+  `reconforge_app` (`rolsuper=false`, `rolbypassrls=false`),
+  `python -m pytest tests/test_postgres_writeback.py -q -rs` passed 3/3.
+- The run proves scoped idempotent history, append-only/tamper boundaries, and
+  ERPNext payment history replay. It does not dispatch to a provider or resolve
+  secrets and is not production write-back evidence.
+
+## E-862: Current PostgreSQL grouped 500/10K scale profiles (2026-08-23)
+
+- Under the same local PostgreSQL 16.14 image digest and
+  `reconforge_app` non-superuser/non-BYPASSRLS role, the following live tests
+  passed: `test_live_postgres_grouped_matching_500_partition_scale_profile`
+  and `test_live_postgres_grouped_matching_10k_partition_scale_profile`.
+- Both profiles completed with zero failed runs, duplicate result identities,
+  and active runs. Workloads are synthetic and the host is single-node; no
+  throughput, soak, HA/DR, or production capacity claim is made.
+
+## E-861: Current PostgreSQL grouped matching runtime replay (2026-08-23)
+
+- Command (with a disposable local PostgreSQL service):
+  `RECONFORGE_TEST_POSTGRES_DSN=postgresql://reconforge_app:***@127.0.0.1:5432/postgres`
+  plus the admin DSN and `RECONFORGE_TEST_POSTGRES_APP_USER=reconforge_app`,
+  then `python -m pytest tests/test_postgres_grouped_matching_runtime.py tests/test_postgres_matching_application.py -q -rs`.
+- Result: 8 passed, 0 skipped. PostgreSQL 16.14 image digest was
+  `sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`;
+  the application role reported `rolsuper=false`, `rolbypassrls=false`.
+- Scope: synthetic tenant/data on one local Docker host; no HA, cross-host
+  recovery, hosted CI, provider I/O, or production readiness claim.
+
+## E-860: Registry-wide matching strategy replay matrix (2026-08-23)
+
+- The public contract suite re-executes all five registered strategy families:
+  indexed, grouped, duplicate detection, carry-forward, and reversal pairing.
+- Every family reproduced its canonical envelope; evidence is local and
+  synthetic, not hosted cross-engine runtime proof.
+
+## E-859: Deterministic strategy re-execution replay (2026-08-23)
+
+- `replay_strategy_result` reruns the strategy for the original request and
+  compares canonical envelopes after strict identity and digest checks.
+- Contract tests pass for equal replay and tampered output refusal; no external
+  calls are made.
+
+## E-858: Offline matching result envelope validation CLI (2026-08-23)
+
+- `reconforge match validate-result-envelope` validates one local envelope and
+  reports strategy/version/digest metadata without execution or network calls.
+- The command explicitly marks `replay_request_required`; full input/result
+  replay remains a separate boundary requiring the original request.
+
+## E-857: Versioned matching result envelope schema (2026-08-23)
+
+- `docs/schemas/matching_strategy_result_envelope.v1.schema.json` is closed at
+  the top level and constrains schema version, strategy identity/version, and
+  lowercase SHA-256 digest fields.
+- The contract suite validates emitted JSON against Draft 2020-12 and rejects
+  unsupported versions. External consumer interoperability remains unproven.
+
+## E-856: Worker-boundary replay verification (2026-08-23)
+
+- Grouped and sequential PostgreSQL adapters now round-trip strategy output
+  through JSON and verify the closed envelope before projecting result rows.
+- Matching strategy and PostgreSQL worker contract suites passed with Ruff and
+  Mypy. This is local synthetic boundary evidence, not hosted runtime proof.
+
+## E-855: Closed matching result JSON envelope (2026-08-23)
+
+- `MatchingStrategyResult` now emits and reconstructs a deterministic JSON-safe
+  envelope with exact fields for strategy identity/version and all digests.
+- Extra fields, malformed collections, and identity drift are rejected; the
+  matching strategy contract suite plus Ruff/Mypy pass.
+- Evidence is an in-process transport contract only; hosted cross-engine
+  replay remains unproven.
+
+## E-854: Matching strategy identity/version binding (2026-08-23)
+
+- Every reviewed strategy adapter emits strategy ID/version plus manifest,
+  input, and decision digests; replay verification rejects identity/version
+  tampering.
+- Matching strategy contract and PostgreSQL grouped/sequential worker suites
+  passed. This is synthetic contract evidence, not hosted cross-engine proof.
+
+## E-853: Composite regulated admission evidence (2026-08-23)
+
+- `deployment verify-regulated-admission` requires no unresolved regulated
+  profile findings and a non-local customer-managed key manifest, then emits
+  child/composite digests without external calls.
+- Focused admission/key/deployment/inventory suite: 50 passed; Ruff and Mypy
+  pass.
+- This is a prerequisite gate only; KMS/HSM runtime enforcement remains open.
+
+## E-852: Managed-key custody evidence (2026-08-23)
+
+- `deployment verify-key-manifest` verifies non-secret key custody metadata and
+  prints a deterministic digest without external calls or key material.
+- Focused key/deployment/inventory suite: 44 passed; Ruff and Mypy pass.
+- KMS/HSM existence, access, rotation, destruction, and production custody are
+  explicitly unproven.
+
+## E-851: Profile-digest-bound runtime evidence (2026-08-23)
+
+- Runtime manifests now carry the selected profile digest and fail closed on
+  profile drift or mismatch.
+- Focused runtime/readiness suite: 12 passed; Ruff and Mypy pass.
+- This is evidence identity and replay protection only, not runtime enforcement.
+
+## E-850: Deployment readiness evidence CLI (2026-08-23)
+
+- `deployment readiness` validates the closed matrix through bounded safe-YAML
+  ingress, checks evidence path containment, and displays a canonical digest.
+- Focused readiness/runtime/profile/worker/inventory suite: 36 passed; Ruff and
+  Mypy pass.
+- Unknown editions, missing matrices, and evidence-path escapes fail closed;
+  no external calls or mutation occur.
+
+## E-849: Mode-specific deployment readiness matrix (2026-08-23)
+
+- The matrix covers all four editions and eight gates with repository-bound
+  evidence paths and explicit scope boundaries.
+- Schema/path regression: 2 passed. Regulated customer-managed keys and
+  independent failure-domain recovery remain open by assertion.
+- The matrix cannot express a generic ready/verified edition state.
+
+## E-848: Digest-bound deployment runtime evidence (2026-08-23)
+
+- The closed manifest binds one edition to exact profile runtime facts and
+  returns deterministic findings plus a SHA-256 digest without external calls.
+- Focused runtime/profile/worker/inventory suite: 31 passed; Ruff and Mypy pass.
+- A clean local manifest is evidence input only; external systems and readiness
+  remain unverified.
+
+## E-847: Worker manifest verification CLI (2026-08-23)
+
+- The CLI verifies a closed local worker permission manifest and prints its
+  deterministic digest; invalid input exits non-zero without side effects.
+- Focused CLI/manifest/profile/inventory suite: 18 passed; Ruff and Mypy pass.
+- This is local evidence only and does not establish hosted IAM enforcement.
+
+## E-846: Add offline digest-bound worker permission manifest verifier (2026-08-23)
+
+- `verify_worker_permission_manifest` accepts only the closed manifest fields,
+  rejects equal or human-governed permissions, requires both grants, validates
+  scope/identity syntax, and exposes a canonical SHA-256 digest.
+- Focused command: `python -m pytest tests/test_worker_permission_manifest.py
+  tests/test_deployment_profiles.py -q` -> 15 passed. Ruff, Mypy, and
+  `git diff --check` pass.
+- Full `python -m pytest -q` on the resulting tree completed with exit code 0
+  over the 3,119-test collection; skips and warnings remain disclosed.
+- Boundary: pure local verification only; the manifest is evidence input and
+  never provisions service accounts or contacts an identity provider.
+
+## E-845: Gate hosted deployment profiles on worker discovery separation (2026-08-23)
+
+- Deployment profiles now expose and validate
+  `worker_discovery_execution_separation_required`; Team, Enterprise, and
+  Regulated reject missing runtime evidence while Community remains exempt.
+- Focused command: `python -m pytest tests/test_deployment_profiles.py -ra` ->
+  9 passed. Ruff, Mypy, and `git diff --check` pass.
+- Full `python -m pytest -q` on the resulting tree completed with exit code 0
+  over the 3,119-test collection; skips and warnings remain disclosed.
+- Boundary: this is a descriptive fail-closed deployment gate; it does not
+  provision service-account permissions or establish production IAM evidence.
+
+## E-844: Separate reconciliation discovery and execution permissions (2026-08-23)
+
+- `PostgresReconciliationWorkerSettings.discovery_policy_permission` optionally
+  authorizes tenant-wide queue enumeration separately; claim and pre-claim
+  execution checks continue to use `policy_permission` (`match.run` by default).
+- Focused command: `python -m pytest tests/test_postgres_reconciliation.py
+  tests/test_api_server_reconciliation.py tests/test_governed_worker_policy.py
+  -ra` -> 33 passed, 1 skipped (live PostgreSQL unavailable). Ruff, Mypy, and
+  `git diff --check` pass.
+- Full `python -m pytest -q` on commit `7f44db68` completed with exit code 0
+  over the 3,119-test collection; skips and warnings remain explicitly
+  disclosed.
+- Boundary: the secure split is an explicit deployment option; existing workers
+  retain compatibility fallback until service-account permissions are migrated.
+
+## E-843: Propagate reconciliation exposure into worker policy rechecks (2026-08-23)
+
+- The API stores `policy_amount` as an exact decimal string in the durable rule
+  metadata. The worker decodes and validates it, then supplies the same Decimal
+  to the tenant and pre-claim scoped service-account policy checks.
+- Focused command: `python -m pytest tests/test_api_server_reconciliation.py
+  tests/test_postgres_reconciliation.py tests/test_governed_worker_policy.py
+  -ra` -> 32 passed, 1 skipped (live PostgreSQL unavailable). Ruff, Mypy, and
+  `git diff --check` pass.
+- Full `python -m pytest -q` completed with exit code 0 after this slice; the
+  current collection remains 3,119 tests, with the same declared skips and
+  warnings.
+- Boundary: direct worker claim/recheck contract is proven; the initial tenant
+  discovery lane still has no per-run amount before listing runs, and live fleet,
+  provider, posting, and production IAM evidence remain future work.
+
+## E-842: Bind reconciliation run submission to amount-bounded ABAC (2026-08-23)
+
+- Reconciliation canonical input amounts are parsed as exact Decimal values;
+  complete inputs pass their gross absolute sum before the PostgreSQL adapter
+  call. Missing amounts remain `None`, preserving fail-closed bounded policy
+  behavior.
+- Focused command: `python -m pytest tests/test_api_server_reconciliation.py
+  -q` -> 3 passed. Ruff, Mypy, and `git diff --check` pass.
+- A full post-slice regression also completed with exit code 0: 3,119
+  tests collected; skips and deprecation/legacy compatibility warnings remain
+  explicitly disclosed.
+- Boundary: synthetic authenticated adapter contract only; universal route/job
+  adoption and production IAM evidence remain future work.
+
+## E-841: Bind ownership-change preparation to amount-bounded ABAC (2026-08-23)
+
+- Typed ownership-change inputs are converted before policy; gross exposure is
+  the absolute ownership-delta effect plus absolute consideration effect
+  (`Decimal("220.00")` in the synthetic fixture), passed before persistence.
+- Focused route/domain/dependency tests: 19 passed, 1 skipped (live PostgreSQL
+  unavailable). Ruff, Mypy, and `git diff --check` pass.
+- Boundary: one synthetic non-posting route; universal route and production IAM
+  evidence remain future work.
+
+## E-840: Bind PPA preparation to amount-bounded ABAC (2026-08-23)
+
+- PPA canonical inputs are converted to typed Money before policy; gross
+  acquisition exposure is `abs(consideration) + abs(nci_fair_value)` and is
+  authorized before PostgreSQL persistence. Allocation items are not counted a
+  second time.
+- Focused command: `python -m pytest tests/test_api_consolidation_ppa.py
+  tests/test_consolidation_ppa.py tests/test_api_dependencies.py -q` -> 16
+  passed. Ruff and Mypy pass.
+- Boundary: one synthetic non-posting route; universal route and production IAM
+  evidence remain future work.
+
+## E-839: Bind deferred-tax preparation to amount-bounded ABAC (2026-08-23)
+
+- Deferred-tax canonical items are converted to typed Money before policy; the
+  gross absolute fair-value Decimal sum is authorized before PostgreSQL
+  persistence. Tax basis is not added a second time.
+- Focused command: `python -m pytest tests/test_api_consolidation_deferred_tax.py
+  tests/test_consolidation_deferred_tax.py tests/test_api_dependencies.py -q`
+  -> 15 passed. Ruff and Mypy pass.
+- Boundary: one synthetic non-posting route; universal route and production IAM
+  evidence remain future work.
+
+## E-838: Bind intercompany preparation to amount-bounded ABAC (2026-08-23)
+
+- Intercompany canonical Money lines are converted before policy, then their
+  gross absolute Decimal exposure is passed to server scope authorization before
+  PostgreSQL proposal persistence.
+- Reciprocal positive/negative lines are not allowed to cancel authorization
+  magnitude; malformed/cross-currency domain input still fails closed.
+- Focused command: `python -m pytest tests/test_api_consolidation_intercompany.py
+  tests/test_intercompany_elimination.py tests/test_api_dependencies.py -q`
+  -> 15 passed. Ruff and Mypy pass.
+- Boundary: one synthetic non-posting route; universal financial-route and
+  production IAM evidence remain future work.
+
+## E-837: Bind Finance Core entry creation to amount-bounded ABAC (2026-08-23)
+
+- Both PostgreSQL Finance Core entry branches now parse every debit and credit
+  as exact non-negative decimals and pass the gross debit total into central
+  server policy before adapter access.
+- Invalid amount syntax or negative values fail with a safe 400 response;
+  balanced-entry semantics avoid double-counting debit and credit.
+- Focused command: `python -m pytest tests/test_api_server_finance_core.py
+  tests/test_api_server_finance_core_live.py tests/test_api_dependencies.py -q`
+  -> 11 passed, 1 declared capability skip. Ruff and Mypy pass.
+- Boundary: one Finance Core route boundary with synthetic server adapter data;
+  other financial routes and production IAM effectiveness remain future work.
+- Full regression after the route contract assertion update completed at 100%
+  with zero failures; the only PostgreSQL-dependent cases remain declared
+  capability skips.
+
+## E-836: Bind impairment prepare to amount-bounded ABAC (2026-08-23)
+
+- The server-only consolidation impairment prepare route now converts the
+  canonical request into typed domain Money, sums carrying amounts with
+  `Decimal("0")`, and passes the exact total to central policy evaluation
+  before PostgreSQL persistence.
+- The read-only artifact route remains amount-free; malformed or cross-currency
+  inputs fail during existing domain conversion before policy/persistence.
+- Focused command: `python -m pytest tests/test_api_consolidation_impairment.py
+  tests/test_policy_engine.py tests/test_api_dependencies.py -q` -> 90 passed.
+  Ruff and Mypy pass for the changed files.
+- Boundary: one high-risk route binding with synthetic non-posting data; other
+  financial routes and deployed IAM effectiveness remain future evidence.
+
+## E-835: Fail closed on missing amount under bounded ABAC policy (2026-08-23)
+
+- `CentralPolicyEngine` now denies any context with `minimum_amount` or
+  `maximum_amount` when `amount` is absent, returning
+  `amount_missing_for_bounded_policy`. No zero, rounding, or inferred amount is
+  substituted.
+- Exact Decimal below-floor, above-ceiling, and in-range behavior remains
+  unchanged; `evaluate_any` inherits the same contextual check.
+- Focused command: `python -m pytest tests/test_policy_engine.py -q` -> 80
+  passed. Ruff and Mypy pass for the changed policy/test files.
+- Boundary: this proves the central primitive only; all route/job/cache
+  callers, distributed invalidation, and production IAM effectiveness remain
+  future evidence.
+- Full regression after E-835: `python -m pytest --tb=short -q` completed with
+  zero failures (the three new parametrized cases are added to the prior
+  2996-pass baseline); Mypy passes across 526 source files and Ruff/diff-check
+  pass.
+
+## E-834: Persist durable write-back recovery observations (2026-08-22)
+
+- Added the immutable `WritebackRecoveryObservationRecord` envelope. It binds
+  tenant/workspace, intent, connector, proposal digest, idempotency-bound
+  observation data, actor, timestamp, record digest, and evidence-node ID.
+- SQLite migration 43 and PostgreSQL Alembic revision 0090 persist the record
+  with append-only mutation guards, JSON/column identity checks, intent binding,
+  scoped uniqueness, and tenant/workspace RLS on PostgreSQL.
+- The recovery API persists the observation before an accepted lifecycle
+  transition and exposes a reviewer list endpoint. Replays are idempotent and
+  rejected/pending/not-found/unknown observations leave the intent unchanged.
+- Focused tests pass 66/66; `python -m mypy reconforge` passes across 526 source
+  files. The disposable SQLite/PostgreSQL 16.14/17.10 matrix passed in 12.292
+  seconds with shared records digest
+  `768c363a6c196da78fe7c6ca40281f1d4ca051c194c8585f648b69c25574aa65`.
+- Scope: synthetic provider responses and one local Docker failure domain;
+  this is not live-vendor interoperability, settlement/accounting posting,
+  cross-host HA/DR, distributed exactly-once, or production assurance.
+- Full local gate after contract updates: `python -m pytest --tb=short -q`
+  passed 2996 tests with 115 declared skips and zero failures. Mypy, build,
+  Bandit, Ruff, and `git diff --check` passed; `pip_audit` passed after the
+  environment-only pip upgrade from 26.1.2 to 26.2 (the prior PYSEC-2026-3721
+  finding is no longer present).
+- A post-commit rerun of the E-834 Docker matrix was attempted on 2026-08-23
+  but could not start because Docker Desktop's Linux engine was unavailable;
+  the retained 2026-08-22 report remains source-digest-bound to commit
+  `c88b8c03666e1f61ac34a58ebe7591e07b878561`, whose code digests are the same
+  code exercised by that successful run.
+
+## E-833: Classify provider status outcomes without lifecycle mutation (2026-08-22)
+
+- Added `WritebackProviderOutcome` with `accepted`, `rejected`, `pending`,
+  `not_found`, and `unknown`, plus the frozen `WritebackRecoveryObservation`
+  contract. The observation binds the original key, HTTP status, raw response
+  digest, provider response digest/reference when available, and its own
+  canonical digest.
+- `observe_recovery()` performs no lifecycle mutation. `recover()` consumes the
+  same classifier and advances only for `accepted`; pending, not-found,
+  rejected, and unknown outcomes remain state-preserving.
+- Focused command:
+  `python -m pytest tests/test_connector_writeback_network.py tests/test_connector_writeback.py -q`.
+  Result: 55 passed, including all five taxonomy values, legacy boolean-only
+  response compatibility, key binding, digest checks, pending refusal, retry,
+  TLS, secret boundaries, and local HTTPS sandbox behavior.
+- Boundary: injected/synthetic transport responses only. No live provider
+  contract, accounting, settlement, network credential, or production recovery
+  claim follows.
+
+## E-832: Reject negative provider outcomes before acknowledgement (2026-08-22)
+
+- The shared `WritebackNetworkExecutor` now rejects `accepted=false` before
+  returning a dispatch or recovery transition. The original intent remains
+  `DISPATCHED` with no acknowledgement; compensation keeps its existing
+  `writeback_compensation_not_accepted` guard.
+- Focused command:
+  `python -m pytest tests/test_connector_writeback_network.py tests/test_connector_writeback.py -q`.
+  Result: 46 passed, including original dispatch, idempotency-status recovery,
+  compensation rejection, schema validation, key binding, retry, secret
+  boundary, TLS pinning, and local HTTPS sandbox coverage.
+- No network or credential was used by the new regression cases. The test
+  responses are injected synthetic envelopes, and error messages contain no
+  response body, credential, payload, or customer data.
+- Boundary: this proves local fail-closed state handling only. Provider-specific
+  status semantics, accounting, settlement, distributed delivery, and
+  production recovery objectives remain unverified.
+
+## E-831: PostgreSQL write-back recovery and compensation parity (2026-08-22)
+
+- Command:
+  `python .github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py --output docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-08-22.json`.
+  The retained report passed in 20.803 seconds on Docker Engine 29.7.2 /
+  Python 3.14.6; report digest
+  `bdf1d82d0667f244160c43068cdab5c7516096d31fba17848e2ec1c33a3cdbb2`.
+- Exact policy-owned images were PostgreSQL 16.14
+  (`postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`)
+  and PostgreSQL 17.10
+  (`postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`).
+  Each disposable application role has superuser, create-database,
+  create-role, replication, and BYPASSRLS all false.
+- The same synthetic intent advances through six append-only versions. A
+  child process records provider acceptance and exits before acknowledgement
+  persistence; recovery persists the original key once and a replay is
+  idempotent. A second child exits after compensation acceptance and recovery
+  persists the distinct `<original-key>:compensation` key once.
+- Direct UPDATE and DELETE are refused, a sibling tenant cannot observe the
+  intent, and every labelled resource cleans up. SQLite and both PostgreSQL
+  cells produce canonical history SHA-256
+  `d59b3648c99690c016c73a3ca9012ca6e7d806429dccc0cbd109081656c5db9d`.
+  The schema, source/report/base binding, package/CI order, and six negative
+  evidence mutations are covered by the focused 37-test selector.
+- This is provider-neutral synthetic evidence on one host. It does not prove
+  live provider conformance, status reconciliation, accounting or settlement,
+  cross-host HA/quorum, automatic failover, distributed exactly-once delivery,
+  production recovery objectives, or production authorization assurance.
+
+## E-830: Receiver replay across synchronous PostgreSQL failover (2026-08-22)
+
+- Added
+  `.github/scripts/verify_postgres_writeback_receiver_failover_matrix.py` and
+  ADR 0544. The runner creates two exact, volume-backed PostgreSQL nodes per
+  version on separate control/replication networks, initializes the E-829
+  receiver before base backup, enables physical streaming plus synchronous
+  remote-apply, and retains fixed progress stages to stderr.
+- Command:
+  `python .github/scripts/verify_postgres_writeback_receiver_failover_matrix.py --output docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-22.json`.
+  Final retained result: PASS in 64.067 seconds on Docker Engine 29.7.2 / Python
+  3.14.6; report digest
+  `5ae22491c01eb93daf38dd7fe6788c4daa7a0d648fb7dfa53ca7edf11d5e07d1`.
+- Runtime cells are exact policy-owned images: PostgreSQL 16.14 via
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  and PostgreSQL 17.10 via
+  `postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`.
+- In each cell, the acknowledged request returns only inside a child process
+  and its response is not delivered to the caller. The standby already holds
+  one receipt/effect. After replication partition, the second request is not
+  classified from a client timeout: PostgreSQL itself must expose that backend
+  in IPC/`SyncRep` wait on COMMIT before the client is terminated.
+- Fencing verifies exact primary identity/state and removal before promotion.
+  The acknowledged identity replays exactly without a new effect. Writes pause
+  while the former-primary volume is re-seeded. After streaming returns to
+  synchronous remote-apply, the uncertain identity applies once and both nodes
+  expose two receipts/two effects with the same history.
+- Restart of each promoted primary re-discovers its dynamic Docker endpoint;
+  both requests replay with no count or history change. PostgreSQL 16/17,
+  rejoined standbys, restarted primaries, and SQLite all produce canonical
+  history SHA-256
+  `5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14`.
+- Local measured acknowledged-effect RPO is zero transactions in this
+  synchronous topology. Fencing-to-exact-replay RTO is 6.168 seconds on 16.14
+  and 6.199 seconds on 17.10 under a 60-second drill ceiling. These are
+  environment-bound measurements, not production SLOs.
+- Development findings retained rather than rewritten as successful evidence:
+  1. The first attempt proved `statement_timeout` does not bound a COMMIT
+     waiting in `SyncRep`; it was operator-interrupted, its exact labelled
+     resources were inspected and removed, and no report was written.
+  2. A host-port readiness race failed before mutation and auto-cleaned.
+  3. A promoted node missing its replication-network alias failed re-seed and
+     auto-cleaned.
+  4. Restart exposed an unbounded DSN probe; that attempt was interrupted and
+     its labelled resources were inspected and removed.
+  5. Bounded probes then correctly failed against the stale pre-restart port;
+     an independent current-port probe identified Docker Desktop endpoint
+     reassignment, and the topology auto-cleaned.
+  Endpoint rediscovery and two-second connect probes with 60-second deadlines
+  close those verifier defects. A first complete report then passed; a
+  low-value backend-PID fingerprint was removed and the final retained matrix
+  reran successfully from scratch. No failed or superseded run was relabeled.
+- The closed Draft 2020-12 schema, report digest/time/source binding, exact
+  images, role flags, response/partition/restart semantics, 23 true checks,
+  RPO/RTO bounds, history parity, package/CI contracts, secret absence, and six
+  negative mutations pass. The supply-chain validator now closes image
+  identity across the migration, receiver-idempotency, and receiver-failover
+  matrices. Focused report/policy selector: 37 passed. Ruff and Mypy pass;
+  Bandit reports no findings with fixed-shell-boundary comment notices only.
+- The first full `python -m pytest` run was not accepted as a pass: it exposed
+  one execution-contract failure because `depends_on: [E-829, E-228]` referred
+  to E-228, which is preserved as a completed slice under P3-ENT-010 rather
+  than a standalone current-backlog task. E-830 now depends only on the closed
+  direct predecessor E-829. The focused execution/failover regression then
+  passed 15/15. A fresh full run passed: 2,970 passed, 115 declared capability
+  skips, and 23 existing warnings across 3,085 collected tests in 531.47
+  seconds. No retry or `--last-failed` result was substituted for this full
+  rerun.
+- Final non-runtime gates: `python -m ruff check .` passed; Mypy passed across
+  525 source files; Bandit exited zero with no finding (comment-parser and
+  reviewed `nosec` notices remain visible); the closed supply-chain policy is
+  valid for 128 Python packages and 211 npm packages with zero active
+  exceptions or npm integrity gaps; and `uv lock --check` resolved 129 packages
+  on CPython 3.12.13.
+- The isolated locked command
+  `python .github/scripts/run_locked_python_audit.py --project-root . --python-version 3.12 --execution-mode isolated`
+  passed with zero known vulnerabilities and zero exceptions. Separate ambient
+  `python -m pip_audit` exited 1 because host-installed `pip 26.1.2` has
+  `PYSEC-2026-3721` and names 26.2 as the fix; this host observation is retained
+  and is not substituted for the clean locked result.
+- `python -m build --no-isolation` produced
+  `reconforge_erp-0.7.1.tar.gz` and
+  `reconforge_erp-0.7.1-py3-none-any.whl`. The 1,768-entry sdist contains exactly
+  the E-830 runner, ADR, retained report, closed schema, and report tests. The
+  625-entry wheel remains runtime-only and correctly adds no evidence-only
+  payload because E-830 changes no product runtime module.
+- Gitleaks 8.30.1 scanned all 663 commits / approximately 25.28 MB and a clean
+  `git archive` checkout / approximately 27.71 MB with `--redact=100`, the
+  repository configuration, and no findings. The archive directory and tar
+  were both resolved inside the workspace, previewed by exact target with
+  `git clean -nd`, removed by those exact targets, and verified absent. The
+  amended evidence commit is rescanned before final handoff.
+- Boundary: one Docker Desktop host, one real failure domain per two-node cell,
+  manual controller, synthetic digests/credentials, no quorum/witness,
+  automatic failover, cross-host/zone/region loss, live provider, accounting,
+  settlement, production RPO/RTO, push, PR, tag, release, or deployment.
+
+## E-829: PostgreSQL receiver idempotency parity (2026-08-22)
+
+- Added `reconforge/connectors/writeback_receiver_postgres.py`: an additive,
+  digest-only psycopg backend for the unchanged E-828 receiver contract. It
+  takes a transaction-scoped advisory lock over the canonical receiver/key
+  identity, atomically inserts one immutable receipt and synthetic effect, and
+  reconstructs exact replays through the shared validated response helper.
+- Command:
+  `python .github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py --output docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-08-22.json`.
+  Result: PASS on the first invocation in 14.142 seconds, Docker Engine 29.7.2,
+  Python 3.14.6; report digest
+  `3e53b99e9d33598d5f010d2b0ad405cbc167936840976564221f8b27bb4d33b1`.
+- Exact runtime cells:
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  reported PostgreSQL 16.14, and
+  `postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`
+  reported PostgreSQL 17.10.
+- In each cell, sequential replay returned the exact response; a changed
+  payload under the same key was refused; eight spawned processes converged to
+  one apply and seven replays; and a retry after child exit immediately after
+  commit was replayed. Three receipts equal three synthetic effects.
+- The runtime role reported superuser, create-database, create-role,
+  replication, and BYPASSRLS all false. Receipt UPDATE, effect DELETE, and a
+  malformed direct digest insert were refused. Each native custom dump was
+  listed and restored into an independent database with equal counts/history
+  and no additional effect on replay. Exact container cleanup passed.
+- Both PostgreSQL cells and the refreshed E-828 SQLite report produced
+  canonical history SHA-256
+  `1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8`.
+  Version-specific native dump hashes are retained separately and are not
+  treated as cross-version canonical bytes.
+- Focused receiver/backend/report tests: 33 passed. Ruff passes for all changed
+  implementation, runner, export, and test surfaces. Mypy initially found two
+  test-only indexing errors from an over-broad JSON type; the annotation was
+  corrected without changing runtime behavior. Bandit reports no findings;
+  its notices cover reviewed immutable table constants, shell-free fixed
+  command vectors, and the randomized path inside a disposable container.
+- Final full regression: PASS, 3,075 collected, 2,960 passed, 115 declared
+  capability skips, 23 existing warnings, 716.62 seconds on ambient Python
+  3.14.6. Full-tree Ruff passes; Mypy passes across 525 source files; Bandit
+  over `reconforge` and the new runner has zero findings.
+- Closed supply-chain policy validation reports 128 Python packages, 211 npm
+  packages, zero active exceptions, and zero npm integrity gaps. `uv lock
+  --check`, changed JSON/YAML parsing, and `git diff --check` pass. The isolated
+  locked audit passes on uv 0.11.32 / Python 3.12.13 with no known findings.
+- Ambient `python -m pip_audit` remains FAIL because the host has `pip 26.1.2`
+  affected by `PYSEC-2026-3721` (fixed in 26.2); the unpublished local package
+  is also not a PyPI audit subject. This host result is not relabeled as a
+  project-controlled dependency success.
+- `python -m build --no-isolation`: PASS. The 1,763-entry sdist contains the
+  PostgreSQL receiver, runner, retained matrix, schema, ADR, and both tests; the
+  625-entry wheel contains both receiver implementations and public exports.
+  Exact required-member checks pass.
+- Gitleaks 8.30.1 scans the complete local history after the implementation
+  commit and repeats after the evidence-only amend: each pass covers 662
+  commits / 25.18 MB with zero findings. The corresponding clean `git archive`
+  scans each cover 27.62 MB with zero findings. The first archive setup command
+  used an unsupported PowerShell parameter and therefore performed no scan;
+  the already-created tar/empty directory were validated, the archive was then
+  extracted and scanned, and every exact temporary target was removed through
+  a dry-run-verified path-specific `git clean`.
+- A closed Draft 2020-12 schema fixes both ordered versions, exact image
+  digests, non-privileged role flags, 17 true checks per cell, three cases,
+  history cardinality, SQLite parity, sources, policy, limitations, and report
+  digest. Negative tests reject false checks, version/cardinality drift, and
+  undeclared fields. CI is defined to retain the matrix before broader server
+  boundaries; D-485 prevents push or hosted-run claims.
+- Boundary: one Docker Desktop host, two sequential single-node PostgreSQL
+  versions, synthetic digest-only effects, no live provider/status contract,
+  cross-host consensus/failover, accounting posting, settlement, HA/DR,
+  production exactly-once assurance, push, PR, tag, release, or deployment.
+
+## E-828: Bounded receiver-side write-back idempotency (2026-08-22)
+
+- Added `reconforge/connectors/writeback_receiver.py`: a closed request model
+  and SQLite reference receiver that stores identifiers/digests only. One
+  transaction inserts both the immutable receipt and synthetic effect under the
+  receiver/key primary key; exact replay reconstructs and validates the same
+  canonical `WritebackProviderResponse`, while changed operation or payload
+  digest raises `writeback_receiver_idempotency_conflict`.
+- Command:
+  `python .github/scripts/verify_writeback_receiver_idempotency.py --output docs/execution/WRITEBACK_RECEIVER_IDEMPOTENCY_DRILL_2026-08-22.json`.
+  Refreshed result after extracting the shared response helpers: PASS in 2.473
+  seconds on Windows 11, Python 3.14.6, SQLite 3.50.4,
+  `spawn`; report digest
+  `cfe14335be6d04387d9f2c1be2909a1d843ebefe744e421f288cf096479274fb`.
+- Sequential case: first disposition `applied`, second `replayed`, identical
+  response. Concurrent case: eight spawned processes yield exactly one apply
+  and seven replays with one response digest. Crash case: a child exits 0 after
+  commit; the parent retry is `replayed` and creates no second effect.
+- Same-key payload retargeting, receipt UPDATE, and effect DELETE are refused.
+  The final store has three receipts and three effects at canonical SHA-256
+  `1c42c656b8e09897710e05411c78a91c709c15b70309d2e68f1e4417f1ac32f8`.
+  An independent SQLite backup has the same counts/digest and replays without
+  an additional effect. All eleven checks and cleanup are true.
+- The first runner invocation failed during Windows Temp cleanup because SQLite
+  context managers ended transactions but did not close every handle. It wrote
+  no retained report. Explicit connection and multiprocessing-queue closure was
+  added; 7/7 unit tests and the retained drill then passed, and the exact failed
+  temp directory was verified and removed.
+- Focused receiver/report/network/SDK/package selector: 85 passed. Ruff and
+  Mypy pass for the changed receiver/runner/export surfaces. The report's closed
+  Draft 2020-12 schema, canonical digest, source binding, live base-commit
+  object, history/cardinality invariants, package manifest, secret/payload
+  absence, CI order/artifact, and four negative mutations pass.
+- Expanded receiver/report/write-back/Phase-4/policy selector: 121 passed. Full
+  regression: PASS, 3,058 collected, 2,943 passed, 115 declared capability
+  skips, 23 existing warnings, 396.97 seconds on ambient Python 3.14.6.
+- Full-tree Ruff: PASS. Mypy: PASS across 524 source files. Bandit over
+  `reconforge` and the new runner: PASS with reviewed fixed-SQL notices. Closed
+  supply-chain validation, `uv lock --check`, JSON/YAML parsing, and `git diff
+  --check`: PASS.
+- Ambient `python -m pip_audit`: FAIL on host-installed `pip 26.1.2` /
+  `PYSEC-2026-3721`; this is not relabeled. The isolated locked audit passes on
+  uv 0.11.32 / Python 3.12.13 with 128 locked packages, zero findings, and zero
+  exceptions.
+- `python -m build --no-isolation`: PASS. The 1,756-entry sdist contains the
+  receiver, runner, retained report, schema, ADR, and both tests; the 624-entry
+  wheel contains the receiver and public connector exports. No intended member
+  is missing.
+- Gitleaks 8.30.1 direct scans of the receiver, runner, report, schema, ADR, and
+  report test passed. Its first receiver-unit-test scan flagged the literal
+  synthetic idempotency fixture as `generic-api-key`; the key was constructed
+  from low-entropy fixed parts without suppression or allowlisting, the focused
+  tests passed, the direct scan returned zero leaks, and the sdist was rebuilt.
+- CI definition: `server-boundaries` runs the drill and uploads its report with
+  a digest-pinned action before broader live tests. D-485 prevents a push, so no
+  hosted run is claimed.
+- Boundary: one host and SQLite database coordination, synthetic digest-only
+  effects, no live vendor/status contract, cross-host consensus, database
+  failover, accounting posting, settlement, or production exactly-once claim.
+
+## E-827: PostgreSQL write-back identity migration version matrix (2026-08-22)
+
+- Declared cells are exact repository-owned runtime profiles, not versions
+  inferred during execution:
+  - PostgreSQL 16.14 via
+    `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`;
+  - PostgreSQL 17.10 via
+    `postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`.
+- Command:
+  `python .github/scripts/verify_postgres_writeback_identity_migration_matrix.py --output docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-08-22.json`.
+  Result: PASS on the first matrix invocation, 24.178 seconds, Docker Engine
+  29.7.2, report digest
+  `6c9e41dd55ef0ff9292a52aacd15030766660db85c5ddda78391aeeb4ecb73f3`.
+- Each cell executed all 89 migrations to 0088, inserted the same valid
+  proposed/approved history, captured and listed a custom native dump, inserted
+  a drifted dispatched version permitted by the legacy trigger, and proved 0089
+  refusal with unchanged revision, history digest, and trigger. Each pre-drift
+  restore independently reached 0089 without history mutation and rejected the
+  drifted INSERT through the enhanced trigger.
+- Both cells produced valid-history SHA-256
+  `ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886`
+  and invalid-history SHA-256
+  `7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4`.
+  The version-specific native dump digests remain separate because physical
+  dump bytes are not a cross-version canonical artifact.
+- The report binds migration commit/source, shared observation runner, matrix
+  runner, and the closed supply-chain policy. Its schema fixes both ordered
+  images/versions, every check, parity fields, exact limitations, and rejects
+  false cleanup, version drift, false parity, or undeclared fields.
+- CI definition: `server-boundaries` runs the matrix after the source-service
+  Alembic upgrade and before the broader live tests, then uploads the report
+  with pinned `actions/upload-artifact` even on failure. D-485 prevents a push,
+  so this is checked workflow evidence, not an identified hosted run.
+- The pre-refactor E-826 artifact test correctly failed only on its old runner
+  source digest. A fresh PostgreSQL 17.10 E-826 run regenerated the retained
+  report at digest
+  `b143c756a27b914ae92a32c3a1595529bd87fc4d64784afee1710a817a44674e`;
+  the full E-826 schema/source/runtime contract then passed.
+- One focused supply-chain regression initially failed because its old static
+  assertion expected `IMAGE_REFERENCE` to appear directly in `docker run`.
+  The policy validator itself passed. The test was corrected to require the
+  default digest to flow into the strict shared `image_reference` argument and
+  to verify both matrix constants; no policy weakening or retry concealment was
+  used.
+- Focused matrix/drill/supply-chain run: 38 passed. Matrix/policy/Phase-4
+  workflow selector: 43 passed. The final documentation selector passed 51/51.
+- Full regression: PASS, 3,042 collected, 2,927 passed, 115 declared capability
+  skips, 23 existing warnings, 410.54 seconds on ambient Python 3.14.6.
+  Full-tree Ruff, Mypy across 523 source files, Bandit over `reconforge` and all
+  changed policy/migration runners, closed supply-chain validation, `uv lock
+  --check`, changed JSON/YAML parsing, and `git diff --check`: PASS.
+- Ambient `python -m pip_audit`: FAIL because host-installed `pip 26.1.2` is
+  reported under `PYSEC-2026-3721`; this remains environment evidence and is
+  not relabeled. The isolated locked audit passed on uv 0.11.32 and Python
+  3.12.13 with 128 locked Python packages, zero findings, and no exceptions.
+- `python -m build --no-isolation`: PASS; built the 0.7.1 sdist and wheel. The
+  1,749-entry sdist contains both migration runners, both retained reports, the
+  closed matrix schema, ADR 0541, and the matrix test. The 623-entry wheel
+  contains Alembic 0089. The only whitespace warning is the preserved unrelated
+  user-owned line-ending change in `P3_ENT_013_EXIT_AUDIT.yaml`.
+- Gitleaks 8.30.1 direct no-git scans of the shared observation runner, matrix
+  runner, and changed supply-chain policy each passed with zero leaks. Its first
+  post-implementation full-history scan covered 660 commits / 25.03 MB with zero
+  leaks. A clean `git archive` extraction scanned 27.47 MB with zero leaks; an
+  initial dynamic cleanup command was rejected before execution, the fixed
+  in-workspace target was then verified exactly and removed successfully.
+- Boundary: one Windows Docker Desktop host, Linux/AMD64, two sequential
+  single-node versions, synthetic credentials/data. No hosted run, live
+  provider, accounting posting, rolling upgrade, replication, cross-host HA/DR,
+  production recovery, or production assurance.
+
+## E-826: PostgreSQL write-back identity migration refusal and restore (2026-08-22)
+
+- Runner:
+  `.github/scripts/verify_postgres_writeback_identity_migration.py`.
+  Runtime: Docker Engine 29.7.2 and exact image
+  `postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`.
+- Command:
+  `python .github/scripts/verify_postgres_writeback_identity_migration.py --output docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.json`.
+  Result: PASS. Source revision 0088 refused the drifted upgrade; restored
+  database reached 0089; report SHA-256
+  `b143c756a27b914ae92a32c3a1595529bd87fc4d64784afee1710a817a44674e`.
+- Valid two-version history SHA-256:
+  `ec931f9cf25e1b9f8c1b39cc83e6c38e2bc3384b669516505a46d4aaabb30886`.
+  Drifted three-version history SHA-256:
+  `7384d0a6b70c466e099461bb28b24a979f90cd0c78ea8ae97e5cdf1d77e950a4`.
+  Native pre-drift dump SHA-256:
+  `157792de539a8b9fe06eb4530aa6096797c54d43fa7af4b1b0f06996d2ecffaf`.
+- Observed refusal invariants: Alembic stayed at 0088, the drifted history digest
+  stayed unchanged, and `connector_writeback_intent_guard` retained its
+  legacy definition. No UPDATE, DELETE, or normalization was used.
+- Observed restore invariants: `pg_restore --list` succeeded; an independent
+  database restored at 0088 with the valid-history digest, upgraded to 0089,
+  retained that digest, installed the INSERT/UPDATE/DELETE trigger, and rejected
+  a direct payload-drift INSERT.
+- Cleanup: the runner compared the exact container ID before stop and verified
+  `docker inspect` could no longer resolve it before setting
+  `cleanup_complete=true`. A post-run filtered Docker listing returned no
+  matching containers.
+- Subject binding: migration commit
+  `c7e357335c71a15889375be01bd3e6bf8d70041c`, canonical migration-source
+  SHA-256 `92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0`,
+  and canonical runner-source SHA-256
+  `e96d2fcda82f1b393024cc30c7b57f216346fb48d0510d623c43618c65a67b24`.
+- Development findings: three earlier invocations failed on missing synthetic
+  `created_at`, tenant, and migration-path fixtures. All failed closed, removed
+  their `--rm` containers, and did not replace the retained report. The fixture
+  omissions were fixed before the final successful run; none is counted as
+  evidence.
+- `python -m pytest -q tests/test_postgres_writeback_identity_migration_drill.py`:
+  PASS, 5/5. The tests validate the Draft 2020-12 closed schema, UTC execution
+  time, canonical report digest, distinct valid/invalid history digests,
+  runner/migration source binding, image/revision binding, and rejection of
+  false checks, version drift, and undeclared evidence.
+- `python -m ruff check .github/scripts/verify_postgres_writeback_identity_migration.py tests/test_postgres_writeback_identity_migration_drill.py`:
+  PASS.
+- `python -m bandit -q .github/scripts/verify_postgres_writeback_identity_migration.py`:
+  PASS with one informational notice for the reviewed isolated `/tmp` path
+  suppression; no failed findings.
+- Focused boundary:
+  `python -m pytest -ra tests/test_connector_writeback.py tests/test_application_writeback.py tests/test_sqlite_writeback.py tests/test_postgres_writeback.py tests/test_alembic_postgres.py tests/test_api_connectors.py tests/test_postgres_operations.py tests/test_postgres_writeback_identity_migration_drill.py tests/test_supply_chain_policy.py`:
+  PASS, 88 passed, four declared live-PostgreSQL skips, one existing warning.
+- Report/policy/parity selector: PASS, 44/44. An earlier exploratory selector
+  named nonexistent `tests/test_execution_state.py` and
+  `tests/test_execution_backlog.py`; pytest ran zero tests and returned exit 1.
+  It was corrected to real execution-contract files and is not counted as
+  passing evidence.
+- Full regression: PASS, 3,032 collected, 2,917 passed, 115 declared capability
+  skips, 23 existing warnings, 405.78 seconds on ambient Python 3.14.6.
+- Full-tree Ruff: PASS. Mypy: PASS across 523 source files. Bandit over
+  `reconforge`: PASS with the existing reviewed notice inventory. Closed
+  supply-chain policy: PASS with 128 Python and 211 npm packages, zero active
+  exceptions, and zero npm integrity gaps. `uv lock --check`: PASS.
+- `python -m pip_audit`: FAIL on the ambient interpreter because its globally
+  installed pip is 26.1.2 and is reported under PYSEC-2026-3721; this command is
+  retained as environment evidence and not relabeled. The required unified
+  command,
+  `python .github/scripts/run_locked_python_audit.py --project-root . --python-version 3.12 --execution-mode isolated`,
+  passes with uv 0.11.32, Python 3.12.13, 128 locked Python packages, zero
+  findings, and no active exceptions. One earlier supply-chain validation call
+  used unsupported `--root`; it returned usage error and was not evidence. The
+  corrected `--project-root .` command passes.
+- `python -m build --no-isolation`: PASS; sdist and wheel built. The 1,744-entry
+  sdist contains the runner, report, schema, ADR, and test. The 623-entry wheel
+  contains Alembic 0089. Changed JSON/YAML parsing and `git diff --check` pass,
+  preserving only the unrelated user-owned line-ending warning.
+- Gitleaks 8.30.1 first scanned the pre-amend commit and correctly flagged the
+  literal synthetic `idempotency_key` fixture under `generic-api-key`. No
+  suppression, fingerprint, or allowlist was added. The fixture now uses a
+  constructed synthetic constant; its direct no-git scan passes, and the live
+  report was regenerated so its runner-source binding remains exact. The final
+  full-history scan passes across 659 commits / 24.98 MB with zero leaks. A
+  clean `git archive` extraction passes a no-git scan across 27.43 MB with zero
+  leaks; its exact verified temporary directory was removed afterward.
+- Boundary: one Windows Docker Desktop host, one PostgreSQL version, one
+  disposable node, synthetic credentials/data, and no live provider, accounting
+  posting, supported-version matrix, cross-host HA/DR, production secret store,
+  or production recovery claim. D-485 forbids publication; no push, PR, tag,
+  release, or deployment occurred.
+
+## E-825: Immutable write-back proposal identity (2026-08-22)
+
+- Adversarial reproduction established that the former repositories validated
+  status adjacency but did not compare the persisted proposal identity with a
+  caller-supplied next version. A direct/internal caller could therefore
+  retarget an approved version without modifying the previous row.
+- `WritebackIntent.proposal_digest` canonically hashes the schema/scope,
+  connector/operation, payload digest, idempotency key, requester/request time,
+  and captured feature flag. Authorized lifecycle transitions keep that digest
+  stable while retaining distinct full evidence digests.
+- SQLite migration 42 and PostgreSQL Alembic 0089 audit existing histories and
+  install INSERT guards. Tests cover every proposal field, non-adjacent state,
+  repository bypass attempts, direct SQLite INSERT drift/state jumps, refusal
+  of a pre-existing drifted SQLite history, temporary audit-state isolation,
+  PostgreSQL SQL shape, migration lineage, and additive API correlation.
+- Focused connector, SQLite, PostgreSQL contract, Alembic, operations-registry,
+  and API selectors pass with only declared live-service skips. Full local
+  regression: **PASS**, 3,027 collected, 2,912 passed, 115 declared capability
+  skips, and 23 existing framework/legacy-input warnings. Ruff: **PASS**.
+  Mypy: **PASS** across 523 source files. Bandit: **PASS** after documenting
+  the fixed-constant migration SQL suppression. Closed supply-chain policy and
+  `uv lock --check`: **PASS**. Sdist/wheel build: **PASS**, including Alembic
+  0089. YAML contracts and `git diff --check`: **PASS**, with only the
+  preserved unrelated line-ending warning.
+- Disposable PostgreSQL runtime: Docker Engine 29.7.2 ran PostgreSQL 17.10
+  Alpine at reviewed digest
+  `sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193`.
+  The two live write-back tests passed under a `NOSUPERUSER`, `NOINHERIT`,
+  `NOBYPASSRLS` application role, including repository proposal drift and
+  administrator direct-INSERT trigger refusal. The isolated Alembic contract
+  upgraded to head, downgraded to 0051 and back to head, downgraded to 0011
+  and returned to head, then verified migration status at 0089. Four selected
+  tests passed; the container and isolated databases were removed afterward.
+- Boundary: this is one disposable local PostgreSQL host with synthetic data.
+  No provider, financial posting, production data, publication, HA/DR, or
+  deployment is claimed.
+- Post-commit Gitleaks 8.30.1 evidence: the checksum-verified Windows binary
+  scanned all 658 commits (24.93 MB) and reported no leaks. A `git archive`
+  checkout scanned 27.38 MB from its own root and also reported no leaks. One
+  deliberately discarded absolute-target invocation surfaced the existing
+  synthetic reliability fixture because its exact relative fingerprint could
+  not match an absolute extracted path; rerunning with CI-equivalent relative
+  paths applied the governed fingerprint and passed. The generated workspace
+  tree was not used as evidence.
+
+## E-824: Governed fixed VEX and retained OpenSSL release block (2026-08-22)
+
+- Primary CPython evidence:
+  - official Python 3.11.16 release metadata dates the signed security release
+    to 2026-08-12 and names gh-145599/CVE-2026-3644 and
+    gh-145986/CVE-2026-4224 as repaired;
+  - GitHub's CPython comparison shows the signed `v3.11.16` tag is three
+    commits after the merged CVE-2026-7210 3.11 backport
+    `cbaecf9f16da611a646d507c1cbca265c588fc56`, with bundled Expat 2.8.3
+    before the final version commit; and
+  - the exact image reports Python 3.11.16 and Expat 2.8.3. The other 3.11
+    backport commits are `dae4b1a21f8df4570e30986affd61bbe4ade4cef`
+    and `642865ddf4b232da1f3b1f7abcfa3254c4bfe785`.
+- Primary OpenSSL evidence: the upstream CVE-2026-14456 advisory limits the
+  defect to the QUIC server incoming-channel queue, rates it Low upstream, and
+  identifies 3.5.0 through 3.5.7 as affected and 3.5.8 as fixed. The exact
+  image reports OpenSSL 3.5.7. Grype/NVD currently rates both package matches
+  High; policy continues to enforce the scanner severity rather than selecting
+  the more favorable rating.
+- Official image and package comparison:
+
+  | Candidate | Resolved identity | Exact components | Grype Critical / High |
+  | --- | --- | --- | ---: |
+  | Python 3.11 Alpine index `6857d2da...fada1` | 3.11.16 Alpine 3.24 | Expat 2.8.3, OpenSSL 3.5.7 | 0 / 7 in the untrimmed official base; the ReconForge runtime removes the two global build-package findings and retains five |
+  | Python 3.12 Alpine index `d09d15e6...7dc31` | 3.12.14 Alpine 3.24 | Expat 2.8.3, OpenSSL 3.5.7 | 0 / 5 |
+  | Python 3.13 Alpine index `540c7d91...a934d` | 3.13.15 Alpine 3.24 | Expat 2.8.2, OpenSSL 3.5.7 | 0 / 2 |
+  | Python 3.11 slim-bookworm index `2e32f7d3...29f91` | 3.11.16 Debian 12 | OpenSSL 3.0.20 | 10 / 38 in the untrimmed official base |
+
+  Syft 1.51.0 generated native inventories and Grype 0.117.0 used the same
+  local v6.1.9 database. Alpine 3.23 and 3.24 `apk policy` both reported
+  3.5.7-r0 as installed and latest for libcrypto3/libssl3. Candidate evidence
+  is time-bounded; 3.13 is also outside the declared tested application matrix.
+- `docs/security/container-runtime.openvex.json` is OpenVEX 0.2, SHA-256
+  `3263ae100c4b89aff8737a11ab708fadd4105c8d3aed7ba9514bbcc0df352d95`,
+  and contains exactly three `fixed` decisions for
+  `pkg:generic/python@3.11.16`. Policy permits no other VEX status and requires
+  review within 30 days.
+- Grype moved exactly the three reviewed Python matches to `ignoredMatches`,
+  each with one `namespace=vex, vex-status=fixed` rule. The repository gate
+  independently matched the CVE/product pairs to the exact Syft inventory.
+  The five-High total remains unchanged; every fixed record has explicit VEX
+  identity while the two OpenSSL records have no VEX or exception.
+- The checked v2 evidence remains **blocked**, exit 1, on exactly
+  CVE-2026-14456 for libcrypto3 and libssl3 3.5.7-r0. It records three applied
+  fixed findings, 68 packages, 94.11% license inventory, database v6.1.9, and
+  SHA-256 `3cae53bf8728fa71d6a6d6d61e09a9916f09c40d61e689b7055031e76a1fec96`.
+- Container-gate file: **PASS**, 16 executable tests and one declared Windows
+  symlink capability skip. The combined gate/policy selector collects 44 tests
+  and passes 43 plus the same skip under isolated Python 3.11.15 and 3.12.13
+  runtimes. Full local regression: **PASS**, 2,894 passed, 115 declared skips,
+  23 warnings, 3,009 collected, in 432.89 seconds on ambient Python 3.14.
+- Full-tree Ruff: **PASS**. Mypy: **PASS** across 525 source files. Bandit:
+  **PASS** with the existing reviewed warning/suppression inventory. Closed
+  supply-chain policy, `uv lock --check`, changed JSON/schema and all workflow
+  YAML parsing, sdist/wheel build, and `git diff --check`: **PASS**.
+- Re-running the validator from the exact Syft/Grype documents returns exit 1
+  for the two policy blockers and regenerates the checked 4,085-byte evidence
+  byte-for-byte at SHA-256
+  `3cae53bf8728fa71d6a6d6d61e09a9916f09c40d61e689b7055031e76a1fec96`;
+  this is a policy block, not scanner or evidence-generation failure.
+- Boundary: no `not_affected` assertion, exception, base-image mutation,
+  registry login, push, PR, tag, release, or deployment occurred. Resume only
+  after a supported base contains fixed OpenSSL or independent security review
+  approves a policy change. D-485 remains active.
+
+## E-823: Exact-image pre-publication container security gate (2026-08-22)
+
+- Official release metadata and checksum files identified Syft 1.51.0 at
+  commit `2293641e3bd628a01bb37639318d62c0ebe89b39` and Grype 0.117.0 at
+  commit `b5fa92bbcbef655497e3be840a2f718380e2cdd3`. The downloaded Windows
+  AMD64 archives matched SHA-256
+  `fc5ffaeffb993576ece9c791da5a688fb2c8969a1479bbfe58583672c64da336`
+  and `7728ee9c06792e62444bd651274e4dd1e30eec02eee1266bb6c9d237d0f0cb`;
+  both binaries reported the expected application/version/commit/platform.
+  The release policy separately pins the official Linux AMD64 archive hashes
+  used by hosted workflows.
+- Grype database update **PASS** after downloading the current database:
+  schema v6.1.9, built `2026-08-22T06:14:16Z`, and valid at scan time.
+  Syft native JSON retained Alpine 3.24.1, Linux AMD64, exact image config
+  `sha256:a39843a5a48d3c071aa8988f0254456753d93bb6735e1648b4734eeb48c3ac1f`,
+  local manifest
+  `sha256:b89e9912efa6d274d850ecfbe701b9d44b7b8f041e2c8ed68c939f673cd3bea5`,
+  and 68 package artifacts.
+- `validate_container_security.py` exited **1 (policy blocked)**, not operational
+  error 2. It recorded five High, twelve Medium, two Low, one Negligible, zero
+  Critical, and zero Unknown findings. The five release blockers are
+  CVE-2026-14456 for libcrypto3 3.5.7-r0 and libssl3 3.5.7-r0, plus
+  CVE-2026-3644, CVE-2026-4224, and CVE-2026-7210 for Python 3.11.16.
+  No ignored match, VEX, or active exception was accepted or fabricated.
+- Package-license inventory found usable metadata for 64/68 packages: 9,411
+  basis points against the 9,000 policy minimum. Missing metadata is explicit
+  for `.python-rundeps`, markdown-it-py, mdurl, and Python. This proves only
+  inventory coverage and is not a legal compatibility or distribution-rights
+  conclusion.
+- `docs/execution/CONTAINER_SECURITY_LOCAL_2026-08-22.json` validates against
+  its closed schema. Rerunning the gate from the retained raw scanner inputs
+  produced the same evidence SHA-256
+  `cbcffc70bf9351558669b1640f1dc483da6c1101c6704cdc8bfc4351e3c0c479`
+  byte for byte while retaining the expected blocked exit.
+- Focused selector across container evidence, supply-chain policy, release
+  SBOM/release workflows, repeated HA/DR, air-gap, and PostgreSQL reliability
+  contracts: **PASS**, 66 tests collected with one declared Windows symlink
+  capability skip. Phase 1-4 execution contracts: **PASS**, 14/14.
+- Full local regression `python -m pytest -q --tb=short -ra`: **PASS**, 3,002
+  tests collected and all executable tests passed; live PostgreSQL, Redis,
+  S3/object-lock, public-network, and Windows link/privilege capabilities
+  remained explicit skips. Ruff **PASS**; mypy **PASS** for 523 source files;
+  Bandit **PASS** with the existing reviewed warnings; policy validation and
+  `uv lock --check` **PASS**; wheel/sdist build **PASS**; workflow YAML parse
+  and `git diff --check` **PASS**.
+- One deliberately incorrect local invocation of the hosted `current` audit
+  mode failed operationally because uv encountered the preserved foreign
+  `.venv/lib64` path on Windows. The documented local `isolated` mode then
+  **PASS** with Python 3.12.13, the exact locked 128-package audit boundary,
+  zero active exceptions, and no Python findings. The failed invocation is an
+  environment/mode mismatch, not a converted success.
+- The release workflow now runs the exact gate before `docker/login-action`,
+  preserves blocked evidence, and after a pass verifies that registry manifest
+  bytes match their digest and reference the scanned image configuration. The
+  weekly/manual security job repeats the local gate. These hosted definitions
+  have not run on this unpushed branch.
+- Boundary: the current image is not releaseable under policy. The evidence is
+  local and time-bounded, scanner findings may require upstream/remediation or
+  independent reachability/VEX review, license compatibility is unassessed,
+  and no registry push, hosted attestation, compliance, certification, or
+  production-readiness claim is made. D-485 remains active; E-824 owns
+  remediation.
+
+## E-822: Bounded non-root container runtime and relative publication repair (2026-08-22)
+
+- Environment: Windows host, Docker Desktop 4.87.0 (236836), Linux engine
+  29.7.2/API 1.55 and BuildKit desktop-linux. The rejected baseline used pinned
+  Python slim digest `a3ab0b966bc4e91546a033e22093cb840908979487a9fc0e6e38295747e49ac0`;
+  the accepted runtime uses official Python 3.11 Alpine index digest
+  `6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1`
+  (amd64 manifest `cc19a3e1085aba7d26690cf0725d9a3e083cbea0feec34ba8133d40a8ac1d399`,
+  Python 3.11.16/Alpine 3.24, official-image revision `fe89472b`).
+- Baseline `docker build --progress=plain -t reconforge:pre-e822 .` **PASS**:
+  build context 53.82 MB; image
+  `sha256:dd0a669b507a24573163a4d07136c6cd975486b1d22ec84db5d6debb8bfaa99b`,
+  149,556,826 bytes; `id` proved `uid=0(root) gid=0(root)`.
+- Intermediate two-stage Debian `reconforge:e822` build **PASS** functionally,
+  but `docker scout cves --only-severity critical,high --exit-code` correctly
+  exited 1: 173 packages, two Critical/eight High findings across Debian Perl,
+  OpenSSL, and global wheel/jaraco build packages. It is rejected evidence.
+- Final `docker build --progress=plain -t reconforge-erp .` **PASS**: the
+  workflow-named local rebuild used a deny-by-default 216.25 KB context; image
+  runtime manifest `sha256:23316ae8f0da9e68eb5f4cf00f0ca556da1a259f564df047a3ddb3c342501c03`,
+  config `sha256:a39843a5a48d3c071aa8988f0254456753d93bb6735e1648b4734eeb48c3ac1f`,
+  and 58,773,988 bytes. `id` proves `uid=10001(reconforge)` and absence checks prove
+  no uv, global pip launcher, project manifests, `/app/reconforge` source, or
+  `/app/docs`. Excluding documentation avoids an evidence/self-subject digest
+  cycle while keeping version-matched docs in source and release surfaces.
+- A second fully cached build retained the exact runtime manifest/config/size
+  but changed the local image-index digest because BuildKit regenerated its
+  attached provenance manifest. This is explicit evidence that OCI index-byte
+  reproducibility remains open; no reproducibility claim is inferred.
+- With `--network none --read-only`, a 16 MiB UID/GID-bound `/tmp` tmpfs and a
+  64 MiB UID/GID-bound `/app/output` tmpfs: Doctor **PASS**; sample validation
+  **PASS** with zero errors/ten expected data-quality warnings; audit-basic
+  control-pack validation **PASS** with eight rules.
+- The first 256 MiB-output demo attempt failed at client-pack publication with
+  `Client pack publication recovery state is ambiguous`. Root cause: relative
+  expected staging path versus absolute enumerated sibling identity. After ADR
+  0536 normalization, the same exact hardened command **PASS**, writing the
+  management pack, reports, dashboards, review artifacts, evidence binder,
+  client pack, reconciliation workbooks, and rule results.
+- Docker Scout 1.24.0 final exact-image scan **PASS** (exit 0): 82 indexed
+  packages and zero Critical, High, Medium, or Low findings. Scout warned that
+  Windows held its temporary archive during cleanup; indexing and gate exit
+  remained successful. The scan is time-bounded and is not signature,
+  provenance, reachability, license, or future-advisory proof.
+- The successful scan targeted an image index carrying the same exact runtime
+  manifest `23316ae8...` recorded above. A later scan of the regenerated local
+  attestation index indexed the same 82 packages but its CVE query was
+  **unavailable** after Docker Scout API connectivity timed out; it is neither
+  pass nor product failure and does not replace the successful content-subject
+  result.
+- `pytest -q tests/test_client_pack_copy_publication.py
+  tests/test_client_pack_publication_recovery.py
+  tests/test_supply_chain_policy.py`: **PASS** (51/51). Focused Ruff **PASS**;
+  focused mypy **PASS**. The expanded execution/release selector passes 84/84.
+- Final full local regression **PASS** in one run after collecting 2,985 tests;
+  every executed test passed and the declared PostgreSQL/Redis/S3/network,
+  object-lock, symlink/privilege, and other capability gates remained explicit
+  skips. Full-tree Ruff **PASS**; mypy **PASS** for 523 source files; Bandit
+  **PASS** with the existing reviewed warning/suppression inventory; policy
+  validation, exact uv 0.11.32 `uv lock --check`, package sdist/wheel build,
+  and `git diff --check` **PASS**.
+- Boundary: local synthetic/no-network execution only. Image reproducibility,
+  CVE/license completeness, hosted enforcement, signature/provenance,
+  production volume ownership, service hardening, and deployment assurance are
+  not established. Publication remains frozen by D-485.
+
+## E-821: Platform-specific developer environment bootstrap (2026-08-22)
+
+- Initial `manage_developer_environment.py doctor` exited 1 with overall
+  `needs-bootstrap`, target `DEVENV-ENV-MISSING`, and preserved legacy
+  `DEVENV-ENV-FOREIGN`. The legacy `.venv/pyvenv.cfg` identified a Linux Python
+  home and had no Windows `Scripts/python.exe`; the tool made no mutation.
+- `manage_developer_environment.py bootstrap --python-version 3.12`: **PASS**.
+  Exact uv 0.11.32 validated the current 128-package lock, synchronized all
+  extras non-editably into ignored `.venv-windows`, and ran ReconForge Doctor
+  successfully. The final report returned `bootstrapped` and `DEVENV-READY`.
+- A second bootstrap and a separate Doctor both exited zero, proving the local
+  path is idempotent and reports Python 3.12 without touching legacy `.venv`.
+- `python -m pytest -q tests/test_developer_environment.py`: **PASS** (8/8).
+  The tests cover platform naming, direct-child confinement, out-of-project and
+  nested refusal, missing/foreign stable findings, byte preservation,
+  activation commands, exact locked/all-extras/non-editable sync construction,
+  pre-sync refusal of failed targets, exact uv policy, and unsupported Python
+  refusal.
+- `.venv-windows/Scripts/python.exe -m pytest -q --tb=short -ra`: **PASS**,
+  100% after collecting 2,981 tests. Every executed test passed; declared
+  PostgreSQL/Redis/S3/network/object-lock/platform capability skips and the
+  existing Starlette/SAML/legacy-financial-input warnings remained visible.
+- Full-tree Ruff **PASS**; mypy **PASS** for 523 source files; Bandit **PASS**
+  with existing reviewed suppression-comment warnings; supply-chain policy
+  validation **PASS**; `git diff --check` **PASS**. The immediately preceding
+  E-820 web/typecheck/unit/build/npm/E2E gates apply to the same ancestor and
+  this slice changes no web or application source.
+- Boundary: one current Windows host and public/configured package resolution.
+  No hosted, macOS/Linux, private-index, proxy, air-gap, clean-host, or installer
+  assurance follows. The pre-existing `.venv` remains owner-managed.
+
+## E-820: Locked Python advisory remediation and unified audit runner (2026-08-22)
+
+- Baseline hash-exported audit rejected locked `pip 26.1.2` with
+  `PYSEC-2026-3721` and identified `26.2` as fixed. Pinned uv 0.11.32 refreshed
+  that package only; `uv lock --check` resolves 129 total project/package
+  records and the closed validator inventories 128 non-root packages.
+- `python -m pytest tests/test_locked_python_audit.py
+  tests/test_supply_chain_policy.py -q`: **PASS** (23 tests after the temporary
+  cache, hostile runner-drift, and unlocked-workflow checks were added).
+- `python -m ruff check .github/scripts/run_locked_python_audit.py
+  .github/scripts/validate_supply_chain_policy.py
+  tests/test_locked_python_audit.py tests/test_supply_chain_policy.py`:
+  **PASS**.
+- `python .github/scripts/run_locked_python_audit.py --project-root .
+  --python-version {3.11,3.12} --execution-mode isolated`: **PASS** for both
+  supported matrix cells with uv 0.11.32, pip-audit 2.10.1 from the locked dev
+  graph, 128 audited packages, zero active exceptions, zero known findings,
+  and a temporary isolated cache/report.
+- `uv run --isolated --locked --all-extras --no-editable --python 3.12 pytest
+  -q --tb=short -ra`: **PASS**, 100% after collecting 2,972 tests. Every
+  executed test passed; capability-gated PostgreSQL/Redis/S3, public-network,
+  object-lock, HTTPS-session, and Windows-symlink cases remained explicit
+  skips. Existing Starlette/SAML and legacy-financial-input warnings remained
+  visible. An additional ambient Python 3.14 run also exited zero but is not the
+  supported-version release evidence.
+- Full static/security gates: Ruff **PASS**; mypy **PASS** for 523 source files;
+  Bandit **PASS** with existing reviewed suppression-comment warnings; policy
+  validator **PASS**; `uv lock --check` **PASS**; `git diff --check` **PASS**.
+- `uv run --isolated --locked --extra dev --no-editable --python 3.12 python
+  -m build --no-isolation`: **PASS**; built the 0.7.1 sdist and wheel.
+- CLI smoke checks: `doctor` **PASS**; sample validation **PASS** with zero
+  errors and ten intentional data-quality warnings.
+- Web gates: `npm ci` and lock audit **PASS** with zero vulnerabilities;
+  typecheck **PASS**; Vitest **PASS** (75/75); production build **PASS**;
+  Playwright **PASS** (16 passed, five capability-gated skips).
+- Boundary: this is current local Windows/Python 3.12 audit evidence. It does
+  not establish hosted Python 3.11/3.12 enforcement, provenance, malware
+  absence, vulnerability reachability, license suitability, independent
+  assurance, or permission to publish. D-485 remains active.
+
 ## E-819: Bounded server-boundary CI lifetime (2026-08-20)
 
 - Hosted `server-boundaries` now declares `timeout-minutes: 30`, preserving
@@ -6910,7 +8628,7 @@ Official source and immutable-tool research:
 
 | Source/input | Verified or selected result |
 | --- | --- |
-| `https://github.com/astral-sh/uv/releases/tag/0.11.32` | Latest stable observed 2026-07-26; commit `3010295ae7ff572de459987ad70db315a62ecd61`, Windows x86_64 archive SHA-256 `acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984`, Linux x86_64 archive SHA-256 `aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967` |
+| `https://github.com/astral-sh/uv/releases/tag/0.11.32` | Latest stable observed 2026-07-26; commit `3010295ae7ff572de459987ad70db315a62ecd61`, Windows x86_64 archive SHA-256 `acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984`, Linux musl x86_64 archive SHA-256 `1fd052f196108d87e61fc3d98fe06b4ec758c9a1eb1466a6fd1a436fe45885f2` (the former glibc archive hash remains historical in earlier revisions) |
 | `https://github.com/astral-sh/setup-uv/releases/tag/v9.0.0` | Full action commit `c771a70e6277c0a99b617c7a806ffedaca235ff9` |
 | `https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1` | Commit `83d9cd684c87d95d656c1458ef04895a7f1cbd8e`; Windows x64 archive SHA-256 `d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e`, Linux x64 archive SHA-256 `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb` |
 | `https://github.com/actions/setup-node` | Full selected v7 action commit `820762786026740c76f36085b0efc47a31fe5020` |
@@ -17220,3 +18938,110 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - python .github/scripts/verify_postgres_native_tools.py --expected-major 16
     - fails locally (pg_config not available on PATH).
    - Boundaries: this slice remains local and synthetic where noted; no GitHub release/push/tag/merge was performed.
+
+- E-866 current bounded PostgreSQL HA/DR drill (2026-08-23; ADR 0575):
+  - `python .github/scripts/verify_postgres_ha_dr.py` completed one clean
+    disposable Docker run on Docker Engine 29.7.2 using
+    `postgres:17.10-alpine` and the synchronous physical-standby topology.
+  - The closed artifact is
+    `docs/execution/POSTGRES_HA_DR_CURRENT_DRILL_2026-08-23.json`; schema
+    validation and the current artifact contract pass.
+  - The run verified encrypted isolated restore, exact-ID stop/remove fencing,
+    zero acknowledged sentinel loss, final sequence `[1, 2, 3, 4]`, failover
+    RTO `11.093` seconds, and failback RTO `1.041` seconds. Docker resources
+    were cleaned by the controller.
+  - Boundary: one synthetic single-host failure domain and a manual controller;
+    host/zone loss, quorum/witness behavior, automatic failover, cross-host
+    networking, production RPO/RTO SLOs, and enterprise readiness remain open.
+
+- E-867 current PostgreSQL consolidation-close runtime (2026-08-23; ADR 0576):
+  - Command: `RECONFORGE_TEST_POSTGRES_DSN=... RECONFORGE_TEST_POSTGRES_ADMIN_DSN=... RECONFORGE_TEST_POSTGRES_APP_USER=reconforge_app python -m pytest tests/test_postgres_consolidation_close.py tests/test_postgres_close_application.py tests/test_api_server_consolidation_close.py -q -rs`.
+  - Result: 32 tests passed against PostgreSQL 16.14. The observed role was
+    `reconforge_app` with `rolsuper=false` and `rolbypassrls=false`.
+  - The run covered replay-identical close preparation, tenant/RLS isolation,
+    maker-checker certification and period reopen, reversal controls,
+    digest-bound impairment/deferred-tax/PPA/ownership/intercompany evidence,
+    and authenticated server HTTP route scope.
+  - Boundary: synthetic data and one local host only. Statutory accounting,
+    external posting, hosted parity, HA/DR, production approval, and
+    independent assurance remain unverified.
+
+- E-868 current PostgreSQL write-back receiver failover matrix (2026-08-23; ADR 0577):
+  - Command: `python .github/scripts/verify_postgres_writeback_receiver_failover_matrix.py --output docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-23.json`.
+  - Both digest-pinned PostgreSQL cells passed all 23 declared checks. The
+    matrix verified acknowledged response-loss replay without a duplicate
+    effect, synchronous partition uncertainty, one application after rejoin,
+    exact fencing before promotion, endpoint rediscovery after restart, and
+    complete labelled-resource cleanup.
+  - Acknowledged-effect RPO was `0` in both cells; final/rejoined/restarted
+    histories matched the SQLite canonical digest
+    `5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14`.
+  - Boundary: one Docker host, two nodes per version, manual controller,
+    synthetic digest-only effects and credentials. No provider, accounting,
+    cross-host HA, or production exactly-once claim follows.
+
+- E-869 current PostgreSQL identity and scope governance runtime (2026-08-23; ADR 0578):
+  - Command: focused `tests/test_postgres_identity_administration.py`,
+    `tests/test_postgres_scope_authority.py`,
+    `tests/test_postgres_privileged_sessions.py`,
+    `tests/test_postgres_policy_scopes.py`, and
+    `tests/test_postgres_policy_analysis_runtime.py` with the declared
+    PostgreSQL DSN and `reconforge_app` application role.
+  - Result: 11 tests passed. The runtime covered sibling-tenant denial,
+    lifecycle/session invalidation, step-up-required mutations, last-admin
+    protection, append-only privileged assertions, deterministic scope grants
+    and revocation, and policy-scope analysis.
+  - Boundary: synthetic single-host PostgreSQL only; no external IdP/SSO,
+    universal MFA, distributed revocation, production PAM, or independent IAM
+    assurance.
+
+- E-870 current offline base-install drill (2026-08-23; ADR 0579):
+  - Command: `python .github/scripts/verify_airgap_install.py --base-install-only`.
+  - The digest-pinned `python:3.14.1-slim` Linux container ran with
+    `network_mode=none`, a read-only root filesystem, and a read-only bundle
+    mount. The wheel-only `uv.lock` bundle contained 68 entries and
+    100,627,876 bytes; pip used `--no-index --no-deps --require-hashes`.
+  - `reconforge doctor` exited zero and the disposable container cleanup
+    completed. The closed current artifact is
+    `docs/execution/OFFLINE_INSTALL_CURRENT_DRILL_2026-08-23.json`.
+  - Boundary: base install only; offline signature trust, identity recovery,
+    backup/restore, upgrade/rollback, physical air-gap isolation, and
+    production readiness remain unverified.
+
+- E-871 current air-gapped recovery and upgrade rollback (2026-08-23; ADR 0580):
+  - Command: `python .github/scripts/verify_airgap_install.py`.
+  - The same digest-pinned `python:3.14.1-slim` / `network=none` / read-only
+    runtime restored two local users, restored zero old sessions, rejected a
+    wrong encryption key, preserved a valid audit chain, and kept credential
+    material out of audit evidence.
+  - Tagged `0.7.0 -> 0.7.1` cutover and exact rollback passed with zero network
+    inputs. Source wheel digest, target wheel digest, target content digest,
+    and rollback digest are retained in the current artifact; cleanup passed.
+  - Boundary: one Linux runtime and one synthetic recovery run; signature
+    trust, hardware/physical air-gap custody, OCI verification, multi-node
+    recovery, and production readiness remain open.
+
+- E-872 release manifest and SBOM pipeline contract runtime (2026-08-23; ADR 0581):
+  - Commands: `python -m pytest tests/test_release_sbom_pipeline.py
+    tests/test_signed_release_pipeline.py tests/test_slsa_provenance_plan.py
+    -q -rs`.
+  - Result: 28 tests passed. The suite exercises exact release identity,
+    artifact subject SHA-256 binding, deterministic CycloneDX 1.7 output,
+    source/package/image cross-binding, tamper and forbidden-path rejection,
+    and release workflow gate ordering.
+  - Boundary: repository-controlled local builders and contracts only. No
+    hosted signed provenance, registry signature, SLSA level, independent
+    verification, or publication evidence follows. `cyclonedx-py` was not
+    counted because its host installation lacks `chardet`.
+
+- E-873 current static security/dependency gate (2026-08-23; ADR 0582):
+  - `python -m bandit -q -r reconforge` completed with no failed findings;
+    the managed-key Boolean evidence flag's intentional B105 false positive is
+    documented inline without changing the output contract.
+  - `python -m pip_audit -l --progress-spinner off` reported `No known
+    vulnerabilities found`; the editable local `reconforge-erp` distribution
+    was explicitly listed as not auditable because it is not on PyPI.
+  - Deployment/security focused tests passed 17 tests and Ruff passed.
+  - Boundary: local static/dependency evidence only; no penetration,
+    reachability, malware, license, hosted, provenance, or production-security
+    assurance follows.

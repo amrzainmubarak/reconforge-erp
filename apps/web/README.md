@@ -25,6 +25,12 @@ npm --prefix apps/web run build
 npm --prefix apps/web run e2e
 ```
 
+The Playwright web-server port defaults to `4173`. If that port is reserved by
+the host or CI runner, set `RECONFORGE_WEB_PORT` to an available loopback port;
+the test base URL and Vite server command use the same value. Live browser
+session and HTTPS production-bundle scenarios remain explicit opt-ins through
+their documented `RECONFORGE_LIVE_*` variables.
+
 Playwright screenshot tests write real UI captures to `docs/assets/screenshots/`.
 
 ## Current boundary

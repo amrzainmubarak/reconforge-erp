@@ -27,6 +27,7 @@ from reconforge.api import create_api_app
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
 from reconforge.application.intercompany_elimination import IntercompanyEliminationApplicationService
 from reconforge.application.jobs import DurableJobApplicationService
+from reconforge.application.matching_strategies import MatchingStrategyContractError, MatchingStrategyResult
 from reconforge.audit import AuditLedgerError, list_audit_events, verify_audit_events
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService, RoleRepository
 from reconforge.auth.federation_config import FederationConfigurationError, load_federation_runtime
@@ -91,7 +92,21 @@ from reconforge.db.importers import (
     import_control_tests,
     import_review_state,
 )
-from reconforge.deployment import DeploymentProfileError, deployment_profile, list_deployment_profiles
+from reconforge.deployment import (
+    DeploymentProfileError,
+    DeploymentReadinessError,
+    DeploymentRuntimeEvidenceError,
+    ManagedKeyManifestError,
+    RegulatedAdmissionError,
+    WorkerPermissionManifestError,
+    deployment_profile,
+    list_deployment_profiles,
+    load_deployment_readiness_matrix,
+    verify_deployment_runtime_evidence,
+    verify_managed_key_manifest,
+    verify_regulated_admission,
+    verify_worker_permission_manifest,
+)
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_acquisition import (
     AcquisitionFairValueBridgeRequest,
@@ -5510,6 +5525,37 @@ def match_job_status_command(
     _print_records("Match Job", [job])
 
 
+@match_app.command("validate-result-envelope")
+def match_validate_result_envelope_command(
+    envelope_path: Annotated[Path, typer.Argument(help="Closed JSON matching strategy result envelope.")],
+) -> None:
+    """Validate a matching result envelope without executing or contacting a backend."""
+
+    try:
+        payload = json.loads(envelope_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise MatchingStrategyContractError("Matching result envelope must be a JSON object.")
+        result = MatchingStrategyResult.from_payload(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, MatchingStrategyContractError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Matching Result Envelope",
+        {
+            "schema_version": 1,
+            "strategy_id": result.strategy_id,
+            "strategy_version": result.strategy_version,
+            "manifest_digest": result.manifest_digest,
+            "input_digest": result.input_digest,
+            "decision_digest": result.decision_digest,
+            "explanation_schema": result.explanation_schema,
+            "result_count": len(result.results),
+            "exception_count": len(result.exceptions),
+            "external_calls": False,
+            "replay_request_required": True,
+        },
+    )
+
+
 @match_app.command("results")
 def match_results_command(
     job_id: Annotated[str, typer.Option("--job-id", help="Match job id.")],
@@ -5874,6 +5920,127 @@ def deployment_profiles_command(
                 "digest": profile.digest,
             },
         )
+
+
+@deployment_app.command("verify-worker-manifest")
+def deployment_verify_worker_manifest_command(
+    manifest_path: Annotated[Path, typer.Argument(help="Closed JSON worker permission manifest to verify.")],
+) -> None:
+    """Verify a hosted worker permission manifest without network or IAM mutation."""
+
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = verify_worker_permission_manifest(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, WorkerPermissionManifestError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Worker Permission Manifest",
+        {
+            **manifest.to_dict(),
+            "digest": manifest.digest,
+            "discovery_execution_separated": True,
+        },
+    )
+
+
+@deployment_app.command("verify-runtime-evidence")
+def deployment_verify_runtime_evidence_command(
+    manifest_path: Annotated[Path, typer.Argument(help="Closed JSON deployment runtime-evidence manifest to verify.")],
+) -> None:
+    """Verify deployment runtime facts and profile findings without external calls."""
+
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        evidence = verify_deployment_runtime_evidence(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, DeploymentRuntimeEvidenceError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Deployment Runtime Evidence",
+        {
+            **evidence.to_dict(),
+            "digest": evidence.digest,
+            "findings": list(evidence.findings),
+            "external_calls": False,
+        },
+    )
+
+
+@deployment_app.command("readiness")
+def deployment_readiness_command(
+    edition: Annotated[
+        str | None,
+        typer.Option("--edition", help="Show one edition; omit to show all matrix entries."),
+    ] = None,
+    matrix_path: Annotated[
+        Path,
+        typer.Option("--matrix", help="Path to the closed deployment readiness matrix."),
+    ] = Path("docs/execution/DEPLOYMENT_READINESS_MATRIX.v1.yaml"),
+) -> None:
+    """Verify and display mode-specific readiness evidence without external calls."""
+
+    try:
+        matrix = load_deployment_readiness_matrix(matrix_path)
+        selected = matrix.select(edition)
+    except (DeploymentReadinessError, OSError, UnicodeError) as exc:
+        _safe_cli_error(exc)
+    for selected_edition in selected:
+        _print_record_detail(
+            "Deployment Readiness Evidence",
+            {
+                "edition": selected_edition["id"],
+                "readiness_status": selected_edition["readiness_status"],
+                "profile_command": selected_edition["profile_command"],
+                "gates": selected_edition["gates"],
+                "matrix_id": matrix.matrix_id,
+                "matrix_digest": matrix.digest,
+                "external_calls": False,
+            },
+        )
+
+
+@deployment_app.command("verify-key-manifest")
+def deployment_verify_key_manifest_command(
+    manifest_path: Annotated[Path, typer.Argument(help="Closed non-secret managed-key custody manifest to verify.")],
+) -> None:
+    """Verify managed-key custody metadata without contacting a KMS or HSM."""
+
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = verify_managed_key_manifest(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, ManagedKeyManifestError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Managed Key Custody Evidence",
+        {
+            **manifest.to_dict(),
+            "digest": manifest.digest,
+            "external_calls": False,
+            # This is an explicit non-secret evidence flag, not a credential.
+            "secret_material_present": False,  # nosec B105
+        },
+    )
+
+
+@deployment_app.command("verify-regulated-admission")
+def deployment_verify_regulated_admission_command(
+    envelope_path: Annotated[Path, typer.Argument(help="Closed JSON regulated-admission evidence envelope to verify.")],
+) -> None:
+    """Verify regulated profile facts and managed-key metadata without external calls."""
+
+    try:
+        payload = json.loads(envelope_path.read_text(encoding="utf-8"))
+        evidence = verify_regulated_admission(payload)
+    except (OSError, UnicodeError, json.JSONDecodeError, RegulatedAdmissionError) as exc:
+        _safe_cli_error(exc)
+    _print_record_detail(
+        "Regulated Admission Evidence",
+        {
+            **evidence.to_dict(),
+            "digest": evidence.digest,
+            "external_calls": False,
+            "production_readiness_claim": False,
+        },
+    )
 
 
 @deployment_app.command("release-check")

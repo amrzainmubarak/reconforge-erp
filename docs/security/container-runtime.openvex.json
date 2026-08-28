@@ -1,0 +1,47 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+  "author": "ReconForge automated security review",
+  "role": "Document Creator",
+  "timestamp": "2026-08-22T12:30:00Z",
+  "last_updated": "2026-08-22T12:30:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-3644"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/python@3.11.16"
+        }
+      ],
+      "status": "fixed",
+      "impact_statement": "CPython 3.11.16 includes the 3.11 backport commit dae4b1a21f8df4570e30986affd61bbe4ade4cef, and the official 3.11.16 release record identifies gh-145599 as the fix for CVE-2026-3644."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-4224"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/python@3.11.16"
+        }
+      ],
+      "status": "fixed",
+      "impact_statement": "CPython 3.11.16 includes the 3.11 backport commit 642865ddf4b232da1f3b1f7abcfa3254c4bfe785, and the official 3.11.16 release record identifies gh-145986 as the fix for CVE-2026-4224."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-7210"
+      },
+      "products": [
+        {
+          "@id": "pkg:generic/python@3.11.16"
+        }
+      ],
+      "status": "fixed",
+      "impact_statement": "The signed CPython v3.11.16 tag is three commits after the merged 3.11 backport cbaecf9f16da611a646d507c1cbca265c588fc56 and also includes bundled Expat 2.8.3, which supplies the required XML_SetHashSalt16Bytes API."
+    }
+  ]
+}

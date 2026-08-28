@@ -7,6 +7,10 @@ on:
   schedule:
     - cron: "30 6 * * 1"
 
+concurrency:
+  group: reconforge-codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -14,6 +18,7 @@ jobs:
   analyze:
     name: Analyze Python
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       security-events: write
       actions: read

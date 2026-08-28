@@ -12,7 +12,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from decimal import Decimal
 from typing import Any, cast
 
-from reconforge.application.matching_strategies import MatchingStrategyRequest
+from reconforge.application.matching_strategies import MatchingStrategyRequest, replay_result_envelope
 from reconforge.infrastructure.grouped_matching_strategy import GroupedSubsetSumStrategy
 from reconforge.workers.postgres_reconciliation import (
     ReconciliationExecutionContext,
@@ -33,8 +33,15 @@ def _decimal_text(value: object) -> object:
     return format(normalized, "f")
 
 
+def _canonical_value(value: Mapping[str, Any], key: str, fallback: object) -> object:
+    """Read a database-owned value without treating numeric zero as missing."""
+
+    candidate = value.get(key)
+    return fallback if candidate is None else candidate
+
+
 def _record(value: Mapping[str, Any], *, side: str, partition_key: str, rule: Mapping[str, Any]) -> dict[str, object]:
-    source_id = str(value.get("source_id") or value.get("id") or "").strip()
+    source_id = str(_canonical_value(value, "source_id", value.get("id", ""))).strip()
     attributes = value.get("attributes_json", value)
     if not isinstance(attributes, Mapping):
         raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL attributes must be an object.")
@@ -43,10 +50,16 @@ def _record(value: Mapping[str, Any], *, side: str, partition_key: str, rule: Ma
     # input producer must not be able to change identity or financial values by
     # shadowing them in attributes_json.
     item["id"] = source_id
-    item["amount"] = _decimal_text(value.get("amount_decimal") or value.get("amount") or item.get("amount", ""))
-    date_value = value.get("date_value") or value.get("date") or item.get("date", "")
+    amount_fallback = _canonical_value(value, "amount", item.get("amount", ""))
+    item["amount"] = _decimal_text(_canonical_value(value, "amount_decimal", amount_fallback))
+    date_fallback = _canonical_value(value, "date", item.get("date", ""))
+    date_value = _canonical_value(value, "date_value", date_fallback)
     item["date"] = date_value.isoformat() if hasattr(date_value, "isoformat") else date_value
-    item["currency"] = value.get("currency_code") or value.get("currency") or item.get("currency", "USD")
+    currency_fallback = _canonical_value(value, "currency", item.get("currency"))
+    currency_value = _canonical_value(value, "currency_code", currency_fallback)
+    if not isinstance(currency_value, str) or not currency_value.strip():
+        raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL records require an explicit currency.")
+    item["currency"] = currency_value
     item["partition"] = partition_key
     if not source_id or not str(item.get("amount", "")).strip() or not str(item.get("date", "")).strip():
         raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL records require id, amount, and date.")
@@ -281,7 +294,11 @@ class PostgresGroupedMatchingAdapter:
                 continue
             request = _request(context, partition.partition_key, partition.left_inputs, partition.right_inputs)
             try:
-                output = self._strategy.execute(request)
+                output = replay_result_envelope(
+                    self._strategy.execute(request),
+                    request,
+                    manifest=self._strategy.manifest,
+                )
             except Exception as exc:
                 raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL matching failed closed.") from exc
             projected_results: list[Mapping[str, object]] = []

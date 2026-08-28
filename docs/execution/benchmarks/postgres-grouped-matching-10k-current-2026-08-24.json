@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "profile_id": "postgres-grouped-matching/10k-partitions-v1",
+  "workers": 16,
+  "runs": 1000,
+  "partitions_per_run": 10,
+  "declared_partitions": 10000,
+  "completed_runs": 1000,
+  "completed_partitions": 10000,
+  "result_rows": 24000,
+  "expected_result_rows": 24000,
+  "duplicate_result_identities": 0,
+  "failed_runs": 0,
+  "final_active_runs": 0,
+  "per_mode_completed": {
+    "fx-many-to-one": 200,
+    "many-to-many": 200,
+    "many-to-one": 200,
+    "one-to-many": 200,
+    "portfolio": 200
+  },
+  "effect_set_digest": "1276abceb444abdf83ca62ba13a2d37f039a5326e8d7b29ed267215b5d3294b2",
+  "observed_runtime_seconds": 220.3637,
+  "environment": {
+    "python": "3.14.6",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "cpu_count": 16,
+    "database": "PostgreSQL 16.14"
+  },
+  "manifest_digest": "5ca2e2231c5f7cabda4155dde43cdfdfcbe53ed9305f885ca3667c093db42671",
+  "limitations": [
+    "Synthetic one-tenant PostgreSQL 16 service with bounded independent worker connections.",
+    "The workload uses bounded partitioned runs and synthetic USD/FX/fee inputs; no provider or statutory posting is exercised.",
+    "Observed runtime is an environment observation, not a throughput, capacity, SLO, soak, or production-sizing claim.",
+    "Cross-host scheduling, queue HA, automatic failover, large-domain diversity, and HA/DR remain unverified."
+  ]
+}

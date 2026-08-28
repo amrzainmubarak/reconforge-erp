@@ -8,19 +8,34 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from typer.testing import CliRunner
 
 from reconforge.application.matching_strategies import (
     GroupedMatchBudget,
     MatchingStrategyContractError,
+    MatchingStrategyManifest,
     MatchingStrategyRegistry,
     MatchingStrategyRequest,
+    MatchingStrategyResult,
+    StrategyLimits,
     canonical_payload,
+    replay_result_envelope,
+    replay_strategy_result,
     request_digest,
+    result_digest,
 )
+from reconforge.cli import app
 from reconforge.db import connect, run_migrations
 from reconforge.infrastructure.carry_forward_strategy import (
     CARRY_FORWARD_FIFO_MANIFEST,
     CarryForwardFifoStrategy,
+)
+from reconforge.infrastructure.duplicate_detection_strategy import DuplicateDetectionStrategy
+from reconforge.infrastructure.fee_fx_matching_strategy import (
+    FEE_AWARE_ONE_TO_ONE_MANIFEST,
+    FX_AWARE_ONE_TO_ONE_MANIFEST,
+    FeeAwareOneToOneStrategy,
+    FxAwareOneToOneStrategy,
 )
 from reconforge.infrastructure.grouped_matching_strategy import (
     GROUPED_SUBSET_SUM_MANIFEST,
@@ -64,6 +79,44 @@ def _request(*, reverse: bool = False, mode: str = "one-to-one") -> MatchingStra
     )
 
 
+def _manifest(**overrides: object) -> MatchingStrategyManifest:
+    values: dict[str, object] = {
+        "id": "test-strategy",
+        "version": "1.0.0",
+        "maturity": "experimental",
+        "algorithm": "deterministic test algorithm",
+        "supported_modes": ("one-to-one",),
+        "deterministic_tie_break": "stable source id ascending",
+        "explanation_schema": "matching-explanation.v1",
+        "limits": StrategyLimits(
+            max_left_records=10,
+            max_right_records=10,
+            max_candidates_per_record=10,
+            max_total_candidate_evaluations=100,
+            max_date_window_days=10,
+        ),
+    }
+    values.update(overrides)
+    return MatchingStrategyManifest(**values)
+
+
+def test_strategy_manifest_requires_reviewable_declarations() -> None:
+    with pytest.raises(MatchingStrategyContractError, match="tie-break and explanation"):
+        _manifest(deterministic_tie_break=" ")
+    with pytest.raises(MatchingStrategyContractError, match="tie-break and explanation"):
+        _manifest(explanation_schema="")
+    with pytest.raises(MatchingStrategyContractError, match="tie-break and explanation"):
+        _manifest(explanation_schema=None)
+    with pytest.raises(MatchingStrategyContractError, match="maturity"):
+        _manifest(maturity="draft")
+    with pytest.raises(MatchingStrategyContractError, match="semantic versioning"):
+        _manifest(version="v1")
+    with pytest.raises(MatchingStrategyContractError, match="published slug"):
+        _manifest(id="Bad Strategy")
+    with pytest.raises(MatchingStrategyContractError, match="non-empty text"):
+        _manifest(supported_modes=("",))
+
+
 def test_indexed_strategy_manifest_is_versioned_bounded_and_registry_addressable(tmp_path: Path) -> None:
     strategy, _service, connection = _strategy(tmp_path)
     try:
@@ -72,7 +125,7 @@ def test_indexed_strategy_manifest_is_versioned_bounded_and_registry_addressable
         assert manifest.version == "1.0.0"
         assert manifest.maturity == "beta"
         assert len(manifest.digest) == 64
-        assert manifest.digest == "e3760bb991ea1edef3dbb2448e8e2b92063147b8dd9261433cac7cfa7fda5da3"
+        assert manifest.digest == "0dd28d4477a8cb29347ded48b96038467c14103f5b057fcfc7c31de0d23c9b85"
         assert manifest.limits.max_left_records == 250_000
         assert manifest.limits.max_candidates_per_record == 10_000
         registry = MatchingStrategyRegistry((strategy,))
@@ -116,6 +169,230 @@ def test_strategy_digests_and_decisions_are_record_permutation_invariant(tmp_pat
     assert first.input_digest == shuffled.input_digest
     assert first.decision_digest == shuffled.decision_digest
     assert first.results == shuffled.results
+
+
+def test_strategy_result_json_envelope_round_trip_is_closed_and_replay_verified(tmp_path: Path) -> None:
+    strategy, _service, connection = _strategy(tmp_path)
+    request = _request()
+    try:
+        result = strategy.execute(request)
+    finally:
+        connection.close()
+
+    payload = json.loads(json.dumps(result.to_payload(), sort_keys=True))
+    schema = json.loads(
+        (Path(__file__).resolve().parents[1] / "docs/schemas/matching_strategy_result_envelope.v1.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    jsonschema.Draft202012Validator.check_schema(schema)
+    jsonschema.Draft202012Validator(schema).validate(payload)
+    restored = MatchingStrategyResult.from_payload(payload)
+    restored.verify_payload(
+        request,
+        manifest_digest=strategy.manifest.digest,
+        strategy_id=strategy.manifest.id,
+        strategy_version=strategy.manifest.version,
+    )
+    assert restored.to_payload() == payload
+    assert replay_result_envelope(result, request, manifest=strategy.manifest) == restored
+    assert replay_strategy_result(strategy, request, result) == restored
+
+    with pytest.raises(MatchingStrategyContractError, match="not closed"):
+        MatchingStrategyResult.from_payload({**payload, "unexpected": True})
+    with pytest.raises(MatchingStrategyContractError, match="schema version"):
+        MatchingStrategyResult.from_payload({**payload, "schema_version": 2})
+    with pytest.raises(MatchingStrategyContractError, match="digest fields"):
+        MatchingStrategyResult.from_payload({**payload, "decision_digest": "not-a-digest"})
+    with pytest.raises(MatchingStrategyContractError, match="identity"):
+        restored.verify_payload(
+            request,
+            manifest_digest=strategy.manifest.digest,
+            strategy_id="tampered-strategy",
+            strategy_version=strategy.manifest.version,
+        )
+    changed_results = tuple({**item, "status": "tampered"} for item in result.results)
+    changed = MatchingStrategyResult(
+        strategy_id=result.strategy_id,
+        strategy_version=result.strategy_version,
+        manifest_digest=result.manifest_digest,
+        input_digest=result.input_digest,
+        decision_digest=result_digest(
+            manifest_digest=result.manifest_digest,
+            input_digest=result.input_digest,
+            results=changed_results,
+            exceptions=result.exceptions,
+        ),
+        results=changed_results,
+        exceptions=result.exceptions,
+        explanation_schema=result.explanation_schema,
+    )
+    with pytest.raises(MatchingStrategyContractError, match="differs"):
+        replay_strategy_result(strategy, request, changed)
+
+
+def test_cli_validates_result_envelope_without_external_calls(tmp_path: Path) -> None:
+    strategy = GroupedSubsetSumStrategy()
+    request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "10", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        right_records=({"id": "R1", "amount": "10", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        mode="many-to-many",
+    )
+    envelope_path = tmp_path / "result.json"
+    envelope_path.write_text(json.dumps(strategy.execute(request).to_payload()), encoding="utf-8")
+    result = CliRunner().invoke(app, ["match", "validate-result-envelope", str(envelope_path)])
+    assert result.exit_code == 0, result.stdout
+    assert "external_calls" in result.stdout
+    assert "replay_request_required" in result.stdout
+
+
+def test_grouped_strategy_supports_bounded_one_to_one_fee_and_fx_cases() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    fee_result = strategy.execute(
+        MatchingStrategyRequest(
+            left_records=({"id": "L1", "amount": "100", "fee": "2", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+            right_records=({"id": "R1", "amount": "98", "fee": "0", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+            mode="one-to-one",
+            netting_mode="net",
+        )
+    )
+    assert fee_result.results[0]["status"] == "matched"
+    assert fee_result.results[0]["netting_mode"] == "net"
+
+    fx_result = strategy.execute(
+        MatchingStrategyRequest(
+            left_records=({"id": "L2", "amount": "100", "currency": "EUR", "date": "2026-01-01", "partition": "P1"},),
+            right_records=({"id": "R2", "amount": "110", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+            mode="one-to-one",
+            target_currency="USD",
+            fx_rates=({"base_currency": "EUR", "quote_currency": "USD", "rate": "1.1", "source": "SYNTHETIC", "rate_type": "spot"},),
+        )
+    )
+    assert fx_result.results[0]["status"] == "matched"
+    assert fx_result.results[0]["currency"] == "USD"
+
+
+def test_grouped_one_to_one_fee_fx_replay_is_permutation_invariant() -> None:
+    strategy = GroupedSubsetSumStrategy()
+    rates = (
+        {"base_currency": "EUR", "quote_currency": "USD", "rate": "1.1", "source": "SYNTHETIC", "rate_type": "spot"},
+        {"base_currency": "GBP", "quote_currency": "USD", "rate": "1.25", "source": "SYNTHETIC", "rate_type": "spot"},
+    )
+    request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "100", "currency": "EUR", "date": "2026-01-01", "partition": "P1"},),
+        right_records=({"id": "R1", "amount": "110", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        mode="one-to-one",
+        target_currency="USD",
+        fx_rates=rates,
+    )
+    permuted = replace(request, fx_rates=tuple(reversed(rates)))
+    first = strategy.execute(request)
+    second = strategy.execute(permuted)
+    assert first.input_digest == second.input_digest
+    assert first.decision_digest == second.decision_digest
+    assert first.results == second.results
+
+
+def test_fee_and_fx_are_explicit_registry_strategies_and_fail_closed() -> None:
+    fee = FeeAwareOneToOneStrategy()
+    fee_request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "100", "fee": "2", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        right_records=({"id": "R1", "amount": "98", "fee": "0", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        mode="fee-aware",
+    )
+    fee_result = fee.execute(fee_request)
+    assert fee.manifest is FEE_AWARE_ONE_TO_ONE_MANIFEST
+    assert fee_result.results[0]["status"] == "matched"
+    assert fee_result.results[0]["netting_mode"] == "net"
+    with pytest.raises(MatchingStrategyContractError, match="fee field"):
+        fee.execute(replace(fee_request, left_fee_field=" "))
+
+    fx = FxAwareOneToOneStrategy()
+    fx_request = MatchingStrategyRequest(
+        left_records=({"id": "L1", "amount": "100", "currency": "EUR", "date": "2026-01-01", "partition": "P1"},),
+        right_records=({"id": "R1", "amount": "110", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+        mode="fx-aware",
+        target_currency="USD",
+        fx_rates=({"base_currency": "EUR", "quote_currency": "USD", "rate": "1.1", "source": "SYNTHETIC", "rate_type": "spot"},),
+    )
+    fx_result = fx.execute(fx_request)
+    assert fx.manifest is FX_AWARE_ONE_TO_ONE_MANIFEST
+    assert fx_result.results[0]["status"] == "matched"
+    assert fx_result.results[0]["currency"] == "USD"
+    with pytest.raises(MatchingStrategyContractError, match="explicit FX rates"):
+        fx.execute(replace(fx_request, fx_rates=()))
+
+
+def test_explicit_financial_aware_strategies_replay_under_record_permutation() -> None:
+    fee = FeeAwareOneToOneStrategy()
+    request = MatchingStrategyRequest(
+        left_records=(
+            {"id": "L2", "amount": "50", "fee": "1", "currency": "USD", "date": "2026-01-02", "partition": "P1"},
+            {"id": "L1", "amount": "100", "fee": "2", "currency": "USD", "date": "2026-01-01", "partition": "P1"},
+        ),
+        right_records=(
+            {"id": "R1", "amount": "98", "fee": "0", "currency": "USD", "date": "2026-01-01", "partition": "P1"},
+            {"id": "R2", "amount": "49", "fee": "0", "currency": "USD", "date": "2026-01-02", "partition": "P1"},
+        ),
+        mode="fee-aware",
+    )
+    reversed_request = replace(request, left_records=tuple(reversed(request.left_records)), right_records=tuple(reversed(request.right_records)))
+    first = fee.execute(request)
+    second = fee.execute(reversed_request)
+    assert first.input_digest == second.input_digest
+    assert first.decision_digest == second.decision_digest
+    assert first.results == second.results
+
+
+def test_all_registered_strategy_families_pass_deterministic_reexecution(tmp_path: Path) -> None:
+    indexed, service, connection = _strategy(tmp_path)
+    try:
+        cases = (
+            (
+                indexed,
+                _request(),
+            ),
+            (
+                GroupedSubsetSumStrategy(),
+                MatchingStrategyRequest(
+                    left_records=({"id": "L1", "amount": "10", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+                    right_records=({"id": "R1", "amount": "10", "currency": "USD", "date": "2026-01-01", "partition": "P1"},),
+                    mode="many-to-many",
+                ),
+            ),
+            (
+                DuplicateDetectionStrategy(),
+                MatchingStrategyRequest(
+                    left_records=({"id": "L1", "amount": "10", "date": "2026-01-01", "reference": "R1", "currency": "USD", "partition": "P1"},),
+                    right_records=({"id": "R1", "amount": "10", "date": "2026-01-01", "reference": "R1", "currency": "USD", "partition": "P1"},),
+                    mode="duplicate-detection",
+                ),
+            ),
+            (
+                CarryForwardFifoStrategy(),
+                MatchingStrategyRequest(
+                    left_records=({"id": "O1", "amount": "10", "date": "2026-01-01", "currency": "USD", "partition": "P1"},),
+                    right_records=({"id": "S1", "amount": "10", "date": "2026-01-02", "currency": "USD", "partition": "P1"},),
+                    mode="carry-forward",
+                    date_window_days=5,
+                ),
+            ),
+            (
+                ReversalPairingStrategy(),
+                MatchingStrategyRequest(
+                    left_records=({"id": "J1", "amount": "10", "date": "2026-01-01", "currency": "USD", "partition": "P1"},),
+                    right_records=({"id": "R1", "amount": "-10", "date": "2026-01-02", "currency": "USD", "partition": "P1", "reversal_of": "J1"},),
+                    mode="reversal-pairing",
+                    date_window_days=5,
+                ),
+            ),
+        )
+        for strategy, request in cases:
+            result = strategy.execute(request)
+            replayed = replay_strategy_result(strategy, request, result)
+            assert replayed.to_payload() == result.to_payload()
+    finally:
+        connection.close()
 
 
 def test_strategy_rejects_limits_and_unsafe_numeric_payloads_before_matching(tmp_path: Path) -> None:
@@ -260,6 +537,8 @@ def test_complete_strategy_registry_covers_every_published_strategy_family(tmp_p
         assert manifest_ids == {
             "indexed-composite-one-to-one",
             "bounded-grouped-subset-sum",
+            "bounded-fee-aware-one-to-one",
+            "bounded-fx-aware-one-to-one",
             "bounded-duplicate-detection",
             "bounded-carry-forward-fifo",
             "bounded-reversal-pairing",
@@ -272,6 +551,31 @@ def test_complete_strategy_registry_covers_every_published_strategy_family(tmp_p
         assert {str(item["id"]) for item in published["strategies"]} == manifest_ids
         for manifest in registry.manifests:
             assert registry.get(manifest.id, manifest.version).manifest == manifest
+    finally:
+        connection.close()
+
+
+def test_registry_mode_coverage_is_explicit_and_deterministic(tmp_path: Path) -> None:
+    _strategy_instance, service, connection = _strategy(tmp_path)
+    try:
+        registry = build_matching_strategy_registry(service)
+        report = registry.coverage_report(
+            ("many-to-many", "one-to-one", "many-to-one", "one-to-many", "unimplemented-mode")
+        )
+        assert report.required_modes == (
+            "many-to-many",
+            "many-to-one",
+            "one-to-many",
+            "one-to-one",
+            "unimplemented-mode",
+        )
+        assert report.missing_modes == ("unimplemented-mode",)
+        assert not report.complete
+        assert report.mode_strategies == tuple(sorted(report.mode_strategies))
+        assert report.mode_strategies[0][0] == "amount-tolerance"
+        assert registry.coverage_report(tuple(reversed(report.required_modes))) == report
+        with pytest.raises(MatchingStrategyContractError, match="tuple of text"):
+            registry.coverage_report(("one-to-one", 1))  # type: ignore[arg-type]
     finally:
         connection.close()
 
@@ -347,10 +651,18 @@ def test_strategy_result_replay_verifier_rejects_manifest_input_and_output_tampe
     )
     result = strategy.execute(request)
 
+    assert result.strategy_id == strategy.manifest.id
+    assert result.strategy_version == strategy.manifest.version
     result.verify_against(request, manifest_digest=strategy.manifest.digest)
 
     with pytest.raises(MatchingStrategyContractError, match="manifest digest"):
         result.verify_against(request, manifest_digest="0" * 64)
+
+    with pytest.raises(MatchingStrategyContractError, match="identity"):
+        result.verify_against(request, manifest_digest=strategy.manifest.digest, strategy_id="tampered")
+
+    with pytest.raises(MatchingStrategyContractError, match="version"):
+        result.verify_against(request, manifest_digest=strategy.manifest.digest, strategy_version="9.9.9")
 
     changed_request = replace(
         request,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -92,10 +93,17 @@ def test_deferred_tax_server_routes_re_evaluate_tenant_policy_without_workspace(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
     client, headers = _client(tmp_path)
-    captured: list[tuple[frozenset[str], str, None]] = []
+    captured: list[tuple[frozenset[str], str, None, object]] = []
 
-    def enforce(_request: object, *, permissions: frozenset[str], tenant_id: str, workspace_id: None) -> None:
-        captured.append((permissions, tenant_id, workspace_id))
+    def enforce(
+        _request: object,
+        *,
+        permissions: frozenset[str],
+        tenant_id: str,
+        workspace_id: None,
+        amount: object = None,
+    ) -> None:
+        captured.append((permissions, tenant_id, workspace_id, amount))
 
     monkeypatch.setattr(routes, "server_deferred_tax_enabled", lambda _request: True)
     monkeypatch.setattr(
@@ -108,11 +116,11 @@ def test_deferred_tax_server_routes_re_evaluate_tenant_policy_without_workspace(
 
     created = client.post("/api/v1/consolidation-deferred-tax", headers=headers, json=_body())
     assert created.status_code == 200
-    assert captured == [(frozenset({"finance_core.manage"}), "tenant-a", None)]
+    assert captured == [(frozenset({"finance_core.manage"}), "tenant-a", None, Decimal("270.00"))]
 
     loaded = client.get(
         "/api/v1/consolidation-deferred-tax/dtax-" + "a" * 32,
         headers=headers,
     )
     assert loaded.status_code == 200
-    assert captured[-1] == (frozenset({"finance_core.read", "finance_core.manage"}), "tenant-a", None)
+    assert captured[-1] == (frozenset({"finance_core.read", "finance_core.manage"}), "tenant-a", None, None)

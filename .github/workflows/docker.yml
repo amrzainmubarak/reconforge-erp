@@ -5,6 +5,10 @@ on:
   push:
     branches: ["main", "master"]
 
+concurrency:
+  group: reconforge-docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

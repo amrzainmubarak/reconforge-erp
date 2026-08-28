@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from typing import cast
 
@@ -116,6 +118,52 @@ def test_postgres_grouped_adapter_digest_changes_when_canonical_amount_changes()
     assert baseline_digest != changed_digest
 
 
+def test_postgres_grouped_request_preserves_explicit_zero_and_canonical_columns() -> None:
+    context = ReconciliationExecutionContext(
+        run={"rule_json": {"grouped_matching_mode": "one-to-many", "amount_tolerance": "0"}},
+        left_inputs=(),
+        right_inputs=(),
+        heartbeat=lambda _progress: {},
+        cancellation_requested=lambda: False,
+    )
+    row = {
+        "source_id": "L-zero",
+        "amount_decimal": Decimal("0"),
+        "amount": "999",
+        "date_value": date(2026, 8, 1),
+        "date": "2099-01-01",
+        "currency_code": "USD",
+        "currency": "EUR",
+        "attributes_json": {"amount": "777", "date": "2000-01-01", "currency": "GBP"},
+    }
+
+    request = _request(context, "entity/zero", (row,), (row | {"source_id": "R-zero"},))
+
+    assert request.left_records[0]["amount"] == "0"
+    assert request.left_records[0]["date"] == "2026-08-01"
+    assert request.left_records[0]["currency"] == "USD"
+    assert request.left_records[0]["partition"] == "entity/zero"
+
+
+def test_postgres_grouped_request_rejects_missing_currency_instead_of_defaulting() -> None:
+    context = ReconciliationExecutionContext(
+        run={"rule_json": {"grouped_matching_mode": "one-to-many", "amount_tolerance": "0"}},
+        left_inputs=(),
+        right_inputs=(),
+        heartbeat=lambda _progress: {},
+        cancellation_requested=lambda: False,
+    )
+    row = {
+        "source_id": "L-no-currency",
+        "amount_decimal": Decimal("1"),
+        "date_value": date(2026, 8, 1),
+        "attributes_json": {"date": "2026-08-01"},
+    }
+
+    with pytest.raises(PostgresGroupedMatchingAdapterError, match="explicit currency"):
+        _request(context, "entity/no-currency", (row,), (row | {"source_id": "R-no-currency"},))
+
+
 def test_postgres_grouped_adapter_skips_completed_checkpoint() -> None:
     result = PostgresGroupedMatchingAdapter().iter_partition_results(
         _context(), completed_partition_keys=frozenset({"entity/A"})
@@ -148,13 +196,19 @@ def test_postgres_grouped_runtime_contract_is_in_source_distribution_manifest() 
     assert "include tests/test_postgres_grouped_matching.py" in manifest
     assert "include tests/test_postgres_grouped_matching_runtime.py" in manifest
     assert "include docs/adr/0268-postgres-grouped-matching-runtime-parity.md" in manifest
+    assert "include docs/adr/0618-postgres-adapter-preserves-canonical-zero-values.md" in manifest
+    assert "include docs/adr/0619-postgres-adapter-requires-explicit-currency.md" in manifest
 
 
 def test_postgres_grouped_adapter_projects_unresolved_sources_and_review_exceptions() -> None:
     partition = ReconciliationInputPartition(
         partition_key="entity/unresolved",
-        left_inputs=({"source_id": "L1", "amount_decimal": "100", "attributes_json": {"date": "2026-08-01"}},),
-        right_inputs=({"source_id": "R1", "amount_decimal": "20", "attributes_json": {"date": "2026-08-01"}},),
+        left_inputs=(
+            {"source_id": "L1", "amount_decimal": "100", "attributes_json": {"date": "2026-08-01", "currency": "USD"}},
+        ),
+        right_inputs=(
+            {"source_id": "R1", "amount_decimal": "20", "attributes_json": {"date": "2026-08-01", "currency": "USD"}},
+        ),
     )
     context = ReconciliationExecutionContext(
         run={"rule_json": {"grouped_matching_mode": "one-to-many", "amount_tolerance": "0"}},
@@ -175,9 +229,15 @@ def test_postgres_grouped_adapter_projects_unresolved_sources_and_review_excepti
 def test_postgres_grouped_adapter_projects_ambiguity_without_hidden_omissions() -> None:
     partition = ReconciliationInputPartition(
         partition_key="entity/ambiguous",
-        left_inputs=({"source_id": "L1", "amount_decimal": "100", "attributes_json": {"date": "2026-08-01"}},),
+        left_inputs=(
+            {"source_id": "L1", "amount_decimal": "100", "attributes_json": {"date": "2026-08-01", "currency": "USD"}},
+        ),
         right_inputs=tuple(
-            {"source_id": source_id, "amount_decimal": "50", "attributes_json": {"date": "2026-08-01"}}
+            {
+                "source_id": source_id,
+                "amount_decimal": "50",
+                "attributes_json": {"date": "2026-08-01", "currency": "USD"},
+            }
             for source_id in ("R1", "R2", "R3")
         ),
     )

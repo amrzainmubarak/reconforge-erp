@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -98,6 +99,7 @@ def test_intercompany_api_computes_with_authenticated_actor(tmp_path: Path, monk
             "workspace_id": "default",
             "organization_id": "org-a",
             "entity_id": "entity-a",
+            "amount": Decimal("200.00"),
         },
         {
             "permission": "finance_core.read",

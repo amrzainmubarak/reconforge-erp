@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
+from reconforge.api.errors import APIError
+from reconforge.api.routes.reconciliation import CanonicalInputRequest, _policy_amount
 from reconforge.api.server_identity import RequestExecutionScope, request_tenant_id
 from reconforge.auth.models import LocalUser
 
@@ -76,6 +80,25 @@ class _FakeReconciliationRepository:
     def requeue_run(self, **values: object) -> dict[str, object]:
         assert values["tenant_id"] == "tenant-a"
         return {**self.run, "cancel_requested": False, "execution_status": "Queued"}
+
+
+def test_reconciliation_policy_amount_is_exact_and_missing_is_not_zero() -> None:
+    complete = [
+        CanonicalInputRequest(side="Left", source_id="left", record_hash="l", amount="10.00"),
+        CanonicalInputRequest(side="Right", source_id="right", record_hash="r", amount="-10.00"),
+    ]
+    assert _policy_amount(complete) == Decimal("20.00")
+    missing = [
+        complete[0],
+        CanonicalInputRequest(side="Right", source_id="right", record_hash="r"),
+    ]
+    assert _policy_amount(missing) is None
+    malformed = [
+        CanonicalInputRequest(side="Left", source_id="left", record_hash="l", amount="not-a-number"),
+    ]
+    with pytest.raises(APIError) as captured:
+        _policy_amount(malformed)
+    assert captured.value.code == "reconciliation_input_amount_invalid"
 
 
 def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: Path, monkeypatch: Any) -> None:
@@ -220,6 +243,7 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
     )
     assert submitted.json()["run"]["execution_status"] == "Queued"
     assert submitted.json()["input_count"] == 2
+    assert scoped_permissions[0]["amount"] == Decimal("20.00")
     assert repository.submitted_run is not None
     assert repository.submitted_run["rule"]["financial_input_policy"] == "strict-financial-input-v2"
     assert (
@@ -227,6 +251,7 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
         == "canonical-multiset-occurrence-v1"
     )
     assert repository.submitted_run["rule"]["amount_tolerance"] == "0"
+    assert repository.submitted_run["rule"]["policy_amount"] == "20.00"
     assert len(repository.submitted_inputs) == 2
     assert repository.submitted_inputs[0]["amount"] == "10.00"
     assert runs.json()["runs"][0]["id"] == "run-a"
@@ -251,6 +276,7 @@ def test_server_reconciliation_routes_are_tenant_scoped_and_read_only(tmp_path: 
             "workspace_id": "workspace-a",
             "organization_id": "org-a",
             "entity_id": "entity-a",
+            "amount": Decimal("20.00"),
         }
     ] * 4
     assert scoped_permissions[4:9] == [

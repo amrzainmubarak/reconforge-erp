@@ -1,9 +1,15 @@
-.PHONY: install setup docs-install doctor test test-all lint type typecheck format security demo studio-data showcase showcase-serve web-install web web-test web-build api docker docs screenshots release-check clean
+.PHONY: install setup dev-doctor dev-bootstrap docs-install doctor test test-all lint type typecheck format security demo studio-data showcase showcase-serve web-install web web-test web-build api docker docs screenshots release-check clean
 
 install:
 	python -m pip install -e ".[dev]"
 
 setup: install docs-install web-install
+
+dev-doctor:
+	python .github/scripts/manage_developer_environment.py doctor --project-root . --python-version 3.12
+
+dev-bootstrap:
+	python .github/scripts/manage_developer_environment.py bootstrap --project-root . --python-version 3.12
 
 docs-install:
 	python -m pip install -e ".[docs]"
@@ -28,8 +34,8 @@ format:
 	ruff format .
 
 security:
-	bandit -q -r reconforge
-	pip-audit
+	python -m bandit -q -r reconforge
+	python .github/scripts/run_locked_python_audit.py --project-root .
 
 demo:
 	reconforge doctor

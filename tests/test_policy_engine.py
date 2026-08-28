@@ -402,6 +402,27 @@ def test_amount_policy_rejects_non_finite_or_inverted_bounds() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("minimum", "maximum"),
+    [(Decimal("100"), None), (None, Decimal("500")), (Decimal("100"), Decimal("500"))],
+)
+def test_bounded_amount_policy_denies_missing_amount(
+    minimum: Decimal | None, maximum: Decimal | None
+) -> None:
+    decision = CentralPolicyEngine().evaluate(
+        PolicyEvaluationContext(
+            user_id="U-missing-amount",
+            username="controller",
+            user_permissions={"finance_core.validate"},
+            minimum_amount=minimum,
+            maximum_amount=maximum,
+        ),
+        required_permission="finance_core.validate",
+    )
+    assert not decision.allowed
+    assert decision.reason_code == "amount_missing_for_bounded_policy"
+
+
 def test_expiring_delegation_is_explicit_replayable_and_fail_closed() -> None:
     expires_at = datetime(2026, 8, 2, 12, 0, tzinfo=UTC)
     base = {

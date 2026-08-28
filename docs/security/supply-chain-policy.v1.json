@@ -11,7 +11,7 @@
     "manager": "uv",
     "manager_version": "0.11.32",
     "manager_commit": "3010295ae7ff572de459987ad70db315a62ecd61",
-    "linux_x86_64_archive_sha256": "aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967",
+    "linux_x86_64_archive_sha256": "1fd052f196108d87e61fc3d98fe06b4ec758c9a1eb1466a6fd1a436fe45885f2",
     "windows_x86_64_archive_sha256": "acfde570451cfdb8689fa159a138ee805ba4e241c466432750302c86254b0984",
     "exclude_newer": "2026-08-02T00:00:00Z",
     "supported_python": [
@@ -39,8 +39,43 @@
   },
   "container_resolution": {
     "dockerfile": "Dockerfile",
-    "base_image": "python:3.11-slim@sha256:a3ab0b966bc4e91546a033e22093cb840908979487a9fc0e6e38295747e49ac0",
-    "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy"
+    "base_image": "python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1",
+    "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy",
+    "service_images": {
+      "airgap_python": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+      "postgres_16_ci": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+      "postgres_drills": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+    }
+  },
+  "container_audits": {
+    "sbom": {
+      "tool": "syft",
+      "version": "1.51.0",
+      "commit": "2293641e3bd628a01bb37639318d62c0ebe89b39",
+      "linux_x86_64_archive_sha256": "2a2e837a2c8d59ec9af5472ee22d3b04ee463c4e44476ecf993fd1e5ab6ebc7f",
+      "windows_x86_64_archive_sha256": "fc5ffaeffb993576ece9c791da5a688fb2c8969a1479bbfe58583672c64da336",
+      "native_schema_version": "16.1.10",
+      "scan_scope": "squashed",
+      "license_content_coverage": 75,
+      "minimum_license_coverage_percent": 90
+    },
+    "vulnerability": {
+      "tool": "grype",
+      "version": "0.117.0",
+      "commit": "b5fa92bbcbef655497e3be840a2f718380e2cdd3",
+      "linux_x86_64_archive_sha256": "38525dab1e06f162ebaa02f94d82d1f807076b011a44180cf2777edf1a7b9c26",
+      "windows_x86_64_archive_sha256": "7728ee9c06792e62444bd651274e4dd1e30eec02eee1266bb6c9c9d237d0f0cb",
+      "supported_db_schema": 6,
+      "max_database_age_hours": 120,
+      "scan_input_format": "syft-json",
+      "fail_severities": ["Critical", "High"],
+      "unknown_severity_policy": "fail",
+      "vex_document": "docs/security/container-runtime.openvex.json",
+      "vex_document_sha256": "3263ae100c4b89aff8737a11ab708fadd4105c8d3aed7ba9514bbcc0df352d95",
+      "vex_context": "https://openvex.dev/ns/v0.2.0",
+      "vex_allowed_statuses": ["fixed"],
+      "vex_max_review_age_days": 30
+    }
   },
   "secret_scanning": {
     "config": ".gitleaks.toml",
@@ -94,12 +129,16 @@
       "python-audit",
       "javascript-audit",
       "git-secret-scan",
-      "tree-secret-scan"
+      "tree-secret-scan",
+      "container-sbom",
+      "container-vulnerability-audit",
+      "container-license-inventory"
     ]
   },
   "limitations": [
-    "A lock or clean vulnerability scan does not establish package safety, provenance, reachability, or license suitability.",
+    "A lock or clean vulnerability scan does not establish package safety, provenance, reachability, or legal license suitability.",
     "The npm lock records registry resolution and SRI for all 211 non-root entries; registry availability, package provenance, and package safety remain separate trust concerns.",
+    "Container license coverage is inventory evidence only; compatibility and distribution rights require independent legal review.",
     "Local scans do not prove that hosted branch protection or release gates executed."
   ]
 }

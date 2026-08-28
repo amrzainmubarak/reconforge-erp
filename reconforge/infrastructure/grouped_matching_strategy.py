@@ -26,7 +26,7 @@ GROUPED_SUBSET_SUM_MANIFEST = MatchingStrategyManifest(
     version="1.0.0",
     maturity="experimental",
     algorithm="bounded-partitioned-subset-sum-enumeration-v1",
-    supported_modes=("many-to-many", "many-to-one", "one-to-many", "partial-settlement", "portfolio"),
+    supported_modes=("many-to-many", "many-to-one", "one-to-many", "one-to-one", "partial-settlement", "portfolio"),
     deterministic_tie_break="difference-cardinality-date-span-stable-record-identities-v1",
     explanation_schema="grouped-matching-explanation-v2",
     limits=StrategyLimits(
@@ -108,6 +108,8 @@ class GroupedSubsetSumStrategy:
         manifest_digest = self.manifest.digest
         input_digest = request_digest(request, manifest_digest)
         result = MatchingStrategyResult(
+            strategy_id=self.manifest.id,
+            strategy_version=self.manifest.version,
             manifest_digest=manifest_digest,
             input_digest=input_digest,
             decision_digest=result_digest(
@@ -120,7 +122,7 @@ class GroupedSubsetSumStrategy:
             exceptions=exceptions,
             explanation_schema=self.manifest.explanation_schema,
         )
-        result.verify_against(request, manifest_digest=manifest_digest)
+        result.verify_against(request, manifest_digest=manifest_digest, strategy_id=self.manifest.id, strategy_version=self.manifest.version)
         return result
 
     def _validate_request(self, request: MatchingStrategyRequest) -> Decimal:

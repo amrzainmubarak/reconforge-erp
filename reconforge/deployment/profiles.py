@@ -36,6 +36,7 @@ class DeploymentProfile:
     supports_air_gap: bool
     requires_customer_managed_keys: bool
     requires_independent_failure_domains: bool
+    requires_worker_discovery_execution_separation: bool
     claim_boundary: str
     requires_backup_restore_evidence: bool = True
     requires_rollback_evidence: bool = True
@@ -70,6 +71,7 @@ class DeploymentProfile:
             "rollback_evidence_required": self.requires_rollback_evidence,
             "storage_backend": self.storage_backend,
             "supports_air_gap": self.supports_air_gap,
+            "worker_discovery_execution_separation_required": self.requires_worker_discovery_execution_separation,
             "writeback_default": self.writeback_default,
         }
 
@@ -93,6 +95,7 @@ class DeploymentRuntimeFacts:
     air_gap_enabled: bool = False
     customer_managed_keys_enabled: bool = False
     independent_failure_domains_verified: bool = False
+    worker_discovery_execution_separation_verified: bool = False
     backup_restore_verified: bool = False
     rollback_verified: bool = False
     retention_privacy_verified: bool = False
@@ -109,6 +112,7 @@ class DeploymentRuntimeFacts:
             "air_gap_enabled",
             "customer_managed_keys_enabled",
             "independent_failure_domains_verified",
+            "worker_discovery_execution_separation_verified",
             "backup_restore_verified",
             "rollback_verified",
             "retention_privacy_verified",
@@ -129,6 +133,7 @@ _PROFILES: dict[DeploymentEdition, DeploymentProfile] = {
         supports_air_gap=True,
         requires_customer_managed_keys=False,
         requires_independent_failure_domains=False,
+        requires_worker_discovery_execution_separation=False,
         claim_boundary="local-first capability contract; no hosted or production assurance",
     ),
     "team": DeploymentProfile(
@@ -142,6 +147,7 @@ _PROFILES: dict[DeploymentEdition, DeploymentProfile] = {
         supports_air_gap=True,
         requires_customer_managed_keys=False,
         requires_independent_failure_domains=False,
+        requires_worker_discovery_execution_separation=True,
         claim_boundary="shared self-hosted capability contract; operational limits remain deployment-specific",
     ),
     "enterprise": DeploymentProfile(
@@ -155,6 +161,7 @@ _PROFILES: dict[DeploymentEdition, DeploymentProfile] = {
         supports_air_gap=True,
         requires_customer_managed_keys=False,
         requires_independent_failure_domains=True,
+        requires_worker_discovery_execution_separation=True,
         claim_boundary="enterprise-oriented controls require deployment and hosted evidence; no readiness claim",
     ),
     "regulated": DeploymentProfile(
@@ -168,6 +175,7 @@ _PROFILES: dict[DeploymentEdition, DeploymentProfile] = {
         supports_air_gap=True,
         requires_customer_managed_keys=True,
         requires_independent_failure_domains=True,
+        requires_worker_discovery_execution_separation=True,
         claim_boundary="regulated deployment contract only; independent review and regulatory mapping remain external",
     ),
 }
@@ -223,6 +231,11 @@ def validate_deployment_profile(edition: str, facts: DeploymentRuntimeFacts) -> 
         findings.append("customer_managed_keys_required")
     if profile.requires_independent_failure_domains and not facts.independent_failure_domains_verified:
         findings.append("independent_failure_domains_required")
+    if (
+        profile.requires_worker_discovery_execution_separation
+        and not facts.worker_discovery_execution_separation_verified
+    ):
+        findings.append("worker_discovery_execution_separation_required")
     if profile.requires_backup_restore_evidence and not facts.backup_restore_verified:
         findings.append("backup_restore_evidence_required")
     if profile.requires_rollback_evidence and not facts.rollback_verified:

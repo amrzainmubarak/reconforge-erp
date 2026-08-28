@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import hashlib
 import json
 import re
 import sys
@@ -29,6 +30,7 @@ _GITLEAKS_FINGERPRINT = re.compile(
 _ALLOWED_GITLEAKS_PATHS = {
     "'''(^|[\\\\/])\\.git[\\\\/]'''",
     "'''(^|[\\\\/])\\.venv[\\\\/]'''",
+    "'''(^|[\\\\/])\\.venv-windows[\\\\/]'''",
     "'''(^|[\\\\/])\\.codex-test-tmp[\\\\/]'''",
     "'''(^|[\\\\/])\\.tmp[\\\\/]'''",
     "'''(^|[\\\\/])node_modules[\\\\/]'''",
@@ -38,6 +40,26 @@ _ALLOWED_GITLEAKS_PATHS = {
     "'''(^|[\\\\/])\\.pytest-tmp-goal[\\\\/]'''",
     "'''(^|[\\\\/])\\.ruff_cache[\\\\/]'''",
     "'''(^|[\\\\/])(build|dist|output)[\\\\/]'''",
+}
+_DOCKER_CONTEXT_ALLOWLIST = {
+    "!.dockerignore",
+    "!Dockerfile",
+    "!LICENSE",
+    "!README.md",
+    "!alembic.ini",
+    "!pyproject.toml",
+    "!setup.py",
+    "!uv.lock",
+    "!alembic/",
+    "!alembic/**",
+    "!config/",
+    "!config/**",
+    "!control-packs/",
+    "!control-packs/**",
+    "!examples/",
+    "!examples/**",
+    "!reconforge/",
+    "!reconforge/**",
 }
 
 
@@ -52,6 +74,7 @@ def _validate_policy_document(policy: dict[str, Any]) -> None:
         policy,
         {
             "$schema",
+            "container_audits",
             "container_resolution",
             "dependency_audits",
             "effective_on",
@@ -126,10 +149,87 @@ def _validate_policy_document(policy: dict[str, Any]) -> None:
         raise SupplyChainPolicyError("JavaScript resolution policy drifted")
 
     container = _require_keys(
-        policy["container_resolution"], {"base_image", "dependency_command", "dockerfile"}, "container resolution"
+        policy["container_resolution"],
+        {"base_image", "dependency_command", "dockerfile", "service_images"},
+        "container resolution",
     )
     if container["dockerfile"] != "Dockerfile" or "@sha256:" not in container["base_image"]:
         raise SupplyChainPolicyError("container resolution policy drifted")
+    service_images = _require_keys(
+        container["service_images"], {"airgap_python", "postgres_16_ci", "postgres_drills"}, "service images"
+    )
+    if service_images != {
+        "airgap_python": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
+        "postgres_16_ci": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+        "postgres_drills": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+    }:
+        raise SupplyChainPolicyError("service-image resolution policy drifted")
+
+    container_audits = _require_keys(
+        policy["container_audits"], {"sbom", "vulnerability"}, "container audits"
+    )
+    sbom = _require_keys(
+        container_audits["sbom"],
+        {
+            "commit",
+            "license_content_coverage",
+            "linux_x86_64_archive_sha256",
+            "minimum_license_coverage_percent",
+            "native_schema_version",
+            "scan_scope",
+            "tool",
+            "version",
+            "windows_x86_64_archive_sha256",
+        },
+        "container SBOM audit",
+    )
+    vulnerability = _require_keys(
+        container_audits["vulnerability"],
+        {
+            "commit",
+            "fail_severities",
+            "linux_x86_64_archive_sha256",
+            "max_database_age_hours",
+            "scan_input_format",
+            "supported_db_schema",
+            "tool",
+            "unknown_severity_policy",
+            "version",
+            "vex_allowed_statuses",
+            "vex_context",
+            "vex_document",
+            "vex_document_sha256",
+            "vex_max_review_age_days",
+            "windows_x86_64_archive_sha256",
+        },
+        "container vulnerability audit",
+    )
+    if (
+        sbom["tool"] != "syft"
+        or sbom["scan_scope"] != "squashed"
+        or sbom["license_content_coverage"] != 75
+        or not 90 <= sbom["minimum_license_coverage_percent"] <= 100
+        or vulnerability["tool"] != "grype"
+        or vulnerability["scan_input_format"] != "syft-json"
+        or vulnerability["fail_severities"] != ["Critical", "High"]
+        or vulnerability["unknown_severity_policy"] != "fail"
+        or vulnerability["supported_db_schema"] != 6
+        or not 1 <= vulnerability["max_database_age_hours"] <= 168
+        or vulnerability["vex_document"] != "docs/security/container-runtime.openvex.json"
+        or vulnerability["vex_context"] != "https://openvex.dev/ns/v0.2.0"
+        or vulnerability["vex_allowed_statuses"] != ["fixed"]
+        or not 1 <= vulnerability["vex_max_review_age_days"] <= 30
+        or re.fullmatch(r"[0-9a-f]{64}", vulnerability["vex_document_sha256"]) is None
+    ):
+        raise SupplyChainPolicyError("container scanner policy drifted")
+    for label, scanner in (("Syft", sbom), ("Grype", vulnerability)):
+        if (
+            re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", scanner["version"]) is None
+            or re.fullmatch(r"[0-9a-f]{40}", scanner["commit"]) is None
+        ):
+            raise SupplyChainPolicyError(f"{label} identity is invalid")
+        for field in ("linux_x86_64_archive_sha256", "windows_x86_64_archive_sha256"):
+            _validate_hash(f"sha256:{scanner[field]}", f"{label} {field}")
 
     secret = _require_keys(
         policy["secret_scanning"],
@@ -223,6 +323,9 @@ def _validate_policy_document(policy: dict[str, Any]) -> None:
             "javascript-audit",
             "git-secret-scan",
             "tree-secret-scan",
+            "container-sbom",
+            "container-vulnerability-audit",
+            "container-license-inventory",
         ]
     ):
         raise SupplyChainPolicyError("release-gate policy drifted")
@@ -512,8 +615,9 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
     docker_policy = policy["container_resolution"]
     python_policy = policy["python_resolution"]
     text = _required_path(root, docker_policy["dockerfile"]).read_text(encoding="utf-8")
-    if text.count(f'FROM {docker_policy["base_image"]}') != 1:
-        raise SupplyChainPolicyError("Docker base image must match the reviewed digest")
+    stage_lines = [line for line in text.splitlines() if line.startswith("FROM ")]
+    if len(stage_lines) != 2 or any(line.split()[1] != docker_policy["base_image"] for line in stage_lines):
+        raise SupplyChainPolicyError("both Docker stages must use the reviewed base-image digest")
     required = (
         f"ADD --checksum=sha256:{python_policy['linux_x86_64_archive_sha256']} ",
         f"/astral-sh/uv/releases/download/{python_policy['manager_version']}/",
@@ -526,25 +630,89 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
             image = line.split()[1]
             if re.search(r"@sha256:[0-9a-f]{64}$", image) is None:
                 raise SupplyChainPolicyError("every Docker stage must use a digest-pinned image")
+    context_rules = [
+        line.strip()
+        for line in _required_path(root, ".dockerignore").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    if not context_rules or context_rules[0] != "*" or set(context_rules[1:]) != _DOCKER_CONTEXT_ALLOWLIST:
+        raise SupplyChainPolicyError("Docker build context must match the closed deny-by-default allowlist")
+
+    service_images = docker_policy["service_images"]
+    expected = {
+        ".github/scripts/verify_airgap_install.py": service_images["airgap_python"],
+        ".github/scripts/verify_postgres_ha_dr.py": service_images["postgres_drills"],
+        ".github/scripts/verify_postgres_writeback_identity_migration.py": service_images["postgres_drills"],
+        ".github/scripts/verify_postgres_reliability.py": service_images["postgres_drills"],
+        ".github/scripts/verify_postgres_upgrade.py": service_images["postgres_drills"],
+    }
+    for relative, image in expected.items():
+        script = _required_path(root, relative).read_text(encoding="utf-8")
+        tag, digest = image.rsplit("@", 1)
+        if (
+            f'IMAGE = "{tag}"' not in script
+            or f'IMAGE_REFERENCE = f"{{IMAGE}}@{digest}"' not in script
+            or script.count("IMAGE_REFERENCE") < 2
+        ):
+            raise SupplyChainPolicyError(f"digest-pinned service image drifted in {relative}")
+
+    matrix_paths = (
+        ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
+        ".github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py",
+        ".github/scripts/verify_postgres_writeback_receiver_failover_matrix.py",
+        ".github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py",
+    )
+    for relative in matrix_paths:
+        matrix_script = _required_path(root, relative).read_text(encoding="utf-8")
+        for prefix, image in (
+            ("POSTGRES_16", service_images["postgres_16_ci"]),
+            ("POSTGRES_17", service_images["postgres_drills"]),
+        ):
+            tag, digest = image.rsplit("@", 1)
+            if (
+                f'{prefix}_IMAGE = "{tag}"' not in matrix_script
+                or f'{prefix}_IMAGE_REFERENCE = (' not in matrix_script
+                or f'f"{{{prefix}_IMAGE}}@{digest}"' not in matrix_script
+                or matrix_script.count(f"{prefix}_IMAGE_REFERENCE") < 2
+            ):
+                raise SupplyChainPolicyError(f"PostgreSQL matrix image drifted in {relative}")
 
 
 def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:
     release = _required_path(root, policy["release_gate"]["workflow"]).read_text(encoding="utf-8")
     security = _required_path(root, ".github/workflows/security.yml").read_text(encoding="utf-8")
+    audit_runner = _required_path(root, ".github/scripts/run_locked_python_audit.py").read_text(
+        encoding="utf-8"
+    )
+    container_gate = _required_path(root, ".github/scripts/validate_container_security.py").read_text(
+        encoding="utf-8"
+    )
     python_policy = policy["python_resolution"]
     secret_policy = policy["secret_scanning"]
+    sbom_policy = policy["container_audits"]["sbom"]
+    vulnerability_policy = policy["container_audits"]["vulnerability"]
     shared_fragments = (
         "astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9",
         f'version: "{python_policy["manager_version"]}"',
         f'GITLEAKS_VERSION: "{secret_policy["version"]}"',
         f"GITLEAKS_LINUX_X64_SHA256: {secret_policy['linux_x86_64_archive_sha256']}",
         "uv lock --check",
-        "pip-audit --require-hashes --disable-pip",
+        "uv sync --locked --extra dev --no-editable --python",
+        ".github/scripts/run_locked_python_audit.py",
         "gitleaks.toml --log-opts=\"--all\"",
         "gitleaks.toml",
         "npm --prefix apps/web audit --package-lock-only --audit-level=high",
-        "--pip-audit-exit-code",
         "--npm-audit-exit-code",
+        f'SYFT_VERSION: "{sbom_policy["version"]}"',
+        f"SYFT_COMMIT: {sbom_policy['commit']}",
+        f"SYFT_LINUX_AMD64_SHA256: {sbom_policy['linux_x86_64_archive_sha256']}",
+        f'GRYPE_VERSION: "{vulnerability_policy["version"]}"',
+        f"GRYPE_COMMIT: {vulnerability_policy['commit']}",
+        f"GRYPE_LINUX_AMD64_SHA256: {vulnerability_policy['linux_x86_64_archive_sha256']}",
+        '"sbom:${RUNNER_TEMP}/image.syft.json"',
+        "--vex docs/security/container-runtime.openvex.json",
+        ".github/scripts/validate_container_security.py",
+        "--image-config-digest",
     )
     for workflow_name, text in (("release", release), ("security", security)):
         if "continue-on-error" in text:
@@ -552,6 +720,28 @@ def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:
         for fragment in shared_fragments:
             if fragment not in text:
                 raise SupplyChainPolicyError(f"{workflow_name} workflow is missing policy gate: {fragment}")
+
+    for fragment in (
+        '"--all-extras"',
+        '"--no-emit-project"',
+        '"--require-hashes"',
+        '"--disable-pip"',
+        '"--pip-audit-exit-code"',
+        '"--isolated"',
+        '"--no-sync"',
+    ):
+        if fragment not in audit_runner:
+            raise SupplyChainPolicyError(f"locked Python audit runner is missing policy gate: {fragment}")
+
+    for fragment in (
+        "ignoredMatches",
+        'severity == "Critical"',
+        "max_database_age_hours",
+        "minimum_license_coverage_percent",
+        "expected_image",
+    ):
+        if fragment not in container_gate:
+            raise SupplyChainPolicyError(f"container audit runner is missing policy gate: {fragment}")
 
     external_write = release.find("docker/login-action@")
     if external_write < 0:
@@ -562,15 +752,28 @@ def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:
         "Scan full Git history with redacted output",
         "Scan checked-out tree with redacted output",
         "Audit the npm lock",
+        "Generate exact-image SBOM and vulnerability inputs",
+        "Build and enforce the local container security gate",
     )
     if any(release.find(step) < 0 or release.find(step) > external_write for step in required_before_write):
         raise SupplyChainPolicyError("release supply-chain gates must precede registry authentication")
+    for fragment in (
+        "docker buildx imagetools inspect --raw",
+        "published manifest bytes do not match the registry digest",
+        "published manifest is not bound to the scanned image configuration",
+    ):
+        if release.find(fragment) < external_write:
+            raise SupplyChainPolicyError(f"release post-push binding is missing: {fragment}")
 
 
 def validate_project(root: Path, as_of: date) -> tuple[dict[str, Any], list[dict[str, Any]], int, int, int]:
     root = root.resolve(strict=True)
     policy = _load_json(_required_path(root, "docs/security/supply-chain-policy.v1.json"))
     _validate_policy_document(policy)
+    vex_policy = policy["container_audits"]["vulnerability"]
+    vex_path = _required_path(root, vex_policy["vex_document"])
+    if hashlib.sha256(vex_path.read_bytes()).hexdigest() != vex_policy["vex_document_sha256"]:
+        raise SupplyChainPolicyError("reviewed OpenVEX document hash drifted")
     python_policy = policy["python_resolution"]
     pyproject = tomllib.loads(_required_path(root, python_policy["manifest"]).read_text(encoding="utf-8"))
     uv_config = pyproject.get("tool", {}).get("uv")

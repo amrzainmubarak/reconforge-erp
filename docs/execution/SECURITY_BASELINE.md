@@ -1,22 +1,293 @@
 # Security Baseline
 
-Measured through 2026-08-07 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
+## E-853 regulated admission gate (2026-08-23)
+
+- Composite verification rejects unresolved profile findings and local key
+  providers before emitting an admission evidence digest.
+- It handles no key material and does not call KMS/HSM or external IAM.
+
+## E-852 managed-key custody evidence (2026-08-23)
+
+- The key manifest contains identifiers and lifecycle metadata only; key bytes
+  and secret references are not accepted or emitted.
+- Provider, active-status, customer-ownership, purpose, scope, and rotation
+  bounds fail closed, but KMS/HSM runtime custody remains open.
+
+## E-851 profile digest binding (2026-08-23)
+
+- Runtime evidence is rejected unless its profile digest matches the selected
+  immutable edition profile.
+- This prevents retargeting local facts across profile contracts but does not
+  authenticate external systems.
+
+## E-850 readiness CLI (2026-08-23)
+
+- Matrix ingestion uses the centralized bounded safe-YAML parser rather than a
+  raw loader and rejects traversal/contract expansion.
+- The command performs no network, secret, database, IAM, or mutation action.
+
+## E-849 deployment readiness matrix (2026-08-23)
+
+- Every mode has the same eight named gates and path-bound evidence references.
+- The schema forbids a generic `verified`/`ready` edition status; open key
+  custody and independent failure-domain gaps remain explicit.
+
+## E-848 runtime evidence manifest (2026-08-23)
+
+- The closed manifest rejects expansion and type confusion before profile
+  evaluation and makes no external or secret-bearing calls.
+- The JSON parser is recorded under FI-042 and exact AST inventory remains
+  enforced.
+- A verified manifest does not authenticate external systems or prove runtime
+  enforcement.
+
+Measured through 2026-08-22 against the current local snapshot in `STATE.md`. This is automated baseline evidence, not an independent security assessment or compliance statement.
+
+## E-846 worker permission manifest verifier (2026-08-23)
+
+- The manifest contract is closed, network-free, digest-bound, and rejects
+  human-only or non-distinct discovery/execution grants.
+- Focused tests pass 15/15. No IAM mutation or production identity evidence is
+  inferred. Full `python -m pytest -q` exits 0 over the 3,119-test collection.
+
+## E-847 worker manifest verification CLI (2026-08-23)
+
+- Verification remains local, strict, digest-bound, and free of network or IAM
+  mutation paths.
+- Direct JSON parsing is recorded in FI-041 and enforced by the exact AST gate.
+- Production identity-provider enforcement and hosted admission remain open.
+
+## E-845 hosted worker permission separation gate (2026-08-23)
+
+- Team, Enterprise, and Regulated profile validation fails closed when worker
+  discovery/execution separation evidence is absent.
+- Focused tests pass 9/9. This gate does not prove service-account provisioning,
+  hosted rollout, or production IAM effectiveness. Full `python -m pytest -q`
+  exits 0 over the 3,119-test collection.
+
+## E-844 reconciliation discovery/execution permission split (2026-08-23)
+
+- Queue discovery can be bound to a separate permission so discovery does not
+  implicitly grant financial execution; claim checks remain tied to `match.run`.
+- Focused tests pass 33/33 with one declared live PostgreSQL skip. Deployment
+  migration and production IAM enforcement remain outside the evidence. Full
+  `python -m pytest -q` on commit `7f44db68` exits 0 over 3,119 tests.
+
+## E-843 reconciliation worker amount-policy propagation (2026-08-23)
+
+- Worker claim authorization reuses the immutable submission exposure and fails
+  closed for invalid stored metadata; legacy rows with no metadata remain
+  amount-unknown rather than zero.
+- Focused API/worker/policy tests pass 32/32 with one declared live PostgreSQL
+  skip. Full `python -m pytest -q` exits 0 over the 3,119-test collection.
+  Discovery-lane policy and production IAM effectiveness remain outside the
+  evidence.
+
+## E-842 reconciliation submission amount ABAC control (2026-08-23)
+
+- Canonical reconciliation inputs contribute exact gross exposure to server
+  authorization before run persistence; missing values stay missing and cannot
+  be coerced to zero.
+- Focused API tests pass 3/3; full post-slice regression completed with exit
+  code 0 over 3,119 collected tests. Live database and production IAM remain
+  outside the evidence.
+
+## E-841 ownership-change route amount ABAC control (2026-08-23)
+
+- Ownership-change preparation authorizes exact gross exposure before
+  persistence, including ownership delta and consideration without double
+  counting derived effects.
+- Focused route/domain/dependency tests pass 19/19 with one declared live
+  PostgreSQL skip. Other financial routes and production IAM remain outside
+  the evidence.
+
+## E-840 PPA route amount ABAC control (2026-08-23)
+
+- PPA preparation authorizes gross consideration plus NCI exposure as exact
+  Decimal before persistence and does not double-count allocation detail.
+- Focused route/domain tests pass 16/16. Other financial routes and production
+  IAM effectiveness remain outside the evidence.
+
+## E-839 deferred-tax route amount ABAC control (2026-08-23)
+
+- Deferred-tax preparation authorizes gross absolute typed fair-value exposure
+  as exact Decimal before persistence and does not double-count tax basis.
+- Focused route/domain tests pass 15/15. Other financial routes and production
+  IAM effectiveness remain outside the evidence.
+
+## E-838 intercompany route amount ABAC control (2026-08-23)
+
+- Intercompany preparation authorizes gross absolute typed Money exposure as
+  exact Decimal before proposal persistence; reciprocal netting cannot bypass a
+  materiality bound.
+- Focused route/domain tests pass 15/15. Other financial routes and production
+  IAM effectiveness remain outside the evidence.
+
+## E-837 Finance Core route amount ABAC control (2026-08-23)
+
+- PostgreSQL Finance Core entry creation parses every debit and credit as exact
+  non-negative decimals and passes one gross debit effect into central policy
+  before adapter access.
+- Invalid or negative amounts fail closed with a safe API error; no float,
+  implicit zero, or duplicated debit-plus-credit amount is used.
+- Focused route/dependency tests pass 11 cases with one declared capability
+  skip. Universal financial-route adoption remains unverified.
+
+## E-836 route-level amount ABAC control (2026-08-23)
+
+- Consolidation impairment preparation now passes the exact Decimal sum of
+  typed carrying amounts to central policy before persistence.
+- Domain conversion rejects malformed or cross-currency amounts before the
+  authorization/persistence boundary; no float or implicit currency conversion
+  is introduced.
+- Focused route/policy/dependency tests pass 90/90. Universal financial-route
+  adoption remains unverified.
+
+## E-835 bounded amount ABAC control (2026-08-23)
+
+- A bounded policy cannot authorize an action when the exact financial amount
+  is missing; the engine returns `amount_missing_for_bounded_policy`.
+- The implementation accepts only the existing finite `Decimal` context and
+  does not coerce missing values to zero or infer them from untrusted fields.
+- Policy regression tests pass 80/80. Universal route adoption and deployed
+  IAM effectiveness remain outside this evidence.
+
+## E-834 durable observation controls (2026-08-22)
+
+- Recovery observations are persisted before an accepted lifecycle transition;
+  rejected, pending, not-found, and unknown outcomes do not mutate the intent.
+- SQLite and PostgreSQL reject direct `UPDATE`/`DELETE`; triggers validate the
+  canonical JSON envelope, duplicated identity columns, nested observation
+  digest, and persisted connector/idempotency binding.
+- PostgreSQL revision 0090 enables forced tenant/workspace row-level security;
+  the disposable matrix verified that a role with all table privilege flags
+  disabled cannot bypass scope enforcement.
+- Replay uses the observation digest as an idempotency identity. The matrix
+  covered SQLite, PostgreSQL 16.14, and PostgreSQL 17.10 with synthetic data;
+  no secrets, provider credentials, or external network calls were used.
+- The full Python suite passed 2996 executed tests with 115 declared skips;
+  Bandit and pip-audit are green. The local pip tool was upgraded to 26.2 to
+  remove the previously reported PYSEC-2026-3721 finding in pip 26.1.2.
+
+## E-833 provider outcome observation controls (2026-08-22)
+
+- Status lookup is separated from mutation; observations are frozen and
+  digest-bound to the original idempotency key and raw response body.
+- `pending`, `not_found`, and `unknown` cannot become acknowledgement or failed
+  lifecycle states through the recovery executor.
+- Legacy boolean responses remain accepted only through deterministic
+  normalization; explicit outcomes are checked against the boolean and included
+  in the response digest.
+- Focused transport/domain tests pass 55/55 with synthetic responses and no
+  credentials or external network calls.
+
+## E-832 negative provider outcome controls (2026-08-22)
+
+- A valid JSON envelope is not trusted as an effect: `accepted=false` is
+  rejected before acknowledgement in original dispatch and status recovery.
+- Error messages are fixed safe codes and never include provider body, payload,
+  credential, or customer data.
+- Existing compensation rejection and idempotency-key binding remain enforced;
+  focused transport/domain tests pass 46/46.
+
+
+## E-831 write-back recovery controls (2026-08-22)
+
+- The runner uses generated disposable credentials, exact digest-pinned images,
+  parameterized values, labelled cleanup, and a non-privileged application
+  role with all elevated flags false.
+- Append-only lifecycle triggers refuse direct UPDATE/DELETE; recovery is
+  keyed by the original immutable identity, while compensation uses a distinct
+  idempotency key and separated actor.
+- Tenant scope is checked explicitly, the closed schema rejects six mutated
+  evidence shapes, and the supply-chain validator consumes the runner, image
+  constants, report, and CI artifact step.
+- No live provider credentials, customer data, network egress, accounting
+  posting, or settlement path is exercised. These controls are not a hostile
+  DBA review, provider security assessment, or production assurance.
 
 ## Measured gates
 
 | Gate | Result | Scope boundary |
 | --- | --- | --- |
-| `python -m bandit -q -r reconforge` | E-131 local exit 0, no findings | Notices cover eight reviewed `# nosec B608` sites: one allowlisted backup identifier site and seven durable-job sites whose SQL identifiers derive only from immutable module-level `_JOB_COLUMNS`; every data value remains parameterized. Suppressions remain manual-review points. |
-| Hash-exported locked Python audit | The reviewed 128-package lock includes boto3 for the S3 server boundary, OpenTelemetry API/SDK for optional local instrumentation, cryptography 50.0.0 for optional encrypted backups, pyOpenSSL 26.4.0 for the WebAuthn stack, joserfc 1.7.4 for OIDC, and python3-saml 1.16.0 with xmlsec/lxml for SAML. Hosted Security `30856022993` and the CI Python 3.11/3.12 audit jobs pass on head `a4a35f8`; the prior 49.0.0 pin was rejected for CVE-2026-69247 and the current lock has no advisory exception. | Advisory results are time-bounded; reachability, provenance, malware, and license suitability are not proven; the SAML dependency deprecation warning remains monitored |
+| `python -m bandit -q -r reconforge` | Current local exit 0, no findings | Notices cover the reviewed fixed-SQL `# nosec B608` sites: the new write-back migration concatenates only two module constants, while earlier backup/durable-job sites use allowlisted identifiers or immutable module-level columns and parameterize every data value. Suppressions remain manual-review points. |
+| Hash-exported locked Python audit | The reviewed 128-package graph now resolves `pip 26.2`; the preceding `26.1.2` lock was rejected locally on 2026-08-22 for `PYSEC-2026-3721`. Isolated Python 3.11/3.12 runners exported all extras with hashes and pip-audit 2.10.1 reported zero known findings with no active exception. Older hosted Security/CI evidence remains historical and does not cover this workflow revision. | Advisory results are time-bounded; a fresh hosted Python 3.11/3.12 matrix is required, and reachability, provenance, malware, and license suitability are not proven; the SAML dependency warning remains monitored. |
 | `npm.cmd --prefix apps/web audit --package-lock-only --audit-level=high` | Exit 0; 0 vulnerabilities reported | Covers the exact-version npm lock; all 211 current non-root entries have HTTPS registry resolution and embedded SRI |
 | Gitleaks 8.30.1 full history | Exit 0; 602 commits and about 22.49 MB scanned after two exact historical fingerprints were recorded for synthetic test fixtures | Checksum-verified binary and default rules; exact fingerprints are limited to known non-secret test literals; detection is not proof that no secret existed or that external credentials are safe |
 | Gitleaks 8.30.1 checked tree | Exit 0 across a clean 25.12 MB `git archive` checkout; the workspace scan is not evidence because generated environments caused a 6.30 GB/120-second timeout | Only generated/tool-owned paths are excluded; output is 100% redacted and every suppression is an exact commit/path/rule/line or path/rule/line fingerprint |
-| Docker | Not run | Daemon unavailable; image contents and runtime user/permissions were not verified locally |
+| Hardened Docker CLI and exact-image gate | E-822 local exit 0: two official-digest-pinned Python 3.11 Alpine stages, closed 216.25 KB context, 58,773,988-byte runtime image, UID/GID 10001, no uv/global pip/source/build manifests/docs; Doctor, validation, rules, and demo pass without networking on a read-only root. E-823/E-824 add exact Syft/Grype subject binding and fixed-only hash-bound VEX for three source-proven CPython fixes. | The current Grype evidence overrides the earlier favorable Docker Scout result for release gating and remains blocked on two CVE-2026-14456 matches in OpenSSL 3.5.7. One Windows/Docker Desktop host and time-bounded databases only; no hosted OCI reproducibility, independent reachability review, license legal review, signature/provenance, production volume ownership, or deployed hardening assurance. |
 
 ## Controls observed
 
+- E-830's final local security gate adds the verifier to the full Bandit scan
+  and exact PostgreSQL image constants to the closed supply-chain validator;
+  both pass. The isolated CPython 3.12.13 audit reports zero findings and zero
+  exceptions across 128 policy-owned packages. Ambient pip-audit separately
+  reports host `pip 26.1.2` / `PYSEC-2026-3721` (fixed in 26.2) and is retained
+  as a host-environment failure, not misreported as project success. Gitleaks
+  8.30.1 reports no findings across all 663 commits and a clean implementation
+  archive; the exact temporary files were verified and removed.
+- E-830 runs exact digest-pinned PostgreSQL 16.14/17.10 images with generated
+  disposable credentials, a runtime role whose superuser/create-database/
+  create-role/replication/BYPASSRLS flags are false, parameterized receiver
+  data, fixed progress labels, and exact resource labels. A partitioned COMMIT
+  is classified uncertain only after direct `SyncRep` observation. Exact-ID
+  fencing and container removal precede promotion, preventing the tested
+  split-brain path. Writes remain controller-paused until a re-seeded standby is
+  synchronous; restart endpoints are rediscovered rather than trusted stale.
+  Normal failures clean automatically, and interrupted runs were removed only
+  after label verification. This is not hostile-controller/DBA resistance,
+  quorum fencing, external secret management, cross-host isolation, automated
+  HA, provider security, or production assurance.
+- E-829 adds an optional PostgreSQL receiver reference with no listener,
+  payload-body storage, credential persistence, numeric financial amount, or
+  autonomous authority. Data values are parameterized; connection/statement
+  timeouts are bounded; transaction-scoped receiver/key locking and one
+  receipt/effect transaction prevent same-database duplicate effects; database
+  triggers refuse UPDATE/DELETE. Runtime-generated credentials are confined to
+  disposable containers, and the application role has no superuser,
+  create-database, create-role, replication, or BYPASSRLS flag. PostgreSQL
+  16.14/17.10 contention, crash replay, malformed-input refusal, native restore,
+  parity, and cleanup pass. This is not external authentication, malicious DBA
+  resistance, cross-host consensus/failover, live-provider security, HA/DR, or
+  production assurance.
+- E-828 introduces no listener, payload persistence, credential store, or
+  autonomous financial authority. Its receiver persists bounded identities and
+  SHA-256 digests only; atomic receipt/effect inserts, an exact receiver/key
+  primary key, validated replay response digests, and immutable-row triggers
+  fail closed on replay retargeting or direct mutation. Spawned contention,
+  crash replay, independent restore, negative schema cases, and verified temp
+  cleanup pass. This is not live-provider authentication, distributed
+  consensus, database failover, secret operations, or production assurance.
+- E-827 closes the current two-version migration evidence gap with exact
+  PostgreSQL 16.14/17.10 image digests owned by the closed supply-chain policy.
+  One input-validated observation function performs both runs; unpinned images,
+  malformed versions, unsafe container prefixes, version mismatches, history
+  divergence, false checks, extra evidence fields, or incomplete cleanup fail
+  closed. The report binds both runners, migration 0089, and policy sources.
+  This remains same-host synthetic evidence, not image vulnerability assurance,
+  provider security, rolling upgrade, HA/DR, or production assurance.
+- E-826 exercises the adversarial migration path on digest-pinned PostgreSQL
+  17.10. A drifted payload identity is refused without advancing Alembic,
+  mutating history, or replacing the trigger. A SHA-256-bound native pre-drift
+  dump restores and upgrades independently before the new trigger refuses
+  drifted direct INSERT. The runner uses runtime-generated synthetic credentials,
+  shell-free argument vectors, no retained payloads/secrets, and verified exact
+  container cleanup. The isolated locked Python 3.12 audit passes with zero
+  findings; the ambient host audit separately and correctly reports its
+  installed vulnerable pip, so it is not used as product evidence. This is not
+  live-provider, cross-host recovery, HA/DR, or production security assurance.
+- E-825 binds every governed write-back version to the original proposal at
+  repository and database INSERT boundaries. SQLite migration 42 and
+  PostgreSQL Alembic 0089 refuse invalid predecessor/state histories and
+  mutation-identity drift; API evidence exposes a stable proposal digest. The
+  trigger and RLS path pass against digest-pinned PostgreSQL 17.10 under a
+  non-superuser/NOBYPASSRLS role. Provider authentication, distributed receiver
+  idempotency, hosted repetition, and production operating effectiveness remain open.
 - GitHub Actions are referenced by full commit SHA in the six inspected workflows.
-- The Docker base image is pinned by SHA-256 digest.
+- Both Docker stages use the same policy-reviewed SHA-256-pinned base. A closed
+  deny-by-default `.dockerignore` allowlist is validator-enforced, build tooling
+  remains outside the runtime image, and the default identity is non-root.
 - Universal `uv.lock` closes runtime, server, backup, observability, dev, docs, and DuckDB resolution; uv 0.11.32, its official archive hashes, and an absolute upload cutoff are policy-pinned. Normal CI, server CI, Docker, security, and candidate definitions use `--locked`.
 - The closed supply-chain policy and exception registry require exact finding identity, repository issue, bounded owner/controls, two non-owner approvers, and at most 30 active days; there are no active exceptions. Scanner errors and report/exit disagreement fail closed.
 - Weekly Dependabot definitions cover pip, npm, Docker, and GitHub Actions. Bot output still requires lock diff review, audits, tests, and human review.
@@ -50,10 +321,20 @@ Measured through 2026-08-07 against the current local snapshot in `STATE.md`. Th
 ## Gaps and residual risk
 
 - The new dependency/secret workflow and pre-registry release gates have not executed on a hosted runner; local definitions and tests are not branch-protection or operating-effectiveness evidence.
-- The npm lock fixes versions but 155 entries lack embedded SRI. The policy counts and discloses the gap rather than treating it as full artifact integrity.
+- The current npm lock fixes versions and all 211 non-root registry records
+  carry HTTPS resolution and SRI. This closes the former recorded integrity
+  metadata gap but does not prove package provenance, safety, reachability, or
+  license suitability.
 - File ingestion remains partial: FI-005/FI-006/FI-007 generated evidence/review/report/Studio CSV/JSON, FI-008/FI-009/FI-014/FI-015/FI-016 paths, and AP/AR/audit/PostgreSQL-outbox/PostgreSQL-reconciliation/SQLite-matching/public-export/Redis-session FI-013 contracts are bounded; exact AST allowlists close current direct tabular/JSON/YAML parser calls. Legacy XLS has only OLE-signature/file-size checks; client-pack and database-export replacement now have bounded explicit recovery but retain observer/pre-marker/host-loss limits. Legacy DB/review-state semantics remain permissive. Authorship, actor authorization, task correctness, disclosure approval, and provenance are not authenticated; malware scanning, quarantine, HTTP upload, and future connector controls remain absent under R-018.
 - PostgreSQL and Redis service images use mutable major tags in CI; local live-service tests were skipped.
-- Checksum-verified local secret scans now pass, and bounded backup encryption plus an application restore-permission boundary have local evidence. No current runtime evidence exists for DAST, broad fuzzing, container/IaC scanning, signature/provenance verification, identity-provisioned restore operation, KMS/key rotation, HA/host-loss DR, air-gap installation, or penetration testing. Static release contracts are not cryptographic execution.
+- Checksum-verified local secret scans and the bounded E-822 container smoke
+  profile pass, but the E-824 exact-image release gate remains blocked by two
+  OpenSSL High matches. Bounded backup encryption plus an application
+  restore-permission boundary have local evidence. No current runtime evidence
+  exists for DAST, broad fuzzing, container/IaC vulnerability scanning,
+  signature/provenance verification, identity-provisioned restore operation,
+  KMS/key rotation, HA/host-loss DR, air-gap installation, or penetration
+  testing. Static release contracts are not cryptographic execution.
 - Signed provenance pipeline execution, protected archives, trusted-builder/source-control assessment, independent verification, revocation drill, training, environment/endpoint assurance, vulnerability response/root-cause operation, and the SP 800-218A AI community profile remain open; the SSDF/SLSA registries expose rather than satisfy these outcomes.
 - Deterministic local package/source SBOM files and synthetic image-normalizer fixtures are not proof of a hosted image scan, signed attestation, complete inventory, vulnerability/license assurance, or published release SBOM.
 - The worktree is too broad for a focused security review and includes authentication, tenant, DB, evidence, and worker changes together.

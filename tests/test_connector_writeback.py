@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from string import ascii_letters, digits
 
 import pytest
@@ -24,6 +24,7 @@ from reconforge.connectors.writeback import (
     dispatch_writeback,
     dispatch_writeback_to_provider,
     request_compensation,
+    validate_writeback_transition,
 )
 
 NOW = datetime(2026, 8, 2, 10, 0, tzinfo=UTC)
@@ -277,3 +278,83 @@ def test_digest_is_deterministic_and_payload_is_not_part_of_contract() -> None:
     second = _intent()
     assert first.digest == second.digest
     assert "payload" not in first.model_dump()
+
+
+def test_proposal_digest_is_stable_across_authorized_lifecycle_versions() -> None:
+    proposed = _intent()
+    approved = approve_writeback(
+        proposed,
+        policy=POLICY,
+        actor_id="checker-1",
+        approved_at=NOW,
+        assurance="mfa",
+        reason="independent review",
+    )
+    dispatched = dispatch_writeback(approved, policy=POLICY)
+    acknowledged = acknowledge_writeback(
+        dispatched,
+        provider_reference="provider-123",
+        response_digest="b" * 64,
+        acknowledged_at=NOW,
+        accepted=True,
+    )
+
+    assert len({item.proposal_digest for item in (proposed, approved, dispatched, acknowledged)}) == 1
+    assert len({item.digest for item in (proposed, approved, dispatched, acknowledged)}) == 4
+    validate_writeback_transition(proposed, approved)
+    validate_writeback_transition(approved, dispatched)
+    validate_writeback_transition(dispatched, acknowledged)
+
+
+@pytest.mark.parametrize(
+    ("field", "changed_value"),
+    [
+        ("schema_version", "connector-writeback-intent-v2"),
+        ("intent_id", "intent-002"),
+        ("tenant_id", "tenant-b"),
+        ("workspace_id", "workspace-b"),
+        ("connector_id", "other-connector"),
+        ("operation", "payment.update"),
+        ("payload_digest", "f" * 64),
+        ("idempotency_key", "writeback-002"),
+        ("requested_by", "maker-2"),
+        ("requested_at", NOW + timedelta(seconds=1)),
+        ("feature_enabled", False),
+    ],
+)
+def test_transition_rejects_drift_in_every_proposal_identity_field(
+    field: str,
+    changed_value: object,
+) -> None:
+    proposed = _intent()
+    approved = approve_writeback(
+        proposed,
+        policy=POLICY,
+        actor_id="checker-1",
+        approved_at=NOW,
+        assurance="mfa",
+        reason="independent review",
+    )
+    drifted = approved.model_copy(update={field: changed_value})
+
+    assert drifted.proposal_digest != proposed.proposal_digest
+    with pytest.raises(WritebackError, match="writeback_proposal_identity_immutable"):
+        validate_writeback_transition(proposed, drifted)
+
+
+def test_transition_rejects_non_adjacent_state_even_when_proposal_is_unchanged() -> None:
+    proposed = _intent()
+    dispatched = dispatch_writeback(
+        approve_writeback(
+            proposed,
+            policy=POLICY,
+            actor_id="checker-1",
+            approved_at=NOW,
+            assurance="mfa",
+            reason="independent review",
+        ),
+        policy=POLICY,
+    )
+
+    with pytest.raises(WritebackError, match="writeback_transition_invalid"):
+        validate_writeback_transition(proposed, dispatched)

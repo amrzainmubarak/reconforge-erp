@@ -61,6 +61,7 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
     assert first.json()["version"] == second.json()["version"] == 1
     assert first.json()["network_dispatch"] == "disabled"
     assert first.json()["digest"] == second.json()["digest"]
+    proposal_digest = first.json()["proposal_digest"]
 
     controller_login = client.post(
         "/api/v1/auth/login", json={"username": "controller", "password": "Secret-123"}
@@ -76,6 +77,7 @@ def test_writeback_intent_api_is_authenticated_actor_bound_and_idempotent(tmp_pa
     assert approval.json()["version"] == 2
     assert approval.json()["intent"]["status"] == "approved"
     assert approval.json()["network_dispatch"] == "disabled"
+    assert approval.json()["proposal_digest"] == proposal_digest
     repeated = client.post(
         f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/approve",
         json={"assurance": "mfa", "reason": "repeat", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
@@ -921,6 +923,18 @@ def test_writeback_recovery_api_reads_provider_status_without_post(tmp_path: Pat
     assert recovered.json()["intent"]["status"] == "acknowledged"
     assert recovered.json()["network_dispatch"] == "recovered"
     assert recovered.json()["version"] == 4
+    assert len(recovered.json()["observation_id"]) == 64
+    observations = client.get(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/recovery-observations",
+        params={"tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        headers=controller_headers,
+    )
+    assert observations.status_code == 200, observations.text
+    assert observations.json()["count"] == 1
+    assert observations.json()["observations"][0]["observation"]["outcome"] == "accepted"
+    assert observations.json()["observations"][0]["evidence_node_id"].endswith(
+        recovered.json()["observation_id"]
+    )
     assert recovery_transport.calls == 1
     assert post_transport.calls == 0
     replay = client.post(
@@ -930,6 +944,13 @@ def test_writeback_recovery_api_reads_provider_status_without_post(tmp_path: Pat
     )
     assert replay.status_code == 200, replay.text
     assert replay.json()["network_dispatch"] == "already_acknowledged"
+    replay_observations = client.get(
+        f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/recovery-observations",
+        params={"tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        headers=controller_headers,
+    )
+    assert replay_observations.status_code == 200, replay_observations.text
+    assert replay_observations.json()["count"] == 1
     assert recovery_transport.calls == 1
     assert post_transport.calls == 0
 

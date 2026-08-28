@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/postgres_writeback_identity_migration_matrix.schema.json",
+  "title": "PostgreSQL write-back identity migration supported-version matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "executed_at",
+    "duration_seconds",
+    "profile",
+    "subject",
+    "runs",
+    "parity",
+    "limitations",
+    "report_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": "postgres-writeback-identity-migration-matrix-v1"},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "profile": {"const": "disposable-postgresql-writeback-identity-migration-matrix"},
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "migration_commit",
+        "migration_source_sha256",
+        "observation_runner_source_sha256",
+        "matrix_runner_source_sha256",
+        "supply_chain_policy_sha256"
+      ],
+      "properties": {
+        "migration_commit": {"$ref": "#/$defs/git_commit"},
+        "migration_source_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_runner_source_sha256": {"$ref": "#/$defs/sha256"},
+        "matrix_runner_source_sha256": {"$ref": "#/$defs/sha256"},
+        "supply_chain_policy_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {"$ref": "#/$defs/postgres16_observation"},
+        {"$ref": "#/$defs/postgres17_observation"}
+      ],
+      "items": false
+    },
+    "parity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "postgresql_versions",
+        "source_revision",
+        "target_revision",
+        "valid_history_sha256",
+        "invalid_history_sha256",
+        "all_checks_passed",
+        "all_cleanup_complete"
+      ],
+      "properties": {
+        "postgresql_versions": {"const": ["16.14", "17.10"]},
+        "source_revision": {"const": "0088_pg_currency_snapshot"},
+        "target_revision": {"const": "0090_pg_writeback_observations"},
+        "valid_history_sha256": {"$ref": "#/$defs/sha256"},
+        "invalid_history_sha256": {"$ref": "#/$defs/sha256"},
+        "all_checks_passed": {"const": true},
+        "all_cleanup_complete": {"const": true}
+      }
+    },
+    "limitations": {
+      "const": [
+        "single_docker_desktop_host",
+        "two_postgresql_versions_only",
+        "sequential_single_node_runs",
+        "synthetic_data_and_credentials_only",
+        "no_live_provider_or_accounting_posting",
+        "no_cross_host_ha_dr_or_production_claim"
+      ]
+    },
+    "report_digest": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "git_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "valid_versions",
+        "invalid_versions",
+        "valid_history_sha256",
+        "invalid_history_sha256",
+        "pre_drift_dump_sha256"
+      ],
+      "properties": {
+        "valid_versions": {"const": 2},
+        "invalid_versions": {"const": 3},
+        "valid_history_sha256": {"$ref": "#/$defs/sha256"},
+        "invalid_history_sha256": {"$ref": "#/$defs/sha256"},
+        "pre_drift_dump_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pre_drift_dump_list_verified",
+        "drifted_upgrade_refused",
+        "failed_upgrade_revision_preserved",
+        "failed_upgrade_history_preserved",
+        "failed_upgrade_trigger_preserved",
+        "pre_drift_restore_verified",
+        "restored_upgrade_to_head",
+        "successful_upgrade_history_preserved",
+        "enhanced_insert_guard_refused_drift",
+        "cleanup_complete"
+      ],
+      "properties": {
+        "pre_drift_dump_list_verified": {"const": true},
+        "drifted_upgrade_refused": {"const": true},
+        "failed_upgrade_revision_preserved": {"const": true},
+        "failed_upgrade_history_preserved": {"const": true},
+        "failed_upgrade_trigger_preserved": {"const": true},
+        "pre_drift_restore_verified": {"const": true},
+        "restored_upgrade_to_head": {"const": true},
+        "successful_upgrade_history_preserved": {"const": true},
+        "enhanced_insert_guard_refused_drift": {"const": true},
+        "cleanup_complete": {"const": true}
+      }
+    },
+    "postgres16_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "history", "checks"],
+      "properties": {
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["docker_server", "image", "postgresql", "source_revision", "target_revision"],
+          "properties": {
+            "docker_server": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "image": {"const": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"},
+            "postgresql": {"const": "16.14"},
+            "source_revision": {"const": "0088_pg_currency_snapshot"},
+            "target_revision": {"const": "0090_pg_writeback_observations"}
+          }
+        },
+        "history": {"$ref": "#/$defs/history"},
+        "checks": {"$ref": "#/$defs/checks"}
+      }
+    },
+    "postgres17_observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "history", "checks"],
+      "properties": {
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["docker_server", "image", "postgresql", "source_revision", "target_revision"],
+          "properties": {
+            "docker_server": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+            "image": {"const": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"},
+            "postgresql": {"const": "17.10"},
+            "source_revision": {"const": "0088_pg_currency_snapshot"},
+            "target_revision": {"const": "0090_pg_writeback_observations"}
+          }
+        },
+        "history": {"$ref": "#/$defs/history"},
+        "checks": {"$ref": "#/$defs/checks"}
+      }
+    }
+  }
+}

@@ -5,6 +5,723 @@
 
 ## Decisions
 
+### D-974: Use a neutral current publication branch name
+
+The active publication branch is `e830-postgres-receiver-failover`, with PR #87
+and a matching local upstream. The rename is metadata-only and preserves all
+commits, tests, evidence, and the user-owned uncommitted audit file. Future
+updates use this branch name; no application or schema compatibility changes
+are implied.
+
+### D-973: Record hosted verification for the current parity/security head
+
+E-922 records hosted CI `32720224211` and server-boundaries
+`97411960661` passing on exact head
+`f45e81e7effbc37e000eecc3e7ac9c9da4ca97a3`, with Security `32720224117`,
+CodeQL `32720224125`, and Docker `32720224090` green. The bounded Gitleaks
+policy remains explicit and validator-approved. This is hosted integration
+evidence only and does not widen claims to production, providers, capacity,
+compliance, or certification.
+
+### D-972: Add an additive domain-diverse PostgreSQL worker parity profile
+
+E-921 adds `postgres-worker-domain-diverse-parity-v1` for six grouped domain
+shapes and requires direct/projected digest equality plus permutation
+invariance. The profile and JSON artifact are deterministic and indexed as
+`partial`; the existing eight-case `postgres-worker-strategy-parity-v1`
+profile remains unchanged. This is in-process adapter evidence only and does
+not widen claims to live PostgreSQL, cross-engine behavior, capacity,
+providers, posting, or production readiness. The addition is reversible and
+requires a new profile version if its fixture inventory changes.
+
+### D-971: Record exact-head hosted verification for PostgreSQL adapter integrity
+
+E-920 records hosted CI run `32713536013` and server-boundaries job
+`97392182901` passing on the exact head
+`21697476d4ea2f426ebe20a836d24c27435f8131` after E-918 canonical-zero
+precedence and E-919 explicit-currency changes. The result is retained as
+hosted integration evidence only; it does not widen claims to providers,
+capacity, production, compliance, or certification. The decision is
+reversible by correcting the evidence record if the hosted result is later
+invalidated.
+
+### D-970: Require explicit currency in PostgreSQL matching adapters
+
+E-919 removes the implicit `USD` fallback from grouped and sequential
+PostgreSQL matching request construction. A present canonical or explicit
+legacy/attribute currency is accepted; absence or emptiness raises a typed
+adapter error before strategy execution. Focused suites, Ruff, and Mypy pass;
+ADR 0619 records the decision. This is a data-quality boundary correction, not
+live-rate, cross-engine, provider, or production-readiness evidence.
+
+### D-969: Preserve canonical zero values in PostgreSQL matching adapters
+
+E-918 replaces truthiness-based fallback in grouped and sequential PostgreSQL
+matching adapters with explicit `None` checks. This keeps valid zero amounts
+and present canonical identity/date/currency columns authoritative over JSON
+attributes, while retaining the existing fail-closed validation path for
+malformed values. Focused suites, Ruff, and Mypy pass; ADR 0618 records the
+reversible decision. This is an input-integrity correction, not a broader
+matching parity, capacity, provider, or production-readiness claim.
+
+### D-968: Index the current PostgreSQL domain-diverse artifact
+
+E-917 adds the current PostgreSQL domain-diverse JSON report to
+`benchmark-evidence-index-v1` with canonical-LF hash
+`7cb954af66ede3d19296907d7beb595fba12a81a004a8039cb088b7bf13c9720`, the
+two emitted digest fields, and `partial` status. The selected-artifact verifier
+now covers 13 entries. This is a provenance/claim-boundary improvement only;
+it does not create cross-engine, capacity, provider, HA/DR, or production
+evidence. ADR 0617 records the reversible decision.
+
+### D-967: Record hosted verification for the domain-diverse gate
+
+E-916 records hosted CI `32696819965` and server-boundaries job
+`97342100366` passing on code head `eb24d519`, including the new domain-diverse
+PostgreSQL selector. The exact-head result verifies integration with the
+hosted server boundary but does not promote synthetic runtime observations to
+throughput, capacity, provider interoperability, posting, write-back, HA/DR,
+or production-sizing claims.
+
+### D-966: Retain domain-diverse PostgreSQL 10K runtime as bounded evidence
+
+E-915 retains a six-shape, 10,000-record PostgreSQL grouped-matching run as
+local correctness evidence only. `claim_run` now gives terminal durable
+execution state precedence over a stale `Running` status, and the bounded
+domain fixtures use the explicit edge allowance they require. The profile is
+reproducible and package-retained, but it does not widen claims to throughput,
+capacity, provider interoperability, posting, write-back, HA/DR, or production
+sizing.
+
+### D-965: Cancel redundant same-ref quality runs
+
+E-907 prevents stale CI, CodeQL, Security, and Docker runs from accumulating
+after a newer commit on the same ref. Cancellation remains distinct from test
+success or failure.
+
+### D-964: Bound CodeQL analysis liveness
+
+E-906 limits CodeQL runner consumption while preserving timeout-as-failure
+semantics. It does not weaken the security gate or infer scan completeness.
+
+### D-963: Normalize malformed manifest text failures
+
+E-905 makes malformed tie-break and explanation declarations fail through the
+public contract error, preventing incidental exceptions or coercion.
+
+### D-962: Bound hosted CI jobs that can stall
+
+E-903 makes the Python test matrix and PostgreSQL HA/DR job finite while
+retaining failure semantics. A timeout cannot be treated as evidence of
+success.
+
+### D-961: Keep runtime strategy IDs schema-valid
+
+E-902 prevents registry admission from accepting IDs that the published JSON
+Schema rejects. Identity format is kept separate from ownership and release
+compatibility.
+
+### D-960: Require semantic version syntax in matching manifests
+
+E-900 ensures strategy identity/version fields remain machine-comparable and
+usable by migration/replay boundaries. It does not infer compatibility from
+syntax alone.
+
+### D-959: Bind fee/FX replay to rate-order invariance
+
+E-899 requires canonical replay to ignore equivalent caller rate ordering while
+retaining rate definitions in the digest. This protects deterministic business
+effects without claiming external rate authenticity.
+
+### D-958: Reuse bounded grouped invariants for fee/FX one-to-one matching
+
+E-898 adds one-to-one cardinality to the grouped matcher so explicit Decimal
+fee and FX policies are executable without a second, divergent algorithm. The
+rate remains caller-supplied and the production/provider boundary is retained.
+
+### D-957: Keep indexed mode declarations aligned with runtime guards
+
+E-897 corrects the omitted `one-to-one` declaration and binds the architecture
+manifest and digest to the existing runtime behavior. It does not expand the
+strategy-family claim boundary.
+
+### D-956: Reject malformed matching mode metadata
+
+E-896 keeps mode declarations and coverage inputs typed and non-empty at their
+public boundaries. It prevents silent coercion without widening capability
+claims.
+
+### D-955: Make matching mode coverage machine-readable
+
+E-895 adds a deterministic registry report for required and missing modes, while
+keeping mode inventory separate from claims about algorithmic or financial
+correctness.
+
+### D-954: Fail closed on incomplete matching strategy declarations
+
+E-894 makes strategy maturity, deterministic tie-break, and explanation schema
+mandatory at manifest construction. This preserves registry/digest integrity
+without claiming that declaration alone proves algorithmic or financial
+correctness.
+
+### D-953: Require composite regulated admission prerequisites
+
+E-853 prevents a regulated evidence envelope from combining unresolved runtime
+facts with local key custody metadata. The verifier remains offline and does not
+grant admission or make a production claim.
+
+### D-952: Separate managed-key custody metadata from KMS/HSM runtime proof
+
+E-852 adds a non-secret manifest and offline verifier, while explicitly keeping
+provider execution, key lifecycle, rotation, destruction, and hardware-backed
+custody outside the claim boundary.
+
+### D-951: Bind runtime evidence to the selected profile digest
+
+E-851 prevents stale or retargeted runtime facts from being treated as evidence
+for a different immutable deployment profile. The check is local and does not
+expand the production claim boundary.
+
+### D-950: Make the readiness matrix consumable without widening its claim
+
+E-850 exposes a read-only CLI over the centralized safe-YAML ingress. It
+validates path containment and computes a digest but cannot promote partial or
+open evidence into a readiness claim.
+
+### D-949: Keep deployment-mode readiness explicitly partial/open
+
+E-849 consolidates existing audits into a closed matrix but forbids a generic
+`verified` or `ready` edition status. Missing external, regulated, and
+independent-failure-domain evidence remains visible rather than inferred.
+
+### D-948: Bind deployment runtime facts to a closed offline evidence manifest
+
+E-848 makes profile inputs reproducible and digestable while preserving the
+fail-closed claim boundary. The verifier and CLI never probe or mutate external
+systems; readiness remains a separate runtime evidence obligation.
+
+### D-947: Expose worker manifest verification through a read-only CLI
+
+E-847 adds `deployment verify-worker-manifest` as a strict, network-free,
+digest-producing inspection command. It never provisions or mutates IAM;
+hosted enforcement remains a separate runtime responsibility.
+
+### D-946: Verify worker permission manifests offline and digest-bound
+
+- **Date**: 2026-08-23
+- **Context**: E-845 required a runtime fact for hosted worker permission
+  separation, but a manually entered boolean was not strong evidence.
+- **Decision**: Adopt ADR 0560. Accept only a closed JSON-shaped manifest and
+  verify worker/principal IDs, scope, distinct non-human discovery/execution
+  permissions, complete sorted grants, and a canonical SHA-256 digest.
+- **Rationale**: Operators can bind the verified digest to deployment evidence
+  without granting the application network access or allowing it to mutate IAM.
+- **Reversibility**: Additive pure verifier; no schema, network, or permission
+  mutation.
+
+### D-945: Require worker discovery separation in hosted deployment profiles
+
+- **Date**: 2026-08-23
+- **Context**: E-844 introduced an optional discovery permission, but the
+  deployment profile contract did not require operators to prove it for hosted
+  editions.
+- **Decision**: Adopt ADR 0559. Team, Enterprise, and Regulated profiles fail
+  closed unless runtime facts include verified worker discovery/execution
+  permission separation. Community remains exempt as a local-first mode.
+- **Rationale**: A capability that is not represented in deployment gates can be
+  silently omitted during rollout. This makes the intended least-privilege
+  topology auditable without claiming that provisioning has occurred.
+- **Reversibility**: Additive profile fact and finding; no schema or runtime
+  permission mutation.
+
+### D-944: Separate reconciliation discovery from execution permission
+
+- **Date**: 2026-08-23
+- **Context**: A worker using `match.run` for tenant-wide queue discovery can
+  be forced to evaluate a bounded execution policy without a run amount.
+- **Decision**: Adopt ADR 0558. Add optional `discovery_policy_permission` for
+  queue enumeration; claim and execution continue using `policy_permission`.
+  When unset, preserve the existing permission for compatibility.
+- **Rationale**: Discovery should be least privilege and distinct from a
+  financial execution grant. The opt-in field avoids silently breaking existing
+  service-account deployments while making the secure topology explicit.
+- **Reversibility**: Additive settings-only change; source revert restores the
+  legacy single-permission behavior.
+
+### D-943: Persist and recheck reconciliation exposure in the worker
+
+- **Date**: 2026-08-23
+- **Context**: API submission supplied amount context, but a later worker claim
+  could lose that context and re-evaluate only tenant/scope permissions.
+- **Decision**: Adopt ADR 0557. Store the exact gross exposure as `policy_amount`
+  inside the immutable reconciliation rule metadata and pass it into both the
+  worker tenant and pre-claim scoped policy checks. Missing legacy metadata
+  remains `None` and is never inferred as zero.
+- **Rationale**: The worker must authorize the same financial object that the
+  API accepted; rule metadata already participates in the durable run contract,
+  so no parallel mutable column or migration is required.
+- **Reversibility**: Source-only metadata and optional worker argument; revert
+  removes propagation without changing existing schemas.
+
+### D-942: Pass canonical reconciliation exposure into server policy
+
+- **Date**: 2026-08-23
+- **Context**: Reconciliation run submission authorized the server scope without
+  the amounts already present in canonical input records.
+- **Decision**: Adopt ADR 0556. Sum absolute exact Decimal amounts for complete
+  input coverage and pass that gross exposure to policy. If any input amount is
+  absent, pass `None` so bounded policies fail closed; never infer zero.
+- **Rationale**: The run's candidate universe is the financial exposure. This
+  preserves exactness while supporting date/reference-only records under
+  unbounded policy rules.
+- **Reversibility**: Source-only optional amount binding; no migration.
+
+### D-941: Pass ownership-change gross exposure into server policy
+
+- **Date**: 2026-08-23
+- **Context**: Ownership-change preparation evaluated server policy before
+  typed conversion and supplied no amount.
+- **Decision**: Adopt ADR 0555. Authorize absolute ownership-delta effect plus
+  absolute consideration effect; do not double-count derived parent equity.
+- **Rationale**: These values represent transaction exposure and preserve exact
+  Decimal fail-closed policy evaluation.
+- **Reversibility**: Source-only optional amount binding; no migration.
+
+### D-940: Pass gross acquisition exposure into PPA server policy
+
+- **Date**: 2026-08-23
+- **Context**: PPA preparation evaluated server policy before typed conversion
+  and supplied no amount; allocation detail could be mistakenly double-counted.
+- **Decision**: Adopt ADR 0554. Authorize absolute consideration plus absolute
+  NCI fair value, excluding allocation detail from the gross amount.
+- **Rationale**: Consideration and NCI represent the transaction exposure;
+  allocation items decompose it. Typed conversion preserves currency and
+  precision invariants.
+- **Reversibility**: Source-only optional amount binding; no migration.
+
+### D-939: Pass deferred-tax fair-value exposure into server policy
+
+- **Date**: 2026-08-23
+- **Context**: Deferred-tax preparation evaluated server policy before typed
+  item conversion and did not provide a bounded amount.
+- **Decision**: Adopt ADR 0553. Convert items first and authorize the gross
+  absolute fair-value Decimal sum; do not double-count tax basis.
+- **Rationale**: Fair value is the single source exposure; tax basis is the
+  comparison input for the same item. Typed conversion preserves currency and
+  precision invariants.
+- **Reversibility**: Source-only optional amount binding; no migration.
+
+### D-938: Pass gross intercompany exposure into server policy
+
+- **Date**: 2026-08-23
+- **Context**: Intercompany preparation evaluated server scope before converting
+  its explicit Money lines and supplied no amount to bounded ABAC.
+- **Decision**: Adopt ADR 0552. Convert lines first, compute gross absolute
+  Decimal exposure, and authorize that value before persistence.
+- **Rationale**: Reciprocal lines may net to zero for elimination, but policy
+  must constrain the gross source exposure; typed conversion preserves currency
+  and precision invariants.
+- **Reversibility**: Source-only and optional helper parameter; no migration.
+
+### D-937: Pass gross Finance Core entry amount into server policy
+
+- **Date**: 2026-08-23
+- **Context**: E-836 bound impairment preparation, but Finance Core entry
+  creation still evaluated server scope without its journal amount.
+- **Decision**: Adopt ADR 0551. Parse all debit/credit values exactly, reject
+  negatives or malformed input before adapter access, and pass the gross debit
+  total as Decimal into both PostgreSQL Finance Core policy paths.
+- **Rationale**: Balanced entries have one non-duplicated gross effect. Parsing
+  both sides prevents malformed data from crossing authorization, while no
+  float or implicit currency operation is introduced.
+- **Reversibility**: Optional helper parameter and source-only rollback; no
+  schema or persisted-data changes.
+
+### D-936: Pass the typed impairment amount into server policy evaluation
+
+- **Date**: 2026-08-23
+- **Context**: E-835 closed missing-amount behavior centrally, but the
+  consolidation impairment route did not yet provide its financial amount to
+  the server-scope policy re-check.
+- **Decision**: Adopt ADR 0550. Convert canonical request data first, sum typed
+  carrying amounts with Decimal arithmetic, and pass the exact total before
+  persistence. Keep read-only retrieval amount-free.
+- **Rationale**: Amount bounds must constrain the actual financial effect at a
+  high-risk route boundary. Typed Money and fail-closed domain conversion
+  preserve currency and precision invariants.
+- **Reversibility**: Additive optional helper parameter and source-only
+  rollback; no schema or stored-data migration.
+
+### D-935: Require an exact amount for bounded ABAC policies
+
+- **Date**: 2026-08-23
+- **Context**: The central policy engine compared amount bounds only when an
+  amount was supplied, so an omitted amount could bypass a configured floor or
+  ceiling.
+- **Decision**: Adopt ADR 0549. If either bound exists, deny without a finite
+  exact `Decimal` amount using reason code
+  `amount_missing_for_bounded_policy`.
+- **Rationale**: Missing financial data is a data-quality/security failure,
+  not zero. Requiring the value preserves deterministic, fail-closed ABAC and
+  avoids implicit rounding or inference.
+- **Reversibility**: Source-only additive behavior; no migration or data
+  rewrite. Existing unbounded policies and explicit amount decisions remain
+  compatible.
+
+### D-934: Make provider recovery observations durable and append-only
+
+- **Date**: 2026-08-22
+- **Context**: E-833 produced a deterministic, non-mutating provider status
+  observation, but an accepted or unresolved lookup still needed durable
+  evidence that could be replayed and reviewed independently of the intent row.
+- **Decision**: Adopt ADR 0548. Persist a scoped observation envelope before an
+  accepted lifecycle transition; use SQLite migration 43 and PostgreSQL
+  revision 0090 with append-only guards, intent/idempotency binding, digest
+  identities, and forced tenant/workspace RLS. Expose read-only reviewer
+  drill-down and make duplicate writes idempotent.
+- **Rationale**: The observation is evidence, not a mutable status cache.
+  Persist-before-transition prevents an acknowledged intent from existing
+  without its provider evidence, while explicit unresolved outcomes preserve
+  operator control and safe replay.
+- **Reversibility**: Additive schema and API surface. Rollback is a versioned
+  migration downgrade only after dependent reads are disabled; existing intent
+  lifecycle data is not rewritten.
+
+### D-933: Separate provider status observation from lifecycle transition
+
+- **Date**: 2026-08-22
+- **Context**: E-832 prevented negative responses from becoming acknowledgements,
+  but `pending`, `not_found`, and unusable/unknown status responses still needed
+  distinct, replayable meanings.
+- **Decision**: Adopt ADR 0547. Classify recovery responses as accepted,
+  rejected, pending, not_found, or unknown. Return a frozen observation with
+  raw-body and observation digests; only accepted can advance the intent.
+- **Rationale**: Status lookup is evidence collection, not a second mutation.
+  Distinct outcomes preserve operator choices and prevent guessed effects or
+  guessed failure states.
+- **Verification**: E-833 covers all five outcomes, legacy boolean responses,
+  key binding, response/observation digests, pending refusal, and no-state-
+  advance behavior; the focused selector passes 55/55.
+- **Compatibility**: The taxonomy is optional for legacy provider envelopes and
+  does not alter API/persistence schemas or historical intent digests.
+- **Rollback**: Remove the observation/classifier additions only with an
+  approved replacement that preserves no-advance semantics for every
+  non-accepted outcome.
+
+### D-932: Never advance write-back state on a negative provider outcome
+
+- **Date**: 2026-08-22
+- **Context**: The transport envelope carries `accepted`, but the original
+  dispatch and status-recovery paths previously treated a valid `accepted=false`
+  response as an acknowledgement. Compensation already rejected it.
+- **Decision**: Adopt ADR 0546. Shared POST and status-recovery validation must
+  raise a safe, non-sensitive error for `accepted=false`; the intent remains in
+  its previous immutable state and no acknowledgement is returned.
+- **Rationale**: A well-formed response is not proof of a provider effect.
+  Positive acknowledgement must be explicit, idempotency-bound, and accepted.
+  Fail-closed state preservation is safer than guessing whether a rejected
+  provider operation can be retried.
+- **Verification**: E-832 adds original-dispatch and recovery regression tests;
+  the existing compensation rejection test remains green. The focused
+  connector transport/domain selector passes 46/46.
+- **Compatibility**: Positive responses, existing lifecycle schemas, APIs,
+  migrations, and Community mode remain unchanged. Only negative outcomes now
+  refuse the state transition consistently across all three paths.
+- **Rollback**: Remove E-832's two guards and ADR/manifest evidence only after
+  an approved replacement explicitly preserves the same no-false-acknowledgement
+  invariant.
+
+### D-931: Recover accepted write-back and compensation operations by immutable keys
+
+- **Date**: 2026-08-22
+- **Context**: E-660 covered a SQLite crash window and E-825–E-830 established
+  immutable proposal identity and server-backed receiver/failover boundaries.
+  A process can still die after a provider accepts an operation but before the
+  local acknowledgement or compensation completion is durable.
+- **Decision**: Adopt ADR 0545. Persist the append-only lifecycle and recover
+  the original operation with its original idempotency key; recover a governed
+  compensation with the distinct `<original-key>:compensation` key. Refuse
+  direct mutation and preserve tenant/role boundaries.
+- **Rationale**: Transport/process failure must not create a new financial
+  identity or silently conflate a reversal with the original operation.
+  Distinct keys and immutable history make replay auditable and deterministic.
+- **Verification**: E-831 passes the six statuses, two spawned crash windows,
+  SQLite/PostgreSQL 16.14/17.10 history parity, 16 checks per PostgreSQL cell,
+  13 SQLite checks, role flags, isolation, negative schema mutations, and
+  cleanup.
+- **Compatibility**: Additive verifier, report, schema, ADR, CI artifact, and
+  manifest entries only; no runtime API, migration, or connector contract is
+  changed.
+- **Rollback**: Remove E-831 evidence/CI assets while preserving existing
+  E-660/E-825–E-830 contracts and the rule that uncertain outcomes replay by
+  immutable identity.
+
+### D-930: Treat a disconnected synchronous COMMIT as uncertain until replay
+
+- **Date**: 2026-08-22
+- **Context**: E-829 proves single-node receiver durability, but a client can
+  lose its connection while PostgreSQL waits for synchronous replication. A
+  local statement timeout does not prove rollback and must not cause a new key.
+- **Decision**: Adopt ADR 0544. Run the same receiver contract on exact
+  PostgreSQL 16.14/17.10 two-node remote-apply topologies. Observe `SyncRep`
+  directly, fence/remove the primary before promotion, replay the acknowledged
+  identity, pause writes through re-seed, then resolve the uncertain identity
+  only after synchronous redundancy returns. Rediscover dynamic endpoints on
+  restart and compare both histories with SQLite.
+- **Rationale**: Idempotency must resolve uncertainty through immutable business
+  identity, not transport outcomes. Fencing and restored redundancy must be
+  explicit before another synthetic mutation is accepted.
+- **Verification**: E-830 requires 23 checks in each version: acknowledged
+  remote apply/replay with no effect, observed SyncRep uncertainty, exact
+  fencing/promotion, controller write pause, former-primary re-seed,
+  synchronous rejoin, one uncertain apply, restart replay, non-privileged role,
+  parity, cleanup, RPO 0, and local RTO at or below 60 seconds.
+- **Compatibility**: Product schemas, migrations, receiver behavior, sender
+  lifecycle, Community mode, connector manifests, APIs, and write-back policy
+  remain unchanged. The topology and CI artifact definition are additive.
+- **Rollback**: Remove E-830 verification assets only. Preserve uncertain and
+  failed-run evidence; never convert a lost response into permission to allocate
+  a different idempotency key.
+
+### D-929: Require server-backed receiver parity before distributed wording
+
+- **Date**: 2026-08-22
+- **Context**: E-828 proves one digest-only synthetic effect on a same-host
+  SQLite reference store, but does not exercise server-backed contention,
+  native backup/restore, or the declared PostgreSQL versions.
+- **Decision**: Adopt ADR 0543. Add an optional psycopg receiver using a
+  transaction-scoped canonical receiver/key lock and one atomic receipt/effect
+  transaction. Run one closed matrix on the exact PostgreSQL 16.14/17.10 image
+  digests and compare both histories with the retained SQLite report.
+- **Rationale**: The backend-neutral contract must survive real database
+  concurrency and restore before it can guide provider adapters, while live
+  vendor, cross-host, settlement, and production claims remain separate.
+- **Verification**: E-829 requires one apply/seven replays across eight spawned
+  processes, conflict and mutation refusal, crash replay, non-privileged role
+  flags, native dump listing, independent restore, exact cleanup, all 17 checks
+  true per version, and one canonical SQLite/PostgreSQL history digest.
+- **Compatibility**: The SQLite receiver, sender lifecycle, connector
+  manifests, product migrations, disabled write-back policy, and Community
+  import behavior remain unchanged; psycopg loads only on backend use.
+- **Rollback**: Remove only additive PostgreSQL receiver/matrix assets and
+  workflow definition. Preserve evidence and never treat conflict as replay.
+
+### D-928: Require receiver-side effect evidence before idempotency claims
+
+- **Date**: 2026-08-22
+- **Context**: Sender retries preserve one key and E-660 recovers uncertain
+  acceptance without another POST, but neither proves that a receiving system
+  commits one effect or refuses reuse of the key for a different mutation.
+- **Decision**: Adopt ADR 0542. Define a digest-only receiver request and an
+  additive SQLite reference store that atomically commits an immutable receipt
+  and synthetic effect. Retain a closed runner/schema/report and a CI artifact
+  definition for sequential, eight-process, crash-after-commit, conflict,
+  immutability, restore, and cleanup checks.
+- **Rationale**: Client-side retry discipline cannot substitute for provider
+  idempotency. Adapter promotion needs an executable receiver contract with
+  stable evidence, while live-vendor and cross-host claims remain separate.
+- **Verification**: E-828 requires one apply/seven replays across eight spawned
+  processes, identical replay responses, no second effect after response loss,
+  fail-closed key retargeting, immutable database rows, identical independent
+  restore history, source/report digests, closed negative-schema tests, and
+  verified cleanup.
+- **Compatibility**: Sender APIs, lifecycle schemas, product database
+  migrations, connector manifests, retry behavior, and disabled-by-default
+  write-back policy remain unchanged.
+- **Rollback**: Remove only the additive reference receiver and its evidence
+  assets. Never reinterpret an idempotency conflict as a replay success.
+
+### D-927: Use one observation path for the declared PostgreSQL migration matrix
+
+- **Date**: 2026-08-22
+- **Context**: E-826 proved the write-back identity migration on PostgreSQL
+  17.10, while the live CI profile separately declares a pinned PostgreSQL 16
+  image. Duplicating the drill would permit version-specific test drift.
+- **Decision**: Adopt ADR 0541. Preserve the E-826 CLI/report while extracting
+  one strict observation function and run it against the exact PostgreSQL 16.14
+  CI and 17.10 drill images. Retain a closed, source-bound parity report and add
+  its command/artifact to the server-boundaries workflow.
+- **Rationale**: A supported-version claim requires the same adversarial inputs,
+  audit refusal, native restore, trigger checks, and cleanup on every declared
+  cell, not different tests that merely share a name.
+- **Verification**: E-827 requires two ordered runtime cells, identical
+  canonical valid/invalid histories, all ten checks true in each cell, exact
+  source/policy digests, strict schema refusal, and CI artifact preservation.
+- **Compatibility**: Product code and migration behavior are unchanged. The
+  original E-826 command still defaults to PostgreSQL 17.10 and its v1 schema.
+- **Rollback**: Revert the matrix/refactor assets together and remove any
+  two-version wording. Never rewrite lifecycle history as rollback.
+
+### D-926: Retain failed-audit state and prove recovery from an independent backup
+
+- **Date**: 2026-08-22
+- **Context**: E-825 defined fail-closed PostgreSQL history auditing, but valid
+  lifecycle tests did not prove that a drifted database remains unmodified after
+  refusal or that a known-valid native backup can upgrade independently.
+- **Decision**: Adopt ADR 0540. Use an exact digest-pinned disposable PostgreSQL
+  runner to bind the source revision, history and trigger before/after refusal;
+  restore a pre-drift native dump into a second database and verify 0089 there.
+- **Rationale**: A refused audit is financial-integrity evidence, not disposable
+  deployment noise. The invalid database must be preserved for investigation,
+  and recovery evidence must not depend on rewriting append-only history.
+- **Verification**: E-826 retains a schema-closed, canonically digest-bound report
+  covering dump listing, refusal, no-mutation checks, independent restore,
+  successful upgrade, enhanced INSERT guard, and exact-container cleanup.
+- **Compatibility**: No product or migration behavior changes; this adds only a
+  reproducible verification runner, report, schema, tests, and documentation.
+- **Rollback**: Preserve the refused database and backup. Do not delete or edit
+  lifecycle rows to make the migration pass.
+
+### D-925: Bind write-back evidence to the immutable original proposal
+
+- **Date**: 2026-08-22
+- **Context**: Append-only intent versions and valid status adjacency did not
+  prevent a direct caller from changing the provider mutation identity in the
+  next row.
+- **Decision**: Adopt ADR 0539. Canonically hash the proposal identity, require
+  that identity across every repository transition, and audit/install direct
+  INSERT lifecycle guards through SQLite migration 42 and PostgreSQL Alembic
+  0089. Return the proposal digest additively through the API.
+- **Rationale**: Approval is meaningful only when it remains bound to the same
+  scope, connector, operation, payload digest, idempotency domain, requester,
+  request time, and captured policy decision.
+- **Verification**: E-825 covers every immutable field, valid digest stability,
+  invalid state jumps, repository bypass, direct SQL bypass, upgrade refusal,
+  API correlation, and both migration registries.
+- **Compatibility**: Valid histories and callers remain valid; historical
+  migration definitions remain stable. Invalid pre-existing histories fail
+  closed for evidence-preserving investigation.
+- **Rollback**: PostgreSQL downgrade restores the previous UPDATE/DELETE-only
+  trigger. Never delete or rewrite history to bypass a migration audit.
+
+### D-924: Accept only source-proven fixed VEX and preserve the OpenSSL block
+
+- **Date**: 2026-08-22
+- **Context**: Grype's NVD CPE matches reported three Python High findings that
+  are already repaired in the exact signed CPython 3.11.16 source tag, plus
+  two OpenSSL matches for a version still inside the upstream affected range.
+- **Decision**: Adopt ADR 0538. Allow only hash-bound OpenVEX `fixed` decisions
+  under a 30-day review ceiling, validate every product PURL and ignored Grype
+  match independently, keep governed findings in total counts, and retain the
+  two OpenSSL matches as blockers. Do not self-approve reachability-based
+  `not_affected`, severity override, or exception status.
+- **Rationale**: Correcting demonstrably stale CPE version metadata is not the
+  same as accepting risk in affected code. Exact fixed evidence can be
+  automated; a runtime reachability disposition requires independent security
+  judgment or an upstream-fixed component.
+- **Verification**: E-824 records the CPython tag/backport ancestry, four base
+  candidate scans, Alpine package-policy checks, governed VEX negative tests,
+  and exact blocked evidence with three fixed dispositions and two blockers.
+- **Compatibility**: Runtime bytes and application interfaces are unchanged;
+  current container-security evidence advances to closed schema v2.
+- **Rollback**: Removing a fixed statement must restore its finding as a
+  blocker. Broad ignore rules, severity reduction, and unreviewed VEX are not
+  rollback mechanisms.
+
+### D-923: Block registry authentication on exact local container evidence
+
+- **Date**: 2026-08-22
+- **Context**: The candidate workflow pushed its image before generating the
+  image SBOM and had no enforceable container CVE, scanner-database,
+  suppressed-match, subject-binding, or license-inventory policy. The current
+  local image now produces five High findings under the reviewed scanners.
+- **Decision**: Adopt ADR 0537. Build and scan the local Linux AMD64 image with
+  pinned Syft/Grype before registry authentication, validate the native
+  subject-bound report under a closed policy, preserve blocked evidence, and
+  verify that any later pushed manifest references the scanned configuration.
+  Repeat the gate weekly/manually and execute disposable drill images by
+  reviewed digest.
+- **Rationale**: Security evidence must prevent the first external publication
+  write, not merely describe an already-pushed candidate. Native Syft JSON
+  retains distro/image semantics needed by the scanner, while the portable
+  CycloneDX output remains the release SBOM.
+- **Verification**: E-823 records dedicated positive/negative/schema/workflow
+  tests and the exact local blocked evidence. Five High findings remain open as
+  E-824; no VEX or synthetic exception was created.
+- **Compatibility**: No CLI, API, database, persisted financial data, matching,
+  posting, audit, or tenant contract changes. Future SBOM manifests name Syft
+  1.51.0; retained 1.49.0 candidate evidence remains historical.
+- **Rollback**: Replace only with a control that proves equivalent
+  pre-authentication scanning, subject/database/scanner integrity, severity and
+  exception enforcement, retained failure evidence, and post-push binding.
+
+### D-922: Compare client-pack publication siblings using canonical path identities
+
+- **Date**: 2026-08-22
+- **Context**: The hardened container demo exposed that a relative output path
+  produced a relative staging identity but sibling enumeration produced an
+  absolute identity, causing a clean publication to fail as ambiguous.
+- **Decision**: Adopt ADR 0536: normalize expected sibling identities to
+  lexical absolute paths only for comparison, preserving every marker, digest,
+  rename, bound, link check, unknown-sibling refusal, and caller-facing path.
+- **Rationale**: Recovery safety depends on filesystem identity, not the
+  caller's relative or absolute spelling of the same directory.
+- **Verification**: E-822; direct relative-path regression, the complete
+  publication/recovery suites, and the container demo pass.
+- **Compatibility**: Relative documented CLI paths are repaired; absolute
+  paths and artifact contracts are unchanged.
+- **Rollback**: Require an equivalent relative/absolute identity proof and
+  unknown-sibling refusal before replacing this normalization.
+
+### D-921: Separate trusted container build inputs from non-root runtime state
+
+- **Date**: 2026-08-22
+- **Context**: The prior image sent a 53.82 MB unrestricted context, retained
+  build tooling, and executed as root despite being a local-first CLI image.
+- **Decision**: Adopt ADR 0535: use a closed deny-by-default build context, two
+  digest-pinned stages, a runtime-only locked environment, fixed UID/GID
+  `10001:10001`, and one declared writable output boundary.
+- **Rationale**: Least privilege and build-context confidentiality must be
+  executable defaults rather than operator assumptions.
+- **Verification**: E-822 records the measured context/image deltas and the
+  no-network/read-only-root CLI and demo gates.
+- **Compatibility**: CLI/assets remain; host bind mounts must grant the chosen
+  runtime identity write access or use an explicit operator mapping.
+- **Rollback**: Never restore root or broad-context defaults; replace them only
+  with an equally bounded, tested runtime contract.
+
+### D-920: Preserve foreign developer state and bootstrap beside it
+
+- **Date**: 2026-08-22
+- **Context**: The ignored `.venv` in this Windows checkout was created for
+  Linux and had no Windows interpreter. Normal project-environment discovery
+  therefore failed before locked commands could run.
+- **Decision**: Adopt ADR 0534: diagnose existing state read-only and create a
+  platform-specific direct `.venv-*` sibling under a locked explicit bootstrap.
+  Never delete, move, traverse, or repair a failed legacy environment
+  automatically.
+- **Rationale**: Reproducibility must not depend on destructive cleanup of
+  user-owned state, and cross-platform worktrees need unambiguous interpreter
+  identity.
+- **Verification**: E-821 records foreign-state detection, successful and
+  repeated Python 3.12 Windows bootstrap, product Doctor, focused tests, and
+  static gates.
+- **Compatibility**: Developer tooling only; existing `.venv`, product APIs,
+  schemas, migrations, and data remain unchanged.
+- **Rollback**: Remove the additive tool/docs/targets; leave local ignored
+  environments for their owners to remove explicitly.
+
+### D-919: Converge every Python advisory gate on the universal lock
+
+- **Date**: 2026-08-22
+- **Context**: The current advisory service rejected locked `pip 26.1.2` for
+  `PYSEC-2026-3721`; hosted workflows audited a hash-exported lock while the
+  Makefile still audited whichever environment happened to be active.
+- **Decision**: Move only locked pip to fixed `26.2` within the unchanged
+  cutoff and route local, CI, and release audits through one fail-closed runner
+  defined by ADR 0533. Local mode is isolated from a project `.venv`; hosted
+  mode reuses the locked environment prepared by the workflow.
+- **Rationale**: The same manifest, lock, scanner policy, and exception decision
+  must produce the same audit boundary independently of workstation state.
+- **Verification**: E-820 records focused tests, both supported audit cells,
+  the full locked Python 3.12 regression, static/security gates, supported
+  package build, CLI smoke checks, and web unit/build/audit/E2E gates.
+- **Compatibility**: Dev/security tooling only; no product runtime API, schema,
+  migration, money calculation, or stored data changes.
+- **Rollback**: Revert the unit only to another currently clean locked graph;
+  never restore the affected lock or an ambient audit. D-485 still forbids
+  publication.
+
 ### D-918: Bound the hosted live server-boundary job lifetime
 
 - **Date**: 2026-08-20

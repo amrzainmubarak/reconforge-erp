@@ -1,5 +1,13 @@
 # Changelog
 
+- Hardened the local Docker CLI image with a closed deny-by-default build
+  context, two digest-pinned stages, a runtime-only locked environment, and
+  fixed non-root UID/GID 10001. A no-network/read-only-root demo gate exposed
+  and fixed relative client-pack publication identity comparison while keeping
+  transactional recovery and artifact contracts unchanged. This is bounded
+  local evidence, not OCI reproducibility, vulnerability assurance, signature,
+  provenance, or production deployment readiness.
+
 - Repeated the complete bounded PostgreSQL HA/DR development drill three times without result selection. All three runs preserved every acknowledged sentinel with zero measured transaction loss; failover RTO ranged 11.075–11.117 seconds and failback RTO 0.912–0.958 seconds under the 60-second drill ceiling. Each run cleaned its labelled resources. These measurements remain one Docker host/failure domain with manual exact-ID fencing, not host-loss HA, quorum, automatic failover, or a production SLO.
 
 - Added a schema-closed reliability incident lifecycle with strict ordered transitions, monotonic UTC time, digest-only evidence, hash-chained events, deterministic manifest verification, and mandatory all-normal recovery evaluation. A retained local drill detects a real 1,000-job critical backlog, records synthetic acknowledgement/mitigation, validates zero backlog through a distinct operator reference, and closes in 60 synthetic seconds. This is not external pager acknowledgement, real staffing evidence, durable incident retention, HA, or a production SLO.

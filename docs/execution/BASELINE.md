@@ -8,6 +8,34 @@
 > machine/session. "Passed/blocked" entries are environment-scoped and should not
 > be interpreted as cross-platform production evidence.
 
+## E-831 local refresh (2026-08-22)
+
+- The provider-neutral PostgreSQL write-back recovery/compensation matrix
+  passed in 20.803 seconds on exact 16.14/17.10 images; SQLite parity history
+  is `d59b3648c99690c016c73a3ca9012ca6e7d806429dccc0cbd109081656c5db9d`.
+- The retained report digest is
+  `bdf1d82d0667f244160c43068cdab5c7516096d31fba17848e2ec1c33a3cdbb2`;
+  focused report/supply-policy tests pass 37/37.
+- Evidence assets are additive and packaged in the sdist; no runtime module,
+  public API, migration, or product behavior changed. No push, PR, tag,
+  release, or deployment occurred.
+
+## E-830 local refresh (2026-08-22)
+
+- Full regression: 2,970 passed, 115 declared capability skips, 23 warnings;
+  3,085 collected tests in 531.47 seconds. An earlier run failed the backlog
+  dependency contract and was corrected before this clean full rerun.
+- Ruff, Mypy across 525 files, Bandit, closed supply policy, `uv lock --check`,
+  isolated Python 3.12 locked audit, JSON/YAML parsing, package build and
+  membership, and whitespace checks pass.
+- The sdist has 1,768 entries and contains all E-830 evidence assets. The
+  runtime-only wheel has 625 entries and no E-830 runtime change.
+- Ambient pip-audit reports host `pip 26.1.2` / `PYSEC-2026-3721`; the isolated
+  project lock reports zero known findings. Gitleaks 8.30.1 reports no findings
+  across all 663 commits or the clean implementation archive, and its exact
+  temporary artifacts were removed. No push, PR, tag, release, or deployment
+  occurred.
+
 ## Latest refresh (2026-08-11)
 
 - Date: 2026-08-11
@@ -46,6 +74,125 @@
 - `docker build -t reconforge:baseline .` : Passed (Exit 0, 2.748 s).
 - `docker run --rm reconforge:baseline reconforge doctor` : Passed (Exit 0).
   - Health snapshot: Package/config/output/validation all OK with 10 warnings, 0 errors.
+
+#### E-822 hardened runtime refresh (2026-08-22)
+
+- Host: Docker Desktop 4.87.0, Linux engine 29.7.2/API 1.55 on Windows.
+- Baseline context/image/user: 53.82 MB; 149,556,826 bytes; UID/GID 0.
+- Final context/image/user: 216.25 KB; 58,773,988 bytes; fixed UID/GID 10001.
+  The accepted Python 3.11 Alpine runtime excludes uv, global pip/build
+  packages, source, project build manifests, and repository documentation.
+- Doctor, sample validation, audit-basic rules, and the complete demo pass with
+  `--network none --read-only` and bounded UID/GID-owned tmpfs mounts for
+  `/tmp` and `/app/output`.
+- This refresh is current local runtime evidence only. It does not supersede
+  hosted/reproducibility/scanning/signature/provenance requirements.
+- Docker Scout 1.24.0 exact-image scan: exit 0 after indexing 82 packages;
+  zero findings at all severities. The result is time-bounded and is not the
+  current release gate because the later pinned Grype database disagrees.
+
+#### E-823/E-824 exact-image security result (2026-08-22)
+
+- Syft 1.51.0 inventories 68 package artifacts with 94.11% usable license
+  metadata. Grype 0.117.0 database v6.1.9 reports five High matches.
+- Exact CPython source/tag evidence establishes CVE-2026-3644,
+  CVE-2026-4224, and CVE-2026-7210 as fixed in Python 3.11.16. The closed
+  fixed-only OpenVEX path records those decisions while retaining them in the
+  total count.
+- CVE-2026-14456 remains unexcepted for libcrypto3 and libssl3 3.5.7-r0.
+  The gate exits 1 and blocks registry authentication. No supported current
+  Alpine candidate offered upstream-fixed OpenSSL 3.5.8 at review time.
+
+#### E-825 write-back lifecycle identity refresh (2026-08-22)
+
+- The SQLite schema head advances from 41 to 42 and the PostgreSQL source
+  Alembic head advances from `0088_pg_currency_snapshot` to
+  `0089_pg_writeback_identity`.
+- Focused local SQLite execution proves proposal-drift/state-jump refusal and
+  fail-closed upgrade behavior. A digest-pinned PostgreSQL 17.10 Alpine runtime
+  passes both write-back histories under a non-superuser/NOBYPASSRLS role and
+  an isolated three-upgrade/two-deep-downgrade Alembic drill through head 0089.
+- The API exposes an additive stable proposal digest. This is bounded intent
+  governance only, not provider connectivity, accounting posting, autonomous
+  approval, or production write-back assurance.
+
+#### E-826 drifted-history refusal and independent restore (2026-08-22)
+
+- A retained Docker runner uses the same digest-pinned PostgreSQL 17.10 Alpine
+  image and container-native `pg_dump`/`pg_restore` across isolated source and
+  restored databases.
+- A drifted three-version history at 0088 is refused by the 0089 audit while its
+  revision, canonical history SHA-256, and legacy trigger remain unchanged.
+- The listed pre-drift native dump restores independently with the same valid
+  history digest, upgrades to 0089 without history mutation, and rejects a
+  proposal-drift direct INSERT through the enhanced trigger.
+- The report is closed by Draft 2020-12 JSON Schema and a canonical report
+  digest and binds the runner/migration source SHA-256 values; exact-container
+  cleanup is required before the report is written. The full regression passes
+  2,917 tests with 115 declared capability skips. The isolated locked Python
+  3.12 audit reports zero findings; ambient `python -m pip_audit` instead reports
+  the host's non-project `pip 26.1.2` / `PYSEC-2026-3721` and is retained as an
+  environment failure. This remains single-host, single-version, synthetic
+  migration evidence.
+
+#### E-830 receiver replay across synchronous PostgreSQL failover (2026-08-22)
+
+- Exact PostgreSQL 16.14/17.10 two-node remote-apply cells prove an acknowledged
+  effect survives manual fenced promotion and replays without another effect.
+  A partitioned COMMIT is observed waiting in `SyncRep`, retained as uncertain,
+  and applies once only after former-primary re-seed restores synchronous
+  redundancy.
+- Rejoined standbys and restarted promoted primaries retain two receipts/two
+  effects and match the same-input SQLite canonical SHA-256
+  `5f5f48a2cf4071f93e064b127f2ecfa67fb5cbf29463a357aa93cfba52419f14`.
+- Local RTO is 6.168/6.199 seconds under a 60-second drill ceiling; acknowledged
+  synthetic-effect RPO is zero in this named topology. Report SHA-256 is
+  `5ae22491c01eb93daf38dd7fe6788c4daa7a0d648fb7dfa53ca7edf11d5e07d1`.
+- Both nodes share one host/failure domain and use a manual controller; this is
+  not cross-host HA, production RPO/RTO, provider, posting, settlement, or
+  exactly-once production evidence.
+
+#### E-829 PostgreSQL receiver idempotency parity (2026-08-22)
+
+- An optional psycopg reference backend preserves the E-828 digest-only
+  contract and atomically stores one immutable receipt/effect under a
+  transaction-scoped canonical receiver/key lock.
+- One closed matrix passes sequential, retargeting-refusal, eight-process,
+  crash-after-commit, mutation/malformed-input refusal, native dump/independent
+  restore, non-privileged-role, and cleanup checks on exact PostgreSQL 16.14
+  and 17.10 images.
+- Both PostgreSQL histories equal the SQLite canonical SHA-256. Report SHA-256
+  is `3e53b99e9d33598d5f010d2b0ad405cbc167936840976564221f8b27bb4d33b1`.
+- This does not establish live-vendor interoperability, cross-host consensus or
+  failover, accounting posting, settlement, HA/DR, or production exactly-once
+  behavior.
+
+#### E-828 bounded receiver idempotency conformance (2026-08-22)
+
+- A digest-only reference receiver now proves one atomic synthetic effect and
+  immutable receipt for a receiver/idempotency-key identity. Exact sequential
+  and spawned-process replay returns one stable provider response; changed
+  payload binding fails closed.
+- A source-bound, closed-schema local drill passes eleven checks including
+  crash-after-commit replay, direct mutation refusal, independent backup
+  restore, canonical-history equality, and cleanup. Report SHA-256 is
+  `cfe14335be6d04387d9f2c1be2909a1d843ebefe744e421f288cf096479274fb`.
+- This does not promote the project to live-vendor interoperability,
+  cross-host/distributed exactly-once delivery, accounting posting, or
+  production readiness.
+
+#### E-827 declared PostgreSQL migration matrix (2026-08-22)
+
+- The exact E-826 observation path now executes on digest-pinned PostgreSQL
+  16.14 and 17.10 images governed by the closed supply-chain policy.
+- Both cells pass the ten refusal/restore/guard/cleanup checks and produce the
+  same canonical two-version valid history and three-version drifted history.
+- The closed, canonically digested matrix report binds migration 0089, both
+  runner sources, the supply-chain policy, runtime identities, native dump
+  digests, checks, parity, and limitations. CI is configured to execute and
+  retain the report before the broader server-boundary matrix.
+- This is two-version local parity on one host, not rolling-upgrade,
+  replication, HA/DR, provider, posting, or production evidence.
 
 ### Disposable PostgreSQL boundary checks
 - `uv run --no-sync pytest -q -ra tests/test_application_metrics.py::test_live_postgres_metrics_and_sqlite_parity tests/test_alembic_postgres.py::test_alembic_upgrade_command_is_available_when_server_extra_is_installed` : **Passed (2/2)**.

@@ -8,19 +8,28 @@ For AI coding agents, also read [AGENTS.md](AGENTS.md).
 
 ## Development Setup
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
-pre-commit install
-```
-
-If the installed `reconforge` command appears stale after a CLI or version change:
+Use Python 3.11 or 3.12 and the exact `uv` version declared in
+`pyproject.toml`. Install `uv` through the checksum-verified procedure in the
+[supply-chain policy](docs/security/supply-chain-policy.md), then diagnose and
+bootstrap a platform-specific environment without replacing an existing
+`.venv`:
 
 ```bash
-python -m pip install -e ".[dev]" --force-reinstall
-python -m reconforge.cli doctor
+python .github/scripts/manage_developer_environment.py doctor --project-root . --python-version 3.12
+python .github/scripts/manage_developer_environment.py bootstrap --project-root . --python-version 3.12
 ```
+
+The command prints the exact activation command for `.venv-windows`,
+`.venv-macos`, or `.venv-linux`. Activate it, then install the Git hook once:
+
+```bash
+python -m pre_commit install
+```
+
+Bootstrap is idempotent for a valid selected environment. It refuses malformed,
+foreign, linked, nested, or out-of-project targets and never deletes or repairs
+the traditional `.venv`; review that directory manually if Doctor reports
+`DEVENV-ENV-FOREIGN`.
 
 ## Quality Commands
 
@@ -45,20 +54,21 @@ reconforge report client-pack --input output --output output/client_pack --summa
 
 ```bash
 python -m bandit -q -r reconforge
-uv lock --check
-python .github/scripts/validate_supply_chain_policy.py --project-root .
+python .github/scripts/run_locked_python_audit.py --project-root .
 npm --prefix apps/web audit --package-lock-only --audit-level=high
 ```
 
-Use the exact uv version and locked audit/secret commands in
-`docs/security/supply-chain-policy.md`. Do not replace them with an ambient
-environment audit, floating scanner, or broad finding baseline.
+The Python audit runner verifies the exact `uv` version, the closed policy, and
+`uv.lock`; exports every optional profile with hashes; and uses a temporary
+isolated Python 3.12 environment by default. It does not trust or repair the
+project `.venv`. Do not replace it with an ambient environment audit, floating
+scanner, or broad finding baseline.
 
 Security-sensitive changes include path handling, generated HTML, href values, YAML parsing, Studio routes, report output, evidence binder output, client packs, redaction, dependency workflows, and any code that handles user-controlled files.
 
 ## Coding Standards
 
-- Use Python 3.11+ with type hints.
+- Use supported Python 3.11 or 3.12 with type hints.
 - Keep reconciliation logic deterministic and explainable.
 - Prefer schema-driven validation over hidden assumptions.
 - Keep core functionality local-first.

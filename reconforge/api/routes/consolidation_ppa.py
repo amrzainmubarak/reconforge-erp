@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Request
@@ -143,7 +144,12 @@ def _server_only(request: Request) -> None:
         )
 
 
-def _enforce_server_policy(request: Request, *, permissions: frozenset[str]) -> None:
+def _enforce_server_policy(
+    request: Request,
+    *,
+    permissions: frozenset[str],
+    amount: Decimal | None = None,
+) -> None:
     """Re-evaluate PPA access against the authenticated tenant in server mode.
 
     PPA evidence is currently tenant-scoped (the persisted contract has no
@@ -158,6 +164,7 @@ def _enforce_server_policy(request: Request, *, permissions: frozenset[str]) -> 
         permissions=permissions,
         tenant_id=request_tenant_id(request),
         workspace_id=None,
+        amount=amount,
     )
 
 
@@ -170,8 +177,13 @@ def prepare_ppa(
     """Persist one authenticated, maker-checker, non-posting PPA artifact."""
 
     _server_only(request)
-    _enforce_server_policy(request, permissions=frozenset({"finance_core.manage"}))
     domain_request = payload.to_domain(prepared_by=current_user.id)
+    gross_consideration = abs(domain_request.consideration.amount) + abs(domain_request.nci_fair_value.amount)
+    _enforce_server_policy(
+        request,
+        permissions=frozenset({"finance_core.manage"}),
+        amount=gross_consideration,
+    )
     artifact = execute_postgres_ppa(
         request,
         lambda repository, _tenant: AcquisitionPpaApplicationService(repository).prepare_and_persist(

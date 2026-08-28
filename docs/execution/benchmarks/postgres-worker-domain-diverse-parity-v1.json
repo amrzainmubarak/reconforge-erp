@@ -1,0 +1,74 @@
+{
+  "observations": [
+    {
+      "adapter": "postgres-grouped",
+      "direct_decision_digest": "9b2bd01ecf86fef423b1f740ccd9efd2a7f0ff08fe77dbd732f7b05d15f4d4a6",
+      "mode": "domain-one-to-many",
+      "parity_verified": true,
+      "permutation_invariant": true,
+      "projected_decision_digests": [
+        "9b2bd01ecf86fef423b1f740ccd9efd2a7f0ff08fe77dbd732f7b05d15f4d4a6"
+      ],
+      "strategy_id": "bounded-grouped-subset-sum"
+    },
+    {
+      "adapter": "postgres-grouped",
+      "direct_decision_digest": "b4fc8f15ccef79001233da8fa3c1788f1abe920d336864d2be87b602e813dc9d",
+      "mode": "domain-many-to-one",
+      "parity_verified": true,
+      "permutation_invariant": true,
+      "projected_decision_digests": [
+        "b4fc8f15ccef79001233da8fa3c1788f1abe920d336864d2be87b602e813dc9d"
+      ],
+      "strategy_id": "bounded-grouped-subset-sum"
+    },
+    {
+      "adapter": "postgres-grouped",
+      "direct_decision_digest": "e4fdae6876d45b022e809bbfec5d80ca3e134deebfec0db1161b4c732af6f485",
+      "mode": "domain-many-to-many",
+      "parity_verified": true,
+      "permutation_invariant": true,
+      "projected_decision_digests": [
+        "e4fdae6876d45b022e809bbfec5d80ca3e134deebfec0db1161b4c732af6f485"
+      ],
+      "strategy_id": "bounded-grouped-subset-sum"
+    },
+    {
+      "adapter": "postgres-grouped",
+      "direct_decision_digest": "5ba4c82f05ddbfe179de5eacf4bc3c29f0627ca4693d0195bbe7608290a5c9e8",
+      "mode": "domain-portfolio-net",
+      "parity_verified": true,
+      "permutation_invariant": true,
+      "projected_decision_digests": [
+        "5ba4c82f05ddbfe179de5eacf4bc3c29f0627ca4693d0195bbe7608290a5c9e8"
+      ],
+      "strategy_id": "bounded-grouped-subset-sum"
+    },
+    {
+      "adapter": "postgres-grouped",
+      "direct_decision_digest": "1161341a4d3f536e92aa3102d9ca97760f0e583307681084e422690f7c1509f4",
+      "mode": "domain-fx-many-to-many",
+      "parity_verified": true,
+      "permutation_invariant": true,
+      "projected_decision_digests": [
+        "1161341a4d3f536e92aa3102d9ca97760f0e583307681084e422690f7c1509f4"
+      ],
+      "strategy_id": "bounded-grouped-subset-sum"
+    },
+    {
+      "adapter": "postgres-grouped",
+      "direct_decision_digest": "4c9595b3cda0b5d5a676acd8fd46d3a4ea6854a5cf31082cc7de16c2380b5f2c",
+      "mode": "domain-portfolio-partial",
+      "parity_verified": true,
+      "permutation_invariant": true,
+      "projected_decision_digests": [
+        "4c9595b3cda0b5d5a676acd8fd46d3a4ea6854a5cf31082cc7de16c2380b5f2c"
+      ],
+      "strategy_id": "bounded-grouped-subset-sum"
+    }
+  ],
+  "parity_count": 6,
+  "profile_digest": "0b0e875542be3a3d6d56fc7c3bf03e74dae21868ea0b55c9071c867246a57feb",
+  "profile_id": "postgres-worker-domain-diverse-parity-v1",
+  "synthetic_only": true
+}

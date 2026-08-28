@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1094 - Strict persisted worker policy amount parsing (2026-08-28)
+
+The full Python regression reaches 100% with exit 0. PostgreSQL reconciliation
+worker tests prove binary-float `policy_amount` values fail closed before claim
+authorization; Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+gates pass. This remains a bounded persisted-rule boundary, not external IAM or
+production authorization evidence.
+
 ## E-1093 - Strict financial inputs at sequential strategy adapters (2026-08-28)
 
 Focused matching-strategy and PostgreSQL sequential-worker tests pass 47/47;

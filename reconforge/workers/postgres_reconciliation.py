@@ -7,7 +7,7 @@ import json
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from threading import Event, Lock
 from typing import Any, Protocol, cast
 
@@ -33,6 +33,7 @@ from reconforge.utils.money import (
     CurrencyRegistry,
     FinancialInputPolicy,
     InvalidAmountError,
+    parse_exact_amount,
 )
 from reconforge.workers.policy import WorkerPolicyContextSupplier, require_service_worker_policy
 
@@ -884,8 +885,8 @@ class PostgresReconciliationWorker:
         if raw is None or (isinstance(raw, str) and not raw.strip()):
             return None
         try:
-            amount = Decimal(str(raw))
-        except (InvalidOperation, ValueError) as exc:
+            amount = parse_exact_amount(raw)
+        except InvalidAmountError as exc:
             raise PostgresReconciliationWorkerError("Stored reconciliation policy amount is invalid.") from exc
         if not amount.is_finite() or amount < 0:
             raise PostgresReconciliationWorkerError("Stored reconciliation policy amount is invalid.")

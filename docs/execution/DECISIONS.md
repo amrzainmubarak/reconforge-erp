@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-1005: Strict parsing for persisted worker policy amounts
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL reconciliation worker decoded the persisted
+  financial exposure used for authorization with `Decimal(str(raw))`, allowing
+  a JSON binary float to become an apparently exact Decimal.
+- **Decision**: Decode `policy_amount` with `parse_exact_amount()` and reject
+  binary floating-point, malformed, non-finite, or negative values before
+  claim/lifecycle policy evaluation. Keep exact text, integer, and Decimal
+  compatibility.
+- **Rationale**: Authorization amounts are financial inputs and must obey the
+  same strict exactness policy as the submission and matching boundaries.
+- **Verification**: The new worker regression, existing PostgreSQL worker and
+  policy suites, full regression, static/security gates, package build, YAML,
+  and diff checks pass.
+- **Compatibility**: Valid persisted exact amounts are unchanged. Stored
+  binary-float policy amounts now fail closed with the existing safe worker
+  validation error.
+- **Rollback**: Revert E-1094, ADR 0754, the worker/test changes, manifest
+  entry, and execution records together.
+
 ### D-1004: Strategy adapters enforce strict financial inputs
 
 - **Date**: 2026-08-28

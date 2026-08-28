@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1094
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict parsing for persisted worker policy amounts
+    status: completed
+    depends_on: [E-1093]
+    exit_evidence: >-
+      PostgreSQL reconciliation worker authorization now decodes persisted
+      policy_amount through parse_exact_amount and refuses binary floating-point,
+      malformed, non-finite, or negative values before claim/lifecycle policy
+      evaluation. Valid exact text, integer, and Decimal values retain their
+      behavior. Worker regression, full regression, static/security gates,
+      package build, YAML, and diff checks pass. This closes a persisted-rule
+      input seam, not external IAM, distributed revocation, posting correctness,
+      hosted enforcement, or production authorization effectiveness.
   - id: E-1093
     priority: P0
     area: financial-exactness

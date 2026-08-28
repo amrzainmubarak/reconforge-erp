@@ -702,6 +702,26 @@ def test_postgres_reconciliation_worker_passes_persisted_policy_amount_to_claim_
     assert policy_amounts[1:] == [Decimal("20.00"), Decimal("20.00")]
 
 
+def test_postgres_reconciliation_worker_rejects_binary_float_policy_amount() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    assert connection.run is not None
+    connection.run["rule_json"] = {"policy_amount": 20.0, "amount_tolerance": "0"}
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="amount-worker", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
+    )
+
+    with pytest.raises(PostgresReconciliationWorkerError, match="Stored reconciliation policy amount is invalid"):
+        worker.process_once()
+
+
 def test_postgres_reconciliation_worker_can_separate_discovery_and_execution_permissions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

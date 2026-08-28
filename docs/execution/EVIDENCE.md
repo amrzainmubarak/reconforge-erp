@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1094: Enforce strict parsing for persisted worker policy amounts (2026-08-28)
+
+- Code evidence: `PostgresReconciliationWorker._policy_amount_from_run()` now
+  uses `parse_exact_amount()` for the immutable `policy_amount` carried into
+  claim and lifecycle authorization. Binary floating-point, malformed,
+  non-finite, and negative values fail closed before policy evaluation.
+- Test evidence: `tests/test_postgres_reconciliation.py::test_postgres_reconciliation_worker_rejects_binary_float_policy_amount`
+  proves a decoded JSON float is refused; the existing worker, policy, scope,
+  resume, and persisted-rule tests remain green.
+- Gate evidence: the full Python regression reaches 100% with exit 0; focused
+  PostgreSQL reconciliation/sequential-worker tests pass; Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML, and diff gates pass. The package sdist
+  contains ADR 0754 and the changed worker module.
+- Boundary: this is persisted-rule input and authorization-boundary evidence.
+  It does not establish external IAM, distributed revocation, hosted
+  enforcement, posting correctness, provider behavior, or production
+  authorization effectiveness.
+
 ## E-1093: Enforce strict financial inputs in sequential strategy adapters (2026-08-28)
 
 - Code evidence: `CarryForwardFifoStrategy` and `ReversalPairingStrategy` use

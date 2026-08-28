@@ -2,6 +2,16 @@
 
 Updated: 2026-08-28
 
+## E-1094 - Enforce strict parsing for persisted worker policy amounts (2026-08-28)
+
+- PostgreSQL reconciliation worker authorization now decodes persisted
+  `policy_amount` through `parse_exact_amount()`. Binary floating-point values
+  are refused before the amount reaches claim/lifecycle policy evaluation;
+  valid exact text, integer, and Decimal values retain their behavior.
+- This closes a persisted-rule input seam only. It is not evidence of external
+  IAM, distributed revocation, hosted enforcement, posting correctness, or
+  production authorization effectiveness.
+
 ## E-1093 - Enforce strict financial inputs in sequential strategy adapters (2026-08-28)
 
 - Carry-forward and reversal-pairing adapters now parse record amounts and

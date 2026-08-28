@@ -20,6 +20,7 @@ T = TypeVar("T")
 
 EmergencyApprover = Annotated[LocalUser, Depends(require_permission("security.emergency.approve"))]
 EmergencyReviewer = Annotated[LocalUser, Depends(require_permission("security.emergency.review"))]
+EmergencyRequester = Annotated[LocalUser, Depends(require_permission("security.emergency.request"))]
 
 
 class EmergencyRequestBody(BaseModel):
@@ -94,7 +95,7 @@ def _execute(request: Request, operation: Callable[[Any, str], T]) -> T:
 def request_access(
     body: EmergencyRequestBody,
     request: Request,
-    current_user: LocalUser = Depends(get_current_user),
+    current_user: EmergencyRequester,
 ) -> dict[str, object]:
     principal = _principal(request, current_user)
     record = _execute(

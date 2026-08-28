@@ -2,6 +2,19 @@
 
 Updated: 2026-08-28
 
+## E-1076 - Explicit emergency-access request authorization (2026-08-28)
+
+- The PostgreSQL emergency-access request mutation now requires the explicit
+  central `security.emergency.request` permission. The permission is human-only
+  and privileged step-up protected; approval/rejection, activation, ending,
+  independent review, forced RLS, and maker-checker repository guards remain
+  unchanged.
+- The route inventory no longer classifies request creation as identity-only.
+  Focused authorization/policy/emergency tests, full regression, and release
+  quality gates are required evidence. This closes request authorization only;
+  it does not establish external IAM, PAM, MFA coverage, or production
+  effectiveness.
+
 ## E-1075 - Exact currency-bound enterprise demo trial balances (2026-08-28)
 
 - Enterprise-demo trial-balance source records now use Decimal account bases

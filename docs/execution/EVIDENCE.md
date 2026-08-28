@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1076: Explicit emergency-access request authorization (2026-08-28)
+
+- Code evidence: the PostgreSQL emergency-access request route now depends on
+  `security.emergency.request`. The central policy registry classifies that
+  permission as human-only and privileged step-up protected. The route
+  inventory removes request creation from the identity-only allowlist and binds
+  the exact permission contract and digest.
+- Test evidence: the authorization inventory asserts the request route's
+  permission-bearing contract; policy parametrization covers service-account
+  denial and recent-step-up requirements; PostgreSQL emergency fixtures grant
+  the new permission explicitly. Focused tests, full pytest, Ruff, Mypy,
+  Bandit, pip-audit, package build, source YAML, and diff checks are the
+  release gates for this slice.
+- Boundary: this closes explicit request authorization only. Approval/review
+  independence and session-bound activation remain separately tested; no PAM,
+  external IAM, universal MFA, or production-effectiveness claim follows.
+
 ## E-1075: Exact currency-bound enterprise demo trial balances (2026-08-28)
 
 - Code evidence: `reconforge/enterprise_demo.py` now stores account bases and

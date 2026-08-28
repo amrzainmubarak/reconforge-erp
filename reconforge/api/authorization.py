@@ -34,7 +34,6 @@ _IDENTITY_MUTATION_ALLOWLIST = frozenset(
     {
         ("POST", "/api/v1/auth/logout"),
         ("POST", "/api/v1/auth/step-up"),
-        ("POST", "/api/v1/auth/emergency-access/requests"),
         ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/activate"),
         ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/end"),
         ("POST", "/api/v1/auth/webauthn/registration/options"),

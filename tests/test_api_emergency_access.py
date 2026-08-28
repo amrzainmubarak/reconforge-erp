@@ -92,10 +92,14 @@ def test_live_http_emergency_request_approval_activation_use_end_and_review(tmp_
                 identity.create_role(tenant_id=tenant_a, role_name=role)
             for permission in (
                 "finance_core.validate",
+                "security.emergency.request",
                 "security.emergency.approve",
                 "security.emergency.review",
             ):
                 identity.create_permission(tenant_id=tenant_a, permission_name=permission)
+            identity.grant_permission(
+                tenant_id=tenant_a, role_name="requester", permission_name="security.emergency.request"
+            )
             identity.grant_permission(
                 tenant_id=tenant_a, role_name="approver", permission_name="security.emergency.approve"
             )

@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1076
+    priority: P0
+    area: identity-governance
+    title: Require explicit permission for emergency-access requests
+    status: completed
+    depends_on: [E-1005]
+    exit_evidence: >-
+      The emergency-access request mutation is a central permission-bearing
+      route requiring `security.emergency.request`; the policy registry marks
+      it human-only and step-up protected, while independent approval/review,
+      session-bound activation, forced RLS, and maker-checker controls remain
+      unchanged. Route-inventory, policy, emergency API, full regression, and
+      release-quality gates pass; ADR 0736 records the compatibility and
+      rollback boundary. This closes explicit request authorization only; it
+      does not claim PAM, MFA, external IAM, or production effectiveness.
   - id: E-1075
     priority: P0
     area: financial-exactness

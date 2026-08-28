@@ -548,8 +548,10 @@ complete WebAuthn/step-up experience. See
 
 ## Emergency access (PostgreSQL profile)
 
-`/api/v1/auth/emergency-access/requests` exposes a human-only, forced-RLS
-lifecycle: self-request and list, independent stepped-up approve/reject,
+`/api/v1/auth/emergency-access/requests` exposes a human-only, explicit-
+permission, forced-RLS lifecycle: a requester with the tenant-defined
+`security.emergency.request` permission submits a self-request and can list it,
+independent stepped-up approve/reject,
 requester activation from the same stepped-up session, explicit end, and
 independent stepped-up review. Authority is limited to a closed five-permission
 financial/operational registry and 5–60 minutes. It never grants identity,

@@ -15,7 +15,7 @@ from reconforge.api.authorization import (
 from reconforge.api.dependencies import require_any_permission, require_permission
 
 EXPECTED_ROUTE_COUNT = 265
-EXPECTED_DIGEST = "66292d07fd4513cbdacc22a95fb4f0ed3f1e16497fdc9044ae02d99233f9efdf"
+EXPECTED_DIGEST = "fb0d04d1afd8f755eefcae1b42a21381c17b45b12d9c5d7e18bb1a4cdf0288d2"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -75,6 +75,13 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     ]
     assert all(contract.permissions for contract in contracts if contract.mode in {"all", "any"})
     assert len([contract for contract in contracts if contract.mode == "scim"]) == 15
+    emergency_request = next(
+        contract
+        for contract in contracts
+        if contract.method == "POST" and contract.path == "/api/v1/auth/emergency-access/requests"
+    )
+    assert emergency_request.mode == "all"
+    assert emergency_request.permissions == ("security.emergency.request",)
     validate_authorization_surface(contracts)
 
 

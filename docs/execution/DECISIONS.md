@@ -5,6 +5,31 @@
 
 ## Decisions
 
+### D-905: Require explicit human authorization to request emergency access
+
+- **Date**: 2026-08-28
+- **Context**: The emergency-access request endpoint accepted any authenticated
+  identity, even though the requested grants are limited to sensitive financial
+  and operational permissions. That left the request mutation outside the
+  central permission contract and made route inventory evidence weaker than
+  the subsequent approval and activation controls.
+- **Decision**: Require the tenant-defined `security.emergency.request`
+  permission through the existing central dependency. Classify it as human-only
+  and privileged step-up protected. Keep the requester restricted to their own
+  target, keep approval/review independent, and keep the existing repository,
+  session, expiry, and forced-RLS guards.
+- **Verification**: Route inventory asserts the exact permission-bearing
+  contract and digest; policy tests cover human-only and step-up behavior; live
+  emergency API/repository fixtures grant the new permission explicitly; full
+  regression and release gates are required.
+- **Compatibility**: This is intentionally stricter authorization. Existing
+  PostgreSQL tenants must register and grant the new permission before users
+  can submit requests; no schema migration silently grants it. No local SQLite
+  route is changed.
+- **Rollback**: Revert E-1076, ADR 0736, the route contract, policy registry,
+  fixtures, and execution evidence together. Do not restore permissionless
+  emergency requests as a default security posture.
+
 ### D-904: Generate enterprise-demo trial balances with exact Money values
 
 - **Date**: 2026-08-28

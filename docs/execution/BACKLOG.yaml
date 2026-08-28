@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1083
+    priority: P1
+    area: supply-chain
+    title: Keep CI service-container identity immutable and documentation-aligned
+    status: completed
+    depends_on: [E-824]
+    exit_evidence: >-
+      The server-boundary PostgreSQL 16 Alpine and Redis 7.4 Alpine service
+      images are pinned by immutable SHA-256 digests; the Redis live report
+      receives the same digest subject. A regression test rejects drift from
+      the reviewed workflow identities, and dependency/gap documentation now
+      describes digest pinning accurately. This closes the local workflow
+      identity/documentation drift only; image provenance, hosted execution,
+      freshness, independent service assurance, and production readiness
+      remain open.
   - id: E-1082
     priority: P0
     area: identity-governance

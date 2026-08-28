@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1083: Keep CI service-container identity immutable and documentation-aligned (2026-08-28)
+
+- Code/workflow evidence: `.github/workflows/ci.yml` executes the
+  server-boundary PostgreSQL service as
+  `postgres:16-alpine@sha256:57c72fd2...07777` and the Redis service as
+  `redis:7.4-alpine@sha256:e7723ff...9219a2`; the same Redis digest is
+  supplied to `verify_redis_live.py`. The exact workflow identities are now
+  guarded by `tests/test_phase4_execution_contract.py`.
+- Test evidence: the focused phase-4 execution-contract suite and its Redis
+  live-report/supply-chain companions pass 42 tests. The full pytest suite
+  completes with no failures; Ruff, Mypy, Bandit, pip-audit, package build,
+  YAML, and diff gates also pass, with existing Bandit `nosec`/comment
+  warnings and the local distribution-not-on-PyPI audit note retained.
+- Boundary: digest pinning prevents tag drift in the reviewed workflow but
+  does not authenticate image provenance, establish freshness, prove hosted
+  execution, provide independent service assurance, or establish production
+  readiness.
+
 ## E-1082: Bind PostgreSQL outbox workers to verified permission manifests (2026-08-28)
 
 - Code evidence: policy-supplier-backed `PostgresOutboxWorkerSettings` now

@@ -2,6 +2,19 @@
 
 Updated: 2026-08-28
 
+## E-1083 - Keep CI service-container identity immutable and documentation-aligned (2026-08-28)
+
+- The server-boundary CI job executes PostgreSQL 16 Alpine and Redis 7.4
+  Alpine by exact SHA-256 digest, and passes the Redis digest into the
+  live-report verifier. A new contract test binds both workflow service
+  identities to their reviewed digests and prevents a return to tag-only
+  execution.
+- `DEPENDENCY_RISK.md` and `GAP_MATRIX.md` now reflect the current
+  digest-pinned state rather than reporting mutable service tags. This is
+  local workflow/documentation evidence only; it does not prove image
+  provenance, hosted execution, freshness, independent service assurance, or
+  production readiness.
+
 ## E-1082 - Bind PostgreSQL outbox workers to verified manifests (2026-08-28)
 
 - Policy-supplier-backed `PostgresOutboxWorkerSettings` now consumes a

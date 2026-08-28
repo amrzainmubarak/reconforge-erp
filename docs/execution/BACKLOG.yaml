@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1091
+    priority: P0
+    area: postgres-runtime
+    title: Enforce hard partition limits during PostgreSQL input streaming
+    status: completed
+    depends_on: [E-1090]
+    exit_evidence: >-
+      PostgreSQL input partition accumulation now validates the persisted
+      partition_max_records ceiling while reading the server cursor, bounds
+      fetch batches to the same declared ceiling, and fails closed before an
+      oversized partition is handed to any matcher. A repository regression
+      proves the second row of a one-record partition is refused; the worker
+      shares one validated limit helper with local partition execution. Focused
+      PostgreSQL tests and the full release gate pass. This controls per-
+      partition materialization, not total-run capacity, database-side memory,
+      or production sizing.
   - id: E-1090
     priority: P0
     area: matching
@@ -3058,6 +3074,14 @@ tasks:
       behavior, explicit strategy/version/digest records, and cross-engine reproducibility
       replay checks under open and synthetic profiles.
     completed_slices:
+      - >
+        E-1091 enforces the persisted `partition_max_records` ceiling while
+        PostgreSQL input partitions are accumulated, caps cursor fetch batches
+        to that same ceiling, and refuses oversized partitions before they are
+        handed to a matcher. The repository regression, full PostgreSQL
+        reconciliation suite, and release gates pass. This is a bounded
+        materialization control, not database resource isolation, total-run
+        capacity, or production sizing evidence.
       - >
         E-1090 bounds one-to-one stock/GL candidate generation at 100,000
         possible pairs per work-order/currency partition. Oversized partitions

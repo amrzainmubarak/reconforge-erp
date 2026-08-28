@@ -426,6 +426,35 @@ def test_postgres_reconciliation_run_listing_is_stable_and_bounded() -> None:
         repository.list_runs(tenant_id="tenant_a", status="unknown")
 
 
+def test_postgres_input_partition_limit_is_enforced_during_cursor_accumulation() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    for side, source_id in (("Left", "left-1"), ("Right", "right-1")):
+        repository.register_input(
+            tenant_id="tenant_a",
+            run_id="run-a",
+            side=side,
+            source_id=source_id,
+            record_hash=f"hash-{source_id}",
+            amount="10.00",
+            currency_code="USD",
+            attributes={"entity_id": "entity-a"},
+        )
+
+    with pytest.raises(PostgresReconciliationIntegrityError, match="max_partition_records=1"):
+        list(
+            repository.iter_input_partitions(
+                tenant_id="tenant_a",
+                run_id="run-a",
+                partition_fields=("entity_id",),
+                max_partition_records=1,
+            )
+        )
+
+    assert len(connection.inputs) == 2
+
+
 def test_postgres_repository_writer_binds_strict_financial_policy_by_default() -> None:
     connection = _ReconciliationConnection()
     repository = PostgresReconciliationRepository(connection)

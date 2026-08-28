@@ -5,6 +5,31 @@
 
 ## Decisions
 
+### D-1002: Enforce hard partition limits during PostgreSQL input streaming
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL partition supplier used a server cursor, but the
+  repository accumulated a complete current partition before the worker's
+  existing post-read `partition_max_records` check. A dense hard key could
+  therefore consume excessive Python memory before being rejected.
+- **Decision**: Add a validated `max_partition_records` contract to
+  `iter_input_partitions()`. Enforce it before appending each row, cap the
+  cursor fetch batch to the same declared ceiling in the repository/worker
+  path, and fail
+  closed with an integrity error when the partition would exceed the limit.
+  Keep the worker and local partition execution on one validation helper.
+- **Rationale**: A hard partition limit must protect the input materialization
+  boundary itself. Silent truncation, late rejection, or handing an oversized
+  partition to grouped/sequential matching would make resource failures harder
+  to explain and harder to replay.
+- **Verification**: The focused repository regression, full PostgreSQL
+  reconciliation suite including worker resume tests, and release gates pass.
+- **Compatibility**: The public repository method keeps a 10,000-record
+  default matching the worker's historical default. Existing callers may pass
+  a lower bound; no input or result schema changes.
+- **Rollback**: Revert E-1091, ADR 0751, the repository/worker/test changes,
+  manifest entry, and execution records together.
+
 ### D-915: Bound stock/GL candidate generation under dense partitions
 
 - **Date**: 2026-08-28

@@ -59,6 +59,21 @@ class PostgresReconciliationWorkerError(RuntimeError):
     """Raised when a reconciliation worker cannot safely finish a cycle."""
 
 
+def _validated_partition_limit(rule: Mapping[str, Any]) -> int:
+    """Return the shared hard-partition memory ceiling from a persisted rule."""
+
+    value = rule.get("partition_max_records", 10_000)
+    if isinstance(value, bool):
+        raise PostgresReconciliationWorkerError("partition_max_records must be an integer.")
+    try:
+        limit = int(value)
+    except (TypeError, ValueError) as exc:
+        raise PostgresReconciliationWorkerError("partition_max_records must be an integer.") from exc
+    if not 1 <= limit <= 100_000:
+        raise PostgresReconciliationWorkerError("partition_max_records must be between 1 and 100000.")
+    return limit
+
+
 class PostgresReconciliationPolicyDenied(PostgresReconciliationWorkerError):
     """Raised when a last-point policy recheck denies a run before claiming it."""
 
@@ -215,16 +230,7 @@ class LocalDeterministicMatcherAdapter:
 
     @staticmethod
     def _partition_limit(rule: Mapping[str, Any]) -> int:
-        value = rule.get("partition_max_records", 10_000)
-        if isinstance(value, bool):
-            raise PostgresReconciliationWorkerError("partition_max_records must be an integer.")
-        try:
-            limit = int(value)
-        except (TypeError, ValueError) as exc:
-            raise PostgresReconciliationWorkerError("partition_max_records must be an integer.") from exc
-        if not 1 <= limit <= 100_000:
-            raise PostgresReconciliationWorkerError("partition_max_records must be between 1 and 100000.")
-        return limit
+        return _validated_partition_limit(rule)
 
     @staticmethod
     def _partition_key(record: Mapping[str, Any], fields: Sequence[str]) -> str:
@@ -1080,6 +1086,7 @@ class PostgresReconciliationWorker:
         amount_field = str(rule.get("amount_field", "amount"))
         date_field = str(rule.get("date_field", "date"))
         reference_field = str(rule.get("reference_field", "reference"))
+        partition_limit = _validated_partition_limit(rule)
 
         def supplier() -> Iterable[ReconciliationInputPartition]:
             with self._transaction().transaction(
@@ -1096,6 +1103,8 @@ class PostgresReconciliationWorker:
                     amount_field=amount_field,
                     date_field=date_field,
                     reference_field=reference_field,
+                    batch_size=min(10_000, partition_limit),
+                    max_partition_records=partition_limit,
                 ):
                     yield ReconciliationInputPartition(
                         partition_key=_stable_partition_key(values),

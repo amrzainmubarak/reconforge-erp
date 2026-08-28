@@ -2,6 +2,18 @@
 
 Updated: 2026-08-28
 
+## E-1091 - Enforce hard partition limits during PostgreSQL input streaming (2026-08-28)
+
+- PostgreSQL `iter_input_partitions()` now validates and enforces
+  `max_partition_records` while accumulating the current server-cursor
+  partition. The worker passes the persisted `partition_max_records` value and
+  caps cursor batches to that same declared ceiling.
+- An oversized partition is refused before it is handed to a matcher, with no
+  truncation or partial partition result. The focused PostgreSQL repository
+  regression and the existing worker resume suite pass. This is a bounded
+  materialization control, not total-run capacity, database-side memory, or
+  production sizing evidence.
+
 ## E-1090 - Bound stock/GL candidate generation under dense partitions (2026-08-28)
 
 - One-to-one stock/GL candidate generation now partitions by work order and

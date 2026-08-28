@@ -2,6 +2,22 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1091: Enforce hard partition limits during PostgreSQL input streaming (2026-08-28)
+
+- Code evidence: `PostgresReconciliationRepository.iter_input_partitions()`
+  validates `max_partition_records`, clamps the cursor batch to that ceiling,
+  and refuses accumulation when the current partition reaches the declared
+  ceiling before appending another input row. `PostgresReconciliationWorker`
+  passes the persisted `partition_max_records` rule through one shared
+  validation helper.
+- Test evidence: `tests/test_postgres_reconciliation.py::test_postgres_input_partition_limit_is_enforced_during_cursor_accumulation`
+  proves a one-record ceiling refuses the second row with an explicit
+  `PostgresReconciliationIntegrityError`; the full PostgreSQL reconciliation
+  file passes, including crash/resume tests.
+- Boundary: the guard limits Python materialization per hard partition. It does
+  not prove database-side resource isolation, total-run capacity, distributed
+  execution, hosted sizing, or production SLOs.
+
 ## E-1090: Bound stock/GL candidate generation under dense partitions (2026-08-28)
 
 - Code evidence: `assign_stock_to_gl` partitions records by normalized work

@@ -9,6 +9,25 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1080
+    priority: P0
+    area: identity-governance
+    title: Bind PostgreSQL reconciliation workers to verified permission manifests
+    status: completed
+    depends_on: [E-1005, E-1008, E-1079]
+    exit_evidence: >-
+      PostgresReconciliationWorkerSettings accepts a verified
+      WorkerPermissionManifest for configured policy workers and fails closed
+      when its worker identity, audit principal, discovery permission, or
+      execution permission drifts from the reviewed manifest. Every discovery
+      and claim/recheck policy boundary rejects unreviewed permission
+      overrides before connection access; explicit unbound local mode remains
+      a named compatibility exception. Focused PostgreSQL reconciliation
+      worker tests pass with the declared capability skip, plus full
+      regression and release-quality gates. This closes the reviewed
+      PostgreSQL reconciliation worker configuration boundary only; external
+      IAM provisioning, universal worker adoption, distributed revocation,
+      and production effectiveness remain open.
   - id: E-1079
     priority: P0
     area: identity-governance

@@ -2,6 +2,20 @@
 
 Updated: 2026-08-28
 
+## E-1080 - Bind PostgreSQL reconciliation workers to verified manifests (2026-08-28)
+
+- `PostgresReconciliationWorkerSettings` now accepts a verified
+  `WorkerPermissionManifest` for workers using a policy supplier. Configuration
+  fails closed when the manifest does not match `worker_id`, `audit_actor_id`,
+  `policy_permission`, or `discovery_policy_permission`.
+- Every discovery and execution policy boundary validates the requested grant
+  against the manifest before `require_service_worker_policy` or any
+  PostgreSQL connection. The explicit `allow_unbound_hosted_policy` path stays
+  available only as a named local compatibility exception. Focused worker
+  tests pass with the declared capability skip; full regression and release
+  gates are required as final evidence. This is not external IAM or universal
+  production-worker coverage.
+
 ## E-1079 - Bind governed durable workers to verified permission manifests (2026-08-28)
 
 - `GovernedDurableJobWorkerService` now requires a verified

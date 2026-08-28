@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1080: Bind PostgreSQL reconciliation workers to verified permission manifests (2026-08-28)
+
+- Code evidence: policy-supplier-backed `PostgresReconciliationWorkerSettings`
+  now requires a `WorkerPermissionManifest` and checks worker identity,
+  audit principal, discovery grant, and execution grant at configuration time.
+  `_authorize_scope` validates every requested discovery or execution
+  permission against that fixed manifest before invoking the central policy
+  helper or opening a PostgreSQL transaction. The explicitly named unbound
+  local compatibility flag remains unchanged.
+- Test evidence: `tests/test_postgres_reconciliation.py` passes its complete
+  contract suite with one declared capability skip, including no-connection
+  rejection for a missing manifest and rejection of an unreviewed permission
+  override. Full pytest, Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff checks are the release gates for this slice.
+- Boundary: this proves the reviewed configuration and policy boundary for
+  the PostgreSQL reconciliation worker. It does not prove external IAM
+  provisioning, every worker uses this setting, distributed revocation,
+  provider behavior, HA/DR, or production authorization effectiveness.
+
 ## E-1079: Bind governed durable workers to verified permission manifests (2026-08-28)
 
 - Code evidence: `GovernedDurableJobWorkerService` now requires a

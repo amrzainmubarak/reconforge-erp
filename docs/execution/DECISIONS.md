@@ -5,6 +5,34 @@
 
 ## Decisions
 
+### D-909: Bind PostgreSQL reconciliation worker settings to permission manifests
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL reconciliation worker already re-evaluated
+  tenant/workspace/entity policy and supported separate discovery and execution
+  permissions, but a configured worker could still omit the reviewed manifest
+  or override the permission passed to the shared policy guard.
+- **Decision**: When a PostgreSQL reconciliation worker uses a policy supplier,
+  require a verified `WorkerPermissionManifest`. Match its worker ID to the
+  worker setting, its principal ID to the audit actor, and its discovery and
+  execution grants to the two configured policy permissions. Validate every
+  discovery/claim boundary against that fixed grant set before connection
+  access. Preserve the explicitly named unbound local compatibility flag.
+- **Rationale**: Runtime policy re-evaluation is strongest when the worker
+  configuration cannot drift from the reviewed deployment artifact. The
+  manifest closes identity and permission substitution while the existing
+  central policy guard remains authoritative for dynamic namespace grants.
+- **Verification**: E-1080 focused PostgreSQL reconciliation worker tests,
+  full regression, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  checks.
+- **Compatibility**: This is a stricter configuration contract only for
+  policy-supplier-backed PostgreSQL reconciliation workers. The local
+  `DurableJobWorkerService` and explicit unbound compatibility path are
+  unchanged; no schema or migration is required.
+- **Rollback**: Revert E-1080, ADR 0740, the settings/tests, and execution
+  records together. Do not restore per-call permission drift without a
+  replacement artifact binding.
+
 ### D-908: Bind governed durable workers to verified permission manifests
 
 - **Date**: 2026-08-28

@@ -2,6 +2,16 @@
 
 Updated: 2026-08-28
 
+## E-1101 - Enforce strict canonical database-reference amounts (2026-08-28)
+
+- The shared `DatabaseRecordRow` validator now uses `parse_exact_amount()` and
+  returns `canonical_decimal_text()`. Scientific notation and malformed values
+  fail closed; finite non-finite validation wording remains compatible. Exact
+  forms are canonicalized before response digest calculation.
+- This is shared connector input and serialization evidence only. Provider
+  authenticity, external database certification, cross-engine parity, capacity,
+  and production financial assurance remain open.
+
 ## E-1100 - Enforce strict PostgreSQL database-connector amount hydration (2026-08-28)
 
 - The read-only PostgreSQL named-query connector now uses

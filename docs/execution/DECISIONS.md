@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1012: Strict canonical database-reference amounts
+
+- **Date**: 2026-08-28
+- **Context**: `DatabaseRecordRow` used `Decimal(value)` only for validation and
+  returned the original amount string, allowing scientific notation and digest
+  variance from equivalent formatting.
+- **Decision**: Use `parse_exact_amount()` and return
+  `canonical_decimal_text()` from the shared amount validator; preserve the
+  existing finite-value error wording.
+- **Rationale**: Shared connector rows are financial inputs and response
+  fingerprints must be deterministic across equivalent source formatting.
+- **Verification**: Shared connector and PostgreSQL transport tests cover exact
+  canonicalization and invalid-value refusal; full gates are recorded in E-1101.
+- **Compatibility**: Exact values remain accepted, but output uses canonical
+  plain text; scientific notation now fails closed.
+- **Rollback**: Revert E-1101, ADR 0761, shared connector/test changes,
+  manifest entry, and execution records together.
+
 ### D-1011: Strict PostgreSQL database-connector amount hydration
 
 - **Date**: 2026-08-28

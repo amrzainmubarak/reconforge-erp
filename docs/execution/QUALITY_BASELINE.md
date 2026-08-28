@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1101 - Strict canonical database-reference amounts (2026-08-28)
+
+Shared database-reference connector tests pass. Amounts now use the strict
+parser and canonical plain-text serialization, so equivalent formatting yields
+stable response digests and scientific notation fails closed. Full regression
+and release-quality gates pass; provider, certification, parity, capacity, and
+production evidence remain open.
+
 ## E-1100 - Strict PostgreSQL database-connector amount hydration (2026-08-28)
 
 The PostgreSQL read-only connector suite passes with one declared live-

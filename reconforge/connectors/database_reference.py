@@ -11,7 +11,6 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -33,6 +32,8 @@ from reconforge.connectors.network import (
     ConnectorNetworkError,
     ConnectorSecretResolver,
 )
+from reconforge.io.writers import canonical_decimal_text
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 DATABASE_REFERENCE_ENDPOINT = "https://db-gateway.example.test/reconforge"
 
@@ -112,12 +113,20 @@ class DatabaseRecordRow(BaseModel):
     @classmethod
     def validate_amount(cls, value: str) -> str:
         try:
-            amount = Decimal(value)
-        except InvalidOperation as exc:
+            amount = parse_exact_amount(value)
+        except InvalidAmountError as exc:
+            if str(value).strip().casefold() in {
+                "nan",
+                "inf",
+                "+inf",
+                "-inf",
+                "infinity",
+                "+infinity",
+                "-infinity",
+            }:
+                raise ValueError("amount must be finite") from exc
             raise ValueError("amount must be exact Decimal text") from exc
-        if not amount.is_finite():
-            raise ValueError("amount must be finite")
-        return value
+        return canonical_decimal_text(amount)
 
 
 class DatabaseTransport(Protocol):

@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1101: Enforce strict canonical database-reference amounts (2026-08-28)
+
+- Code evidence: `DatabaseRecordRow.amount` uses `parse_exact_amount()` and
+  returns `canonical_decimal_text()`, so shared database-reference rows expose
+  one finite exact representation before response digest calculation.
+- Test evidence: `tests/test_connector_database_reference.py` covers
+  canonicalization and scientific/non-finite refusal; existing scope, duplicate,
+  cursor, and PostgreSQL transport tests remain green.
+- Gate evidence: focused connector tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is shared connector validation/serialization evidence. It does
+  not establish provider authenticity, external database certification,
+  cross-engine parity, capacity, or production financial assurance.
+
 ## E-1100: Enforce strict PostgreSQL database-connector amount hydration (2026-08-28)
 
 - Code evidence: `_canonical_amount()` in the read-only PostgreSQL named-query

@@ -1109,3 +1109,4 @@ include docs/adr/0757-strict-ownership-percentage-hydration.md
 include docs/adr/0758-strict-consolidation-minor-amount-verification.md
 include docs/adr/0759-strict-postgres-worker-tolerance-hydration.md
 include docs/adr/0760-strict-postgres-database-connector-amount-hydration.md
+include docs/adr/0761-strict-canonical-database-reference-amounts.md

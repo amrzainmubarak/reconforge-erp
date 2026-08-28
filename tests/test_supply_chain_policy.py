@@ -44,6 +44,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         ".github/dependabot.yml",
         ".github/scripts/run_locked_python_audit.py",
         ".github/scripts/validate_container_security.py",
+        ".github/scripts/extract_syft_image_config_digest.py",
         ".github/scripts/verify_airgap_install.py",
         ".github/scripts/verify_postgres_ha_dr.py",
         ".github/scripts/verify_postgres_writeback_identity_migration.py",
@@ -504,6 +505,7 @@ def test_security_and_release_workflows_pin_tools_and_fail_before_registry_write
         assert f'SYFT_VERSION: "{policy["container_audits"]["sbom"]["version"]}"' in workflow
         assert f'GRYPE_VERSION: "{policy["container_audits"]["vulnerability"]["version"]}"' in workflow
         assert ".github/scripts/validate_container_security.py" in workflow
+        assert ".github/scripts/extract_syft_image_config_digest.py" in workflow
 
     assert '"--require-hashes"' in audit_runner
     assert '"--disable-pip"' in audit_runner

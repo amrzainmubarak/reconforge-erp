@@ -1,0 +1,100 @@
+{
+  "$schema": "../schemas/container_security_evidence.schema.json",
+  "active_exception_count": 0,
+  "blockers": [],
+  "database": {
+    "age_seconds_at_scan": 56716,
+    "built_at": "2026-08-27T09:17:14Z",
+    "schema_version": "v6.1.9"
+  },
+  "evaluated_at": "2026-08-28T01:02:30Z",
+  "image": {
+    "config_digest": "sha256:915ea5d3c8b64f8c0163c5e4617eaa8f518cfc31e7c763e52ce7e1036b925fff",
+    "distro": {
+      "id": "alpine",
+      "version": "3.24.1"
+    },
+    "local_manifest_digest": "sha256:33b14b7cd8262f2f7f7a64843564c6e37a13faa276d92b90bb6acbaff24a188d",
+    "platform": "linux/amd64",
+    "source_name": "ghcr.io/amrzainmubarak/reconforge-erp",
+    "source_version": "0.7.1"
+  },
+  "license_inventory": {
+    "coverage_basis_points": 9558,
+    "legal_compatibility_assessed": false,
+    "licensed_packages": 65,
+    "minimum_coverage_basis_points": 9000,
+    "missing_license_packages": [
+      ".python-rundeps@20260813.194431",
+      "markdown-it-py@4.2.0",
+      "python@3.11.16"
+    ],
+    "total_packages": 68
+  },
+  "policy_id": "reconforge-supply-chain",
+  "schema_version": 2,
+  "status": "passed",
+  "tools": {
+    "grype": "grype@0.117.0",
+    "syft": "syft@1.51.0"
+  },
+  "vex": {
+    "applied_fixed_findings": 3,
+    "author": "ReconForge automated security review",
+    "document_id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+    "document_sha256": "3263ae100c4b89aff8737a11ab708fadd4105c8d3aed7ba9514bbcc0df352d95",
+    "last_updated": "2026-08-22T12:30:00Z",
+    "review_age_days": 6,
+    "reviewed_fixed_statements": 3
+  },
+  "vulnerabilities": {
+    "counts": {
+      "critical": 0,
+      "high": 3,
+      "low": 2,
+      "medium": 13,
+      "negligible": 1,
+      "unknown": 0
+    },
+    "critical_or_high_findings": [
+      {
+        "exception_id": null,
+        "fix_state": "fixed",
+        "id": "CVE-2026-3644",
+        "match_types": ["cpe-match"],
+        "namespace": "nvd:cpe",
+        "package": "python",
+        "severity": "High",
+        "version": "3.11.16",
+        "vex_document_id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+        "vex_status": "fixed"
+      },
+      {
+        "exception_id": null,
+        "fix_state": "fixed",
+        "id": "CVE-2026-4224",
+        "match_types": ["cpe-match"],
+        "namespace": "nvd:cpe",
+        "package": "python",
+        "severity": "High",
+        "version": "3.11.16",
+        "vex_document_id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+        "vex_status": "fixed"
+      },
+      {
+        "exception_id": null,
+        "fix_state": "fixed",
+        "id": "CVE-2026-7210",
+        "match_types": ["cpe-match"],
+        "namespace": "nvd:cpe",
+        "package": "python",
+        "severity": "High",
+        "version": "3.11.16",
+        "vex_document_id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+        "vex_status": "fixed"
+      }
+    ],
+    "grype_report_sha256": "0055784bb2eda77f32d1a77a62fb5093bf806a91ea74da240e47ae71ba5e1bde",
+    "syft_inventory_sha256": "98f812a46b6c59466965145e7e39d5512900da95e0f9244dcf27714dfe2372bb"
+  }
+}

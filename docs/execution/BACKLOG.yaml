@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1074
+    priority: P0
+    area: container-security
+    title: Bind CI image scans to Syft configuration subject
+    status: completed
+    depends_on: [E-823, E-1073]
+    exit_evidence: >-
+      Security and release workflows derive IMAGE_CONFIG_DIGEST from Syft's
+      native imageID after SBOM generation instead of Docker's potentially
+      manifest-list-valued local Id. The helper fail-closes on non-image,
+      malformed digest, or non-linux/amd64 metadata. Focused identity,
+      workflow, supply-chain, signed-release, and container-hardening tests,
+      Ruff, Mypy, policy validation, and source YAML validation pass; ADR 0734
+      records compatibility and rollback. E-824 remains open for hosted
+      clean-build/provenance, signed publication, and independent production
+      evidence.
   - id: E-1073
     priority: P0
     area: container-security

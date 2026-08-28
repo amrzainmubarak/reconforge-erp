@@ -5,6 +5,27 @@
 
 ## Decisions
 
+### D-903: Derive the CI image subject from the native Syft SBOM
+
+- **Date**: 2026-08-28
+- **Context**: With BuildKit attestations, Docker's local `.Id` can identify a
+  manifest list while Syft's native image document identifies the image
+  configuration through `source.metadata.imageID`. The mismatch made the
+  exact-subject security evidence fail even though the image and SBOM were
+  valid.
+- **Decision**: Extract and validate Syft's configuration digest after SBOM
+  generation, require the native manifest digest and `linux/amd64` platform,
+  and use that configuration digest for Grype evidence and post-push binding
+  in both security and release workflows.
+- **Verification**: The helper identity tests and workflow-contract suites
+  pass, as do Ruff, Mypy, supply-chain policy validation, and source YAML
+  validation. The retained local image evidence is bound to config digest
+  `sha256:915ea5d3c8b64f8c0163c5e4617eaa8f518cfc31e7c763e52ce7e1036b925fff`.
+- **Compatibility**: Existing workflow environment keys and publication order
+  remain unchanged; only the subject extraction source is corrected.
+- **Rollback**: Revert E-1074, ADR 0734, helper, manifest, tests, and workflow
+  changes together; never reintroduce an unchecked Docker `.Id` hand-off.
+
 ### D-900: Bind Alpine security APK retrieval to reviewed checksums
 
 - **Date**: 2026-08-28

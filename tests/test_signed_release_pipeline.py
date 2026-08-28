@@ -337,6 +337,7 @@ def test_release_workflow_fails_closed_on_source_attestation_and_runner_identity
         "sha256sum --check SHA256SUMS",
         "sha256sum --check SBOM_SHA256SUMS",
         "No GitHub Release or PyPI publication was performed.",
+        ".github/scripts/extract_syft_image_config_digest.py",
     ]:
         assert required in raw
     assert raw.count("gh attestation verify") == 6

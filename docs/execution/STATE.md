@@ -2,6 +2,19 @@
 
 Updated: 2026-08-28
 
+## E-1074 - Bind CI image scans to Syft configuration subject (2026-08-28)
+
+- The security and release workflows now derive `IMAGE_CONFIG_DIGEST` from
+  Syft's native `source.metadata.imageID` after the SBOM is written. The new
+  helper validates the image type, canonical config/manifest SHA-256 values,
+  and the required `linux/amd64` platform before returning the subject. This
+  removes the BuildKit manifest-list versus image-configuration identity drift
+  exposed by the local current-image evidence.
+- Focused identity, workflow, supply-chain, signed-release, and container
+  hardening tests pass; Ruff, Mypy, policy validation, and YAML validation pass.
+  E-824 remains open for hosted clean-build/provenance, signed publication,
+  and independent production evidence.
+
 ## E-1073 - Checksum-bound Alpine security APK retrieval (2026-08-28)
 
 - The digest-pinned container now retrieves the reviewed OpenSSL runtime APKs

@@ -40,8 +40,10 @@ the same runner in `current` mode only after a locked dev-profile sync.
 
 Container publication additionally requires checksum/commit/platform-verified
 Syft 1.51.0 and Grype 0.117.0. The workflow builds one Linux AMD64 image without
-registry credentials, binds Syft and Grype reports to its configuration and
-manifest digests, requires a valid Grype v6 database no more than 120 hours old,
+registry credentials, derives the configuration subject from Syft's native
+`source.metadata.imageID` (while retaining its manifest digest), binds Syft and
+Grype reports to both exact identities, requires a valid Grype v6 database no
+more than 120 hours old,
 and requires at least 90% package-license inventory coverage. It rejects
 Critical, unexcepted High, Unknown-severity, stale, mismatched, or operationally
 failed scans. A suppressed finding is accepted only when the hash-bound

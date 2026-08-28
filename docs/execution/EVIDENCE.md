@@ -2,6 +2,29 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1074: Syft-derived CI image subject (2026-08-28)
+
+- Root cause evidence: on the fresh local BuildKit image, Docker's local
+  manifest-list identity was `sha256:a4e1b425a341d03ebb7d2d5017b4e2df183e5daf31a6e8e4f8f89e14b9d8e7b2`,
+  while Syft's native image document reported configuration
+  `sha256:915ea5d3c8b64f8c0163c5e4617eaa8f518cfc31e7c763e52ce7e1036b925fff`
+  and manifest `sha256:33b14b7cd8262f2f7f7a64843564c6e37a13faa276d92b90bb6acbaff24a188d`.
+  These are different OCI identities and must not be substituted for one
+  another.
+- Code evidence: `.github/scripts/extract_syft_image_config_digest.py` now
+  validates the native Syft image envelope and returns only `imageID`. Both
+  `.github/workflows/security.yml` and `.github/workflows/release.yml` invoke
+  it after SBOM generation and before Grype/evidence publication. Neither
+  workflow obtains the scan subject from Docker's local `.Id` anymore.
+- Test evidence: `tests/test_extract_syft_image_identity.py` proves valid
+  extraction and fail-closed wrong-platform handling. The identity,
+  supply-chain, signed-release, and container-hardening workflow suites pass
+  (`55` tests); Ruff, Mypy, `python .github/scripts/validate_supply_chain_policy.py`,
+  and source YAML validation also pass.
+- Boundary: this closes a CI evidence-subject integrity defect. It does not
+  establish a hosted run, signed provenance, OCI reproducibility, registry
+  publication, legal license compatibility, or production security.
+
 ## 2026-08-28: current local runtime and release-gate refresh
 
 - Environment evidence: Windows host, Docker Engine `29.7.2`, Python

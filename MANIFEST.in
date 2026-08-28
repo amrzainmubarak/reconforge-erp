@@ -128,6 +128,7 @@ include tests/test_p3_ent_008_exit_audit.py
 include docs/execution/P3_ENT_009_EXIT_AUDIT.yaml
 include tests/test_p3_ent_009_exit_audit.py
 include .github/scripts/verify_application_upgrade.py
+include .github/scripts/extract_syft_image_config_digest.py
 include .github/scripts/verify_postgres_upgrade.py
 include .github/scripts/verify_postgres_ha_dr.py
 include docs/schemas/ha_dr_drill_report.schema.json
@@ -1077,5 +1078,7 @@ include docs/adr/0730-connector-writeback-responses-use-fail-closed-projection.m
 include docs/adr/0731-local-workflow-responses-use-fail-closed-projection.md
 include docs/adr/0732-local-role-responses-use-fail-closed-projection.md
 include docs/adr/0733-checksum-bound-alpine-security-apks.md
+include docs/adr/0734-ci-image-scan-uses-syft-config-subject.md
+include docs/execution/CONTAINER_SECURITY_LOCAL_2026-08-28.json
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json

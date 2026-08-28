@@ -91,7 +91,7 @@
   zero findings at all severities. The result is time-bounded and is not the
   current release gate because the later pinned Grype database disagrees.
 
-#### E-823/E-824 exact-image security result (2026-08-22)
+#### E-823/E-824 exact-image security result (2026-08-28)
 
 - Syft 1.51.0 inventories 68 package artifacts with 94.11% usable license
   metadata. Grype 0.117.0 database v6.1.9 reports five High matches.

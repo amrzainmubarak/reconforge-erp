@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1090: Bound stock/GL candidate generation under dense partitions (2026-08-28)
+
+- Code evidence: `assign_stock_to_gl` partitions records by normalized work
+  order and currency and refuses a partition above the fixed 100,000-pair
+  candidate-generation ceiling before evaluating pair candidates. The refusal
+  creates one explicit ambiguity group covering every affected source row;
+  optimization metrics remain null because no assignment was evaluated.
+- Test evidence: the focused ambiguity/property/stock-GL suite proves a lowered
+  3-by-3 partition ceiling produces no matches, six ambiguity rows, the explicit
+  `candidate_generation_budget_exceeded` reason, and a balanced record-accounting
+  invariant. Full regression and release gates are recorded for this slice.
+- Boundary: this is a local algorithm safety bound. It does not prove
+  throughput, capacity, PostgreSQL/provider parity, distributed execution, or
+  production sizing.
+
 ## E-1089: Enforce tenant provenance in execution-scope resolution (2026-08-28)
 
 - Code evidence: `request_execution_scope()` now compares the validated request

@@ -50,6 +50,7 @@ include docs/schemas/sqlite_matching_rule.schema.json
 include docs/schemas/redis_session.schema.json
 include docs/adr/0748-generic-server-permission-tenant-binding.md
 include docs/adr/0749-execution-scope-tenant-boundary.md
+include docs/adr/0750-bounded-stock-gl-candidate-generation.md
 include docs/schemas/sqlite_legacy_import_summary.schema.json
 include docs/schemas/sqlite_matching_lineage.schema.json
 include docs/schemas/database_backup.schema.json

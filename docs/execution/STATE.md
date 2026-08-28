@@ -2,6 +2,15 @@
 
 Updated: 2026-08-28
 
+## E-1090 - Bound stock/GL candidate generation under dense partitions (2026-08-28)
+
+- One-to-one stock/GL candidate generation now partitions by work order and
+  currency and refuses a Cartesian upper bound above 100,000 pairs. The full
+  affected partition is surfaced as explicit `candidate_generation_budget_exceeded`
+  ambiguity evidence; no partial candidate set or assignment is selected.
+- The focused ambiguity/property/stock-GL suite passes. This is bounded
+  algorithm safety evidence, not capacity, throughput, or production evidence.
+
 ## E-1089 - Enforce tenant provenance in execution-scope resolution (2026-08-28)
 
 - `request_execution_scope()` now rejects a non-empty principal tenant grant

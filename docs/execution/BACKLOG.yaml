@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1090
+    priority: P0
+    area: matching
+    title: Bound stock/GL candidate generation under dense partitions
+    status: completed
+    depends_on: [E-1085]
+    exit_evidence: >-
+      One-to-one stock/GL matching now partitions candidate generation by
+      work-order and currency and refuses any partition whose Cartesian upper
+      bound exceeds 100,000 pairs. The refusal is explicit ambiguity evidence
+      for every affected source row with no partial assignment or unreported
+      truncation. Focused ambiguity/property/stock-GL tests, full regression,
+      static/security gates, package build, YAML, and diff checks pass. This is
+      a bounded algorithm safety control, not capacity or production evidence.
   - id: E-1089
     priority: P0
     area: identity-governance
@@ -3044,6 +3058,13 @@ tasks:
       behavior, explicit strategy/version/digest records, and cross-engine reproducibility
       replay checks under open and synthetic profiles.
     completed_slices:
+      - >
+        E-1090 bounds one-to-one stock/GL candidate generation at 100,000
+        possible pairs per work-order/currency partition. Oversized partitions
+        become explicit `candidate_generation_budget_exceeded` ambiguity
+        exceptions covering all affected records, with no partial assignment
+        and null optimization metrics. Broader engine/backend/capacity and
+        production evidence remain open.
       - >
         E-1085 adds fresh-process replay checks across Pandas and
         forced-partitioned DuckDB with distinct hash seeds. The serialized

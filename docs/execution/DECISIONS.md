@@ -5,6 +5,29 @@
 
 ## Decisions
 
+### D-915: Bound stock/GL candidate generation under dense partitions
+
+- **Date**: 2026-08-28
+- **Context**: One-to-one stock/GL matching evaluated a full Cartesian product
+  inside each work order without a candidate-generation ceiling. Dense inputs
+  could consume unbounded resources before ambiguity protection ran.
+- **Decision**: Partition candidate generation by normalized work order and
+  currency and refuse any partition above 100,000 possible pairs before pair
+  evaluation. Surface all affected rows through an explicit
+  `candidate_generation_budget_exceeded` ambiguity group; do not select a
+  partial assignment, and leave optimization metrics null when no assignment
+  was evaluated.
+- **Rationale**: Financial matching must fail closed under density and must not
+  silently truncate candidates or turn a resource timeout into an unexplained
+  result. Currency partitioning preserves the eligible-pair invariant.
+- **Verification**: The focused lowered-ceiling 3-by-3 regression, existing
+  ambiguity/property/stock-GL tests, full regression, static/security gates,
+  package build, YAML, and diff checks pass for the slice.
+- **Compatibility**: Existing output is preserved below the ceiling. This is a
+  bounded algorithm guard, not capacity or production evidence.
+- **Rollback**: Revert E-1090, ADR 0750, the matcher/test changes, manifest
+  entry, and execution records together.
+
 ### D-914: Enforce tenant provenance in execution-scope resolution
 
 - **Date**: 2026-08-28

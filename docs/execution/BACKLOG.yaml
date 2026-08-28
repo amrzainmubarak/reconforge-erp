@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1097
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict ownership-percentage hydration
+    status: completed
+    depends_on: [E-1096]
+    exit_evidence: >-
+      PostgreSQL and SQLite ownership readers and PostgreSQL ownership-change
+      replay now hydrate persisted percentages through parse_exact_amount before
+      effective ownership, NCI, or adjustment calculations. Binary floating-point,
+      malformed, non-finite, and missing values fail closed while existing domain
+      bounds remain unchanged. Focused ownership/domain tests, full regression,
+      static/security gates, package build, YAML, and diff checks pass. This is
+      adapter replay evidence, not statutory treatment, provider, parity,
+      capacity, or production assurance.
   - id: E-1096
     priority: P0
     area: financial-exactness

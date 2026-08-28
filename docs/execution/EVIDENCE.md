@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1097: Enforce strict ownership-percentage hydration (2026-08-28)
+
+- Code evidence: PostgreSQL and SQLite direct-ownership readers and the
+  PostgreSQL ownership-change request replay reader use `parse_exact_amount()`
+  before constructing typed consolidation inputs. Domain range checks remain in
+  force after exact parsing.
+- Test evidence: `tests/test_postgres_consolidation_ownership.py`,
+  `tests/test_sqlite_consolidation_ownership.py`, and
+  `tests/test_postgres_consolidation_ownership_change.py` each reject a binary
+  float at their hydration boundary; existing replay, immutability, backup,
+  digest, and domain tests remain green.
+- Gate evidence: the focused ownership/domain suite passes with one declared
+  live-PostgreSQL capability skip; full regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is exact adapter replay evidence. It does not establish
+  statutory accounting treatment, driver certification, provider behavior,
+  cross-engine parity, capacity, or production financial assurance.
+
 ## E-1096: Bind PostgreSQL matching input persistence to the financial policy (2026-08-28)
 
 - Code evidence: `PostgresMatchingRepository._run_records()` passes the selected

@@ -1,5 +1,14 @@
 # Quality Baseline
 
+## E-1097 - Strict ownership-percentage hydration (2026-08-28)
+
+The ownership and ownership-change focused suites pass with one declared live-
+PostgreSQL capability skip. PostgreSQL and SQLite replay boundaries reject
+binary-float percentages before consolidation/NCI calculations, while canonical
+decimal persistence remains compatible. Full regression and release-quality
+gates pass for this adapter slice; statutory, provider, parity, capacity, and
+production evidence remain open.
+
 ## E-1096 - PostgreSQL matching persistence follows the financial policy (2026-08-28)
 
 Focused PostgreSQL matching application tests pass with one declared live-

@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-1008: Strict ownership-percentage hydration
+
+- **Date**: 2026-08-28
+- **Context**: Ownership persistence readers reconstructed percentages with
+  `Decimal(str(value))`, allowing binary floats from a database adapter or
+  persisted JSON to reach consolidation, NCI, and ownership-change calculations.
+- **Decision**: Use `parse_exact_amount()` for direct ownership in PostgreSQL
+  and SQLite readers and for prior/new ownership in PostgreSQL ownership-change
+  replay. Preserve the domain's existing percentage bounds and fail closed on
+  invalid values.
+- **Rationale**: Ownership ratios affect financial scope and calculated
+  adjustments, so their replay boundary must enforce the exact-input policy.
+- **Verification**: Three binary-float hydration regressions plus existing
+  ownership and ownership-change suites pass; full regression and release gates
+  are recorded in E-1097.
+- **Compatibility**: Canonical decimal text, integers, and Decimal values are
+  unchanged; only previously coerced binary floats now fail closed.
+- **Rollback**: Revert E-1097, ADR 0757, the reader/test changes, manifest
+  entry, and execution records together.
+
 ### D-1007: PostgreSQL matching input persistence follows the financial policy
 
 - **Date**: 2026-08-28

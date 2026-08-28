@@ -75,6 +75,7 @@ def test_latest_migrations_persist_effective_dated_ownership_and_replay_by_date(
             )
     finally:
         connection.close()
+
     assert path.exists()
 
 
@@ -120,6 +121,7 @@ def test_backup_restore_replays_ownership_master(tmp_path: Path) -> None:
         )
     finally:
         connection.close()
+
     backup = create_backup(source_path, tmp_path / "backup")
     restored_path = tmp_path / "restored.db"
     restore_backup(restored_path, backup.backup_path)
@@ -132,3 +134,36 @@ def test_backup_restore_replays_ownership_master(tmp_path: Path) -> None:
         assert [item.interest_id for item in result] == ["OWN-RESTORE"]
     finally:
         restored_connection.close()
+
+
+def test_sqlite_ownership_hydration_rejects_binary_float_percentage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _path, connection = _database(tmp_path)
+    try:
+        repository = SQLiteConsolidationOwnershipRepository(connection)
+        monkeypatch.setattr(
+            repository,
+            "_rows",
+            lambda **_kwargs: [
+                {
+                    "interest_id": "OWN-SQLITE-FLOAT",
+                    "parent_entity_code": "PARENT",
+                    "subsidiary_entity_code": "SUB",
+                    "direct_ownership_percentage": 0.80,
+                    "effective_from": "2026-01-01",
+                    "effective_to": "",
+                    "version": "1.0.0",
+                    "source_digest": _digest("OWN-SQLITE-FLOAT"),
+                    "prepared_by": "ownership-preparer",
+                    "approved_by": "ownership-reviewer",
+                    "approved_at": "2026-08-01T00:00:00Z",
+                }
+            ],
+        )
+        with pytest.raises(PlatformError, match="deterministic replay"):
+            repository.resolve_effective(
+                group_code="GLOBAL-GROUP", reporting_date="2026-08-01", actor_label="reader"
+            )
+    finally:
+        connection.close()

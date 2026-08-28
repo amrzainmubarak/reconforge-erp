@@ -2,6 +2,17 @@
 
 Updated: 2026-08-28
 
+## E-1097 - Enforce strict ownership-percentage hydration (2026-08-28)
+
+- PostgreSQL and SQLite ownership readers, plus PostgreSQL ownership-change
+  replay, now hydrate persisted percentages through `parse_exact_amount()`.
+  Binary floating-point, malformed, non-finite, and missing values fail closed
+  before effective ownership, NCI, or adjustment calculations; existing domain
+  bounds remain unchanged.
+- This is exact financial replay evidence for three adapter boundaries. It does
+  not establish statutory accounting treatment, driver certification, provider
+  behavior, cross-engine parity, or production financial assurance.
+
 ## E-1096 - Bind PostgreSQL matching input persistence to the financial policy (2026-08-28)
 
 - PostgreSQL matching input registration now hydrates source amounts through the

@@ -5,6 +5,26 @@
 
 ## Decisions
 
+### D-1006: Strict PostgreSQL financial hydration
+
+- **Date**: 2026-08-28
+- **Context**: PostgreSQL policy-analysis scope bounds and trial-balance
+  aggregates used `Decimal(str(value))` at read boundaries, allowing a result
+  adapter returning a binary float to be treated as exact financial data.
+- **Decision**: Use `parse_exact_amount()` for both repository paths. Refuse
+  binary floating-point, malformed, non-finite, and negative present values;
+  preserve exact text, integer, and Decimal values and the existing explicit
+  zero fallback for missing aggregates.
+- **Rationale**: Financial authorization bounds and balance evidence must share
+  the strict exactness contract at the last boundary before domain use.
+- **Verification**: The policy-scope and trial-balance float regressions,
+  existing PostgreSQL suites, full regression, static/security gates, package
+  build, YAML, and diff checks pass.
+- **Compatibility**: Valid PostgreSQL numeric results are unchanged. Invalid
+  binary-float adapter results now fail closed instead of being interpreted.
+- **Rollback**: Revert E-1095, ADR 0755, the repository/test changes, manifest
+  entry, and execution records together.
+
 ### D-1005: Strict parsing for persisted worker policy amounts
 
 - **Date**: 2026-08-28

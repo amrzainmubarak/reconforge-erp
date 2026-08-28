@@ -1103,3 +1103,4 @@ include docs/adr/0751-bounded-postgres-input-partition-materialization.md
 include docs/adr/0752-bounded-bank-control-candidate-evaluation.md
 include docs/adr/0753-strategy-adapters-enforce-strict-financial-inputs.md
 include docs/adr/0754-strict-persisted-policy-amount-parsing.md
+include docs/adr/0755-strict-postgres-financial-hydration.md

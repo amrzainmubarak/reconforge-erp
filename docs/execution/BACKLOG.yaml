@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1095
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict PostgreSQL financial hydration
+    status: completed
+    depends_on: [E-1094]
+    exit_evidence: >-
+      PostgreSQL policy-analysis scope amount bounds and trial-balance debit and
+      credit totals now use parse_exact_amount at repository hydration. Present
+      binary floating-point, malformed, non-finite, and negative values fail
+      closed; missing trial-balance aggregates retain the explicit zero
+      fallback. Focused repository tests, full regression, static/security
+      gates, package build, YAML, and diff checks pass. This is repository
+      input-integrity evidence, not driver certification, statutory posting,
+      external IAM, provider behavior, or production financial assurance.
   - id: E-1094
     priority: P0
     area: financial-exactness

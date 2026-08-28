@@ -1,5 +1,14 @@
 # Quality Baseline
 
+## E-1095 - Strict PostgreSQL financial hydration (2026-08-28)
+
+Focused PostgreSQL policy-analysis and ledger repository tests pass, and the
+full Python regression reaches 100% with exit 0. Scope amount bounds and
+trial-balance totals reject binary-float adapter values before financial policy
+or balance evidence is produced. Ruff, Mypy, Bandit, pip-audit, package build,
+YAML, and diff gates pass, with the existing Bandit suppressions and local-
+package PyPI audit note retained as bounded observations.
+
 ## E-1094 - Strict persisted worker policy amount parsing (2026-08-28)
 
 The full Python regression reaches 100% with exit 0. PostgreSQL reconciliation

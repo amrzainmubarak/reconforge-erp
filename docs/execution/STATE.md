@@ -2,6 +2,16 @@
 
 Updated: 2026-08-28
 
+## E-1095 - Enforce strict PostgreSQL financial hydration (2026-08-28)
+
+- PostgreSQL policy-analysis scope amount bounds and trial-balance debit/credit
+  totals now use `parse_exact_amount()`. Binary floating-point, malformed,
+  non-finite, and negative present values fail closed at repository hydration;
+  missing trial-balance aggregates retain the explicit zero fallback.
+- This is repository input-integrity evidence only. External IAM, driver
+  certification, statutory posting, provider behavior, and production financial
+  assurance remain open.
+
 ## E-1094 - Enforce strict parsing for persisted worker policy amounts (2026-08-28)
 
 - PostgreSQL reconciliation worker authorization now decodes persisted

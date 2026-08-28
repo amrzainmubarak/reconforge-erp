@@ -2,6 +2,27 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1095: Enforce strict PostgreSQL financial hydration (2026-08-28)
+
+- Code evidence: PostgreSQL policy-analysis scope amount bounds and ledger
+  trial-balance debit/credit totals use `parse_exact_amount()` at hydration.
+  Present binary floating-point, malformed, non-finite, and negative values
+  fail closed; a missing trial-balance aggregate retains the explicit zero
+  fallback.
+- Test evidence: the policy-scope and trial-balance float regressions cover the
+  two repository boundaries; existing PostgreSQL policy-analysis, ledger,
+  trial-balance, scope, and audit tests remain green.
+- Gate evidence: focused repository tests pass; `python -m pytest -q
+  --tb=short --maxfail=1` reaches 100% with exit 0; Ruff passes; Mypy reports
+  no issues in 539 source files; Bandit exits 0 with reviewed existing
+  suppression warnings; pip-audit reports no known vulnerabilities while
+  noting the local package is not on PyPI; the 0.7.1 wheel and sdist build
+  successfully; the sdist contains ADR 0755 and the changed repositories;
+  and YAML/diff checks pass.
+- Boundary: this is repository hydration/input-integrity evidence. It does not
+  establish PostgreSQL driver certification, statutory posting, external IAM,
+  provider behavior, or production financial assurance.
+
 ## E-1094: Enforce strict parsing for persisted worker policy amounts (2026-08-28)
 
 - Code evidence: `PostgresReconciliationWorker._policy_amount_from_run()` now

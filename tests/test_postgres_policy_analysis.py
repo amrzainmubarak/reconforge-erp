@@ -10,6 +10,7 @@ from reconforge.auth.policy_analysis import PolicyScope
 from reconforge.infrastructure.postgres_policy_analysis import (
     PostgresPolicyAnalysisError,
     PostgresPolicyAnalysisRepository,
+    _optional_scope_amount,
 )
 
 
@@ -114,3 +115,8 @@ def test_postgres_snapshot_loader_rejects_invalid_tenant_before_sql() -> None:
 
     with pytest.raises(PostgresPolicyAnalysisError, match="tenant_id"):
         PostgresPolicyAnalysisRepository(Connection(), "Tenant Unsafe")
+
+
+def test_postgres_policy_scope_amount_rejects_binary_float() -> None:
+    with pytest.raises(PostgresPolicyAnalysisError, match="minimum_amount is invalid"):
+        _optional_scope_amount({"minimum_amount": 100.0}, "minimum_amount", 0, "minimum_amount")

@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1104: Enforce strict canonical ERPNext read amounts (2026-08-28)
+
+- Code evidence: ERPNext GL Entry and Payment Entry read models use the shared
+  canonical connector amount boundary; derived signed/non-zero checks use
+  strict parsed values before response digest construction.
+- Test evidence: ERPNext read suites cover canonical output,
+  scientific/non-finite/negative refusal, one-sided and non-zero invariants,
+  company scope, cursor/query behavior, token isolation, SDK inventory, and
+  TLS/retry contracts.
+- Gate evidence: focused ERPNext/SDK tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is synthetic provider-neutral read-boundary evidence. It does
+  not establish live ERPNext authenticity, posting, settlement, write-back, or
+  production assurance.
+
 ## E-1103: Share strict canonical amount validation across reference connectors (2026-08-28)
 
 - Code evidence: `canonical_connector_amount()` is the shared response-model

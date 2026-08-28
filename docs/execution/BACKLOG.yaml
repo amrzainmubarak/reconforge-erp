@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1104
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict canonical ERPNext read amounts
+    status: completed
+    depends_on: [E-1103]
+    exit_evidence: >-
+      ERPNext GL Entry and Payment Entry read models now use
+      canonical_connector_amount and strict parsing for derived arithmetic.
+      Binary floats, scientific notation, malformed/non-finite values, and
+      invalid negative GL amounts fail closed while existing one-sided,
+      non-zero, company-scope, cursor, and token contracts remain intact.
+      Focused ERPNext/SDK tests, full regression, static/security gates,
+      package build, YAML, and diff checks pass. This is provider-neutral
+      read-boundary evidence, not live ERPNext authenticity, posting,
+      settlement, write-back, or production assurance.
   - id: E-1103
     priority: P0
     area: financial-exactness

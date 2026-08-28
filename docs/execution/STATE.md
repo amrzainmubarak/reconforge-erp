@@ -2,6 +2,14 @@
 
 Updated: 2026-08-28
 
+## E-1104 - Enforce strict canonical ERPNext read amounts (2026-08-28)
+
+- ERPNext GL Entry and Payment Entry read models now use the shared strict
+  canonical amount boundary, with derived checks using strict parsed values.
+- This is synthetic provider-neutral read evidence only. Live ERPNext
+  authenticity, posting, settlement, write-back, and production assurance
+  remain open.
+
 ## E-1103 - Share strict canonical amount validation across reference connectors (2026-08-28)
 
 - REST, ERP, payment-statement, and generic database-reference response models

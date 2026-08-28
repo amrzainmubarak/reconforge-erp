@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-1015: Strict canonical ERPNext read amounts
+
+- **Date**: 2026-08-28
+- **Context**: ERPNext GL and Payment Entry read models duplicated permissive
+  `Decimal` validation and returned non-canonical provider text.
+- **Decision**: Use `canonical_connector_amount()` for read-only ERPNext
+  amounts and `parse_exact_amount()` for derived checks.
+- **Rationale**: ERP provider response data needs the same deterministic,
+  finite, exact policy as other connector boundaries before replay and scope
+  processing.
+- **Verification**: GL, Payment Entry, SDK, full regression, and release gates
+  pass; evidence is recorded in E-1104.
+- **Compatibility**: Read response shape and existing business/error
+  invariants remain stable; output is canonicalized. Write-back is unchanged.
+- **Rollback**: Revert E-1104, ADR 0764, ERPNext read connector/test changes,
+  manifest entry, and execution records together.
+
 ### D-1014: Shared strict connector amount validation
 
 - **Date**: 2026-08-28

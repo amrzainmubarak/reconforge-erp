@@ -12,11 +12,12 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
+from reconforge.connectors.amounts import canonical_connector_amount
 from reconforge.connectors.manifest import (
     AuthenticationMethod,
     ConnectorCapability,
@@ -32,6 +33,7 @@ from reconforge.connectors.network import (
     NetworkConnectorExecutor,
     NetworkConnectorRegistration,
 )
+from reconforge.utils.money import parse_exact_amount
 
 ERP_NEXT_GL_ENTRY_PATH = "/api/resource/GL%20Entry"
 ERP_NEXT_ENDPOINT = "https://erpnext.example.test" + ERP_NEXT_GL_ENTRY_PATH
@@ -59,13 +61,14 @@ ERP_NEXT_MANIFEST = ConnectorManifest(
 
 
 def _exact_non_negative_decimal(value: str, field_name: str) -> str:
-    try:
-        parsed = Decimal(value)
-    except InvalidOperation as exc:
-        raise ValueError(f"{field_name} must be exact Decimal text") from exc
-    if not parsed.is_finite() or parsed < 0:
+    canonical = canonical_connector_amount(
+        value,
+        invalid_message=f"{field_name} must be exact Decimal text",
+        nonfinite_message=f"{field_name} must be finite non-negative Decimal text",
+    )
+    if parse_exact_amount(canonical) < 0:
         raise ValueError(f"{field_name} must be finite non-negative Decimal text")
-    return value
+    return canonical
 
 
 class ErpNextGlEntry(BaseModel):
@@ -90,7 +93,7 @@ class ErpNextGlEntry(BaseModel):
 
     @model_validator(mode="after")
     def validate_debit_credit(self) -> ErpNextGlEntry:
-        if Decimal(self.debit) > 0 and Decimal(self.credit) > 0:
+        if parse_exact_amount(self.debit) > 0 and parse_exact_amount(self.credit) > 0:
             raise ValueError("a GL Entry must not carry both debit and credit")
         return self
 
@@ -98,7 +101,7 @@ class ErpNextGlEntry(BaseModel):
     def signed_amount(self) -> Decimal:
         """Return a derived amount without changing the source-line payload."""
 
-        return Decimal(self.debit) - Decimal(self.credit)
+        return parse_exact_amount(self.debit) - parse_exact_amount(self.credit)
 
 
 class ErpNextGlEntryPage(BaseModel):

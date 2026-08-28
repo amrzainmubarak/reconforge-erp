@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1104 - Strict canonical ERPNext read amounts (2026-08-28)
+
+ERPNext GL Entry and Payment Entry read models now share strict canonical
+amount validation and strict derived arithmetic. Scientific notation,
+non-finite, malformed, and invalid negative values fail closed. Focused and
+full quality gates pass; live ERPNext, posting, settlement, write-back, and
+production evidence remain open.
+
 ## E-1103 - Shared strict canonical reference-connector amounts (2026-08-28)
 
 REST, ERP, payment-statement, and generic database-reference response models

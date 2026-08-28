@@ -356,6 +356,7 @@ def test_postgres_journal_material_is_canonical_and_balanced() -> None:
     assert restored["amount_decimal"] == "12.00"
     assert PostgresConsolidationCloseRepository._amount_matches_minor("12.000000000000000000", 1200, "USD")
     assert not PostgresConsolidationCloseRepository._amount_matches_minor("12.01", 1200, "USD")
+    assert not PostgresConsolidationCloseRepository._amount_matches_minor(12.0, 1200, "USD")
 
 
 def test_translation_evidence_projection_is_backend_neutral() -> None:

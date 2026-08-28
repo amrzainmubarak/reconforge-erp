@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1098 - Strict consolidation minor-amount verification (2026-08-28)
+
+Consolidation-close and SQLite close suites pass. PostgreSQL replay verification
+now refuses binary-float actual amounts before journal/effect evidence can be
+accepted, while canonical decimal values remain compatible. Full regression and
+release-quality gates pass for this verifier slice; statutory, posting,
+provider, and production evidence remain open.
+
 ## E-1097 - Strict ownership-percentage hydration (2026-08-28)
 
 The ownership and ownership-change focused suites pass with one declared live-

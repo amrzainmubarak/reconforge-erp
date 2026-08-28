@@ -1106,3 +1106,4 @@ include docs/adr/0754-strict-persisted-policy-amount-parsing.md
 include docs/adr/0755-strict-postgres-financial-hydration.md
 include docs/adr/0756-matching-input-persistence-follows-financial-policy.md
 include docs/adr/0757-strict-ownership-percentage-hydration.md
+include docs/adr/0758-strict-consolidation-minor-amount-verification.md

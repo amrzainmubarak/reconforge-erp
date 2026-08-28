@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1098: Enforce strict consolidation minor-amount verification (2026-08-28)
+
+- Code evidence: `PostgresConsolidationCloseRepository._amount_matches_minor()`
+  parses both persisted actual amounts and minor-unit-derived expected amounts
+  with `parse_exact_amount()` before equality verification.
+- Test evidence: `tests/test_postgres_consolidation_close.py` proves canonical
+  equality, mismatch refusal, and binary-float refusal; the SQLite close and
+  broader consolidation replay suites remain green.
+- Gate evidence: the focused close suite passes; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is bounded journal/effect replay evidence. It does not
+  establish statutory accounting treatment, posting correctness, provider
+  behavior, or production financial assurance.
+
 ## E-1097: Enforce strict ownership-percentage hydration (2026-08-28)
 
 - Code evidence: PostgreSQL and SQLite direct-ownership readers and the

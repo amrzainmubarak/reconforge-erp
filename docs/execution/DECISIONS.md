@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1009: Strict consolidation minor-amount verification
+
+- **Date**: 2026-08-28
+- **Context**: Consolidation-close replay used `Decimal(str(value))` when
+  comparing persisted decimal amounts with minor-unit-derived expectations.
+  Binary floats from an adapter could pass as exact journal/effect evidence.
+- **Decision**: Parse both actual and expected values with
+  `parse_exact_amount()` before equality comparison, retaining the existing
+  minor-unit source of truth and fail-closed behavior for invalid values.
+- **Rationale**: Journal/effect replay must not accept an inexact financial
+  adapter value merely because its string rendering matches the expectation.
+- **Verification**: Close replay tests cover exact equality, mismatch, and
+  binary-float refusal; full regression and release gates are recorded in E-1098.
+- **Compatibility**: Canonical decimal text and other exact values are
+  unchanged; strict binary-float actual values now fail verification.
+- **Rollback**: Revert E-1098, ADR 0758, verifier/test changes, manifest entry,
+  and execution records together.
+
 ### D-1008: Strict ownership-percentage hydration
 
 - **Date**: 2026-08-28

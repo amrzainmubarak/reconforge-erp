@@ -9,6 +9,20 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1098
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict consolidation minor-amount verification
+    status: completed
+    depends_on: [E-1097]
+    exit_evidence: >-
+      PostgreSQL consolidation-close worksheet and effect replay compare
+      persisted amounts and minor-unit-derived expected values through
+      parse_exact_amount, refusing binary floating-point, malformed, missing,
+      and non-finite adapter values. Exact canonical values retain behavior.
+      Focused close tests, full regression, static/security gates, package build,
+      YAML, and diff checks pass. This is replay-verification evidence, not
+      statutory treatment, posting, provider, or production assurance.
   - id: E-1097
     priority: P0
     area: financial-exactness

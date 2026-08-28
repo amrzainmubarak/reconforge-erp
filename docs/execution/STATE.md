@@ -2,6 +2,17 @@
 
 Updated: 2026-08-28
 
+## E-1098 - Enforce strict consolidation minor-amount verification (2026-08-28)
+
+- PostgreSQL consolidation-close worksheet and effect replay now compare
+  persisted amounts with minor-unit-derived expectations through
+  `parse_exact_amount()`. Binary floating-point, malformed, missing, and
+  non-finite adapter values fail closed before journal/effect evidence is
+  accepted.
+- This is a bounded replay-verification control. It does not establish statutory
+  accounting treatment, posting correctness, provider behavior, or production
+  financial assurance.
+
 ## E-1097 - Enforce strict ownership-percentage hydration (2026-08-28)
 
 - PostgreSQL and SQLite ownership readers, plus PostgreSQL ownership-change

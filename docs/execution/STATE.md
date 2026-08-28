@@ -1,6 +1,28 @@
 ﻿# Execution State
 
-Updated: 2026-08-27
+Updated: 2026-08-28
+
+## Current local runtime and release-gate refresh (2026-08-28)
+
+- The current branch is `money-strict-bank-control`; it contains no Codex
+  wording. The tracked worktree was clean before this documentation update,
+  and the user-created untracked execution files remain untouched.
+- Local CLI evidence is current: `reconforge doctor`, sample-data validation,
+  and the synthetic demo all exit `0`. The demo produced the expected report,
+  review, evidence, reconciliation, and rule artifacts; its warnings and
+  exceptions remain synthetic fixture observations.
+- Frontend evidence is current: install, typecheck, unit tests (`75/75`),
+  production build, and E2E (`16` passed, `5` declared environment-bounded
+  skips) exit `0`. Python full regression and static/release gates also pass:
+  pytest, Ruff, Mypy (`539` files), Bandit, pip-audit, package build, source
+  YAML validation, and diff check.
+- A fresh current-source Docker build was retried with pull/no-cache and
+  failed before image creation because Alpine exposed OpenSSL runtime packages
+  at `3.5.7-r0` while the Dockerfile intentionally pins `3.5.8-r0`; the
+  mirror also reported a TLS unspecified error. The pin remains unchanged.
+  This updates E-824 with a current external drift blocker; it does not
+  replace hosted clean-build, current scanner, provenance, or publication
+  evidence.
 
 ## E-1071 - Fail-closed local workflow responses (2026-08-27)
 

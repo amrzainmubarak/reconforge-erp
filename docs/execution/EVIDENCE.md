@@ -2,6 +2,48 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## 2026-08-28: current local runtime and release-gate refresh
+
+- Environment evidence: Windows host, Docker Engine `29.7.2`, Python
+  environment with the installed ReconForge package at version `0.7.1`, and
+  the repository branch `money-strict-bank-control`. The tracked worktree was
+  clean before this documentation update; pre-existing user-created
+  untracked execution files were not staged or modified.
+- CLI evidence: `reconforge doctor` exited `0`; package, configuration, sample
+  data, output path, and validation checks were reported healthy. The doctor
+  output contained `0` errors and `10` expected synthetic sample warnings.
+  `reconforge validate examples/sample_data` also exited `0` with `0` errors
+  and the same `10` documented sample-data warnings.
+- Demo evidence: `reconforge demo run --output
+  output/baseline-demo-20260828` exited `0` and produced the management pack,
+  executive report, dashboard, review register/state, evidence/client pack,
+  stock-GL and work-order reconciliation outputs, and rule results. The run
+  reported `10` validation issues, `13` stock-GL exceptions, `16` work-order
+  exceptions, `2` triggered rules, `14` evidence cases, and `1` review entry.
+  These are synthetic-demo observations, not production outcome claims.
+- Web evidence: `npm --prefix apps/web ci`, `typecheck`, `test:run`, `build`,
+  and `e2e` all exited `0`. The frontend unit suite passed `15` files and `75`
+  tests; the browser suite passed `16` tests and declared `5` environment-
+  bounded skips out of `21`. The production build transformed `2,383`
+  modules. The npm audit performed by the install reported `0` vulnerabilities.
+- Python/release-gate evidence: full pytest passed at `100%`; Ruff passed;
+  Mypy passed on `539` source files; Bandit passed; pip-audit exited `0` with
+  no known third-party vulnerabilities, while correctly reporting that the
+  local distribution is not published on PyPI and therefore cannot itself be
+  audited; `python -m build --no-isolation` passed; source YAML validation
+  reported `139` valid files; and `git diff --check` passed.
+- Docker boundary: a fresh current-source
+  `docker build --pull --no-cache --platform linux/amd64 -t
+  reconforge:current .` was attempted with Docker Engine `29.7.2` and failed
+  before producing a current image. Alpine `v3.24` exposed
+  `libcrypto3-3.5.7-r0` and `libssl3-3.5.7-r0`, while the Dockerfile requires
+  the security-pinned `3.5.8-r0` versions; `apk` exited `9` after the mirror
+  also reported a TLS unspecified error. This is external package-mirror
+  drift, not a successful build and not a reason to weaken the pins. E-824
+  remains open for a fresh reproducible build and the required current
+  scanner/provenance evidence. The previously retained image evidence is not
+  promoted as evidence for this source revision.
+
 ## E-1071: Fail-closed local workflow responses
 
 - Code evidence: Local workflow object, allowed-transition, and history routes

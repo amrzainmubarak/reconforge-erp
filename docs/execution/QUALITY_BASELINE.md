@@ -1,5 +1,17 @@
 # Quality Baseline
 
+## E-824 - Exact local container security disposition (2026-08-28)
+
+Checksum-verified Syft 1.51.0 and Grype 0.117.0 passed the exact candidate
+image gate using a valid imported v6.1.9 database built on 2026-08-28. The
+validator reports zero blockers and zero active exceptions, with 68 packages,
+94.11% license metadata coverage, 16 active matches, and three fixed Python
+3.12.14 High dispositions retained in the total count. The evidence is bound
+to the current image configuration and manifest in
+`CONTAINER_SECURITY_LOCAL_2026-08-28.json`. Hosted clean-build/provenance,
+publication, legal license review, and production security effectiveness are
+not implied. ADR 0768 records the reproducible import boundary.
+
 ## E-884 - Python 3.12 Alpine candidate matrix (2026-08-28)
 
 The candidate Docker image was built from the digest-pinned Python 3.12 Alpine

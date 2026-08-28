@@ -2,6 +2,28 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-824: Exact local container security disposition (2026-08-28)
+
+- Syft 1.51.0 generated the native SBOM for the Python 3.12.14 linux/amd64
+  candidate. Grype 0.117.0 imported a fresh official v6.1.9 database into an
+  isolated cache; `grype db status` reported valid, built
+  `2026-08-28T09:21:39Z`, and schema `v6.1.9`. The imported SQLite payload
+  SHA-256 is `4304a9eb9165b8ffd0613b0b60b0379444e1a9b5ef0882ca80547775f3bef054`.
+- The exact SBOM scan exited 0 and contained 16 active matches plus three
+  ignored matches. The repository validator returned `status=passed`, zero
+  blockers, and zero active exceptions. It records 68 packages, 94.11% license
+  metadata coverage, and three source-proven fixed Python 3.12.14 High
+  dispositions; the full vulnerability count remains visible.
+- The current evidence is bound to config
+  `sha256:08723531122c50615c42860fd299b9bb797ba67c231b7f1cb5b1cc8b3822cf0f`
+  and manifest
+  `sha256:3ddcdc5dc7636350f5919c6915a935940dac322e07483a7ffe01473fa7facf1b`
+  in `CONTAINER_SECURITY_LOCAL_2026-08-28.json`.
+- Boundary: this closes E-824's local exact-image disposition only. Hosted
+  clean-build, registry publication, signed provenance, legal license review,
+  vulnerability reachability, and production security effectiveness remain
+  open. ADR 0768 records the import and fail-closed verification procedure.
+
 ## E-884: Gate Python 3.12 Alpine base-image upgrade (2026-08-28)
 
 - Code evidence: both Docker stages use the official digest-pinned Python 3.12

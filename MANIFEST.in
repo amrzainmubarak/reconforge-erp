@@ -1117,4 +1117,5 @@ include docs/adr/0764-strict-canonical-erpnext-read-amounts.md
 include docs/adr/0765-strict-canonical-erpnext-writeback-amounts.md
 include docs/adr/0766-strict-ownership-change-result-replay.md
 include docs/adr/0767-python312-alpine-base-upgrade.md
+include docs/adr/0768-fresh-grype-database-exact-container-gate.md
 include docs/execution/CONTAINER_SECURITY_PY312_CANDIDATE_2026-08-28.md

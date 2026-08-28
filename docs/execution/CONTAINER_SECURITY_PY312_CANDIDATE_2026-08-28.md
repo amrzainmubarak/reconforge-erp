@@ -33,9 +33,13 @@ air-gap rollback drills also passed on this source revision.
 
 ## Scanner boundary
 
-The local Docker Scout result is the fresh candidate vulnerability evidence.
-The release-integrated Syft/Grype attempt generated the candidate Syft SBOM
-with checksum-verified Syft 1.51.0, but Grype database refresh was stopped
-after the external download remained stale/blocked. No stale database result
-was promoted to a pass. E-824 remains open for a fresh valid database and the
-hosted clean-build/release subject.
+The local Docker Scout result and the exact release-integrated Syft/Grype result
+are both available. Grype 0.117.0 imported a fresh official v6.1.9 database in
+an isolated cache, verified it as valid, scanned the candidate SBOM, and the
+repository validator returned `status=passed` with zero blockers and zero
+active exceptions. The raw database payload SHA-256 is
+`4304a9eb9165b8ffd0613b0b60b0379444e1a9b5ef0882ca80547775f3bef054`.
+
+E-824 is closed for the local exact-image disposition. Hosted clean-build,
+registry publication, signed provenance, legal license review, and production
+security effectiveness remain open under the release gates.

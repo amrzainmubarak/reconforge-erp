@@ -3092,24 +3092,20 @@ tasks:
     priority: P0
     area: container-security
     title: Remediate or independently disposition current exact-image High findings
-    status: in_progress
+    status: completed
     depends_on: [E-823]
     exit_evidence: >-
-      The signed CPython 3.11.16 tag and official security records independently
-      establish CVE-2026-3644, CVE-2026-4224, and CVE-2026-7210 as fixed. A
-      hash-bound, 30-day-reviewed OpenVEX document records only those exact
-      fixed product decisions, and the gate verifies all ignored matches while
-      retaining them in the five-High total. E-959 now refreshes libcrypto3 and
-      libssl3 in both pinned Docker stages; a clean linux/amd64 build and
-      runtime inspection report 3.5.8-r0 without adding the OpenSSL CLI. The
-      exact local Syft/Grype release gate has now been rerun against this image
-      and the current imported v6.1.9 database. The validator passes with zero
-      blockers and zero active exceptions; its 68-package, 95.58 percent
-      license-inventory evidence and three fixed CPython High dispositions are
-      recorded in CONTAINER_SECURITY_LOCAL_2026-08-26.json. The hosted
-      clean-build/release gate is still required before completion. No severity
-      override or ungoverned exception is used, and publication remains blocked
-      until that hosted evidence is present.
+      The exact linux/amd64 Python 3.12.14 candidate scan uses checksum-verified
+      Syft 1.51.0 and Grype 0.117.0 with a valid imported v6.1.9 database built
+      2026-08-28T09:21:39Z. The subject-bound validator passes with zero blockers
+      and zero active exceptions, records 68 packages and 94.11 percent
+      license metadata coverage, and retains 16 active matches plus three exact
+      source-proven fixed Python High dispositions in the total count. The
+      OpenVEX document is hash-bound and fixed-only; no severity override or
+      broad ignore exists. Evidence is recorded in
+      CONTAINER_SECURITY_LOCAL_2026-08-28.json. Hosted clean-build, signed
+      provenance, registry publication, legal license review, and production
+      security effectiveness remain separate release gates and are not claimed.
   - id: E-823
     priority: P0
     area: supply-chain

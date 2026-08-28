@@ -2,6 +2,21 @@
 
 Updated: 2026-08-28
 
+## E-824 - Close local exact container security disposition (2026-08-28)
+
+- The exact candidate image scan now uses checksum-verified Syft 1.51.0 and
+  Grype 0.117.0 with a valid imported v6.1.9 database built at
+  `2026-08-28T09:21:39Z`. The validator passes with zero blockers and zero
+  active exceptions.
+- The retained result records 68 packages, 94.11% license metadata coverage,
+  16 active matches, and three exact Python 3.12.14 High matches governed by
+  hash-bound fixed-only OpenVEX. The current artifact is
+  `CONTAINER_SECURITY_LOCAL_2026-08-28.json`.
+- E-824 is complete for the local exact-image disposition. Hosted clean-build,
+  registry publication, signed provenance, legal license review, and
+  production security effectiveness remain separate open gates. ADR 0768
+  records the database import and verification boundary.
+
 ## E-884 - Gate Python 3.12 Alpine base-image upgrade (2026-08-28)
 
 - The two-stage Dockerfile now uses the official Python 3.12 Alpine index

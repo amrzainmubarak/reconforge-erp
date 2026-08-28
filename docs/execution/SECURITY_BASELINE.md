@@ -1,5 +1,19 @@
 # Security Baseline
 
+## E-824 Exact local container security disposition (2026-08-28)
+
+- The current Python 3.12.14 linux/amd64 candidate passes the exact
+  subject-bound Syft 1.51.0/Grype 0.117.0 gate with a valid imported Grype
+  v6.1.9 database built 2026-08-28. The validator reports zero blockers and
+  zero active exceptions.
+- The result records 68 packages, 94.11% license metadata coverage, 16 active
+  matches, and three exact source-proven fixed Python High dispositions under
+  hash-bound fixed-only OpenVEX. Counts remain visible; no broad ignore or
+  severity override is used.
+- E-824 is now complete for local exact-image disposition. Hosted build and
+  provenance, registry publication, legal license compatibility, independent
+  reachability, and production security effectiveness remain open.
+
 ## E-884 Python 3.12 Alpine candidate (2026-08-28)
 
 - The digest-pinned two-stage runtime now uses Python 3.12 Alpine. The

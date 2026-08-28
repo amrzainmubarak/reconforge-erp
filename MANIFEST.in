@@ -1100,3 +1100,4 @@ include docs/execution/CONTAINER_SECURITY_LOCAL_2026-08-28.json
 include docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json
 include docs/schemas/community_compose_runtime_report.schema.json
 include docs/adr/0751-bounded-postgres-input-partition-materialization.md
+include docs/adr/0752-bounded-bank-control-candidate-evaluation.md

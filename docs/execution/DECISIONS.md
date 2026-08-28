@@ -5,6 +5,31 @@
 
 ## Decisions
 
+### D-1003: Bound bank-control duplicate-reference evaluation
+
+- **Date**: 2026-08-28
+- **Context**: The bank-statement control grouped ledger records by normalized
+  reference but had no domain-level ceilings for direct callers. Dense
+  duplicate references could create large ambiguity payloads and high repeated
+  candidate work. Final unmatched-ledger coverage also searched all previous
+  decisions for each ledger record.
+- **Decision**: Refuse more than 250,000 records per input side, more than
+  10,000 ledger candidates for one normalized reference, or more than
+  1,000,000 candidate evaluations in one run. Fail closed without a partial
+  artifact, preserve existing ambiguity behavior below the limits, and replace
+  the final nested scan with one referenced-ID set.
+- **Rationale**: Direct domain APIs are part of the safety boundary. Candidate
+  density and cumulative work must be visible and bounded, while output
+  semantics should remain stable for supported inputs.
+- **Verification**: The dense-reference regression, existing bank-control
+  replay/API/persistence suites, full regression, static/security gates,
+  package build, and diff checks pass.
+- **Compatibility**: Normal and bounded duplicate-reference decisions retain
+  their existing order and digest semantics. Oversized direct inputs now fail
+  with a safe control error rather than producing a partial result.
+- **Rollback**: Revert E-1092, ADR 0752, the domain/test changes, manifest
+  entry, and execution records together.
+
 ### D-1002: Enforce hard partition limits during PostgreSQL input streaming
 
 - **Date**: 2026-08-28

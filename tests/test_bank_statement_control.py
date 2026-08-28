@@ -15,6 +15,7 @@ from reconforge.application.bank_statement_control import (
 )
 from reconforge.cli import app
 from reconforge.domain.bank_statement_control import (
+    MAX_BANK_CANDIDATES_PER_REFERENCE,
     BankLedgerRecord,
     BankStatementControlError,
     BankStatementRecord,
@@ -91,6 +92,18 @@ def test_bank_control_is_permutation_stable_and_rejects_duplicate_ids() -> None:
         run_bank_statement_control(
             (_bank(),),
             (_ledger(), _ledger("LEDGER-1")),
+            amount_tolerance=_money("0.01"),
+        )
+
+
+def test_bank_control_refuses_unbounded_duplicate_reference_candidates() -> None:
+    ledger_records = tuple(
+        _ledger(f"LEDGER-{index}") for index in range(MAX_BANK_CANDIDATES_PER_REFERENCE + 1)
+    )
+    with pytest.raises(BankStatementControlError, match="reference candidate limit exceeded"):
+        run_bank_statement_control(
+            (_bank(),),
+            ledger_records,
             amount_tolerance=_money("0.01"),
         )
 

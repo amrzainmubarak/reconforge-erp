@@ -2,6 +2,18 @@
 
 Updated: 2026-08-28
 
+## E-1092 - Bound bank-control duplicate-reference evaluation (2026-08-28)
+
+- The bank-statement control now rejects direct inputs above 250,000 records
+  per side, more than 10,000 ledger candidates for one normalized reference,
+  or more than 1,000,000 candidate evaluations per run. It fails closed rather
+  than truncating candidates or emitting a partial artifact.
+- Final unmatched-ledger coverage now uses one referenced-ID set, removing the
+  previous quadratic nested membership scan. Existing duplicate-reference
+  ambiguity and replay behavior remain unchanged below the ceilings. This is
+  bounded local algorithm/input safety evidence, not provider or production
+  banking assurance.
+
 ## E-1091 - Enforce hard partition limits during PostgreSQL input streaming (2026-08-28)
 
 - PostgreSQL `iter_input_partitions()` now validates and enforces

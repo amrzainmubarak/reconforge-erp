@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1092
+    priority: P0
+    area: bank-control
+    title: Bound bank-control duplicate-reference evaluation
+    status: completed
+    depends_on: [E-1091]
+    exit_evidence: >-
+      The bank-statement control domain boundary now rejects oversized direct
+      inputs, dense normalized-reference candidate sets, and excessive total
+      candidate evaluations before producing a partial artifact. Its final
+      ledger-coverage projection uses a materialized ID set instead of a
+      quadratic nested scan. Existing duplicate-reference ambiguity, replay,
+      API, persistence, full regression, and release gates remain green. This
+      is bounded algorithm/input safety evidence, not bank-source authenticity,
+      provider integration, payment execution, or production capacity.
   - id: E-1091
     priority: P0
     area: postgres-runtime

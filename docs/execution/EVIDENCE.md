@@ -2,6 +2,28 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1092: Bound bank-control duplicate-reference evaluation (2026-08-28)
+
+- Code evidence: `run_bank_statement_control()` declares and validates limits
+  for records per side, candidates per normalized reference, and total
+  candidate evaluations. It refuses a dense reference or exhausted evaluation
+  budget before returning a partial run, and uses a referenced-ledger ID set
+  for final unmatched coverage.
+- Test evidence: `tests/test_bank_statement_control.py::test_bank_control_refuses_unbounded_duplicate_reference_candidates`
+  proves a candidate set above the declared ceiling is rejected. Existing
+  duplicate-reference ambiguity, permutation/replay, API, persistence, full
+  regression, and release gates remain green.
+- Gate evidence: the focused bank-control/API suite passes with one declared
+  capability skip; `python -m pytest -q --tb=short --maxfail=1` reaches 100%
+  with exit 0; Ruff passes; Mypy reports no issues in 539 source files; Bandit
+  exits 0 with reviewed existing suppression warnings; pip-audit reports no
+  known vulnerabilities while noting the local package is not on PyPI; the
+  0.7.1 wheel and sdist build successfully; and the sdist contains ADR 0752
+  and the changed bank-control module.
+- Boundary: this is a local deterministic input/algorithm guard. It does not
+  establish bank-source authenticity, live provider behavior, payment or
+  posting correctness, distributed capacity, or production banking assurance.
+
 ## E-1091: Enforce hard partition limits during PostgreSQL input streaming (2026-08-28)
 
 - Code evidence: `PostgresReconciliationRepository.iter_input_partitions()`

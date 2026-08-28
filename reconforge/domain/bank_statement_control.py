@@ -17,6 +17,9 @@ from reconforge.utils.money import Money
 
 BANK_STATEMENT_CONTROL_SCHEMA_VERSION = 1
 BANK_STATEMENT_CONTROL_ALGORITHM_VERSION = "bank-statement-control-v1"
+MAX_BANK_STATEMENT_CONTROL_RECORDS = 250_000
+MAX_BANK_CANDIDATES_PER_REFERENCE = 10_000
+MAX_BANK_CANDIDATE_EVALUATIONS = 1_000_000
 BankStatementStatus = Literal["matched", "exception", "unmatched_bank", "unmatched_ledger", "ambiguous"]
 _IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$")
 
@@ -161,6 +164,10 @@ def run_bank_statement_control(
         raise BankStatementControlError("date window must be an integer from 0 to 366 days.")
     if not bank_lines and not ledger_records:
         raise BankStatementControlError("bank statement control requires at least one record.")
+    if len(bank_lines) > MAX_BANK_STATEMENT_CONTROL_RECORDS or len(ledger_records) > MAX_BANK_STATEMENT_CONTROL_RECORDS:
+        raise BankStatementControlError(
+            "bank statement control record limit exceeded; split the input into bounded runs."
+        )
     bank_ids = [item.line_id for item in bank_lines]
     ledger_ids = [item.record_id for item in ledger_records]
     if len(bank_ids) != len(set(bank_ids)):
@@ -173,10 +180,23 @@ def run_bank_statement_control(
     by_reference: dict[str, list[BankLedgerRecord]] = {}
     for record in ledger_records:
         by_reference.setdefault(record.reference, []).append(record)
+    oversized_references = sorted(
+        reference for reference, records in by_reference.items() if len(records) > MAX_BANK_CANDIDATES_PER_REFERENCE
+    )
+    if oversized_references:
+        raise BankStatementControlError(
+            "bank statement control reference candidate limit exceeded; refine the reference partition."
+        )
     used_ledger_ids: set[str] = set()
     decisions: list[BankStatementDecision] = []
+    candidate_evaluations = 0
     for bank in sorted(bank_lines, key=lambda item: (item.account_id, item.booking_date, item.line_id)):
         candidates = sorted(by_reference.get(bank.reference, []), key=lambda item: item.record_id)
+        candidate_evaluations += len(candidates)
+        if candidate_evaluations > MAX_BANK_CANDIDATE_EVALUATIONS:
+            raise BankStatementControlError(
+                "bank statement control candidate evaluation budget exceeded; split the input into bounded runs."
+            )
         if not candidates:
             decisions.append(BankStatementDecision(bank.line_id, bank.account_id, "unmatched_bank", (), None, None, "BANK_LINE_HAS_NO_LEDGER_CANDIDATE"))
             continue
@@ -208,8 +228,11 @@ def run_bank_statement_control(
             continue
         used_ledger_ids.add(ledger.record_id)
         decisions.append(BankStatementDecision(bank.line_id, bank.account_id, "matched", (ledger.record_id,), amount_variance, days_variance, "BANK_LEDGER_RECONCILED"))
+    referenced_ledger_ids = {
+        ledger_id for decision in decisions for ledger_id in decision.ledger_record_ids
+    }
     for record in sorted(ledger_records, key=lambda item: (item.account_id, item.booking_date, item.record_id)):
-        if record.record_id not in used_ledger_ids and not any(record.record_id in item.ledger_record_ids for item in decisions):
+        if record.record_id not in used_ledger_ids and record.record_id not in referenced_ledger_ids:
             decisions.append(BankStatementDecision(record.record_id, record.account_id, "unmatched_ledger", (record.record_id,), None, None, "LEDGER_RECORD_HAS_NO_BANK_LINE"))
     ordered = tuple(sorted(decisions, key=lambda item: (item.account_id, item.bank_line_id, item.status, item.ledger_record_ids)))
     payload = {
@@ -262,6 +285,9 @@ def verify_bank_statement_payload(payload: dict[str, object]) -> None:
 __all__ = [
     "BANK_STATEMENT_CONTROL_ALGORITHM_VERSION",
     "BANK_STATEMENT_CONTROL_SCHEMA_VERSION",
+    "MAX_BANK_CANDIDATE_EVALUATIONS",
+    "MAX_BANK_CANDIDATES_PER_REFERENCE",
+    "MAX_BANK_STATEMENT_CONTROL_RECORDS",
     "BankLedgerRecord",
     "BankStatementControlError",
     "BankStatementControlRun",

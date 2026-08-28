@@ -2,6 +2,14 @@
 
 Updated: 2026-08-28
 
+## E-1089 - Enforce tenant provenance in execution-scope resolution (2026-08-28)
+
+- `request_execution_scope()` now rejects a non-empty principal tenant grant
+  that does not include the validated request tenant before it resolves
+  workspace, organization, or legal-entity scope. The direct sibling-tenant
+  regression passes. Empty grants remain an explicit legacy compatibility seam;
+  this is not independent IAM or production authorization evidence.
+
 ## E-1088 - Bind generic server permission dependencies to tenant scope (2026-08-28)
 
 - The central `require_permission` and `require_any_permission` server paths

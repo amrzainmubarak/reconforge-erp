@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1089: Enforce tenant provenance in execution-scope resolution (2026-08-28)
+
+- Code evidence: `request_execution_scope()` now compares the validated request
+  tenant with `ServerPrincipal.authorized_tenant_ids` before parsing or
+  returning workspace and narrower hierarchy scope. A non-empty mismatch is
+  refused with `tenant_scope_denied`.
+- Test evidence: the direct execution-scope regression proves that a principal
+  bound to `tenant-a` cannot resolve a `tenant-b` scope; existing workspace,
+  organization, entity, dependency, identity, full regression, and release
+  gates remain green for this slice.
+- Packaging evidence: `python -m build --no-isolation` succeeds, and direct
+  inspection of `reconforge_erp-0.7.1.tar.gz` confirms that ADR 0749 is included
+  in the source distribution.
+- Boundary: the empty tenant-grant compatibility seam remains explicit. This
+  is reusable local scope-provenance evidence, not independent tenant
+  membership, external IAM, distributed revocation, hosted enforcement, or
+  production authorization effectiveness.
+
 ## E-1088: Bind generic server permission dependencies to tenant scope (2026-08-28)
 
 - Code evidence: the server branches of `require_permission` and

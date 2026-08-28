@@ -57,6 +57,17 @@ def test_execution_scope_requires_authenticated_granted_workspace() -> None:
     assert sibling.value.code == "workspace_scope_denied"
 
 
+def test_execution_scope_rejects_authenticated_sibling_tenant() -> None:
+    with pytest.raises(APIError) as sibling:
+        request_execution_scope(
+            _request(
+                {"X-ReconForge-Tenant": "tenant-b", "X-ReconForge-Workspace": "workspace-a"},
+                _principal(),
+            )
+        )
+    assert sibling.value.code == "tenant_scope_denied"
+
+
 def test_execution_scope_composes_workspace_organization_and_entity() -> None:
     scope = request_execution_scope(
         _request(

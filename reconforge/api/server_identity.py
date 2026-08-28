@@ -202,6 +202,8 @@ def request_execution_scope(request: Request) -> RequestExecutionScope:
     principal = getattr(request.state, "server_principal", None)
     if not isinstance(principal, ServerPrincipal):
         raise APIError(status_code=401, code="auth_required", message="Authentication required.")
+    if principal.authorized_tenant_ids and tenant_id not in principal.authorized_tenant_ids:
+        raise APIError(status_code=403, code="tenant_scope_denied", message="Tenant scope is not authorized.")
     raw_workspace = request.headers.get("x-reconforge-workspace", "").strip()
     if not raw_workspace:
         raise APIError(

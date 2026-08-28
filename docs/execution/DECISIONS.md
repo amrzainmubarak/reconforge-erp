@@ -5,6 +5,28 @@
 
 ## Decisions
 
+### D-914: Enforce tenant provenance in execution-scope resolution
+
+- **Date**: 2026-08-28
+- **Context**: `request_execution_scope()` resolved the validated tenant and
+  checked workspace/organization/entity grants, but did not independently
+  compare the tenant against the authenticated principal's bound tenant grant.
+  It is a reusable boundary called by many server route families.
+- **Decision**: Reject a non-empty principal tenant grant that excludes the
+  validated request tenant before resolving any narrower execution scope, with
+  the stable `tenant_scope_denied` reason. Keep the empty-grant path as an
+  explicit legacy injection/test compatibility seam.
+- **Rationale**: A scope resolver must be safe independently of its callers;
+  workspace authorization must never substitute for tenant provenance.
+- **Verification**: The direct sibling-tenant scope regression passes, along
+  with focused scope/dependency/identity tests, full regression, static,
+  security, package, YAML, and diff gates.
+- **Compatibility**: SQLite behavior is unchanged. Real server-authenticated
+  principals carry the tenant grant; only legacy unbound seams use the empty
+  grant fallback.
+- **Rollback**: Revert E-1089, ADR 0749, the scope/test changes, manifest entry,
+  and execution records together.
+
 ### D-913: Bind generic server permission dependencies to tenant scope
 
 - **Date**: 2026-08-28

@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1089
+    priority: P0
+    area: identity-governance
+    title: Enforce tenant provenance in execution-scope resolution
+    status: completed
+    depends_on: [E-1088]
+    exit_evidence: >-
+      request_execution_scope now rejects a non-empty authenticated principal
+      tenant grant that does not contain the validated request tenant before
+      resolving workspace or narrower hierarchy scope. A sibling-tenant
+      regression passes, while the explicit empty-grant legacy compatibility
+      seam remains bounded. Focused scope/dependency tests, full regression,
+      static/security gates, package build, YAML, and diff checks pass. This is
+      a reusable local scope-boundary control, not independent IAM or
+      production authorization evidence.
   - id: E-1088
     priority: P0
     area: identity-governance
@@ -3217,6 +3232,12 @@ tasks:
       checks for creator-vs-approver flows, and auditable policy decisions with stable identity
       canonicalization and namespace scopes.
     completed_slices:
+      - >
+        E-1089 makes `request_execution_scope` independently enforce the
+        authenticated principal's tenant grant before resolving workspace or
+        narrower hierarchy scope. This closes a reusable server scope-helper
+        gap; external IAM, distributed revocation, and production
+        effectiveness remain open.
       - >
         E-1088 closes the generic server permission-context gap: both
         `require_permission` and `require_any_permission` pass the validated

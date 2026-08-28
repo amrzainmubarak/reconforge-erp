@@ -2,6 +2,17 @@
 
 Updated: 2026-08-28
 
+## E-1099 - Enforce strict PostgreSQL worker tolerance hydration (2026-08-28)
+
+- PostgreSQL grouped and sequential worker adapters now parse
+  `amount_tolerance` through `parse_exact_amount()` and emit canonical
+  non-scientific text. Binary floating-point, malformed, non-finite, negative,
+  and noncanonical scientific-notation values fail at the worker boundary;
+  existing error wording and supported-mode behavior remain compatible.
+- This closes worker rule-input consistency only. Provider behavior,
+  cross-engine parity, capacity, external authorization, and production
+  financial assurance remain open.
+
 ## E-1098 - Enforce strict consolidation minor-amount verification (2026-08-28)
 
 - PostgreSQL consolidation-close worksheet and effect replay now compare

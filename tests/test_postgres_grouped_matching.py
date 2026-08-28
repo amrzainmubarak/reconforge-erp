@@ -190,6 +190,19 @@ def test_postgres_grouped_adapter_rejects_binary_tolerance() -> None:
         PostgresGroupedMatchingAdapter().iter_partition_results(context)
 
 
+def test_postgres_grouped_adapter_rejects_noncanonical_tolerance() -> None:
+    context = _context()
+    context = ReconciliationExecutionContext(
+        run={"rule_json": {"grouped_matching_mode": "one-to-many", "amount_tolerance": "1e-2"}},
+        left_inputs=context.left_inputs,
+        right_inputs=context.right_inputs,
+        heartbeat=lambda completed: {"completed": completed},
+        cancellation_requested=lambda: False,
+    )
+    with pytest.raises(PostgresGroupedMatchingAdapterError, match="exact text"):
+        PostgresGroupedMatchingAdapter().iter_partition_results(context)
+
+
 def test_postgres_grouped_runtime_contract_is_in_source_distribution_manifest() -> None:
     manifest = Path("MANIFEST.in").read_text(encoding="utf-8")
     assert "include reconforge/workers/postgres_grouped_matching.py" in manifest

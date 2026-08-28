@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1010: Strict PostgreSQL worker tolerance hydration
+
+- **Date**: 2026-08-28
+- **Context**: Grouped and sequential PostgreSQL worker adapters used
+  ad-hoc `Decimal(str(value))` tolerance normalization after a partial float
+  check, leaving a different rule-input contract from the core parser.
+- **Decision**: Use `parse_exact_amount()` for both adapters, reject negative
+  tolerances, and serialize accepted values as canonical non-scientific text;
+  retain the established safe error wording.
+- **Rationale**: Tolerances affect matching decisions and must share the same
+  strict, reproducible financial-input policy before strategy construction.
+- **Verification**: Focused grouped/sequential tests and full regression pass;
+  release gates are recorded in E-1099.
+- **Compatibility**: Exact text, integers, and Decimal inputs retain behavior;
+  binary floats and noncanonical scientific text now fail closed.
+- **Rollback**: Revert E-1099, ADR 0759, worker/test changes, manifest entry,
+  and execution records together.
+
 ### D-1009: Strict consolidation minor-amount verification
 
 - **Date**: 2026-08-28

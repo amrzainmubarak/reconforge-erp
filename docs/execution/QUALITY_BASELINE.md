@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1099 - Strict PostgreSQL worker tolerance hydration (2026-08-28)
+
+Grouped and sequential PostgreSQL worker suites pass. Their tolerance values
+now share the exact parser and canonical serialization contract, rejecting
+binary floats and scientific-notation input before request construction. Full
+regression and release-quality gates pass for this worker slice; provider,
+parity, capacity, external IAM, and production evidence remain open.
+
 ## E-1098 - Strict consolidation minor-amount verification (2026-08-28)
 
 Consolidation-close and SQLite close suites pass. PostgreSQL replay verification

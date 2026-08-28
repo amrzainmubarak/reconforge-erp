@@ -2,6 +2,21 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1099: Enforce strict PostgreSQL worker tolerance hydration (2026-08-28)
+
+- Code evidence: grouped and sequential PostgreSQL worker request builders use
+  `parse_exact_amount()` for `amount_tolerance`, retain non-negative bounds,
+  and pass canonical non-scientific text into strategy requests.
+- Test evidence: `tests/test_postgres_grouped_matching.py` and
+  `tests/test_postgres_sequential_matching.py` cover binary-float and
+  scientific-notation refusal; existing projection, ambiguity, digest, and
+  sequential strategy tests remain green.
+- Gate evidence: focused worker tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is worker rule-input consistency evidence. It does not
+  establish provider behavior, cross-engine parity, capacity, external IAM,
+  or production financial assurance.
+
 ## E-1098: Enforce strict consolidation minor-amount verification (2026-08-28)
 
 - Code evidence: `PostgresConsolidationCloseRepository._amount_matches_minor()`

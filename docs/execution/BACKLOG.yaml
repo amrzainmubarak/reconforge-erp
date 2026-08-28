@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1099
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict PostgreSQL worker tolerance hydration
+    status: completed
+    depends_on: [E-1098]
+    exit_evidence: >-
+      PostgreSQL grouped and sequential worker adapters now parse
+      amount_tolerance through parse_exact_amount and serialize accepted values
+      as canonical non-scientific text. Binary floating-point, malformed,
+      non-finite, negative, and scientific-notation inputs fail with existing
+      safe messages. Focused worker tests, full regression, static/security
+      gates, package build, YAML, and diff checks pass. This is worker rule-input
+      consistency evidence, not provider, parity, capacity, authorization, or
+      production assurance.
   - id: E-1098
     priority: P0
     area: financial-exactness

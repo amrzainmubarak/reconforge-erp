@@ -2,6 +2,23 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1118: Strict Payables quantity inputs (2026-08-29)
+
+- Code evidence: SQLite and PostgreSQL Payables `_quantity()` boundaries now
+  call `parse_exact_amount()`; PostgreSQL preserves the original value for
+  parsing after applying its text safety and length checks.
+- Test evidence: the focused Payables/API/application/PostgreSQL selection
+  reports 30 passed and 1 capability-gated PostgreSQL skip. It covers exact
+  arbitrary-scale quantities plus binary floating-point and scientific-
+  notation rejection in both adapters.
+- Gate evidence: focused Ruff, Mypy, and `git diff --check` pass; the full
+  locked Python 3.11 regression exits 0 at 100% with declared capability-gated
+  skips. Security and package gates remain separate evidence.
+- Boundary: this prevents non-exact quantity input from entering the bounded
+  Payables persistence and three-way-match path. It does not prove inventory
+  unit governance, statutory posting, settlement, provider behavior, or
+  production assurance.
+
 ## E-1117: Strict amount lexemes in duplicate detection (2026-08-29)
 
 - Code evidence: `reconforge.domain.duplicate_detection._canonical_amount()`
@@ -10,8 +27,9 @@ This file records commands and observed results. It does not convert a dirty wor
 - Test evidence: the focused duplicate-detection and strategy-contract
   selection reports 48 passed. The regression covers Python binary
   floating-point rejection and both scientific-notation text spellings.
-- Gate evidence: focused Ruff and Mypy pass; `git diff --check` is required
-  before commit and full local release gates remain separate evidence.
+- Gate evidence: focused Ruff and Mypy pass; the full locked Python 3.11
+  regression exits 0 at 100% with declared capability-gated skips, and
+  `git diff --check` passes.
 - Boundary: this aligns the duplicate-fingerprint amount lexical policy with
   strict financial ingress. It does not prove probabilistic matching, fraud
   classification, source authenticity, posting, or production assurance.

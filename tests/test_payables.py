@@ -172,6 +172,12 @@ def test_payables_rejects_stale_versions_and_invalid_values(tmp_path: Path) -> N
         connection.close()
 
 
+@pytest.mark.parametrize("quantity", [0.1, "1e2"])
+def test_sqlite_payables_quantity_rejects_non_strict_numeric_inputs(quantity: object) -> None:
+    with pytest.raises(PlatformError, match="quantity"):
+        payables_module._quantity(quantity, field="Quantity")
+
+
 def test_purchase_order_creator_cannot_self_approve_in_trusted_local_mode(tmp_path: Path) -> None:
     connection, service = _service(tmp_path)
     try:

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Sequence
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from reconforge.application.payables import (
@@ -40,6 +40,7 @@ from reconforge.platform.common import (
     rows_to_dicts,
 )
 from reconforge.platform.exceptions import ExceptionQueueService
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 SUPPLIER_STATUSES = {"Draft", "Active", "Suspended", "Closed"}
 PURCHASE_ORDER_STATUSES = {"Draft", "Submitted", "Approved", "Closed", "Cancelled"}
@@ -1065,14 +1066,13 @@ def _minor(value: object, *, field: str) -> int:
 
 
 def _quantity(value: object, *, field: str) -> str:
-    text = normalize_text(value, default="")
-    if not text:
+    if value is None or (isinstance(value, str) and not value.strip()):
         raise PlatformError(f"Quantity in field '{field}' is required.")
     try:
-        quantity = Decimal(text)
-    except (InvalidOperation, ValueError) as exc:
+        quantity = parse_exact_amount(value)
+    except InvalidAmountError as exc:
         raise PlatformError(f"Invalid quantity in field '{field}'.") from exc
-    if not quantity.is_finite() or quantity <= 0:
+    if quantity <= 0:
         raise PlatformError(f"Quantity in field '{field}' must be finite and greater than zero.")
     return _decimal_text(quantity)
 

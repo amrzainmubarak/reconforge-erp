@@ -6,7 +6,7 @@ import re
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date, datetime
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from reconforge.application.payables import (
@@ -25,6 +25,7 @@ from reconforge.io.persisted import (
     encode_postgres_outbox_payload,
 )
 from reconforge.platform.common import PlatformError, platform_id
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
 SUPPLIER_STATUSES = ("Draft", "Active", "Suspended", "Closed")
@@ -96,12 +97,12 @@ def _minor(value: object, label: str) -> int:
 
 
 def _quantity(value: object, label: str) -> tuple[Decimal, str]:
-    raw = _text(value, label, maximum=80)
+    _text(value, label, maximum=80)
     try:
-        quantity = Decimal(raw)
-    except (InvalidOperation, ValueError) as exc:
+        quantity = parse_exact_amount(value)
+    except InvalidAmountError as exc:
         raise PlatformError(f"{label} must be an exact decimal quantity.") from exc
-    if not quantity.is_finite() or quantity <= 0:
+    if quantity <= 0:
         raise PlatformError(f"{label} must be finite and greater than zero.")
     exponent = quantity.as_tuple().exponent
     if not isinstance(exponent, int):

@@ -1,14 +1,26 @@
 # Security Baseline
 
+## E-1118 Strict Payables quantity inputs (2026-08-29)
+
+- SQLite and PostgreSQL Payables adapters reject binary floating-point and
+  scientific-notation quantity inputs before persistence or three-way match
+  arithmetic, using the shared strict parser.
+- The focused Payables/API/application/PostgreSQL selection reports 30 passed
+  and 1 capability-gated PostgreSQL skip; the full locked Python 3.11
+  regression exits 0 at 100% with declared capability-gated skips. This is a
+  fail-closed input control, not inventory, provider, settlement, posting, or
+  production-security assurance.
+
 ## E-1117 Strict amount lexemes in duplicate detection (2026-08-29)
 
 - Duplicate-detection amount fingerprints now share the strict parser, which
   rejects binary floating-point and scientific-notation text before values
   enter the canonical grouping digest.
 - The focused duplicate-detection and strategy-contract selection passes
-  48/48, including both scientific-notation rejection cases. This is a
-  fail-closed input boundary, not source authentication, fraud prevention,
-  posting, or production-security assurance.
+  48/48, including both scientific-notation rejection cases; the full locked
+  Python 3.11 regression exits 0 at 100% with declared capability-gated skips.
+  This is a fail-closed input boundary, not source authentication, fraud
+  prevention, posting, or production-security assurance.
 
 ## E-1116 Explicit financial input policy in Journal Controls (2026-08-29)
 

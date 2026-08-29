@@ -9,6 +9,24 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1118
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict Payables quantity inputs
+    status: completed
+    depends_on: [E-1117]
+    exit_evidence: >-
+      SQLite and PostgreSQL Payables quantity boundaries now use the shared
+      parse_exact_amount parser while preserving positive arbitrary-scale
+      canonical quantity text. Binary floating-point, non-finite, malformed,
+      and scientific-notation inputs fail closed before persistence or
+      three-way matching. The focused Payables/API/application/PostgreSQL
+      selection reports 30 passed and 1 capability-gated PostgreSQL skip; the
+      full locked Python 3.11 regression exits 0 at 100% with declared
+      capability-gated skips. Static, security, package, and diff gates remain
+      the required broader release evidence. This is bounded quantity-input
+      evidence, not inventory completeness, posting, settlement, or
+      production assurance.
   - id: E-1117
     priority: P0
     area: financial-exactness
@@ -21,10 +39,11 @@ tasks:
       rejecting binary floating-point, non-finite, malformed, and
       scientific-notation text inputs while preserving exact duplicate
       occurrence semantics. The focused duplicate-detection and
-      strategy-contract selection passes 48/48; full regression, static,
-      security, package, and diff gates remain the required broader evidence.
-      This is bounded matching-input evidence, not fraud detection, source
-      authenticity, posting, or production assurance.
+      strategy-contract selection passes 48/48, and the full locked Python
+      3.11 regression exits 0 at 100% with declared capability-gated skips;
+      static, security, package, and diff gates remain the required broader
+      release evidence. This is bounded matching-input evidence, not fraud
+      detection, source authenticity, posting, or production assurance.
   - id: E-1116
     priority: P0
     area: financial-exactness

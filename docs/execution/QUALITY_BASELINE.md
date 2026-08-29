@@ -1,12 +1,24 @@
 # Quality Baseline
 
+## E-1118 - Strict Payables quantity inputs (2026-08-29)
+
+SQLite and PostgreSQL Payables quantity parsing now shares the strict exact
+parser and preserves arbitrary-scale canonical text. The focused
+Payables/API/application/PostgreSQL selection reports 30 passed and 1
+capability-gated PostgreSQL skip, and the full locked Python 3.11 regression
+exits 0 at 100% with declared capability-gated skips. This is bounded
+quantity-input evidence, not inventory completeness, statutory posting,
+settlement, or production assurance.
+
 ## E-1117 - Strict amount lexemes in duplicate detection (2026-08-29)
 
 The duplicate-detection amount fingerprint now uses the shared strict parser,
 so binary floating-point and scientific-notation text are rejected before
 canonical grouping. The focused duplicate-detection and strategy-contract
-selection passes 48/48. This is bounded matching-input quality evidence, not
-fraud detection, source authenticity, posting, or production assurance.
+selection passes 48/48, and the full locked Python 3.11 regression exits 0 at
+100% with declared capability-gated skips. This is bounded matching-input
+quality evidence, not fraud detection, source authenticity, posting, or
+production assurance.
 
 ## E-1116 - Explicit financial input policy in Journal Controls (2026-08-29)
 

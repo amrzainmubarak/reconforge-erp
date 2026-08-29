@@ -2,6 +2,18 @@
 
 Updated: 2026-08-29
 
+## E-1118 - Strict Payables quantity inputs (2026-08-29)
+
+- SQLite and PostgreSQL Payables quantity boundaries now use the shared
+  `parse_exact_amount()` parser while preserving positive arbitrary-scale
+  canonical quantity text. Binary floating-point, non-finite, malformed, and
+  scientific-notation values fail closed before persistence or 3-way matching.
+- The focused Payables/API/application/PostgreSQL selection reports 30 passed
+  and 1 capability-gated PostgreSQL skip; the full locked Python 3.11
+  regression also exits 0 at 100% with only declared capability-gated skips.
+  This is bounded quantity-input evidence, not inventory completeness,
+  posting, settlement, or production assurance.
+
 ## E-1117 - Strict amount lexemes in duplicate detection (2026-08-29)
 
 - The bounded duplicate-detection strategy now uses the shared
@@ -9,9 +21,10 @@ Updated: 2026-08-29
   Binary floating-point, non-finite, malformed, and scientific-notation text
   values fail closed without changing exact duplicate occurrence semantics.
 - The focused duplicate-detection and strategy-contract selection passes
-  48/48; full regression and release-quality gates remain required as final
-  evidence. This is bounded matching-input evidence, not fraud detection,
-  source authenticity, posting, or production assurance.
+  48/48; the full locked Python 3.11 regression also exits 0 at 100% with
+  only declared capability-gated skips. This is bounded matching-input
+  evidence, not fraud detection, source authenticity, posting, or production
+  assurance.
 
 ## E-1116 - Explicit financial input policy in Journal Controls (2026-08-29)
 

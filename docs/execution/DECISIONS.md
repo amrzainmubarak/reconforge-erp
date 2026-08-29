@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-1030: Enforce strict quantity inputs in Payables adapters
+
+- **Date**: 2026-08-29
+- **Context**: Payables quantities were converted directly with `Decimal` in
+  SQLite and PostgreSQL, allowing binary floating-point and scientific-text
+  inputs to reach exact quantity persistence and three-way matching.
+- **Decision**: Route both adapter quantity boundaries through
+  `parse_exact_amount()`, preserving positive arbitrary-scale canonical text
+  and the existing error boundary.
+- **Rationale**: Quantity comparisons and price calculations must not depend
+  on a weaker lexical or type policy in one persistence mode than another.
+- **Verification**: E-1118, focused Payables/API/application/PostgreSQL tests,
+  Ruff, Mypy, and diff checks.
+- **Rollback**: Revert E-1118 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
 ### D-1029: Use the strict amount parser in duplicate detection
 
 - **Date**: 2026-08-29

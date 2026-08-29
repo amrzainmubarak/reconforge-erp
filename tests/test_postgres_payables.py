@@ -246,6 +246,12 @@ def test_purchase_order_quantity_preserves_exact_scale_without_typmod_rounding()
     assert canonical == "0.0000000000001"
 
 
+@pytest.mark.parametrize("quantity", [0.1, "1e2"])
+def test_postgres_payables_quantity_rejects_non_strict_numeric_inputs(quantity: object) -> None:
+    with pytest.raises(PlatformError, match="quantity"):
+        _quantity(quantity, "Quantity")
+
+
 def test_all_payables_signatures_match_application_contract() -> None:
     methods = (
         "upsert_supplier",

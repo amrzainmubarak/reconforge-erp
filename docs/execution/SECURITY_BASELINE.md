@@ -1,5 +1,17 @@
 # Security Baseline
 
+## E-1115 Strict canonical Money in bank-control replay (2026-08-29)
+
+- Persisted bank-control reports fail closed when the tolerance or a decision
+  variance is valid only after Money text normalization; the strict reader
+  requires exact producer serialization and preserves the existing digest
+  boundary.
+- Focused bank/API/persistence tests pass 11/11 with one capability-gated
+  PostgreSQL skip, and the full locked Python 3.11 regression reaches 100% and
+  exits 0. This is an input/replay-integrity control, not bank-source
+  authentication, payment security, settlement, posting, or production
+  assurance.
+
 ## E-1114 Current supply-chain claims follow zero npm SRI gap (2026-08-29)
 
 - Current policy and documentation agree on 211 npm registry entries and zero

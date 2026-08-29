@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1027: Enforce strict canonical Money in bank-control replay
+
+- **Date**: 2026-08-29
+- **Context**: Bank-control reports validated decision structure and digests,
+  but persisted Money objects could be accepted after textual normalization
+  rather than proving exact producer serialization.
+- **Decision**: Require the strict canonical Money reader for the report
+  tolerance and every non-null decision variance before replay verification
+  accepts the artifact. Keep source ingestion and compatibility contracts
+  unchanged.
+- **Rationale**: A valid outer digest must not make a representation-drifted
+  financial value acceptable as deterministic evidence. The control remains
+  bounded and non-posting.
+- **Verification**: E-1115, the focused bank/API/persistence selection, full
+  locked Python 3.11 regression, Ruff, Mypy, and diff checks.
+- **Rollback**: Revert E-1115 code, test, ADR, and execution-record changes;
+  no schema or external runtime state is changed.
+
 ### D-1026: Current supply-chain claims follow the zero npm SRI-gap result
 
 - **Date**: 2026-08-29

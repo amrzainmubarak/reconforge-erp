@@ -1,5 +1,15 @@
 # Quality Baseline
 
+## E-1115 - Strict canonical Money in bank-control replay (2026-08-29)
+
+The bank-control replay verifier now requires canonical Money serialization for
+the amount tolerance and all serialized decision variances. The focused
+bank/API/SQLite/PostgreSQL selection passes 11/11 with one capability-gated
+PostgreSQL skip, and the full locked Python 3.11 regression reaches 100% and
+exits 0. The result is bounded local artifact-integrity evidence; bank source
+authenticity, settlement, posting, and production assurance remain outside
+this baseline.
+
 ## E-1114 - Current supply-chain claims follow zero npm SRI gap (2026-08-29)
 
 Current supply-chain surfaces now agree with the validator-backed 211 npm

@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1115
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict canonical Money in bank-control replay
+    status: completed
+    depends_on: [E-1114]
+    exit_evidence: >-
+      Bank-control report verification now restores amount_tolerance and every
+      non-null decision amount_variance through the strict canonical Money
+      reader before accepting the nested decision digest. A re-signed padded
+      amount is rejected. The focused bank/API/SQLite/PostgreSQL selection
+      passes 11/11 with one capability-gated PostgreSQL skip; the full locked
+      Python 3.11 regression reaches 100% and exits 0. This is bounded local
+      artifact-integrity evidence, not bank-source authenticity, settlement,
+      posting, or production assurance.
   - id: E-1114
     priority: P1
     area: supply-chain-governance

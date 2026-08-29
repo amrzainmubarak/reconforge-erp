@@ -257,6 +257,12 @@ def run_bank_statement_control(
 def verify_bank_statement_payload(payload: dict[str, object]) -> None:
     """Verify the serialized bank-control decision projection."""
 
+    _verify_strict_money(payload.get("amount_tolerance"), "amount_tolerance")
+    decisions = payload.get("decisions")
+    if isinstance(decisions, list):
+        for index, decision in enumerate(decisions):
+            if isinstance(decision, dict) and decision.get("amount_variance") is not None:
+                _verify_strict_money(decision["amount_variance"], f"decisions[{index}].amount_variance")
     try:
         verify_canonical_decision_payload(
             payload,
@@ -280,6 +286,17 @@ def verify_bank_statement_payload(payload: dict[str, object]) -> None:
         )
     except ValueError as exc:
         raise BankStatementControlError("bank statement report replay verification failed.") from exc
+
+
+def _verify_strict_money(value: object, field: str) -> None:
+    """Require persisted bank evidence Money to reproduce canonical bytes."""
+
+    if not isinstance(value, dict):
+        raise BankStatementControlError(f"bank statement {field} must be canonical Money.")
+    try:
+        Money.from_strict_canonical_dict(value)
+    except (TypeError, ValueError) as exc:
+        raise BankStatementControlError(f"bank statement {field} is not canonical Money.") from exc
 
 
 __all__ = [

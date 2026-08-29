@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1115: Strict canonical Money in bank-control replay (2026-08-29)
+
+- Code evidence: `verify_bank_statement_payload()` now applies
+  `Money.from_strict_canonical_dict()` to the report tolerance and each
+  non-null decision variance before the nested decision digest is accepted.
+- Test evidence: the focused bank control/API/SQLite/PostgreSQL selection
+  passes 11/11 with one capability-gated PostgreSQL skip, including a
+  re-signed padded-money refusal; the full locked Python 3.11 regression
+  reaches 100% and exits 0.
+- Gate evidence: focused Ruff, focused Mypy, and `git diff --check` pass.
+- Boundary: this verifies canonical serialized Money in a local replay
+  artifact. It does not authenticate a bank or ERP source, prove settlement or
+  posting correctness, or establish production assurance.
+
 ## E-1114: Current supply-chain claims follow zero npm SRI gap (2026-08-29)
 
 - Code/documentation evidence: the current policy validator reports 211 npm

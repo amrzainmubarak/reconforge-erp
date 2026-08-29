@@ -174,6 +174,44 @@ def test_bank_report_rejects_nested_decision_tampering_after_outer_rehash(tmp_pa
         verify_bank_statement_report(output)
 
 
+def test_bank_report_rejects_resigned_noncanonical_money(tmp_path: Path) -> None:
+    run = run_bank_statement_control(
+        (_bank(),),
+        (_ledger(amount="10.50"),),
+        amount_tolerance=_money("0.01"),
+    )
+    output = tmp_path / "bank-noncanonical-money.json"
+    write_bank_statement_report(run, output)
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload["amount_tolerance"]["amount"] = "0.010"
+    payload["decisions"][0]["amount_variance"]["amount"] = "0.500"
+    digest_payload = {
+        key: payload[key]
+        for key in (
+            "algorithm_version",
+            "amount_tolerance",
+            "date_window_days",
+            "decisions",
+            "input_digests",
+            "schema_version",
+        )
+    }
+    payload["decision_digest"] = hashlib.sha256(
+        json.dumps(digest_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+    payload["artifact_digest"] = hashlib.sha256(
+        json.dumps(
+            {key: value for key, value in payload.items() if key != "artifact_digest"},
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("ascii")
+    ).hexdigest()
+    output.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(BankStatementControlError, match="canonical Money"):
+        verify_bank_statement_report(output)
+
+
 def test_bank_control_cli_writes_replayable_artifact(tmp_path: Path) -> None:
     output = tmp_path / "cli-report.json"
     result = runner.invoke(

@@ -2,6 +2,18 @@
 
 Updated: 2026-08-29
 
+## E-1115 - Strict canonical Money in bank-control replay (2026-08-29)
+
+- Bank-control report verification now restores `amount_tolerance` and every
+  non-null decision `amount_variance` through the strict canonical Money
+  reader before accepting the decision digest.
+- A re-signed report with padded amount text is rejected before replay
+  acceptance. The focused bank/API/SQLite/PostgreSQL selection passes 11/11
+  with one capability-gated PostgreSQL skip; the full locked Python 3.11
+  regression reaches 100% and exits 0. This is local artifact-integrity
+  evidence, not bank-source authenticity, settlement, posting, or production
+  assurance.
+
 ## E-1114 - Current supply-chain claims follow zero npm SRI gap (2026-08-29)
 
 - Current gap, whitepaper, and documentation-drift surfaces now state the

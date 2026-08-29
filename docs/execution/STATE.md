@@ -2,6 +2,21 @@
 
 Updated: 2026-08-29
 
+## E-1119 - Strict persisted Payables quantity decoding (2026-08-29)
+
+- SQLite and PostgreSQL receipt-limit and three-way-match arithmetic now
+  decodes persisted ordered, invoiced, and received quantities through the
+  shared strict parser boundary. PostgreSQL sums canonical persisted text
+  shadows after decoding instead of coercing an aggregate through
+  `Decimal(str(...))`.
+- Malformed, non-finite, negative, and non-canonical persisted quantity data
+  fails closed; zero is accepted only for an empty receipt aggregate. The
+  focused selection reports 40 passed and 1 capability-gated PostgreSQL skip,
+  and the full locked Python 3.11 regression exits 0 at 100% with only
+  declared capability-gated skips. This is persisted quantity-integrity
+  evidence, not inventory completeness, posting, settlement, or production
+  assurance.
+
 ## E-1118 - Strict Payables quantity inputs (2026-08-29)
 
 - SQLite and PostgreSQL Payables quantity boundaries now use the shared

@@ -1,5 +1,17 @@
 # Security Baseline
 
+## E-1119 Strict persisted Payables quantity decoding (2026-08-29)
+
+- Receipt-limit and three-way-match arithmetic rejects malformed, non-finite,
+  negative, and non-canonical persisted quantities through a strict decoder;
+  zero is permitted only when no posted receipt rows exist.
+- PostgreSQL uses the canonical text shadow for receipt aggregation before
+  arithmetic. The focused selection reports 40 passed and 1 capability-gated
+  PostgreSQL skip, and the full locked Python 3.11 regression exits 0 at 100%
+  with declared capability-gated skips. This is a fail-closed persistence
+  control, not inventory, provider, settlement, posting, or production-
+  security assurance.
+
 ## E-1118 Strict Payables quantity inputs (2026-08-29)
 
 - SQLite and PostgreSQL Payables adapters reject binary floating-point and

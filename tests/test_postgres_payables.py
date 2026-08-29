@@ -30,6 +30,7 @@ from reconforge.infrastructure.postgres_payables import (
     PostgresPayablesError,
     PostgresPayablesRepository,
     _quantity,
+    _stored_quantity,
 )
 from reconforge.platform.common import PlatformError
 
@@ -250,6 +251,14 @@ def test_purchase_order_quantity_preserves_exact_scale_without_typmod_rounding()
 def test_postgres_payables_quantity_rejects_non_strict_numeric_inputs(quantity: object) -> None:
     with pytest.raises(PlatformError, match="quantity"):
         _quantity(quantity, "Quantity")
+
+
+@pytest.mark.parametrize("quantity", [0.1, "1e2", "NaN", "-1", None])
+def test_postgres_payables_stored_quantity_decoder_fails_closed(quantity: object) -> None:
+    with pytest.raises(PlatformError, match="stored quantity"):
+        _stored_quantity(quantity, "Stored quantity")
+
+    assert _stored_quantity("0", "Empty receipt total", allow_zero=True) == 0
 
 
 def test_all_payables_signatures_match_application_contract() -> None:

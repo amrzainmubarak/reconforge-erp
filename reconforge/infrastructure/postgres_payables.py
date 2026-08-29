@@ -112,6 +112,18 @@ def _quantity(value: object, label: str) -> tuple[Decimal, str]:
     return quantity, text
 
 
+def _stored_quantity(value: object, label: str, *, allow_zero: bool = False) -> Decimal:
+    """Decode a persisted quantity without weakening the exact-input policy."""
+
+    try:
+        quantity = parse_exact_amount(value)
+    except InvalidAmountError as exc:
+        raise PlatformError(f"Invalid stored quantity: {label}.") from exc
+    if quantity < 0 or (quantity == 0 and not allow_zero):
+        raise PlatformError(f"Invalid stored quantity: {label}.")
+    return quantity
+
+
 def _normalize_po_lines(lines: Sequence[PurchaseOrderLineInput]) -> list[tuple[str, Decimal, str, int, str, int]]:
     if not lines:
         raise PlatformError("Purchase order requires at least one line.")
@@ -594,18 +606,25 @@ class PostgresPayablesRepository:
         return result
 
     def _received_quantity(self, purchase_order_line_id: str) -> Decimal:
-        row = self.connection.execute(
-            """SELECT COALESCE(SUM(l.received_quantity),0) AS quantity
+        rows = self.connection.execute(
+            """SELECT l.received_quantity_text AS quantity
                FROM reconforge.ap_goods_receipt_lines l
                JOIN reconforge.ap_goods_receipts r
                  ON r.tenant_id=l.tenant_id AND r.id=l.receipt_id
-               WHERE l.tenant_id=%s AND l.purchase_order_line_id=%s AND r.status='Posted'""",
+               WHERE l.tenant_id=%s AND l.purchase_order_line_id=%s AND r.status='Posted'
+               ORDER BY r.receipt_date, r.id, l.id""",
             (self.tenant_id, purchase_order_line_id),
-        ).fetchone()
-        if row is None:
-            return Decimal("0")
-        value = row["quantity"] if isinstance(row, Mapping) else row[0]
-        return Decimal(str(value))
+        ).fetchall()
+        return sum(
+            (
+                _stored_quantity(
+                    row["quantity"] if isinstance(row, Mapping) else row[0],
+                    f"received quantity {purchase_order_line_id}",
+                )
+                for row in rows
+            ),
+            Decimal("0"),
+        )
 
     def _receipt(self, receipt_id: str) -> dict[str, Any]:
         row = self.connection.execute(
@@ -971,7 +990,7 @@ class PostgresPayablesRepository:
                 if line_id not in line_rows:
                     raise PlatformError(f"Unknown purchase-order line: {line_id}.")
             for line_id, (quantity, _quantity_text) in normalized_quantities.items():
-                ordered = Decimal(str(line_rows[line_id]["ordered_quantity"]))
+                ordered = _stored_quantity(line_rows[line_id]["ordered_quantity"], f"ordered quantity {line_id}")
                 if self._received_quantity(line_id) + quantity > ordered:
                     raise PlatformError(f"Receipt exceeds ordered quantity for line {line_id}.")
             receipt_id = platform_id("APGR", workspace_id, number)
@@ -1196,7 +1215,7 @@ class PostgresPayablesRepository:
                     reasons.append(f"AP-3WM-UNKNOWN-LINE:{line_id}")
                     continue
                 received = self._received_quantity(line_id)
-                invoiced = Decimal(str(line["invoiced_quantity"]))
+                invoiced = _stored_quantity(line["invoiced_quantity"], f"invoiced quantity {line_id}")
                 quantity_variance += invoiced - received
                 unit_price_delta = Decimal(int(line["unit_price_minor"])) - Decimal(int(po_line["unit_price_minor"]))
                 price_variance += unit_price_delta * invoiced

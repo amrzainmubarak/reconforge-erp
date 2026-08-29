@@ -394,7 +394,9 @@ class SQLitePayablesRepository:
             for line_id, quantity in normalized_quantities.items():
                 row = line_rows[line_id]
                 already_received = self._received_quantity(line_id)
-                if already_received + Decimal(quantity) > Decimal(str(row["ordered_quantity"])):
+                if already_received + Decimal(quantity) > _stored_quantity(
+                    row["ordered_quantity"], field=f"ordered quantity {line_id}"
+                ):
                     raise PlatformError(f"Receipt exceeds ordered quantity for line {line_id}.")
                 self.connection.execute(
                     """
@@ -611,7 +613,7 @@ class SQLitePayablesRepository:
                 reasons.append(f"AP-3WM-UNKNOWN-LINE:{line_id}")
                 continue
             received = self._received_quantity(line_id)
-            invoiced = Decimal(str(line["invoiced_quantity"]))
+            invoiced = _stored_quantity(line["invoiced_quantity"], field=f"invoiced quantity {line_id}")
             quantity_variance += invoiced - received
             unit_price_delta = Decimal(int(line["unit_price_minor"])) - Decimal(int(po_line["unit_price_minor"]))
             price_variance += unit_price_delta * invoiced
@@ -957,7 +959,13 @@ class SQLitePayablesRepository:
             """,
             (purchase_order_line_id,),
         ).fetchall()
-        return sum((Decimal(str(row["received_quantity"])) for row in rows), Decimal("0"))
+        return sum(
+            (
+                _stored_quantity(row["received_quantity"], field=f"received quantity {purchase_order_line_id}")
+                for row in rows
+            ),
+            Decimal("0"),
+        )
 
     def _workspace_name(self, workspace_id: str) -> str:
         row = self.connection.execute("SELECT name FROM workspaces WHERE id = ?", (workspace_id,)).fetchone()
@@ -1075,6 +1083,18 @@ def _quantity(value: object, *, field: str) -> str:
     if quantity <= 0:
         raise PlatformError(f"Quantity in field '{field}' must be finite and greater than zero.")
     return _decimal_text(quantity)
+
+
+def _stored_quantity(value: object, *, field: str, allow_zero: bool = False) -> Decimal:
+    """Decode a persisted quantity without weakening the exact-input policy."""
+
+    try:
+        quantity = parse_exact_amount(value)
+    except InvalidAmountError as exc:
+        raise PlatformError(f"Invalid stored quantity in field '{field}'.") from exc
+    if quantity < 0 or (quantity == 0 and not allow_zero):
+        raise PlatformError(f"Invalid stored quantity in field '{field}'.")
+    return quantity
 
 
 def _decimal_text(value: Decimal) -> str:

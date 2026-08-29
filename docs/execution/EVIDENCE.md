@@ -2,6 +2,24 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1119: Strict persisted Payables quantity decoding (2026-08-29)
+
+- Code evidence: SQLite and PostgreSQL receipt-limit and three-way-match
+  paths decode persisted ordered, invoiced, and received quantities through
+  `_stored_quantity()` and `parse_exact_amount()`. PostgreSQL reads the
+  canonical `received_quantity_text` shadow rows before summing them.
+- Test evidence: the focused Payables/API/application/PostgreSQL selection
+  reports 40 passed and 1 capability-gated PostgreSQL skip, including
+  fail-closed stored-quantity decoder cases and the existing exact-scale
+  workflow coverage.
+- Gate evidence: focused Ruff and Mypy pass; the full locked Python 3.11
+  regression exits 0 at 100% with declared capability-gated skips. Security,
+  package, and diff gates remain separate evidence.
+- Boundary: this prevents malformed persisted quantity data from silently
+  entering the bounded receipt-limit or three-way-match arithmetic. It does
+  not prove inventory-unit governance, provider/source authenticity,
+  settlement, posting, or production assurance.
+
 ## E-1118: Strict Payables quantity inputs (2026-08-29)
 
 - Code evidence: SQLite and PostgreSQL Payables `_quantity()` boundaries now

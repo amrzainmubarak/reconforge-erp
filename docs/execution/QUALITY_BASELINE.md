@@ -1,5 +1,15 @@
 # Quality Baseline
 
+## E-1119 - Strict persisted Payables quantity decoding (2026-08-29)
+
+Persisted ordered, invoiced, and received Payables quantities now pass
+through a strict decoder before receipt-limit and three-way-match arithmetic.
+The focused Payables/API/application/PostgreSQL selection reports 40 passed
+and 1 capability-gated PostgreSQL skip; the full locked Python 3.11 regression
+exits 0 at 100% with declared capability-gated skips. This is persisted
+quantity-integrity evidence, not inventory completeness, posting, settlement,
+or production assurance.
+
 ## E-1118 - Strict Payables quantity inputs (2026-08-29)
 
 SQLite and PostgreSQL Payables quantity parsing now shares the strict exact

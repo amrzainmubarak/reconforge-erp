@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1031: Decode persisted Payables quantities through the strict boundary
+
+- **Date**: 2026-08-29
+- **Context**: Receipt-limit and three-way-match arithmetic used direct
+  `Decimal(str(...))` conversions for persisted ordered, invoiced, and
+  received quantities after strict ingress had completed.
+- **Decision**: Decode every persisted quantity used by those calculations
+  with an adapter-local `_stored_quantity()` wrapper around
+  `parse_exact_amount()`. In PostgreSQL, aggregate canonical text shadows
+  after decoding rather than coercing a numeric aggregate.
+- **Rationale**: Persisted financial and operational data must fail closed if
+  malformed or tampered, and both storage adapters must share the same exact
+  arithmetic boundary.
+- **Verification**: E-1119, focused Payables/API/application/PostgreSQL tests,
+  full locked Python 3.11 regression, Ruff, Mypy, and diff checks.
+- **Rollback**: Revert E-1119 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
 ### D-1030: Enforce strict quantity inputs in Payables adapters
 
 - **Date**: 2026-08-29

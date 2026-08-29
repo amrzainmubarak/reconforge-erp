@@ -1,5 +1,13 @@
 # Quality Baseline
 
+## E-1117 - Strict amount lexemes in duplicate detection (2026-08-29)
+
+The duplicate-detection amount fingerprint now uses the shared strict parser,
+so binary floating-point and scientific-notation text are rejected before
+canonical grouping. The focused duplicate-detection and strategy-contract
+selection passes 48/48. This is bounded matching-input quality evidence, not
+fraud detection, source authenticity, posting, or production assurance.
+
 ## E-1116 - Explicit financial input policy in Journal Controls (2026-08-29)
 
 Journal threshold parsing and stored journal amount evaluation now carry a

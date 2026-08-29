@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1117: Strict amount lexemes in duplicate detection (2026-08-29)
+
+- Code evidence: `reconforge.domain.duplicate_detection._canonical_amount()`
+  now calls the shared `parse_exact_amount()` and wraps invalid input in the
+  existing backend-neutral duplicate-detection error.
+- Test evidence: the focused duplicate-detection and strategy-contract
+  selection reports 48 passed. The regression covers Python binary
+  floating-point rejection and both scientific-notation text spellings.
+- Gate evidence: focused Ruff and Mypy pass; `git diff --check` is required
+  before commit and full local release gates remain separate evidence.
+- Boundary: this aligns the duplicate-fingerprint amount lexical policy with
+  strict financial ingress. It does not prove probabilistic matching, fraud
+  classification, source authenticity, posting, or production assurance.
+
 ## E-1116: Explicit financial input policy in Journal Controls (2026-08-29)
 
 - Code evidence: `journal_threshold()` and

@@ -1,5 +1,15 @@
 # Security Baseline
 
+## E-1117 Strict amount lexemes in duplicate detection (2026-08-29)
+
+- Duplicate-detection amount fingerprints now share the strict parser, which
+  rejects binary floating-point and scientific-notation text before values
+  enter the canonical grouping digest.
+- The focused duplicate-detection and strategy-contract selection passes
+  48/48, including both scientific-notation rejection cases. This is a
+  fail-closed input boundary, not source authentication, fraud prevention,
+  posting, or production-security assurance.
+
 ## E-1116 Explicit financial input policy in Journal Controls (2026-08-29)
 
 - Journal-control production adapters now name the strict financial input

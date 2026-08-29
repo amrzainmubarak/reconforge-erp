@@ -5,6 +5,22 @@
 
 ## Decisions
 
+### D-1029: Use the strict amount parser in duplicate detection
+
+- **Date**: 2026-08-29
+- **Context**: Duplicate detection rejected binary floats but parsed amount
+  values independently, allowing scientific-notation text to bypass the
+  shared strict financial-input lexical boundary.
+- **Decision**: Use `parse_exact_amount()` for duplicate-detection amount
+  fingerprint canonicalization and preserve the existing adapter error
+  contract.
+- **Rationale**: Financial matching fingerprints must not have a weaker or
+  divergent amount lexical policy than other current financial ingress paths.
+- **Verification**: E-1117, focused duplicate-detection/strategy-contract
+  tests, Ruff, Mypy, and diff checks.
+- **Rollback**: Revert E-1117 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
 ### D-1028: Name the financial input policy in Journal Controls
 
 - **Date**: 2026-08-29

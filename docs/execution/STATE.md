@@ -2,6 +2,17 @@
 
 Updated: 2026-08-29
 
+## E-1117 - Strict amount lexemes in duplicate detection (2026-08-29)
+
+- The bounded duplicate-detection strategy now uses the shared
+  `parse_exact_amount()` boundary before amount fingerprint canonicalization.
+  Binary floating-point, non-finite, malformed, and scientific-notation text
+  values fail closed without changing exact duplicate occurrence semantics.
+- The focused duplicate-detection and strategy-contract selection passes
+  48/48; full regression and release-quality gates remain required as final
+  evidence. This is bounded matching-input evidence, not fraud detection,
+  source authenticity, posting, or production assurance.
+
 ## E-1116 - Explicit financial input policy in Journal Controls (2026-08-29)
 
 - Journal threshold and stored journal-amount evaluation now accept a named

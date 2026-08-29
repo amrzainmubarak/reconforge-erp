@@ -12,8 +12,10 @@ import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Literal, cast
+
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 DuplicateSide = Literal["left", "right"]
 DuplicateGroupStatus = Literal["unique", "duplicate"]
@@ -181,16 +183,10 @@ def _projection(record: Mapping[str, object], fields: tuple[str, ...], amount_fi
 
 
 def _canonical_amount(value: object) -> str:
-    if isinstance(value, bool):
-        raise DuplicateDetectionError("Duplicate-detection amounts cannot be boolean values.")
-    if isinstance(value, float):
-        raise DuplicateDetectionError("Duplicate-detection amounts cannot use binary floating point.")
     try:
-        amount = value if isinstance(value, Decimal) else Decimal(str(value))
-    except (InvalidOperation, TypeError, ValueError) as exc:
+        amount = parse_exact_amount(value)
+    except InvalidAmountError as exc:
         raise DuplicateDetectionError("Duplicate-detection amounts must be finite exact values.") from exc
-    if not isinstance(amount, Decimal) or not amount.is_finite():
-        raise DuplicateDetectionError("Duplicate-detection amounts must be finite exact values.")
     normalized = Decimal("0") if amount == 0 else amount.normalize()
     return format(normalized, "f")
 

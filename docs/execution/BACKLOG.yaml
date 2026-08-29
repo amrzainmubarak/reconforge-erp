@@ -9,6 +9,22 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1117
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict amount lexemes in duplicate detection
+    status: completed
+    depends_on: [E-1116]
+    exit_evidence: >-
+      The bounded duplicate-detection strategy now uses the shared
+      parse_exact_amount boundary before canonical amount fingerprinting,
+      rejecting binary floating-point, non-finite, malformed, and
+      scientific-notation text inputs while preserving exact duplicate
+      occurrence semantics. The focused duplicate-detection and
+      strategy-contract selection passes 48/48; full regression, static,
+      security, package, and diff gates remain the required broader evidence.
+      This is bounded matching-input evidence, not fraud detection, source
+      authenticity, posting, or production assurance.
   - id: E-1116
     priority: P0
     area: financial-exactness

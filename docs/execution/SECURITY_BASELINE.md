@@ -1,5 +1,15 @@
 # Security Baseline
 
+## E-1116 Explicit financial input policy in Journal Controls (2026-08-29)
+
+- Journal-control production adapters now name the strict financial input
+  policy when parsing thresholds and persisted journal amounts; a float cannot
+  enter the new control path implicitly.
+- The focused journal/application/control selection passes 10/10 with one
+  capability-gated PostgreSQL skip, with strict rejection and explicit legacy
+  compatibility covered. This is a fail-closed input control, not posting,
+  source-authenticity, or production-security assurance.
+
 ## E-1115 Strict canonical Money in bank-control replay (2026-08-29)
 
 - Persisted bank-control reports fail closed when the tolerance or a decision

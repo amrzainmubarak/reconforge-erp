@@ -1127,4 +1127,5 @@ include docs/adr/0774-strict-postgres-ownership-change-money-hydration.md
 include docs/adr/0775-strict-canonical-api-and-cli-money-inputs.md
 include docs/adr/0776-current-supply-chain-claims-follow-zero-npm-sri-gap.md
 include docs/adr/0777-strict-canonical-bank-control-replay-money.md
+include docs/adr/0778-explicit-journal-financial-input-policy.md
 include docs/execution/CONTAINER_SECURITY_PY312_CANDIDATE_2026-08-28.md

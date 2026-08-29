@@ -1,5 +1,14 @@
 # Quality Baseline
 
+## E-1116 - Explicit financial input policy in Journal Controls (2026-08-29)
+
+Journal threshold parsing and stored journal amount evaluation now carry a
+named financial input policy. SQLite and PostgreSQL production adapters pass
+strict policy explicitly, while legacy float behavior is tested only behind an
+explicit legacy selection. The focused journal/application/control selection
+passes 10/10 with one capability-gated PostgreSQL skip. This is bounded input
+policy evidence, not statutory posting or production assurance.
+
 ## E-1115 - Strict canonical Money in bank-control replay (2026-08-29)
 
 The bank-control replay verifier now requires canonical Money serialization for

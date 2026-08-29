@@ -2,6 +2,17 @@
 
 Updated: 2026-08-29
 
+## E-1116 - Explicit financial input policy in Journal Controls (2026-08-29)
+
+- Journal threshold and stored journal-amount evaluation now accept a named
+  `FinancialInputPolicy`; SQLite and PostgreSQL production adapters pass the
+  strict policy explicitly before creating control exceptions.
+- Legacy float behavior remains available only when the domain caller chooses
+  the legacy policy explicitly. The focused journal/application/control
+  selection passes 10/10 with one capability-gated PostgreSQL skip; no schema
+  or migration changed. This is input-policy evidence, not statutory posting
+  or production assurance.
+
 ## E-1115 - Strict canonical Money in bank-control replay (2026-08-29)
 
 - Bank-control report verification now restores `amount_tolerance` and every

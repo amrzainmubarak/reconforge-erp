@@ -2,6 +2,20 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1116: Explicit financial input policy in Journal Controls (2026-08-29)
+
+- Code evidence: `journal_threshold()` and
+  `evaluate_journal_policies()` accept a named `FinancialInputPolicy`; the
+  SQLite and PostgreSQL journal adapters explicitly pass
+  `STRICT_FINANCIAL_INPUT_POLICY`.
+- Test evidence: the focused journal/application/control selection passes
+  10/10 with one capability-gated PostgreSQL skip. It covers strict float
+  refusal and explicit legacy warning/compatibility behavior.
+- Gate evidence: focused Ruff, Mypy, and `git diff --check` pass.
+- Boundary: this prevents implicit financial-policy selection in the reviewed
+  journal-control production adapters. It does not prove statutory posting,
+  source authenticity, provider behavior, or production assurance.
+
 ## E-1115: Strict canonical Money in bank-control replay (2026-08-29)
 
 - Code evidence: `verify_bank_statement_payload()` now applies

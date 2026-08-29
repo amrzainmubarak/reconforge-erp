@@ -9,6 +9,21 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1116
+    priority: P0
+    area: financial-exactness
+    title: Name the financial input policy in Journal Controls
+    status: completed
+    depends_on: [E-1115]
+    exit_evidence: >-
+      Journal threshold and stored journal amount evaluation now accept a
+      named FinancialInputPolicy, and SQLite/PostgreSQL production adapters
+      pass strict policy explicitly. Legacy float behavior remains available
+      only through an explicit domain selection. The focused
+      journal/application/control selection passes 10/10 with one
+      capability-gated PostgreSQL skip; Ruff, Mypy, and diff checks pass. No
+      schema or migration changed. This is bounded input-policy evidence, not
+      statutory posting or production assurance.
   - id: E-1115
     priority: P0
     area: financial-exactness

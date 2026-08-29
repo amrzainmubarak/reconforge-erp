@@ -5,6 +5,24 @@
 
 ## Decisions
 
+### D-1028: Name the financial input policy in Journal Controls
+
+- **Date**: 2026-08-29
+- **Context**: Journal threshold and stored journal amount parsing relied on
+  the strict parser default without carrying the policy as an explicit
+  contract through the domain and persistence adapters.
+- **Decision**: Add a named `FinancialInputPolicy` argument to the pure journal
+  policy functions and pass strict policy explicitly from SQLite and
+  PostgreSQL adapters. Permit legacy behavior only through an explicit domain
+  selection for compatibility callers.
+- **Rationale**: Financial control behavior must be visible in the call graph,
+  fail closed for new production paths, and remain deliberately reversible
+  during the deprecation window.
+- **Verification**: E-1116, focused journal/application/control tests, Ruff,
+  Mypy, and diff checks.
+- **Rollback**: Revert E-1116 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
 ### D-1027: Enforce strict canonical Money in bank-control replay
 
 - **Date**: 2026-08-29

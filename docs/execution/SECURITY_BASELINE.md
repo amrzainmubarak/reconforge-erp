@@ -5,10 +5,11 @@
 - Journal-control production adapters now name the strict financial input
   policy when parsing thresholds and persisted journal amounts; a float cannot
   enter the new control path implicitly.
-- The focused journal/application/control selection passes 10/10 with one
-  capability-gated PostgreSQL skip, with strict rejection and explicit legacy
-  compatibility covered. This is a fail-closed input control, not posting,
-  source-authenticity, or production-security assurance.
+- The focused journal/application/control selection collected 10 tests: 9
+  passed and 1 capability-gated PostgreSQL test was skipped, with strict
+  rejection and explicit legacy compatibility covered. This is a fail-closed
+  input control, not posting, source-authenticity, or production-security
+  assurance.
 
 ## E-1115 Strict canonical Money in bank-control replay (2026-08-29)
 

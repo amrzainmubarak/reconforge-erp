@@ -6,8 +6,9 @@ Journal threshold parsing and stored journal amount evaluation now carry a
 named financial input policy. SQLite and PostgreSQL production adapters pass
 strict policy explicitly, while legacy float behavior is tested only behind an
 explicit legacy selection. The focused journal/application/control selection
-passes 10/10 with one capability-gated PostgreSQL skip. This is bounded input
-policy evidence, not statutory posting or production assurance.
+collects 10 tests: 9 passed and 1 capability-gated PostgreSQL test was
+skipped. This is bounded input policy evidence, not statutory posting or
+production assurance.
 
 ## E-1115 - Strict canonical Money in bank-control replay (2026-08-29)
 

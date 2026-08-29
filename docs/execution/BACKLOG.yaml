@@ -20,10 +20,10 @@ tasks:
       named FinancialInputPolicy, and SQLite/PostgreSQL production adapters
       pass strict policy explicitly. Legacy float behavior remains available
       only through an explicit domain selection. The focused
-      journal/application/control selection passes 10/10 with one
-      capability-gated PostgreSQL skip; Ruff, Mypy, and diff checks pass. No
-      schema or migration changed. This is bounded input-policy evidence, not
-      statutory posting or production assurance.
+      journal/application/control selection collected 10 tests: 9 passed and
+      1 capability-gated PostgreSQL test was skipped; Ruff, Mypy, and diff
+      checks pass. No schema or migration changed. This is bounded
+      input-policy evidence, not statutory posting or production assurance.
   - id: E-1115
     priority: P0
     area: financial-exactness

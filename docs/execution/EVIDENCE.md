@@ -8,9 +8,10 @@ This file records commands and observed results. It does not convert a dirty wor
   `evaluate_journal_policies()` accept a named `FinancialInputPolicy`; the
   SQLite and PostgreSQL journal adapters explicitly pass
   `STRICT_FINANCIAL_INPUT_POLICY`.
-- Test evidence: the focused journal/application/control selection passes
-  10/10 with one capability-gated PostgreSQL skip. It covers strict float
-  refusal and explicit legacy warning/compatibility behavior.
+- Test evidence: the focused journal/application/control selection collected
+  10 tests: 9 passed and 1 capability-gated PostgreSQL test was skipped. It
+  covers strict float refusal and explicit legacy warning/compatibility
+  behavior.
 - Gate evidence: focused Ruff, Mypy, and `git diff --check` pass.
 - Boundary: this prevents implicit financial-policy selection in the reviewed
   journal-control production adapters. It does not prove statutory posting,

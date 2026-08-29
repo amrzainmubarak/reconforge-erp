@@ -9,9 +9,9 @@ Updated: 2026-08-29
   strict policy explicitly before creating control exceptions.
 - Legacy float behavior remains available only when the domain caller chooses
   the legacy policy explicitly. The focused journal/application/control
-  selection passes 10/10 with one capability-gated PostgreSQL skip; no schema
-  or migration changed. This is input-policy evidence, not statutory posting
-  or production assurance.
+  selection collected 10 tests: 9 passed and 1 capability-gated PostgreSQL
+  test was skipped; no schema or migration changed. This is input-policy
+  evidence, not statutory posting or production assurance.
 
 ## E-1115 - Strict canonical Money in bank-control replay (2026-08-29)
 

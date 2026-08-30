@@ -23,9 +23,14 @@ tasks:
       capability-gated PostgreSQL skip; the full locked Python 3.11
       regression exits 0 at 100% with declared capability-gated skips, and
       the local static/security/package gates pass with the unpublished local
-      package explicitly excluded from PyPI lookup. This is bounded
-      input-integrity evidence, not quantity-unit governance, tax correctness,
-      posting, settlement, provider authenticity, or production assurance.
+      package explicitly excluded from PyPI lookup. A disposable local
+      PostgreSQL 16 runtime with a non-privileged application role ran the
+      four-file Payables/Receivables PostgreSQL and HTTP selection at exit 0;
+      the HTTP tests inject synthetic authenticated principals and scope
+      snapshots. This is bounded input-integrity evidence, not quantity-unit
+      governance, tax correctness, posting, settlement, provider authenticity,
+      hosted or cross-version backend parity, external identity, or production
+      assurance.
   - id: E-1119
     priority: P0
     area: financial-exactness

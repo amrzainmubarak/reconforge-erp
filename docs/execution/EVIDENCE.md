@@ -17,9 +17,17 @@ This file records commands and observed results. It does not convert a dirty wor
   package build produces the sdist and wheel; `pip-audit` reports no known
   vulnerabilities, while explicitly noting that unpublished local
   `reconforge-erp 0.7.1` cannot be audited on PyPI.
+- Runtime evidence: a disposable local PostgreSQL 16 runtime with a
+  non-privileged application role ran the four-file Payables/Receivables
+  PostgreSQL and HTTP selection at exit 0. It covers the existing canonical
+  lifecycle, scope, and exact-value paths; the HTTP tests inject synthetic
+  authenticated principals and scope snapshots rather than an external
+  identity provider. The isolated test container was removed after the gate;
+  no pre-existing containers were modified.
 - Boundary: this is a local/tenant adapter input-integrity control. It does
   not prove quantity-unit governance, tax correctness, statutory posting,
-  settlement, provider behavior, or production assurance.
+  settlement, provider behavior, hosted or cross-version backend parity,
+  external identity, or production assurance.
 
 ## E-1119: Strict persisted Payables quantity decoding (2026-08-29)
 

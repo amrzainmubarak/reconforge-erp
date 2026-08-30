@@ -9,9 +9,12 @@
   capability-gated PostgreSQL skip; the full locked Python 3.11 regression
   exits 0 at 100% with declared capability-gated skips. Bandit exits 0, and
   `pip-audit` reports no known vulnerabilities while explicitly excluding the
-  unpublished local package from PyPI lookup. This is a fail-closed input
-  control, not tax, posting, settlement, provider, or production-security
-  assurance.
+  unpublished local package from PyPI lookup. A disposable local PostgreSQL
+  16 runtime with a non-privileged application role also ran the four-file
+  Payables/Receivables PostgreSQL and HTTP selection at exit 0. The HTTP
+  fixtures inject synthetic authenticated principals and scope snapshots, so
+  this is a fail-closed input control rather than external-identity, hosted,
+  tax, posting, settlement, provider, or production-security assurance.
 
 ## E-1119 Strict persisted Payables quantity decoding (2026-08-29)
 

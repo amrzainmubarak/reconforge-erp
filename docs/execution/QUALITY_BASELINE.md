@@ -7,8 +7,12 @@ the PostgreSQL adapter before persistence and line-total arithmetic. The
 focused Receivables/API/PostgreSQL selection reports 19 passed and 1
 capability-gated PostgreSQL skip. The full locked Python 3.11 regression
 exits 0 at 100% with declared capability-gated skips; all-code Ruff and Mypy
-also pass. This is bounded input-integrity evidence, not quantity-unit
-governance, tax correctness, posting, settlement, or production assurance.
+also pass. A disposable local PostgreSQL 16 runtime with a non-privileged
+application role ran the four-file Payables/Receivables PostgreSQL and HTTP
+selection at exit 0; its HTTP fixtures inject synthetic authenticated
+principals and scope snapshots. This is bounded input-integrity evidence, not
+quantity-unit governance, tax correctness, posting, settlement, hosted or
+cross-version backend parity, external identity, or production assurance.
 
 ## E-1119 - Strict persisted Payables quantity decoding (2026-08-29)
 

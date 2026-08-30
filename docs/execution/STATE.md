@@ -12,8 +12,14 @@ Updated: 2026-08-30
   exits 0 at 100% with declared capability-gated skips. Local Ruff, Mypy,
   Bandit, dependency-audit, and package-build gates also pass, with the local
   package explicitly not audited by PyPI because it is unpublished. This is
-  bounded input-integrity evidence, not quantity-unit governance, tax
-  correctness, statutory posting, settlement, or production assurance.
+  bounded input-integrity evidence. A disposable local PostgreSQL 16 runtime
+  with a non-privileged application role also ran the four-file
+  Payables/Receivables PostgreSQL and HTTP selection at exit 0. Its HTTP tests
+  use synthetic authenticated principals and scope snapshots; the test
+  container was removed afterward without touching pre-existing containers.
+  This does not prove quantity-unit governance, tax correctness, statutory
+  posting, settlement, hosted or cross-version backend parity, external
+  identity, or production assurance.
 
 ## E-1119 - Strict persisted Payables quantity decoding (2026-08-29)
 

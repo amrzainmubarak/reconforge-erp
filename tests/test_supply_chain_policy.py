@@ -357,6 +357,69 @@ def _mutate_release_post_push_binding(root: Path) -> None:
     )
 
 
+def _mutate_release_unpinned_action(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+            "actions/setup-node@v7",
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_clean_tree_check(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            'test -z "$(git status --porcelain=v1 --untracked-files=all)"',
+            '# test -z "$(git status --porcelain=v1 --untracked-files=all)"',
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_tag_package_alignment(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            'test "$GITHUB_REF_NAME" = "v${version}"',
+            'test "$GITHUB_REF_NAME" = "${version}"',
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_signed_tag_verification(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(".verification.verified", ".verification.unavailable"),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_sbom_attestation(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "sbom-path: release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.cdx.json",
+            "# sbom path intentionally removed",
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_provenance_verification(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "--bundle release/image-sbom.sigstore.json >/dev/null",
+            "--bundle release/image-sbom-disabled.sigstore.json >/dev/null",
+        ),
+        encoding="utf-8",
+    )
+
+
 @pytest.mark.parametrize(
     "mutator",
     [
@@ -386,6 +449,27 @@ def test_policy_validator_rejects_resolution_or_gate_drift(
     mutator(project)
 
     with pytest.raises(SupplyChainPolicyError):
+        POLICY_MODULE.validate_project(project, date(2026, 7, 26))
+
+
+@pytest.mark.parametrize(
+    ("mutator", "message"),
+    [
+        (_mutate_release_unpinned_action, "not pinned to a full SHA"),
+        (_mutate_release_clean_tree_check, "clean tree check"),
+        (_mutate_release_tag_package_alignment, "tag/package version alignment"),
+        (_mutate_release_signed_tag_verification, "signed annotated tag verification"),
+        (_mutate_release_sbom_attestation, "SBOM attestation"),
+        (_mutate_release_provenance_verification, "missing bundle"),
+    ],
+)
+def test_release_workflow_guard_rejects_essential_release_gate_drift(
+    tmp_path: Path, mutator: Callable[[Path], None], message: str
+) -> None:
+    project = _copy_policy_project(tmp_path)
+    mutator(project)
+
+    with pytest.raises(SupplyChainPolicyError, match=message):
         POLICY_MODULE.validate_project(project, date(2026, 7, 26))
 
 

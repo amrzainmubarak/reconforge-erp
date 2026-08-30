@@ -443,6 +443,22 @@ test("discloses the bounded synthetic workspace", async () => {
   expect(screen.getByText("Only workspace in this preview")).toBeVisible();
 });
 
+test("marks bundled Studio fixtures as synthetic rather than live operational evidence in both locales", async () => {
+  render(<App />);
+  await controlRoomHeading();
+
+  const provenance = screen.getByRole("status", { name: /Data provenance/ });
+  expect(provenance).toHaveAttribute("data-provenance-state", "synthetic_demo");
+  expect(provenance).toHaveAttribute("data-operational-evidence", "false");
+  expect(within(provenance).getByText("Synthetic demo — not live operational evidence")).toBeVisible();
+  expect(within(provenance).getByText("bundled_local_fixture")).toBeVisible();
+
+  fireEvent.click(screen.getByTestId("locale-toggle"));
+
+  expect(await screen.findByText("عرض اصطناعي — وليس دليلًا تشغيليًا حيًا")).toBeVisible();
+  expect(document.documentElement).toHaveAttribute("dir", "rtl");
+});
+
 test("renders explicit empty states for an empty synthetic snapshot", async () => {
   vi.stubGlobal(
     "fetch",

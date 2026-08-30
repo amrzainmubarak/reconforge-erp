@@ -7,7 +7,7 @@ import { NoticesPanel, ProfilePanel, QuickPanel, Topbar, type OpenPanel } from "
 import { loadStudioOverview } from "./data";
 import { translate, type MessageKey } from "./i18n";
 import { usePreferences } from "./preferences";
-import type { StudioOverview, StudioPage, ThemePreference } from "./types";
+import type { StudioOverviewWithProvenance, StudioPage, ThemePreference } from "./types";
 
 const themes: ThemePreference[] = ["system", "light", "dark"];
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
@@ -57,7 +57,7 @@ function pathForPage(page: StudioPage): string {
 export default function App() {
   const preferences = usePreferences();
   const t = useCallback((key: MessageKey) => translate(preferences.locale, key), [preferences.locale]);
-  const [data, setData] = useState<StudioOverview | null>(null);
+  const [data, setData] = useState<StudioOverviewWithProvenance | null>(null);
   const [error, setError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

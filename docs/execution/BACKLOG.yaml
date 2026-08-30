@@ -9439,3 +9439,20 @@ tasks:
       refusal. A schema/digest-bound report is packaged. External IdP/SSO/SCIM,
       distributed revocation, HA/DR, legal hold, WORM, regulated review, and
       production IAM remain open.
+  - id: E-1121
+    priority: P0
+    area: persistence_isolation_and_evidence
+    title: Close matching persistence policy bypass and PostgreSQL live-test residue
+    status: completed
+    depends_on: []
+    exit_evidence: >-
+      New matching writes require strict-v2 at the application and SQLite
+      persistence boundaries; historical idempotent records retain explicit
+      replay compatibility. A fresh PostgreSQL 16 synthetic matrix passes with
+      zero test-owned tenant/data residue and all non-internal triggers enabled
+      after cleanup. Module readiness, static release-policy, and Studio
+      provenance slices are covered by focused tests. Full local Python,
+      static/security/dependency/package gates, Studio typecheck/tests/build,
+      and Docker doctor all pass. Hosted CI, multi-host reliability, providers,
+      independent security review, certification, and production claims remain
+      open and must not be inferred from this local evidence.

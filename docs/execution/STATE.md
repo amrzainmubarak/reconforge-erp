@@ -11207,3 +11207,29 @@ evidence remain open. GitHub publication remains deferred by owner policy.
 - Boundary: one disposable Docker host and synthetic tenants/credentials only;
   no external IdP/SSO/SCIM, distributed revocation, HA/DR, legal hold, WORM,
   regulated review, or production IAM claim follows.
+
+## E-1121 — P0 persistence, PostgreSQL hygiene, and evidence-bound Studio presentation (2026-08-30; D-1033/D-1034)
+
+- Commits `57d66bd4`, `459ce612`, `09ad98bc`, `e65249af`, `324f8cf1`, and
+  `cfc67208` close bounded local gaps in matching persistence, PostgreSQL
+  integration isolation, module promotion checks, static release-policy
+  checks, and Studio source disclosure. They are local commits only; no push,
+  release, or public readiness claim was made.
+- New matching jobs reject legacy financial-input policy at both the application
+  and SQLite persistence boundaries before a job or workspace is created.
+  Existing idempotent historical records preserve explicit legacy replay
+  behavior, with non-sensitive policy-use metadata surfaced at the application
+  result boundary.
+- A disposable PostgreSQL 16 run passed the focused RLS/matching/payables/
+  receivables/durable-job matrix. Direct residual queries returned zero rows
+  across the test-owned tenant, reconciliation, audit, AP, AR, and durable-job
+  tables, and no non-internal trigger remained disabled. The 1M/10M durable
+  tiers were intentionally not opted in.
+- Full local Python regression exited 0; Ruff, Mypy, Bandit, pip-audit, wheel/
+  sdist build, static supply-chain policy validation, Studio typecheck,
+  77/77 Studio tests, and the production Studio build all passed. A Docker
+  image built from this tree and completed `reconforge doctor` successfully.
+- Boundary: this strengthens local/synthetic evidence only. It does not prove
+  hosted CI execution, live connectors or providers, multi-host HA/DR,
+  production security, independent penetration testing, regulatory compliance,
+  certification, customer outcomes, or global readiness.

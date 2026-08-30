@@ -12752,3 +12752,45 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Rollback**: Remove the disposable labelled container after evidence capture
   and revert the report/schema/test/manifest/docs references. Existing runtime
   code and prior evidence remain unchanged.
+
+### D-1033: Treat the matching policy as a persistence boundary, not only an application convention
+
+- **Date**: 2026-08-30
+- **Context**: The application facade rejected legacy-v1 policy for a new
+  matching job, but a direct SQLite adapter caller could still serialize
+  legacy-v1 into a new `match_jobs` row. That made the new-write invariant
+  dependent on a caller choosing the facade.
+- **Decision**: Resolve the deterministic idempotency target before calling
+  `ensure_workspace`. If no persisted job exists, require strict-v2 before any
+  workspace/job creation. Existing idempotent records retain their persisted
+  policy for historical compatibility; result objects surface a stable,
+  non-sensitive policy-use observation.
+- **Verification**: Focused application/financial/SQLite matching tests,
+  adapter test proving a rejected legacy write leaves workspace/job counts
+  unchanged, Ruff, Mypy, and the full local Python suite.
+- **Compatibility**: Normal strict callers are unchanged. Intentional behavior
+  change: a raw adapter attempt to create a new legacy-v1 job now fails closed.
+  Existing historical jobs remain readable/replayable under their persisted
+  policy and idempotency identity.
+- **Rollback**: Revert `09ad98bc`; no migration or persisted-data rewrite is
+  required.
+
+### D-1034: Make disposable PostgreSQL integration cleanup scoped, transactional, and observable
+
+- **Date**: 2026-08-30
+- **Context**: Several live tests used fixed tenant identifiers and suppressed
+  cleanup errors. A complete local matrix left synthetic tenants, audit rows,
+  and durable-job evidence behind, invalidating clean-boot confidence.
+- **Decision**: Generate per-test tenant identifiers and use an admin-only
+  cleanup plan that deletes child-first rows only for explicit tenant IDs.
+  It never uses `TRUNCATE` or broad `CASCADE`; immutable triggers are suspended
+  only inside the cleanup transaction, deferred constraints are checked before
+  re-enabling triggers, and residual rows fail the test.
+- **Verification**: Unit contracts for scoped cleanup and rollback behavior;
+  a fresh PostgreSQL 16 focused matrix including 100k durable-job effects;
+  direct post-run counts of test-owned tables all zero; direct trigger query
+  found no disabled non-internal trigger.
+- **Compatibility**: Test-only behavior. No production schema, production
+  cleanup path, tenant data, or operator database is touched.
+- **Rollback**: Revert `459ce612` and restore the previous test cleanup. This
+  is not recommended because it reintroduces silent residue risk.

@@ -22191,3 +22191,43 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
     no live vendor interoperability, credential-vault assurance, distributed
     registry consistency, accounting posting, HA/DR, or production readiness
     follows.
+
+## E-1121 — P0 persistence, PostgreSQL hygiene, and evidence-bound Studio presentation (2026-08-30)
+
+- **Scope and commits:** `57d66bd4` boots the matching PostgreSQL live test
+  with the ledger/audit dependency it actually writes; `459ce612` introduces
+  admin-only, tenant-scoped PostgreSQL test cleanup; `09ad98bc` requires
+  strict-v2 policy for new matching writes at the application and SQLite
+  adapter boundaries; `e65249af` gates beta/stable module promotion on
+  readiness evidence; `324f8cf1` tests the static signed-release contract;
+  `cfc67208` makes bundled Studio fixtures visibly synthetic.
+- **Focused financial verification:** the matching-policy regression command
+  covering financial policy, application matching, SQLite matching-rule JSON,
+  platform determinism, and PostgreSQL writer contracts exited 0. Ruff and
+  Mypy passed. Expected legacy compatibility warnings remain confined to
+  explicit historical/binary-float compatibility coverage.
+- **Fresh PostgreSQL verification:** a new disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container with a non-superuser application role ran
+  `test_postgres_foundation.py`, `test_postgres_matching_application.py`,
+  `test_postgres_payables.py`, `test_postgres_receivables.py`, and
+  `test_postgres_durable_jobs.py` successfully. The 1M/10M durable profiles
+  were skipped only because their explicit opt-in was absent. Subsequent
+  direct count queries returned zero for all test-owned data tables, and a
+  trigger-state query returned an empty disabled-trigger set. The disposable
+  container was then removed.
+- **Integrated local validation:** full Python `pytest -q --tb=short -ra`
+  exited 0. Ruff, Mypy, Bandit, pip-audit, package build, and
+  `.github/scripts/validate_supply_chain_policy.py --as-of 2026-07-26` exited
+  0; the policy report recorded zero active exceptions and no known audited
+  dependency vulnerabilities. The local project distribution itself remains
+  unauditable by PyPI lookup because it is not published there.
+- **Studio and packaging verification:** Studio typecheck passed; Vitest
+  passed 15 files / 77 tests; the production build passed. Browser QA confirmed
+  the provenance banner in English and Arabic RTL. Docker image
+  `reconforge:codex-cfc67208` built successfully and `reconforge doctor`
+  passed inside it with zero validation errors and ten intentional sample-data
+  warnings.
+- **Boundary:** no external service, live customer dataset, GitHub-hosted run,
+  provider integration, security assessment, release signature, or production
+  deployment was performed or inferred from this evidence.

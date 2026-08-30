@@ -1,5 +1,18 @@
 # Security Baseline
 
+## E-1120 Strict Receivables quantity inputs (2026-08-29)
+
+- SQLite Receivables rejects binary floating-point, scientific-notation,
+  non-finite, malformed, and missing invoice quantities before persistence or
+  line-total arithmetic through the shared strict parser.
+- The focused Receivables/API/PostgreSQL selection reports 19 passed and 1
+  capability-gated PostgreSQL skip; the full locked Python 3.11 regression
+  exits 0 at 100% with declared capability-gated skips. Bandit exits 0, and
+  `pip-audit` reports no known vulnerabilities while explicitly excluding the
+  unpublished local package from PyPI lookup. This is a fail-closed input
+  control, not tax, posting, settlement, provider, or production-security
+  assurance.
+
 ## E-1119 Strict persisted Payables quantity decoding (2026-08-29)
 
 - Receipt-limit and three-way-match arithmetic rejects malformed, non-finite,

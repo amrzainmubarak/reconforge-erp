@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-08-29"
+updated_at: "2026-08-30"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -9,6 +9,23 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: E-1120
+    priority: P0
+    area: financial-exactness
+    title: Enforce strict Receivables quantity inputs
+    status: completed
+    depends_on: [E-1119]
+    exit_evidence: >-
+      SQLite Receivables invoice quantity validation now uses the shared
+      parse_exact_amount boundary, aligning with PostgreSQL before line
+      persistence and line-total arithmetic. The focused
+      Receivables/API/PostgreSQL selection reports 19 passed and 1
+      capability-gated PostgreSQL skip; the full locked Python 3.11
+      regression exits 0 at 100% with declared capability-gated skips, and
+      the local static/security/package gates pass with the unpublished local
+      package explicitly excluded from PyPI lookup. This is bounded
+      input-integrity evidence, not quantity-unit governance, tax correctness,
+      posting, settlement, provider authenticity, or production assurance.
   - id: E-1119
     priority: P0
     area: financial-exactness

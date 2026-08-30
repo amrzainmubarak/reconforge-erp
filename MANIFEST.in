@@ -1131,4 +1131,5 @@ include docs/adr/0778-explicit-journal-financial-input-policy.md
 include docs/adr/0779-strict-duplicate-detection-amount-lexemes.md
 include docs/adr/0780-strict-payables-quantity-inputs.md
 include docs/adr/0781-strict-payables-persisted-quantity-decoding.md
+include docs/adr/0782-strict-receivables-quantity-inputs.md
 include docs/execution/CONTAINER_SECURITY_PY312_CANDIDATE_2026-08-28.md

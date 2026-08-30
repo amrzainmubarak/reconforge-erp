@@ -1,5 +1,15 @@
 # Quality Baseline
 
+## E-1120 - Strict Receivables quantity inputs (2026-08-29)
+
+SQLite Receivables invoice quantities now share the strict exact parser with
+the PostgreSQL adapter before persistence and line-total arithmetic. The
+focused Receivables/API/PostgreSQL selection reports 19 passed and 1
+capability-gated PostgreSQL skip. The full locked Python 3.11 regression
+exits 0 at 100% with declared capability-gated skips; all-code Ruff and Mypy
+also pass. This is bounded input-integrity evidence, not quantity-unit
+governance, tax correctness, posting, settlement, or production assurance.
+
 ## E-1119 - Strict persisted Payables quantity decoding (2026-08-29)
 
 Persisted ordered, invoiced, and received Payables quantities now pass

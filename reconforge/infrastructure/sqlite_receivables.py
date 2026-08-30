@@ -12,7 +12,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Sequence
 from datetime import date, timedelta
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from reconforge.application.receivables import (
@@ -39,6 +39,7 @@ from reconforge.platform.common import (
     require_permission,
     rows_to_dicts,
 )
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 CUSTOMER_STATUSES = {"Draft", "Active", "Suspended", "Closed"}
 INVOICE_STATUSES = {"Draft", "Submitted", "Approved", "PartiallyPaid", "Paid", "Cancelled"}
@@ -948,10 +949,10 @@ def _date(value: str, *, field: str) -> date:
 
 def _quantity(value: object, *, field: str) -> str:
     try:
-        quantity = Decimal(str(value).strip())
-    except (InvalidOperation, ValueError, TypeError) as exc:
+        quantity = parse_exact_amount(value)
+    except InvalidAmountError as exc:
         raise PlatformError(f"Invalid quantity in field '{field}'.") from exc
-    if not quantity.is_finite() or quantity <= 0:
+    if quantity <= 0:
         raise PlatformError(f"Quantity in field '{field}' must be finite and positive.")
     return format(quantity.normalize(), "f")
 

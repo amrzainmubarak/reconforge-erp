@@ -1,6 +1,19 @@
 ﻿# Execution State
 
-Updated: 2026-08-29
+Updated: 2026-08-30
+
+## E-1120 - Strict Receivables quantity inputs (2026-08-29)
+
+- SQLite Receivables invoice quantity validation now uses the shared
+  `parse_exact_amount()` boundary, matching the existing PostgreSQL adapter
+  before invoice-line persistence and line-total arithmetic.
+- The focused Receivables/API/PostgreSQL selection reports 19 passed and 1
+  capability-gated PostgreSQL skip; the full locked Python 3.11 regression
+  exits 0 at 100% with declared capability-gated skips. Local Ruff, Mypy,
+  Bandit, dependency-audit, and package-build gates also pass, with the local
+  package explicitly not audited by PyPI because it is unpublished. This is
+  bounded input-integrity evidence, not quantity-unit governance, tax
+  correctness, statutory posting, settlement, or production assurance.
 
 ## E-1119 - Strict persisted Payables quantity decoding (2026-08-29)
 

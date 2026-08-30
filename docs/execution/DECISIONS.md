@@ -5,6 +5,23 @@
 
 ## Decisions
 
+### D-1032: Align SQLite Receivables quantity parsing with PostgreSQL
+
+- **Date**: 2026-08-29
+- **Context**: SQLite Receivables converted invoice quantities with
+  `Decimal(str(...))`, while the PostgreSQL adapter already enforced the
+  strict exact-input policy.
+- **Decision**: Route SQLite Receivables quantity validation through
+  `parse_exact_amount()` and preserve its existing positive canonical text
+  and error behavior.
+- **Rationale**: Equivalent local and tenant-scoped workflows must reject the
+  same unsafe quantity representations before persistence and arithmetic.
+- **Verification**: E-1120, the focused Receivables/API/PostgreSQL test
+  selection, full locked Python 3.11 regression, local Ruff/Mypy/Bandit/
+  dependency-audit/package gates, and diff checks.
+- **Rollback**: Revert E-1120 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
 ### D-1031: Decode persisted Payables quantities through the strict boundary
 
 - **Date**: 2026-08-29

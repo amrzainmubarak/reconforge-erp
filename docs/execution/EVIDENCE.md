@@ -2,6 +2,25 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1120: Strict Receivables quantity inputs (2026-08-29)
+
+- Code evidence: SQLite Receivables `_quantity()` now calls
+  `parse_exact_amount()` before canonicalization and line-total arithmetic,
+  aligning it with the PostgreSQL adapter.
+- Test evidence: the focused Receivables/API/PostgreSQL selection reports 19
+  passed and 1 capability-gated PostgreSQL skip, including binary-floating,
+  scientific-notation, non-finite, missing, and existing invoice workflow
+  cases. The full locked Python 3.11 regression exits 0 at 100% with declared
+  capability-gated skips.
+- Gate evidence: local all-code Ruff passes; Mypy reports no issues in 540
+  source files; Bandit exits 0 with existing comment/`nosec` warnings; the
+  package build produces the sdist and wheel; `pip-audit` reports no known
+  vulnerabilities, while explicitly noting that unpublished local
+  `reconforge-erp 0.7.1` cannot be audited on PyPI.
+- Boundary: this is a local/tenant adapter input-integrity control. It does
+  not prove quantity-unit governance, tax correctness, statutory posting,
+  settlement, provider behavior, or production assurance.
+
 ## E-1119: Strict persisted Payables quantity decoding (2026-08-29)
 
 - Code evidence: SQLite and PostgreSQL receipt-limit and three-way-match

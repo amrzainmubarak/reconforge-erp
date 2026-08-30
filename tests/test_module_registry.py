@@ -10,7 +10,14 @@ from typer.testing import CliRunner
 from reconforge.auth import RoleRepository
 from reconforge.cli import app
 from reconforge.db import connect, run_migrations
-from reconforge.modules import ModuleDescriptor, get_module, list_modules, registry_payload, validate_registry
+from reconforge.modules import (
+    ModuleDescriptor,
+    get_module,
+    list_modules,
+    registry_payload,
+    validate_module_readiness,
+    validate_registry,
+)
 
 runner = CliRunner()
 
@@ -37,6 +44,7 @@ def test_registry_payload_is_versioned_and_serialization_safe() -> None:
     assert isinstance(modules, list)
     assert modules
     assert all(record["maturity"] == "experimental" for record in modules)
+    assert all("readiness" not in record for record in modules)
     json.dumps(payload)
 
 
@@ -88,10 +96,149 @@ def test_registry_rejects_duplicate_ids() -> None:
 def test_descriptor_rejects_planned_runtime_modules_and_unsafe_evidence_paths() -> None:
     source = get_module("platform.core").model_dump()
 
+    legacy = ModuleDescriptor.model_validate({key: value for key, value in source.items() if key != "readiness"})
+    assert legacy.readiness is None
     with pytest.raises(ValidationError):
         ModuleDescriptor.model_validate({**source, "maturity": "planned"})
     with pytest.raises(ValidationError):
         ModuleDescriptor.model_validate({**source, "test_evidence": ("../secret.txt",)})
+    with pytest.raises(ValidationError, match="readiness evidence paths"):
+        ModuleDescriptor.model_validate(
+            {**source, "readiness": {"benchmark_evidence": ("../secret.txt",)}}
+        )
+
+
+def _write_readiness_evidence(repository_root: Path, *relative_paths: str) -> None:
+    for relative_path in relative_paths:
+        path = repository_root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("synthetic readiness evidence\n", encoding="utf-8")
+
+
+def _promoted_platform_descriptor(*, maturity: str, readiness: dict[str, object] | None = None) -> ModuleDescriptor:
+    source = get_module("platform.core").model_dump()
+    return ModuleDescriptor.model_validate({**source, "maturity": maturity, "readiness": readiness})
+
+
+def _promotion_migrations() -> frozenset[int]:
+    return frozenset({1, 2, 3, 4, 5})
+
+
+def _complete_readiness_evidence(repository_root: Path, *, include_operational: bool = False) -> dict[str, object]:
+    evidence: dict[str, object] = {
+        "accountable_owner": "financial-controls-team",
+        "threat_model_evidence": ("docs/security/platform-core-threat-model.md",),
+        "rollback_evidence": ("docs/runbooks/platform-core-rollback.md",),
+        "test_matrix_evidence": ("tests/test_platform_core_readiness.py",),
+        "benchmark_evidence": ("benchmarks/platform-core-readiness.json",),
+    }
+    if include_operational:
+        evidence["operational_evidence"] = ("docs/runbooks/platform-core-operations.md",)
+    _write_readiness_evidence(
+        repository_root,
+        *(path for paths in evidence.values() if isinstance(paths, tuple) for path in paths),
+    )
+    return evidence
+
+
+def test_experimental_module_can_declare_gaps_without_fabricating_promotion_evidence(tmp_path: Path) -> None:
+    experimental = _promoted_platform_descriptor(
+        maturity="experimental",
+        readiness={"declared_gaps": ("A dedicated benchmark has not been completed.",)},
+    )
+
+    assert validate_module_readiness(experimental, repository_root=tmp_path) == ()
+    assert validate_registry(
+        (experimental,),
+        known_migrations=_promotion_migrations(),
+        repository_root=tmp_path,
+    ) == ()
+
+
+def test_beta_promotion_is_rejected_without_readiness_contract() -> None:
+    promoted = _promoted_platform_descriptor(maturity="beta")
+
+    issues = validate_registry((promoted,), known_migrations=_promotion_migrations())
+
+    assert [(issue.code, issue.module_id) for issue in issues] == [
+        ("missing_readiness_contract", "platform.core")
+    ]
+    assert "accountable_owner" in issues[0].message
+    assert "benchmark_evidence" in issues[0].message
+
+
+def test_beta_promotion_requires_real_readiness_evidence_and_named_owner(tmp_path: Path) -> None:
+    readiness = _complete_readiness_evidence(tmp_path)
+    promoted = _promoted_platform_descriptor(maturity="beta", readiness=readiness)
+
+    assert validate_registry(
+        (promoted,),
+        known_migrations=_promotion_migrations(),
+        repository_root=tmp_path,
+    ) == ()
+
+    placeholder_owner = promoted.model_copy(
+        update={"readiness": promoted.readiness.model_copy(update={"accountable_owner": "TBD"})}
+    )
+    missing_benchmark = promoted.model_copy(
+        update={
+            "readiness": promoted.readiness.model_copy(
+                update={"benchmark_evidence": ("benchmarks/not-present.json",)}
+            )
+        }
+    )
+    misplaced_threat_model = promoted.model_copy(
+        update={
+            "readiness": promoted.readiness.model_copy(
+                update={"threat_model_evidence": ("tests/test_platform_core_readiness.py",)}
+            )
+        }
+    )
+
+    owner_issues = validate_module_readiness(placeholder_owner, repository_root=tmp_path)
+    benchmark_issues = validate_module_readiness(missing_benchmark, repository_root=tmp_path)
+    threat_model_issues = validate_module_readiness(misplaced_threat_model, repository_root=tmp_path)
+
+    assert [(issue.code, issue.module_id) for issue in owner_issues] == [
+        ("unassigned_readiness_owner", "platform.core")
+    ]
+    assert [(issue.code, issue.module_id) for issue in benchmark_issues] == [
+        ("missing_readiness_evidence_file", "platform.core")
+    ]
+    assert "not-present.json" in benchmark_issues[0].message
+    assert [(issue.code, issue.module_id) for issue in threat_model_issues] == [
+        ("invalid_readiness_evidence_location", "platform.core")
+    ]
+    assert "docs/security/" in threat_model_issues[0].message
+
+
+def test_stable_promotion_requires_operational_evidence_and_no_declared_gaps(tmp_path: Path) -> None:
+    readiness = _complete_readiness_evidence(tmp_path)
+    promoted = _promoted_platform_descriptor(maturity="stable", readiness=readiness)
+
+    missing_operational = validate_module_readiness(promoted, repository_root=tmp_path)
+
+    assert [(issue.code, issue.module_id) for issue in missing_operational] == [
+        ("missing_readiness_evidence", "platform.core")
+    ]
+    assert "operational_evidence" in missing_operational[0].message
+
+    stable_readiness = _complete_readiness_evidence(tmp_path, include_operational=True)
+    stable = _promoted_platform_descriptor(maturity="stable", readiness=stable_readiness)
+    assert validate_module_readiness(stable, repository_root=tmp_path) == ()
+
+    declared_gap = stable.model_copy(
+        update={
+            "readiness": stable.readiness.model_copy(
+                update={"declared_gaps": ("Recovery exercise remains unverified.",)}
+            )
+        }
+    )
+    gap_issues = validate_module_readiness(declared_gap, repository_root=tmp_path)
+
+    assert [(issue.code, issue.module_id) for issue in gap_issues] == [
+        ("unresolved_readiness_gaps", "platform.core")
+    ]
 
 
 def test_modules_cli_lists_filters_and_shows_json() -> None:

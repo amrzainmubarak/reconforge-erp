@@ -4,11 +4,13 @@ from reconforge.modules.registry import (
     MODULE_REGISTRY_SCHEMA_VERSION,
     ModuleDescriptor,
     ModuleMaturity,
+    ModuleReadinessContract,
     ModuleRegistryError,
     RegistryValidationIssue,
     get_module,
     list_modules,
     registry_payload,
+    validate_module_readiness,
     validate_registry,
 )
 
@@ -16,10 +18,12 @@ __all__ = [
     "MODULE_REGISTRY_SCHEMA_VERSION",
     "ModuleMaturity",
     "ModuleDescriptor",
+    "ModuleReadinessContract",
     "ModuleRegistryError",
     "RegistryValidationIssue",
     "get_module",
     "list_modules",
     "registry_payload",
+    "validate_module_readiness",
     "validate_registry",
 ]

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -17,9 +17,69 @@ CapabilityStatus = Literal["implemented", "foundation"]
 ModuleInterface = Literal["cli", "api", "current-studio", "modern-studio", "artifacts", "library"]
 NetworkRequirement = Literal["none", "loopback-optional"]
 
+_READINESS_EVIDENCE_FIELDS = {
+    "threat_model_evidence": ("docs/security/", "docs/architecture/", "docs/adr/"),
+    "rollback_evidence": ("docs/",),
+    "test_matrix_evidence": ("tests/", "apps/web/"),
+    "benchmark_evidence": ("benchmarks/",),
+    "operational_evidence": ("docs/", "tests/"),
+}
+_PROMOTION_REQUIRED_READINESS_FIELDS = (
+    "threat_model_evidence",
+    "rollback_evidence",
+    "test_matrix_evidence",
+    "benchmark_evidence",
+)
+_UNASSIGNED_READINESS_OWNERS = frozenset({"-", "n/a", "none", "tbd", "todo", "unassigned", "unknown"})
+
 
 class ModuleRegistryError(ValueError):
     """Raised when module metadata is missing, incompatible, or structurally invalid."""
+
+
+class ModuleReadinessContract(BaseModel):
+    """Optional evidence metadata that becomes mandatory when a module is promoted.
+
+    Experimental modules may declare known gaps without fabricating owners or
+    evidence. Beta and stable modules are checked by ``validate_registry`` so
+    promotion cannot silently bypass the governance and evidence contract.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    accountable_owner: str | None = Field(default=None, min_length=1, max_length=120)
+    threat_model_evidence: tuple[str, ...] = ()
+    rollback_evidence: tuple[str, ...] = ()
+    test_matrix_evidence: tuple[str, ...] = ()
+    benchmark_evidence: tuple[str, ...] = ()
+    operational_evidence: tuple[str, ...] = ()
+    declared_gaps: tuple[str, ...] = ()
+
+    @field_validator(
+        "threat_model_evidence",
+        "rollback_evidence",
+        "test_matrix_evidence",
+        "benchmark_evidence",
+        "operational_evidence",
+    )
+    @classmethod
+    def _safe_repository_evidence_paths(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        for item in value:
+            path = PurePosixPath(item)
+            if not item or item != item.strip() or len(item) > 240 or path.is_absolute() or ".." in path.parts or "\\" in item:
+                raise ValueError("readiness evidence paths must be bounded repository-relative POSIX paths")
+        if len(set(value)) != len(value):
+            raise ValueError("readiness evidence paths must be unique")
+        return tuple(sorted(value))
+
+    @field_validator("declared_gaps")
+    @classmethod
+    def _declared_gaps_are_concrete_and_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if any(not item.strip() or len(item) > 500 for item in value):
+            raise ValueError("declared readiness gaps must contain 1 to 500 non-whitespace characters")
+        if len(set(value)) != len(value):
+            raise ValueError("declared readiness gaps must be unique")
+        return tuple(sorted(value))
 
 
 class ModuleDescriptor(BaseModel):
@@ -49,6 +109,7 @@ class ModuleDescriptor(BaseModel):
     retention_note: str = Field(min_length=1, max_length=500)
     activation_note: str = Field(min_length=1, max_length=500)
     test_evidence: tuple[str, ...]
+    readiness: ModuleReadinessContract | None = None
 
     @field_validator(
         "dependencies",
@@ -108,6 +169,101 @@ class RegistryValidationIssue:
     code: str
     module_id: str
     message: str
+
+
+def validate_module_readiness(
+    descriptor: ModuleDescriptor,
+    *,
+    repository_root: Path | None = None,
+) -> tuple[RegistryValidationIssue, ...]:
+    """Return deterministic promotion-readiness issues for one module descriptor.
+
+    This validator deliberately checks metadata and repository evidence only. It
+    does not infer ownership, invent benchmark results, or turn a referenced
+    file into a compliance or production-readiness claim.
+    """
+
+    readiness = descriptor.readiness
+    if readiness is None:
+        if descriptor.maturity == "experimental":
+            return ()
+        required = ", ".join(("readiness.accountable_owner", *_PROMOTION_REQUIRED_READINESS_FIELDS))
+        if descriptor.maturity == "stable":
+            required = f"{required}, operational_evidence"
+        return (
+            RegistryValidationIssue(
+                "missing_readiness_contract",
+                descriptor.module_id,
+                f"{descriptor.maturity.capitalize()} modules require readiness metadata: {required}.",
+            ),
+        )
+
+    issues: list[RegistryValidationIssue] = []
+    owner = readiness.accountable_owner
+    if owner is not None and owner.strip().casefold() in _UNASSIGNED_READINESS_OWNERS:
+        issues.append(
+            RegistryValidationIssue(
+                "unassigned_readiness_owner",
+                descriptor.module_id,
+                "readiness.accountable_owner must identify an accountable owner; placeholders such as 'TBD' are not accepted.",
+            )
+        )
+
+    required_fields = list(_PROMOTION_REQUIRED_READINESS_FIELDS)
+    if descriptor.maturity == "stable":
+        required_fields.append("operational_evidence")
+        if readiness.declared_gaps:
+            issues.append(
+                RegistryValidationIssue(
+                    "unresolved_readiness_gaps",
+                    descriptor.module_id,
+                    "Stable modules cannot retain declared readiness gaps; resolve them or lower the maturity claim.",
+                )
+            )
+
+    if descriptor.maturity in {"beta", "stable"}:
+        if owner is None or not owner.strip():
+            issues.append(
+                RegistryValidationIssue(
+                    "missing_readiness_owner",
+                    descriptor.module_id,
+                    "Promoted modules require readiness.accountable_owner; do not use an unassigned placeholder.",
+                )
+            )
+        for field_name in required_fields:
+            if not getattr(readiness, field_name):
+                issues.append(
+                    RegistryValidationIssue(
+                        "missing_readiness_evidence",
+                        descriptor.module_id,
+                        f"{descriptor.maturity.capitalize()} modules require readiness.{field_name} with at least one evidence file.",
+                    )
+                )
+
+    root = (repository_root if repository_root is not None else Path(__file__).resolve().parents[2]).resolve()
+    for field_name, allowed_prefixes in _READINESS_EVIDENCE_FIELDS.items():
+        for relative_path in getattr(readiness, field_name):
+            if not relative_path.startswith(allowed_prefixes):
+                allowed = ", ".join(allowed_prefixes)
+                issues.append(
+                    RegistryValidationIssue(
+                        "invalid_readiness_evidence_location",
+                        descriptor.module_id,
+                        f"readiness.{field_name} path '{relative_path}' must be under: {allowed}",
+                    )
+                )
+                continue
+            candidate = (root / PurePosixPath(relative_path)).resolve()
+            if not candidate.is_relative_to(root) or not candidate.is_file():
+                issues.append(
+                    RegistryValidationIssue(
+                        "missing_readiness_evidence_file",
+                        descriptor.module_id,
+                        f"readiness.{field_name} path '{relative_path}' must resolve to an existing file below the repository root.",
+                    )
+                )
+
+    return tuple(sorted(set(issues), key=lambda issue: (issue.code, issue.module_id, issue.message)))
 
 
 _MODULES = (
@@ -724,8 +880,9 @@ def validate_registry(
     descriptors: tuple[ModuleDescriptor, ...] | None = None,
     *,
     known_migrations: frozenset[int] | None = None,
+    repository_root: Path | None = None,
 ) -> tuple[RegistryValidationIssue, ...]:
-    """Validate uniqueness, references, migration compatibility, and dependency acyclicity."""
+    """Validate registry structure plus maturity-appropriate readiness evidence."""
 
     records = descriptors if descriptors is not None else _MODULES
     migration_versions = (
@@ -739,6 +896,7 @@ def validate_registry(
         issues.append(RegistryValidationIssue("duplicate_module_id", module_id, "Module IDs must be unique."))
 
     for record in sorted(records, key=lambda item: item.module_id):
+        issues.extend(validate_module_readiness(record, repository_root=repository_root))
         for dependency in record.dependencies:
             if dependency == record.module_id:
                 issues.append(
@@ -802,5 +960,5 @@ def registry_payload(*, maturity: ModuleMaturity | None = None) -> dict[str, obj
         "package_version": __version__,
         "local_first": True,
         "external_calls": False,
-        "modules": [descriptor.model_dump(mode="json") for descriptor in list_modules(maturity=maturity)],
+        "modules": [descriptor.model_dump(mode="json", exclude_none=True) for descriptor in list_modules(maturity=maturity)],
     }

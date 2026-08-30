@@ -31,6 +31,7 @@ from reconforge.platform.common import (
     audit,
     ensure_platform_schema,
     ensure_workspace,
+    normalize_key,
     platform_id,
     read_local_record_document,
     require_permission,
@@ -73,6 +74,7 @@ from reconforge.utils.money import (
     LEGACY_FINANCIAL_INPUT_POLICY,
     STRICT_FINANCIAL_INPUT_POLICY,
     FinancialInputPolicy,
+    resolve_new_financial_write_policy,
 )
 
 
@@ -386,57 +388,64 @@ class SQLiteMatchingRepository:
     ) -> MatchRunResult:
         financial_input_policy = _matching_input_policy(financial_input_policy)
         record_identity_policy = _matching_record_identity_policy(record_identity_policy)
-        workspace_id = ensure_workspace(self.connection, workspace)
+        # Derive the idempotency target without creating a workspace.  This
+        # makes the persistence adapter itself a financial-write boundary:
+        # legacy policy can only address an already-persisted historical job,
+        # never create a new job (or its workspace as a side effect).
+        workspace_id = platform_id("WS", normalize_key(workspace, default="default"))
         created_at = utc_now_text()
-        self._ensure_match_result_columns()
         job_id = (
             platform_id("MJ", workspace_id, name, left_source, right_source, "idempotency", idempotency_key)
             if idempotency_key
             else platform_id("MJ", workspace_id, name, left_source, right_source, created_at)
         )
+        existing = None
         if idempotency_key:
             existing = self.connection.execute(
                 "SELECT id, rule_json FROM match_jobs WHERE id = ?",
                 (job_id,),
             ).fetchone()
-            if existing is not None:
-                try:
-                    existing_rule = self._matching_rule_document(existing["rule_json"]).payload
-                except PlatformError as exc:
-                    raise PlatformError("Existing idempotent match rule is invalid.") from exc
-                existing_policy = _matching_input_policy(
-                    existing_rule.get(
-                        "financial_input_policy",
-                        LEGACY_FINANCIAL_INPUT_POLICY,
-                    )
+        if idempotency_key and existing is not None:
+            try:
+                existing_rule = self._matching_rule_document(existing["rule_json"]).payload
+            except PlatformError as exc:
+                raise PlatformError("Existing idempotent match rule is invalid.") from exc
+            existing_policy = _matching_input_policy(
+                existing_rule.get(
+                    "financial_input_policy",
+                    LEGACY_FINANCIAL_INPUT_POLICY,
                 )
-                if existing_policy != financial_input_policy:
-                    raise PlatformError("Idempotency key is bound to a different financial input policy.")
-                existing_identity_policy = str(
-                    existing_rule.get(
-                        "record_identity_policy",
-                        LEGACY_RECORD_IDENTITY_POLICY,
-                    )
+            )
+            if existing_policy != financial_input_policy:
+                raise PlatformError("Idempotency key is bound to a different financial input policy.")
+            existing_identity_policy = str(
+                existing_rule.get(
+                    "record_identity_policy",
+                    LEGACY_RECORD_IDENTITY_POLICY,
                 )
-                if existing_identity_policy != record_identity_policy:
-                    raise PlatformError("Idempotency key is bound to a different record identity policy.")
-                counts = self.connection.execute(
-                    """
-                    SELECT
-                        COUNT(CASE WHEN left_id <> '' THEN 1 END) AS result_count,
-                        COUNT(CASE WHEN status = 'Matched' THEN 1 END) AS matched_count
-                    FROM match_results
-                    WHERE job_id = ?
-                    """,
-                    (job_id,),
-                ).fetchone()
-                return MatchRunResult(
-                    job_id=job_id,
-                    result_count=int(counts["result_count"] or 0),
-                    matched_count=int(counts["matched_count"] or 0),
-                    financial_input_policy=existing_policy,
-                    record_identity_policy=existing_identity_policy,
-                )
+            )
+            if existing_identity_policy != record_identity_policy:
+                raise PlatformError("Idempotency key is bound to a different record identity policy.")
+            counts = self.connection.execute(
+                """
+                SELECT
+                    COUNT(CASE WHEN left_id <> '' THEN 1 END) AS result_count,
+                    COUNT(CASE WHEN status = 'Matched' THEN 1 END) AS matched_count
+                FROM match_results
+                WHERE job_id = ?
+                """,
+                (job_id,),
+            ).fetchone()
+            return MatchRunResult(
+                job_id=job_id,
+                result_count=int(counts["result_count"] or 0),
+                matched_count=int(counts["matched_count"] or 0),
+                financial_input_policy=existing_policy,
+                record_identity_policy=existing_identity_policy,
+            )
+        resolve_new_financial_write_policy(financial_input_policy)
+        workspace_id = ensure_workspace(self.connection, workspace)
+        self._ensure_match_result_columns()
         exact_field_list = [field.strip() for field in exact_fields.split(",") if field.strip()]
         tolerance = _non_negative_amount(
             amount_tolerance,

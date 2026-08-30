@@ -32,6 +32,41 @@ FinancialInputPolicy = Literal[
     "strict-financial-input-v2",
 ]
 CURRENT_FINANCIAL_INPUT_POLICY: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY
+FinancialInputPolicyUse = Literal[
+    "new-financial-write",
+    "historical-financial-replay",
+]
+FinancialInputPolicyOrigin = Literal[
+    "explicit-policy",
+    "implicit-missing-historical-policy",
+]
+NEW_FINANCIAL_WRITE: Literal["new-financial-write"] = "new-financial-write"
+HISTORICAL_FINANCIAL_REPLAY: Literal["historical-financial-replay"] = "historical-financial-replay"
+
+
+@dataclass(frozen=True)
+class FinancialInputPolicyObservation:
+    """Describe the policy and compatibility mode used at a financial boundary."""
+
+    policy: FinancialInputPolicy
+    use: FinancialInputPolicyUse
+    origin: FinancialInputPolicyOrigin
+
+    @property
+    def legacy_compatibility(self) -> bool:
+        """Whether this boundary replayed the legacy-v1 compatibility behavior."""
+
+        return self.policy == LEGACY_FINANCIAL_INPUT_POLICY
+
+    def audit_metadata(self) -> dict[str, str | bool]:
+        """Return stable, non-sensitive metadata suitable for audit events."""
+
+        return {
+            "financial_input_policy": self.policy,
+            "financial_input_policy_use": self.use,
+            "financial_input_policy_origin": self.origin,
+            "legacy_financial_input_compatibility": self.legacy_compatibility,
+        }
 
 
 _SCIENTIFIC_NOTATION_PATTERN = re.compile(r"[eE]")
@@ -88,6 +123,51 @@ def validate_financial_input_policy(value: object) -> FinancialInputPolicy:
     if value in {LEGACY_FINANCIAL_INPUT_POLICY, STRICT_FINANCIAL_INPUT_POLICY}:
         return cast(FinancialInputPolicy, value)
     raise InvalidAmountError("unsupported financial input policy")
+
+
+def resolve_new_financial_write_policy(value: object) -> FinancialInputPolicyObservation:
+    """Require strict-v2 before a newly-created financial record can be persisted."""
+
+    policy = validate_financial_input_policy(value)
+    if policy != STRICT_FINANCIAL_INPUT_POLICY:
+        raise InvalidAmountError(
+            "new financial writes require strict-financial-input-v2; "
+            "legacy-financial-input-v1 is reserved for explicit historical replay"
+        )
+    return FinancialInputPolicyObservation(
+        policy=policy,
+        use=NEW_FINANCIAL_WRITE,
+        origin="explicit-policy",
+    )
+
+
+def resolve_historical_financial_replay_policy(
+    value: object | None,
+    *,
+    missing_policy_is_legacy_v1: bool = False,
+) -> FinancialInputPolicyObservation:
+    """Resolve persisted historical policy metadata without silently inferring legacy mode.
+
+    Callers that read an artifact predating the policy field must explicitly
+    declare that its missing field represents legacy-v1 behavior. The returned
+    observation can be attached to an audit event or surfaced to an operator.
+    """
+
+    if value is None:
+        if not missing_policy_is_legacy_v1:
+            raise InvalidAmountError(
+                "historical financial replay requires a persisted policy or explicit legacy-v1 fallback"
+            )
+        return FinancialInputPolicyObservation(
+            policy=LEGACY_FINANCIAL_INPUT_POLICY,
+            use=HISTORICAL_FINANCIAL_REPLAY,
+            origin="implicit-missing-historical-policy",
+        )
+    return FinancialInputPolicyObservation(
+        policy=validate_financial_input_policy(value),
+        use=HISTORICAL_FINANCIAL_REPLAY,
+        origin="explicit-policy",
+    )
 
 
 def _rounding_mode(policy: str) -> str:

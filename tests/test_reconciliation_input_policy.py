@@ -180,7 +180,7 @@ def test_matching_run_persists_policy_in_rule_audit_outbox_and_idempotency(tmp_p
                 (first.job_id,),
             ).fetchone()["payload_json"]
         )
-        with pytest.raises(PlatformError, match="different financial input policy"):
+        with pytest.raises(InvalidAmountError, match="new financial writes require strict-financial-input-v2"):
             service.run(
                 left_path=left_path,
                 right_path=right_path,

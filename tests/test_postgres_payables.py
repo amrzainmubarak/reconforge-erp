@@ -33,6 +33,10 @@ from reconforge.infrastructure.postgres_payables import (
     _stored_quantity,
 )
 from reconforge.platform.common import PlatformError
+from tests.postgres_test_hygiene import (
+    PAYABLES_TENANT_CLEANUP_PLAN,
+    cleanup_postgres_test_tenants_as_admin,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -313,7 +317,7 @@ def test_supplier_invoice_total_mismatch_fails_before_transaction() -> None:
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
 def test_live_postgres_payables_lifecycle_exactness_and_rls() -> None:
-    psycopg = pytest.importorskip("psycopg")
+    pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
     app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
@@ -418,10 +422,11 @@ def test_live_postgres_payables_lifecycle_exactness_and_rls() -> None:
             assert repository.list_suppliers(workspace="Payables") == []
             assert repository.list_supplier_invoices(workspace="Payables") == []
     finally:
-        for tenant in (tenant_a, tenant_b):
-            try:
-                with PostgresTenantBoundary(factory).transaction(tenant) as connection:
-                    connection.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant,))
-            except psycopg.Error:
-                pass
-        admin.close()
+        try:
+            cleanup_postgres_test_tenants_as_admin(
+                admin,
+                tenant_ids=(tenant_a, tenant_b),
+                plan=PAYABLES_TENANT_CLEANUP_PLAN,
+            )
+        finally:
+            admin.close()

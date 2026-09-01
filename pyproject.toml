@@ -80,7 +80,7 @@ connectors = [
     "cryptography==50.0.0",
 ]
 federation = [
-    "joserfc==1.7.4",
+    "joserfc==1.7.5",
     "python3-saml==1.16.0",
 ]
 mfa = [

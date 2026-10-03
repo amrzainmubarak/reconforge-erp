@@ -71,9 +71,13 @@ Review OpenSSF Scorecard and the signed-candidate per-subject SBOM results when 
 Only claim Docker runtime verification after these commands pass in a live Docker environment:
 
 ```bash
-docker build -t reconforge-erp .
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge doctor
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge demo run --output output/demo
+docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
+docker run --rm --network=none --read-only --cap-drop=ALL \
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700 \
+  --tmpfs /app/output:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0700 \
+  reconforge-erp reconforge demo run --output output/demo
 ```
 
 If Docker is unavailable locally, document that limitation instead of claiming verification.

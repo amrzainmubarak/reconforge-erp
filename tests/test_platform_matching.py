@@ -1627,12 +1627,12 @@ def test_platform_duplicate_identity_is_multiset_stable_and_source_location_is_u
     try:
         service = MatchingService(connection)
         left = [
-            {"id": "LEFT-DUP", "reference": "INV-DUP", "amount": "10.00", "date": "2026-07-25"},
-            {"id": "LEFT-DUP", "reference": "INV-DUP", "amount": "10.00", "date": "2026-07-25"},
+            {"id": "LEFT-DUP", "reference": "INV-DUP", "amount": "10.00", "currency": "USD", "date": "2026-07-25"},
+            {"id": "LEFT-DUP", "reference": "INV-DUP", "amount": "10.00", "currency": "USD", "date": "2026-07-25"},
         ]
         right = [
-            {"id": "RIGHT-DUP", "reference": "INV-DUP", "amount": "10.00", "date": "2026-07-25"},
-            {"id": "RIGHT-DUP", "reference": "INV-DUP", "amount": "10.00", "date": "2026-07-25"},
+            {"id": "RIGHT-DUP", "reference": "INV-DUP", "amount": "10.00", "currency": "USD", "date": "2026-07-25"},
+            {"id": "RIGHT-DUP", "reference": "INV-DUP", "amount": "10.00", "currency": "USD", "date": "2026-07-25"},
         ]
         first = service.match_records(
             left_records=left,
@@ -1670,15 +1670,15 @@ def test_local_csv_run_persists_current_identity_policy_and_physical_rows(tmp_pa
     left_path = tmp_path / "identity-left.csv"
     right_path = tmp_path / "identity-right.csv"
     left_path.write_text(
-        "id,reference,amount,date\n"
-        "LEFT-DUP,INV-DUP,10.00,2026-07-25\n"
-        "LEFT-DUP,INV-DUP,10.00,2026-07-25\n",
+        "id,reference,amount,currency,date\n"
+        "LEFT-DUP,INV-DUP,10.00,USD,2026-07-25\n"
+        "LEFT-DUP,INV-DUP,10.00,USD,2026-07-25\n",
         encoding="utf-8",
     )
     right_path.write_text(
-        "id,reference,amount,date\n"
-        "RIGHT-DUP,INV-DUP,10.00,2026-07-25\n"
-        "RIGHT-DUP,INV-DUP,10.00,2026-07-25\n",
+        "id,reference,amount,currency,date\n"
+        "RIGHT-DUP,INV-DUP,10.00,USD,2026-07-25\n"
+        "RIGHT-DUP,INV-DUP,10.00,USD,2026-07-25\n",
         encoding="utf-8",
     )
 

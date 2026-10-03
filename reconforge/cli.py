@@ -25,6 +25,7 @@ from reconforge.ai.summaries import explain_exception_file
 from reconforge.anonymizer.engine import anonymize_directory
 from reconforge.api import create_api_app
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
+from reconforge.application.evidence import EvidenceObjectStore
 from reconforge.application.intercompany_elimination import IntercompanyEliminationApplicationService
 from reconforge.application.jobs import DurableJobApplicationService
 from reconforge.application.matching_strategies import MatchingStrategyContractError, MatchingStrategyResult
@@ -136,6 +137,8 @@ from reconforge.enterprise_demo import EnterpriseDemoError, generate_enterprise_
 from reconforge.evidence.binder import generate_evidence_binder
 from reconforge.generator.synthetic import generate_synthetic_dataset
 from reconforge.infrastructure.object_storage import (
+    LocalObjectStorageSettings,
+    LocalObjectStore,
     ObjectStorageConnectionFactory,
     ObjectStorageSettings,
     S3ObjectStore,
@@ -4635,7 +4638,7 @@ def consolidation_intercompany_eliminations_command(
             if not isinstance(amount, dict):
                 raise PlatformError(f"Intercompany elimination line {index} amount must be canonical Money.")
             values = dict(raw_line)
-            values["amount"] = Money.from_canonical_dict(cast(dict[str, object], amount))
+            values["amount"] = Money.from_strict_canonical_dict(cast(dict[str, object], amount))
             lines.append(IntercompanyEliminationInputLine(**values))
         result = IntercompanyEliminationApplicationService.prepare(
             tuple(lines),
@@ -4878,7 +4881,17 @@ def evidence_register_command(
     object_type: Annotated[str, typer.Option("--object-type", help="Optional linked object type.")] = "",
     object_id: Annotated[str, typer.Option("--object-id", help="Optional linked object id.")] = "",
     redaction_status: Annotated[str, typer.Option("--redaction-status", help="Redaction status.")] = "unknown",
-    storage_backend: Annotated[str, typer.Option("--storage-backend", help="Storage backend: local or s3.")] = "local",
+    storage_backend: Annotated[
+        str,
+        typer.Option("--storage-backend", help="Storage backend: local, local-object-store, or s3."),
+    ] = "local",
+    storage_root: Annotated[
+        Path,
+        typer.Option(
+            "--storage-root",
+            help="Absolute root for the offline local-object-store backend.",
+        ),
+    ] = Path("output/evidence-objects"),
     storage_tenant_id: Annotated[
         str, typer.Option("--storage-tenant-id", help="Tenant scope for object storage.")
     ] = "",
@@ -4903,18 +4916,21 @@ def evidence_register_command(
     ] = False,
     retention_until: Annotated[
         str,
-        typer.Option("--retention-until", help="Optional ISO-8601 retention timestamp; requires provider object lock."),
+        typer.Option(
+            "--retention-until",
+            help="Optional ISO-8601 retention timestamp; enforced by the selected object store.",
+        ),
     ] = "",
     actor: Annotated[str, typer.Option("--actor", help="Actor username or local label.")] = "local-cli",
 ) -> None:
     """Register evidence with checksum/provenance metadata."""
 
-    object_store = None
+    object_store: EvidenceObjectStore | None = None
     storage_factory = None
     try:
         backend = storage_backend.strip().casefold()
-        if backend not in {"local", "s3"}:
-            raise PlatformError("Evidence storage backend must be local or s3.")
+        if backend not in {"local", "local-object-store", "s3"}:
+            raise PlatformError("Evidence storage backend must be local, local-object-store, or s3.")
         parsed_retention: datetime | None = None
         if retention_until:
             try:
@@ -4924,7 +4940,11 @@ def evidence_register_command(
             if parsed_retention.tzinfo is None:
                 raise PlatformError("Retention timestamp must include a timezone offset.")
             parsed_retention = parsed_retention.astimezone(UTC)
-        if backend == "s3":
+        if backend == "local-object-store":
+            object_store = LocalObjectStore(
+                LocalObjectStorageSettings(root=storage_root.resolve())
+            )
+        elif backend == "s3":
             if not s3_bucket.strip():
                 raise PlatformError("--s3-bucket or RECONFORGE_S3_BUCKET is required for s3 evidence storage.")
             storage_factory = ObjectStorageConnectionFactory(
@@ -4964,6 +4984,20 @@ def evidence_register_command(
 def evidence_verify_command(
     evidence_id: Annotated[str, typer.Option("--id", help="Evidence id.")],
     db_path: Annotated[Path, typer.Option("--db", help="Local SQLite database path.")] = Path("output/reconforge.db"),
+    storage_backend: Annotated[
+        str,
+        typer.Option(
+            "--storage-backend",
+            help="Object backend: s3 or local-object-store; s3 preserves the historical default.",
+        ),
+    ] = "s3",
+    storage_root: Annotated[
+        Path,
+        typer.Option(
+            "--storage-root",
+            help="Absolute root for local-object-store verification.",
+        ),
+    ] = Path("output/evidence-objects"),
     s3_bucket: Annotated[
         str,
         typer.Option(
@@ -4991,27 +5025,35 @@ def evidence_verify_command(
     """Verify local or configured object-backed evidence checksum."""
 
     storage_factory = None
-    object_store = None
+    object_store: EvidenceObjectStore | None = None
     try:
         connection = _db_connection(db_path)
         try:
             service = EvidenceRegistryService(connection)
             evidence = service.get(evidence_id)
             if str(evidence.get("storage_backend") or "") == OBJECT_STORAGE_BACKEND:
-                if not s3_bucket.strip():
-                    raise PlatformError(
-                        "--s3-bucket or RECONFORGE_S3_BUCKET is required for object-backed evidence verification."
+                backend = storage_backend.strip().casefold()
+                if backend not in {"local-object-store", "s3"}:
+                    raise PlatformError("Object-backed evidence verification requires s3 or local-object-store.")
+                if backend == "local-object-store":
+                    object_store = LocalObjectStore(
+                        LocalObjectStorageSettings(root=storage_root.resolve())
                     )
-                storage_factory = ObjectStorageConnectionFactory(
-                    ObjectStorageSettings(
-                        bucket=s3_bucket,
-                        endpoint_url=s3_endpoint_url or None,
-                        region=s3_region,
-                        key_prefix=s3_key_prefix,
-                        require_tls=not s3_no_tls,
+                else:
+                    if not s3_bucket.strip():
+                        raise PlatformError(
+                            "--s3-bucket or RECONFORGE_S3_BUCKET is required for object-backed evidence verification."
+                        )
+                    storage_factory = ObjectStorageConnectionFactory(
+                        ObjectStorageSettings(
+                            bucket=s3_bucket,
+                            endpoint_url=s3_endpoint_url or None,
+                            region=s3_region,
+                            key_prefix=s3_key_prefix,
+                            require_tls=not s3_no_tls,
+                        )
                     )
-                )
-                object_store = S3ObjectStore(storage_factory)
+                    object_store = S3ObjectStore(storage_factory)
             result = service.verify(evidence_id, actor_label=actor, object_store=object_store)
         finally:
             connection.close()

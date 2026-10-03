@@ -6,6 +6,7 @@ import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import cast
 
@@ -24,10 +25,20 @@ _GATES = (
 )
 _STATUSES = frozenset({"verified_scoped", "partial", "open"})
 _TOP_LEVEL = frozenset(
-    {"schema_version", "matrix_id", "reviewed_on", "claim_boundary", "status_values", "required_gates", "editions"}
+    {
+        "schema_version",
+        "matrix_id",
+        "reviewed_on",
+        "claim_boundary",
+        "status_values",
+        "required_gates",
+        "evidence_digests",
+        "editions",
+    }
 )
 _EDITION_FIELDS = frozenset({"id", "readiness_status", "profile_command", "gates"})
 _GATE_FIELDS = frozenset({"id", "status", "evidence", "boundary"})
+_EVIDENCE_DIGEST_FIELDS = frozenset({"path", "sha256"})
 
 
 class DeploymentReadinessError(ValueError):
@@ -82,12 +93,67 @@ def _relative_evidence_path(value: object, *, root: Path) -> None:
         raise DeploymentReadinessError("evidence path does not resolve to a regular file")
 
 
+def _verify_evidence_digests(
+    value: object,
+    *,
+    referenced_paths: set[str],
+    root: Path,
+) -> None:
+    if not isinstance(value, list):
+        raise DeploymentReadinessError("evidence_digests must be an array")
+    declared: dict[str, str] = {}
+    for raw_digest in value:
+        digest = _mapping(raw_digest, "evidence digest")
+        if set(digest) != _EVIDENCE_DIGEST_FIELDS:
+            raise DeploymentReadinessError("evidence digest fields do not match the closed contract")
+        path = digest["path"]
+        sha256 = digest["sha256"]
+        if not isinstance(path, str) or not path or Path(path).is_absolute():
+            raise DeploymentReadinessError("evidence digest paths must be relative")
+        if (
+            not isinstance(sha256, str)
+            or len(sha256) != 64
+            or any(character not in "0123456789abcdef" for character in sha256)
+        ):
+            raise DeploymentReadinessError("evidence digest sha256 is invalid")
+        if path in declared:
+            raise DeploymentReadinessError("evidence digest paths must be unique")
+        declared[path] = sha256
+
+    if set(declared) != referenced_paths:
+        raise DeploymentReadinessError("evidence digest coverage does not match referenced evidence")
+    for path, expected in declared.items():
+        actual = hashlib.sha256((root / path).read_bytes()).hexdigest()
+        if actual != expected:
+            raise DeploymentReadinessError(f"evidence digest mismatch: {path}")
+
+
 def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
     top = _mapping(payload, "readiness matrix")
     if set(top) != _TOP_LEVEL:
         raise DeploymentReadinessError("readiness matrix fields do not match the closed contract")
-    if top["schema_version"] != 1 or top["matrix_id"] != "reconforge-deployment-readiness":
+    schema_version = top["schema_version"]
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int) or schema_version != 1:
         raise DeploymentReadinessError("readiness matrix identity is invalid")
+    if top["matrix_id"] != "reconforge-deployment-readiness":
+        raise DeploymentReadinessError("readiness matrix identity is invalid")
+    reviewed_on = top["reviewed_on"]
+    if (
+        not isinstance(reviewed_on, str)
+        or len(reviewed_on) != 10
+        or reviewed_on[4] != "-"
+        or reviewed_on[7] != "-"
+    ):
+        raise DeploymentReadinessError("reviewed_on must be an ISO date")
+    try:
+        parsed_reviewed_on = date.fromisoformat(reviewed_on)
+    except ValueError as exc:
+        raise DeploymentReadinessError("reviewed_on must be an ISO date") from exc
+    if parsed_reviewed_on.isoformat() != reviewed_on:
+        raise DeploymentReadinessError("reviewed_on must be an ISO date")
+    claim_boundary = top["claim_boundary"]
+    if not isinstance(claim_boundary, str) or len(claim_boundary) < 80:
+        raise DeploymentReadinessError("claim_boundary must contain at least 80 characters")
     status_values = top["status_values"]
     if not isinstance(status_values, list) or tuple(cast(list[object], status_values)) != (
         "verified_scoped",
@@ -98,6 +164,7 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
     required_gates = top["required_gates"]
     if not isinstance(required_gates, list) or tuple(cast(list[object], required_gates)) != _GATES:
         raise DeploymentReadinessError("readiness matrix gate contract is invalid")
+    referenced_evidence_paths: set[str] = set()
     editions = top["editions"]
     if not isinstance(editions, list) or len(editions) != len(_EDITIONS):
         raise DeploymentReadinessError("readiness matrix editions are invalid")
@@ -110,8 +177,13 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
         if not isinstance(edition_id, str) or edition_id not in _EDITIONS or edition_id in seen_editions:
             raise DeploymentReadinessError("edition identity is invalid")
         seen_editions.add(edition_id)
-        if edition["readiness_status"] not in {"partial", "open"}:
+        readiness_status = edition["readiness_status"]
+        if not isinstance(readiness_status, str) or readiness_status not in {"partial", "open"}:
             raise DeploymentReadinessError("edition readiness status cannot claim readiness")
+        profile_command = edition["profile_command"]
+        expected_profile_command = f"reconforge deployment profiles --edition {edition_id}"
+        if profile_command != expected_profile_command:
+            raise DeploymentReadinessError("edition profile command is invalid")
         gates = edition["gates"]
         if not isinstance(gates, list) or len(gates) != len(_GATES):
             raise DeploymentReadinessError("edition gates are invalid")
@@ -124,15 +196,27 @@ def _verify_payload(payload: object, *, root: Path) -> Mapping[str, object]:
             if not isinstance(gate_id, str) or gate_id not in _GATES or gate_id in seen_gates:
                 raise DeploymentReadinessError("gate identity is invalid")
             seen_gates.add(gate_id)
-            if gate["status"] not in _STATUSES:
+            status = gate["status"]
+            if not isinstance(status, str) or status not in _STATUSES:
                 raise DeploymentReadinessError("gate status is invalid")
+            boundary = gate["boundary"]
+            if not isinstance(boundary, str) or len(boundary) < 20 or not boundary.strip():
+                raise DeploymentReadinessError("gate boundary must contain at least 20 non-whitespace characters")
             evidence = gate["evidence"]
             if not isinstance(evidence, list):
                 raise DeploymentReadinessError("gate evidence must be an array")
+            if status == "verified_scoped" and not evidence:
+                raise DeploymentReadinessError("verified_scoped gates require evidence paths")
             for evidence_path in evidence:
                 _relative_evidence_path(evidence_path, root=root)
+                referenced_evidence_paths.add(cast(str, evidence_path))
     if seen_editions != set(_EDITIONS):
         raise DeploymentReadinessError("readiness matrix must contain every edition")
+    _verify_evidence_digests(
+        top["evidence_digests"],
+        referenced_paths=referenced_evidence_paths,
+        root=root,
+    )
     return top
 
 

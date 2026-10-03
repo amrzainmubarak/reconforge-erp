@@ -53,6 +53,7 @@ def test_payment_statement_connector_is_read_only_and_canonical() -> None:
     result = connector.read_page(idempotency_key="statement-1", cursor="cursor-1")
     assert result.page.next_cursor == "cursor-2"
     assert [line.line_id for line in result.page.records] == ["L-2", "L-1"]
+    assert [line.amount for line in result.page.records] == ["-20", "100"]
     assert result.response_digest
     assert transport.calls[0][0] == PAYMENT_STATEMENT_MANIFEST.egress_destinations[0]
     assert PAYMENT_STATEMENT_MANIFEST.capabilities == frozenset({"read"})
@@ -76,6 +77,7 @@ def test_payment_statement_rejects_account_scope_mismatch() -> None:
         b'{"records":[{"id":"L-1","account_id":"BANK-1","bookingDate":"2026-01-02","valueDate":"2026-01-01","amount":"1.00","currency":"USD"}]}',
         b'{"records":[{"id":"L-1","account_id":"BANK-1","bookingDate":"2026-01-01","valueDate":"2026-01-01","amount":"NaN","currency":"USD"}]}',
         b'{"records":[{"id":"L-1","account_id":"BANK-1","bookingDate":"2026-01-01","valueDate":"2026-01-01","amount":"1.00","currency":"USD"},{"id":"L-1","account_id":"BANK-1","bookingDate":"2026-01-01","valueDate":"2026-01-01","amount":"2.00","currency":"USD"}]}',
+        b'{"records":[{"id":"L-1","account_id":"BANK-1","bookingDate":"2026-01-01","valueDate":"2026-01-01","amount":"1e2","currency":"USD"}]}',
     ],
 )
 def test_payment_statement_rejects_invalid_lines(body: bytes) -> None:

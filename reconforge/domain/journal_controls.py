@@ -7,18 +7,27 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from reconforge.utils.money import InvalidAmountError, parse_amount
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+    InvalidAmountError,
+    parse_amount,
+)
 
 
 class JournalPolicyError(ValueError):
     """Raised when journal policy input cannot be evaluated safely."""
 
 
-def journal_threshold(value: object) -> Decimal:
+def journal_threshold(
+    value: object,
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> Decimal:
     """Return a finite non-negative exact threshold."""
 
     try:
-        parsed = parse_amount(value)
+        parsed = parse_amount(value, input_policy=financial_input_policy)
     except InvalidAmountError as exc:
         raise JournalPolicyError("High-value journal threshold is invalid.") from exc
     if parsed < 0:
@@ -32,6 +41,7 @@ def evaluate_journal_policies(
     period_end: str,
     high_value_threshold: Decimal,
     high_risk_accounts: set[str],
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
 ) -> list[tuple[str, str, str]]:
     """Evaluate one normalized journal row without persistence or ambient state."""
 
@@ -49,7 +59,7 @@ def evaluate_journal_policies(
     if not _text(_value(row, "approver")):
         policies.append(("MISSING_APPROVER", "high", "Journal is missing approver evidence/reference."))
     try:
-        amount = parse_amount(_value(row, "amount_decimal"))
+        amount = parse_amount(_value(row, "amount_decimal"), input_policy=financial_input_policy)
     except InvalidAmountError as exc:
         raise JournalPolicyError("Stored journal amount is invalid.") from exc
     if abs(amount) >= high_value_threshold:

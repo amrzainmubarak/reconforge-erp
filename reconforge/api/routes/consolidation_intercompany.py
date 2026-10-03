@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal
 from typing import Annotated, Literal
 
@@ -16,6 +17,7 @@ from reconforge.api.server_consolidation_intercompany import (
 )
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.application.intercompany_elimination import IntercompanyEliminationApplicationService
+from reconforge.auth.field_access import project_consolidation_intercompany_response
 from reconforge.auth.models import LocalUser
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.intercompany_elimination import IntercompanyEliminationInputLine
@@ -63,7 +65,7 @@ class IntercompanyLineRequest(BaseModel):
                 reference=self.reference,
                 group_account_code=self.group_account_code,
                 account_type=self.account_type,
-                amount=Money.from_canonical_dict(self.amount.model_dump(mode="python")),
+                amount=Money.from_strict_canonical_dict(self.amount.model_dump(mode="python")),
                 source_reference=self.source_reference,
                 source_digest=self.source_digest,
             )
@@ -92,6 +94,14 @@ def _server_only(request: Request) -> None:
             code="consolidation_intercompany_unavailable",
             message="Intercompany elimination persistence requires the PostgreSQL server profile.",
         )
+
+
+def _project_artifact_response(
+    artifact: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_intercompany_response(
+        {"artifact": artifact, "source": source}
+    ).visible
 
 
 def _scope_for_payload(
@@ -139,10 +149,10 @@ def prepare_intercompany(
             actor_label=current_user.id,
         ),
     )
-    return {
-        "artifact": artifact,
-        "source": {"kind": "postgresql-consolidation-intercompany", "server_mode": True},
-    }
+    return _project_artifact_response(
+        artifact,
+        {"kind": "postgresql-consolidation-intercompany", "server_mode": True},
+    )
 
 
 @router.get("/{artifact_id}")
@@ -169,10 +179,10 @@ def get_intercompany(
     )
     if artifact.get("workspace_id") != scope.workspace_id:
         raise APIError(status_code=404, code="consolidation_intercompany_not_found", message="Artifact was not found.")
-    return {
-        "artifact": artifact,
-        "source": {"kind": "postgresql-consolidation-intercompany", "server_mode": True},
-    }
+    return _project_artifact_response(
+        artifact,
+        {"kind": "postgresql-consolidation-intercompany", "server_mode": True},
+    )
 
 
 __all__ = [

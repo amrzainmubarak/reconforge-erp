@@ -14,6 +14,7 @@ from typing import Any, cast
 
 from reconforge.application.matching_strategies import MatchingStrategyRequest, replay_result_envelope
 from reconforge.infrastructure.grouped_matching_strategy import GroupedSubsetSumStrategy
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 from reconforge.workers.postgres_reconciliation import (
     ReconciliationExecutionContext,
     ReconciliationExecutionResult,
@@ -76,14 +77,13 @@ def _request(context: ReconciliationExecutionContext, partition_key: str, left: 
     if mode not in {"one-to-many", "many-to-one", "many-to-many", "partial-settlement", "portfolio"}:
         raise PostgresGroupedMatchingAdapterError("grouped_matching_mode must be an explicit supported mode.")
     tolerance = rule.get("amount_tolerance", "0")
-    if isinstance(tolerance, (float, bool)):
-        raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL amount_tolerance must be exact text.")
     try:
-        tolerance_text = str(Decimal(str(tolerance)))
-    except Exception as exc:
+        tolerance_value = parse_exact_amount(tolerance)
+    except InvalidAmountError as exc:
         raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL amount_tolerance must be exact text.") from exc
-    if not Decimal(tolerance_text).is_finite() or Decimal(tolerance_text) < 0:
+    if tolerance_value < 0:
         raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL amount_tolerance must be finite and non-negative.")
+    tolerance_text = str(_decimal_text(tolerance_value))
     date_window = rule.get("date_window_days", 0)
     if isinstance(date_window, bool) or not isinstance(date_window, int) or not 0 <= date_window <= 3660:
         raise PostgresGroupedMatchingAdapterError("Grouped PostgreSQL date_window_days is outside its bound.")

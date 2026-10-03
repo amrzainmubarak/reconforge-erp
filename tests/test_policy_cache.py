@@ -103,8 +103,29 @@ def test_denials_and_delegations_are_never_cached() -> None:
     assert allowed.calls == 2 and len(cache) == 0
 
 
+def test_allowed_decision_expires_after_bounded_ttl() -> None:
+    now = [100.0]
+    cache = PolicyDecisionCache(cache_ttl_seconds=5, clock=lambda: now[0])
+    evaluator = _CountingEvaluator(PolicyDecision(True, "allowed", granted_permission="close.manage"))
+    context = _context("tenant-a")
+
+    cache.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    cache.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    assert evaluator.calls == 1
+
+    now[0] = 105.0
+    cache.evaluate(context, required_permission="close.manage", evaluator=evaluator)
+    assert evaluator.calls == 2
+
+
 def test_cache_rejects_unsafe_scope_and_capacity_configuration() -> None:
-    for kwargs in ({"max_entries": 0}, {"max_entries": 100001}, {"policy_version": ""}):
+    for kwargs in (
+        {"max_entries": 0},
+        {"max_entries": 100001},
+        {"cache_ttl_seconds": 0},
+        {"cache_ttl_seconds": 3601},
+        {"policy_version": ""},
+    ):
         try:
             PolicyDecisionCache(**kwargs)
         except PolicyCacheError:

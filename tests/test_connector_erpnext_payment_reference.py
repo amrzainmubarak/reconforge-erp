@@ -66,7 +66,10 @@ def test_erpnext_payment_entry_read_uses_token_cursor_company_filter_and_exact_a
 
     assert [entry.entry_id for entry in result.page.entries] == ["PAY-2", "PAY-1"]
     assert result.page.next_cursor == "50"
-    assert result.page.entries[0].received_amount == "20.00"
+    assert [(entry.paid_amount, entry.received_amount) for entry in result.page.entries] == [
+        ("0", "20"),
+        ("10", "0"),
+    ]
     assert transport.calls[0][0] == (
         ERP_NEXT_PAYMENT_ENTRY_ENDPOINT
         + '?filters=%5B%5B%22company%22%2C%22%3D%22%2C%22Acme%22%5D%5D&limit_page_length=500&limit_start=25'
@@ -81,6 +84,7 @@ def test_erpnext_payment_entry_read_uses_token_cursor_company_filter_and_exact_a
     [
         b'{"data":[{"name":"PAY-1","company":"Acme","posting_date":"2026-01-01","paid_amount":"0","received_amount":"0","paid_from_account_currency":"USD","paid_to_account_currency":"USD","status":"Submitted"}]}',
         b'{"data":[{"name":"PAY-1","company":"Acme","posting_date":"2026-01-01","paid_amount":"NaN","received_amount":"0","paid_from_account_currency":"USD","paid_to_account_currency":"USD","status":"Submitted"}]}',
+        b'{"data":[{"name":"PAY-1","company":"Acme","posting_date":"2026-01-01","paid_amount":"1e2","received_amount":"0","paid_from_account_currency":"USD","paid_to_account_currency":"USD","status":"Submitted"}]}',
         b'{"data":[{"name":"PAY-1","company":"Acme","posting_date":"2026-01-01","paid_amount":"1","received_amount":"0","paid_from_account_currency":"USD","paid_to_account_currency":"USD","status":"Submitted"},{"name":"PAY-1","company":"Acme","posting_date":"2026-01-01","paid_amount":"1","received_amount":"0","paid_from_account_currency":"USD","paid_to_account_currency":"USD","status":"Submitted"}]}',
         b'{"data":[{"name":"PAY-1","company":"Acme","posting_date":"2026-01-01","paid_amount":"1","received_amount":"0","paid_from_account_currency":"USD","paid_to_account_currency":"USD","status":"Submitted"},{"name":"PAY-2","company":"Other","posting_date":"2026-01-01","paid_amount":"1","received_amount":"0","paid_from_account_currency":"USD","paid_to_account_currency":"USD","status":"Submitted"}]}',
     ],

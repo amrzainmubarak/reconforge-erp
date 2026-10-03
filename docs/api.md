@@ -194,6 +194,29 @@ call an external provider. This is a bounded server API composition, not proof
 of distributed export workers, object-store durability, UI adoption, HA/DR, or
 production readiness.
 
+## Governed server write-back boundary
+
+The server-profile write-back routes are:
+
+- `POST /api/v1/connectors/writeback/intents/{intent_id}/dispatch`
+- `POST /api/v1/connectors/writeback/intents/{intent_id}/recover`
+- `POST /api/v1/connectors/writeback/intents/{intent_id}/compensate`
+
+These routes require an authenticated tenant/workspace scope and the
+corresponding write-back permission. Each admitted in-memory
+`WritebackNetworkRegistration` must also declare the exact same `tenant_id`
+and `workspace_id`; a missing binding returns
+`writeback_connector_scope_not_configured`, and a different binding returns
+`writeback_connector_scope_mismatch`. The network executor repeats this check
+before resolving a payload or credential, so configuration cannot reuse an
+endpoint or credential reference across scopes by connector ID alone.
+
+Registration scope is digest-bound when present. Construction of an unbound
+registration remains parseable for compatibility and inspection, but it is not
+executable. Network write-back remains opt-in, provider-neutral, synthetic in
+the retained evidence, and explicitly non-posting until a separately governed
+provider integration is proven. See ADR 0651.
+
 ## Endpoints
 
 Unauthenticated:
@@ -201,6 +224,18 @@ Unauthenticated:
 - `GET /api/v1/health`
 - `GET /api/v1/version`
 - `POST /api/v1/auth/login`
+
+`GET /api/v1/health` is backend-aware. Local Profile reports the SQLite
+migration version and a redacted database filename. PostgreSQL Server Profile
+reports the PostgreSQL Alembic revision, pending migration count, and the
+stable `server-managed` path summary. It returns `degraded` when the server
+database or migration state cannot be verified; it never exposes a DSN or raw
+driver error.
+
+`GET /api/v1/version` preserves the package/API version contract and reports
+`local/self-hosted foundation` or
+`postgresql server/self-hosted foundation` according to the configured
+backend profile.
 
 Authenticated local users and roles:
 
@@ -270,8 +305,16 @@ PostgreSQL close-control boundary. `POST /close/periods` requires an existing
 starter tasks. Task completion is blocked by incomplete dependencies, approval
 and locking require 100% readiness, and reopening requires a reason. These
 states coordinate ReconForge close work only; they do not lock source-ERP
-postings. Close mutations append PostgreSQL audit-chain and outbox evidence in
-the same transaction and never fall back to SQLite.
+postings. Lock and reopen identities are persisted, and the locker cannot
+reopen the same period. PostgreSQL task and period mutations serialize on the
+parent period, and locked actor/timestamp evidence is immutable. Close mutations append PostgreSQL audit-chain and
+outbox evidence in the same transaction and never fall back to SQLite.
+Consolidation-close run preparation uses the same governed-period serialization
+boundary: PostgreSQL locks the parent period and SQLite re-reads it after its
+writer transaction begins before accepting a new run. The close worksheet
+remains explicitly non-posting.
+Server consolidation run transitions also lock and re-check the parent period;
+once it is `Locked`, approval/posting/reversal transitions fail closed.
 
 Exceptions and metrics:
 
@@ -505,8 +548,10 @@ complete WebAuthn/step-up experience. See
 
 ## Emergency access (PostgreSQL profile)
 
-`/api/v1/auth/emergency-access/requests` exposes a human-only, forced-RLS
-lifecycle: self-request and list, independent stepped-up approve/reject,
+`/api/v1/auth/emergency-access/requests` exposes a human-only, explicit-
+permission, forced-RLS lifecycle: a requester with the tenant-defined
+`security.emergency.request` permission submits a self-request and can list it,
+independent stepped-up approve/reject,
 requester activation from the same stepped-up session, explicit end, and
 independent stepped-up review. Authority is limited to a closed five-permission
 financial/operational registry and 5–60 minutes. It never grants identity,

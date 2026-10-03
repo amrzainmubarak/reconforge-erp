@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+import pytest
+
 from reconforge.config import ReconForgeConfig
 from reconforge.reconciliation.risk import amount_component, assess_risk, risk_level
 from reconforge.risk.scoring import score_exception
+from reconforge.utils.money import LEGACY_FINANCIAL_INPUT_POLICY, STRICT_FINANCIAL_INPUT_POLICY
 
 
 def test_risk_level_boundaries() -> None:
@@ -28,6 +31,15 @@ def test_risk_amount_component_uses_exact_decimal_thresholds() -> None:
     assert amount_component(Decimal("1000.50")) == 20
     assert amount_component(Decimal("250.01"), baseline=Decimal("250")) == 20
     assert amount_component("not-a-number") == 0
+
+
+def test_risk_amount_component_requires_explicit_policy_for_binary_float() -> None:
+    with pytest.warns(DeprecationWarning):
+        legacy = amount_component(1000.5, financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY)
+    strict = amount_component(1000.5, financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY)
+
+    assert legacy == 20
+    assert strict == 0
 
 
 def test_risk_scoring_invalid_amount_factors_do_not_crash_or_cast_to_zero() -> None:

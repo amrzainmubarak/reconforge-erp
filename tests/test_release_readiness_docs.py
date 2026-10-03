@@ -26,9 +26,12 @@ REQUIRED_SMOKE_COMMANDS = [
     "reconforge api serve --db output/reconforge.db --host 127.0.0.1 --port 8765",
     "reconforge studio --input examples/sample_data --output output/demo",
     "reconforge studio --input examples/sample_data --output output/demo --db output/reconforge.db --require-auth",
-    "docker build -t reconforge-erp .",
-    "docker run --rm reconforge-erp reconforge doctor",
-    "docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge demo run --output output/demo",
+    "docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .",
+    "docker run --rm --network=none --read-only",
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges",
+    "reconforge-erp reconforge doctor",
+    "--tmpfs /app/output:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0700",
 ]
 
 

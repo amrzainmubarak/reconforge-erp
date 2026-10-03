@@ -44,6 +44,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         ".github/dependabot.yml",
         ".github/scripts/run_locked_python_audit.py",
         ".github/scripts/validate_container_security.py",
+        ".github/scripts/extract_syft_image_config_digest.py",
         ".github/scripts/verify_airgap_install.py",
         ".github/scripts/verify_postgres_ha_dr.py",
         ".github/scripts/verify_postgres_writeback_identity_migration.py",
@@ -179,6 +180,21 @@ def test_docker_runtime_is_multistage_and_non_root() -> None:
     assert "USER 10001:10001" in dockerfile
     assert "chown 10001:10001 /app/output" in dockerfile
     assert dockerfile.index("USER 10001:10001") < dockerfile.index('CMD ["reconforge", "doctor"]')
+
+
+def test_docker_stages_refresh_the_open_ssl_runtime_libraries_without_cli() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    stages = dockerfile.split("FROM ")[1:]
+
+    assert len(stages) == 2
+    assert all("apk add --no-cache --upgrade" in stage for stage in stages)
+    assert dockerfile.count("libcrypto3-3.5.8-r0.apk") == 2
+    assert dockerfile.count("libssl3-3.5.8-r0.apk") == 2
+    assert dockerfile.count("sha256:161223a16f042b8e469e9441291e071464fd91d4f4bbe6f496ee8d0abd4e0701") == 2
+    assert dockerfile.count("sha256:aca521e5ae4a321322a9d47ed64a1775f5ab1ffd215d1e9fc0433c58f7bfd037") == 2
+    assert dockerfile.count("/tmp/libcrypto3.apk") == 6
+    assert dockerfile.count("/tmp/libssl3.apk") == 6
+    assert "openssl " not in dockerfile
 
 
 def test_docker_context_is_deny_by_default() -> None:
@@ -341,6 +357,69 @@ def _mutate_release_post_push_binding(root: Path) -> None:
     )
 
 
+def _mutate_release_unpinned_action(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+            "actions/setup-node@v7",
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_clean_tree_check(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            'test -z "$(git status --porcelain=v1 --untracked-files=all)"',
+            '# test -z "$(git status --porcelain=v1 --untracked-files=all)"',
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_tag_package_alignment(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            'test "$GITHUB_REF_NAME" = "v${version}"',
+            'test "$GITHUB_REF_NAME" = "${version}"',
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_signed_tag_verification(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(".verification.verified", ".verification.unavailable"),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_sbom_attestation(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "sbom-path: release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.cdx.json",
+            "# sbom path intentionally removed",
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_provenance_verification(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "--bundle release/image-sbom.sigstore.json >/dev/null",
+            "--bundle release/image-sbom-disabled.sigstore.json >/dev/null",
+        ),
+        encoding="utf-8",
+    )
+
+
 @pytest.mark.parametrize(
     "mutator",
     [
@@ -370,6 +449,27 @@ def test_policy_validator_rejects_resolution_or_gate_drift(
     mutator(project)
 
     with pytest.raises(SupplyChainPolicyError):
+        POLICY_MODULE.validate_project(project, date(2026, 7, 26))
+
+
+@pytest.mark.parametrize(
+    ("mutator", "message"),
+    [
+        (_mutate_release_unpinned_action, "not pinned to a full SHA"),
+        (_mutate_release_clean_tree_check, "clean tree check"),
+        (_mutate_release_tag_package_alignment, "tag/package version alignment"),
+        (_mutate_release_signed_tag_verification, "signed annotated tag verification"),
+        (_mutate_release_sbom_attestation, "SBOM attestation"),
+        (_mutate_release_provenance_verification, "missing bundle"),
+    ],
+)
+def test_release_workflow_guard_rejects_essential_release_gate_drift(
+    tmp_path: Path, mutator: Callable[[Path], None], message: str
+) -> None:
+    project = _copy_policy_project(tmp_path)
+    mutator(project)
+
+    with pytest.raises(SupplyChainPolicyError, match=message):
         POLICY_MODULE.validate_project(project, date(2026, 7, 26))
 
 
@@ -489,6 +589,7 @@ def test_security_and_release_workflows_pin_tools_and_fail_before_registry_write
         assert f'SYFT_VERSION: "{policy["container_audits"]["sbom"]["version"]}"' in workflow
         assert f'GRYPE_VERSION: "{policy["container_audits"]["vulnerability"]["version"]}"' in workflow
         assert ".github/scripts/validate_container_security.py" in workflow
+        assert ".github/scripts/extract_syft_image_config_digest.py" in workflow
 
     assert '"--require-hashes"' in audit_runner
     assert '"--disable-pip"' in audit_runner

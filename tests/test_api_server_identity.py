@@ -506,7 +506,10 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
         postgres_require_tls=False,
     )
     # This fixture intentionally covers the pre-Finance-Core server ledger
-    # compatibility contract.  Dedicated tests exercise the new adapter.
+    # compatibility contract. The fake identity transport has no PostgreSQL
+    # domain-audit backend; dedicated synthetic/live tests exercise the new
+    # durable policy-provenance adapter.
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     legacy_app.state.postgres_finance_core_factory = None
     client = TestClient(legacy_app)
     tenant_headers = {"X-ReconForge-Tenant": "tenant-a"}
@@ -673,7 +676,7 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
     assert server_trial_balance.json()["totals"]["balanced"] is True
     assert audit_events.status_code == 200
     assert audit_events.json()["source"]["kind"] == "postgresql-ledger-control"
-    assert audit_events.json()["events"][0]["metadata"] == {"source": "fake"}
+    assert audit_events.json()["events"][0]["metadata"] == "[REDACTED]"
     assert audit_verify.status_code == 200
     assert audit_verify.json()["ok"] is True
     assert entity_trial_balance.status_code == 501
@@ -1325,6 +1328,8 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 {
                     "registration_schema": "writeback-network-registration-v1",
                     "connector_id": connector_id,
+                    "tenant_id": tenant_a,
+                    "workspace_id": "workspace-a",
                     "version": "1.0.0",
                     "endpoint": "https://api.example.test/v1/writeback",
                     "egress_destinations": ("https://api.example.test/v1/writeback",),

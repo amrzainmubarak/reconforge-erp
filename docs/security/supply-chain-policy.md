@@ -12,7 +12,7 @@ that hosted controls ran or that dependencies are safe.
 | --- | --- | --- | --- |
 | Python runtime/server/tools | `pyproject.toml` + universal `uv.lock` | `uv sync --locked`; supported Python 3.11/3.12 | Lock applies to the application and repository workflows, not downstream library consumers |
 | Web client | `apps/web/package.json` + npm v3 lock | `npm ci` | All 211 non-root records have HTTPS registry resolution and embedded SRI; the known integrity gap is zero |
-| Container | digest-pinned Python base and drill images + checksum-pinned uv/Syft/Grype archives + `uv.lock` + hash-bound OpenVEX | non-editable runtime-only sync; Syft native inventory is scanned by Grype before registry authentication | The 2026-08-22 local image has five High matches: three exact Python matches are source-proven `fixed` in reviewed VEX, while two affected OpenSSL 3.5.7 matches still block release; no exception or `not_affected` decision exists |
+| Container | digest-pinned Python base and drill images + checksum-pinned Alpine security APKs, uv/Syft/Grype archives + `uv.lock` + hash-bound OpenVEX | non-editable runtime-only sync; both Docker stages install checksum-bound libcrypto3/libssl3 APKs before the trimmed runtime is produced; Syft native inventory is scanned by Grype before registry authentication | E-824's current local exact-subject scan passes with valid v6.1.9 database and zero policy blockers. Hosted clean-build/provenance and publication evidence remain open; license inventory is not legal compatibility |
 | Release build tools | `.github/release-build-requirements.txt` | pip `--require-hashes` | Separate from application resolution under ADR 0067 |
 
 The absolute uv cutoff makes an unchanged lock regeneration independent of
@@ -40,8 +40,10 @@ the same runner in `current` mode only after a locked dev-profile sync.
 
 Container publication additionally requires checksum/commit/platform-verified
 Syft 1.51.0 and Grype 0.117.0. The workflow builds one Linux AMD64 image without
-registry credentials, binds Syft and Grype reports to its configuration and
-manifest digests, requires a valid Grype v6 database no more than 120 hours old,
+registry credentials, derives the configuration subject from Syft's native
+`source.metadata.imageID` (while retaining its manifest digest), binds Syft and
+Grype reports to both exact identities, requires a valid Grype v6 database no
+more than 120 hours old,
 and requires at least 90% package-license inventory coverage. It rejects
 Critical, unexcepted High, Unknown-severity, stale, mismatched, or operationally
 failed scans. A suppressed finding is accepted only when the hash-bound

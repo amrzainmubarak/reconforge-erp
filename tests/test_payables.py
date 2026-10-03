@@ -172,6 +172,20 @@ def test_payables_rejects_stale_versions_and_invalid_values(tmp_path: Path) -> N
         connection.close()
 
 
+@pytest.mark.parametrize("quantity", [0.1, "1e2"])
+def test_sqlite_payables_quantity_rejects_non_strict_numeric_inputs(quantity: object) -> None:
+    with pytest.raises(PlatformError, match="quantity"):
+        payables_module._quantity(quantity, field="Quantity")
+
+
+@pytest.mark.parametrize("quantity", [0.1, "1e2", "NaN", "-1", None])
+def test_sqlite_payables_stored_quantity_decoder_fails_closed(quantity: object) -> None:
+    with pytest.raises(PlatformError, match="stored quantity"):
+        payables_module._stored_quantity(quantity, field="Stored quantity")
+
+    assert payables_module._stored_quantity("0", field="Empty receipt total", allow_zero=True) == 0
+
+
 def test_purchase_order_creator_cannot_self_approve_in_trusted_local_mode(tmp_path: Path) -> None:
     connection, service = _service(tmp_path)
     try:

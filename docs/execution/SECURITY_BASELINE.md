@@ -1,5 +1,186 @@
 # Security Baseline
 
+## E-1120 Strict Receivables quantity inputs (2026-08-29)
+
+- SQLite Receivables rejects binary floating-point, scientific-notation,
+  non-finite, malformed, and missing invoice quantities before persistence or
+  line-total arithmetic through the shared strict parser.
+- The focused Receivables/API/PostgreSQL selection reports 19 passed and 1
+  capability-gated PostgreSQL skip; the full locked Python 3.11 regression
+  exits 0 at 100% with declared capability-gated skips. Bandit exits 0, and
+  `pip-audit` reports no known vulnerabilities while explicitly excluding the
+  unpublished local package from PyPI lookup. A disposable local PostgreSQL
+  16 runtime with a non-privileged application role also ran the four-file
+  Payables/Receivables PostgreSQL and HTTP selection at exit 0. The HTTP
+  fixtures inject synthetic authenticated principals and scope snapshots, so
+  this is a fail-closed input control rather than external-identity, hosted,
+  tax, posting, settlement, provider, or production-security assurance.
+
+## E-1119 Strict persisted Payables quantity decoding (2026-08-29)
+
+- Receipt-limit and three-way-match arithmetic rejects malformed, non-finite,
+  negative, and non-canonical persisted quantities through a strict decoder;
+  zero is permitted only when no posted receipt rows exist.
+- PostgreSQL uses the canonical text shadow for receipt aggregation before
+  arithmetic. The focused selection reports 40 passed and 1 capability-gated
+  PostgreSQL skip, and the full locked Python 3.11 regression exits 0 at 100%
+  with declared capability-gated skips. This is a fail-closed persistence
+  control, not inventory, provider, settlement, posting, or production-
+  security assurance.
+
+## E-1118 Strict Payables quantity inputs (2026-08-29)
+
+- SQLite and PostgreSQL Payables adapters reject binary floating-point and
+  scientific-notation quantity inputs before persistence or three-way match
+  arithmetic, using the shared strict parser.
+- The focused Payables/API/application/PostgreSQL selection reports 30 passed
+  and 1 capability-gated PostgreSQL skip; the full locked Python 3.11
+  regression exits 0 at 100% with declared capability-gated skips. This is a
+  fail-closed input control, not inventory, provider, settlement, posting, or
+  production-security assurance.
+
+## E-1117 Strict amount lexemes in duplicate detection (2026-08-29)
+
+- Duplicate-detection amount fingerprints now share the strict parser, which
+  rejects binary floating-point and scientific-notation text before values
+  enter the canonical grouping digest.
+- The focused duplicate-detection and strategy-contract selection passes
+  48/48, including both scientific-notation rejection cases; the full locked
+  Python 3.11 regression exits 0 at 100% with declared capability-gated skips.
+  This is a fail-closed input boundary, not source authentication, fraud
+  prevention, posting, or production-security assurance.
+
+## E-1116 Explicit financial input policy in Journal Controls (2026-08-29)
+
+- Journal-control production adapters now name the strict financial input
+  policy when parsing thresholds and persisted journal amounts; a float cannot
+  enter the new control path implicitly.
+- The focused journal/application/control selection collected 10 tests: 9
+  passed and 1 capability-gated PostgreSQL test was skipped, with strict
+  rejection and explicit legacy compatibility covered. This is a fail-closed
+  input control, not posting, source-authenticity, or production-security
+  assurance.
+
+## E-1115 Strict canonical Money in bank-control replay (2026-08-29)
+
+- Persisted bank-control reports fail closed when the tolerance or a decision
+  variance is valid only after Money text normalization; the strict reader
+  requires exact producer serialization and preserves the existing digest
+  boundary.
+- Focused bank/API/persistence tests pass 11/11 with one capability-gated
+  PostgreSQL skip, and the full locked Python 3.11 regression reaches 100% and
+  exits 0. This is an input/replay-integrity control, not bank-source
+  authentication, payment security, settlement, posting, or production
+  assurance.
+
+## E-1114 Current supply-chain claims follow zero npm SRI gap (2026-08-29)
+
+- Current policy and documentation agree on 211 npm registry entries and zero
+  local integrity gaps; the retired 155-entry statement remains only in dated
+  historical records where it describes an earlier revision.
+- The validator/documentation regression and full locked security/package
+  gates pass. Local SRI metadata is not package-safety, provenance, or hosted
+  enforcement evidence.
+
+## E-1113 Strict canonical API and CLI Money inputs (2026-08-29)
+
+- Canonical Money request adapters fail closed on padded/scientific amount
+  text, lowercase currency, and altered provenance before domain arithmetic;
+  the legacy ownership-change CLI contract is explicitly excluded.
+- Focused interface/domain tests and full locked static/security/package/diff
+  gates pass. This is input-integrity evidence, not production assurance.
+
+## E-1112 Strict PostgreSQL ownership-change Money hydration (2026-08-29)
+
+- Persisted ownership-change Money fields now fail closed on non-canonical
+  amount, currency, or provenance mappings during typed hydration, before
+  replay and digest-lineage acceptance.
+- Canonical requests remain compatible; ownership-change persistence/domain
+  tests and full locked static/security/package/diff gates pass. This is
+  artifact-integrity evidence, not production assurance.
+
+## E-1111 Strict canonical-money replay consumers (2026-08-29)
+
+- Four additional persisted-money consumers fail closed on mapping drift:
+  translation-result replay, worksheet replay, impairment-bridge replay, and
+  intercompany source-line decoding. Compatibility/API restoration remains
+  unchanged.
+- Re-signed padded amount text is covered before arithmetic/reproduction; the
+  focused 40/40 selection and full static/security/package/diff gates pass.
+  This is artifact-integrity evidence, not statutory or production assurance.
+
+## E-1110 Strict canonical-money replay reader (2026-08-29)
+
+- The additive strict reader rejects mapping drift after policy-aware Money
+  restoration; four non-posting financial replay verifiers use it. Existing
+  compatibility restoration is not changed.
+- Padded/scientific amounts, lowercase currency, and altered canonical fields
+  are covered by focused tests. The full regression and static/security,
+  package, and diff gates pass. This is artifact-integrity evidence, not
+  statutory, valuation, posting, or production assurance.
+
+## E-1109 Strict PPA and deferred-tax replay money (2026-08-28)
+
+- PPA and deferred-tax replay reject re-signed padded decimal text and
+  lowercase currency codes before financial arithmetic. Policy/registry
+  provenance and the canonical producer serialization must agree.
+- The focused acquisition/PPA/deferred-tax/impairment suite passes 31/31, with
+  full regression and static/security/package/diff gates passing. This is
+  local non-posting artifact integrity, not statutory, tax, valuation, or
+  production assurance.
+
+## E-1108 Strict acquisition bridge replay amounts (2026-08-28)
+
+- Acquisition replay now fails closed when a re-signed summary or line amount
+  is malformed, non-canonical, non-finite, policy-inconsistent, or in a
+  different or non-canonical currency. The verifier restores the embedded
+  canonical money policy before balance evaluation.
+- The focused acquisition suite passes 13/13 and the locked full regression
+  plus static/security/package/diff gates pass. The control protects local
+  artifact integrity; it does not provide statutory, valuation, or production
+  assurance.
+
+## E-824 Exact local container security disposition (2026-08-28)
+
+- The current Python 3.12.14 linux/amd64 candidate passes the exact
+  subject-bound Syft 1.51.0/Grype 0.117.0 gate with a valid imported Grype
+  v6.1.9 database built 2026-08-28. The validator reports zero blockers and
+  zero active exceptions.
+- The result records 68 packages, 94.11% license metadata coverage, 16 active
+  matches, and three exact source-proven fixed Python High dispositions under
+  hash-bound fixed-only OpenVEX. Counts remain visible; no broad ignore or
+  severity override is used.
+- E-824 is now complete for local exact-image disposition. Hosted build and
+  provenance, registry publication, legal license compatibility, independent
+  reachability, and production security effectiveness remain open.
+
+## E-1107 Content-bound deployment-readiness evidence (2026-08-28)
+
+- The readiness matrix binds all 25 referenced repository evidence files to
+  lowercase SHA-256 digests. The offline reader checks exact coverage and file
+  bytes before the matrix or CLI digest is returned.
+- Focused profile/readiness/runtime tests pass 38/38; the full locked Python
+  3.11 regression and static/security/package/diff gates pass. This detects
+  repository evidence drift but does not authenticate runtime events, sign
+  artifacts, provide independent assurance, or establish production readiness.
+
+## E-884 Python 3.12 Alpine candidate (2026-08-28)
+
+- The digest-pinned two-stage runtime now uses Python 3.12 Alpine. The
+  linux/amd64 candidate build, hardened networkless/read-only/capability-dropped
+  runtime smoke, sample validation, and demo output all pass.
+- Docker Scout 1.24.0 reports 82 packages and zero Critical/High/Medium/Low
+  findings for the candidate. This is fresh local candidate evidence, not a
+  hosted release scan.
+- Full locked Python 3.11/3.12 application regressions, web gates, package
+  build, API/parity, and air-gap rollback drills pass. The existing Python 3.11
+  image passed Doctor as the rollback smoke.
+- The exact Syft/Grype release-integrated scan is deliberately not claimed as
+  passed: Syft generated the candidate SBOM, but the Grype database refresh
+  remained stale/blocked. E-824 stays open for a fresh valid database, hosted
+  build, signed provenance, and publication. License legality, reachability,
+  cross-platform behavior, and production security effectiveness remain open.
+
 ## E-853 regulated admission gate (2026-08-23)
 
 - Composite verification rejects unresolved profile findings and local key
@@ -215,7 +396,7 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
 | `npm.cmd --prefix apps/web audit --package-lock-only --audit-level=high` | Exit 0; 0 vulnerabilities reported | Covers the exact-version npm lock; all 211 current non-root entries have HTTPS registry resolution and embedded SRI |
 | Gitleaks 8.30.1 full history | Exit 0; 602 commits and about 22.49 MB scanned after two exact historical fingerprints were recorded for synthetic test fixtures | Checksum-verified binary and default rules; exact fingerprints are limited to known non-secret test literals; detection is not proof that no secret existed or that external credentials are safe |
 | Gitleaks 8.30.1 checked tree | Exit 0 across a clean 25.12 MB `git archive` checkout; the workspace scan is not evidence because generated environments caused a 6.30 GB/120-second timeout | Only generated/tool-owned paths are excluded; output is 100% redacted and every suppression is an exact commit/path/rule/line or path/rule/line fingerprint |
-| Hardened Docker CLI and exact-image gate | E-822 local exit 0: two official-digest-pinned Python 3.11 Alpine stages, closed 216.25 KB context, 58,773,988-byte runtime image, UID/GID 10001, no uv/global pip/source/build manifests/docs; Doctor, validation, rules, and demo pass without networking on a read-only root. E-823/E-824 add exact Syft/Grype subject binding and fixed-only hash-bound VEX for three source-proven CPython fixes. | The current Grype evidence overrides the earlier favorable Docker Scout result for release gating and remains blocked on two CVE-2026-14456 matches in OpenSSL 3.5.7. One Windows/Docker Desktop host and time-bounded databases only; no hosted OCI reproducibility, independent reachability review, license legal review, signature/provenance, production volume ownership, or deployed hardening assurance. |
+| Hardened Docker CLI and exact-image gate | E-884 local exit 0: two official-digest-pinned Python 3.12 Alpine stages, closed context, runtime-only assets, UID/GID 10001, no uv/global pip/source/build manifests/docs; E-959 refreshes both stages to libcrypto3/libssl3 3.5.8-r0 without adding the OpenSSL CLI. Hardened Doctor passes without networking on a read-only root. E-823/E-824 retain exact Syft/Grype subject binding and fixed-only hash-bound VEX contracts; E-1074 derives the CI config subject from Syft's native image metadata. | Fresh Docker Scout 1.24.0 candidate scan reports 82 packages and zero Critical/High/Medium/Low findings. Syft generated the candidate SBOM, but the exact Grype release path is not marked green because database refresh remained stale/blocked. One Windows/Docker Desktop host; no hosted OCI reproducibility, independent reachability review, license legal review, signature/provenance, production volume ownership, or deployed hardening assurance. |
 
 ## Controls observed
 
@@ -327,9 +508,11 @@ Measured through 2026-08-22 against the current local snapshot in `STATE.md`. Th
   license suitability.
 - File ingestion remains partial: FI-005/FI-006/FI-007 generated evidence/review/report/Studio CSV/JSON, FI-008/FI-009/FI-014/FI-015/FI-016 paths, and AP/AR/audit/PostgreSQL-outbox/PostgreSQL-reconciliation/SQLite-matching/public-export/Redis-session FI-013 contracts are bounded; exact AST allowlists close current direct tabular/JSON/YAML parser calls. Legacy XLS has only OLE-signature/file-size checks; client-pack and database-export replacement now have bounded explicit recovery but retain observer/pre-marker/host-loss limits. Legacy DB/review-state semantics remain permissive. Authorship, actor authorization, task correctness, disclosure approval, and provenance are not authenticated; malware scanning, quarantine, HTTP upload, and future connector controls remain absent under R-018.
 - PostgreSQL and Redis service images use mutable major tags in CI; local live-service tests were skipped.
-- Checksum-verified local secret scans and the bounded E-822 container smoke
-  profile pass, but the E-824 exact-image release gate remains blocked by two
-  OpenSSL High matches. Bounded backup encryption plus an application
+- Checksum-verified local secret scans and the bounded E-822/E-959 container
+  smoke profile pass, and the rebuilt runtime contains OpenSSL 3.5.8-r0. The
+  local E-824 exact-image gate passes; hosted clean-build and provenance
+  evidence remain open.
+  Bounded backup encryption plus an application
   restore-permission boundary have local evidence. No current runtime evidence
   exists for DAST, broad fuzzing, container/IaC vulnerability scanning,
   signature/provenance verification, identity-provisioned restore operation,

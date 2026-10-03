@@ -6,6 +6,7 @@ import pytest
 
 from reconforge.application.scheduler import ScheduleProcessResult
 from reconforge.auth.policy import PolicyEvaluationContext
+from reconforge.deployment import WorkerPermissionManifest
 from reconforge.workers import postgres_scheduler as worker_module
 from reconforge.workers.postgres_scheduler import (
     PostgresSchedulerWorker,
@@ -33,6 +34,17 @@ class _Factory:
         return connection
 
 
+def _scheduler_manifest(worker_id: str) -> WorkerPermissionManifest:
+    return WorkerPermissionManifest(
+        worker_id=worker_id,
+        principal_id=worker_id,
+        discovery_permission="schedule.discover",
+        execution_permission="schedule.run",
+        granted_permissions=("schedule.discover", "schedule.run"),
+        scope="tenant:tenant_a",
+    )
+
+
 def test_scheduler_worker_uses_stable_tenant_order_one_clock_and_fresh_connections(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -55,7 +67,10 @@ def test_scheduler_worker_uses_stable_tenant_order_one_clock_and_fresh_connectio
         factory,
         tenant_supplier=lambda: ("tenant-b", "tenant-a", "tenant-a"),
         settings=PostgresSchedulerWorkerSettings(
-            worker_id="scheduler-worker", poll_interval_seconds=0, batch_size=25
+            worker_id="scheduler-worker",
+            poll_interval_seconds=0,
+            batch_size=25,
+            allow_unbound_hosted_policy=True,
         ),
         clock=lambda: datetime(2026, 7, 29, 12, 0, 0, 987654, tzinfo=UTC),
     )
@@ -98,6 +113,8 @@ def test_scheduler_worker_policy_denies_before_connection_access() -> None:
         tenant_supplier=lambda: ("tenant_a",),
         settings=PostgresSchedulerWorkerSettings(
             worker_id="scheduler-policy-worker",
+            permission_manifest=_scheduler_manifest("scheduler-policy-worker"),
+            discovery_policy_permission="schedule.discover",
             policy_context_supplier=lambda tenant: PolicyEvaluationContext(
                 user_id="scheduler-policy-worker",
                 username="scheduler-policy-worker",
@@ -112,8 +129,67 @@ def test_scheduler_worker_policy_denies_before_connection_access() -> None:
         worker.process_once()
 
 
+def test_scheduler_worker_rejects_missing_policy_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> _Connection:
+            raise AssertionError("missing policy must be rejected before connection access")
+
+    worker = PostgresSchedulerWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ("tenant_a",),
+        settings=PostgresSchedulerWorkerSettings(worker_id="unbound-scheduler-worker"),
+    )
+    with pytest.raises(
+        PostgresSchedulerWorkerError,
+        match="requires an explicit service-account policy supplier",
+    ):
+        worker.process_once()
+
+
+def test_scheduler_worker_requires_manifest_for_configured_policy_before_connection() -> None:
+    class _NeverConnect:
+        def connect(self) -> _Connection:
+            raise AssertionError("missing permission manifest must be rejected before connection access")
+
+    worker = PostgresSchedulerWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ("tenant_a",),
+        settings=PostgresSchedulerWorkerSettings(
+            worker_id="manifestless-scheduler",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="manifestless-scheduler",
+                username="manifestless-scheduler",
+                user_permissions={"schedule.discover", "schedule.run"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    with pytest.raises(PostgresSchedulerWorkerError, match="verified worker permission manifest"):
+        worker.process_once()
+
+
+def test_scheduler_worker_rejects_manifest_permission_configuration_drift() -> None:
+    with pytest.raises(PostgresSchedulerWorkerError, match="execution_permission"):
+        PostgresSchedulerWorkerSettings(
+            worker_id="scheduler-drift-worker",
+            policy_permission="schedule.run",
+            discovery_policy_permission="schedule.discover",
+            permission_manifest=WorkerPermissionManifest(
+                worker_id="scheduler-drift-worker",
+                principal_id="scheduler-drift-worker",
+                discovery_permission="schedule.discover",
+                execution_permission="other.run",
+                granted_permissions=("other.run", "schedule.discover"),
+                scope="tenant:tenant_a",
+            ),
+        )
+
+
 def test_scheduler_worker_policy_allows_scoped_service_identity(monkeypatch: pytest.MonkeyPatch) -> None:
     factory = _Factory()
+    policy_permissions: list[str] = []
 
     class Service:
         def __init__(self, repository: object) -> None:
@@ -125,15 +201,22 @@ def test_scheduler_worker_policy_allows_scoped_service_identity(monkeypatch: pyt
             return ScheduleProcessResult(1, 1, 1, 1, 0, 0, 0, 0)
 
     monkeypatch.setattr(worker_module, "SchedulerApplicationService", Service)
+    monkeypatch.setattr(
+        worker_module,
+        "require_service_worker_policy",
+        lambda **values: policy_permissions.append(str(values["policy_permission"])),
+    )
     worker = PostgresSchedulerWorker(
         factory,
         tenant_supplier=lambda: ("tenant_a",),
         settings=PostgresSchedulerWorkerSettings(
             worker_id="scheduler-policy-worker",
+            permission_manifest=_scheduler_manifest("scheduler-policy-worker"),
+            discovery_policy_permission="schedule.discover",
             policy_context_supplier=lambda tenant: PolicyEvaluationContext(
                 user_id="scheduler-policy-worker",
                 username="scheduler-policy-worker",
-                user_permissions={"schedule.run"},
+                user_permissions={"schedule.discover", "schedule.run"},
                 principal_type="service_account",
                 tenant_id=tenant,
                 authorized_tenant_ids=frozenset({tenant}),
@@ -142,6 +225,7 @@ def test_scheduler_worker_policy_allows_scoped_service_identity(monkeypatch: pyt
     )
     result = worker.process_once()
     assert result[0].dispatched == 1
+    assert policy_permissions == ["schedule.discover", "schedule.run"]
 
 
 def test_scheduler_worker_rechecks_policy_before_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -163,7 +247,7 @@ def test_scheduler_worker_rechecks_policy_before_dispatch(monkeypatch: pytest.Mo
     def policy_context(tenant: str) -> PolicyEvaluationContext:
         nonlocal policy_calls
         policy_calls += 1
-        permissions = {"schedule.run"} if policy_calls == 1 else set()
+        permissions = {"schedule.discover", "schedule.run"} if policy_calls == 1 else set()
         return PolicyEvaluationContext(
             user_id="scheduler-revocation-worker",
             username="scheduler-revocation-worker",
@@ -179,6 +263,8 @@ def test_scheduler_worker_rechecks_policy_before_dispatch(monkeypatch: pytest.Mo
         tenant_supplier=lambda: ("tenant_a",),
         settings=PostgresSchedulerWorkerSettings(
             worker_id="scheduler-revocation-worker",
+            permission_manifest=_scheduler_manifest("scheduler-revocation-worker"),
+            discovery_policy_permission="schedule.discover",
             policy_context_supplier=policy_context,
             poll_interval_seconds=0,
         ),
@@ -222,7 +308,7 @@ def test_scheduler_worker_scope_lane_requires_exact_policy_and_passes_scope(
         return PolicyEvaluationContext(
             user_id="scoped-scheduler",
             username="scoped-scheduler",
-            user_permissions={"schedule.run"},
+            user_permissions={"schedule.discover", "schedule.run"},
             principal_type="service_account",
             tenant_id=tenant,
             workspace_id=workspace,
@@ -237,6 +323,8 @@ def test_scheduler_worker_scope_lane_requires_exact_policy_and_passes_scope(
         tenant_supplier=tuple,
         settings=PostgresSchedulerWorkerSettings(
             worker_id="scoped-scheduler",
+            permission_manifest=_scheduler_manifest("scoped-scheduler"),
+            discovery_policy_permission="schedule.discover",
             policy_context_scope_supplier=policy_context,
             scope_supplier=lambda: (("tenant_a", "workspace-a", "entity-a"),),
             poll_interval_seconds=0,
@@ -261,10 +349,12 @@ def test_scheduler_worker_rejects_entity_lane_without_workspace_before_connectio
         tenant_supplier=tuple,
         settings=PostgresSchedulerWorkerSettings(
             worker_id="scoped-scheduler",
+            permission_manifest=_scheduler_manifest("scoped-scheduler"),
+            discovery_policy_permission="schedule.discover",
             policy_context_scope_supplier=lambda tenant, workspace, entity: PolicyEvaluationContext(
                 user_id="scoped-scheduler",
                 username="scoped-scheduler",
-                user_permissions={"schedule.run"},
+                user_permissions={"schedule.discover", "schedule.run"},
                 principal_type="service_account",
                 tenant_id=tenant,
                 workspace_id=workspace,

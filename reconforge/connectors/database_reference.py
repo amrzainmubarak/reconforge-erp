@@ -11,13 +11,13 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from typing import Protocol
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from reconforge.connectors.amounts import canonical_connector_amount
 from reconforge.connectors.manifest import (
     AuthenticationMethod,
     ConnectorCapability,
@@ -111,13 +111,7 @@ class DatabaseRecordRow(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, value: str) -> str:
-        try:
-            amount = Decimal(value)
-        except InvalidOperation as exc:
-            raise ValueError("amount must be exact Decimal text") from exc
-        if not amount.is_finite():
-            raise ValueError("amount must be finite")
-        return value
+        return canonical_connector_amount(value)
 
 
 class DatabaseTransport(Protocol):

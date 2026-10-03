@@ -29,6 +29,7 @@ from reconforge.api.server_identity import (
 )
 from reconforge.auth import AuthRepositoryError, AuthServiceError, LocalAuthService
 from reconforge.auth.federation import FederationError, FederationRequest, FederationService
+from reconforge.auth.field_access import project_auth_me
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id
@@ -566,7 +567,7 @@ def me(
             "organizations": sorted(principal.authorized_organization_ids),
             "legal_entities": sorted(principal.authorized_legal_entity_ids),
         }
-    return payload
+    return project_auth_me(payload).visible
 
 
 def _server_authenticate_and_create_session(

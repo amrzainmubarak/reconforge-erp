@@ -139,6 +139,61 @@ def test_acquisition_bridge_payload_verification_detects_tampering() -> None:
         verify_acquisition_fair_value_bridge_payload(payload)
 
 
+@pytest.mark.parametrize(
+    ("location", "value"),
+    [
+        (("goodwill", "amount"), "5E+1"),
+        (("bargain_purchase", "amount"), "050.00"),
+        (("lines", 0, "amount", "amount"), "120E+0"),
+    ],
+)
+def test_acquisition_bridge_rejects_resigned_noncanonical_money(
+    location: tuple[object, ...], value: str
+) -> None:
+    result = prepare_acquisition_fair_value_bridge(_request())
+    payload = result.to_dict()
+    target: object = payload
+    for part in location[:-1]:
+        target = target[part]  # type: ignore[index]
+    target[location[-1]] = value  # type: ignore[index]
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    payload["result_digest"] = sha256(
+        json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+
+    with pytest.raises(ConsolidationError, match="canonical exact decimal text"):
+        verify_acquisition_fair_value_bridge_payload(payload)
+
+
+def test_acquisition_bridge_rejects_resigned_noncanonical_currency_code() -> None:
+    result = prepare_acquisition_fair_value_bridge(_request())
+    payload = result.to_dict()
+    payload["goodwill"]["currency"] = "usd"  # type: ignore[index]
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    payload["result_digest"] = sha256(
+        json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+
+    with pytest.raises(ConsolidationError, match="canonical exact decimal text"):
+        verify_acquisition_fair_value_bridge_payload(payload)
+
+
+def test_acquisition_bridge_rejects_resigned_noncanonical_reporting_currency() -> None:
+    result = prepare_acquisition_fair_value_bridge(_request())
+    payload = result.to_dict()
+    payload["reporting_currency"] = "usd"
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    payload["result_digest"] = sha256(
+        json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+
+    with pytest.raises(ConsolidationError, match="reporting currency is invalid"):
+        verify_acquisition_fair_value_bridge_payload(payload)
+
+
 def test_acquisition_bridge_schema_accepts_typed_result() -> None:
     schema = json.loads(
         (ROOT / "docs/schemas/acquisition_fair_value_goodwill_bridge_v1.schema.json").read_text(encoding="utf-8")

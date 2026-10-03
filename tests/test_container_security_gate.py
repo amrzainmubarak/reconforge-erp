@@ -46,9 +46,9 @@ def _json(path: Path) -> dict[str, Any]:
 
 def _artifact(index: int, *, licensed: bool = True) -> dict[str, Any]:
     name = "python" if index == 0 else f"package-{index}"
-    version = "3.11.16" if index == 0 else "1.0.0"
+    version = "3.12.14" if index == 0 else "1.0.0"
     package_type = "binary" if index == 0 else "python"
-    purl = "pkg:generic/python@3.11.16" if index == 0 else f"pkg:pypi/{name}@{version}"
+    purl = "pkg:generic/python@3.12.14" if index == 0 else f"pkg:pypi/{name}@{version}"
     return {
         "id": f"artifact-{index}",
         "name": name,
@@ -96,8 +96,8 @@ def _finding(*, severity: str = "High", identifier: str = "CVE-2026-0001") -> di
         },
         "artifact": {
             "name": "python",
-            "version": "3.11.16",
-            "purl": "pkg:generic/python@3.11.16",
+            "version": "3.12.14",
+            "purl": "pkg:generic/python@3.12.14",
         },
         "matchDetails": [{"type": "cpe-match"}],
     }
@@ -167,7 +167,7 @@ def _evaluate(
         grype_report=grype_path,
         scanner_exit_code=scanner_exit_code,
         image_config_digest=CONFIG_DIGEST,
-        as_of=date(2026, 8, 22),
+        as_of=date(2026, 8, 28),
     )
 
 
@@ -309,7 +309,7 @@ def test_exact_reviewed_fixed_vex_is_recorded_without_weakening_other_findings(
     assert findings[0]["vex_status"] == "fixed"
     assert findings[1]["vex_status"] is None
     assert evidence["blockers"] == [
-        "unexcepted high finding CVE-2026-9999 for python@3.11.16"
+        "unexcepted high finding CVE-2026-9999 for python@3.12.14"
     ]
 
 
@@ -329,7 +329,7 @@ def test_exact_reviewed_fixed_vex_is_recorded_without_weakening_other_findings(
         ),
         (
             lambda vex: vex["statements"][0]["products"][0].update(
-                {"@id": "pkg:generic/python@3.11.15"}
+                {"@id": "pkg:generic/python@3.12.13"}
             ),
             "absent from",
         ),

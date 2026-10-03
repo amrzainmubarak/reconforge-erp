@@ -7,9 +7,9 @@ from types import SimpleNamespace
 import pytest
 from starlette.requests import Request
 
+from reconforge.api import server_finance_core
 from reconforge.api.routes import finance_core as routes
 from reconforge.api.server_identity import RequestExecutionScope
-from reconforge.application.finance_core import FinanceCoreSummary
 from reconforge.auth.models import LocalUser
 
 
@@ -24,11 +24,24 @@ class _FakeFinanceRepository:
 
     def _record(self, operation: str, **values: object) -> dict[str, object]:
         self.calls.append((operation, values))
-        return {"id": f"{operation}-1", **values}
+        return {"id": f"{operation}-1", "unknown_future_column": "must-not-escape", **values}
 
-    def summary(self, **values: object) -> FinanceCoreSummary:
+    def summary(self, **values: object):
         self.calls.append(("summary", values))
-        return FinanceCoreSummary("workspace-a", 1, 1, 1, 1, 1, 0, 0, 0)
+        return SimpleNamespace(
+            to_dict=lambda: {
+                "workspace": "workspace-a",
+                "charts": 1,
+                "accounts": 1,
+                "dimensions": 1,
+                "dimension_values": 1,
+                "journals": 1,
+                "draft_entries": 0,
+                "validated_entries": 0,
+                "voided_entries": 0,
+                "unknown_summary_field": "must-not-escape",
+            }
+        )
 
     def snapshot(self, **values: object) -> dict[str, object]:
         self.calls.append(("snapshot", values))
@@ -89,6 +102,38 @@ class _FakeFinanceRepository:
         return self._record("void_entry", entry_id=entry_id, **values)
 
 
+class _ScopeResult:
+    def __init__(self, row: dict[str, str] | None) -> None:
+        self.row = row
+
+    def fetchone(self) -> dict[str, str] | None:
+        return self.row
+
+
+class _ScopeConnection:
+    def execute(self, query: str, _parameters: tuple[object, ...]) -> _ScopeResult:
+        if "FROM reconforge.organizations" in query:
+            return _ScopeResult({"id": "org-a", "organization_code": "ORG-A"})
+        if "master_data_workspace_organizations" in query:
+            return _ScopeResult({"ok": "1"})
+        if "FROM reconforge.legal_entities" in query:
+            return _ScopeResult({"id": "entity-a", "entity_code": "ENTITY-A"})
+        raise AssertionError(f"unexpected scope query: {query}")
+
+
+def test_finance_core_scope_codes_are_canonical_and_reject_spoofed_values() -> None:
+    scope = RequestExecutionScope("tenant-a", "workspace-a", "org-a", "entity-a")
+    connection = _ScopeConnection()
+
+    assert server_finance_core._scope_codes(connection, scope) == ("ORG-A", "ENTITY-A")
+    with pytest.raises(routes.APIError) as organization_error:
+        server_finance_core._scope_codes(connection, scope, organization_code="ORG-SPOOF")
+    assert organization_error.value.code == "organization_scope_denied"
+    with pytest.raises(routes.APIError) as entity_error:
+        server_finance_core._scope_codes(connection, scope, entity_code="ENTITY-SPOOF")
+    assert entity_error.value.code == "entity_scope_denied"
+
+
 def test_server_finance_core_routes_use_scoped_adapter_and_never_local_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -111,6 +156,17 @@ def test_server_finance_core_routes_use_scoped_adapter_and_never_local_fallback(
         lambda _request, **values: permission_checks.append(("any", values["permissions"])),
     )
     monkeypatch.setattr(routes, "execute_postgres_finance_core", lambda _request, operation: operation(repository))
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core_scoped",
+        lambda _request, operation, **values: operation(
+            repository,
+            SimpleNamespace(
+                organization_code=values.get("organization_code", ""),
+                entity_code=values.get("entity_code", ""),
+            ),
+        ),
+    )
 
     summary = routes.summary(request, user, None, workspace="default")
     chart = routes.upsert_chart(
@@ -130,8 +186,10 @@ def test_server_finance_core_routes_use_scoped_adapter_and_never_local_fallback(
     )
     assert summary["summary"]["workspace"] == "workspace-a"
     assert chart["chart"]["workspace"] == "workspace-a"
+    assert "must-not-escape" not in str(chart)
     assert dimensions["pagination"]["returned"] == 0
     assert journal["journal"]["workspace"] == "workspace-a"
+    assert "must-not-escape" not in str(journal)
     assert all(call[1].get("workspace") == "workspace-a" for call in calls if "workspace" in call[1])
     assert ("any", frozenset({"finance_core.read", "finance_core.manage", "finance_core.validate"})) in permission_checks
     assert ("exact", "finance_core.manage") in permission_checks
@@ -153,6 +211,17 @@ def test_server_finance_core_entry_binds_exact_debit_amount_to_policy(
         lambda _request, **values: captured.update(values),
     )
     monkeypatch.setattr(routes, "execute_postgres_finance_core", lambda _request, operation: operation(repository))
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core_scoped",
+        lambda _request, operation, **values: operation(
+            repository,
+            SimpleNamespace(
+                organization_code=values.get("organization_code", ""),
+                entity_code=values.get("entity_code", ""),
+            ),
+        ),
+    )
 
     result = routes.create_entry(
         request,
@@ -206,6 +275,155 @@ def test_server_finance_core_entry_rejects_negative_amount_before_adapter(
             None,
         )
     assert error.value.code == "finance_entry_amount_invalid"
+
+
+def test_finance_core_entry_route_drops_future_adapter_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: True)
+    monkeypatch.setattr(
+        routes,
+        "_server_finance_workspace",
+        lambda *_args, **_kwargs: "workspace-a",
+    )
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core",
+        lambda _request, _operation: {
+            "id": "GLE-1",
+            "entry_number": "JE-001",
+            "status": "Validated",
+            "unknown_future_column": "must-not-escape",
+            "lines": [
+                {
+                    "id": "line-1",
+                    "line_number": 1,
+                    "account_id": "account-1",
+                    "unknown_line_column": "must-not-escape",
+                }
+            ],
+        },
+    )
+
+    result = routes.get_entry(request, "GLE-1", user, None)
+
+    assert result["entry"] == {
+        "entry_number": "JE-001",
+        "id": "GLE-1",
+        "lines": [{"account_id": "account-1", "id": "line-1", "line_number": 1}],
+        "status": "Validated",
+    }
+
+
+def test_finance_core_snapshot_route_projects_server_adapter_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: True)
+    monkeypatch.setattr(routes, "_server_finance_workspace", lambda *_args, **_kwargs: "workspace-a")
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core",
+        lambda _request, _operation: {
+            "schema_version": 1,
+            "generated_at": "2026-08-27T10:00:00Z",
+            "workspace": "workspace-a",
+            "source": {"kind": "repository", "unknown_source": "must-not-escape"},
+            "summary": {"workspace": "workspace-a", "charts": 1, "unknown_summary": "must-not-escape"},
+            "charts": [{"id": "chart-1", "chart_code": "DEFAULT", "unknown_chart": "must-not-escape"}],
+            "accounts": [],
+            "dimensions": [],
+            "dimension_values": [],
+            "journals": [],
+            "entries": [],
+            "unknown_snapshot": "must-not-escape",
+        },
+    )
+
+    result = routes.snapshot(request, user, None, workspace="default")
+
+    assert result["source"] == {"kind": "postgres-finance-core"}
+    assert result["summary"] == {"workspace": "workspace-a", "charts": 1}
+    assert result["charts"] == [{"chart_code": "DEFAULT", "id": "chart-1"}]
+    assert "must-not-escape" not in str(result)
+
+
+def test_finance_core_snapshot_route_projects_local_adapter_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+
+    class _LocalService:
+        def __init__(self, _connection: object) -> None:
+            pass
+
+        def snapshot(self, **_values: object) -> dict[str, object]:
+            return {
+                "schema_version": 1,
+                "generated_at": "2026-08-27T10:00:00Z",
+                "source": {"kind": "local-finance-core", "unknown_source": "must-not-escape"},
+                "workspace": "default",
+                "summary": {"workspace": "default", "charts": 0},
+                "charts": [],
+                "accounts": [],
+                "dimensions": [],
+                "dimension_values": [],
+                "journals": [],
+                "entries": [],
+                "unknown_snapshot": "must-not-escape",
+            }
+
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: False)
+    monkeypatch.setattr(routes, "server_ledger_enabled", lambda _request: False)
+    monkeypatch.setattr(routes, "FinanceCoreService", _LocalService)
+
+    result = routes.snapshot(request, user, object(), workspace="default")
+
+    assert result["source"] == {"kind": "local-finance-core"}
+    assert "must-not-escape" not in str(result)
+
+
+def test_server_finance_core_entry_does_not_fall_back_to_legacy_ledger(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request = _request()
+    user = LocalUser(id="user-a", username="alice", display_name="Alice")
+    monkeypatch.setattr(routes, "server_finance_core_enabled", lambda _request: True)
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_finance_core_scoped",
+        lambda *_args, **_kwargs: pytest.fail("Finance Core adapter must not run for incomplete scope"),
+    )
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_ledger",
+        lambda *_args, **_kwargs: pytest.fail("legacy ledger fallback must not run"),
+    )
+
+    with pytest.raises(routes.APIError) as error:
+        routes.create_entry(
+            request,
+            routes.LedgerEntryRequest(
+                entry_number="JE/BOUNDARY/001",
+                organization_code="ORG-A",
+                entity_code="",
+                period_id="PERIOD-A",
+                journal_code="GENERAL",
+                posting_date="2026-08-23",
+                description="Incomplete server scope",
+                lines=[
+                    routes.LedgerLineRequest(account_code="1000", debit="1.00", credit="0"),
+                    routes.LedgerLineRequest(account_code="3000", debit="0", credit="1.00"),
+                ],
+            ),
+            user,
+            None,
+        )
+    assert error.value.code == "finance_core_entry_scope_required"
 
 
 def test_server_finance_core_rejects_cross_workspace_payload_before_adapter(

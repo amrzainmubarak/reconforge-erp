@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from decimal import Decimal, localcontext
 from pathlib import Path
 
@@ -8,7 +9,7 @@ import pytest
 from reconforge.audit import list_audit_events
 from reconforge.db import connect, run_migrations
 from reconforge.platform.close import CloseManagementService
-from reconforge.platform.common import PlatformError
+from reconforge.platform.common import PlatformError, ensure_workspace
 from reconforge.platform.evidence import EvidenceRegistryService
 from reconforge.platform.metrics import MetricsService
 
@@ -148,3 +149,65 @@ def test_missing_close_reopen_produces_no_audit_evidence(tmp_path: Path) -> None
         assert connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == 0
     finally:
         connection.close()
+
+
+def test_close_reopen_requires_an_independent_actor_and_preserves_evidence(tmp_path: Path) -> None:
+    db_path = tmp_path / "close-sod.db"
+    run_migrations(db_path)
+    connection = connect(db_path, require_exists=True)
+    try:
+        close = CloseManagementService(connection)
+        period = close.period_init(
+            period_name="2026-09",
+            start_date="2026-09-01",
+            end_date="2026-09-30",
+            actor_label="preparer",
+        )
+        tasks = close.list_tasks(period_id=str(period["id"]))
+        for task in tasks:
+            close.task_status(task_id=str(task["id"]), status="Complete", actor_label="preparer")
+        locked = close.lock_period(str(period["id"]), actor_label="locker")
+        assert locked["locked_by"] == "locker"
+
+        with pytest.raises(PlatformError, match="independent actor"):
+            close.reopen_period(str(period["id"]), reason="Late evidence", actor_label="locker")
+        assert connection.execute("SELECT COUNT(*) AS count FROM audit_events WHERE action = 'close_period_reopened'").fetchone()["count"] == 0
+
+        reopened = close.reopen_period(str(period["id"]), reason="Late evidence", actor_label="reviewer")
+        assert reopened["reopened_by"] == "reviewer"
+    finally:
+        connection.close()
+
+
+def test_close_sod_migration_backfills_legacy_lock_identity(tmp_path: Path) -> None:
+    db_path = tmp_path / "close-sod-migration.db"
+    run_migrations(db_path, target_version=43)
+    connection = connect(db_path, require_exists=True)
+    try:
+        workspace_id = ensure_workspace(connection, "default")
+        connection.execute(
+            """
+            INSERT INTO close_periods(
+                id,workspace_id,period_name,start_date,end_date,status,readiness_score,
+                locked_at,reopened_at,created_at,updated_at
+            ) VALUES(?,?,'legacy-close','2026-01-01','2026-01-31','Locked',100,'2026-02-01T00:00:00Z',NULL,'2026-01-01T00:00:00Z','2026-02-01T00:00:00Z')
+            """,
+            ("legacy-close", workspace_id),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    run_migrations(db_path)
+    migrated = connect(db_path, require_exists=True)
+    try:
+        row = migrated.execute(
+            "SELECT locked_by,reopened_by FROM close_periods WHERE id='legacy-close'"
+        ).fetchone()
+        assert dict(row) == {"locked_by": "legacy-unknown", "reopened_by": ""}
+        with pytest.raises(sqlite3.IntegrityError, match="immutable"):
+            migrated.execute(
+                "UPDATE close_periods SET locked_by='forged-actor' WHERE id='legacy-close'"
+            )
+    finally:
+        migrated.close()

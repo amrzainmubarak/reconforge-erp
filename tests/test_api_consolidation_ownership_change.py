@@ -60,10 +60,26 @@ def test_ownership_change_api_rebuilds_typed_request_and_binds_authenticated_act
                 "id": "ownchg-" + "a" * 32,
                 "posted": False,
                 "result_digest": result.result_digest,  # type: ignore[union-attr]
+                "result_payload": {
+                    "posted": False,
+                    "lines": [
+                        {
+                            "line_type": "nci",
+                            "amount": {"amount": "1", "currency": "USD", "future_money": "must-not-leak"},
+                            "future_line_field": "must-not-leak",
+                        }
+                    ],
+                    "future_result_field": "must-not-leak",
+                },
+                "future_artifact_field": "must-not-leak",
             }
 
         def get(self, artifact_id: str, **_: object) -> dict[str, object]:
-            return {"id": artifact_id, "posted": False}
+            return {
+                "id": artifact_id,
+                "posted": False,
+                "future_artifact_field": "must-not-leak",
+            }
 
     repository = Repository()
 
@@ -77,6 +93,9 @@ def test_ownership_change_api_rebuilds_typed_request_and_binds_authenticated_act
     created = client.post("/api/v1/consolidation-ownership-change", headers=headers, json=_body())
     assert created.status_code == 200, created.text
     assert created.json()["artifact"]["posted"] is False
+    assert "future_artifact_field" not in created.json()["artifact"]
+    assert "future_result_field" not in created.json()["artifact"]["result_payload"]
+    assert "future_line_field" not in created.json()["artifact"]["result_payload"]["lines"][0]
     assert captured["request"].prepared_by == actor_id  # type: ignore[union-attr]
     assert captured["request"].approved_by == "reviewer"  # type: ignore[union-attr]
 
@@ -86,6 +105,7 @@ def test_ownership_change_api_rebuilds_typed_request_and_binds_authenticated_act
     )
     assert loaded.status_code == 200
     assert loaded.json()["artifact"]["posted"] is False
+    assert "future_artifact_field" not in loaded.json()["artifact"]
 
     invalid = _body()
     invalid["unexpected"] = True

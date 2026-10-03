@@ -33,6 +33,19 @@ def _input(source_id: str, amount: str, when: str, *, reversal_of: str = "") -> 
     }
 
 
+def test_postgres_sequential_request_rejects_noncanonical_tolerance() -> None:
+    context = _context("carry-forward", (), ())
+    context = ReconciliationExecutionContext(
+        run={"rule_json": {"matching_mode": "carry-forward", "amount_tolerance": "1e-2"}},
+        left_inputs=(),
+        right_inputs=(),
+        heartbeat=lambda completed: {"completed": completed},
+        cancellation_requested=lambda: False,
+    )
+    with pytest.raises(PostgresSequentialMatchingAdapterError, match="exact text"):
+        _request(context, "entity/A", (), ())
+
+
 def test_carry_forward_worker_projection_preserves_allocation_and_residual_lineage() -> None:
     result = PostgresSequentialMatchingAdapter()(
         _context(

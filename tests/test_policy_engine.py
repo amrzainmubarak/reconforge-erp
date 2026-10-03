@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import ast
 import logging
+from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from reconforge.audit import list_audit_events, verify_audit_events
 from reconforge.auth.models import LocalUser
 from reconforge.auth.policy import (
     HUMAN_ONLY_PERMISSIONS,
@@ -17,9 +21,14 @@ from reconforge.auth.policy import (
     CentralPolicyEngine,
     PolicyEvaluationContext,
     audit_policy_decision,
+    build_policy_decision_evidence,
     evaluate_principal_access,
+    policy_context_digest,
+    policy_scope_digest,
+    verify_policy_decision_evidence,
 )
 from reconforge.auth.rbac import check_sod_conflict
+from reconforge.db import connect, run_migrations
 from reconforge.platform.common import ServerPrincipal
 
 
@@ -263,7 +272,9 @@ def test_creator_can_never_approve_or_review_own_object(action: str) -> None:
 
 
 @given(
-    actor=st.text(alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8),
+    actor=st.text(
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8
+    ),
     action=st.sampled_from(["approve", "review", "certify"]),
 )
 def test_creator_canonicalization_cannot_bypass_high_risk_self_approval(actor: str, action: str) -> None:
@@ -285,7 +296,9 @@ def test_creator_canonicalization_cannot_bypass_high_risk_self_approval(actor: s
 
 
 @given(
-    actor=st.text(alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8),
+    actor=st.text(
+        alphabet=st.characters(whitelist_categories=("Lu", "Ll", "Nd"), max_codepoint=127), min_size=1, max_size=8
+    ),
 )
 def test_sod_canonicalization_cannot_bypass_prior_prepare(actor: str) -> None:
     result = check_sod_conflict(
@@ -406,9 +419,7 @@ def test_amount_policy_rejects_non_finite_or_inverted_bounds() -> None:
     ("minimum", "maximum"),
     [(Decimal("100"), None), (None, Decimal("500")), (Decimal("100"), Decimal("500"))],
 )
-def test_bounded_amount_policy_denies_missing_amount(
-    minimum: Decimal | None, maximum: Decimal | None
-) -> None:
+def test_bounded_amount_policy_denies_missing_amount(minimum: Decimal | None, maximum: Decimal | None) -> None:
     decision = CentralPolicyEngine().evaluate(
         PolicyEvaluationContext(
             user_id="U-missing-amount",
@@ -490,3 +501,245 @@ def test_policy_audit_record_is_versioned_and_redacts_actor_and_permissions(
     assert len(evidence["actor_digest"]) == 64
     assert "sensitive-user" not in str(evidence)
     assert "audit.read" not in str(evidence)
+    decision_evidence = evidence["decision_evidence"]
+    assert decision_evidence["context_binding"] == "bound"
+    assert verify_policy_decision_evidence(decision_evidence) == decision_evidence
+    assert evidence["decision_digest"] == decision_evidence["decision_digest"]
+
+
+def test_policy_audit_can_persist_redacted_evidence_in_the_local_append_only_ledger(tmp_path: Path) -> None:
+    database_path = tmp_path / "policy-audit.db"
+    run_migrations(database_path)
+    connection = connect(database_path, require_exists=True)
+    try:
+        context = PolicyEvaluationContext(
+            user_id="sensitive-user",
+            username="alice",
+            user_permissions={"finance_core.validate"},
+            tenant_id="tenant-secret",
+            workspace_id="workspace-secret",
+            amount=Decimal("123456789.01"),
+        )
+        decision = CentralPolicyEngine().evaluate(context, required_permission="finance_core.validate")
+        evidence = audit_policy_decision(
+            decision,
+            actor_id="sensitive-user",
+            required_permissions=frozenset({"finance_core.validate"}),
+            surface="POST /api/v1/finance-core/journals/validate",
+            request_id="request-secret",
+            context=context,
+            audit_connection=connection,
+        )
+
+        events = list_audit_events(connection)
+        verification = verify_audit_events(connection)
+        assert verification.ok is True
+        assert len(events) == 1
+        event = events[0]
+        assert event.object_type == "authorization.policy_decision"
+        assert event.action == "evaluated"
+        assert event.object_id == evidence.decision_digest
+        assert event.after_hash == evidence.decision_digest
+        assert event.metadata["policy_decision_evidence"] == evidence.to_dict()
+        assert "tenant-secret" not in str(event.metadata)
+        assert "workspace-secret" not in str(event.metadata)
+        assert "123456789.01" not in str(event.metadata)
+        assert "request-secret" not in str(event.metadata)
+    finally:
+        connection.close()
+
+
+def test_policy_decision_evidence_is_replayable_closed_and_redacted() -> None:
+    context = PolicyEvaluationContext(
+        user_id=" USER-100 ",
+        username=" Controller ",
+        user_permissions={"finance_core.validate"},
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
+        entity_id="entity-a",
+        period_id="period-2026-08",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+        authorized_workspace_ids=frozenset({"workspace-a"}),
+        authorized_entity_ids=frozenset({"entity-a"}),
+        authorized_period_ids=frozenset({"period-2026-08"}),
+        amount=Decimal("123456789.01"),
+        minimum_amount=Decimal("100.00"),
+        maximum_amount=Decimal("200.00"),
+        object_type="journal",
+        object_id="journal-1",
+        action="validate",
+    )
+    decision = CentralPolicyEngine().evaluate(context, required_permission="finance_core.validate")
+    evidence = build_policy_decision_evidence(
+        decision,
+        actor_id=" USER-100 ",
+        required_permissions=frozenset({"finance_core.validate"}),
+        surface="POST /api/v1/finance-core/journals/validate",
+        request_id="request-1",
+        context=context,
+    )
+    replay = build_policy_decision_evidence(
+        decision,
+        actor_id=" USER-100 ",
+        required_permissions=frozenset({"finance_core.validate"}),
+        surface="POST /api/v1/finance-core/journals/validate",
+        request_id="request-1",
+        context=context,
+    )
+
+    assert evidence == replay
+    payload = evidence.to_dict()
+    assert verify_policy_decision_evidence(payload) == payload
+    assert "tenant-a" not in str(payload)
+    assert "123456789.01" not in str(payload)
+    assert "journal-1" not in str(payload)
+
+    tampered = dict(payload)
+    tampered["allowed"] = not payload["allowed"]
+    with pytest.raises(ValueError, match="digest mismatch"):
+        verify_policy_decision_evidence(tampered)
+
+
+def test_policy_decision_evidence_rejects_context_digest_mismatch() -> None:
+    original_context = PolicyEvaluationContext(
+        user_id="U-100",
+        username="controller",
+        user_permissions={"evidence.read"},
+        tenant_id="tenant-a",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+        object_type="evidence",
+        object_id="evidence-1",
+        action="read",
+    )
+    different_context = PolicyEvaluationContext(
+        user_id="U-100",
+        username="controller",
+        user_permissions={"evidence.read"},
+        tenant_id="tenant-a",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+        object_type="evidence",
+        object_id="evidence-2",
+        action="read",
+    )
+    decision = CentralPolicyEngine().evaluate(original_context, required_permission="evidence.read")
+
+    with pytest.raises(ValueError, match="context digest does not match"):
+        build_policy_decision_evidence(
+            decision,
+            actor_id="U-100",
+            required_permissions=frozenset({"evidence.read"}),
+            surface="GET /api/v1/evidence/evidence-2",
+            context=different_context,
+        )
+
+
+def test_policy_decision_evidence_rejects_scope_digest_mismatch() -> None:
+    original_context = PolicyEvaluationContext(
+        user_id="U-100",
+        username="controller",
+        user_permissions={"evidence.read"},
+        tenant_id="tenant-a",
+        authorized_tenant_ids=frozenset({"tenant-a"}),
+    )
+    different_scope_context = PolicyEvaluationContext(
+        user_id="U-100",
+        username="controller",
+        user_permissions={"evidence.read"},
+        tenant_id="tenant-b",
+        authorized_tenant_ids=frozenset({"tenant-b"}),
+    )
+    decision = CentralPolicyEngine().evaluate(original_context, required_permission="evidence.read")
+    context_bound_decision = replace(
+        decision,
+        context_digest=policy_context_digest(different_scope_context),
+    )
+
+    with pytest.raises(ValueError, match="scope digest does not match"):
+        build_policy_decision_evidence(
+            context_bound_decision,
+            actor_id="U-100",
+            required_permissions=frozenset({"evidence.read"}),
+            surface="GET /api/v1/evidence",
+            context=different_scope_context,
+        )
+
+
+def test_policy_scope_digest_keeps_same_text_in_distinct_namespaces_distinct() -> None:
+    tenant_context = PolicyEvaluationContext(
+        user_id="U-1",
+        username="user",
+        user_permissions={"evidence.read"},
+        tenant_id="same-id",
+        authorized_tenant_ids=frozenset({"same-id"}),
+    )
+    workspace_context = PolicyEvaluationContext(
+        user_id="U-1",
+        username="user",
+        user_permissions={"evidence.read"},
+        workspace_id="same-id",
+        authorized_workspace_ids=frozenset({"same-id"}),
+    )
+
+    assert policy_scope_digest(tenant_context) != policy_scope_digest(workspace_context)
+
+
+def test_policy_context_digest_canonicalizes_actor_presentation() -> None:
+    upper = PolicyEvaluationContext(
+        user_id="  USER-1  ",
+        username="  Controller  ",
+        user_permissions={"evidence.read"},
+        object_owner_id="owner-1",
+        object_id="  OBJECT-1  ",
+        action="review",
+    )
+    canonical = PolicyEvaluationContext(
+        user_id="user-1",
+        username="controller",
+        user_permissions={"evidence.read"},
+        object_owner_id="owner-1",
+        object_id="object-1",
+        action="review",
+    )
+
+    assert policy_context_digest(upper) == policy_context_digest(canonical)
+
+
+def test_production_policy_audits_pass_the_evaluated_context() -> None:
+    package_root = Path(__file__).resolve().parents[1] / "reconforge"
+    missing_context: list[str] = []
+    for source_path in package_root.rglob("*.py"):
+        if source_path.as_posix().endswith("/auth/policy.py"):
+            continue
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if not isinstance(node.func, ast.Name) or node.func.id != "audit_policy_decision":
+                continue
+            if not any(keyword.arg == "context" for keyword in node.keywords):
+                missing_context.append(f"{source_path.relative_to(package_root.parent)}:{node.lineno}")
+
+    assert missing_context == []
+
+
+def test_local_policy_audit_callers_bind_their_sqlite_connection() -> None:
+    package_root = Path(__file__).resolve().parents[1] / "reconforge"
+    expected_call_counts = {
+        Path("reconforge/api/dependencies.py"): (5, 2, 3),
+        Path("reconforge/platform/common.py"): (2, 2, 0),
+        Path("reconforge/workflow/service.py"): (1, 1, 0),
+        Path("reconforge/studio/app.py"): (1, 1, 0),
+    }
+    for relative_path, (total, bound, sink_bound) in expected_call_counts.items():
+        source_path = package_root.parent / relative_path
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        calls = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "audit_policy_decision"
+        ]
+        assert len(calls) == total, relative_path
+        assert sum(any(keyword.arg == "audit_connection" for keyword in node.keywords) for node in calls) == bound
+        assert sum(any(keyword.arg == "audit_sink" for keyword in node.keywords) for node in calls) == sink_bound

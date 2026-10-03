@@ -8,6 +8,19 @@
 > machine/session. "Passed/blocked" entries are environment-scoped and should not
 > be interpreted as cross-platform production evidence.
 
+## E-884 Python 3.12 container candidate (2026-08-28)
+
+- The Dockerfile now pins both stages to the official Python 3.12 Alpine index
+  digest `sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31`.
+- A clean linux/amd64 no-cache build produced candidate digest
+  `sha256:a96d87d994852b9fc7b9f647977413e37f5959a95f0e7d36bc66584a8b529e52`.
+  Hardened Doctor, sample validation, demo generation, and Docker Scout passed;
+  Scout reported 82 packages and zero Critical/High/Medium/Low findings.
+- Full locked all-extra Python 3.11 and 3.12 regressions, package build,
+  air-gap/rollback, API/parity, and web gates passed. The prior Python 3.11.16
+  image passed Doctor as rollback smoke. Exact fresh Syft/Grype release
+  evidence and hosted publication remain open and are not inferred from Scout.
+
 ## E-831 local refresh (2026-08-22)
 
 - The provider-neutral PostgreSQL write-back recovery/compensation matrix
@@ -91,7 +104,7 @@
   zero findings at all severities. The result is time-bounded and is not the
   current release gate because the later pinned Grype database disagrees.
 
-#### E-823/E-824 exact-image security result (2026-08-22)
+#### E-823/E-824 exact-image security result (2026-08-28)
 
 - Syft 1.51.0 inventories 68 package artifacts with 94.11% usable license
   metadata. Grype 0.117.0 database v6.1.9 reports five High matches.
@@ -99,9 +112,11 @@
   CVE-2026-4224, and CVE-2026-7210 as fixed in Python 3.11.16. The closed
   fixed-only OpenVEX path records those decisions while retaining them in the
   total count.
-- CVE-2026-14456 remains unexcepted for libcrypto3 and libssl3 3.5.7-r0.
-  The gate exits 1 and blocks registry authentication. No supported current
-  Alpine candidate offered upstream-fixed OpenSSL 3.5.8 at review time.
+- E-959 refreshes libcrypto3/libssl3 in both pinned stages. A clean
+  linux/amd64 build and runtime inspection report 3.5.8-r0, with no OpenSSL
+  CLI added. The exact local Syft/Grype/license gate now passes against the
+  rebuilt subject; hosted clean-build, provenance, registry authentication,
+  and release publication remain blocked pending their separate evidence.
 
 #### E-825 write-back lifecycle identity refresh (2026-08-22)
 

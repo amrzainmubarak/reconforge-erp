@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -113,6 +114,20 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
     repository = _Repository()
     user = LocalUser(id="user-admin", username="admin", display_name="Admin")
 
+    original_asdict = routes.asdict
+
+    def future_asdict(value: Any) -> dict[str, object]:
+        result = original_asdict(value)
+        if isinstance(value, AccessPermissionSummary):
+            result["future_permission_field"] = "must-not-escape"
+        if isinstance(value, AccessRoleSummary):
+            result["future_role_field"] = "must-not-escape"
+        if isinstance(value, UserRoleAssignmentChange):
+            result["future_assignment_field"] = "must-not-escape"
+        return result
+
+    monkeypatch.setattr(routes, "asdict", future_asdict)
+
     def authenticate(request: Any, token: str) -> AuthenticatedServerRequest | None:
         assert request_tenant_id(request) == "tenant-a"
         profiles = {
@@ -140,6 +155,7 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(routes, "execute_postgres_access_administration", execute)
     root = tmp_path / "tenants"
     root.mkdir()
@@ -174,6 +190,7 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
 
     permissions = client.get("/api/v1/admin/access/permissions", headers=headers("human-ok"))
     assert permissions.status_code == 200 and permissions.json()[0]["name"] == "roles.manage"
+    assert "future_permission_field" not in permissions.text
     first = client.get("/api/v1/admin/access/roles?limit=1", headers=headers("human-ok"))
     assert first.status_code == 200, first.text
     cursor = first.json()["pagination"]["next_cursor"]
@@ -181,6 +198,7 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
         "/api/v1/admin/access/roles", params={"limit": 1, "cursor": cursor}, headers=headers("human-ok")
     )
     assert second.status_code == 200 and second.json()["roles"][0]["name"] == "reviewer"
+    assert "future_role_field" not in second.text
     mismatch = client.get(
         "/api/v1/admin/access/roles",
         params={"cursor": cursor, "include_retired": True},
@@ -194,24 +212,63 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
         json={"name": "reviewer", "description": "Reviewer", "permissions": ["audit.read"]},
     )
     assert created.status_code == 200 and created.json()["transitioned"] is True
+    assert "future_role_field" not in created.text
     updated = client.patch(
         "/api/v1/admin/access/roles/role-administrator",
         headers=headers("human-ok"),
         json={"description": "Admin", "expected_lifecycle_version": 1},
     )
     assert updated.status_code == 200 and updated.json()["role"]["lifecycle_version"] == 2
+    assert "future_role_field" not in updated.text
     policy = client.put(
         "/api/v1/admin/access/roles/role-administrator/permissions",
         headers=headers("human-ok"),
         json={"permissions": ["roles.manage"], "expected_lifecycle_version": 1},
     )
     assert policy.status_code == 200 and policy.json()["revoked_sessions"] == 1
+    assert "future_role_field" not in policy.text
     assignment = client.put(
         "/api/v1/admin/access/users/user-reviewer/roles",
         headers=headers("human-ok"),
         json={"role_ids": ["role-reviewer"], "expected_user_lifecycle_version": 1},
     )
     assert assignment.status_code == 200 and assignment.json()["role_names"] == ["reviewer"]
+    assert "future_assignment_field" not in assignment.text
+
+    class _PolicyAnalysisService:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def analyze(self, **_kwargs: object) -> SimpleNamespace:
+            return SimpleNamespace(
+                to_dict=lambda: {
+                    "schema_version": 1,
+                    "algorithm_version": "policy-analysis-v1",
+                    "request_digest": "a" * 64,
+                    "result_digest": "b" * 64,
+                    "policy_id": "policy-1",
+                    "policy_version": "1.0.0",
+                    "status": "conflicts",
+                    "findings": [
+                        {
+                            "code": "sod_permission_overlap",
+                            "conflict_id": "c" * 64,
+                            "grant_ids": ["grant-1", "grant-2"],
+                            "permissions": ["roles.manage", "security.policy.manage"],
+                            "principal_id": "user-admin",
+                            "reason": "Preparation and approval overlap",
+                            "scope_digests": ["d" * 64],
+                            "severity": "critical",
+                            "future_finding_field": "must-not-escape",
+                        }
+                    ],
+                    "active_grant_count": 2,
+                    "revoked_grant_count": 0,
+                    "future_analysis_field": "must-not-escape",
+                }
+            )
+
+    monkeypatch.setattr(routes, "PolicyAnalysisApplicationService", _PolicyAnalysisService)
     analysis = client.post(
         "/api/v1/admin/access/policy-analysis",
         headers=headers("human-ok"),
@@ -219,6 +276,8 @@ def test_access_admin_http_is_human_mfa_governed_paginated_and_closes_sqlite_rol
     )
     assert analysis.status_code == 200, analysis.text
     assert analysis.json()["status"] == "conflicts"
+    assert "future_analysis_field" not in analysis.text
+    assert "future_finding_field" not in analysis.text
     assert "sod_permission_overlap" in {finding["code"] for finding in analysis.json()["findings"]}
     hostile = client.post(
         "/api/v1/admin/access/roles",

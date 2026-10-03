@@ -1,4 +1,4 @@
-import { loadLiveStudioContract } from "./data";
+import { classifyStudioDataProvenance, loadLiveStudioContract } from "./data";
 
 const metric = {
   id: "met-1", workspace_id: "workspace-1", metric_key: "period_readiness", period_name: "2026-07",
@@ -15,8 +15,22 @@ test("loads the guarded same-origin live contract with exact values", async () =
   const result = await loadLiveStudioContract({ fetcher, period: "2026-07", now: new Date("2026-07-28T10:00:00Z"), staleAfterSeconds: 300 });
   expect(fetcher).toHaveBeenCalledOnce();
   expect(fetcher).toHaveBeenCalledWith("/api/v1/metrics/dashboard?period=2026-07", expect.objectContaining({ cache: "no-store", credentials: "same-origin" }));
-  expect(result).toMatchObject({ mode: "live", empty: false, stale: false, generated_at: metric.computed_at });
+  expect(result).toMatchObject({
+    mode: "live",
+    empty: false,
+    stale: false,
+    generated_at: metric.computed_at,
+    provenance: { state: "live", source: "same_origin_authorized_api", operational_evidence: "unverified" },
+  });
   expect(result.metrics[0].value_text).toBe("91.00");
+});
+
+test("keeps unclassified data out of the live operational-evidence state", () => {
+  expect(classifyStudioDataProvenance({ metrics: [] })).toEqual({
+    state: "unknown",
+    source: "unknown",
+    operational_evidence: "unknown",
+  });
 });
 
 test("distinguishes empty and stale authorized responses", async () => {

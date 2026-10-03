@@ -88,6 +88,7 @@ def test_scoped_export_route_is_authenticated_hierarchy_bound_and_deterministic(
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(export_routes, "request_execution_scope", lambda _request: RequestExecutionScope(
         "tenant-a", "workspace-a", "org-a", "entity-a"
     ))

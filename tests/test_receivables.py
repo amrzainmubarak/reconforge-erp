@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,8 @@ from reconforge.platform.receivables import (
     ReceivableInvoiceLineInput,
     ReceivablesService,
 )
+
+receivables_module = import_module("reconforge.infrastructure.sqlite_receivables")
 
 
 def _service(tmp_path: Path):
@@ -54,6 +57,12 @@ def _invoice(service: ReceivablesService, *, number: str = "AR-001", total: int 
         ],
         actor_label="prep",
     )
+
+
+@pytest.mark.parametrize("quantity", [0.1, "1e2", "NaN", "Infinity", None])
+def test_sqlite_receivables_quantity_rejects_non_strict_numeric_inputs(quantity: object) -> None:
+    with pytest.raises(PlatformError, match="quantity"):
+        receivables_module._quantity(quantity, field="Quantity")
 
 
 def test_receivables_credit_control_receipt_allocation_and_aging(tmp_path: Path) -> None:
@@ -265,7 +274,10 @@ def test_receivables_reject_invalid_amount_and_roll_back_audit_failure(
                 actor_label="prep",
             )
 
-        before_audit_count = connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"]
+        before_audit_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM audit_events "
+            "WHERE object_type <> 'authorization.policy_decision'"
+        ).fetchone()["count"]
         monkeypatch.setattr(
             common_module, "audit", lambda *_args, **_kwargs: (_ for _ in ()).throw(AuditLedgerError("forced"))
         )
@@ -284,7 +296,11 @@ def test_receivables_reject_invalid_amount_and_roll_back_audit_failure(
             == 0
         )
         assert (
-            connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"] == before_audit_count
+            connection.execute(
+                "SELECT COUNT(*) AS count FROM audit_events "
+                "WHERE object_type <> 'authorization.policy_decision'"
+            ).fetchone()["count"]
+            == before_audit_count
         )
     finally:
         connection.close()

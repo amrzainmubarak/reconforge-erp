@@ -1663,13 +1663,16 @@ class PostgresReconciliationRepository:
         date_field: str = "date",
         reference_field: str = "reference",
         batch_size: int = 10_000,
+        max_partition_records: int = 10_000,
     ) -> Iterator[tuple[tuple[str | None, ...], tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]]:
         """Stream one hard-key input partition at a time from PostgreSQL.
 
         The query uses a server-side cursor when psycopg provides one and
         orders by validated JSONB-derived partition values. Only the current
-        partition is held in Python memory. The caller must keep this method
-        inside the tenant-scoped transaction that owns the cursor.
+        partition is held in Python memory. ``max_partition_records`` is
+        enforced while rows are being accumulated, before an oversized
+        partition can be handed to a matcher. The caller must keep this
+        method inside the tenant-scoped transaction that owns the cursor.
         """
 
         tenant = self._tenant(tenant_id)
@@ -1679,6 +1682,12 @@ class PostgresReconciliationRepository:
             raise PostgresReconciliationValidationError("partition_fields must contain between 1 and 8 unique names.")
         if isinstance(batch_size, bool) or not 1 <= int(batch_size) <= 100_000:
             raise PostgresReconciliationValidationError("batch_size must be between 1 and 100000.")
+        if isinstance(max_partition_records, bool) or not 1 <= int(max_partition_records) <= 100_000:
+            raise PostgresReconciliationValidationError(
+                "max_partition_records must be between 1 and 100000."
+            )
+        partition_limit = int(max_partition_records)
+        fetch_size = min(int(batch_size), partition_limit)
         amount_name = self._text(amount_field, "amount_field", maximum=128)
         date_name = self._text(date_field, "date_field", maximum=128)
         reference_name = self._text(reference_field, "reference_field", maximum=128)
@@ -1734,7 +1743,7 @@ class PostgresReconciliationRepository:
         right_records: list[dict[str, Any]] = []
         try:
             while True:
-                rows = cursor.fetchmany(int(batch_size))
+                rows = cursor.fetchmany(fetch_size)
                 if not rows:
                     break
                 for row in rows:
@@ -1761,6 +1770,11 @@ class PostgresReconciliationRepository:
                         left_records = []
                         right_records = []
                     current_values = values
+                    if len(left_records) + len(right_records) >= partition_limit:
+                        raise PostgresReconciliationIntegrityError(
+                            "PostgreSQL input partition exceeds max_partition_records="
+                            f"{partition_limit}; refine the hard partition fields."
+                        )
                     if str(input_row["side"]) == "Left":
                         left_records.append(input_row)
                     elif str(input_row["side"]) == "Right":

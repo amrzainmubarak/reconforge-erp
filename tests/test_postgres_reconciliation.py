@@ -15,6 +15,7 @@ from uuid import uuid4
 import pytest
 
 from reconforge.auth.policy import PolicyEvaluationContext
+from reconforge.deployment import WorkerPermissionManifest
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -65,6 +66,18 @@ class _Cursor:
         selected = self.rows[self.position : self.position + size]
         self.position += len(selected)
         return selected
+
+
+def _worker_manifest(worker_id: str, *, principal_id: str | None = None) -> WorkerPermissionManifest:
+    principal = principal_id or worker_id
+    return WorkerPermissionManifest(
+        worker_id=worker_id,
+        principal_id=principal,
+        discovery_permission="match.discover",
+        execution_permission="match.run",
+        granted_permissions=("match.discover", "match.run"),
+        scope="tenant:tenant_a",
+    )
 
 
 class _ReconciliationConnection:
@@ -413,6 +426,35 @@ def test_postgres_reconciliation_run_listing_is_stable_and_bounded() -> None:
         repository.list_runs(tenant_id="tenant_a", status="unknown")
 
 
+def test_postgres_input_partition_limit_is_enforced_during_cursor_accumulation() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    for side, source_id in (("Left", "left-1"), ("Right", "right-1")):
+        repository.register_input(
+            tenant_id="tenant_a",
+            run_id="run-a",
+            side=side,
+            source_id=source_id,
+            record_hash=f"hash-{source_id}",
+            amount="10.00",
+            currency_code="USD",
+            attributes={"entity_id": "entity-a"},
+        )
+
+    with pytest.raises(PostgresReconciliationIntegrityError, match="max_partition_records=1"):
+        list(
+            repository.iter_input_partitions(
+                tenant_id="tenant_a",
+                run_id="run-a",
+                partition_fields=("entity_id",),
+                max_partition_records=1,
+            )
+        )
+
+    assert len(connection.inputs) == 2
+
+
 def test_postgres_repository_writer_binds_strict_financial_policy_by_default() -> None:
     connection = _ReconciliationConnection()
     repository = PostgresReconciliationRepository(connection)
@@ -495,7 +537,9 @@ def test_postgres_reconciliation_execution_worker_claims_persists_and_completes(
         _ConnectionFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=matcher,
-        settings=PostgresReconciliationWorkerSettings(worker_id="recon-worker-a", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="recon-worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     summary = worker.process_once()
@@ -522,6 +566,8 @@ def test_postgres_reconciliation_worker_policy_denies_before_connection_access()
         matcher=lambda _context: ReconciliationExecutionResult(),
         settings=PostgresReconciliationWorkerSettings(
             worker_id="policy-worker",
+            permission_manifest=_worker_manifest("policy-worker"),
+            discovery_policy_permission="match.discover",
             policy_context_supplier=lambda tenant: PolicyEvaluationContext(
                 user_id="policy-worker",
                 username="policy-worker",
@@ -536,6 +582,65 @@ def test_postgres_reconciliation_worker_policy_denies_before_connection_access()
         worker.process_once()
 
 
+def test_postgres_reconciliation_worker_rejects_missing_policy_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("missing policy must be rejected before connection access")
+
+    worker = PostgresReconciliationWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(worker_id="unbound-recon-worker"),
+    )
+    with pytest.raises(
+        PostgresReconciliationWorkerError,
+        match="requires an explicit service-account policy supplier",
+    ):
+        worker.process_once()
+
+
+def test_postgres_reconciliation_worker_requires_manifest_for_configured_policy() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("missing permission manifest must be rejected before connection access")
+
+    worker = PostgresReconciliationWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="manifestless-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="manifestless-worker",
+                username="manifestless-worker",
+                user_permissions={"match.discover", "match.run"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    with pytest.raises(PostgresReconciliationWorkerError, match="verified worker permission manifest"):
+        worker.process_once()
+
+
+def test_postgres_reconciliation_worker_rejects_unreviewed_permission_override() -> None:
+    worker = PostgresReconciliationWorker(
+        object(),
+        tenant_supplier=tuple,
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="manifest-bound-worker",
+            permission_manifest=_worker_manifest("manifest-bound-worker"),
+            discovery_policy_permission="match.discover",
+            allow_unbound_hosted_policy=True,
+        ),
+    )
+    with pytest.raises(PostgresReconciliationWorkerError, match="verified permission manifest"):
+        worker._authorize_tenant("tenant_a", policy_permission="other.run")
+
+
 def test_postgres_reconciliation_worker_policy_allows_scoped_service_identity() -> None:
     connection = _ReconciliationConnection()
     repository = PostgresReconciliationRepository(connection)
@@ -547,10 +652,12 @@ def test_postgres_reconciliation_worker_policy_allows_scoped_service_identity() 
         matcher=lambda _context: ReconciliationExecutionResult(),
         settings=PostgresReconciliationWorkerSettings(
             worker_id="policy-worker",
+            permission_manifest=_worker_manifest("policy-worker"),
+            discovery_policy_permission="match.discover",
             policy_context_supplier=lambda tenant: PolicyEvaluationContext(
                 user_id="policy-worker",
                 username="policy-worker",
-                user_permissions={"match.run"},
+                user_permissions={"match.discover", "match.run"},
                 principal_type="service_account",
                 tenant_id=tenant,
                 authorized_tenant_ids=frozenset({tenant}),
@@ -583,7 +690,9 @@ def test_postgres_reconciliation_worker_passes_persisted_policy_amount_to_claim_
         _ConnectionFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=lambda _context: ReconciliationExecutionResult(),
-        settings=PostgresReconciliationWorkerSettings(worker_id="amount-worker", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="amount-worker", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     summary = worker.process_once()
@@ -591,6 +700,26 @@ def test_postgres_reconciliation_worker_passes_persisted_policy_amount_to_claim_
     assert summary.completed == 1
     assert policy_amounts[0] is None
     assert policy_amounts[1:] == [Decimal("20.00"), Decimal("20.00")]
+
+
+def test_postgres_reconciliation_worker_rejects_binary_float_policy_amount() -> None:
+    connection = _ReconciliationConnection()
+    repository = PostgresReconciliationRepository(connection)
+    _create_run(repository)
+    assert connection.run is not None
+    connection.run["rule_json"] = {"policy_amount": 20.0, "amount_tolerance": "0"}
+
+    worker = PostgresReconciliationWorker(
+        _ConnectionFactory(connection),
+        tenant_supplier=lambda: ["tenant_a"],
+        matcher=lambda _context: ReconciliationExecutionResult(),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="amount-worker", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
+    )
+
+    with pytest.raises(PostgresReconciliationWorkerError, match="Stored reconciliation policy amount is invalid"):
+        worker.process_once()
 
 
 def test_postgres_reconciliation_worker_can_separate_discovery_and_execution_permissions(
@@ -616,6 +745,7 @@ def test_postgres_reconciliation_worker_can_separate_discovery_and_execution_per
             worker_id="split-permission-worker",
             poll_interval_seconds=0,
             discovery_policy_permission="match.discover",
+            allow_unbound_hosted_policy=True,
         ),
     )
 
@@ -649,6 +779,8 @@ def test_postgres_reconciliation_worker_rechecks_policy_before_claim() -> None:
         matcher=lambda _context: ReconciliationExecutionResult(),
         settings=PostgresReconciliationWorkerSettings(
             worker_id="recheck-worker",
+            permission_manifest=_worker_manifest("recheck-worker"),
+            discovery_policy_permission="match.discover",
             policy_context_supplier=policy_context,
             poll_interval_seconds=0,
         ),
@@ -675,7 +807,7 @@ def test_postgres_reconciliation_worker_propagates_workspace_scope_to_policy_and
         return PolicyEvaluationContext(
             user_id="scoped-worker",
             username="scoped-worker",
-            user_permissions={"match.run"},
+            user_permissions={"match.discover", "match.run"},
             principal_type="service_account",
             tenant_id=tenant,
             workspace_id=workspace,
@@ -690,6 +822,8 @@ def test_postgres_reconciliation_worker_propagates_workspace_scope_to_policy_and
         matcher=lambda _context: ReconciliationExecutionResult(),
         settings=PostgresReconciliationWorkerSettings(
             worker_id="scoped-worker",
+            permission_manifest=_worker_manifest("scoped-worker"),
+            discovery_policy_permission="match.discover",
             policy_context_scope_supplier=policy_context,
             poll_interval_seconds=0,
         ),
@@ -721,10 +855,12 @@ def test_postgres_reconciliation_worker_rejects_legacy_policy_for_scoped_run() -
         matcher=lambda _context: ReconciliationExecutionResult(),
         settings=PostgresReconciliationWorkerSettings(
             worker_id="legacy-worker",
+            permission_manifest=_worker_manifest("legacy-worker"),
+            discovery_policy_permission="match.discover",
             policy_context_supplier=lambda tenant: PolicyEvaluationContext(
                 user_id="legacy-worker",
                 username="legacy-worker",
-                user_permissions={"match.run"},
+                user_permissions={"match.discover", "match.run"},
                 principal_type="service_account",
                 tenant_id=tenant,
                 authorized_tenant_ids=frozenset({tenant}),
@@ -750,7 +886,7 @@ def test_postgres_reconciliation_worker_propagates_entity_scope_and_rejects_miss
         return PolicyEvaluationContext(
             user_id="entity-worker",
             username="entity-worker",
-            user_permissions={"match.run"},
+            user_permissions={"match.discover", "match.run"},
             principal_type="service_account",
             tenant_id=tenant,
             workspace_id=workspace,
@@ -766,6 +902,8 @@ def test_postgres_reconciliation_worker_propagates_entity_scope_and_rejects_miss
         matcher=lambda _context: ReconciliationExecutionResult(),
         settings=PostgresReconciliationWorkerSettings(
             worker_id="entity-worker",
+            permission_manifest=_worker_manifest("entity-worker"),
+            discovery_policy_permission="match.discover",
             policy_context_scope_supplier=policy_context,
             poll_interval_seconds=0,
         ),
@@ -863,6 +1001,7 @@ def test_local_matcher_uses_persisted_financial_input_policy() -> None:
             "attributes_json": {
                 "id": "left-1",
                 "amount": 10.5,
+                "currency": "USD",
                 "date": "2026-07-25",
                 "reference": "INV-1",
             },
@@ -876,6 +1015,7 @@ def test_local_matcher_uses_persisted_financial_input_policy() -> None:
             "attributes_json": {
                 "id": "right-1",
                 "amount": 10.5,
+                "currency": "USD",
                 "date": "2026-07-25",
                 "reference": "INV-1",
             },
@@ -1063,7 +1203,9 @@ def test_postgres_reconciliation_worker_resumes_after_partition_failure() -> Non
         _ConnectionFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=matcher,
-        settings=PostgresReconciliationWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     failed = worker.process_run(tenant_id="tenant_a", run_id="run-resume")
@@ -1096,7 +1238,9 @@ def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_
             _ConnectionFactory(baseline_connection),
             tenant_supplier=lambda: ["tenant_a"],
             matcher=adapter,
-            settings=PostgresReconciliationWorkerSettings(worker_id="worker-baseline", poll_interval_seconds=0),
+            settings=PostgresReconciliationWorkerSettings(
+                worker_id="worker-baseline", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+            ),
         )
         baseline = baseline_worker.process_run(tenant_id="tenant_a", run_id=run_id)
         assert baseline.status == "Complete"
@@ -1136,7 +1280,9 @@ def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_
             _ConnectionFactory(crash_connection),
             tenant_supplier=lambda: ["tenant_a"],
             matcher=matcher,
-            settings=PostgresReconciliationWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+            settings=PostgresReconciliationWorkerSettings(
+                worker_id="worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+            ),
         )
         with pytest.raises(_SyntheticProcessCrash, match="after checkpoint commit"):
             first_worker.process_run(tenant_id="tenant_a", run_id=run_id)
@@ -1152,7 +1298,9 @@ def test_postgres_reconciliation_worker_resumes_after_unhandled_crash_and_lease_
             _ConnectionFactory(crash_connection),
             tenant_supplier=lambda: ["tenant_a"],
             matcher=matcher,
-            settings=PostgresReconciliationWorkerSettings(worker_id="worker-b", poll_interval_seconds=0),
+            settings=PostgresReconciliationWorkerSettings(
+                worker_id="worker-b", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+            ),
         )
         with pytest.raises(PostgresReconciliationBusyError, match="already leased"):
             replacement_worker.process_run(tenant_id="tenant_a", run_id=run_id)
@@ -1256,7 +1404,9 @@ def test_postgres_reconciliation_worker_close_is_idempotent_and_delegates() -> N
         factory,
         tenant_supplier=lambda: [],
         matcher=lambda _context: ReconciliationExecutionResult(results=(), exceptions=()),
-        settings=PostgresReconciliationWorkerSettings(worker_id="close-worker", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="close-worker", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
     worker.close()
     worker.close()
@@ -1342,7 +1492,9 @@ def test_postgres_reconciliation_execution_failure_is_retryable_and_busy_runs_ar
         _ConnectionFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         matcher=matcher,
-        settings=PostgresReconciliationWorkerSettings(worker_id="recon-worker-a", poll_interval_seconds=0),
+        settings=PostgresReconciliationWorkerSettings(
+            worker_id="recon-worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
     failed = worker.process_run(tenant_id="tenant_a", run_id="run-a")
 

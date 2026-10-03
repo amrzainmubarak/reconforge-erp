@@ -117,6 +117,18 @@ def test_postgres_consolidation_close_schema_is_tenant_scoped_and_exact() -> Non
     assert "DOUBLE PRECISION" not in schema
 
 
+def test_postgres_prepare_run_serializes_on_the_parent_period() -> None:
+    source = inspect.getsource(PostgresConsolidationCloseRepository.prepare_run)
+    assert "SELECT status FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s FOR UPDATE" in source
+
+
+def test_postgres_run_transitions_serialize_on_and_recheck_the_parent_period() -> None:
+    source = inspect.getsource(PostgresConsolidationCloseRepository._transition)
+    assert "SELECT period_id FROM reconforge.consolidation_close_runs" in source
+    assert "SELECT status FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s FOR UPDATE" in source
+    assert "A locked consolidation period cannot accept a run transition." in source
+
+
 def test_postgres_close_hierarchy_scope_schema_is_additive_and_reversible() -> None:
     schema = POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL
     for table_name in (
@@ -344,6 +356,7 @@ def test_postgres_journal_material_is_canonical_and_balanced() -> None:
     assert restored["amount_decimal"] == "12.00"
     assert PostgresConsolidationCloseRepository._amount_matches_minor("12.000000000000000000", 1200, "USD")
     assert not PostgresConsolidationCloseRepository._amount_matches_minor("12.01", 1200, "USD")
+    assert not PostgresConsolidationCloseRepository._amount_matches_minor(12.0, 1200, "USD")
 
 
 def test_translation_evidence_projection_is_backend_neutral() -> None:
@@ -567,6 +580,13 @@ def test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable() -
         )
         locked = repository.lock_period(period["id"], expected_version=1, reason="close", actor_label="period-reviewer")
         assert locked["status"] == "Locked"
+        with pytest.raises(PlatformError, match="locked"):
+            repository.request_reversal(
+                first["id"],
+                expected_version=3,
+                reason="blocked after period lock",
+                actor_label="reversal-preparer",
+            )
         with pytest.raises(PlatformError, match="independent"):
             repository.reopen_period(
                 period["id"],

@@ -1305,6 +1305,8 @@ BACKUP_INSERT_COLUMNS = {
         "readiness_score",
         "locked_at",
         "reopened_at",
+        "locked_by",
+        "reopened_by",
         "created_at",
         "updated_at",
     ),
@@ -1368,6 +1370,7 @@ BACKUP_INSERT_COLUMNS = {
         "content_type",
         "byte_size",
         "retention_until",
+        "retention_version",
         "registered_by",
         "created_at",
         "updated_at",
@@ -2144,9 +2147,9 @@ BACKUP_INSERT_QUERIES = {
     "close_periods": """
         INSERT INTO close_periods (
             id, workspace_id, period_name, start_date, end_date, status,
-            readiness_score, locked_at, reopened_at, created_at, updated_at
+            readiness_score, locked_at, reopened_at, locked_by, reopened_by, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "close_tasks_db": """
         INSERT INTO close_tasks_db (
@@ -2179,9 +2182,9 @@ BACKUP_INSERT_QUERIES = {
         id, workspace_id, evidence_code, source_path, checksum_sha256,
             provenance_type, redaction_status, evidence_status, storage_backend,
             storage_tenant_id, storage_key, storage_version_id, content_type, byte_size,
-            retention_until, registered_by, created_at, updated_at
+            retention_until, retention_version, registered_by, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "evidence_requirements": """
         INSERT INTO evidence_requirements (

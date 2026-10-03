@@ -152,7 +152,11 @@ class AcquisitionDeferredTaxItem:
 
     def tax_effect(self, currency: str) -> Money:
         # Money applies the installed currency registry's explicit ROUND_HALF_UP policy.
-        return Money.from_exact(self.temporary_difference(currency).amount * self.tax_rate, currency)
+        return Money.from_exact(
+            self.temporary_difference(currency).amount * self.tax_rate,
+            currency,
+            strict_precision=False,
+        )
 
     def classification(self, currency: str) -> DeferredTaxClassification:
         amount = self.tax_effect(currency).amount
@@ -345,9 +349,9 @@ def prepare_acquisition_deferred_tax_bridge(
 
 def _canonical_money(payload: object, currency: str, field: str, *, non_negative: bool = False) -> Money:
     try:
-        value = Money.from_canonical_dict(payload)  # type: ignore[arg-type]
+        value = Money.from_strict_canonical_dict(payload)  # type: ignore[arg-type]
     except (TypeError, ValueError, KeyError) as exc:
-        raise ConsolidationError(f"Acquisition deferred-tax {field} money is invalid.") from exc
+        raise ConsolidationError(f"Acquisition deferred-tax {field} money must use canonical exact decimal text.") from exc
     return _money(value, currency, field, non_negative=non_negative)
 
 
@@ -372,7 +376,12 @@ def verify_acquisition_deferred_tax_bridge_payload(payload: object) -> dict[str,
     acquisition_id = payload.get("acquisition_id")
     currency = payload.get("reporting_currency")
     request_digest = payload.get("request_digest")
-    if not isinstance(acquisition_id, str) or not isinstance(currency, str) or not _SHA256.fullmatch(str(request_digest)):
+    if (
+        not isinstance(acquisition_id, str)
+        or not isinstance(currency, str)
+        or not re.fullmatch(r"[A-Z][A-Z0-9]{2,5}", currency)
+        or not _SHA256.fullmatch(str(request_digest))
+    ):
         raise ConsolidationError("Acquisition deferred-tax identity is invalid.")
     asset_total = _canonical_money(payload.get("deferred_tax_asset"), currency, "deferred-tax asset", non_negative=True)
     liability_total = _canonical_money(
@@ -425,7 +434,11 @@ def verify_acquisition_deferred_tax_bridge_payload(payload: object) -> dict[str,
         signed_fair = _signed(kind, fair_value.amount)
         signed_basis = _signed(kind, tax_basis.amount)
         expected_temporary = Money.from_exact(signed_fair - signed_basis, currency, strict_precision=True)
-        expected_tax = Money.from_exact(expected_temporary.amount * rate, currency)
+        expected_tax = Money.from_exact(
+            expected_temporary.amount * rate,
+            currency,
+            strict_precision=False,
+        )
         if temporary.amount != expected_temporary.amount or tax_amount.amount != expected_tax.amount:
             raise ConsolidationError(f"Acquisition deferred-tax item {item_id} arithmetic does not reconcile.")
         expected_classification: DeferredTaxClassification = (

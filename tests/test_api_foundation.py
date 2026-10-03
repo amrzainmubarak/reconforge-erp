@@ -13,7 +13,12 @@ from reconforge.auth.policy_cache import PolicyDecisionCache
 from reconforge.cli import app
 from reconforge.db import run_migrations
 from reconforge.db.migrations import MIGRATIONS
-from reconforge.infrastructure.postgres import PostgresPooledConnectionFactory
+from reconforge.infrastructure.postgres import (
+    PostgresConnectionFactory,
+    PostgresPooledConnectionFactory,
+    PostgresSettings,
+)
+from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REVISIONS
 from reconforge.infrastructure.redis import RedisPolicyCacheVersionStore
 from reconforge.platform.common import is_trusted_local_mode
 
@@ -58,6 +63,116 @@ def test_api_health_and_version_work_without_auth(tmp_path: Path) -> None:
     assert health.headers["X-Frame-Options"] == "DENY"
     assert health.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert health.headers["X-Permitted-Cross-Domain-Policies"] == "none"
+
+
+def test_server_health_uses_postgresql_migration_state_instead_of_sqlite(tmp_path: Path) -> None:
+    class FakeConnection:
+        def __init__(self, revision: str) -> None:
+            self.revision = revision
+
+        def execute(self, statement: str) -> Any:
+            assert statement == "SELECT version_num FROM alembic_version"
+            revision = self.revision
+            return type("Cursor", (), {"fetchone": lambda _self: (revision,)})()
+
+        def close(self) -> None:
+            return None
+
+    class FakeFactory(PostgresConnectionFactory):
+        def __init__(self, revision: str) -> None:
+            super().__init__(PostgresSettings(dsn="postgresql://health.test/reconforge", require_tls=False))
+            self.revision = revision
+
+        def connect(self) -> FakeConnection:
+            return FakeConnection(self.revision)
+
+    db_path = tmp_path / "server-health-should-not-be-read.db"
+    api = create_api_app(
+        db_path,
+        tenant_db_root=tmp_path / "tenants",
+        postgres_dsn="postgresql://identity.test/reconforge",
+    )
+    api.state.postgres_identity_factory.close()
+    latest_revision = POSTGRES_MIGRATION_REVISIONS[-1]
+    api.state.postgres_identity_factory = FakeFactory(latest_revision)
+    client = TestClient(api)
+
+    health = client.get("/api/v1/health")
+    version = client.get("/api/v1/version")
+
+    assert health.status_code == 200
+    assert version.status_code == 200
+    assert version.json()["scope"] == "postgresql server/self-hosted foundation"
+    payload = health.json()
+    assert payload["status"] == "ok"
+    assert payload["service"] == "reconforge-server-api"
+    assert payload["database"] == {
+        "backend": "postgresql",
+        "reachable": True,
+        "schema_version": latest_revision,
+        "latest_schema_version": latest_revision,
+        "pending_migrations": 0,
+        "path_summary": "server-managed",
+    }
+
+
+def test_server_health_is_degraded_when_postgresql_migrations_are_pending(tmp_path: Path) -> None:
+    class PendingConnection:
+        def execute(self, statement: str) -> Any:
+            assert statement == "SELECT version_num FROM alembic_version"
+            return type("Cursor", (), {"fetchone": lambda self: ("0089_pg_writeback_identity",)})()
+
+        def close(self) -> None:
+            return None
+
+    class PendingFactory(PostgresConnectionFactory):
+        def __init__(self) -> None:
+            super().__init__(PostgresSettings(dsn="postgresql://health.test/reconforge", require_tls=False))
+
+        def connect(self) -> PendingConnection:
+            return PendingConnection()
+
+    api = create_api_app(
+        tmp_path / "server-health-pending.db",
+        tenant_db_root=tmp_path / "tenants",
+        postgres_dsn="postgresql://identity.test/reconforge",
+    )
+    api.state.postgres_identity_factory.close()
+    api.state.postgres_identity_factory = PendingFactory()
+    response = TestClient(api).get("/api/v1/health")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "degraded"
+    assert payload["database"]["reachable"] is True
+    assert payload["database"]["schema_version"] == "0089_pg_writeback_identity"
+    assert payload["database"]["pending_migrations"] == 3
+
+
+def test_server_health_is_degraded_when_postgresql_migration_state_is_unavailable(tmp_path: Path) -> None:
+    class BrokenFactory(PostgresConnectionFactory):
+        def __init__(self) -> None:
+            super().__init__(PostgresSettings(dsn="postgresql://health.test/reconforge", require_tls=False))
+
+        def connect(self) -> Any:
+            raise RuntimeError("must not be exposed")
+
+    api = create_api_app(
+        tmp_path / "server-health.db",
+        tenant_db_root=tmp_path / "tenants",
+        postgres_dsn="postgresql://identity.test/reconforge",
+    )
+    api.state.postgres_identity_factory.close()
+    api.state.postgres_identity_factory = BrokenFactory()
+    response = TestClient(api).get("/api/v1/health")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "degraded"
+    assert payload["service"] == "reconforge-server-api"
+    assert payload["database"]["backend"] == "postgresql"
+    assert payload["database"]["reachable"] is False
+    assert "must not be exposed" not in response.text
 
 
 def test_protected_route_requires_auth_and_returns_structured_error(tmp_path: Path) -> None:

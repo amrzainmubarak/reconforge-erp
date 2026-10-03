@@ -5,6 +5,2739 @@
 
 ## Decisions
 
+### D-1032: Align SQLite Receivables quantity parsing with PostgreSQL
+
+- **Date**: 2026-08-29
+- **Context**: SQLite Receivables converted invoice quantities with
+  `Decimal(str(...))`, while the PostgreSQL adapter already enforced the
+  strict exact-input policy.
+- **Decision**: Route SQLite Receivables quantity validation through
+  `parse_exact_amount()` and preserve its existing positive canonical text
+  and error behavior.
+- **Rationale**: Equivalent local and tenant-scoped workflows must reject the
+  same unsafe quantity representations before persistence and arithmetic.
+- **Verification**: E-1120, the focused Receivables/API/PostgreSQL test
+  selection, full locked Python 3.11 regression, local Ruff/Mypy/Bandit/
+  dependency-audit/package gates, and diff checks.
+- **Rollback**: Revert E-1120 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
+### D-1031: Decode persisted Payables quantities through the strict boundary
+
+- **Date**: 2026-08-29
+- **Context**: Receipt-limit and three-way-match arithmetic used direct
+  `Decimal(str(...))` conversions for persisted ordered, invoiced, and
+  received quantities after strict ingress had completed.
+- **Decision**: Decode every persisted quantity used by those calculations
+  with an adapter-local `_stored_quantity()` wrapper around
+  `parse_exact_amount()`. In PostgreSQL, aggregate canonical text shadows
+  after decoding rather than coercing a numeric aggregate.
+- **Rationale**: Persisted financial and operational data must fail closed if
+  malformed or tampered, and both storage adapters must share the same exact
+  arithmetic boundary.
+- **Verification**: E-1119, focused Payables/API/application/PostgreSQL tests,
+  full locked Python 3.11 regression, Ruff, Mypy, and diff checks.
+- **Rollback**: Revert E-1119 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
+### D-1030: Enforce strict quantity inputs in Payables adapters
+
+- **Date**: 2026-08-29
+- **Context**: Payables quantities were converted directly with `Decimal` in
+  SQLite and PostgreSQL, allowing binary floating-point and scientific-text
+  inputs to reach exact quantity persistence and three-way matching.
+- **Decision**: Route both adapter quantity boundaries through
+  `parse_exact_amount()`, preserving positive arbitrary-scale canonical text
+  and the existing error boundary.
+- **Rationale**: Quantity comparisons and price calculations must not depend
+  on a weaker lexical or type policy in one persistence mode than another.
+- **Verification**: E-1118, focused Payables/API/application/PostgreSQL tests,
+  Ruff, Mypy, and diff checks.
+- **Rollback**: Revert E-1118 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
+### D-1029: Use the strict amount parser in duplicate detection
+
+- **Date**: 2026-08-29
+- **Context**: Duplicate detection rejected binary floats but parsed amount
+  values independently, allowing scientific-notation text to bypass the
+  shared strict financial-input lexical boundary.
+- **Decision**: Use `parse_exact_amount()` for duplicate-detection amount
+  fingerprint canonicalization and preserve the existing adapter error
+  contract.
+- **Rationale**: Financial matching fingerprints must not have a weaker or
+  divergent amount lexical policy than other current financial ingress paths.
+- **Verification**: E-1117, focused duplicate-detection/strategy-contract
+  tests, Ruff, Mypy, and diff checks.
+- **Rollback**: Revert E-1117 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
+### D-1028: Name the financial input policy in Journal Controls
+
+- **Date**: 2026-08-29
+- **Context**: Journal threshold and stored journal amount parsing relied on
+  the strict parser default without carrying the policy as an explicit
+  contract through the domain and persistence adapters.
+- **Decision**: Add a named `FinancialInputPolicy` argument to the pure journal
+  policy functions and pass strict policy explicitly from SQLite and
+  PostgreSQL adapters. Permit legacy behavior only through an explicit domain
+  selection for compatibility callers.
+- **Rationale**: Financial control behavior must be visible in the call graph,
+  fail closed for new production paths, and remain deliberately reversible
+  during the deprecation window.
+- **Verification**: E-1116, focused journal/application/control tests, Ruff,
+  Mypy, and diff checks.
+- **Rollback**: Revert E-1116 source, test, ADR, and execution records; no
+  schema, migration, or external runtime state changes.
+
+### D-1027: Enforce strict canonical Money in bank-control replay
+
+- **Date**: 2026-08-29
+- **Context**: Bank-control reports validated decision structure and digests,
+  but persisted Money objects could be accepted after textual normalization
+  rather than proving exact producer serialization.
+- **Decision**: Require the strict canonical Money reader for the report
+  tolerance and every non-null decision variance before replay verification
+  accepts the artifact. Keep source ingestion and compatibility contracts
+  unchanged.
+- **Rationale**: A valid outer digest must not make a representation-drifted
+  financial value acceptable as deterministic evidence. The control remains
+  bounded and non-posting.
+- **Verification**: E-1115, the focused bank/API/persistence selection, full
+  locked Python 3.11 regression, Ruff, Mypy, and diff checks.
+- **Rollback**: Revert E-1115 code, test, ADR, and execution-record changes;
+  no schema or external runtime state is changed.
+
+### D-1026: Current supply-chain claims follow the zero npm SRI-gap result
+
+- **Date**: 2026-08-29
+- **Context**: The current policy validator reported zero npm integrity gaps,
+  while current-facing documentation still repeated the historical 155-entry
+  gap.
+- **Decision**: Align current gap, whitepaper, and documentation-drift
+  surfaces with the validator-backed zero-gap result; retain historical records
+  as dated evidence and preserve hosted provenance/package-assurance limits.
+- **Rationale**: Release and security decisions require one current truth, and
+  a closed local metadata control must not obscure the remaining trust gaps.
+- **Verification**: ADR 0776, the validator/documentation regression, full
+  regression, and release gates are recorded in E-1114.
+- **Rollback**: Revert E-1114, ADR 0776, current documentation/test changes,
+  manifest, and execution records; no dependency or runtime state changes.
+
+### D-1025: Strict canonical API and CLI Money inputs
+
+- **Date**: 2026-08-29
+- **Context**: Declared canonical Money request boundaries still used the
+  compatibility reader and could normalize padded or otherwise non-canonical
+  serialized values before domain construction.
+- **Decision**: Use the strict reader in five consolidation API adapters and
+  the intercompany CLI; retain the explicitly legacy ownership-change CLI
+  two-field input contract and other compatibility readers.
+- **Rationale**: Canonical input contracts should reject representation drift
+  at ingress instead of accepting it and relying on later canonical output.
+- **Verification**: ADR 0775, focused interface/domain tests, full regression,
+  and release gates are recorded in E-1113.
+- **Rollback**: Revert E-1113, ADR 0775, interface/test changes, manifest, and
+  execution records; no schema, financial data, or deployment state changes.
+
+### D-1024: Strict PostgreSQL ownership-change Money hydration
+
+- **Date**: 2026-08-29
+- **Context**: PostgreSQL ownership-change request hydration restored
+  persisted Money through the compatibility reader before the immutable row
+  digest lineage check.
+- **Decision**: Use `Money.from_strict_canonical_dict()` for persisted request
+  Money fields while keeping API and explicitly compatible readers unchanged.
+- **Rationale**: A persisted financial request must not be normalized into a
+  typed object before replay verification; fail closed at the Money boundary.
+- **Verification**: ADR 0774, ownership-change persistence/domain tests, full
+  regression, and release gates are recorded in E-1112.
+- **Rollback**: Revert E-1112, ADR 0774, the hydration/test changes, manifest,
+  and execution records; no schema, financial data, or deployment state
+  changes.
+
+### D-1023: Strict canonical-money replay consumers
+
+- **Date**: 2026-08-29
+- **Context**: Translation, worksheet, impairment, and intercompany replay
+  consumers still used the compatibility Money reader at persisted-data
+  boundaries where producer serialization identity is part of the evidence.
+- **Decision**: Use `Money.from_strict_canonical_dict()` for those four bounded
+  replay consumers while retaining compatibility readers for API and other
+  explicitly compatible restoration boundaries.
+- **Rationale**: One exact serialization policy must cover every persisted
+  financial replay boundary in scope; re-signed normalized text must fail
+  closed before arithmetic or artifact reproduction.
+- **Verification**: ADR 0773, focused 40/40 replay tests, full regression, and
+  release gates are recorded in E-1111.
+- **Rollback**: Revert E-1111, ADR 0773, use-site/tests, manifest, and
+  execution records together; no financial data or deployment state changes.
+
+### D-1022: Strict canonical-money replay reader
+
+- **Date**: 2026-08-29
+- **Context**: Multiple financial replay verifiers needed to reject values
+  that `Money.from_canonical_dict()` could normalize while preserving valid
+  policy/provenance and arithmetic.
+- **Decision**: Add `Money.from_strict_canonical_dict()` as an additive reader
+  that requires the complete input mapping to equal the reconstructed
+  `to_canonical_dict()`. Use it in acquisition, PPA, deferred-tax, and
+  ownership-change replay; retain the compatibility reader unchanged.
+- **Rationale**: One shared deterministic serialization boundary prevents
+  verifier drift and keeps equivalent financial evidence from acquiring
+  multiple persisted representations.
+- **Verification**: ADR 0772, focused strict-reader/replay tests, full
+  regression, and release gates are recorded in E-1110.
+- **Rollback**: Revert E-1110, ADR 0772, strict-reader use sites/tests,
+  manifest, and execution records together; no financial data or deployment
+  state changes.
+
+### D-1021: Strict PPA and deferred-tax replay money
+
+- **Date**: 2026-08-28
+- **Context**: PPA and deferred-tax replay restored money for arithmetic but
+  could normalize a padded decimal or lowercase currency code from a
+  re-signed payload before comparing it with the reported result.
+- **Decision**: Require every PPA and deferred-tax money object's raw amount
+  and currency to equal its reconstructed canonical `Money` representation,
+  and require canonical top-level reporting currency syntax.
+- **Rationale**: Equivalent arithmetic must not make non-canonical persisted
+  financial evidence acceptable once its outer digest is recomputed.
+- **Verification**: ADR 0771, focused re-signed payload tests, full
+  regression, and release gates are recorded in E-1109.
+- **Rollback**: Revert E-1109, ADR 0771, verifier/tests, manifest, and
+  execution records together; no financial data or deployment state changes.
+
+### D-1020: Strict acquisition bridge replay amounts
+
+- **Date**: 2026-08-28
+- **Context**: Acquisition bridge replay used `Decimal(text)` for persisted
+  summary and line amounts. A caller able to recompute the outer digest could
+  therefore submit scientific or non-canonical decimal text.
+- **Decision**: Restore every persisted money payload through
+  `Money.from_canonical_dict()`, require its amount text and currency code to
+  equal the canonical producer representation, bind it to the reporting
+  currency, and apply
+  non-negative validation to goodwill and bargain-purchase summaries.
+- **Rationale**: A valid digest must not turn semantically invalid financial
+  serialization into an acceptable replay artifact.
+- **Verification**: ADR 0770, acquisition replay tests, full regression, and
+  release gates are recorded in E-1108.
+- **Rollback**: Revert E-1108, ADR 0770, verifier/tests, manifest, and
+  execution records together; no financial data or deployment state changes.
+
+### D-1019: Content-bound deployment-readiness evidence
+
+- **Date**: 2026-08-28
+- **Context**: Readiness gates required evidence paths, but an unchanged path
+  could point to changed bytes without changing the matrix digest.
+- **Decision**: Require a closed lowercase SHA-256 manifest covering every
+  referenced evidence file and verify the bytes offline before exposing the
+  matrix through the reader or CLI.
+- **Rationale**: Reviewers need deterministic evidence identity and immediate
+  fail-closed drift detection without network calls, signatures, or hidden
+  runtime assumptions.
+- **Verification**: ADR 0769, schema validation, tamper/coverage tests, and
+  the E-1107 execution gates.
+- **Rollback**: Revert the reader, schema, matrix manifest, tests, ADR, and
+  execution records together; no deployment or database state changes.
+
+### D-1018: Move the bounded runtime base to Python 3.12 Alpine
+
+- **Date**: 2026-08-28
+- **Context**: The Docker runtime remained on Python 3.11 although the locked
+  application matrix supported Python 3.12; a base upgrade needed exact
+  runtime, rollback, matrix, and scan evidence.
+- **Decision**: Accept the official digest-pinned Python 3.12 Alpine base for
+  the local candidate runtime, with the prior Python 3.11 digest retained as a
+  rollback target. Keep hosted publication and the exact fresh Syft/Grype gate
+  separately open.
+- **Rationale**: The candidate build, hardened smoke, full 3.11/3.12 matrix,
+  web/API/package/air-gap checks, rollback smoke, and Docker Scout result pass;
+  the stale scanner database is not converted into a false success.
+- **Verification**: ADR 0767, E-884 evidence, candidate scanner record, and
+  execution quality/security baselines.
+- **Rollback**: Restore the previous Dockerfile base/uv interpreter references
+  and revert the single implementation slice; no data migration is required.
+
+### D-1017: Strict ownership-change result replay
+
+- **Date**: 2026-08-28
+- **Context**: Result replay checked a digest and `Decimal(text)` balance only;
+  a freshly re-signed payload could bypass semantic amount validation.
+- **Decision**: Strict-parse and canonicalize scalar result fields, restore
+  line amounts through `Money.from_canonical_dict()`, and require line
+  currencies to match the reporting currency before summing.
+- **Rationale**: Persisted financial evidence must fail closed on semantic
+  corruption even when its outer digest is internally consistent.
+- **Verification**: Ownership-change domain, PostgreSQL, API, full regression,
+  and release gates are recorded in E-1106.
+- **Compatibility**: Valid typed results and fixed currency-precision strings
+  remain supported; invalid re-signed payloads now fail closed.
+- **Rollback**: Revert E-1106, ADR 0766, verifier/tests, manifest, and
+  execution records together.
+
+### D-1016: Strict canonical ERPNext write-back amounts
+
+- **Date**: 2026-08-28
+- **Context**: ERPNext write-back drafts retained source amount formatting and
+  used local `Decimal` validation, so equivalent proposals could receive
+  different approval-bound payload digests.
+- **Decision**: Canonicalize Journal Entry and Payment Entry draft amounts
+  through the shared helper and use strict parsed values for balance checks.
+- **Rationale**: One financial proposal must have one deterministic payload
+  identity before human approval and governed dispatch.
+- **Verification**: Write-back, provider TLS, full regression, and release
+  gates pass; evidence is recorded in E-1105.
+- **Compatibility**: Payload schema and operations remain unchanged, but newly
+  built equivalent drafts converge to canonical bytes and may have new
+  digests. Existing persisted intent bytes are not rewritten.
+- **Rollback**: Revert E-1105, ADR 0765, write-back connector/test changes,
+  manifest entry, and execution records together.
+
+### D-1015: Strict canonical ERPNext read amounts
+
+- **Date**: 2026-08-28
+- **Context**: ERPNext GL and Payment Entry read models duplicated permissive
+  `Decimal` validation and returned non-canonical provider text.
+- **Decision**: Use `canonical_connector_amount()` for read-only ERPNext
+  amounts and `parse_exact_amount()` for derived checks.
+- **Rationale**: ERP provider response data needs the same deterministic,
+  finite, exact policy as other connector boundaries before replay and scope
+  processing.
+- **Verification**: GL, Payment Entry, SDK, full regression, and release gates
+  pass; evidence is recorded in E-1104.
+- **Compatibility**: Read response shape and existing business/error
+  invariants remain stable; output is canonicalized. Write-back is unchanged.
+- **Rollback**: Revert E-1104, ADR 0764, ERPNext read connector/test changes,
+  manifest entry, and execution records together.
+
+### D-1014: Shared strict connector amount validation
+
+- **Date**: 2026-08-28
+- **Context**: Four read-only reference response models duplicated permissive
+  `Decimal` validation and returned non-canonical amount text.
+- **Decision**: Use the shared `canonical_connector_amount()` helper across
+  REST, ERP, payment-statement, and generic database-reference models.
+- **Rationale**: A single strict parser and canonical serializer makes
+  connector financial boundaries consistent and response fingerprints stable.
+- **Verification**: The four connector suites, SDK inventory, full regression,
+  and release gates pass; evidence is recorded in E-1103.
+- **Compatibility**: Exact finite values remain valid, field contracts and
+  error vocabulary remain stable, and output is canonicalized.
+- **Rollback**: Revert E-1103, ADR 0763, the shared helper, migrated
+  connector/test changes, manifest entry, and execution records together.
+
+### D-1013: Strict CAMT.053 decimal lexical boundary
+
+- **Date**: 2026-08-28
+- **Context**: CAMT.053 amount parsing used `Decimal(value)`, which admitted
+  scientific notation and display-oriented separators at an ISO source
+  boundary.
+- **Decision**: Enforce the ISO decimal lexical shape before
+  `parse_exact_amount()` and serialize accepted values with
+  `canonical_decimal_text()`.
+- **Rationale**: Source-format validation, exact financial parsing, and
+  deterministic digest serialization must be separate and explicit.
+- **Verification**: CAMT.053 replay, rejection, projection, schema, and
+  hardening tests pass; full gates are recorded in E-1102.
+- **Compatibility**: Ordinary signed decimal text remains accepted and is
+  canonicalized; scientific, locale-formatted, accounting-parenthesized, and
+  non-finite values fail closed.
+- **Rollback**: Revert E-1102, ADR 0762, CAMT.053 code/tests, manifest entry,
+  and execution records together.
+
+### D-1012: Strict canonical database-reference amounts
+
+- **Date**: 2026-08-28
+- **Context**: `DatabaseRecordRow` used `Decimal(value)` only for validation and
+  returned the original amount string, allowing scientific notation and digest
+  variance from equivalent formatting.
+- **Decision**: Use `parse_exact_amount()` and return
+  `canonical_decimal_text()` from the shared amount validator; preserve the
+  existing finite-value error wording.
+- **Rationale**: Shared connector rows are financial inputs and response
+  fingerprints must be deterministic across equivalent source formatting.
+- **Verification**: Shared connector and PostgreSQL transport tests cover exact
+  canonicalization and invalid-value refusal; full gates are recorded in E-1101.
+- **Compatibility**: Exact values remain accepted, but output uses canonical
+  plain text; scientific notation now fails closed.
+- **Rollback**: Revert E-1101, ADR 0761, shared connector/test changes,
+  manifest entry, and execution records together.
+
+### D-1011: Strict PostgreSQL database-connector amount hydration
+
+- **Date**: 2026-08-28
+- **Context**: The read-only PostgreSQL named-query connector used direct
+  `Decimal(str(value))` parsing after a partial float check, creating a
+  different amount contract from the platform parser.
+- **Decision**: Use `parse_exact_amount()` for connector amount hydration,
+  preserve existing safe error categories, and keep canonical decimal output.
+- **Rationale**: Database results are adapter input and must be exact before
+  entering the typed connector row and reconciliation pipeline.
+- **Verification**: Connector hydration tests cover float, scientific text,
+  boolean, non-finite, and valid read behavior; full regression and release
+  gates are recorded in E-1100.
+- **Compatibility**: Exact values and public error codes remain compatible;
+  invalid/inexact values fail closed.
+- **Rollback**: Revert E-1100, ADR 0760, connector/test changes, manifest
+  entry, and execution records together.
+
+### D-1010: Strict PostgreSQL worker tolerance hydration
+
+- **Date**: 2026-08-28
+- **Context**: Grouped and sequential PostgreSQL worker adapters used
+  ad-hoc `Decimal(str(value))` tolerance normalization after a partial float
+  check, leaving a different rule-input contract from the core parser.
+- **Decision**: Use `parse_exact_amount()` for both adapters, reject negative
+  tolerances, and serialize accepted values as canonical non-scientific text;
+  retain the established safe error wording.
+- **Rationale**: Tolerances affect matching decisions and must share the same
+  strict, reproducible financial-input policy before strategy construction.
+- **Verification**: Focused grouped/sequential tests and full regression pass;
+  release gates are recorded in E-1099.
+- **Compatibility**: Exact text, integers, and Decimal inputs retain behavior;
+  binary floats and noncanonical scientific text now fail closed.
+- **Rollback**: Revert E-1099, ADR 0759, worker/test changes, manifest entry,
+  and execution records together.
+
+### D-1009: Strict consolidation minor-amount verification
+
+- **Date**: 2026-08-28
+- **Context**: Consolidation-close replay used `Decimal(str(value))` when
+  comparing persisted decimal amounts with minor-unit-derived expectations.
+  Binary floats from an adapter could pass as exact journal/effect evidence.
+- **Decision**: Parse both actual and expected values with
+  `parse_exact_amount()` before equality comparison, retaining the existing
+  minor-unit source of truth and fail-closed behavior for invalid values.
+- **Rationale**: Journal/effect replay must not accept an inexact financial
+  adapter value merely because its string rendering matches the expectation.
+- **Verification**: Close replay tests cover exact equality, mismatch, and
+  binary-float refusal; full regression and release gates are recorded in E-1098.
+- **Compatibility**: Canonical decimal text and other exact values are
+  unchanged; strict binary-float actual values now fail verification.
+- **Rollback**: Revert E-1098, ADR 0758, verifier/test changes, manifest entry,
+  and execution records together.
+
+### D-1008: Strict ownership-percentage hydration
+
+- **Date**: 2026-08-28
+- **Context**: Ownership persistence readers reconstructed percentages with
+  `Decimal(str(value))`, allowing binary floats from a database adapter or
+  persisted JSON to reach consolidation, NCI, and ownership-change calculations.
+- **Decision**: Use `parse_exact_amount()` for direct ownership in PostgreSQL
+  and SQLite readers and for prior/new ownership in PostgreSQL ownership-change
+  replay. Preserve the domain's existing percentage bounds and fail closed on
+  invalid values.
+- **Rationale**: Ownership ratios affect financial scope and calculated
+  adjustments, so their replay boundary must enforce the exact-input policy.
+- **Verification**: Three binary-float hydration regressions plus existing
+  ownership and ownership-change suites pass; full regression and release gates
+  are recorded in E-1097.
+- **Compatibility**: Canonical decimal text, integers, and Decimal values are
+  unchanged; only previously coerced binary floats now fail closed.
+- **Rollback**: Revert E-1097, ADR 0757, the reader/test changes, manifest
+  entry, and execution records together.
+
+### D-1007: PostgreSQL matching input persistence follows the financial policy
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL matching adapter passed a financial input policy to
+  the deterministic engine, while `_register_inputs()` independently used
+  `Decimal(str(value))` for persisted source amounts. This could make a binary
+  float appear exact in stored evidence even when strict matching rejected it.
+- **Decision**: Hydrate source amounts through `parse_amount()` with the same
+  policy used by the engine on both source sides. Strict mode records no usable
+  amount and marks the input invalid; explicit legacy mode retains compatibility
+  conversion.
+- **Rationale**: The decision and evidence boundaries must share one versioned
+  financial-input contract; invalid amounts cannot become valid through a
+  persistence-only conversion.
+- **Verification**: Strict-rejection, legacy-compatibility, lineage, and full
+  matching-application tests pass; full regression and release gates are
+  recorded in E-1096.
+- **Compatibility**: Exact valid inputs are unchanged. Only strict binary-float
+  source hydration changes from an apparently valid Decimal to invalid input.
+- **Rollback**: Revert E-1096, ADR 0756, the adapter/test changes, manifest
+  entry, and execution records together.
+
+### D-1006: Strict PostgreSQL financial hydration
+
+- **Date**: 2026-08-28
+- **Context**: PostgreSQL policy-analysis scope bounds and trial-balance
+  aggregates used `Decimal(str(value))` at read boundaries, allowing a result
+  adapter returning a binary float to be treated as exact financial data.
+- **Decision**: Use `parse_exact_amount()` for both repository paths. Refuse
+  binary floating-point, malformed, non-finite, and negative present values;
+  preserve exact text, integer, and Decimal values and the existing explicit
+  zero fallback for missing aggregates.
+- **Rationale**: Financial authorization bounds and balance evidence must share
+  the strict exactness contract at the last boundary before domain use.
+- **Verification**: The policy-scope and trial-balance float regressions,
+  existing PostgreSQL suites, full regression, static/security gates, package
+  build, YAML, and diff checks pass.
+- **Compatibility**: Valid PostgreSQL numeric results are unchanged. Invalid
+  binary-float adapter results now fail closed instead of being interpreted.
+- **Rollback**: Revert E-1095, ADR 0755, the repository/test changes, manifest
+  entry, and execution records together.
+
+### D-1005: Strict parsing for persisted worker policy amounts
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL reconciliation worker decoded the persisted
+  financial exposure used for authorization with `Decimal(str(raw))`, allowing
+  a JSON binary float to become an apparently exact Decimal.
+- **Decision**: Decode `policy_amount` with `parse_exact_amount()` and reject
+  binary floating-point, malformed, non-finite, or negative values before
+  claim/lifecycle policy evaluation. Keep exact text, integer, and Decimal
+  compatibility.
+- **Rationale**: Authorization amounts are financial inputs and must obey the
+  same strict exactness policy as the submission and matching boundaries.
+- **Verification**: The new worker regression, existing PostgreSQL worker and
+  policy suites, full regression, static/security gates, package build, YAML,
+  and diff checks pass.
+- **Compatibility**: Valid persisted exact amounts are unchanged. Stored
+  binary-float policy amounts now fail closed with the existing safe worker
+  validation error.
+- **Rollback**: Revert E-1094, ADR 0754, the worker/test changes, manifest
+  entry, and execution records together.
+
+### D-1004: Strategy adapters enforce strict financial inputs
+
+- **Date**: 2026-08-28
+- **Context**: Carry-forward and reversal-pairing adapters converted public
+  record amounts with `Decimal(str(value))`, allowing a binary float to cross
+  the adapter boundary even though the domain models require exact Decimal
+  values.
+- **Decision**: Parse amounts and tolerances through `parse_exact_amount()`
+  and reject binary floating-point values before matching. Preserve exact text,
+  integer, and Decimal inputs and the existing result/digest contract.
+- **Rationale**: Every financial adapter boundary must enforce the same strict
+  input policy. A textual conversion of a float is not evidence that the
+  original financial value was exact.
+- **Verification**: The new sequential adapter regression plus existing
+  carry-forward, reversal, worker, replay, and strategy-contract suites pass;
+  full regression and release gates are recorded in E-1093.
+- **Compatibility**: Only binary floating-point inputs change from accepted to
+  refused. Valid exact-text requests are unchanged.
+- **Rollback**: Revert E-1093, ADR 0753, the two adapter changes, the
+  regression test, manifest entry, and execution records together.
+
+### D-1003: Bound bank-control duplicate-reference evaluation
+
+- **Date**: 2026-08-28
+- **Context**: The bank-statement control grouped ledger records by normalized
+  reference but had no domain-level ceilings for direct callers. Dense
+  duplicate references could create large ambiguity payloads and high repeated
+  candidate work. Final unmatched-ledger coverage also searched all previous
+  decisions for each ledger record.
+- **Decision**: Refuse more than 250,000 records per input side, more than
+  10,000 ledger candidates for one normalized reference, or more than
+  1,000,000 candidate evaluations in one run. Fail closed without a partial
+  artifact, preserve existing ambiguity behavior below the limits, and replace
+  the final nested scan with one referenced-ID set.
+- **Rationale**: Direct domain APIs are part of the safety boundary. Candidate
+  density and cumulative work must be visible and bounded, while output
+  semantics should remain stable for supported inputs.
+- **Verification**: The dense-reference regression, existing bank-control
+  replay/API/persistence suites, full regression, static/security gates,
+  package build, and diff checks pass.
+- **Compatibility**: Normal and bounded duplicate-reference decisions retain
+  their existing order and digest semantics. Oversized direct inputs now fail
+  with a safe control error rather than producing a partial result.
+- **Rollback**: Revert E-1092, ADR 0752, the domain/test changes, manifest
+  entry, and execution records together.
+
+### D-1002: Enforce hard partition limits during PostgreSQL input streaming
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL partition supplier used a server cursor, but the
+  repository accumulated a complete current partition before the worker's
+  existing post-read `partition_max_records` check. A dense hard key could
+  therefore consume excessive Python memory before being rejected.
+- **Decision**: Add a validated `max_partition_records` contract to
+  `iter_input_partitions()`. Enforce it before appending each row, cap the
+  cursor fetch batch to the same declared ceiling in the repository/worker
+  path, and fail
+  closed with an integrity error when the partition would exceed the limit.
+  Keep the worker and local partition execution on one validation helper.
+- **Rationale**: A hard partition limit must protect the input materialization
+  boundary itself. Silent truncation, late rejection, or handing an oversized
+  partition to grouped/sequential matching would make resource failures harder
+  to explain and harder to replay.
+- **Verification**: The focused repository regression, full PostgreSQL
+  reconciliation suite including worker resume tests, and release gates pass.
+- **Compatibility**: The public repository method keeps a 10,000-record
+  default matching the worker's historical default. Existing callers may pass
+  a lower bound; no input or result schema changes.
+- **Rollback**: Revert E-1091, ADR 0751, the repository/worker/test changes,
+  manifest entry, and execution records together.
+
+### D-915: Bound stock/GL candidate generation under dense partitions
+
+- **Date**: 2026-08-28
+- **Context**: One-to-one stock/GL matching evaluated a full Cartesian product
+  inside each work order without a candidate-generation ceiling. Dense inputs
+  could consume unbounded resources before ambiguity protection ran.
+- **Decision**: Partition candidate generation by normalized work order and
+  currency and refuse any partition above 100,000 possible pairs before pair
+  evaluation. Surface all affected rows through an explicit
+  `candidate_generation_budget_exceeded` ambiguity group; do not select a
+  partial assignment, and leave optimization metrics null when no assignment
+  was evaluated.
+- **Rationale**: Financial matching must fail closed under density and must not
+  silently truncate candidates or turn a resource timeout into an unexplained
+  result. Currency partitioning preserves the eligible-pair invariant.
+- **Verification**: The focused lowered-ceiling 3-by-3 regression, existing
+  ambiguity/property/stock-GL tests, full regression, static/security gates,
+  package build, YAML, and diff checks pass for the slice.
+- **Compatibility**: Existing output is preserved below the ceiling. This is a
+  bounded algorithm guard, not capacity or production evidence.
+- **Rollback**: Revert E-1090, ADR 0750, the matcher/test changes, manifest
+  entry, and execution records together.
+
+### D-914: Enforce tenant provenance in execution-scope resolution
+
+- **Date**: 2026-08-28
+- **Context**: `request_execution_scope()` resolved the validated tenant and
+  checked workspace/organization/entity grants, but did not independently
+  compare the tenant against the authenticated principal's bound tenant grant.
+  It is a reusable boundary called by many server route families.
+- **Decision**: Reject a non-empty principal tenant grant that excludes the
+  validated request tenant before resolving any narrower execution scope, with
+  the stable `tenant_scope_denied` reason. Keep the empty-grant path as an
+  explicit legacy injection/test compatibility seam.
+- **Rationale**: A scope resolver must be safe independently of its callers;
+  workspace authorization must never substitute for tenant provenance.
+- **Verification**: The direct sibling-tenant scope regression passes, along
+  with focused scope/dependency/identity tests, full regression, static,
+  security, package, YAML, and diff gates.
+- **Compatibility**: SQLite behavior is unchanged. Real server-authenticated
+  principals carry the tenant grant; only legacy unbound seams use the empty
+  grant fallback.
+- **Rollback**: Revert E-1089, ADR 0749, the scope/test changes, manifest entry,
+  and execution records together.
+
+### D-913: Bind generic server permission dependencies to tenant scope
+
+- **Date**: 2026-08-28
+- **Context**: The generic server-mode `require_permission` and
+  `require_any_permission` dependencies evaluated authenticated permissions
+  without passing the validated request tenant into the policy context. More
+  specific server-scoped dependencies already carried tenant provenance.
+- **Decision**: Include the validated request tenant and the principal's bound
+  `authorized_tenant_ids` in both generic server dependency policy contexts.
+  Preserve the named fallback for legacy injected principals with no optional
+  tenant binding, and retain the sanitized API denial while recording the exact
+  tenant-scope reason in policy evidence.
+- **Rationale**: Every authorization dependency is a policy boundary. Tenant
+  provenance must not depend on a later route-specific check or on a request
+  header being treated as an independent grant.
+- **Verification**: Both dependency modes have a sibling-tenant regression;
+  focused tests, full regression, Ruff, Mypy, Bandit, package build, YAML, and
+  diff checks pass for the slice.
+- **Compatibility**: Local SQLite behavior is unchanged. Real server-mode
+  authentication already requires the tenant header; the fallback is only for
+  legacy injected/test seams without the new binding.
+- **Rollback**: Revert E-1088, ADR 0748, the dependency/test changes, manifest
+  entry, and execution records together.
+
+### D-912: Bind authenticated server principals to tenant scope
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL identity operation already authenticated a
+  credential against the request tenant, but the resulting server principal did
+  not preserve that tenant as a typed authorization input. Several scoped policy
+  contexts therefore reconstructed the tenant grant from the request boundary.
+- **Decision**: Carry the validated tenant through
+  `AuthenticatedServerRequest` into `ServerPrincipal.authorized_tenant_ids`.
+  Server-scoped policy contexts must use the bound grant and reject a bound
+  sibling tenant before evaluation or repository access. Keep an explicit
+  fallback for legacy tuple/test seams that cannot supply the optional binding.
+- **Rationale**: Authentication provenance and authorization scope should remain
+  connected in the typed request principal. This makes the tenant input visible
+  in policy evidence and prevents a future caller from treating a selected
+  request header as an independent grant. The fallback is isolated compatibility
+  behavior, not a production authentication path.
+- **Verification**: Focused scope, operations, server-identity, and foundation
+  tests pass with two declared capability skips; Ruff and Mypy pass for changed
+  files. Full regression and release-quality gates remain required for the
+  slice.
+- **Compatibility**: The new field is optional for existing injected test and
+  tuple seams. Real PostgreSQL-authenticated requests populate it from the
+  tenant used by credential verification; no database migration is required.
+- **Rollback**: Revert E-1087, ADR 0747, the principal/context changes, tests,
+  manifest entry, and execution records together.
+
+### D-911: Bind PostgreSQL outbox workers to permission manifests
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL outbox worker already performed a discovery
+  policy check before claiming events and a second check before publishing,
+  but its worker identity and permission names were independently configured.
+  The local SQLite worker shares the settings type and must not accidentally
+  accept hosted deployment controls.
+- **Decision**: For policy-supplier-backed PostgreSQL outbox workers, require
+  a verified `WorkerPermissionManifest`; match its worker ID, audit principal,
+  discovery permission, and execution permission to the settings. Use the
+  discovery grant before connection/claim and the execution grant immediately
+  before publisher and failure lifecycle side effects. Reject missing or
+  mismatched manifests before database access. Reject manifest/discovery
+  configuration in the local SQLite worker boundary.
+- **Rationale**: Discovery and publishing are separate privilege steps. A
+  reviewed, immutable capability contract prevents per-call permission
+  substitution while the existing central policy guard remains authoritative
+  for current tenant/workspace/organization scope and revocation.
+- **Verification**: E-1082 focused outbox tests pass 21/21 with two declared
+  live-PostgreSQL skips; full pytest, Ruff, Mypy, Bandit, pip-audit, package
+  build, YAML, and diff checks are the release gates for this slice.
+- **Compatibility**: The stricter contract applies only to PostgreSQL workers
+  using a policy supplier. Explicit unbound compatibility remains available
+  only through its existing named flag; local SQLite workers retain their
+  existing policy-free behavior and reject hosted-only settings.
+- **Rollback**: Revert E-1082, ADR 0742, the outbox settings/worker/tests,
+  manifest entry, and execution records together. Do not restore per-call
+  permission substitution without a replacement artifact-binding design.
+
+### D-910: Bind PostgreSQL scheduler workers to permission manifests
+
+- **Date**: 2026-08-28
+- **Context**: The scheduler worker performed a policy check before opening a
+  connection and a second check before dispatch, but both checks used the
+  same independently configured execution permission. Its service identity
+  and permission configuration were not bound to the reviewed manifest.
+- **Decision**: Add verified `WorkerPermissionManifest` binding to
+  `PostgresSchedulerWorkerSettings` for policy-supplier-backed workers. Match
+  worker ID and audit principal, add an explicit discovery permission, and use
+  the manifest's discovery grant for lane enumeration and execution grant for
+  dispatch. Reject missing manifests or permission/configuration drift before
+  database access; retain the explicit unbound local compatibility mode.
+- **Rationale**: Scheduler enumeration and dispatch are distinct trust steps.
+  A fixed artifact contract prevents identity or privilege substitution while
+  retaining the existing dynamic policy and scope checks.
+- **Verification**: E-1081 focused scheduler tests, full regression, Ruff,
+  Mypy, Bandit, pip-audit, package build, YAML, and diff checks.
+- **Compatibility**: The change is stricter only for policy-supplier-backed
+  PostgreSQL scheduler workers. No schema or migration changes; local
+  unbound mode and existing scheduler application contracts remain intact.
+- **Rollback**: Revert E-1081, ADR 0741, scheduler settings/tests, manifest
+  entry, and execution records together.
+
+### D-909: Bind PostgreSQL reconciliation worker settings to permission manifests
+
+- **Date**: 2026-08-28
+- **Context**: The PostgreSQL reconciliation worker already re-evaluated
+  tenant/workspace/entity policy and supported separate discovery and execution
+  permissions, but a configured worker could still omit the reviewed manifest
+  or override the permission passed to the shared policy guard.
+- **Decision**: When a PostgreSQL reconciliation worker uses a policy supplier,
+  require a verified `WorkerPermissionManifest`. Match its worker ID to the
+  worker setting, its principal ID to the audit actor, and its discovery and
+  execution grants to the two configured policy permissions. Validate every
+  discovery/claim boundary against that fixed grant set before connection
+  access. Preserve the explicitly named unbound local compatibility flag.
+- **Rationale**: Runtime policy re-evaluation is strongest when the worker
+  configuration cannot drift from the reviewed deployment artifact. The
+  manifest closes identity and permission substitution while the existing
+  central policy guard remains authoritative for dynamic namespace grants.
+- **Verification**: E-1080 focused PostgreSQL reconciliation worker tests,
+  full regression, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  checks.
+- **Compatibility**: This is a stricter configuration contract only for
+  policy-supplier-backed PostgreSQL reconciliation workers. The local
+  `DurableJobWorkerService` and explicit unbound compatibility path are
+  unchanged; no schema or migration is required.
+- **Rollback**: Revert E-1080, ADR 0740, the settings/tests, and execution
+  records together. Do not restore per-call permission drift without a
+  replacement artifact binding.
+
+### D-908: Bind governed durable workers to verified permission manifests
+
+- **Date**: 2026-08-28
+- **Context**: The offline worker-permission verifier already separated
+  discovery and execution grants and produced a deterministic digest, but the
+  opt-in governed worker facade accepted a caller-supplied permission on every
+  lifecycle call without consuming that contract.
+- **Decision**: Require `GovernedDurableJobWorkerService` to receive a verified
+  `WorkerPermissionManifest`. Before repository access, bind the manifest's
+  worker ID, principal ID, and canonical tenant/workspace/organization/entity
+  namespace. Require the manifest's non-human execution permission for claim,
+  lease, checkpoint, effect, and terminal lifecycle actions; reject the
+  separate discovery permission at this execution boundary.
+- **Rationale**: A verified deployment artifact must constrain runtime input,
+  otherwise an operator can present one reviewed manifest and execute through
+  a different per-call permission or scope. Keeping the raw worker primitive
+  unchanged preserves the local Community adapter while making the governed
+  adoption boundary fail closed.
+- **Verification**: E-1079 focused worker/manifest tests, full regression,
+  Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff checks.
+- **Compatibility**: The governed facade constructor is intentionally stricter;
+  existing callers must provide a verified manifest. The backend-neutral
+  `DurableJobWorkerService` API and storage schemas are unchanged.
+- **Rollback**: Revert E-1079, ADR 0739, the focused tests, and execution
+  evidence together; do not restore unbound per-call permissions on the
+  governed facade without a replacement binding contract.
+
+### D-907: Require explicit currency in canonical matching
+
+- **Date**: 2026-08-28
+- **Context**: The deterministic engine accepted a valid amount with no
+  currency under the current canonical record-identity policy. Because empty
+  currency bypassed the resolver, two incomplete records could be selected as
+  a valid match.
+- **Decision**: Under `canonical-multiset-occurrence-v1`, classify missing
+  currency as `MISSING_CURRENCY`, emit the normal data-quality exception and
+  invalid result, and exclude the record from candidate selection. Preserve
+  the legacy stock/GL reader behavior until a versioned compatibility
+  migration is approved.
+- **Verification**: The focused deterministic-engine regression proves both
+  sides are invalid, both exceptions are visible, and no result is matched;
+  full pytest, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  checks are release gates for the slice.
+- **Compatibility**: Only the current canonical identity contract becomes
+  stricter. The legacy identity policy remains a compatibility reader, so no
+  existing local stock/GL contract is silently changed.
+- **Rollback**: Revert E-1078, ADR 0738, the focused regression, and execution
+  evidence together. Never reintroduce implicit currency semantics into the
+  canonical contract without a versioned decision.
+
+### D-906: Bind emergency mutations to the authenticated tenant policy
+
+- **Date**: 2026-08-28
+- **Context**: Emergency route dependencies checked permissions and assurance,
+  and the PostgreSQL repository used forced RLS, but the policy decision
+  evidence for named emergency mutations was unbound to the request tenant.
+- **Decision**: Re-evaluate `security.emergency.request`,
+  `security.emergency.approve`, and `security.emergency.review` through the
+  central tenant-scoped helper immediately before the corresponding repository
+  mutation. Re-evaluate `security.emergency.approve` for administrator-driven
+  ending. Preserve self-service target activation/end without a synthetic
+  administrative scope and retain all repository guards.
+- **Verification**: E-1077 helper and emergency tests, full regression, Ruff,
+  Mypy, Bandit, pip-audit, package build, YAML, and diff checks.
+- **Compatibility**: No schema or public payload change. Server emergency
+  mutations gain an additional fail-closed policy check; local SQLite remains
+  unavailable for this route family.
+- **Rollback**: Revert E-1077, ADR 0737, helper calls/test, and evidence
+  together. Do not weaken tenant-bound authorization provenance by default.
+
+### D-905: Require explicit human authorization to request emergency access
+
+- **Date**: 2026-08-28
+- **Context**: The emergency-access request endpoint accepted any authenticated
+  identity, even though the requested grants are limited to sensitive financial
+  and operational permissions. That left the request mutation outside the
+  central permission contract and made route inventory evidence weaker than
+  the subsequent approval and activation controls.
+- **Decision**: Require the tenant-defined `security.emergency.request`
+  permission through the existing central dependency. Classify it as human-only
+  and privileged step-up protected. Keep the requester restricted to their own
+  target, keep approval/review independent, and keep the existing repository,
+  session, expiry, and forced-RLS guards.
+- **Verification**: Route inventory asserts the exact permission-bearing
+  contract and digest; policy tests cover human-only and step-up behavior; live
+  emergency API/repository fixtures grant the new permission explicitly; full
+  regression and release gates are required.
+- **Compatibility**: This is intentionally stricter authorization. Existing
+  PostgreSQL tenants must register and grant the new permission before users
+  can submit requests; no schema migration silently grants it. No local SQLite
+  route is changed.
+- **Rollback**: Revert E-1076, ADR 0736, the route contract, policy registry,
+  fixtures, and execution evidence together. Do not restore permissionless
+  emergency requests as a default security posture.
+
+### D-904: Generate enterprise-demo trial balances with exact Money values
+
+- **Date**: 2026-08-28
+- **Context**: The synthetic enterprise demo used binary floating-point
+  literals and `round` for trial-balance amounts before writing the CSV that
+  feeds the strict account-import path.
+- **Decision**: Use Decimal literals and factors, then construct every balance
+  through `Money.from_exact` with the entity currency and strict precision.
+- **Verification**: The new exact-money regression and enterprise-demo suite
+  pass; the full Python and release-quality gates are required for closure.
+- **Compatibility**: CSV field names and textual balance outputs remain
+  unchanged for existing consumers; the in-memory values are now exact
+  Decimals instead of floats.
+- **Rollback**: Revert E-1075, ADR 0735, and the focused test together; never
+  restore float-based monetary fixture generation.
+
+### D-903: Derive the CI image subject from the native Syft SBOM
+
+- **Date**: 2026-08-28
+- **Context**: With BuildKit attestations, Docker's local `.Id` can identify a
+  manifest list while Syft's native image document identifies the image
+  configuration through `source.metadata.imageID`. The mismatch made the
+  exact-subject security evidence fail even though the image and SBOM were
+  valid.
+- **Decision**: Extract and validate Syft's configuration digest after SBOM
+  generation, require the native manifest digest and `linux/amd64` platform,
+  and use that configuration digest for Grype evidence and post-push binding
+  in both security and release workflows.
+- **Verification**: The helper identity tests and workflow-contract suites
+  pass, as do Ruff, Mypy, supply-chain policy validation, and source YAML
+  validation. The retained local image evidence is bound to config digest
+  `sha256:915ea5d3c8b64f8c0163c5e4617eaa8f518cfc31e7c763e52ce7e1036b925fff`.
+- **Compatibility**: Existing workflow environment keys and publication order
+  remain unchanged; only the subject extraction source is corrected.
+- **Rollback**: Revert E-1074, ADR 0734, helper, manifest, tests, and workflow
+  changes together; never reintroduce an unchecked Docker `.Id` hand-off.
+
+### D-900: Bind Alpine security APK retrieval to reviewed checksums
+
+- **Date**: 2026-08-28
+- **Context**: The digest-pinned Alpine base could fail at the package index
+  when `3.5.8-r0` was present as an artifact but the current index selected
+  only `3.5.7-r0`.
+- **Decision**: Fetch exact `linux/amd64` APK URLs with BuildKit checksums and
+  install the local files in both stages; preserve `apk` verification and the
+  no-CLI runtime boundary.
+- **Verification**: Fresh pull/no-cache Docker build and hardened runtime
+  smoke pass with exact `3.5.8-r0` packages. E-824 remains open for scanner,
+  hosted provenance, and publication evidence.
+- **Rollback**: Revert E-1073 Dockerfile/tests, ADR 0733, manifest, and
+  execution metadata together; never restore unbounded package lookup.
+
+### D-899: Local role responses use fail-closed projection
+
+- **Date**: 2026-08-28
+- **Context**: Local role inspection serialized role models directly and the
+  role-permission response had no shared shape validation.
+- **Decision**: Use central projections for local roles and role permissions;
+  reject malformed role or permission collections with a bounded API error.
+- **Verification**: Focused field-access and authenticated API tests inject
+  future fields and pass, with Ruff and Mypy clean. Full regression and
+  release gates are required before E-1072 closure.
+- **Compatibility**: Preserve the existing local role route paths, keys, and
+  values.
+- **Rollback**: Revert E-1072 code, tests, ADR 0732, manifest, and execution
+  metadata together.
+
+### D-898: Local workflow responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Local workflow routes serialized state-machine models directly
+  with `model_dump`, allowing future model fields to change the API response
+  without a reviewed boundary contract.
+- **Decision**: Apply central projections to workflow objects, allowed
+  transitions, and history events. Invalid model response shapes fail closed
+  with a bounded API error.
+- **Verification**: Field-access tests inject future object, transition, and
+  event fields; workflow API/state-machine/schema suites pass. Focused and full
+  regression checks plus Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- **Compatibility**: Preserve the existing object lifecycle, transition
+  permissions, SoD metadata, and history audit fields.
+- **Rollback**: Revert E-1071 code, tests, ADR 0731, manifest, and execution
+  metadata together; do not restore direct workflow serialization.
+
+### D-897: Connector write-back responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Several connector write-back routes serialized immutable intent
+  and recovery models directly with `model_dump`, making response shape depend
+  on future model additions rather than a reviewed API contract.
+- **Decision**: Apply central nested projections to every write-back intent
+  response and recovery-observation list response across local and server
+  paths. Malformed nested contracts fail closed with bounded API errors.
+- **Verification**: Field-access tests inject future fields into intent,
+  approval, acknowledgement, recovery-record, and provider-observation
+  boundaries; connector API and observation suites pass. Focused and full
+  regression checks plus Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- **Compatibility**: Preserve the existing lifecycle, identity, digest,
+  approval, acknowledgement, compensation, and recovery-observation fields.
+- **Rollback**: Revert E-1070 code, tests, ADR 0730, manifest, and execution
+  metadata together; do not restore direct model serialization.
+
+### D-896: Evidence coverage responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The evidence coverage route returned adapter dictionaries
+  directly. Its summary and per-object counts cross a governed evidence API
+  boundary and must not inherit future repository fields implicitly.
+- **Decision**: Apply a central recursive projection to coverage summary fields
+  and per-object requirement/link counts for both SQLite and PostgreSQL route
+  paths. Malformed object collections fail closed with a bounded API error.
+- **Verification**: Field-access, PostgreSQL-shaped API, and local SQLite route
+  tests inject future summary/object fields and prove they do not escape.
+  Focused and full regression checks plus Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff gates pass. pip-audit cannot audit the
+  local distribution because it is not published on PyPI.
+- **Compatibility**: Preserve tenant/workspace identity, coverage counts,
+  percentage, and explainable object-level requirement counts.
+- **Rollback**: Revert E-1069 code, tests, ADR 0729, manifest, and execution
+  metadata together; do not restore direct coverage serialization.
+
+### D-895: Access policy-analysis responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The access policy-analysis route returned `result.to_dict()`
+  directly. Its deterministic result contains conflict findings and digest
+  metadata that must remain bounded at the authenticated API boundary.
+- **Decision**: Apply a central recursive projection to policy-analysis result
+  fields and conflict findings. Malformed finding collections fail closed with
+  a bounded API error; no request/grant internals beyond the reviewed finding
+  contract are admitted.
+- **Verification**: Field-access and authenticated route tests inject future
+  result and finding fields and prove they do not escape. Focused and full
+  regression checks plus Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- **Compatibility**: Preserve algorithm version, policy identifiers, digests,
+  status, counts, and explainable finding fields.
+- **Rollback**: Revert E-1068 code, tests, ADR 0728, manifest, and execution
+  metadata together; do not restore direct policy-analysis serialization.
+
+### D-894: Security Governance responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Security Governance routes serialized integration,
+  retention-policy, and evidence-retention dataclasses directly with
+  `asdict(...)`. These authenticated responses describe credential counts,
+  retention state, and security lifecycle metadata.
+- **Decision**: Apply central projections to integration and retention-policy
+  records, paginated envelopes, disable/policy-change mutations, and
+  evidence-retention applications. Invalid nested shapes fail closed with
+  bounded API errors. Policy-analysis remains a separate contract.
+- **Verification**: Field-access tests inject future fields into records,
+  pagination, nested mutations, and retention results. Authenticated API tests
+  inject future fields through the route serialization seam. Focused and full
+  regression, static/security/package, source-YAML, and diff gates pass for
+  E-1067. Live PostgreSQL execution remains environment-skipped.
+- **Compatibility**: Preserve reviewed security lifecycle fields, state
+  digests, retention dates, credential counts, pagination, and audit IDs.
+- **Rollback**: Revert E-1067 code, tests, ADR 0727, manifest, and execution
+  metadata together; do not restore direct security-response serialization.
+
+### D-893: Access administration responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Access administration routes serialized permission, role, and
+  user-role assignment dataclasses directly with `asdict(...)`. These
+  authenticated responses define authorization lifecycle state and must not
+  rely only on framework response-model filtering.
+- **Decision**: Apply central projections to permission records, role pages,
+  role lifecycle mutations, and user-role assignment responses. Reject
+  malformed nested role/page shapes at the API boundary. Policy-analysis
+  artifacts remain a separate contract and are not broadened by this Slice.
+- **Verification**: Field-access tests inject future permission, role,
+  pagination, and assignment fields. Authenticated API tests inject future
+  fields through the route serialization seam and prove they do not escape.
+  Focused and full regression, static/security/package, source-YAML, and diff
+  gates pass for E-1066. Live PostgreSQL execution remains environment-skipped.
+- **Compatibility**: Preserve the existing role lifecycle, permission names,
+  assignment state, pagination, and audit identifiers.
+- **Rollback**: Revert E-1066 code, tests, ADR 0726, manifest, and execution
+  metadata together; do not restore direct access-response serialization.
+
+### D-892: Identity administration responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Identity administration routes serialized user and session
+  dataclasses with `asdict(...)` directly. These responses contain sensitive
+  lifecycle metadata and must not depend only on framework response-model
+  filtering.
+- **Decision**: Apply central projections to identity-user and identity-session
+  records, paginated user/session envelopes, user-status transitions, and
+  session revocations. Invalid nested shapes fail closed with bounded API
+  errors; raw credentials, tokens, network values, and future fields are not
+  admitted to the reviewed response contract.
+- **Verification**: Field-access tests inject future fields into user/session
+  records and nested mutation responses. Authenticated API tests inject future
+  fields through the route serialization seam and prove they do not escape.
+  Focused and full regression, static/security/package, source-YAML, and diff
+  gates pass for E-1065. Live PostgreSQL execution remains environment-skipped.
+- **Compatibility**: Preserve the existing response-model fields, lifecycle
+  state, state digests, recorded-value booleans, pagination, and audit IDs.
+- **Rollback**: Revert E-1065 code, tests, ADR 0725, manifest, and execution
+  metadata together; do not restore direct identity serialization.
+
+### D-891: Finance Core snapshots use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The authenticated Finance Core snapshot route returned the
+  PostgreSQL repository snapshot directly, while the snapshot contains several
+  financial collections and nested ledger-entry data.
+- **Decision**: Apply one central recursive projection to the snapshot root,
+  source and summary envelopes, master-data collections, entries, and entry
+  lines for both local SQLite and tenant-scoped PostgreSQL responses. Reject
+  malformed collection or envelope shapes at the API boundary.
+- **Verification**: Field-access and server-shaped route tests inject future
+  fields into every reviewed snapshot boundary; focused and full regression,
+  static/security/package, source-YAML, and diff gates pass for E-1064. Live
+  PostgreSQL execution remains environment-skipped.
+- **Compatibility**: Preserve the reviewed snapshot schema, source markers,
+  financial counts, master-data records, and exact entry fields; deny unknown
+  adapter fields without altering repository storage contracts.
+- **Rollback**: Revert E-1064 code, tests, ADR 0724, manifest, and execution
+  metadata together; do not restore direct snapshot serialization.
+
+### D-890: Consolidation source-bound artifacts use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Three authenticated PostgreSQL finance-evidence APIs exposed
+  raw artifact dictionaries containing nested financial payloads.
+- **Decision**: Apply family-specific central projections for intercompany,
+  impairment, and deferred-tax artifacts, including nested exact Money and
+  source structures.
+- **Verification**: Focused server-shaped API and field-access tests inject
+  future fields at every nested boundary; full regression and release gates
+  pass for E-1063.
+- **Compatibility**: Preserve reviewed lineage, result explanations,
+  non-posting status, and exact-money metadata; deny unknown fields.
+- **Rollback**: Revert E-1063 code, tests, ADR 0723, manifest, and execution
+  metadata together; do not restore direct serialization.
+
+### D-889: Evidence-link responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The server evidence-link mutation route exposed the raw
+  PostgreSQL link dictionary.
+- **Decision**: Apply central link and source-envelope projections before the
+  response crosses the authenticated API boundary.
+- **Verification**: Focused server-shaped API and field-access tests inject
+  future fields and prove they do not escape; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1062.
+- **Compatibility**: Preserve reviewed evidence identity and object-binding
+  fields; deny unknown adapter fields.
+- **Rollback**: Revert E-1062 code, tests, ADR 0722, manifest, and execution
+  metadata together; do not restore direct serialization.
+
+### D-888: Consolidation ownership-change artifacts use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Ownership-change prepare/read routes exposed raw artifact
+  dictionaries with nested request/result payloads and exact Money values.
+- **Decision**: Use one central nested projection for artifact, source,
+  payload, Money, and adjustment-line response shapes.
+- **Verification**: Focused API and field-access tests inject future fields at
+  every nested boundary and prove they do not cross the response boundary.
+  Full regression, static, security, packaging, YAML, and diff gates pass for
+  E-1061.
+- **Compatibility**: Preserve reviewed lineage, exact-money metadata,
+  non-posting, approval, percentages, and balanced lines; deny unknown fields.
+- **Rollback**: Revert E-1061 code, tests, ADR 0721, manifest, and execution
+  metadata together; do not restore direct serialization.
+
+### D-887: Consolidation PPA artifacts use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: PPA prepare/read routes exposed raw artifact dictionaries with
+  nested request/result payloads and canonical financial values.
+- **Decision**: Use one central nested projection for the artifact, source,
+  payload, Money, item, bridge, and bridge-line response shapes.
+- **Verification**: Focused API and field-access tests inject future fields at
+  every nested boundary and prove they do not cross the response boundary.
+  Full regression, static, security, packaging, YAML, and diff gates pass for
+  E-1060.
+- **Compatibility**: Preserve reviewed lineage, exact-money metadata,
+  non-posting, approval, valuation, and bridge fields; deny unknown fields.
+- **Rollback**: Revert E-1060 code, tests, ADR 0720, manifest, and execution
+  metadata together; do not restore direct serialization.
+
+### D-886: Consolidation ownership responses use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Ownership save and effective-resolution routes exposed raw
+  adapter-shaped records across local and PostgreSQL paths.
+- **Decision**: Use central nested projections for one interest and effective
+  interest collections, including a reviewed source envelope.
+- **Verification**: Focused API and field-access tests inject future adapter
+  fields and prove they do not cross the response boundary. Full regression,
+  static, security, packaging, YAML, and diff gates pass for E-1059.
+- **Compatibility**: Preserve existing reviewed ownership, approval, date,
+  digest, and source fields; deny unknown fields.
+- **Rollback**: Revert E-1059 code, tests, ADR 0719, manifest, and execution
+  metadata together; do not restore direct serialization.
+
+### D-885: Consolidation evidence links use fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Five Consolidation Close evidence-link mutations returned raw
+  PostgreSQL rows with a shared identity/digest shape and type-specific
+  fields.
+- **Decision**: Apply one central compatibility-union projection to every
+  evidence-link response and independently project its source envelope.
+- **Verification**: Focused server-shaped route tests inject a future link
+  field and prove it is denied; full regression, static, security, packaging,
+  YAML, and diff gates pass for E-1058.
+- **Compatibility**: Existing identity, binding, digest, actor, timestamp,
+  and type-specific evidence fields remain available; unknown fields are
+  removed.
+- **Rollback**: Revert E-1058 code, tests, ADR 0718, manifest, and execution
+  metadata together; do not restore direct link-row serialization.
+
+### D-884: Consolidation certification uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Consolidation-close certification prepare, review, and read
+  routes returned local/PostgreSQL certification mappings directly despite
+  different physical schemas.
+- **Decision**: Apply one nested certification/source projection to all three
+  response paths and preserve only the reviewed compatibility union.
+- **Verification**: Focused local and PostgreSQL-shaped route tests inject a
+  future certification field and prove it is denied; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1057.
+- **Compatibility**: Existing status, actors, evidence digest, timestamps,
+  scope, and version fields remain available; unknown response fields are
+  removed.
+- **Rollback**: Revert E-1057 code, tests, ADR 0717, manifest, and execution
+  metadata together; do not restore direct certification serialization.
+
+### D-883: Legacy audit verification uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The legacy audit verification route shaped local output but
+  returned PostgreSQL verification mappings and issue dictionaries directly.
+- **Decision**: Apply one central projection to local and PostgreSQL results,
+  including a nested allowlist for verification issues.
+- **Verification**: Focused local and PostgreSQL-shaped route tests inject
+  future result/issue fields and prove they are denied; full regression,
+  static, security, packaging, YAML, and diff gates pass for E-1056.
+- **Compatibility**: Existing status, count, head hash, issue sequence, and
+  issue message fields remain unchanged; unknown response fields are removed.
+- **Rollback**: Revert E-1056 code, tests, ADR 0716, manifest, and execution
+  metadata together; do not restore direct PostgreSQL serialization.
+
+### D-882: Master Registry binding uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The explicit Currency Registry binding mutation returned the
+  local and PostgreSQL binding mappings directly, unlike the bounded
+  reconciliation response.
+- **Decision**: Apply one nested binding/source projection to both local and
+  PostgreSQL binding responses before serialization.
+- **Verification**: Focused local and PostgreSQL-shaped route tests inject a
+  future binding field and prove it is denied; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1055.
+- **Compatibility**: Binding version, digest, timestamps, actor, and the
+  existing server source marker remain available; only unknown response
+  fields are removed.
+- **Rollback**: Revert E-1055 code, tests, ADR 0715, manifest, and execution
+  metadata together; do not restore direct result serialization.
+
+### D-881: Master Registry reconciliation uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The Currency Registry reconciliation route returned adapter
+  mappings directly while its snapshot embedding had a bounded projection.
+- **Decision**: Apply one nested master-registry projection to local and
+  PostgreSQL reconciliation responses.
+- **Verification**: Focused route and field-boundary tests inject future
+  top-level/nested fields and prove they are denied; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1054.
+- **Compatibility**: No reconciliation or registry behavior changes; this is
+  bounded response disclosure control.
+- **Rollback**: Revert E-1054 code, tests, ADR 0714, manifest, and execution
+  metadata together; do not restore direct result serialization.
+
+### D-880: Risk scoring propagates financial input policy
+
+- **Date**: 2026-08-27
+- **Context**: Risk scoring used the parser default instead of the policy
+  selected by the surrounding reconciliation/report workflow.
+- **Decision**: Require an explicit policy parameter on risk scoring and pass
+  it through Stock, Work-order, and WIP paths; strict v2 is the new default.
+- **Verification**: Focused risk, reconciliation, and report tests cover exact
+  inputs and explicit legacy/strict binary-float behavior; full regression,
+  static, security, packaging, YAML, and diff gates pass for E-1053.
+- **Compatibility**: No exact-input score or stored financial amount changes;
+  implicit parser-policy selection is removed.
+- **Rollback**: Revert E-1053 code, tests, ADR 0713, manifest, and execution
+  metadata together; do not restore implicit parser policy.
+
+### D-879: Inventory movement void uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Inventory movement void responses bypassed the projection used
+  by the other movement lifecycle endpoints.
+- **Decision**: Project local and PostgreSQL-shaped void records through the
+  existing central movement allowlist.
+- **Verification**: Focused authenticated route coverage injects a future
+  movement field and proves it is denied; full regression, static, security,
+  packaging, YAML, and diff gates pass for E-1052.
+- **Compatibility**: No movement validation, authorization, persistence, or
+  audit behavior changes; this is bounded disclosure control.
+- **Rollback**: Revert E-1052 code, tests, ADR 0712, manifest, and execution
+  metadata together; do not restore direct adapter serialization.
+
+### D-878: Metrics API uses fail-closed projections
+
+- **Date**: 2026-08-27
+- **Context**: Local and PostgreSQL metric adapters exposed different row
+  shapes, and the local dashboard used a `SELECT *` response path.
+- **Decision**: Apply separate dashboard and lineage allowlists centrally at
+  the API boundary.
+- **Verification**: Focused unit and authenticated route tests inject future
+  fields into both response families and prove they are denied; full
+  regression, static, security, packaging, YAML, and diff gates pass for
+  E-1051.
+- **Compatibility**: No metric computation, lineage, tenant policy, or
+  persistence behavior changes; this is bounded disclosure control.
+- **Rollback**: Revert E-1051 code, tests, ADR 0711, manifest, and execution
+  metadata together; do not restore direct adapter serialization.
+
+### D-877: Scope-grant list uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Scope-grant administration returned repository mappings
+  directly, with no central response boundary for future storage fields.
+- **Decision**: Project each listed grant through one closed allowlist before
+  serialization.
+- **Verification**: Focused unit and authenticated route tests inject a future
+  repository field and prove it is denied; full regression, static, security,
+  packaging, YAML, and diff gates pass for E-1050.
+- **Compatibility**: No grant authorization, tenant enforcement, mutation, or
+  persistence behavior changes; this is bounded disclosure control.
+- **Rollback**: Revert E-1050 code, tests, ADR 0710, manifest, and execution
+  metadata together; do not restore direct repository serialization.
+
+### D-876: Auth Me uses fail-closed identity projection
+
+- **Date**: 2026-08-27
+- **Context**: The identity snapshot endpoint returned a dynamic dictionary
+  without a central response allowlist, despite exposing roles, permissions,
+  and authorized scope metadata.
+- **Decision**: Project the top-level identity contract and the nested
+  authorized scope envelope through one central allowlist before serialization.
+- **Verification**: Focused identity projector and authenticated HTTP tests
+  inject future fields and prove they are denied; full regression, static,
+  security, packaging, YAML, and diff gates pass for E-1049.
+- **Compatibility**: No authentication, session, role lookup, authorization,
+  or token behavior changes; this is bounded disclosure control.
+- **Rollback**: Revert E-1049 code, tests, ADR 0709, manifest, and execution
+  metadata together; do not restore unbounded identity serialization.
+
+### D-875: Consolidation Close summary API uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Local and PostgreSQL consolidation-close summaries were
+  serialized directly even though related period/run response families used
+  closed projections.
+- **Decision**: Apply the central consolidation summary allowlist to both
+  backends before serialization, retaining lifecycle counts and dropping
+  future fields.
+- **Verification**: Focused field and server-boundary tests inject an unknown
+  summary field and prove it is denied. Full Python and release-quality gates
+  pass for E-1048.
+- **Compatibility**: No lock, run, reversal, scope, persistence, or
+  authorization behavior changes. This is bounded response disclosure
+  control.
+- **Rollback**: Revert E-1048 code, tests, ADR 0708, manifest, and execution
+  metadata together; do not restore unbounded summaries.
+
+### D-874: Finance summary API uses one compatibility union projection
+
+- **Date**: 2026-08-27
+- **Context**: Local Finance Core, hosted Finance Core, and legacy hosted
+  Ledger summary branches expose different known count fields. Direct or
+  branch-specific serialization could create inconsistent future disclosure.
+- **Decision**: Apply `project_finance_summary` to all three branches. Preserve
+  the deliberate union of known count/source fields and recursively project
+  source metadata; drop everything else.
+- **Verification**: Focused projector and server-route tests inject unknown
+  summary/source fields and prove they do not escape. Full Python and
+  release-quality gates pass for E-1047.
+- **Compatibility**: No posting, validation, ledger arithmetic, scope,
+  persistence, or authorization behavior changes. This is bounded response
+  disclosure control.
+- **Rollback**: Revert E-1047 code, tests, ADR 0707, manifest, and execution
+  metadata together; do not restore unbounded summaries.
+
+### D-873: Master Data summary API uses one fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Local master-data summary responses were serialized directly,
+  while the PostgreSQL branch assembled a bounded dictionary. The two modes
+  therefore did not share one reviewed disclosure boundary.
+- **Decision**: Apply `project_master_summary` to both backend branches before
+  serialization. Unknown fields are dropped; known counts, source metadata,
+  and unsupported-collection information remain compatible.
+- **Verification**: Focused field and route tests inject a future summary
+  field and prove it is denied. Full Python and release-quality gates pass for
+  E-1046.
+- **Compatibility**: No master-data persistence, relationship, currency,
+  lifecycle, authorization, or audit behavior changes. This is bounded
+  response disclosure control.
+- **Rollback**: Revert E-1046 code, tests, ADR 0706, manifest, and execution
+  metadata together; do not restore unbounded summary serialization.
+
+### D-872: Inventory Planning summary API uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: The Inventory Planning summary endpoint returned aggregate
+  service/repository dictionaries directly on local and PostgreSQL paths.
+  Future adapter fields could therefore expand the disclosed response without
+  a reviewed field decision.
+- **Decision**: Apply the central inventory-planning summary allowlist on both
+  backend branches before serialization. Unknown fields are dropped and the
+  operation remains read-only with its existing counts and scope envelope.
+- **Verification**: Focused projector and server-route tests inject unknown
+  summary fields and prove they do not escape. Full Python and release-quality
+  gates pass for E-1045.
+- **Compatibility**: No known response field, quantity, lifecycle,
+  authorization, or persistence behavior changes. This is a bounded disclosure
+  control.
+- **Rollback**: Revert E-1045 code, tests, ADR 0705, manifest, and execution
+  metadata together; do not restore unbounded summary serialization.
+
+### D-871: Individual Cashflow API uses fail-closed recursive projection
+
+- **Date**: 2026-08-27
+- **Context**: The local-only Individual Cashflow API returned a domain run
+  dictionary containing Money values, decisions, digests, and status counts
+  without a central response disclosure boundary.
+- **Decision**: Project the run envelope, decision records, canonical Money
+  values, input digests, and known status counts through central recursive
+  allowlists. Unknown fields are dropped and malformed nested collections are
+  rejected before response serialization.
+- **Verification**: Focused field/API tests cover synthetic future fields at
+  every reviewed nested level. Full `python -m pytest -q` passes 100%; Ruff,
+  Mypy across 539 source files, Bandit, pip-audit, package build, source YAML
+  validation across 174 files, and diff checks pass. The local distribution is
+  unauditable by pip-audit because it is not published on PyPI.
+- **Compatibility**: Local-only, non-posting behavior and known response
+  fields remain unchanged; this is a bounded disclosure control.
+- **Rollback**: Revert E-1044 code/tests/ADR 0704/manifest and execution
+  metadata together; do not restore unbounded run serialization.
+
+### D-870: Inventory Planning API uses fail-closed recursive projection
+
+- **Date**: 2026-08-27
+- **Context**: Inventory Planning exposes physical-count sessions and lines,
+  reorder rules, deterministic reorder signals, and snapshots through local
+  SQLite and tenant-scoped PostgreSQL adapters. Future adapter fields could
+  silently expand quantities, approval metadata, or operational risk output.
+- **Decision**: Apply central allowlists to count-session lifecycle and list
+  responses, reorder-rule mutation/list responses, reorder signals, and
+  snapshots. Recursively project count lines, session summaries, source and
+  pagination metadata, signal objects, and snapshot collections while
+  preserving exact quantities, workspace scope, and lifecycle behavior.
+- **Verification**: Focused field/API tests pass 37 tests plus 1 existing
+  live-PostgreSQL skip, including synthetic future fields across all reviewed
+  route families. Full `python -m pytest -q` passes 100%; Ruff, Mypy across
+  539 source files, Bandit, pip-audit, package build, source YAML validation
+  across 174 files, and diff checks pass. The local distribution remains
+  unauditable by pip-audit because it is not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, or
+  inventory lifecycle behavior changes; this is a bounded disclosure control.
+- **Rollback**: Revert E-1043 code/tests/ADR 0703/manifest and execution
+  metadata together; do not restore unbounded planning-row serialization.
+
+### D-869: Finance Core master API uses fail-closed projection
+
+- **Date**: 2026-08-27
+- **Context**: Finance Core charts, accounts, dimensions, dimension values,
+  and journals are returned by local SQLite, tenant-scoped PostgreSQL, and a
+  bounded legacy ledger adapter. Future adapter fields could silently expand
+  accounting master-data responses.
+- **Decision**: Apply central allowlists to every reviewed Finance Core master
+  list and mutation response. Preserve the deliberate local/server/legacy
+  field union, including the server workspace marker, and drop unknown fields
+  before serialization without changing accounting, permission, scope,
+  pagination, or persistence behavior.
+- **Verification**: Focused field/API tests pass 42 tests, including a
+  synthetic future adapter field in server chart and journal responses. Full
+  Python regression passes at 100%; Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, source YAML validation (174 files), and diff gates
+  pass. The local distribution remains unauditable by pip-audit because it is
+  not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, route,
+  pagination, or accounting behavior changes; this is a bounded disclosure
+  control.
+- **Rollback**: Revert E-1042 code/tests/ADR 0702/manifest and execution
+  metadata together; do not restore unbounded master-row serialization.
+
+### D-868: Bank Statement Control API uses fail-closed recursive projection
+
+- **Date**: 2026-08-27
+- **Context**: Bank Statement Control evidence is returned from local SQLite
+  and tenant-scoped PostgreSQL adapters as a run envelope containing canonical
+  money values, status counts, and nested bank-to-ledger decisions. Future
+  adapter fields could silently expand a financial evidence response.
+- **Decision**: Apply central allowlists to the run envelope and recursively
+  project report, amount tolerance, decision amount variance, decisions, and
+  known status-count keys on create, list, and read responses. Preserve exact
+  values, evidence digests, workspace scope, and the no-network/no-posting
+  boundary; reject malformed nested mappings.
+- **Verification**: Focused field/API tests pass 31 tests plus 1 existing
+  live-PostgreSQL skip, including synthetic future fields at every reviewed
+  nesting level. Full Python regression passes at 100%; Ruff, Mypy (539 source
+  files), Bandit, pip-audit, package build, source YAML validation (174 files),
+  and diff gates pass. The local distribution remains unauditable by pip-audit
+  because it is not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, route,
+  or evidence-digest behavior changes; this is a bounded disclosure control.
+- **Rollback**: Revert E-1041 code/tests/ADR 0701/manifest and execution
+  metadata together; do not restore unbounded adapter-row serialization.
+
+### D-867: Manufacturing Cost Control API uses fail-closed recursive projection
+
+- **Date**: 2026-08-27
+- **Context**: Manufacturing cost-control evidence is returned from local
+  SQLite and tenant-scoped PostgreSQL adapters as a run envelope containing
+  canonical money and quantity objects, status counts, and nested production
+  decisions. Future adapter fields could silently expand a financial evidence
+  response.
+- **Decision**: Apply central allowlists to the run envelope and recursively
+  project report, amount tolerance, maximum scrap quantity, every decision
+  quantity and money value, and known status-count keys on create, list, and
+  read responses. Preserve exact values, evidence digests, workspace scope,
+  and the no-network/no-posting boundary; reject malformed nested mappings.
+- **Verification**: Focused field/API tests pass 31 tests plus 1 existing
+  live-PostgreSQL skip, including synthetic future fields at every reviewed
+  nesting level. Full Python regression passes at 100%; Ruff, Mypy (539 source
+  files), Bandit, pip-audit, package build, source YAML validation (174 files),
+  and diff gates pass. The local distribution remains unauditable by pip-audit
+  because it is not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, route,
+  or evidence-digest behavior changes; this is a bounded disclosure control.
+- **Rollback**: Revert E-1040 code/tests/ADR 0700/manifest and execution
+  metadata together; do not restore unbounded adapter-row serialization.
+
+### D-866: Retail Settlement API uses fail-closed recursive projection
+
+- **Date**: 2026-08-27
+- **Context**: Retail Settlement evidence is returned from local SQLite and
+  tenant-scoped PostgreSQL adapters as a run envelope containing a report,
+  canonical monetary fields, status counts, and nested POS/processor
+  decisions. Future adapter fields could silently expand a financial response.
+- **Decision**: Apply central allowlists to the run envelope and recursively
+  project report tolerance, settlement decisions, every optional variance
+  money value, and known status-count keys on create, list, and read responses.
+  Preserve existing response envelopes, exact money values, workspace scope,
+  and the no-network/no-posting boundary.
+- **Verification**: Focused field/API tests pass 31 tests plus 1 existing
+  live-PostgreSQL skip, including synthetic future fields at every reviewed
+  nesting level. Full Python regression passes at 100%; Ruff, Mypy (539 source
+  files), Bandit, pip-audit, package build, targeted safe YAML validation (9
+  files), and diff gates pass. The local distribution is not auditable by
+  pip-audit because it is not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, route, or
+  evidence-digest behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1039 code/tests/ADR 0699/manifest and execution
+  metadata together; do not restore unbounded adapter-row serialization.
+
+### D-865: Professional invoice/payment API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: Professional invoice/payment evidence is returned from local
+  SQLite and tenant-scoped PostgreSQL adapters as a run envelope containing a
+  report, canonical money values, status counts, and nested decisions. Future
+  adapter fields could silently expand a financial evidence response.
+- **Decision**: Apply central allowlists to the run envelope and recursively
+  project report, amount tolerance, amount variance, decisions, and known
+  status-count keys on create, list, and read responses. Preserve existing
+  response envelopes, canonical financial values, workspace scope, and the
+  no-network/no-posting boundary.
+- **Verification**: Focused field/API tests pass 29 tests plus 1 existing skip,
+  including synthetic future fields at every reviewed nesting level. Full
+  Python regression passes at 100%; Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted safe YAML validation (9 files), and diff
+  gates pass. The local distribution is not auditable by pip-audit because it
+  is not published on PyPI.
+- **Compatibility**: No schema, migration, persistence, permission, route, or
+  evidence-digest behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1038 code/tests/ADR 0698/manifest and execution
+  metadata together; do not restore unbounded adapter-row serialization.
+
+### D-864: Receivables API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: Receivables customer, invoice, receipt, credit-exposure, and
+  aging routes returned local SQLite and tenant-scoped PostgreSQL mappings.
+  Future storage or adapter fields could silently expand financial responses,
+  including invoice lines, receipt allocations, and aging items.
+- **Decision**: Apply central top-level and nested allowlists to every reviewed
+  Receivables response family in both local and PostgreSQL branches. Preserve
+  existing direct response shapes, exact minor units, lifecycle behavior,
+  pagination, and scope/permission checks.
+- **Verification**: Focused field/API tests pass 24 tests plus 1 existing skip
+  and include synthetic future columns in all reviewed AR tables. Full Python
+  regression passes at 100%; Ruff, Mypy (539 source files), Bandit, pip-audit,
+  package build, targeted safe YAML validation (9 files), and diff gates pass.
+  The local distribution is not auditable by pip-audit because it is not
+  published on PyPI.
+- **Compatibility**: No route, schema, migration, permission, envelope, or
+  lifecycle behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1037 code/tests/ADR 0697/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
+### D-863: Payables supplier-invoice API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: Supplier-invoice create/list/lifecycle/match routes returned
+  local SQLite and tenant-scoped PostgreSQL mappings with nested invoice lines
+  and match results. Future adapter/storage fields could silently expand a
+  financial response.
+- **Decision**: Apply central invoice and nested-line allowlists to create,
+  list, submit, and approve responses, plus a separate three-way-match
+  allowlist for match results and embedded match children. Preserve existing
+  direct response shapes, exact quantities/minor units, permissions, and
+  lifecycle behavior.
+- **Verification**: Focused field/API tests pass 26 tests and include
+  synthetic future columns in invoice and line tables. Full Python, security,
+  package, YAML, and diff gates pass. The local distribution is not auditable
+  by pip-audit because it is not published on PyPI.
+- **Compatibility**: No route, schema, migration, permission, or lifecycle
+  behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1036 code/tests/ADR 0696/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
+### D-862: Payables goods-receipt API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: The Payables receipt-posting route returned local SQLite and
+  tenant-scoped PostgreSQL mappings with nested receipt lines. Future storage
+  or adapter fields could silently expand this financial operational response.
+- **Decision**: Apply central top-level and nested-line allowlists to receipt
+  posting responses in both local and PostgreSQL branches. Preserve the direct
+  response shape, exact quantity fields, permissions, lifecycle behavior, and
+  local/server boundaries.
+- **Verification**: Focused field/API tests pass 24 tests and include
+  synthetic future columns in both receipt tables. Full `python -m pytest -q`
+  passes at 100%; Ruff, Mypy (539 source files), Bandit, pip-audit, package
+  build, targeted safe YAML validation (9 files), and diff gates also pass.
+  The local distribution is not auditable by pip-audit because it is not
+  published on PyPI.
+- **Compatibility**: No route, schema, migration, permission, or lifecycle
+  behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1035 code/tests/ADR 0695/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
+### D-861: Payables purchase-order API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: Purchase-order create and lifecycle routes returned local SQLite
+  and tenant-scoped PostgreSQL mappings, including nested line rows. Storage
+  or adapter growth could silently disclose new fields in a financial
+  lifecycle response.
+- **Decision**: Apply central allowlists to purchase-order create, submit, and
+  approve responses, with an independent nested-line allowlist. Preserve the
+  existing direct response shape, exact quantity/price fields, permissions,
+  lifecycle policy, and local/server boundaries.
+- **Verification**: Focused field/API tests pass 22 tests and include
+  synthetic future columns in both purchase-order tables. Full `python -m
+  pytest -q` passes at 100%; Ruff, Mypy (539 source files), Bandit, pip-audit,
+  package build, targeted safe YAML validation (9 files), and diff gates also
+  pass. The local distribution is not auditable by pip-audit because it is not
+  published on PyPI.
+- **Compatibility**: No route, schema, migration, permission, or lifecycle
+  behavior changes; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1034 code/tests/ADR 0694/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
+### D-860: Payables supplier API uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Payables supplier save/list routes returned local SQLite and
+  tenant-scoped PostgreSQL mappings. The local table is queried with broad
+  columns and a future adapter/storage column could silently expand the
+  financial master-data response.
+- **Decision**: Apply one explicit supplier allowlist to save and paginated list
+  responses in both local and PostgreSQL branches. Preserve the direct response
+  shape, pagination metadata, permissions, and all reviewed supplier fields.
+- **Verification**: Focused field/API tests pass 20 tests and include a
+  synthetic future SQLite column. Full `python -m pytest -q` passes at 100%;
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  safe YAML validation (9 files), and diff gates also pass. The local
+  distribution is not auditable by pip-audit because it is not published on
+  PyPI.
+- **Compatibility**: No schema, migration, route, permission, or response
+  envelope change; this is a bounded disclosure control only.
+- **Rollback**: Revert E-1033 code/tests/ADR 0693/manifest and execution
+  metadata together; do not restore unbounded repository-row serialization.
+
+### D-859: Inventory Core operational API uses fail-closed recursive projection
+
+- **Date**: 2026-08-26
+- **Context**: Inventory Core operational routes returned movement, balance,
+  control, summary, and snapshot mappings from both SQLite and PostgreSQL.
+  Repository rows include backend-specific fields and can gain future columns;
+  snapshots also contain nested master and movement collections.
+- **Decision**: Add separate central allowlists for movement headers/lines,
+  on-hand envelopes/balances, control-exception envelopes/items, summary, and
+  snapshot/source shapes. Reuse the E-1031 master-resource projectors inside
+  snapshots, and reject malformed nested collections or records before
+  serialization. Preserve exact quantity fields and existing response
+  envelopes for compatibility.
+- **Verification**: Focused field/API boundary tests pass 19 tests. Full
+  `python -m pytest -q` passes at 100%; Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted safe YAML validation (9 files), and diff
+  gates also pass. The local distribution is not auditable by pip-audit because
+  it is not published on PyPI.
+- **Compatibility**: Existing routes, envelopes, permissions, step-up policy,
+  known fields, and local/server separation remain; no schema or migration
+  changes are introduced.
+- **Rollback**: Revert E-1032 code/tests/ADR 0692/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
+### D-858: Inventory Core master API uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Inventory Core master-resource routes returned local SQLite and
+  PostgreSQL mappings for units, items, warehouses, locations, and lots or
+  serials. Future storage or adapter fields could silently expand these
+  operational responses.
+- **Decision**: Apply one explicit resource allowlist to every reviewed list
+  and mutation response for the five master-resource families. Movement,
+  on-hand, control-exception, summary, and snapshot responses remain separate
+  surfaces.
+- **Verification**: Focused field/API tests and the full Python regression pass
+  at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML validation (9 files), and diff checks also pass. Universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing envelopes, reviewed known fields, permissions,
+  and local/server boundaries remain; no schema or migration changes.
+- **Rollback**: Revert E-1031 code/tests/ADR 0691/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
+### D-857: Inventory Valuation Reversal API uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Reversal routes returned local SQLite and PostgreSQL mappings,
+  with effect records carrying restoration/removal quantities and values.
+  Summary and snapshot responses aggregate this financial evidence.
+- **Decision**: Apply central allowlists to reversal and summary responses, an
+  independent effect allowlist, and recursive source/summary/reversal
+  projection to the snapshot. Reject malformed nested collections or records
+  before serialization.
+- **Verification**: Focused field/API tests and the full Python regression pass
+  at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML validation (9 files), and diff checks also pass. Universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing envelopes, reviewed known fields, permissions,
+  money/quantity text, and local/server boundaries remain; no schema or
+  migration changes.
+- **Rollback**: Revert E-1030 code/tests/ADR 0690/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
+### D-856: Inventory Valuation policy, layer, summary, and snapshot responses use fail-closed projection
+
+- **Date**: 2026-08-26
+- **Context**: Inventory Valuation policy and cost-layer routes returned
+  mappings sourced from local SQLite and PostgreSQL joins. The summary and
+  snapshot aggregate those mappings; future storage or adapter fields could
+  therefore silently expand multiple financial response paths.
+- **Decision**: Apply central allowlists to policy, cost-layer, and summary
+  responses, and a recursive closed projection to the snapshot source,
+  summary, policy, document, and open-layer collections. Reject malformed
+  nested collections or records before serialization.
+- **Verification**: Focused field/API tests and the full Python regression pass
+  at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML validation (9 files), and diff checks also pass. Universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing response envelopes, reviewed known fields,
+  permissions, money/quantity text, and local/server boundaries remain; no
+  schema or migration changes.
+- **Rollback**: Revert E-1029 code/tests/ADR 0689/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
+### D-855: Inventory Valuation document API uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Inventory Valuation document routes returned local SQLite and
+  PostgreSQL adapter mappings. The document details include input costs,
+  valuation lines, and layer consumptions; repository `SELECT *` expansion or
+  adapter changes could silently expose financial fields.
+- **Decision**: Apply one central top-level allowlist to document list, create,
+  read, approve, and cancel responses, and independent child allowlists to all
+  three detail collections. Reject malformed nested collections or records
+  before serialization.
+- **Verification**: Focused field/API tests and the full Python regression pass
+  at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML validation (9 files), and diff checks also pass. Universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing response envelopes and reviewed known fields,
+  permissions, money text, and local/server boundaries remain; no schema or
+  migration changes.
+- **Rollback**: Revert E-1028 code/tests/ADR 0688/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
+### D-854: Master Data API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Master Data routes returned local `SELECT *` rows and mapped
+  PostgreSQL records for currencies, organizations, legal entities, branches,
+  periods, and the versioned snapshot. Future columns could silently expand
+  these scope-defining responses.
+- **Decision**: Apply explicit resource allowlists to every reviewed list and
+  mutation response and a closed recursive projection to the snapshot,
+  including currency-registry nested records. Reject malformed nested
+  snapshot data instead of filtering it silently.
+- **Verification**: Focused field/API tests and full regression pass at 100%;
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  safe YAML validation (9 files), and diff gates pass. External
+  IAM, distributed revocation, disclosure approval, source authenticity, and
+  production effectiveness remain open.
+- **Compatibility**: Existing response envelopes, known resource fields,
+  permissions, and local/server boundaries remain; no schema or migration is
+  changed.
+- **Rollback**: Revert E-1027 code/tests/ADR 0687/manifest and execution
+  metadata together; do not restore direct repository-row serialization.
+
+### D-853: Finance Core ledger-entry API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Finance Core entry routes returned mappings from local SQLite,
+  PostgreSQL Finance Core, and the bounded legacy PostgreSQL ledger. Local
+  `SELECT *` queries and nested ledger lines made future storage/adapter fields
+  capable of silently expanding the API response.
+- **Decision**: Apply one central allowlist to entry list, read, create,
+  validate, and void responses and a separate allowlist to nested ledger
+  lines. Preserve known envelopes and fields while denying unknown fields.
+- **Verification**: Focused field/API tests and full regression pass at 100%;
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  safe YAML validation (9 files), and diff gates pass. External
+  IAM, distributed revocation, disclosure approval, source authenticity, and
+  production effectiveness remain open.
+- **Compatibility**: Existing permissions, tenant/workspace scope, write
+  invariants, response envelopes, and reviewed financial fields remain.
+- **Rollback**: Revert E-1026 code/tests/ADR 0686/manifest and execution
+  metadata together; do not restore direct repository-mapping serialization.
+
+### D-852: Reconciliation API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: PostgreSQL reconciliation routes returned run metadata and
+  paginated input/result/exception mappings from the adapter. Although the
+  repository selects reviewed columns, future adapter fields or nested shape
+  changes could become API fields without a centralized response contract.
+- **Decision**: Apply central allowlists to run, canonical-input,
+  deterministic-result, and reconciliation-exception responses. Project
+  nested run collections and reject malformed child collections before
+  serialization.
+- **Verification**: Synthetic server adapter-field coverage and field tests
+  pass; full regression, static, security, package, YAML, and diff gates pass.
+  External IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing known fields and response envelopes remain
+  available; route permissions, tenant scoping, and actor binding are unchanged.
+- **Rollback**: Revert E-1025 code/tests/ADR 0685/manifest and execution
+  metadata together; do not restore direct adapter mapping serialization.
+
+### D-851: Account reconciliation API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Account reconciliation repositories use broad `SELECT *` reads
+  and return local/PostgreSQL record mappings directly. Detailed reads also
+  include nested reconciliation items, so future storage or adapter fields
+  could become API fields without a reviewed contract change.
+- **Decision**: Apply one central allowlist to all account reconciliation list,
+  read, create, and lifecycle response paths. Project nested items with their
+  own allowlist and drop unknown fields before serialization.
+- **Verification**: Synthetic local future-column and server adapter-field
+  tests pass; full regression, static, security, package, YAML, and diff gates
+  pass. External IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing known fields and response envelopes remain
+  available. No change to route permissions or actor binding is introduced.
+- **Rollback**: Revert E-1024 code/tests/ADR 0684/manifest and execution
+  metadata together; do not restore direct mapping serialization.
+
+### D-850: Consolidation-close API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Consolidation-close adapters use broad `SELECT *` reads and
+  return local/PostgreSQL period and run mappings, including nested journal and
+  effect records. Future storage or adapter fields could therefore become API
+  fields without a reviewed contract change.
+- **Decision**: Apply one central allowlist to every consolidation-close period
+  and run response path. Project nested journal lines and effect lines with
+  their own allowlists, retain the reviewed PostgreSQL evidence fields, and
+  drop unknown fields before serialization.
+- **Verification**: Synthetic future-column field/API coverage and focused
+  tests pass; full regression, static, security, package, YAML, and diff gates
+  pass. External IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing known fields and response envelopes remain
+  available; internal worksheet payload/cache fields remain excluded.
+- **Rollback**: Revert E-1023 code/tests/ADR 0683/manifest and execution
+  metadata together; do not restore direct `SELECT *` response serialization.
+
+### D-849: Exception API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Local exception queue reads used `SELECT *`, and the API
+  returned list, assignment, and status records directly. Future SQLite
+  fields could become response fields without review.
+- **Decision**: Apply one central exception allowlist to all three local API
+  response paths and drop unknown fields before serialization.
+- **Verification**: Synthetic future-column API coverage and field primitive
+  tests pass; full regression, static, package, YAML, and diff gates pass.
+  External IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing field names, response envelopes, and RBAC
+  boundaries remain unchanged.
+- **Rollback**: Revert E-1022 code/tests/ADR 0682/manifest and execution
+  metadata together; do not restore direct `SELECT *` response serialization.
+
+### D-848: Close API responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Local close period/task reads used `SELECT *`, and close routes
+  returned local and PostgreSQL mappings directly. Future storage or adapter
+  fields could therefore become API fields without contract review.
+- **Decision**: Project all Close API period, task, and readiness responses
+  through central allowlists covering the reviewed union of both adapter
+  shapes; drop unknown fields before serialization.
+- **Verification**: Focused field/API tests cover unknown SQLite columns and
+  all three shapes. Full regression, static, package, YAML, and diff gates are
+  required for closure. External IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: Existing field names and permission boundaries remain
+  unchanged. No new response envelope is introduced.
+- **Rollback**: Revert E-1021 code/tests/ADR 0681/manifest and execution
+  metadata together; do not restore direct `SELECT *` response serialization.
+
+### D-847: Evidence mutation responses use fail-closed projection
+
+- **Date**: 2026-08-26
+- **Context**: Evidence list/get/drill-down responses were projected, but
+  Server Profile requirement and checksum-verification mutations returned
+  adapter fields directly.
+- **Decision**: Apply central allowlists to both mutation response families,
+  preserve their known authorized fields, add deterministic projection
+  metadata, and drop unknown adapter fields before serialization.
+- **Verification**: Focused field/API tests pass; full regression, static,
+  package, YAML, and diff gates are required for closure. External IAM,
+  distributed revocation, disclosure approval, source authenticity, and
+  production effectiveness remain unproven.
+- **Compatibility**: Additive `field_access` metadata; known fields remain
+  available under the existing permission and tenant boundaries.
+- **Rollback**: Revert E-1020 code/tests/ADR 0680/manifest and execution
+  metadata together.
+
+### D-846: Legacy audit event responses use fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: The consolidated PostgreSQL administration audit route was
+  redacted, but the compatibility `/api/v1/audit/events` route serialized
+  local and PostgreSQL adapter records directly, exposing actor/target/request
+  identifiers, reasons, and decoded metadata.
+- **Decision**: Apply one central allowlist to both physical response shapes.
+  Preserve known non-sensitive fields and existing sensitive keys only as the
+  `[REDACTED]` marker; drop unknown future adapter fields before serialization.
+- **Verification**: Field, local API, and Server Profile policy tests cover
+  the boundary. Full regression, static, package, YAML, and diff gates are
+  required for closure. External IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+- **Compatibility**: The response envelope and known field names remain
+  available, while sensitive values are no longer returned. This is a
+  security-preserving value change on the legacy route, not a new disclosure
+  contract.
+- **Rollback**: Revert E-1019 code/tests/ADR 0679/manifest and execution
+  metadata together; do not restore direct adapter serialization.
+
+### D-845: Extend field projection to evidence record responses
+
+- **Date**: 2026-08-26
+- **Context**: E-1017 protected drill-down, but evidence list/get and the
+  Server Profile registration response still serialized adapter records
+  directly.
+- **Decision**: Apply the same evidence record/link allowlist to local and
+  Server Profile list/get responses, pass safe field names through the Server
+  Profile central policy boundary, and project registration responses with the
+  sensitive allowlist after existing `evidence.manage` authorization.
+- **Verification**: Focused local/Server API and field tests pass; full
+  regression, package build, and diff checks are required for closure.
+  Universal field-level migration and production IAM effectiveness remain
+  unproven.
+- **Compatibility**: Additive `field_access` metadata; the existing redaction
+  token and permission contracts remain unchanged.
+- **Rollback**: Revert E-1018 code/tests/ADR 0678/manifest and execution
+  metadata; persisted evidence is unaffected.
+
+### D-844: Evidence drill-down uses fail-closed field projection
+
+- **Date**: 2026-08-26
+- **Context**: Repository-specific evidence redaction could retain every
+  physical column and nested link field, while the reusable field-level
+  policy primitive had no sensitive evidence consumer.
+- **Decision**: Apply one versioned allowlist to local and Server Profile
+  evidence drill-down nodes and nested links. Preserve the legacy redaction
+  token, require `evidence.manage` for sensitive mode, pass the sensitive
+  field request through the central Server Profile policy boundary, and drop
+  unknown future fields in both modes. Return deterministic projection
+  evidence per node.
+- **Verification**: Focused field, local API, and Server Profile API tests
+  pass; full regression, package build, and diff checks are required for
+  closure. Universal field-level migration and production IAM effectiveness
+  remain unproven.
+- **Compatibility**: Additive response metadata only; known redaction token
+  and existing `include_sensitive` permission contract remain unchanged.
+- **Rollback**: Revert E-1017 code/tests/ADR 0677/manifest and execution
+  metadata; persisted evidence is unaffected.
+
+### D-843: Require explicit policy supplier before PostgreSQL Reconciliation execution
+
+- **Date**: 2026-08-26
+- **Context**: The shared worker guard could no-op when PostgreSQL
+  Reconciliation omitted every policy supplier, allowing discovery or
+  execution to reach a database transaction without a service-account
+  decision.
+- **Decision**: Make the hosted Reconciliation boundary fail closed by
+  default for discovery, claim, and execution. Keep a clearly named
+  compatibility flag for bounded legacy fixtures and benchmarks.
+- **Verification**: E-1016 focused Reconciliation, persisted-JSON, grouped
+  runtime, static checks, full regression, and package build pass. External
+  IAM and production effectiveness remain unproven.
+- **Compatibility**: No schema or payload changes; ungoverned hosted
+  fixtures must opt out explicitly.
+- **Rollback**: Revert E-1016 worker/settings/tests/benchmark/ADR 0676/manifest
+  and execution metadata.
+
+### D-842: Require explicit policy supplier before PostgreSQL Scheduler processing
+
+- **Date**: 2026-08-26
+- **Context**: The shared worker guard could no-op when PostgreSQL Scheduler
+  configuration omitted every policy supplier, allowing a valid lane to open
+  a connection and process due schedules without a service-account decision.
+- **Decision**: Make the hosted Scheduler boundary fail closed by default.
+  Keep a clearly named compatibility flag for bounded legacy fixtures and
+  reject no policy only after lane validation, before connection access.
+- **Verification**: E-1015 focused Scheduler worker/notification tests and
+  static checks pass; full regression and package build are required for
+  closure. Reconciliation remains a separate follow-up slice.
+- **Compatibility**: No schema or payload changes; ungoverned hosted
+  fixtures must opt out explicitly.
+- **Rollback**: Revert E-1015 worker/settings/tests/ADR 0675/manifest and
+  execution metadata.
+
+### D-841: Require explicit policy supplier before PostgreSQL Outbox publishing
+
+- **Date**: 2026-08-26
+- **Context**: The shared worker guard could no-op when PostgreSQL Outbox
+  configuration omitted every policy supplier, allowing an external publish
+  path without a service-account decision.
+- **Decision**: Make the hosted Outbox boundary fail closed by default. Keep a
+  clearly named compatibility flag for bounded legacy fixtures/benchmarks and
+  reject that flag in the local SQLite worker.
+- **Verification**: E-1014 focused Outbox/payload/notification/local-worker
+  tests, static checks, and no-effect policy regressions pass. Scheduler and
+  Reconciliation remain separate follow-up slices.
+- **Compatibility**: No schema or payload changes; ungoverned hosted fixtures
+  must opt out explicitly.
+- **Rollback**: Revert E-1014 worker/settings/tests/ADR 0674/manifest and
+  execution metadata.
+
+### D-840: Inject the PostgreSQL policy-audit sink into governed job facade
+
+- **Date**: 2026-08-26
+- **Context**: E-1012 routed Server Profile through the governed facade, but
+  the facade decision itself had no request-scoped persistence sink.
+- **Decision**: Add optional provider-neutral `PolicyAuditSink` injection and
+  supply the existing tenant-scoped PostgreSQL sink in Server Profile. Keep
+  local/Community default behavior structured-log-only and dependency-free.
+- **Verification**: E-1013 sink-capture, full regression, Ruff, Mypy, and build
+  gates pass; failure behavior remains owned by the existing server adapter.
+- **Compatibility**: Constructor argument is optional; no route response,
+  repository, schema, or migration changes.
+- **Rollback**: Revert E-1013 facade/route/test/ADR 0673/manifest/execution
+  metadata.
+
+### D-839: Use the governed durable-job facade in Server Profile queue health
+
+- **Date**: 2026-08-26
+- **Context**: E-1011 governed the local queue route, while Server Profile
+  still called the raw application service after its tenant check.
+- **Decision**: Bind the verified `ServerPrincipal` and its scope grants into
+  the same governed facade in Server Profile. Retain the tenant-policy,
+  transaction-local scope, and RLS barriers; keep facade evidence provider
+  neutral until a PostgreSQL sink adapter is introduced.
+- **Verification**: E-1012 route, API, Ruff, and Mypy gates pass; live
+  PostgreSQL execution remains environment-gated where declared.
+- **Compatibility**: No route response, repository contract, schema, or
+  migration changes.
+- **Rollback**: Revert E-1012 route/test/ADR 0672/manifest/execution metadata.
+
+### D-838: Route local operations queue health through the governed job facade
+
+- **Date**: 2026-08-26
+- **Context**: The local operations API checked `ops.read` but then called the
+  raw durable-job application service, bypassing the exact-scope facade.
+- **Decision**: Construct a local user/scope policy context and call the
+  governed `queue_snapshot` facade in local mode. Keep Server Profile on its
+  existing PostgreSQL tenant-policy/RLS boundary until a dedicated audit-sink
+  adapter exists.
+- **Verification**: E-1011 API, application, and worker tests pass with Ruff,
+  Mypy, and diff checks. The response projection remains backward compatible.
+- **Compatibility**: No endpoint, response, schema, or migration changes;
+  only the local service call path is strengthened.
+- **Rollback**: Revert E-1011 route/test/ADR 0671/manifest/execution metadata.
+
+### D-837: Govern durable-job application queue reads and requeue by exact scope
+
+- **Date**: 2026-08-26
+- **Context**: E-1008 tightened worker lifecycle authorization, but the
+  application facade still left queue projection and terminal-job requeue
+  outside the same explicit policy boundary.
+- **Decision**: Add policy-gated `queue_snapshot` and `requeue` methods. Bind
+  each decision to the exact hierarchy, actual object ID, action, and request
+  ID; authorize before lookup; and verify persisted job scope before requeue.
+- **Verification**: E-1010 focused job/worker tests pass, the PostgreSQL
+  governed fixture supplies entity scope, and static gates pass. Evidence is
+  local/synthetic and does not establish API-wide or production authorization.
+- **Compatibility**: The raw backend-neutral service and existing submit/
+  cancel signatures remain reusable; governed callers gain optional request
+  IDs and explicit entity scope where required.
+- **Rollback**: Revert E-1010 code, tests, manifest, ADR 0670, and execution
+  entries. No migration or user data changes are involved.
+
+### D-836: Re-evaluate governed worker policy at every lifecycle boundary
+
+- **Date**: 2026-08-26
+- **Context**: A worker could retain a lease after policy revocation if policy
+  was checked only at claim time.
+- **Decision**: Require a fresh policy context and permission for every
+  governed worker lifecycle boundary and bind the decision to the actual job
+  and action.
+- **Verification**: E-1008 focused worker tests prove post-claim revocation
+  cannot renew or complete a job; local synthetic evidence only.
+- **Compatibility**: The raw worker primitive remains available to trusted
+  internal infrastructure; governed wrappers are explicit and fail closed.
+- **Rollback**: Revert the E-1008 worker, test, ADR 0669, and execution
+  metadata changes without touching data.
+
+### D-835: Refresh current Community Compose schema and backup/restore runtime evidence
+
+- **Date**: 2026-08-26
+- **Context**: E-973 advanced the local SQLite head to migration 46, while the
+  latest Compose runtime evidence was historical schema 45/45. The Community
+  readiness matrix needed current-head restart and backup/restore evidence
+  without widening the local-only deployment claim.
+- **Decision**: Build the current Community image, run a labelled disposable
+  Compose service without relying on the environment-reserved host port,
+  verify in-container health and hardening, register synthetic retention
+  evidence, verify its backup manifest, and restore into an independent local
+  SQLite target. Bind the result to a strict schema and digest report.
+- **Verification**: The runtime reached healthy after restart; API health was
+  `ok`; SQLite schema was `46/46`; UID, read-only root, capability drop, and
+  internal networking matched the Compose contract; backup verification and
+  independent restore passed at schema 46 with 113 tables.
+- **Compatibility**: Runtime evidence and readiness metadata only. The
+  Compose file, API contract, and historical E-968 artifact remain unchanged.
+- **Rollback**: Remove the E-974 report/schema/test, manifest and matrix
+  references, ADR 0668, and execution entries. The labelled disposable
+  container and volume are removed after capture; no user or production data
+  is changed.
+
+### D-834: Close SQLite evidence-retention shortening through migration, trigger, and version guard
+
+- **Date**: 2026-08-26
+- **Context**: SQLite evidence re-registration used an upsert that replaced
+  `retention_until`, allowing a later request to shorten a previously stored
+  evidence floor. PostgreSQL already had a governed retention version/floor
+  contract, but the local adapter lacked an equivalent database backstop.
+- **Decision**: Add additive SQLite migration 46 with `retention_version` and
+  a trigger that rejects shortening, malformed timestamps, and invalid version
+  transitions. Validate the transition before object-store upload, preserve an
+  existing floor, increment the version only for a strict extension, and carry
+  the field through backup/restore. Keep pre-46 registration compatible until
+  the explicit migration is applied.
+- **Verification**: Focused evidence, backup/restore, migration-upgrade, Ruff,
+  full regression, and package checks pass. The direct service test confirms a
+  rejected shortening performs no additional object-store upload; the direct
+  SQL test confirms the trigger is an independent backstop.
+- **Compatibility**: Additive schema migration and backup field extension;
+  existing local evidence rows receive version `1`, and the current CLI/API
+  contracts remain unchanged.
+- **Rollback**: Revert migration 46, repository/version handling, backup field,
+  tests, ADR 0667, and execution references before accepting databases that
+  depend on the new column. No production data is modified by the local test.
+
+### D-833: Refresh bounded PostgreSQL HA/DR repeated runtime evidence
+
+- **Date**: 2026-08-26
+- **Context**: The repository had older repeated PostgreSQL HA/DR artifacts,
+  while the current Docker Engine was available for a fresh bounded drill.
+- **Decision**: Execute exactly three disposable primary/synchronous-standby
+  cycles, require encrypted restore/fencing/failover/failback/cleanup through
+  the existing script, package the schema-valid report, and reference it from
+  the mode-specific readiness matrix. Keep all single-host/manual/synthetic
+  limitations explicit.
+- **Verification**: Three runs passed with zero acknowledged transaction loss,
+  final sequence 4, failover max 11.721s, failback max 1.316s, and no labelled
+  Docker resources left behind. The repeated-report schema test passes.
+- **Compatibility**: Evidence artifact, manifest inclusion, matrix references,
+  and tests only; no production database or application data is changed.
+- **Rollback**: Remove the current report, manifest entry, matrix references,
+  regression assertions, ADR 0664, and E-970 execution entries. The drill's
+  temporary resources are already cleaned.
+
+### D-832: Refresh the readiness matrix with current Community Compose evidence
+
+- **Date**: 2026-08-26
+- **Context**: E-968 added a live, bounded Community Compose profile, but the
+  centralized readiness matrix still had its 2026-08-23 review date and did
+  not point to the current Compose artifact or test.
+- **Decision**: Refresh the matrix date and add the Compose contract, test, and
+  ADR to only the Community external-dependency gate. Preserve the explicit
+  partial/open status and state that this local evidence does not prove host
+  firewall behavior, backup/restore, HA/DR, or production readiness.
+- **Verification**: Matrix schema/reader tests and the new exact-evidence
+  regression pass.
+- **Compatibility**: Evidence metadata only; no runtime or data migration.
+- **Rollback**: Revert the matrix references, regression assertion, ADR 0663,
+  and E-969 execution entries.
+
+### D-831: Add a bounded Community Docker Compose profile
+
+- **Date**: 2026-08-26
+- **Context**: The standalone image had a hardened local smoke contract, but
+  operators had no checked-in Compose start path for the local SQLite API.
+- **Decision**: Ship `compose.yaml` only for Community/local use. Initialize
+  SQLite idempotently, persist it in a named volume, publish on loopback,
+  keep the network internal, and retain non-root/read-only/capability-dropped
+  runtime hardening with a local healthcheck. Do not imply Team, Enterprise,
+  Regulated, HA/DR, hosted, production, or compliance support.
+- **Verification**: Compose config/static tests pass; the image builds; a live
+  one-off service reaches healthy with SQLite schema 45/45, UID 10001, and a
+  retained database after restart. Host port publication is environment-
+  limited and is not counted as runtime application evidence.
+- **Compatibility**: Adds a new local deployment artifact; the standalone
+  Docker commands and API contracts remain unchanged.
+- **Rollback**: Revert `compose.yaml`, the Docker `/data` directory creation,
+  ADR 0662, tests, and synchronized docs/execution entries.
+
+### D-830: Synchronize current Docker documentation with the hardened workflow
+
+- **Date**: 2026-08-26
+- **Context**: Current release and deployment documents still advertised the
+  weaker cached/writable Docker smoke and historical Compose/dashboard commands,
+  while the checked-in standalone workflow had moved to a hardened contract.
+- **Decision**: Update current operator-facing Docker/release surfaces to the
+  pull/no-cache linux/amd64 build and bounded hardened runtime. At that time,
+  explicitly state that no Compose deployment contract was shipped until a
+  versioned profile and smoke evidence existed. Retain historical strategy
+  records as historical; E-968 later supplies the bounded Community profile.
+- **Verification**: The release-readiness documentation suite passes with the
+  hardened commands; YAML and diff checks pass.
+- **Compatibility**: Documentation and test expectations only for E-967; no
+  runtime, image, API, or deployment artifact was added by that slice.
+- **Rollback**: Revert the documentation, regression expectation, ADR, and
+  E-967 execution entries.
+
+### D-829: Harden the standalone Docker workflow
+
+- **Date**: 2026-08-26
+- **Context**: The dedicated Docker workflow used a cached/default-platform
+  build and a writable, networked Doctor smoke, while the CI and release paths
+  already used a bounded hardened runtime contract.
+- **Decision**: Require pull/no-cache linux/amd64 builds, a 20-minute timeout,
+  and a networkless read-only container with all capabilities dropped and
+  `no-new-privileges`. Remove the output volume from this smoke because the
+  check is an inspection-only runtime proof.
+- **Verification**: The standalone workflow contract test and the focused
+  release/container suite pass; supply-chain policy validation remains valid.
+- **Compatibility**: Workflow-only change; no application, image content, API,
+  schema, or local CLI contract changes.
+- **Rollback**: Revert the workflow, regression test, ADR, and E-966 evidence.
+
+### D-828: Require per-handler server-boundary evidence
+
+- **Date**: 2026-08-26
+- **Context**: The existing route inventory only required a boundary marker
+  somewhere in a mutating route module. A newly added handler could therefore
+  be missed if a neighboring handler or module helper supplied the only marker.
+- **Decision**: Parse each mutating handler independently. Accept a direct
+  server-boundary marker or an explicit module-specific helper allowlist for
+  reviewed central service wrappers, server adapters, and local fail-closed
+  connection helpers. Keep authentication, SCIM, and WebAuthn as explicit
+  protocol exceptions.
+- **Verification**: The focused authorization inventory and full Python suite
+  pass; static gates and evidence files are updated for E-965.
+- **Compatibility**: Test and documentation only; no runtime, API, schema,
+  database, or authorization behavior changes.
+- **Rollback**: Revert the handler-level test, ADR, and E-965 documentation.
+
+### D-827: Protect nonstandard-currency cross-engine parity
+
+- **Date**: 2026-08-26
+- **Context**: Existing engine parity properties covered generic and USD-shaped
+  records, while global financial correctness also depends on currency policies
+  with zero or three minor units surviving serialization, matching, digest, and
+  partitioned execution.
+- **Decision**: Add a deterministic regression using generated JPY and KWD
+  datasets. Require equal result contracts and reconciliation signatures across
+  Pandas, DuckDB full-scan, and forced partitioned DuckDB execution, while
+  asserting the manifest's resolved minor-unit policy.
+- **Verification**: The focused parity suite passes. The test is intentionally
+  synthetic and local; broader supported-version, provider, capacity, HA/DR,
+  and production evidence remains separately required.
+- **Compatibility**: Test-only change; no runtime, schema, CLI, API, or output
+  contract changes.
+- **Rollback**: Revert the test, ADR, and E-964 documentation entries. No data
+  migration or external-state rollback is required.
+
+### D-826: Reject hosted policy configuration in the local outbox worker
+
+- **Date**: 2026-08-26
+- **Context**: The shared `OutboxWorkerSettings` exposes hosted worker policy
+  fields, but the local SQLite worker has no tenant lane or central-policy
+  boundary and previously ignored those fields silently.
+- **Decision**: Reject actor overrides, policy suppliers, scope suppliers, and
+  non-default hosted permissions when constructing `OutboxWorker`. Keep the
+  default local contract unchanged and direct governed deployments to
+  `PostgresOutboxWorker`.
+- **Verification**: E-963 local outbox regression proves rejection before
+  connection access; existing PostgreSQL outbox policy tests cover the
+  supported hosted path. Full/static gates provide the final slice evidence.
+- **Compatibility**: No default Community/local behavior, schema, event
+  format, or delivery lifecycle changes. Only previously silent unsupported
+  hosted configuration becomes an explicit error.
+- **Rollback**: Revert the constructor guard, regression test, ADR, and E-963
+  evidence entries. No database or external-state rollback is required.
+
+### D-825: Add a regression gate for mutating route server boundaries
+
+- **Date**: 2026-08-26
+- **Context**: Permission inventory prevents anonymous or unclassified API
+  mutations, but a new route module could still omit the Server Profile scope
+  or fail-closed boundary that E-1005 requires.
+- **Decision**: Add a deterministic AST test requiring every mutating route
+  module to show a server boundary marker, with only explicit auth/SCIM/
+  WebAuthn protocol modules exempted. Keep semantic scope, RLS, SoD, and
+  runtime tests as separate required evidence.
+- **Verification**: E-962 authorization inventory and full Python regression
+  pass, with Ruff, Mypy, YAML, and diff gates.
+- **Compatibility**: Test-only guard; no route, API, schema, migration, or
+  deployment behavior changes.
+- **Rollback**: Revert the gate and E-962 documentation. No persisted-state
+  rollback is required.
+
+### D-824: Refuse the local-only individual cashflow API in Server Profile
+
+- **Date**: 2026-08-26
+- **Context**: The authenticated individual cashflow endpoint is a stateless
+  local control with no tenant-scoped PostgreSQL persistence or server adapter.
+  Its permission dependency alone would allow the route to appear in Server
+  Profile without a request scope or durable evidence boundary.
+- **Decision**: Preserve the Local Profile endpoint and fail closed with HTTP
+  501 and a stable safe error code whenever `server_identity_enabled` is true.
+  Do not add an implicit SQLite fallback or claim server-side support.
+- **Verification**: E-961 focused HTTP and local-boundary tests pass, along
+  with authorization inventory, Ruff, Mypy, and diff checks.
+- **Compatibility**: Local API, CLI, control-pack, report schema, and existing
+  non-posting behavior remain unchanged. Only unsupported Server Profile
+  access becomes explicit.
+- **Rollback**: Revert the route guard, test, and E-961 documentation. No
+  database or external-state rollback is required.
+
+### D-823: Make write-back rate-limit reservations atomic and registration-scoped
+
+- **Date**: 2026-08-26
+- **Context**: The write-back executor tracked the next allowed time by
+  `connector_id` without synchronization. Concurrent workers could read the
+  same deadline before either updated it, and unrelated tenant/workspace
+  registrations could share a throttle lane.
+- **Decision**: Add a process-local lock around deadline reservation, release it
+  before sleeping, and key the reservation by the immutable registration
+  digest. This preserves bounded retry behavior while making the declared
+  sender-side rate limit deterministic for concurrent workers and isolated
+  registrations.
+- **Verification**: E-960 focused write-back tests pass, including concurrent
+  reservation and cross-scope lane isolation. No provider or distributed quota
+  claim is added.
+- **Compatibility**: No public schema, database migration, request payload,
+  idempotency key, or provider contract changes. The only behavior change is
+  correct local throttling under concurrency and narrower lane sharing.
+- **Rollback**: Revert the lock/key implementation and E-960 evidence. No
+  persisted data or migration rollback is required.
+
+### D-822: Record bounded live PostgreSQL matching replay
+
+- **Date**: 2026-08-26
+- **Context**: E-1003 had in-process strategy/worker parity and larger
+  PostgreSQL synthetic profiles, but the current tree lacked a fresh live
+  PostgreSQL run comparing persisted worker lineage with direct strategy
+  digests across grouped and sequential fixtures.
+- **Decision**: Record the existing live integration test as E-923 when it
+  passes against a digest-bound disposable PostgreSQL image. Keep the claim
+  one-host and synthetic, and do not widen it to provider, capacity, soak,
+  hosted, or production evidence.
+- **Verification**: PostgreSQL image digest, command, exit code, grouped and
+  sequential counts, direct-digest assertions, tenant-isolation assertion, and
+  cleanup boundary are recorded in
+  `POSTGRES_MATCHING_LIVE_2026-08-26.json`.
+- **Rollback**: Remove the E-923 evidence and ADR. No application or database
+  migration rollback is required.
+
+### D-821: Refresh only the pinned container OpenSSL runtime libraries
+
+- **Date**: 2026-08-26
+- **Context**: The pinned official Python Alpine index remained on OpenSSL
+  `3.5.7-r0` while Alpine published `3.5.8-r0`, the upstream-fixed package
+  needed for the tracked E-824 vulnerability. Changing the Python base digest
+  without a verified replacement would weaken provenance and compatibility
+  evidence.
+- **Decision**: Keep the reviewed Python digest and add an explicit,
+  exact-version `apk add --no-cache --upgrade` for `libcrypto3=3.5.8-r0` and
+  `libssl3=3.5.8-r0` in both builder and runtime stages. Do not install the
+  OpenSSL CLI or broaden the package set. Keep E-824 open until the hosted
+  release gate is rerun.
+- **Verification**: E-959 clean linux/amd64 build, exact package inspection,
+  hardened Doctor smoke, Dockerfile regression test, and the checksum-verified
+  Syft 1.51.0/Grype 0.117.0 gate against database v6.1.9 pass locally. The
+  subject-bound result is recorded in
+  `CONTAINER_SECURITY_LOCAL_2026-08-26.json`; the hosted run is not counted as
+  complete.
+- **Compatibility**: Python base identity, runtime user, application assets,
+  CLI, database, and persisted financial contracts are unchanged. The image
+  build now depends on the supported Alpine repository serving the pinned
+  architecture's security packages.
+- **Rollback**: Revert the two package-refresh RUN instructions to restore the
+  previous image bytes, then reopen the prior E-824 blocked evidence. Never use
+  a VEX ignore or severity reduction as rollback.
+
+### D-820: Bind executable write-back registrations to authenticated scope
+
+- **Date**: 2026-08-26
+- **Context**: Server write-back intents and permissions were tenant/workspace
+  scoped, but the in-memory provider registration lookup used connector ID
+  only. A shared endpoint and credential reference could be selected across
+  scopes by configuration error.
+- **Decision**: Add an additive tenant/workspace binding to the registration,
+  require an exact match in the server route, and repeat the same fail-closed
+  check in the executor before payload or secret resolution. Bound scope is
+  included in the registration digest; unbound construction remains parseable
+  but is not executable.
+- **Verification**: E-958, ADR 0651, focused API/executor/TLS tests, Ruff,
+  Mypy, full regression, and diff checks.
+- **Compatibility**: No database migration; local intent and registration
+  inspection compatibility is retained. Server registrations require explicit
+  scope configuration.
+- **Rollback**: Revert the code and restore the prior registration shape if
+  required. No persisted data migration is involved.
+
+### D-1001: Make API version scope backend-aware
+
+The public version endpoint still labeled PostgreSQL Server Profile as
+`local/self-hosted foundation`. Preserve the Local response and select an
+explicit PostgreSQL server/self-hosted scope label from the configured backend
+capability. This is a reversible metadata-only change with no schema or data
+effect. ADR 0646 records the decision.
+
+### D-1000: Synchronize current-state server-boundary wording
+
+The architecture current-state document lagged the authenticated PostgreSQL
+adapter work and said reconciliation and other domains were still entirely
+SQLite-backed. Update it to describe the bounded adapters and current Alembic
+head while retaining explicit unsupported-route and production limitations.
+This is a documentation-only, reversible change with no migration or data
+effect. ADR 0645 records the decision.
+
+### D-999: Make the unauthenticated API health probe backend-aware
+
+The health route previously used the Local Profile SQLite path and service
+label regardless of whether PostgreSQL Server Profile was enabled. Branch on
+the explicit server capability, use the existing PostgreSQL migration-status
+provider, and report a non-diagnostic degraded state when the server probe
+cannot read migration state or has pending revisions. Preserve local response
+compatibility; add no schema or persisted-data changes. This is reversible and
+bounded. ADR 0644 records the decision.
+
+### D-998: Remove the superseded Inventory Core guard and synchronize the audit trail
+
+ADR 0632's explicit `get_inventory_local_db` helper was correct for the
+pre-adapter E-939 state, but E-941/ADR 0634 now expose all Inventory Core
+operations through the real scoped PostgreSQL server adapter. Keeping the old
+helper and 501 tests in the current source created contradictory route and
+claim evidence even though the helper was no longer used. Remove the dead
+helper and obsolete tests, retain E-939/ADR 0632 as historical records, and
+make E-941/ADR 0634 authoritative for the current boundary. No runtime
+fallback is restored and Local Profile compatibility remains unchanged. This
+is reversible and bounded; no migration or persisted state changes. ADR 0643
+records the repair.
+
+### D-997: Refuse incomplete Finance Core entry scope before legacy fallback
+
+When the PostgreSQL Finance Core backend is enabled, `/finance-core/entries`
+must not silently route an incomplete request to the older tenant-scoped ledger
+adapter. The route now requires `entity_code`, `period_id`, and `journal_code`
+for the Finance Core contract and returns a stable validation error before any
+adapter is called. Local Profile behavior is unchanged, and valid Server
+Profile Finance Core requests retain their existing path. This is reversible and
+bounded; it does not claim legacy ledger removal, hosted parity, external IAM,
+HA/DR, provider, production, compliance, or certification readiness. ADR 0642
+records the rollback boundary.
+
+### D-996: Canonicalize Finance Core hierarchy selectors from authenticated scope
+
+Finance Core server routes must not trust organization or legal-entity codes
+from request payloads when the authenticated PostgreSQL scope already carries
+the corresponding IDs. The new scoped executor resolves canonical codes inside
+the tenant-bound transaction, verifies organization-to-workspace linkage,
+rejects mismatches, and injects the canonical values into repository writes and
+queries. Local Profile behavior and the existing unscoped adapter contract are
+preserved for compatibility. This is reversible and bounded; the current live
+PostgreSQL proof remains capability-gated and no hosted, IAM, HA/DR, provider,
+production, compliance, or certification claim follows. ADR 0641 records the
+rollback boundary.
+
+### D-995: Refuse local user SQLite access before the Server Profile guard
+
+The legacy `/users` routes now use `get_local_db` and resolve a local
+connection only after checking that PostgreSQL server identity is not active.
+This preserves Local Profile compatibility while preventing an authenticated
+server request from opening tenant SQLite before the intentionally disabled
+shadow identity surface returns `local_identity_surface_disabled`. The
+authoritative PostgreSQL identity/access routes remain separate. This is
+reversible and bounded; ADR 0640 records the rollback boundary.
+
+### D-994: Bind Inventory Valuation and Reversal server routes to PostgreSQL
+
+Inventory Valuation and Valuation Reversal server-mode operations now use
+explicit PostgreSQL adapter boundaries. Each request reconstructs the
+authenticated tenant/workspace/organization/legal-entity hierarchy,
+re-evaluates central scoped policy, validates movement/document/reversal
+object scope, and opens one `PostgresTenantBoundary` transaction. Policy
+hierarchy values are canonicalized from authenticated scope and actor identity
+comes from the authenticated principal. Existing exact FIFO, minor/scaled
+quantity, Finance Draft, reversal-effect, audit/outbox, and maker-checker
+controls remain the contract. Local SQLite remains the compatibility path
+only outside Server Profile. This is reversible and bounded; external IAM,
+HA/DR, provider behavior, capacity, backup/restore, and production
+effectiveness remain unproven. ADR 0639 records the rollback boundary.
+
+### D-993: Bind Inventory Planning server routes to the real PostgreSQL aggregate
+
+Inventory Planning server-mode operations now use an explicit PostgreSQL
+adapter boundary for count sessions, count lifecycle transitions, reorder
+rules, reorder signals, summaries, and snapshots. Each request reconstructs
+the authenticated tenant/workspace/organization/legal-entity hierarchy,
+re-evaluates central scoped policy, validates count-session object scope, and
+opens one `PostgresTenantBoundary` transaction. Payload hierarchy values are
+canonicalized from authenticated scope and actor identity comes from the
+authenticated principal. Exact scaled quantities and existing maker-checker
+controls remain the contract. Local SQLite remains the compatibility path.
+This is reversible and bounded; external IAM, HA/DR, provider behavior,
+capacity, backup/restore, and production effectiveness remain unproven. ADR
+0638 records the rollback boundary.
+
+### D-992: Keep SQLite-only Exceptions and Workflow routes fail-closed
+
+The legacy Exceptions queue and Workflow state-machine routes remain local
+SQLite capabilities until dedicated PostgreSQL adapters, hierarchy policy,
+RLS, audit/outbox contracts, and live evidence exist. Their dependencies now
+return no local connection in Server Profile, and each route rejects the
+request with an explicit 501 before the SQLite service is called. Local mode
+is preserved. This prevents an authenticated PostgreSQL server request from
+silently creating or mutating financial workflow state in a tenant-local
+database. The decision is reversible when the dedicated adapters are ready;
+ADR 0637 records the boundary.
+
+### D-991: Bind Payables server routes to the real PostgreSQL aggregate
+
+Payables server-mode HTTP operations now use an explicit PostgreSQL adapter
+boundary for suppliers, purchase orders, goods receipts, supplier invoices,
+three-way matching, and approval. Each request reconstructs the authenticated
+tenant/workspace hierarchy, re-evaluates central scoped policy, validates
+object and supplier scope, and opens one `PostgresTenantBoundary` transaction.
+Server payload workspace, organization, entity, and actor values are not
+authoritative: hierarchy is canonicalized from the request scope and actor
+identity comes from the authenticated principal. Exact quantities and the
+existing maker-checker/matching lifecycle remain the contract. Local SQLite
+remains the compatibility path. This is reversible and bounded; external IAM,
+HA/DR, provider behavior, capacity, backup/restore, and production
+effectiveness remain unproven. ADR 0636 records the rollback boundary.
+
+### D-990: Bind Receivables server routes to the real PostgreSQL aggregate
+
+Receivables server-mode HTTP operations now use an explicit PostgreSQL adapter
+boundary for customer, invoice, receipt, credit-exposure, and aging flows.
+Each request reconstructs the authenticated tenant/workspace hierarchy,
+re-evaluates central scoped policy, validates object/customer scope, and opens
+one `PostgresTenantBoundary` transaction. Server payload workspace,
+organization, entity, and actor values are not authoritative: hierarchy is
+canonicalized from the request scope and actor identity comes from the
+authenticated principal. Exact minor-unit amounts and arbitrary-scale
+quantities remain the persistence contract; existing SoD and credit-control
+guards remain in force. Local SQLite remains the compatibility path. This is
+reversible and bounded; external IAM, HA/DR, provider behavior, capacity,
+backup/restore, and production effectiveness remain unproven. ADR 0635 records
+the rollback boundary.
+
+### D-989: Bind Inventory Core server routes to the real PostgreSQL aggregate
+
+Inventory Core server-mode HTTP operations now use the explicit PostgreSQL
+adapter boundary instead of the interim 501 fail-closed route. Every operation
+reconstructs the authenticated tenant/workspace/organization/legal-entity
+hierarchy, re-evaluates central scoped policy, and opens a transaction with the
+same scope. Movement object scope is checked before object operations; actors
+come from the authenticated principal; exact scaled quantities remain the
+storage and serialization contract; and `inventory.post` retains step-up
+protection. Local SQLite remains the compatibility path. The live FastAPI /
+PostgreSQL gate verifies CRUD, posting, exact output, source metadata, and
+workspace denial with a non-superuser/no-BYPASSRLS role. This is reversible and
+bounded; external IAM, HA/DR, capacity, provider behavior, backup/restore, and
+production effectiveness remain unproven. ADR 0634 records the rollback
+boundary and supersedes ADR 0632 for this configured server path.
+
+### D-988: Bind Account Reconciliation server routes to the real PostgreSQL aggregate
+
+Account Reconciliation server-mode HTTP operations now use an explicit
+PostgreSQL adapter boundary instead of the legacy SQLite service. Every
+operation reconstructs the authenticated tenant/workspace hierarchy, performs
+central scoped-policy evaluation, and opens a transaction with the same scope.
+Create/prepare/review/complete actor identity comes from the authenticated
+principal; client-supplied preparer/reviewer labels are not trusted. Local
+SQLite remains the compatibility path. A live FastAPI/PostgreSQL test with a
+non-superuser/no-BYPASSRLS role verifies the lifecycle, exact decimal output,
+maker-checker separation, and workspace denial. This is reversible, but
+external IAM, HA/DR, provider behavior, capacity, and production effectiveness
+remain unproven. ADR 0633 records the rollback boundary.
+
+### D-987: Historical interim decision — keep the local Inventory Core API out of PostgreSQL server mode
+
+This was the E-939 interim decision before E-941/ADR 0634 exposed the
+PostgreSQL Inventory Core server boundary. It remains a historical record of
+the pre-adapter safety state and is not the current route contract. E-950
+removes the obsolete helper and synchronizes the current source and claims.
+
+### D-986: Use a tenant-scoped server policy-audit sink
+
+Server authorization dependencies persist closed policy evidence through a
+request-scoped sink that opens an independent PostgreSQL tenant transaction and
+uses the existing `domain_audit_events` append-only repository. The policy
+engine remains backend-neutral; direct SQLite, repository, and sink options
+are mutually exclusive. A configured server audit failure is surfaced as a
+safe unavailable response rather than downgraded to structured logging. Live
+PostgreSQL/RLS and production IAM evidence remain required. ADR 0631 records
+the decision and rollback boundary.
+
+### D-985: Classify policy provenance separately from business rollback effects
+
+Durable local authorization decisions are first-class append-only audit events,
+so rollback tests must distinguish `authorization.policy_decision` from
+business audit events. Update affected assertions to exclude only that explicit
+object type when measuring business rollback; do not delete, suppress, or roll
+back the authorization provenance event merely to preserve legacy row counts.
+This keeps authorization-attempt evidence durable while preserving the
+business transaction atomicity contract. The decision is limited to test
+semantics and is reversible if the audit taxonomy is versioned.
+
+### D-984: Persist local policy evidence in the existing audit chain
+
+When a local SQLite connection is available, `audit_policy_decision` appends
+the same closed policy evidence to the immutable hash-chained audit ledger as
+`authorization.policy_decision`. The event binds its object ID and after hash
+to the decision digest and stores a request digest rather than raw context.
+Local API, platform, workflow, and Studio callers pass their existing
+connection; server-only callers retain the structured-log boundary. ADR 0630
+records the reversible local-provenance decision and its limits.
+
+### D-983: Require explicit precision on direct production Money calls
+
+Extend the existing financial-input AST contract so direct production
+`Money(...)` calls declare `strict_precision` as well as the existing
+`input_policy`; a typed helper parameter may be propagated explicitly. Both
+strict and explicitly named compatibility choices remain valid; omission is
+rejected. This prevents silent constructor-policy drift without breaking the
+legacy reader boundary. ADR 0629 records the reversible decision.
+
+### D-982: Keep web E2E live and HTTPS skips explicit
+
+The local web gate records `npm ci`, TypeScript typecheck, 75 Vitest tests,
+production build, and 21 Chromium E2E tests with 16 passes and 5 explicit
+skips in standard mode. The opt-in local HTTPS production-bundle run passes
+17 with 4 skips and verifies HSTS, CSP, same-origin health, and no inline
+script/style execution. The remaining browser-session/administration mutation
+tests require a provisioned API proxy and synthetic mutation target. Passing
+local browser tests must not be described as live IAM, hosted deployment, or
+independent accessibility certification. ADR 0628 records the reversible
+evidence-boundary decision.
+
+### D-981: Bind production policy audits to the evaluated context
+
+Every production call to `audit_policy_decision` now passes the same
+`PolicyEvaluationContext` used by the policy evaluation. API dependencies,
+platform/workflow authorization, durable and hosted workers, Studio, and
+PostgreSQL scoped exports retain that object; an AST inventory rejects future
+production calls without `context=`. Authorization behavior, reason codes, and
+schema-v1 evidence remain compatible. This proves caller plumbing and local
+evidence binding only; principal authenticity, durable append-only storage,
+external IAM enforcement, and universal authorization effectiveness remain
+open. ADR 0627 records the decision.
+
+### D-980: Align deployment-readiness scalar contracts
+
+The offline readiness reader and v1 JSON Schema now share strict scalar
+constraints: boolean-safe schema versioning, canonical ISO review dates, an
+80-character claim boundary, an exact edition profile command, and gate
+boundaries of at least 20 characters containing non-whitespace. Evidence path
+containment remains a deliberate runtime-strengthening check. The checked-in
+matrix remains valid and no readiness or production claim is widened. ADR 0626
+records the reversible decision.
+
+### D-979: Refuse mismatched policy evidence context
+
+When `build_policy_decision_evidence` receives a `PolicyEvaluationContext`, it
+now derives both expected digests from that context and rejects any existing
+decision digest that differs. Context and typed-scope mismatches are checked
+independently. Calls without a context retain the existing compatibility
+behavior for decision-bound or explicit unbound digests. This prevents silent
+evidence rebinding without changing authorization outcomes or evidence schema
+versions. ADR 0625 records the local, reversible decision; universal caller
+context provenance and append-only audit storage remain open.
+
+### D-978: Make production Money precision choices explicit
+
+Every production `Money.from_exact` call now spells a literal
+`strict_precision` policy. Source-value helpers in manufacturing and retail
+use strict registered-currency precision, while derived deferred-tax, NCI, and
+ownership-change calculations explicitly retain the installed registry's
+rounding policy and existing visible deltas. Zero initializers use strict
+precision. A repository AST regression and 67 focused domain/control tests
+pass. This is a construction-policy guard, not evidence of complete financial
+coverage, provider behavior, posting, write-back, HA/DR, or production
+readiness. ADR 0624 records the reversible decision.
+
+### D-977: Fail closed on incomplete deployment-readiness evidence
+
+The offline readiness matrix reader now requires every gate to carry a
+non-empty boundary and every `verified_scoped` gate to carry at least one
+repository-relative evidence file. Runtime evidence canonicalizes the selected
+edition through its immutable profile before digesting it. Existing matrix
+content remains valid; no readiness status or production claim is widened. The
+focused deployment suites, Ruff, and Mypy pass. ADR 0623 records the
+reversible schema-integrity decision; actual deployment drills and external
+enforcement remain open.
+
+### D-976: Bind central policy decisions to redacted evidence digests
+
+Central RBAC/ABAC/SoD decisions now carry deterministic context and typed-scope
+digests, and `audit_policy_decision` emits an additive closed schema-v1 evidence
+object with a self-verifying decision digest. The context includes exact Decimal
+amount/bounds, permissions, step-up/delegation, ownership, requested fields,
+and SoD history only as canonicalized or hashed inputs. Scope namespaces remain
+distinct before hashing so equal text cannot collapse tenant and workspace
+meaning. Existing authorization behavior and log-reader fields remain
+compatible. Policy tests, Ruff, and Mypy pass. This is local redacted evidence
+and does not claim append-only audit storage, external IAM enforcement,
+universal route adoption, distributed invalidation, or production readiness.
+ADR 0622 records the reversible decision.
+
+### D-975: Enforce currency precision at application financial ingress
+
+`Money.from_exact` is now called with `strict_precision=True` throughout
+`reconforge/application/` for source-export monetary fields and tolerances.
+The application layer is the boundary where external financial text becomes a
+canonical domain value, so over-precision must fail closed instead of being
+rounded silently. Derived domain calculations retain their explicit rounding
+boundaries. The existing compatibility readers remain available and no public
+schema, API, CLI, or artifact version changes. ADR 0621 and the application AST
+contract record the rule; targeted local suites, Ruff, and Mypy pass. This does
+not widen claims to hosted parity, source authenticity, providers, posting,
+write-back, HA/DR, or production readiness.
+
 ### D-974: Use a neutral current publication branch name
 
 The active publication branch is `e830-postgres-receiver-failover`, with PR #87
@@ -9911,3 +12644,153 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   or persisted data behavior changed.
 - **Rollback**: Supersede E-813 with a newer verified run if the tree changes
   or any previously skipped capability is exercised and fails.
+### D-816: Enforce independent actors on generic close-period reopen
+
+- **Date**: 2026-08-26
+- **Context**: Generic local and PostgreSQL close management persisted lock and
+  reopen timestamps but not the transition actors, so the declared SoD rule
+  could not be enforced. Consolidation close already had a narrower control.
+- **Decision**: Add `locked_by` and `reopened_by` through SQLite migration 44
+  and PostgreSQL Alembic 0091. Backfill historical locked/reopened rows with
+  `legacy-unknown`, require locked state and reason, and reject a reopen by the
+  locker in both adapters and database triggers.
+- **Verification**: E-954 and ADR 0647; focused migration, adapter, local
+  lifecycle, Ruff, Mypy, and diff-check evidence.
+- **Compatibility**: Additive persisted metadata; no source-ERP or statutory
+  posting behavior is changed. Existing historical state is not assigned a
+  fabricated human actor.
+- **Rollback**: Restore a pre-migration SQLite backup. PostgreSQL downgrade is
+  refusal-gated while locked/reopened evidence exists.
+
+### D-817: Serialize generic close mutations and protect lock evidence
+
+- **Date**: 2026-08-26
+- **Context**: SoD depends on `locked_by` remaining authoritative. Without a
+  parent-period lock and immutable lock evidence, concurrent task updates or a
+  direct mutation could make readiness or locker identity stale.
+- **Decision**: Lock the PostgreSQL parent period for task/period mutations,
+  re-read task state after the lock, reject a second lock, and add SQLite 45 /
+  PostgreSQL 0092 persistence guards for `locked_by` and `locked_at`.
+- **Verification**: E-955, ADR 0648, focused contracts, migration trigger
+  test, full Python/static/security gates.
+- **Compatibility**: Additive migration and stricter fail-closed behavior for
+  already locked periods; no source-ERP or statutory posting change.
+- **Rollback**: SQLite backup restore; PostgreSQL 0092 downgrade restores the
+  0091 guard.
+
+### D-818: Serialize consolidation-close preparation on the governed period
+
+- **Date**: 2026-08-26
+- **Context**: A consolidation run could read an open period and then race with
+  a period lock before its run row was inserted. This would allow a new close
+  run to enter a period that was locked after the stale read.
+- **Decision**: PostgreSQL `prepare_run` takes a parent-period row lock before
+  checking state. SQLite starts `BEGIN IMMEDIATE` before re-reading the period,
+  checking lock state, resolving idempotent run identity, and inserting the
+  run. The worksheet remains explicitly non-posting.
+- **Verification**: E-956 focused transaction-boundary contracts, live
+  PostgreSQL consolidation-close replay, full Python/static/security gates.
+- **Compatibility**: No schema or public route change; only the transaction
+  boundary and fail-closed race behavior change.
+- **Rollback**: Revert the adapter commit. No migration rollback is required.
+
+### D-819: Serialize consolidation run transitions on the parent period
+
+- **Date**: 2026-08-26
+- **Context**: SQLite refused run transitions after a period lock, but the
+  PostgreSQL transition path locked only the run and could continue a posted
+  run's reversal after the parent period was locked.
+- **Decision**: Resolve the run's parent period, lock it with `FOR UPDATE`,
+  reject `Locked`, then re-read and lock the run before evaluating its state,
+  SoD, evidence, and transition effect.
+- **Verification**: E-957 focused SQLite/PostgreSQL parity contracts and the
+  full release gate at the slice head.
+- **Compatibility**: No schema or route change; the server path now fails
+  closed where the local path already did.
+- **Rollback**: Revert the adapter code. No database migration rollback is
+  required.
+
+### D-820: Expose offline local object retention without changing the local default
+
+- **Date**: 2026-08-26
+- **Context**: `LocalObjectStore` already provided immutable offline content,
+  checksum manifests, tenant/workspace scope, and retention-delete guards, but
+  the evidence CLI exposed only direct local files or S3-compatible storage.
+  Community operators therefore could not use the tested retention primitive
+  without network/provider configuration.
+- **Decision**: Add an explicit `local-object-store` CLI backend with a bounded
+  `--storage-root` for register and verify. Keep `local` as the historical
+  direct-filesystem backend and fail closed when retention is supplied without
+  an object store. Keep the database's generic object-backed storage label for
+  compatibility; the selected provider remains an operator-side configuration.
+- **Verification**: E-971, ADR 0665, focused CLI/evidence/object-storage tests,
+  Ruff, Mypy, and full Python regression.
+- **Compatibility**: Additive CLI options only; no schema or migration change.
+  No network call is introduced for the offline backend, and no retention claim
+  is promoted to legal hold, WORM, or production durability.
+- **Rollback**: Revert the CLI options, focused tests, matrix/evidence updates,
+  and ADR. Existing local-filesystem evidence remains readable.
+
+### D-821: Use a fresh disposable PostgreSQL head for governance runtime evidence
+
+- **Date**: 2026-08-26
+- **Context**: Existing local PostgreSQL containers had different migration
+  heads and were not a safe basis for a current identity/retention claim. The
+  repository already had live-gated security-governance and identity tests,
+  but the evidence needed a clean current-head runtime.
+- **Decision**: Create a newly labelled disposable PostgreSQL `17.10-alpine`
+  container, migrate it from empty state to Alembic head `0092`, create a
+  dedicated non-superuser/non-BYPASSRLS application role, and run only the
+  focused live governance/identity selectors. Record only the observed
+  bounded controls and never include credentials in the report.
+- **Verification**: E-972, ADR 0666, the schema/digest-bound report and report
+  test, plus the two live selectors passing `2/2`.
+- **Compatibility**: No product schema or API behavior changed; this is
+  runtime evidence and packaging only. Team/Enterprise/Regulated statuses stay
+  `partial` or `open` because external IAM, failure domains, and regulated
+  controls are not established.
+- **Rollback**: Remove the disposable labelled container after evidence capture
+  and revert the report/schema/test/manifest/docs references. Existing runtime
+  code and prior evidence remain unchanged.
+
+### D-1033: Treat the matching policy as a persistence boundary, not only an application convention
+
+- **Date**: 2026-08-30
+- **Context**: The application facade rejected legacy-v1 policy for a new
+  matching job, but a direct SQLite adapter caller could still serialize
+  legacy-v1 into a new `match_jobs` row. That made the new-write invariant
+  dependent on a caller choosing the facade.
+- **Decision**: Resolve the deterministic idempotency target before calling
+  `ensure_workspace`. If no persisted job exists, require strict-v2 before any
+  workspace/job creation. Existing idempotent records retain their persisted
+  policy for historical compatibility; result objects surface a stable,
+  non-sensitive policy-use observation.
+- **Verification**: Focused application/financial/SQLite matching tests,
+  adapter test proving a rejected legacy write leaves workspace/job counts
+  unchanged, Ruff, Mypy, and the full local Python suite.
+- **Compatibility**: Normal strict callers are unchanged. Intentional behavior
+  change: a raw adapter attempt to create a new legacy-v1 job now fails closed.
+  Existing historical jobs remain readable/replayable under their persisted
+  policy and idempotency identity.
+- **Rollback**: Revert `09ad98bc`; no migration or persisted-data rewrite is
+  required.
+
+### D-1034: Make disposable PostgreSQL integration cleanup scoped, transactional, and observable
+
+- **Date**: 2026-08-30
+- **Context**: Several live tests used fixed tenant identifiers and suppressed
+  cleanup errors. A complete local matrix left synthetic tenants, audit rows,
+  and durable-job evidence behind, invalidating clean-boot confidence.
+- **Decision**: Generate per-test tenant identifiers and use an admin-only
+  cleanup plan that deletes child-first rows only for explicit tenant IDs.
+  It never uses `TRUNCATE` or broad `CASCADE`; immutable triggers are suspended
+  only inside the cleanup transaction, deferred constraints are checked before
+  re-enabling triggers, and residual rows fail the test.
+- **Verification**: Unit contracts for scoped cleanup and rollback behavior;
+  a fresh PostgreSQL 16 focused matrix including 100k durable-job effects;
+  direct post-run counts of test-owned tables all zero; direct trigger query
+  found no disabled non-internal trigger.
+- **Compatibility**: Test-only behavior. No production schema, production
+  cleanup path, tenant data, or operator database is touched.
+- **Rollback**: Revert `459ce612` and restore the previous test cleanup. This
+  is not recommended because it reintroduces silent residue risk.

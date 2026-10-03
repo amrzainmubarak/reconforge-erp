@@ -1,4 +1,4 @@
-import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BankStatementStatus, BankStatementStudioContract, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, IndividualCashflowStatus, IndividualCashflowStudioContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, ManufacturingCostStatus, ManufacturingCostStudioContract, ProfessionalInvoicePaymentStatus, ProfessionalInvoicePaymentStudioContract, RetailSettlementStudioContract, StudioOverview } from "./types";
+import type { AdminAccessPermission, AdminAccessRole, AdminAccessRoleChange, AdminAuditEvent, AdminAuditPage, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIdentityUserStatusChange, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, AdminSessionRevocation, AdminUserRoleAssignment, BankStatementStatus, BankStatementStudioContract, BrowserAdminSession, EvidenceBinderContract, ExceptionQueueContract, IndividualCashflowStatus, IndividualCashflowStudioContract, InventoryControlContract, LiveStudioContract, LiveStudioMetric, ManufacturingCostStatus, ManufacturingCostStudioContract, ProfessionalInvoicePaymentStatus, ProfessionalInvoicePaymentStudioContract, RetailSettlementStudioContract, StudioContractWithProvenance, StudioDataProvenance, StudioOverview, StudioOverviewWithProvenance } from "./types";
 
 const OVERVIEW_URL = `${import.meta.env.BASE_URL}demo/studio-overview.json`;
 const EXCEPTIONS_URL = `${import.meta.env.BASE_URL}demo/studio-exceptions.json`;
@@ -53,6 +53,41 @@ function isContractSource(value: unknown): boolean {
     value.local_first === true &&
     value.external_calls === false
   );
+}
+
+const SYNTHETIC_DEMO_PROVENANCE = {
+  state: "synthetic_demo",
+  source: "bundled_local_fixture",
+  operational_evidence: false,
+} as const satisfies StudioDataProvenance;
+
+const LIVE_API_PROVENANCE = {
+  state: "live",
+  source: "same_origin_authorized_api",
+  operational_evidence: "unverified",
+} as const satisfies StudioDataProvenance;
+
+const UNKNOWN_PROVENANCE = {
+  state: "unknown",
+  source: "unknown",
+  operational_evidence: "unknown",
+} as const satisfies StudioDataProvenance;
+
+/**
+ * Classifies the source boundary, not the business correctness of its values.
+ * Unknown sources are intentionally not promoted to live operational evidence.
+ */
+export function classifyStudioDataProvenance(value: unknown): StudioDataProvenance {
+  if (
+    isObject(value) &&
+    value.synthetic_data_only === true &&
+    typeof value.synthetic_data_marker === "string" &&
+    value.synthetic_data_marker.startsWith("SYNTHETIC_") &&
+    isContractSource(value.source)
+  ) {
+    return SYNTHETIC_DEMO_PROVENANCE;
+  }
+  return UNKNOWN_PROVENANCE;
 }
 
 function hasContractEnvelope(value: Record<string, unknown>): boolean {
@@ -727,39 +762,39 @@ function isStudioOverview(value: unknown): value is StudioOverview {
   );
 }
 
-export async function loadStudioOverview(signal?: AbortSignal): Promise<StudioOverview> {
+export async function loadStudioOverview(signal?: AbortSignal): Promise<StudioOverviewWithProvenance> {
   return loadContract(OVERVIEW_URL, isStudioOverview, "overview", signal);
 }
 
-export async function loadExceptionQueue(signal?: AbortSignal): Promise<ExceptionQueueContract> {
+export async function loadExceptionQueue(signal?: AbortSignal): Promise<StudioContractWithProvenance<ExceptionQueueContract>> {
   return loadContract(EXCEPTIONS_URL, isExceptionQueue, "exception queue", signal);
 }
 
-export async function loadEvidenceBinder(signal?: AbortSignal): Promise<EvidenceBinderContract> {
+export async function loadEvidenceBinder(signal?: AbortSignal): Promise<StudioContractWithProvenance<EvidenceBinderContract>> {
   return loadContract(EVIDENCE_URL, isEvidenceBinder, "evidence binder", signal);
 }
 
-export async function loadInventoryControl(signal?: AbortSignal): Promise<InventoryControlContract> {
+export async function loadInventoryControl(signal?: AbortSignal): Promise<StudioContractWithProvenance<InventoryControlContract>> {
   return loadContract(INVENTORY_URL, isInventoryControl, "inventory control", signal);
 }
 
-export async function loadRetailSettlementStudio(signal?: AbortSignal): Promise<RetailSettlementStudioContract> {
+export async function loadRetailSettlementStudio(signal?: AbortSignal): Promise<StudioContractWithProvenance<RetailSettlementStudioContract>> {
   return loadContract(RETAIL_SETTLEMENT_URL, isRetailSettlementStudio, "retail settlement", signal);
 }
 
-export async function loadBankStatementStudio(signal?: AbortSignal): Promise<BankStatementStudioContract> {
+export async function loadBankStatementStudio(signal?: AbortSignal): Promise<StudioContractWithProvenance<BankStatementStudioContract>> {
   return loadContract(BANK_STATEMENT_URL, isBankStatementStudio, "bank statement", signal);
 }
 
-export async function loadManufacturingCostStudio(signal?: AbortSignal): Promise<ManufacturingCostStudioContract> {
+export async function loadManufacturingCostStudio(signal?: AbortSignal): Promise<StudioContractWithProvenance<ManufacturingCostStudioContract>> {
   return loadContract(MANUFACTURING_COST_URL, isManufacturingCostStudio, "manufacturing cost", signal);
 }
 
-export async function loadProfessionalInvoicePaymentStudio(signal?: AbortSignal): Promise<ProfessionalInvoicePaymentStudioContract> {
+export async function loadProfessionalInvoicePaymentStudio(signal?: AbortSignal): Promise<StudioContractWithProvenance<ProfessionalInvoicePaymentStudioContract>> {
   return loadContract(PROFESSIONAL_INVOICE_PAYMENT_URL, isProfessionalInvoicePaymentStudio, "professional invoice/payment", signal);
 }
 
-export async function loadIndividualCashflowStudio(signal?: AbortSignal): Promise<IndividualCashflowStudioContract> {
+export async function loadIndividualCashflowStudio(signal?: AbortSignal): Promise<StudioContractWithProvenance<IndividualCashflowStudioContract>> {
   return loadContract(INDIVIDUAL_CASHFLOW_URL, isIndividualCashflowStudio, "individual cashflow", signal);
 }
 
@@ -768,16 +803,17 @@ async function loadContract<T>(
   validator: (value: unknown) => value is T,
   label: string,
   signal?: AbortSignal,
-): Promise<T> {
+): Promise<StudioContractWithProvenance<T>> {
   const response = await fetch(url, { cache: "no-store", signal });
   if (!response.ok) {
     throw new Error(`The local Studio ${label} artifact could not be loaded (${response.status}).`);
   }
   const value: unknown = await response.json();
-  if (!validator(value)) {
+  const provenance = classifyStudioDataProvenance(value);
+  if (!validator(value) || provenance.state !== "synthetic_demo") {
     throw new Error(`The local Studio ${label} artifact does not match schema version 1.`);
   }
-  return value;
+  return { ...value, provenance };
 }
 
 const LIVE_METRICS_PATH = "/api/v1/metrics/dashboard" as const;
@@ -824,6 +860,7 @@ export async function loadLiveStudioContract(options: LiveStudioLoadOptions = {}
   const ageSeconds = newest === null ? 0 : Math.max(0, (now.getTime() - Date.parse(newest)) / 1_000);
   return {
     mode: "live",
+    provenance: LIVE_API_PROVENANCE,
     endpoint: LIVE_METRICS_PATH,
     fetched_at: now.toISOString(),
     generated_at: newest,

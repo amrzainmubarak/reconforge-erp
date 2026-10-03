@@ -148,7 +148,9 @@ def test_corrupt_claim_rolls_back_before_external_publisher_receives_event() -> 
         _CorruptWorkerFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         publisher=lambda event: published.append(event.id),
-        settings=OutboxWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+        settings=OutboxWorkerSettings(
+            worker_id="worker-a", poll_interval_seconds=0, allow_unbound_hosted_policy=True
+        ),
     )
 
     with pytest.raises(PostgresOutboxWorkerError, match="failed safely"):

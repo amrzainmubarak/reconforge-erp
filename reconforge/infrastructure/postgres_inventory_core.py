@@ -245,8 +245,15 @@ class PostgresInventoryCoreRepository:
 
     def _workspace_id(self, workspace: str) -> str:
         row = self.connection.execute(
-            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND name=%s",
-            (self.tenant_id, clean_text(workspace, "Workspace name")),
+            """SELECT id FROM reconforge.domain_workspaces
+            WHERE tenant_id=%s AND (id=%s OR name=%s)
+            ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1""",
+            (
+                self.tenant_id,
+                clean_text(workspace, "Workspace name"),
+                clean_text(workspace, "Workspace name"),
+                clean_text(workspace, "Workspace name"),
+            ),
         ).fetchone()
         if row is None:
             raise PlatformError("Inventory workspace was not found for this tenant.")
@@ -599,7 +606,7 @@ class PostgresInventoryCoreRepository:
                 records.append(record)
             return {
                 "schema_version": 1,
-                "source": {"kind": "local-inventory-ledger", "local_first": True, "external_calls": False},
+                "source": {"kind": "postgresql-inventory-ledger", "local_first": True, "external_calls": False},
                 "workspace": clean_text(workspace, "Workspace name"),
                 "organization_code": organization["organization_code"],
                 "entity_code": entity["entity_code"],
@@ -695,7 +702,7 @@ class PostgresInventoryCoreRepository:
             "schema_version": 1,
             "generated_at": utc_now_text(),
             "as_of": as_of_date.isoformat(),
-            "source": {"kind": "local-inventory-controls", "local_first": True, "external_calls": False},
+            "source": {"kind": "postgresql-inventory-controls", "local_first": True, "external_calls": False},
             "workspace": clean_text(workspace, "Workspace name"),
             "organization_code": code(organization_code, "Organization code"),
             "entity_code": code(entity_code, "Entity code"),
@@ -747,7 +754,7 @@ class PostgresInventoryCoreRepository:
         return {
             "schema_version": 1,
             "generated_at": utc_now_text(),
-            "source": {"kind": "local-inventory-core", "local_first": True, "external_calls": False},
+            "source": {"kind": "postgresql-inventory-core", "local_first": True, "external_calls": False},
             "workspace": workspace_name,
             "summary": summary.to_dict(),
             "units_of_measure": self.list_uoms(workspace=workspace_name, limit=MAX_LIST_LIMIT, actor_label=actor_label),

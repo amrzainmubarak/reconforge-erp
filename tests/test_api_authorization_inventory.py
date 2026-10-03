@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,47 @@ from reconforge.api.authorization import (
 from reconforge.api.dependencies import require_any_permission, require_permission
 
 EXPECTED_ROUTE_COUNT = 265
-EXPECTED_DIGEST = "66292d07fd4513cbdacc22a95fb4f0ed3f1e16497fdc9044ae02d99233f9efdf"
+EXPECTED_DIGEST = "fb0d04d1afd8f755eefcae1b42a21381c17b45b12d9c5d7e18bb1a4cdf0288d2"
+ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
+SPECIAL_ROUTE_MODULES = frozenset(
+    {
+        # Authentication and protocol surfaces have their own explicit
+        # handshake or SCIM authorization classification.
+        "auth.py",
+        "scim.py",
+        "webauthn.py",
+    }
+)
+SERVER_BOUNDARY_MARKERS = (
+    "enforce_server_scoped",
+    "enforce_server_tenant",
+    "server_identity_enabled",
+)
+HANDLER_BOUNDARY_HELPERS = {
+    "access_administration.py": frozenset({"_service"}),
+    "accounts.py": frozenset({"_server_scope"}),
+    "consolidation_deferred_tax.py": frozenset({"_enforce_server_policy"}),
+    "consolidation_impairment.py": frozenset({"_enforce_server_policy"}),
+    "consolidation_intercompany.py": frozenset({"_scope_for_payload", "_server_only"}),
+    "consolidation_ownership_change.py": frozenset({"_enforce_server_policy"}),
+    "consolidation_ppa.py": frozenset({"_enforce_server_policy"}),
+    "emergency_access.py": frozenset({"_execute"}),
+    "exceptions.py": frozenset({"_local_connection"}),
+    "evidence.py": frozenset({"_enforce_server_evidence_permission"}),
+    "finance_core.py": frozenset({"_server_finance_workspace"}),
+    "identity_administration.py": frozenset({"_service"}),
+    "inventory_core.py": frozenset({"_server_call"}),
+    "inventory_planning.py": frozenset({"_server_call"}),
+    "inventory_valuation.py": frozenset({"_server_call"}),
+    "inventory_valuation_reversal.py": frozenset({"_server_call"}),
+    "master_data.py": frozenset({"_enforce_server_manage"}),
+    "payables.py": frozenset({"_server_call"}),
+    "receivables.py": frozenset({"_server_call"}),
+    "reconciliation.py": frozenset({"_enforce_server_run_scope"}),
+    "security_governance.py": frozenset({"_service"}),
+    "users.py": frozenset({"_local_connection"}),
+    "workflow.py": frozenset({"_local_connection"}),
+}
 
 
 def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Path) -> None:
@@ -34,7 +75,77 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     ]
     assert all(contract.permissions for contract in contracts if contract.mode in {"all", "any"})
     assert len([contract for contract in contracts if contract.mode == "scim"]) == 15
+    emergency_request = next(
+        contract
+        for contract in contracts
+        if contract.method == "POST" and contract.path == "/api/v1/auth/emergency-access/requests"
+    )
+    assert emergency_request.mode == "all"
+    assert emergency_request.permissions == ("security.emergency.request",)
     validate_authorization_surface(contracts)
+
+
+def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_classification() -> None:
+    """Prevent a new mutating API module from silently bypassing E-1005 scope review."""
+
+    violations: list[str] = []
+    for path in sorted(ROUTES_ROOT.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        has_mutation = any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in {"post", "put", "patch", "delete"}
+            for node in ast.walk(tree)
+        )
+        if not has_mutation or path.name in SPECIAL_ROUTE_MODULES:
+            continue
+        source = path.read_text(encoding="utf-8")
+        if not any(marker in source for marker in SERVER_BOUNDARY_MARKERS):
+            violations.append(path.name)
+
+    assert violations == [], (
+        "Mutating route modules must either call/declare a server scope or be "
+        f"added to the reviewed protocol allowlist: {violations}"
+    )
+
+
+def test_each_mutating_route_handler_reaches_a_reviewed_server_boundary() -> None:
+    """Prevent a new handler from relying only on a neighboring route's guard."""
+
+    violations: list[str] = []
+    for path in sorted(ROUTES_ROOT.glob("*.py")):
+        if path.name in SPECIAL_ROUTE_MODULES:
+            continue
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+        reviewed_helpers = HANDLER_BOUNDARY_HELPERS.get(path.name, frozenset())
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            is_mutating_handler = any(
+                isinstance(decorator, ast.Call)
+                and isinstance(decorator.func, ast.Attribute)
+                and decorator.func.attr in {"post", "put", "patch", "delete"}
+                for decorator in node.decorator_list
+            )
+            if not is_mutating_handler:
+                continue
+            handler_source = ast.get_source_segment(source, node) or ""
+            handler_calls = {
+                call.func.id
+                for call in ast.walk(node)
+                if isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+            }
+            has_direct_boundary = any(marker in handler_source for marker in SERVER_BOUNDARY_MARKERS)
+            has_reviewed_helper = bool(handler_calls & reviewed_helpers)
+            if not has_direct_boundary and not has_reviewed_helper:
+                violations.append(f"{path.name}:{node.name}")
+
+    assert violations == [], (
+        "Every mutating handler must reach a direct server boundary or a "
+        "reviewed module helper: "
+        f"{violations}"
+    )
 
 
 def test_inventory_rejects_unclassified_and_stale_allowlisted_routes() -> None:
@@ -87,3 +198,17 @@ def test_mutating_authorization_surface_fails_closed_outside_explicit_handshakes
             RouteAuthorizationContract("POST", "/api/v1/workflow/objects/{object_type}/{object_id}/transition", "dynamic"),
         )
     )
+
+
+def test_critical_financial_route_permission_contract_cannot_drift() -> None:
+    with pytest.raises(ValueError, match="Critical API route authorization contract drifted"):
+        validate_authorization_surface(
+            (
+                RouteAuthorizationContract(
+                    "POST",
+                    "/api/v1/finance-core/entries/{entry_id}/validate",
+                    "all",
+                    ("finance_core.manage",),
+                ),
+            )
+        )

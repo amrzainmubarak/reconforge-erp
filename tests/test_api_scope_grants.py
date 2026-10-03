@@ -42,7 +42,14 @@ def test_scope_grant_routes_require_governed_human_authority(tmp_path: Path, mon
 
         def list_active(self, **values: object) -> list[dict[str, str]]:
             calls.append(("list", values))
-            return [{"id": "grant-a", "scope_type": "workspace", "scope_id": "workspace-a"}]
+            return [
+                {
+                    "id": "grant-a",
+                    "scope_type": "workspace",
+                    "scope_id": "workspace-a",
+                    "future_scope_grant_field": "must-not-escape",
+                }
+            ]
 
         def revoke(self, **values: object) -> None:
             calls.append(("revoke", values))
@@ -52,6 +59,7 @@ def test_scope_grant_routes_require_governed_human_authority(tmp_path: Path, mon
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(routes, "execute_postgres_identity", execute)
     monkeypatch.setattr(routes, "PostgresScopeAuthorityRepository", Authority)
     tenant_root = tmp_path / "tenants"
@@ -80,6 +88,7 @@ def test_scope_grant_routes_require_governed_human_authority(tmp_path: Path, mon
     listed = client.get("/api/v1/scope-grants/user/user-a", headers=headers)
     assert listed.status_code == 200
     assert listed.json()["grants"][0]["scope_id"] == "workspace-a"
+    assert "future_scope_grant_field" not in listed.text
     grant_id = created.json()["grant_id"]
     revoked = client.post(
         f"/api/v1/scope-grants/{grant_id}/revoke", headers=headers, json={"reason": "assignment ended"}

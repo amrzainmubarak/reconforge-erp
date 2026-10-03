@@ -26,6 +26,11 @@ from reconforge.infrastructure.postgres_journals import (
     install_postgres_journal_schema,
 )
 from reconforge.infrastructure.sqlite_journals import SQLiteJournalControlRepository
+from reconforge.utils.money import (
+    LEGACY_FINANCIAL_INPUT_POLICY,
+    STRICT_FINANCIAL_INPUT_POLICY,
+    LegacyFinancialInputWarning,
+)
 
 
 class _Transaction:
@@ -75,7 +80,7 @@ def test_shared_journal_policy_is_exact_deterministic_and_rejects_binary_float()
     }
     policies = evaluate_journal_policies(
         row, period_end="2026-08-31", high_value_threshold=journal_threshold("1000.00"),
-        high_risk_accounts={"9999"},
+        high_risk_accounts={"9999"}, financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
     )
     assert [code for code, _, _ in policies] == [
         "MANUAL_JOURNAL", "POST_PERIOD", "WEEKEND_POSTING", "MISSING_REFERENCE",
@@ -83,6 +88,30 @@ def test_shared_journal_policy_is_exact_deterministic_and_rejects_binary_float()
     ]
     with pytest.raises(JournalPolicyError, match="invalid"):
         journal_threshold(1000.0)
+
+
+def test_journal_policy_legacy_float_requires_explicit_selection() -> None:
+    with pytest.warns(LegacyFinancialInputWarning):
+        assert journal_threshold(1000.0, financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY) == 1000
+    row = {
+        "posting_date": "2026-08-31", "is_manual": False, "reference": "REF", "approver": "reviewer",
+        "amount_decimal": 1000.0, "account_code": "1000",
+    }
+    with pytest.raises(JournalPolicyError, match="invalid"):
+        evaluate_journal_policies(
+            row,
+            period_end="2026-08-31",
+            high_value_threshold=journal_threshold("1000.00", financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY),
+            high_risk_accounts=set(),
+        )
+    with pytest.warns(LegacyFinancialInputWarning):
+        assert evaluate_journal_policies(
+            row,
+            period_end="2026-08-31",
+            high_value_threshold=journal_threshold("1000.00"),
+            high_risk_accounts=set(),
+            financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+        ) == [("HIGH_VALUE", "high", "Journal amount exceeds the configured high-value threshold.")]
 
 
 def test_postgres_journal_missing_workspace_rolls_back_without_import(tmp_path: Path) -> None:

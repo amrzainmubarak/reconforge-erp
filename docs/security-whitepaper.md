@@ -77,9 +77,9 @@ The repository includes quality gates for:
 
 Universal `uv.lock` closes the repository's runtime/server/tool resolution and
 the audit definition exports all extras with hashes. The npm lock fixes versions
-but 155 entries still lack embedded SRI. Both require review before production
-use; local clean scans do not establish safety, provenance, reachability, or
-license suitability.
+and the current local policy validator verifies 211 registry entries with zero
+embedded-SRI gaps. Local clean scans still do not establish package safety,
+maintainer provenance, reachability, license suitability, or hosted enforcement.
 
 OpenSSF Scorecard is configured as a scheduled/manual repository security maturity check. It should be used to prioritize improvements, not as a guarantee that the repository is secure.
 
@@ -172,7 +172,8 @@ Near-term:
 - authenticated local workspace mode
 - workbook-level redaction strategy or clearer safe-export alternatives
 - Docker runtime verification across supported local environments
-- hosted two-version dependency/secret gate execution and npm SRI closure
+- hosted two-version dependency/secret gate execution, package provenance, and
+  external package-assurance review
 - Scorecard finding review and remediation process
 - SBOM artifact review for tagged releases
 - clearer secure deployment defaults

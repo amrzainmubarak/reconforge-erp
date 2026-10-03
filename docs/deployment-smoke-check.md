@@ -94,22 +94,28 @@ Docker runtime verification depends on Docker Desktop, Docker Engine, or CI Dock
 Build:
 
 ```bash
-docker build -t reconforge-erp .
+docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
 ```
 
 Run doctor:
 
 ```bash
-docker run --rm reconforge-erp reconforge doctor
+docker run --rm --network=none --read-only --cap-drop=ALL \
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
 ```
 
-Run demo with a mounted output folder:
+Run a bounded demo smoke with ephemeral output:
 
 ```bash
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp reconforge demo run --output output/demo
+docker run --rm --network=none --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700 \
+  --tmpfs /app/output:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0700 \
+  reconforge-erp reconforge demo run --output output/demo
 ```
 
-Do not claim Docker runtime verification unless these commands pass in the environment being described.
+For retained artifacts, use a narrowly scoped host directory or managed volume
+instead of the tmpfs mount, review ownership for UID/GID `10001:10001`, and
+record that the retained-output run has a different write boundary. Do not claim Docker runtime verification unless these commands pass in the environment being described.
 
 ## Release Claim Checklist
 

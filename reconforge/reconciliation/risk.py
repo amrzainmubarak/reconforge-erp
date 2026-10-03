@@ -6,7 +6,13 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from reconforge.config import ReconForgeConfig
-from reconforge.utils.money import InvalidAmountError, parse_amount
+from reconforge.utils.money import (
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+    InvalidAmountError,
+    parse_amount,
+    validate_financial_input_policy,
+)
 
 
 @dataclass(frozen=True)
@@ -29,11 +35,17 @@ def risk_level(score: int) -> str:
     return "Critical"
 
 
-def amount_component(amount: object, baseline: object = Decimal("1000")) -> int:
+def amount_component(
+    amount: object,
+    baseline: object = Decimal("1000"),
+    *,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
+) -> int:
     """Scale amount exposure into a small risk component."""
 
-    amount_value = _to_decimal(amount)
-    baseline_value = _to_decimal(baseline)
+    input_policy = validate_financial_input_policy(financial_input_policy)
+    amount_value = _to_decimal(amount, financial_input_policy=input_policy)
+    baseline_value = _to_decimal(baseline, financial_input_policy=input_policy)
     if amount_value.is_nan():
         return 0
     amount_value = amount_value.copy_abs()
@@ -44,11 +56,11 @@ def amount_component(amount: object, baseline: object = Decimal("1000")) -> int:
     return min(int((amount_value / baseline_value) * 20), 40)
 
 
-def _to_decimal(value: object) -> Decimal:
+def _to_decimal(value: object, *, financial_input_policy: FinancialInputPolicy) -> Decimal:
     if value is None:
         return Decimal("0")
     try:
-        return parse_amount(value)
+        return parse_amount(value, input_policy=financial_input_policy)
     except InvalidAmountError:
         # Keep invalid values as a non-numeric marker so scoring logic does not
         # silently treat them as a valid zero amount.
@@ -62,9 +74,11 @@ def assess_risk(
     amount: object = Decimal("0"),
     amount_difference: object = Decimal("0"),
     aging_days: int = 0,
+    financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
 ) -> RiskAssessment:
     """Score a reconciliation exception from 0 to 100."""
 
+    input_policy = validate_financial_input_policy(financial_input_policy)
     weights = config.risk_scoring_weights
     normalized = exception_type.lower()
     base_scores = {
@@ -89,8 +103,12 @@ def assess_risk(
         "reference_mismatch": weights.invalid_master_reference,
     }
     score = base_scores.get(normalized, 25)
-    score += amount_component(amount)
-    score += amount_component(amount_difference, baseline=Decimal("250"))
+    score += amount_component(amount, financial_input_policy=input_policy)
+    score += amount_component(
+        amount_difference,
+        baseline=Decimal("250"),
+        financial_input_policy=input_policy,
+    )
     if aging_days > 90:
         score += min((aging_days - 90) // 15, 15)
     score = max(0, min(score, 100))

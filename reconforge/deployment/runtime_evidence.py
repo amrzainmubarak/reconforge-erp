@@ -91,12 +91,11 @@ def verify_deployment_runtime_evidence(payload: Mapping[str, object]) -> Deploym
     try:
         facts = DeploymentRuntimeFacts(**cast(Any, values))
         # Validate edition while keeping the original profile error text useful.
-        expected_digest = deployment_profile(edition).digest
+        profile = deployment_profile(edition)
+        expected_digest = profile.digest
         if profile_digest != expected_digest:
             raise DeploymentRuntimeEvidenceError("profile_digest does not match the selected edition")
-        evidence = DeploymentRuntimeEvidence(
-            edition=cast(DeploymentEdition, edition), profile_digest=profile_digest, facts=facts
-        )
+        evidence = DeploymentRuntimeEvidence(edition=profile.edition, profile_digest=profile_digest, facts=facts)
         _ = evidence.findings
     except (DeploymentProfileError, TypeError, ValueError) as exc:
         raise DeploymentRuntimeEvidenceError(str(exc)) from exc

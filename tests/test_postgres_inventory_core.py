@@ -23,7 +23,11 @@ from reconforge.infrastructure.postgres_inventory_core import (
     POSTGRES_INVENTORY_CORE_SCHEMA_SQL,
     PostgresInventoryCoreRepository,
 )
-from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
+from reconforge.infrastructure.postgres_master_data import (
+    POSTGRES_FISCAL_PERIOD_SCHEMA_SQL,
+    POSTGRES_MASTER_DATA_SCHEMA_SQL,
+)
 from reconforge.infrastructure.postgres_master_data_application import (
     install_postgres_master_data_application_schema,
 )
@@ -181,7 +185,9 @@ def test_live_postgres_inventory_lifecycle_stock_controls_and_rls() -> None:
             install_postgres_rls_schema(admin)
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
+            admin.execute(POSTGRES_FISCAL_PERIOD_SCHEMA_SQL)
             install_postgres_master_data_application_schema(admin)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             install_postgres_finance_core_schema(admin)
             admin.execute(POSTGRES_INVENTORY_CORE_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")

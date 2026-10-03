@@ -209,9 +209,11 @@ class PostgresInventoryPlanningRepository:
         )
 
     def _workspace_id(self, workspace: str) -> str:
+        cleaned = clean_text(workspace, "Workspace name")
         row = self.connection.execute(
-            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND name=%s",
-            (self.tenant_id, clean_text(workspace, "Workspace name")),
+            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND (id=%s OR name=%s) "
+            "ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1",
+            (self.tenant_id, cleaned, cleaned, cleaned),
         ).fetchone()
         if row is None:
             raise PlatformError("Inventory planning workspace was not found.")

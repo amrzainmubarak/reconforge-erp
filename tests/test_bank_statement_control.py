@@ -15,6 +15,7 @@ from reconforge.application.bank_statement_control import (
 )
 from reconforge.cli import app
 from reconforge.domain.bank_statement_control import (
+    MAX_BANK_CANDIDATES_PER_REFERENCE,
     BankLedgerRecord,
     BankStatementControlError,
     BankStatementRecord,
@@ -95,6 +96,18 @@ def test_bank_control_is_permutation_stable_and_rejects_duplicate_ids() -> None:
         )
 
 
+def test_bank_control_refuses_unbounded_duplicate_reference_candidates() -> None:
+    ledger_records = tuple(
+        _ledger(f"LEDGER-{index}") for index in range(MAX_BANK_CANDIDATES_PER_REFERENCE + 1)
+    )
+    with pytest.raises(BankStatementControlError, match="reference candidate limit exceeded"):
+        run_bank_statement_control(
+            (_bank(),),
+            ledger_records,
+            amount_tolerance=_money("0.01"),
+        )
+
+
 def test_bank_control_rejects_invalid_reference_float_and_currency() -> None:
     with pytest.raises(BankStatementControlError, match="cannot be empty"):
         normalize_bank_reference("---")
@@ -102,6 +115,34 @@ def test_bank_control_rejects_invalid_reference_float_and_currency() -> None:
         BankStatementRecord("BANK-FLOAT", "ACCOUNT-1", "2026-08-04", 1.0, "REF", "source")  # type: ignore[arg-type]
     with pytest.raises(BankStatementControlError, match="one currency"):
         run_bank_statement_control((_bank(),), (), amount_tolerance=Money.from_exact("0.01", "USD"))
+
+
+def test_bank_control_rejects_amounts_beyond_currency_precision(tmp_path: Path) -> None:
+    over_precision_ledger = tmp_path / "over-precision-ledger.json"
+    over_precision_ledger.write_text(
+        json.dumps(
+            {
+                "records": [
+                    {
+                        "record_id": "LEDGER-OVER-PRECISION",
+                        "account_id": "DE89370400440532013000",
+                        "booking_date": "2026-08-04",
+                        "amount": "100.001",
+                        "currency": "EUR",
+                        "reference": "BANK-CREDIT-001",
+                        "source_reference": "synthetic-over-precision",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(BankStatementControlError, match="closed record contract"):
+        run_bank_statement_control_files(STATEMENT, over_precision_ledger, currency="EUR", tolerance="0.01")
+
+    with pytest.raises(BankStatementControlError, match="amount tolerance is invalid"):
+        run_bank_statement_control_files(STATEMENT, LEDGER, currency="EUR", tolerance="0.001")
 
 
 def test_bank_report_is_schema_and_digest_bound(tmp_path: Path) -> None:
@@ -130,6 +171,44 @@ def test_bank_report_rejects_nested_decision_tampering_after_outer_rehash(tmp_pa
     ).hexdigest()
     output.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(BankStatementControlError, match="replay verification failed"):
+        verify_bank_statement_report(output)
+
+
+def test_bank_report_rejects_resigned_noncanonical_money(tmp_path: Path) -> None:
+    run = run_bank_statement_control(
+        (_bank(),),
+        (_ledger(amount="10.50"),),
+        amount_tolerance=_money("0.01"),
+    )
+    output = tmp_path / "bank-noncanonical-money.json"
+    write_bank_statement_report(run, output)
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload["amount_tolerance"]["amount"] = "0.010"
+    payload["decisions"][0]["amount_variance"]["amount"] = "0.500"
+    digest_payload = {
+        key: payload[key]
+        for key in (
+            "algorithm_version",
+            "amount_tolerance",
+            "date_window_days",
+            "decisions",
+            "input_digests",
+            "schema_version",
+        )
+    }
+    payload["decision_digest"] = hashlib.sha256(
+        json.dumps(digest_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+    payload["artifact_digest"] = hashlib.sha256(
+        json.dumps(
+            {key: value for key, value in payload.items() if key != "artifact_digest"},
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("ascii")
+    ).hexdigest()
+    output.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(BankStatementControlError, match="canonical Money"):
         verify_bank_statement_report(output)
 
 

@@ -268,6 +268,7 @@ def test_erpnext_gl_provider_boundary_runs_over_pinned_tls_with_cursor_and_scope
         )
 
     assert result.attempts == 2
+    assert (result.page.entries[0].debit, result.page.entries[0].credit) == ("10", "0")
     assert result.page.entries[0].signed_amount == 10
     assert result.page.next_cursor == "50"
     assert "filters=%5B%5B%22company%22%2C%22%3D%22%2C%22Acme%22%5D%5D" in state.requests[1][0]
@@ -297,7 +298,7 @@ def test_erpnext_payment_entry_provider_boundary_runs_over_pinned_tls(tmp_path: 
         )
 
     assert result.attempts == 2
-    assert result.page.entries[0].paid_amount == "10.00"
+    assert (result.page.entries[0].paid_amount, result.page.entries[0].received_amount) == ("10", "0")
     assert result.page.next_cursor == "50"
     assert "filters=%5B%5B%22company%22%2C%22%3D%22%2C%22Acme%22%5D%5D" in state.requests[1][0]
     assert state.requests[1][1]["Authorization"] == "token tls-sandbox-secret"
@@ -353,6 +354,8 @@ def test_erpnext_journal_writeback_runs_over_pinned_tls_with_retry_and_idempoten
         registration = erpnext_writeback_registration(
             credential_reference="vault://tls/synthetic",
             endpoint=endpoint,
+            tenant_id="tenant-tls",
+            workspace_id="workspace-tls",
         ).model_copy(update={"feature_enabled": True})
         receipt = WritebackNetworkExecutor(
             transport,
@@ -429,6 +432,8 @@ def test_erpnext_payment_writeback_runs_over_pinned_tls_with_exact_draft_payload
         registration = erpnext_payment_entry_writeback_registration(
             credential_reference="vault://tls/synthetic",
             endpoint=endpoint,
+            tenant_id="tenant-tls",
+            workspace_id="workspace-tls",
         ).model_copy(update={"feature_enabled": True})
         receipt = WritebackNetworkExecutor(
             transport,

@@ -13,6 +13,7 @@ from reconforge.application.matching_strategies import (
 )
 from reconforge.infrastructure.carry_forward_strategy import CarryForwardFifoStrategy
 from reconforge.infrastructure.reversal_matching_strategy import ReversalPairingStrategy
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 from reconforge.workers.postgres_reconciliation import (
     ReconciliationExecutionContext,
     ReconciliationExecutionResult,
@@ -75,14 +76,13 @@ def _request(
     if mode not in {"carry-forward", "sequence-window", "reversal-pairing"}:
         raise PostgresSequentialMatchingAdapterError("matching_mode must be an explicit sequential mode.")
     tolerance = rule.get("amount_tolerance", "0")
-    if isinstance(tolerance, (float, bool)):
-        raise PostgresSequentialMatchingAdapterError("Sequential PostgreSQL amount_tolerance must be exact text.")
     try:
-        tolerance_text = str(Decimal(str(tolerance)))
-        if not Decimal(tolerance_text).is_finite() or Decimal(tolerance_text) < 0:
-            raise ValueError
-    except (ValueError, ArithmeticError) as exc:
-        raise PostgresSequentialMatchingAdapterError("Sequential PostgreSQL amount_tolerance is invalid.") from exc
+        tolerance_value = parse_exact_amount(tolerance)
+    except InvalidAmountError as exc:
+        raise PostgresSequentialMatchingAdapterError("Sequential PostgreSQL amount_tolerance must be exact text.") from exc
+    if tolerance_value < 0:
+        raise PostgresSequentialMatchingAdapterError("Sequential PostgreSQL amount_tolerance must be exact text.")
+    tolerance_text = str(_decimal_text(tolerance_value))
     date_window = rule.get("date_window_days", 0)
     if isinstance(date_window, bool) or not isinstance(date_window, int) or not 0 <= date_window <= 3660:
         raise PostgresSequentialMatchingAdapterError("Sequential PostgreSQL date_window_days is outside its bound.")

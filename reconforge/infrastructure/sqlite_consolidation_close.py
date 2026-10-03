@@ -271,9 +271,6 @@ class SQLiteConsolidationCloseRepository:
             raise PlatformError("Only a non-posting worksheet may enter the governed journal lifecycle.")
         workspace_id = ensure_workspace(self.connection, clean_text(workspace, "Workspace name"))
         period_identifier = platform_id("CCP", workspace_id, verified.group_code, verified.period_id)
-        period = self._period(period_identifier)
-        if period["status"] == "Locked":
-            raise PlatformError("A locked consolidation period cannot accept a new run.")
         expected_period = (
             verified.group_code,
             verified.period_id,
@@ -282,19 +279,6 @@ class SQLiteConsolidationCloseRepository:
             verified.period_end_date,
             verified.reporting_date,
         )
-        actual_period = tuple(
-            str(period[key])
-            for key in (
-                "group_code",
-                "period_name",
-                "reporting_currency",
-                "period_start_date",
-                "period_end_date",
-                "reporting_date",
-            )
-        )
-        if actual_period != expected_period:
-            raise PlatformError("Worksheet scope does not match the governed consolidation period.")
         self._currency(verified.reporting_currency)
         number = document_number(run_number, "Consolidation run number")
         lines, journal_digest = self._worksheet_lines(verified)
@@ -303,20 +287,40 @@ class SQLiteConsolidationCloseRepository:
         except PersistedJsonError as exc:
             raise PlatformError("Consolidation worksheet exceeds the bounded persistence profile.") from exc
         run_id = platform_id("CGR", workspace_id, verified.group_code, verified.period_id, number)
-        existing = self.connection.execute("SELECT * FROM consolidation_runs WHERE id=?", (run_id,)).fetchone()
-        if existing is not None:
-            if (
-                str(existing["worksheet_result_digest"]) != verified.result_digest
-                or str(existing["worksheet_payload_digest"]) != encoded.checksum_sha256
-                or str(existing["journal_digest"]) != journal_digest
-            ):
-                raise PlatformError("Consolidation run number conflicts with a different immutable worksheet.")
-            return self._public_run(self._verified_run(run_id), include_details=True)
         now = utc_now_text()
         if now < verified.prepared_at:
             raise PlatformError("A consolidation run cannot persist a worksheet prepared in the future.")
         try:
             self.connection.execute("BEGIN IMMEDIATE")
+            # Re-read after acquiring SQLite's writer lock. The first read
+            # would otherwise allow a concurrent period lock to race with
+            # this run insertion.
+            period = self._period(period_identifier)
+            if period["status"] == "Locked":
+                raise PlatformError("A locked consolidation period cannot accept a new run.")
+            actual_period = tuple(
+                str(period[key])
+                for key in (
+                    "group_code",
+                    "period_name",
+                    "reporting_currency",
+                    "period_start_date",
+                    "period_end_date",
+                    "reporting_date",
+                )
+            )
+            if actual_period != expected_period:
+                raise PlatformError("Worksheet scope does not match the governed consolidation period.")
+            existing = self.connection.execute("SELECT * FROM consolidation_runs WHERE id=?", (run_id,)).fetchone()
+            if existing is not None:
+                if (
+                    str(existing["worksheet_result_digest"]) != verified.result_digest
+                    or str(existing["worksheet_payload_digest"]) != encoded.checksum_sha256
+                    or str(existing["journal_digest"]) != journal_digest
+                ):
+                    raise PlatformError("Consolidation run number conflicts with a different immutable worksheet.")
+                self.connection.commit()
+                return self._public_run(self._verified_run(run_id), include_details=True)
             self.connection.execute(
                 """
                 INSERT INTO consolidation_runs(

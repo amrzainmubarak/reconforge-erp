@@ -133,6 +133,31 @@ def test_native_tool_verifier_is_packaged_and_executable_from_workflow() -> None
     assert "--expected-major" in source
 
 
+def test_server_boundary_service_images_are_immutable_and_subject_bound() -> None:
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    services = workflow["jobs"]["server-boundaries"]["services"]
+    postgres_image = str(services["postgres"]["image"])
+    redis_image = str(services["redis"]["image"])
+
+    assert postgres_image == (
+        "postgres:16-alpine@sha256:"
+        "57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+    )
+    assert redis_image == (
+        "redis:7.4-alpine@sha256:"
+        "e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2"
+    )
+    assert postgres_image.count("@sha256:") == 1
+    assert redis_image.count("@sha256:") == 1
+
+    live_boundary_step = next(
+        step
+        for step in workflow["jobs"]["server-boundaries"]["steps"]
+        if step.get("name") == "Run live server-boundary tests"
+    )
+    assert live_boundary_step["env"]["RECONFORGE_REDIS_IMAGE_DIGEST"] == redis_image.split("@", 1)[1]
+
+
 def test_server_boundaries_matrix_retains_the_repaired_postgres_failure_surfaces() -> None:
     workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
     inventory = yaml.safe_load((ROOT / "docs" / "execution" / "POSTGRES_PARITY_INVENTORY.yaml").read_text(encoding="utf-8"))

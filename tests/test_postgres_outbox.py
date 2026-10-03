@@ -19,6 +19,7 @@ from reconforge.benchmark.postgres_outbox_scale import (
     run_postgres_outbox_scale_profile,
     verify_postgres_outbox_scale_result,
 )
+from reconforge.deployment import WorkerPermissionManifest
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -36,7 +37,7 @@ from reconforge.infrastructure.postgres_outbox import (
     TenantBoundPostgresOutboxRepository,
     tenant_bound_postgres_outbox_repository,
 )
-from reconforge.workers.outbox import OutboxWorkerSettings
+from reconforge.workers.outbox import OutboxWorkerError, OutboxWorkerSettings
 from reconforge.workers.postgres_outbox import PostgresOutboxWorker, PostgresOutboxWorkerError
 
 
@@ -155,6 +156,17 @@ class _FakeFactory:
         return self.connection
 
 
+def _outbox_manifest(worker_id: str) -> WorkerPermissionManifest:
+    return WorkerPermissionManifest(
+        worker_id=worker_id,
+        principal_id=worker_id,
+        discovery_permission="outbox.discover",
+        execution_permission="outbox.publish",
+        granted_permissions=("outbox.discover", "outbox.publish"),
+        scope="tenant:tenant_a",
+    )
+
+
 def test_postgres_outbox_claim_and_transitions_are_tenant_scoped() -> None:
     assert "claimed_by TEXT" in POSTGRES_LEDGER_SCHEMA_SQL
     assert "workspace_id TEXT DEFAULT NULLIF(current_setting('app.workspace_id'" in POSTGRES_LEDGER_SCHEMA_SQL
@@ -206,14 +218,27 @@ def test_postgres_outbox_rejects_wrong_worker_and_invalid_status() -> None:
         repository.list_events(tenant_id="tenant_a", status="unknown")
 
 
-def test_postgres_outbox_worker_publishes_with_idempotent_event_id() -> None:
+def test_postgres_outbox_worker_publishes_with_idempotent_event_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     connection = _FakeConnection()
     published: list[str] = []
+    policy_permissions: list[str] = []
+    monkeypatch.setattr(
+        "reconforge.workers.postgres_outbox.require_service_worker_policy",
+        lambda **values: policy_permissions.append(str(values["policy_permission"])),
+    )
     worker = PostgresOutboxWorker(
         _FakeFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         publisher=lambda event: published.append(event.id),
-        settings=OutboxWorkerSettings(worker_id="worker-a", poll_interval_seconds=0),
+        settings=OutboxWorkerSettings(
+            worker_id="worker-a",
+            poll_interval_seconds=0,
+            discovery_policy_permission="outbox.discover",
+            permission_manifest=_outbox_manifest("worker-a"),
+            allow_unbound_hosted_policy=True,
+        ),
     )
 
     result = worker.process_once()
@@ -223,6 +248,7 @@ def test_postgres_outbox_worker_publishes_with_idempotent_event_id() -> None:
     assert result.failed == 0
     assert published == ["evt-1"]
     assert connection.commits == 2
+    assert policy_permissions == ["outbox.discover", "outbox.publish", "outbox.publish"]
 
 
 def test_postgres_outbox_worker_records_publisher_failure() -> None:
@@ -235,7 +261,12 @@ def test_postgres_outbox_worker_records_publisher_failure() -> None:
         _FakeFactory(connection),
         tenant_supplier=lambda: ["tenant_a"],
         publisher=publish,
-        settings=OutboxWorkerSettings(worker_id="worker-a", max_attempts=1, poll_interval_seconds=0),
+        settings=OutboxWorkerSettings(
+            worker_id="worker-a",
+            max_attempts=1,
+            poll_interval_seconds=0,
+            allow_unbound_hosted_policy=True,
+        ),
     )
 
     result = worker.process_once()
@@ -257,6 +288,8 @@ def test_postgres_outbox_worker_policy_denies_before_connection_access() -> None
         publisher=lambda _event: None,
         settings=OutboxWorkerSettings(
             worker_id="outbox-policy-worker",
+            permission_manifest=_outbox_manifest("outbox-policy-worker"),
+            discovery_policy_permission="outbox.discover",
             policy_context_supplier=lambda tenant: PolicyEvaluationContext(
                 user_id="outbox-policy-worker",
                 username="outbox-policy-worker",
@@ -271,6 +304,63 @@ def test_postgres_outbox_worker_policy_denies_before_connection_access() -> None
         worker.process_once()
 
 
+def test_postgres_outbox_worker_rejects_missing_policy_before_connection_access() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("missing policy must be rejected before connection access")
+
+    worker = PostgresOutboxWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(worker_id="unbound-outbox-worker"),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="requires an explicit service-account policy supplier"):
+        worker.process_once()
+
+
+def test_postgres_outbox_worker_requires_manifest_for_configured_policy() -> None:
+    class _NeverConnect:
+        def connect(self) -> Any:
+            raise AssertionError("missing permission manifest must be rejected before connection access")
+
+    worker = PostgresOutboxWorker(
+        _NeverConnect(),
+        tenant_supplier=lambda: ["tenant_a"],
+        publisher=lambda _event: None,
+        settings=OutboxWorkerSettings(
+            worker_id="manifestless-outbox-worker",
+            policy_context_supplier=lambda tenant: PolicyEvaluationContext(
+                user_id="manifestless-outbox-worker",
+                username="manifestless-outbox-worker",
+                user_permissions={"outbox.discover", "outbox.publish"},
+                principal_type="service_account",
+                tenant_id=tenant,
+                authorized_tenant_ids=frozenset({tenant}),
+            ),
+        ),
+    )
+    with pytest.raises(PostgresOutboxWorkerError, match="verified worker permission manifest"):
+        worker.process_once()
+
+
+def test_postgres_outbox_worker_rejects_manifest_configuration_drift() -> None:
+    with pytest.raises(OutboxWorkerError, match="execution_permission"):
+        OutboxWorkerSettings(
+            worker_id="outbox-drift-worker",
+            policy_permission="outbox.publish",
+            discovery_policy_permission="outbox.discover",
+            permission_manifest=WorkerPermissionManifest(
+                worker_id="outbox-drift-worker",
+                principal_id="outbox-drift-worker",
+                discovery_permission="outbox.discover",
+                execution_permission="other.publish",
+                granted_permissions=("other.publish", "outbox.discover"),
+                scope="tenant:tenant_a",
+            ),
+        )
+
+
 def test_postgres_outbox_worker_policy_allows_scoped_service_identity() -> None:
     connection = _FakeConnection()
     worker = PostgresOutboxWorker(
@@ -279,10 +369,12 @@ def test_postgres_outbox_worker_policy_allows_scoped_service_identity() -> None:
         publisher=lambda _event: None,
         settings=OutboxWorkerSettings(
             worker_id="outbox-policy-worker",
+            permission_manifest=_outbox_manifest("outbox-policy-worker"),
+            discovery_policy_permission="outbox.discover",
             policy_context_supplier=lambda tenant: PolicyEvaluationContext(
                 user_id="outbox-policy-worker",
                 username="outbox-policy-worker",
-                user_permissions={"outbox.publish"},
+                user_permissions={"outbox.discover", "outbox.publish"},
                 principal_type="service_account",
                 tenant_id=tenant,
                 authorized_tenant_ids=frozenset({tenant}),
@@ -301,7 +393,7 @@ def test_postgres_outbox_worker_rechecks_policy_before_publisher_side_effect() -
     def policy_context(tenant: str) -> PolicyEvaluationContext:
         nonlocal policy_calls
         policy_calls += 1
-        permissions = {"outbox.publish"} if policy_calls == 1 else set()
+        permissions = {"outbox.discover", "outbox.publish"} if policy_calls == 1 else set()
         return PolicyEvaluationContext(
             user_id="outbox-revocation-worker",
             username="outbox-revocation-worker",
@@ -317,6 +409,8 @@ def test_postgres_outbox_worker_rechecks_policy_before_publisher_side_effect() -
         publisher=lambda event: published.append(event.id),
         settings=OutboxWorkerSettings(
             worker_id="outbox-revocation-worker",
+            permission_manifest=_outbox_manifest("outbox-revocation-worker"),
+            discovery_policy_permission="outbox.discover",
             policy_context_supplier=policy_context,
             poll_interval_seconds=0,
         ),
@@ -343,7 +437,7 @@ def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
         return PolicyEvaluationContext(
             user_id="outbox-scoped-worker",
             username="outbox-scoped-worker",
-            user_permissions={"outbox.publish"},
+            user_permissions={"outbox.discover", "outbox.publish"},
             principal_type="service_account",
             tenant_id=tenant,
             organization_id=organization,
@@ -361,6 +455,8 @@ def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
         publisher=lambda _event: None,
         settings=OutboxWorkerSettings(
             worker_id="outbox-scoped-worker",
+            permission_manifest=_outbox_manifest("outbox-scoped-worker"),
+            discovery_policy_permission="outbox.discover",
             poll_interval_seconds=0,
             policy_context_hierarchy_supplier=policy_context,
             scope_supplier=lambda: (("tenant_a", "workspace-a", "org-a", "entity-a"),),
@@ -389,10 +485,12 @@ def test_postgres_outbox_worker_requires_hierarchy_policy_for_organization_lane(
         publisher=lambda _event: None,
         settings=OutboxWorkerSettings(
             worker_id="outbox-organization-policy",
+            permission_manifest=_outbox_manifest("outbox-organization-policy"),
+            discovery_policy_permission="outbox.discover",
             policy_context_scope_supplier=lambda tenant, workspace, entity: PolicyEvaluationContext(
                 user_id="outbox-organization-policy",
                 username="outbox-organization-policy",
-                user_permissions={"outbox.publish"},
+                user_permissions={"outbox.discover", "outbox.publish"},
                 principal_type="service_account",
                 tenant_id=tenant,
                 workspace_id=workspace,

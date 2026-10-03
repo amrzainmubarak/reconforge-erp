@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal
 from typing import Annotated, Literal
 
@@ -15,6 +16,7 @@ from reconforge.api.server_consolidation_impairment import (
     server_impairment_enabled,
 )
 from reconforge.application.consolidation_impairment import ConsolidationImpairmentApplicationService
+from reconforge.auth.field_access import project_consolidation_impairment_response
 from reconforge.auth.models import LocalUser
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_impairment import (
@@ -72,7 +74,7 @@ class ImpairmentPrepareRequest(BaseModel):
     @staticmethod
     def _money(value: CanonicalMoneyRequest) -> Money:
         try:
-            return Money.from_canonical_dict(value.model_dump(mode="python"))
+            return Money.from_strict_canonical_dict(value.model_dump(mode="python"))
         except (TypeError, ValueError, KeyError) as exc:
             raise APIError(
                 status_code=400,
@@ -127,6 +129,14 @@ def _server_only(request: Request) -> None:
         )
 
 
+def _project_artifact_response(
+    artifact: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_impairment_response(
+        {"artifact": artifact, "source": source}
+    ).visible
+
+
 def _enforce_server_policy(
     request: Request,
     *,
@@ -172,10 +182,10 @@ def prepare_impairment(
             actor_label=current_user.id,
         ),
     )
-    return {
-        "artifact": artifact,
-        "source": {"kind": "postgresql-consolidation-impairment", "server_mode": True},
-    }
+    return _project_artifact_response(
+        artifact,
+        {"kind": "postgresql-consolidation-impairment", "server_mode": True},
+    )
 
 
 @router.get("/{artifact_id}")
@@ -192,10 +202,10 @@ def get_impairment(
         request,
         lambda repository, _tenant: repository.get(artifact_id, actor_label=current_user.id),
     )
-    return {
-        "artifact": artifact,
-        "source": {"kind": "postgresql-consolidation-impairment", "server_mode": True},
-    }
+    return _project_artifact_response(
+        artifact,
+        {"kind": "postgresql-consolidation-impairment", "server_mode": True},
+    )
 
 
 __all__ = [

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Mapping
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -26,6 +27,15 @@ from reconforge.application.pagination import (
     cursor_scope_digest,
 )
 from reconforge.auth import AuthServiceError, LocalAuthService
+from reconforge.auth.field_access import (
+    EVIDENCE_DRILL_DOWN_FIELDS,
+    EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS,
+    project_evidence_coverage,
+    project_evidence_drill_down_record,
+    project_evidence_link_response,
+    project_evidence_requirement,
+    project_evidence_verification,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.platform.common import PlatformError
@@ -40,6 +50,7 @@ EvidenceVerify = Annotated[LocalUser, Depends(require_permission("evidence.verif
 PageLimit = Annotated[int, Query(ge=1, le=MAX_LIMIT)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
 CursorToken = Annotated[str | None, Query(max_length=4096)]
+_EVIDENCE_SAFE_DRILL_DOWN_FIELDS = EVIDENCE_DRILL_DOWN_FIELDS - EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS
 
 
 def _cursor_page(
@@ -129,12 +140,156 @@ def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connecti
     return connection
 
 
-def _server_record(record: dict[str, object]) -> dict[str, object]:
-    return {**record, "source_backend": "postgresql-evidence-registry"}
+def _project_drill_down_result(result: dict[str, object], *, include_sensitive: bool) -> dict[str, object]:
+    """Apply the central response field policy to every evidence node."""
+
+    raw_nodes = result.get("nodes")
+    if not isinstance(raw_nodes, list):
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid drill-down contract.",
+        )
+    projected_nodes: list[dict[str, object]] = []
+    for raw_node in raw_nodes:
+        if not isinstance(raw_node, Mapping):
+            raise APIError(
+                status_code=503,
+                code="evidence_projection_failed",
+                message="Evidence registry returned an invalid node contract.",
+            )
+        node = dict(raw_node)
+        if node.get("node_type") == "evidence":
+            raw_record = node.get("record")
+            if not isinstance(raw_record, Mapping):
+                raise APIError(
+                    status_code=503,
+                    code="evidence_projection_failed",
+                    message="Evidence registry returned an invalid evidence record contract.",
+                )
+            projected_record = _project_evidence_record_response(
+                raw_record,
+                include_sensitive=include_sensitive,
+            )
+            node["record"] = projected_record["record"]
+            node["field_access"] = projected_record["field_access"]
+        projected_nodes.append(node)
+    projected = dict(result)
+    projected["nodes"] = projected_nodes
+    projected["field_access"] = {
+        "version": "field-projection-v1",
+        "mode": "sensitive" if include_sensitive else "redacted",
+        "allowlisted_record_fields": sorted(EVIDENCE_DRILL_DOWN_FIELDS),
+        "sensitive_record_fields": sorted(EVIDENCE_DRILL_DOWN_SENSITIVE_FIELDS),
+    }
+    return projected
 
 
-def _enforce_server_evidence_permission(request: Request, *, permission: str) -> None:
+def _project_coverage(result: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_evidence_coverage(result).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="evidence_coverage_projection_failed",
+            message="Evidence registry returned an invalid coverage contract.",
+        ) from exc
+
+
+def _project_evidence_record_response(
+    record: Mapping[str, object],
+    *,
+    include_sensitive: bool,
+) -> dict[str, object]:
+    """Project one evidence response and expose bounded projection evidence."""
+
+    try:
+        projection = project_evidence_drill_down_record(record, include_sensitive=include_sensitive)
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid field projection contract.",
+        ) from exc
+    return {
+        "record": projection.visible,
+        "field_access": {
+            "version": "field-projection-v1",
+            "mode": "sensitive" if include_sensitive else "redacted",
+            "masked_fields": list(projection.masked_fields),
+            "denied_fields": list(projection.denied_fields),
+            "projection_digest": projection.projection_digest,
+        },
+    }
+
+
+def _project_evidence_record_payload(
+    record: Mapping[str, object],
+    *,
+    include_sensitive: bool,
+) -> dict[str, object]:
+    """Flatten one projected record for list/get/register response envelopes."""
+
+    projected = _project_evidence_record_response(record, include_sensitive=include_sensitive)
+    visible = projected["record"]
+    field_access = projected["field_access"]
+    if not isinstance(visible, Mapping) or not isinstance(field_access, Mapping):
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid field projection contract.",
+        )
+    return {**dict(visible), "field_access": dict(field_access)}
+
+
+def _project_evidence_mutation_payload(
+    result: Mapping[str, object],
+    *,
+    kind: Literal["requirement", "verification"],
+) -> dict[str, object]:
+    """Project an adapter mutation response before it crosses the API boundary."""
+
+    projector = project_evidence_requirement if kind == "requirement" else project_evidence_verification
+    try:
+        projection = projector(result)
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid mutation response contract.",
+        ) from exc
+    return {
+        **projection.visible,
+        "field_access": {
+            "version": "field-projection-v1",
+            "mode": "allowlisted",
+            "masked_fields": list(projection.masked_fields),
+            "denied_fields": list(projection.denied_fields),
+            "projection_digest": projection.projection_digest,
+        },
+    }
+
+
+def _enforce_server_evidence_permission(
+    request: Request,
+    *,
+    permission: str,
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
+) -> None:
     scope = request_execution_scope(request)
+    if requested_field_names or authorized_field_names:
+        enforce_server_scoped_permission(
+            request,
+            permission=permission,
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+            requested_field_names=requested_field_names,
+            authorized_field_names=authorized_field_names,
+        )
+        return
     enforce_server_scoped_permission(
         request,
         permission=permission,
@@ -145,10 +300,22 @@ def _enforce_server_evidence_permission(request: Request, *, permission: str) ->
     )
 
 
-def _enforce_server_evidence_read_access(request: Request) -> None:
+def _enforce_server_evidence_read_access(request: Request, *, field_level: bool = False) -> None:
     """Bind tenant/workspace evidence reads to the same central policy gate."""
 
     scope = request_execution_scope(request)
+    if field_level:
+        enforce_server_scoped_permissions(
+            request,
+            permissions=frozenset({"evidence.read", "evidence.manage"}),
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+            requested_field_names=_EVIDENCE_SAFE_DRILL_DOWN_FIELDS,
+            authorized_field_names=_EVIDENCE_SAFE_DRILL_DOWN_FIELDS,
+        )
+        return
     enforce_server_scoped_permissions(
         request,
         permissions=frozenset({"evidence.read", "evidence.manage"}),
@@ -160,10 +327,20 @@ def _enforce_server_evidence_read_access(request: Request) -> None:
 
 
 def _require_evidence_manage_access(
-    request: Request, current_user: EvidenceRead, connection: sqlite3.Connection | None
+    request: Request,
+    current_user: EvidenceRead,
+    connection: sqlite3.Connection | None,
+    *,
+    requested_field_names: frozenset[str] = frozenset(),
+    authorized_field_names: frozenset[str] = frozenset(),
 ) -> None:
     if server_evidence_enabled(request):
-        _enforce_server_evidence_permission(request, permission="evidence.manage")
+        _enforce_server_evidence_permission(
+            request,
+            permission="evidence.manage",
+            requested_field_names=requested_field_names,
+            authorized_field_names=authorized_field_names,
+        )
         return
     if connection is None:
         raise APIError(status_code=500, code="db_not_configured", message="Local auth database is not configured.")
@@ -196,7 +373,7 @@ def list_evidence(
     if pagination == "cursor" and offset != 0:
         raise APIError(status_code=400, code="pagination_mode_conflict", message="Offset is not valid in cursor mode.")
     if server_evidence_enabled(request):
-        _enforce_server_evidence_read_access(request)
+        _enforce_server_evidence_read_access(request, field_level=True)
         if pagination == "cursor":
             raise APIError(
                 status_code=501,
@@ -210,7 +387,13 @@ def list_evidence(
             ),
         )
         return {
-            "evidence": [_server_record(record) for record in records],
+            "evidence": [
+                {
+                    **_project_evidence_record_payload(record, include_sensitive=False),
+                    "source_backend": "postgresql-evidence-registry",
+                }
+                for record in records
+            ],
             "pagination": {"limit": limit, "offset": offset, "returned": len(records)},
             "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
         }
@@ -220,13 +403,14 @@ def list_evidence(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="evidence_list_failed", message=str(exc)) from exc
+    projected_records = [_project_evidence_record_payload(record, include_sensitive=False) for record in records]
     if pagination == "cursor":
-        page, next_cursor = _cursor_page(request, records, status=status, limit=limit, cursor=cursor)
+        page, next_cursor = _cursor_page(request, projected_records, status=status, limit=limit, cursor=cursor)
         return {
             "evidence": page,
             "pagination": {"limit": limit, "returned": len(page), "next_cursor": next_cursor, "mode": "cursor"},
         }
-    page = records[offset : offset + limit]
+    page = projected_records[offset : offset + limit]
     return {
         "evidence": page,
         "pagination": {"limit": limit, "offset": offset, "returned": len(page)},
@@ -244,12 +428,15 @@ def evidence_coverage(
     if server_evidence_enabled(request):
         _enforce_server_evidence_read_access(request)
         result = execute_postgres_evidence(request, lambda repository, tenant: repository.coverage(tenant_id=tenant))
-        return {"coverage": result, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+        return {
+            "coverage": _project_coverage(result),
+            "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+        }
     try:
         result = EvidenceRegistryService(_local_connection(connection)).coverage(actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="evidence_coverage_failed", message=str(exc)) from exc
-    return {"coverage": result}
+    return {"coverage": _project_coverage(result)}
 
 
 @router.get("/records/{evidence_id}")
@@ -262,19 +449,20 @@ def get_evidence(
     """Return evidence provenance and links; artifact bytes remain out of band."""
 
     if server_evidence_enabled(request):
-        _enforce_server_evidence_read_access(request)
+        _enforce_server_evidence_read_access(request, field_level=True)
         record = execute_postgres_evidence(
             request, lambda repository, tenant: repository.get(tenant_id=tenant, evidence_id=evidence_id)
         )
+        projected = _project_evidence_record_payload(record, include_sensitive=False)
         return {
-            "evidence": _server_record(record),
+            "evidence": {**projected, "source_backend": "postgresql-evidence-registry"},
             "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
         }
     try:
         record = EvidenceRegistryService(_local_connection(connection)).get(evidence_id)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=404, code="evidence_record_not_found", message=str(exc)) from exc
-    return {"evidence": record}
+    return {"evidence": _project_evidence_record_payload(record, include_sensitive=False)}
 
 
 @router.get("/records/{evidence_id}/drill-down")
@@ -292,10 +480,26 @@ def get_evidence_drill_down(
     """Return a governance-safe evidence relationship graph with optional sensitive fields."""
 
     if include_sensitive:
-        _require_evidence_manage_access(request, current_user, connection)
+        _require_evidence_manage_access(
+            request,
+            current_user,
+            connection,
+            requested_field_names=EVIDENCE_DRILL_DOWN_FIELDS,
+            authorized_field_names=EVIDENCE_DRILL_DOWN_FIELDS,
+        )
     if server_evidence_enabled(request):
         if not include_sensitive:
-            _enforce_server_evidence_read_access(request)
+            scope = request_execution_scope(request)
+            enforce_server_scoped_permissions(
+                request,
+                permissions=frozenset({"evidence.read", "evidence.manage"}),
+                tenant_id=scope.tenant_id,
+                workspace_id=scope.workspace_id,
+                organization_id=scope.organization_id,
+                entity_id=scope.legal_entity_id,
+                requested_field_names=_EVIDENCE_SAFE_DRILL_DOWN_FIELDS,
+                authorized_field_names=_EVIDENCE_SAFE_DRILL_DOWN_FIELDS,
+            )
         result = execute_postgres_evidence(
             request,
             lambda repository, tenant: repository.drill_down(
@@ -310,7 +514,10 @@ def get_evidence_drill_down(
                 request_id=str(getattr(request.state, "request_id", "")),
             ),
         )
-        return {"drill_down": result, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+        return {
+            "drill_down": _project_drill_down_result(result, include_sensitive=include_sensitive),
+            "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+        }
     try:
         result = EvidenceRegistryService(_local_connection(connection)).drill_down(
             evidence_id,
@@ -323,7 +530,7 @@ def get_evidence_drill_down(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="evidence_drill_down_failed", message=str(exc)) from exc
-    return {"drill_down": result}
+    return {"drill_down": _project_drill_down_result(result, include_sensitive=include_sensitive)}
 
 
 @router.post("/records")
@@ -370,7 +577,13 @@ def register_evidence(
             reason=payload.reason,
         ),
     )
-    return {"evidence": _server_record(record), "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+    return {
+        "evidence": {
+            **_project_evidence_record_payload(record, include_sensitive=True),
+            "source_backend": "postgresql-evidence-registry",
+        },
+        "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+    }
 
 
 @router.post("/records/{evidence_id}/links")
@@ -400,7 +613,16 @@ def link_evidence(
             reason=payload.reason,
         ),
     )
-    return {"link": link, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+    try:
+        return project_evidence_link_response(
+            {"link": link, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+        ).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="evidence_projection_failed",
+            message="Evidence registry returned an invalid link response contract.",
+        ) from exc
 
 
 @router.post("/requirements")
@@ -432,7 +654,10 @@ def save_evidence_requirement(
             reason=payload.reason,
         ),
     )
-    return {"requirement": requirement, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+    return {
+        "requirement": _project_evidence_mutation_payload(requirement, kind="requirement"),
+        "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+    }
 
 
 @router.post("/records/{evidence_id}/verify")
@@ -460,4 +685,7 @@ def verify_evidence(
             reason=payload.reason,
         ),
     )
-    return {"verification": result.__dict__, "source": {"kind": "postgresql-evidence-registry", "server_mode": True}}
+    return {
+        "verification": _project_evidence_mutation_payload(result.__dict__, kind="verification"),
+        "source": {"kind": "postgresql-evidence-registry", "server_mode": True},
+    }

@@ -20,11 +20,23 @@ from reconforge.api.dependencies import (
 )
 from reconforge.api.errors import APIError
 from reconforge.api.server_finance_core import (
+    FinanceCoreExecutionScope,
     execute_postgres_finance_core,
+    execute_postgres_finance_core_scoped,
     server_finance_core_enabled,
 )
 from reconforge.api.server_identity import request_execution_scope
 from reconforge.api.server_ledger import execute_postgres_ledger, server_ledger_enabled
+from reconforge.auth.field_access import (
+    project_finance_account,
+    project_finance_chart,
+    project_finance_dimension,
+    project_finance_dimension_value,
+    project_finance_entry,
+    project_finance_journal,
+    project_finance_snapshot,
+    project_finance_summary,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
@@ -159,6 +171,45 @@ def _list_response(
     offset: int,
 ) -> dict[str, object]:
     return {key: records, "pagination": {"limit": limit, "offset": offset, "returned": len(records)}}
+
+
+def _project_entry(value: dict[str, object]) -> dict[str, object]:
+    return project_finance_entry(value).visible
+
+
+def _project_entries(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [_project_entry(value) for value in values]
+
+
+def _project_charts(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_chart(value).visible for value in values]
+
+
+def _project_accounts(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_account(value).visible for value in values]
+
+
+def _project_dimensions(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_dimension(value).visible for value in values]
+
+
+def _project_dimension_values(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_dimension_value(value).visible for value in values]
+
+
+def _project_journals(values: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [project_finance_journal(value).visible for value in values]
+
+
+def _project_snapshot(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_finance_snapshot(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="finance_core_snapshot_projection_failed",
+            message="Finance Core returned an invalid snapshot response contract.",
+        ) from exc
 
 
 def _local_connection(connection: sqlite3.Connection | None) -> sqlite3.Connection:
@@ -347,7 +398,7 @@ def summary(
             request,
             lambda repository: repository.summary(workspace=scoped_workspace, actor_label=current_user.id),
         )
-        return {"summary": result.to_dict()}
+        return {"summary": project_finance_summary(result.to_dict()).visible}
     if server_ledger_enabled(request):
         _server_workspace(workspace)
         _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
@@ -355,14 +406,16 @@ def summary(
             request, lambda repository, tenant: repository.summary(tenant_id=tenant)
         )
         return {
-            "summary": {
-                "workspace": None,
-                "accounts": server_result["accounts"],
-                "draft_entries": server_result["draft_entries"],
-                "posted_entries": server_result["posted_entries"],
-                "source": server_result["source"],
-                "unsupported_collections": server_result["unsupported_collections"],
-            }
+            "summary": project_finance_summary(
+                {
+                    "workspace": None,
+                    "accounts": server_result["accounts"],
+                    "draft_entries": server_result["draft_entries"],
+                    "posted_entries": server_result["posted_entries"],
+                    "source": server_result["source"],
+                    "unsupported_collections": server_result["unsupported_collections"],
+                }
+            ).visible
         }
     try:
         local_result = FinanceCoreService(_local_connection(connection)).summary(
@@ -370,7 +423,7 @@ def summary(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_core_summary_failed", exc) from exc
-    return {"summary": local_result.to_dict()}
+    return {"summary": project_finance_summary(local_result.to_dict()).visible}
 
 
 @router.get("/snapshot")
@@ -386,12 +439,14 @@ def snapshot(
             request,
             lambda repository: repository.snapshot(workspace=scoped_workspace, actor_label=current_user.id),
         )
-        return {**result, "source": {"kind": "postgres-finance-core"}}
+        return _project_snapshot({**result, "source": {"kind": "postgres-finance-core"}})
     if server_ledger_enabled(request):
         raise _server_unsupported("the full Finance Core snapshot")
     try:
-        return FinanceCoreService(_local_connection(connection)).snapshot(
-            workspace=workspace, actor_label=current_user.username
+        return _project_snapshot(
+            FinanceCoreService(_local_connection(connection)).snapshot(
+                workspace=workspace, actor_label=current_user.username
+            )
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_core_snapshot_failed", exc) from exc
@@ -417,7 +472,7 @@ def list_charts(
                 actor_label=current_user.id,
             ),
         )
-        return _list_response("charts", records, limit=limit, offset=offset)
+        return _list_response("charts", _project_charts(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("charts of accounts")
     try:
@@ -426,7 +481,7 @@ def list_charts(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_charts_list_failed", exc) from exc
-    return _list_response("charts", records, limit=limit, offset=offset)
+    return _list_response("charts", _project_charts(records), limit=limit, offset=offset)
 
 
 @router.post("/charts")
@@ -442,7 +497,15 @@ def upsert_chart(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "chart": execute_postgres_finance_core(request, lambda repository: repository.upsert_chart(**values))
+            "chart": project_finance_chart(
+                execute_postgres_finance_core_scoped(
+                    request,
+                    lambda repository, scope: repository.upsert_chart(
+                        **{**values, "organization_code": scope.organization_code}
+                    ),
+                    organization_code=payload.organization_code,
+                )
+            ).visible
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("charts of accounts")
@@ -452,7 +515,7 @@ def upsert_chart(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_chart_save_failed", exc) from exc
-    return {"chart": record}
+    return {"chart": project_finance_chart(record).visible}
 
 
 @router.get("/accounts")
@@ -470,17 +533,20 @@ def list_accounts(
     if server_finance_core_enabled(request):
         scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
 
-        def finance_operation(repository: PostgresFinanceCoreRepository) -> list[dict[str, object]]:
+        def finance_operation(
+            repository: PostgresFinanceCoreRepository, scope: FinanceCoreExecutionScope
+        ) -> list[dict[str, object]]:
             # Finance accounts are scoped by chart.  When an organization is
             # supplied, resolve the permitted chart set before pagination so
             # records from another organization cannot cross the boundary.
             chart_codes: set[str] | None = None
-            if organization:
+            bound_organization = scope.organization_code
+            if bound_organization:
                 charts = repository.list_charts(workspace=scoped_workspace, limit=500, offset=0)
                 chart_codes = {
                     str(chart["chart_code"])
                     for chart in charts
-                    if str(chart.get("organization_code") or "").casefold() == organization.casefold()
+                    if str(chart.get("organization_code") or "").casefold() == bound_organization.casefold()
                 }
                 if not chart_codes:
                     return []
@@ -496,9 +562,13 @@ def list_accounts(
                 records = [record for record in records if str(record.get("chart_code")) in chart_codes]
             return records
 
-        records = execute_postgres_finance_core(request, finance_operation)
+        records = execute_postgres_finance_core_scoped(
+            request,
+            finance_operation,
+            organization_code=organization,
+        )
         page = records[offset : offset + limit]
-        return _list_response("accounts", page, limit=limit, offset=offset)
+        return _list_response("accounts", _project_accounts(page), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         _server_workspace(workspace)
         _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
@@ -516,7 +586,7 @@ def list_accounts(
 
         records = execute_postgres_ledger(request, operation)
         page = records[offset : offset + limit]
-        return _list_response("accounts", page, limit=limit, offset=offset)
+        return _list_response("accounts", _project_accounts(page), limit=limit, offset=offset)
     try:
         records = FinanceCoreService(_local_connection(connection)).list_accounts(
             workspace=workspace,
@@ -528,7 +598,7 @@ def list_accounts(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_accounts_list_failed", exc) from exc
-    return _list_response("accounts", records, limit=limit, offset=offset)
+    return _list_response("accounts", _project_accounts(records), limit=limit, offset=offset)
 
 
 @router.post("/accounts")
@@ -545,7 +615,9 @@ def upsert_account(
         values["actor_label"] = current_user.id
         # The adapter binds accounts to a chart.  Validate the optional
         # organization selector against that chart before persisting.
-        def finance_operation(repository: PostgresFinanceCoreRepository) -> dict[str, object]:
+        def finance_operation(
+            repository: PostgresFinanceCoreRepository, scope: FinanceCoreExecutionScope
+        ) -> dict[str, object]:
             charts = repository.list_charts(workspace=scoped_workspace, limit=500, offset=0)
             selected = next(
                 (chart for chart in charts if str(chart["chart_code"]).casefold() == payload.chart_code.casefold()),
@@ -553,15 +625,24 @@ def upsert_account(
             )
             if selected is None:
                 raise PlatformError("Accounts require an existing chart of accounts.")
-            if payload.organization_code and str(selected.get("organization_code") or "").casefold() not in {
+            bound_organization = scope.organization_code
+            if bound_organization and str(selected.get("organization_code") or "").casefold() not in {
                 "",
-                payload.organization_code.casefold(),
+                bound_organization.casefold(),
             }:
                 raise PlatformError("Account organization must match its chart of accounts.")
-            values.pop("organization_code", None)
-            return repository.upsert_account(**values)
+            values_without_selector = {key: value for key, value in values.items() if key != "organization_code"}
+            return repository.upsert_account(**values_without_selector)
 
-        return {"account": execute_postgres_finance_core(request, finance_operation)}
+        return {
+            "account": project_finance_account(
+                execute_postgres_finance_core_scoped(
+                    request,
+                    finance_operation,
+                    organization_code=payload.organization_code,
+                )
+            ).visible
+        }
     if server_ledger_enabled(request):
         _server_workspace(payload.workspace)
         scope = request_execution_scope(request)
@@ -603,7 +684,7 @@ def upsert_account(
                 )
             )
 
-        return {"account": execute_postgres_ledger(request, operation)}
+        return {"account": project_finance_account(execute_postgres_ledger(request, operation)).visible}
     try:
         values = payload.model_dump()
         values.pop("organization_code", None)
@@ -612,7 +693,7 @@ def upsert_account(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_account_save_failed", exc) from exc
-    return {"account": record}
+    return {"account": project_finance_account(record).visible}
 
 
 @router.get("/dimensions")
@@ -635,7 +716,7 @@ def list_dimensions(
                 actor_label=current_user.id,
             ),
         )
-        return _list_response("dimensions", records, limit=limit, offset=offset)
+        return _list_response("dimensions", _project_dimensions(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimensions")
     try:
@@ -644,7 +725,7 @@ def list_dimensions(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_dimensions_list_failed", exc) from exc
-    return _list_response("dimensions", records, limit=limit, offset=offset)
+    return _list_response("dimensions", _project_dimensions(records), limit=limit, offset=offset)
 
 
 @router.post("/dimensions")
@@ -660,9 +741,15 @@ def upsert_dimension(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "dimension": execute_postgres_finance_core(
-                request, lambda repository: repository.upsert_dimension(**values)
-            )
+            "dimension": project_finance_dimension(
+                execute_postgres_finance_core_scoped(
+                    request,
+                    lambda repository, scope: repository.upsert_dimension(
+                        **{**values, "organization_code": scope.organization_code}
+                    ),
+                    organization_code=payload.organization_code,
+                )
+            ).visible
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimensions")
@@ -672,7 +759,7 @@ def upsert_dimension(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_dimension_save_failed", exc) from exc
-    return {"dimension": record}
+    return {"dimension": project_finance_dimension(record).visible}
 
 
 @router.get("/dimension-values")
@@ -697,7 +784,7 @@ def list_dimension_values(
                 actor_label=current_user.id,
             ),
         )
-        return _list_response("dimension_values", records, limit=limit, offset=offset)
+        return _list_response("dimension_values", _project_dimension_values(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimension values")
     try:
@@ -710,7 +797,7 @@ def list_dimension_values(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_dimension_values_list_failed", exc) from exc
-    return _list_response("dimension_values", records, limit=limit, offset=offset)
+    return _list_response("dimension_values", _project_dimension_values(records), limit=limit, offset=offset)
 
 
 @router.post("/dimension-values")
@@ -726,9 +813,9 @@ def upsert_dimension_value(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "dimension_value": execute_postgres_finance_core(
-                request, lambda repository: repository.upsert_dimension_value(**values)
-            )
+            "dimension_value": project_finance_dimension_value(
+                execute_postgres_finance_core(request, lambda repository: repository.upsert_dimension_value(**values))
+            ).visible
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("accounting dimension values")
@@ -738,7 +825,7 @@ def upsert_dimension_value(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_dimension_value_save_failed", exc) from exc
-    return {"dimension_value": record}
+    return {"dimension_value": project_finance_dimension_value(record).visible}
 
 
 @router.get("/journals")
@@ -753,17 +840,18 @@ def list_journals(
 ) -> dict[str, object]:
     if server_finance_core_enabled(request):
         scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
-        records = execute_postgres_finance_core(
+        records = execute_postgres_finance_core_scoped(
             request,
-            lambda repository: repository.list_journals(
+            lambda repository, scope: repository.list_journals(
                 workspace=scoped_workspace,
-                organization_code=organization,
+                organization_code=scope.organization_code,
                 limit=limit,
                 offset=offset,
                 actor_label=current_user.id,
             ),
+            organization_code=organization,
         )
-        return _list_response("journals", records, limit=limit, offset=offset)
+        return _list_response("journals", _project_journals(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         raise _server_unsupported("finance journals")
     try:
@@ -776,7 +864,7 @@ def list_journals(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_journals_list_failed", exc) from exc
-    return _list_response("journals", records, limit=limit, offset=offset)
+    return _list_response("journals", _project_journals(records), limit=limit, offset=offset)
 
 
 @router.post("/journals")
@@ -792,9 +880,15 @@ def upsert_journal(
         values["workspace"] = scoped_workspace
         values["actor_label"] = current_user.id
         return {
-            "journal": execute_postgres_finance_core(
-                request, lambda repository: repository.upsert_journal(**values)
-            )
+            "journal": project_finance_journal(
+                execute_postgres_finance_core_scoped(
+                    request,
+                    lambda repository, scope: repository.upsert_journal(
+                        **{**values, "organization_code": scope.organization_code}
+                    ),
+                    organization_code=payload.organization_code,
+                )
+            ).visible
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("finance journals")
@@ -804,7 +898,7 @@ def upsert_journal(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_journal_save_failed", exc) from exc
-    return {"journal": record}
+    return {"journal": project_finance_journal(record).visible}
 
 
 @router.get("/trial-balance")
@@ -819,15 +913,17 @@ def trial_balance(
 ) -> dict[str, object]:
     if server_finance_core_enabled(request) and entity.strip():
         scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
-        return execute_postgres_finance_core(
+        return execute_postgres_finance_core_scoped(
             request,
-            lambda repository: repository.trial_balance(
+            lambda repository, scope: repository.trial_balance(
                 period_id=period_id,
-                organization_code=organization,
-                entity_code=entity,
+                organization_code=scope.organization_code,
+                entity_code=scope.entity_code,
                 workspace=scoped_workspace,
                 actor_label=current_user.id,
             ),
+            organization_code=organization,
+            entity_code=entity,
         )
     if server_ledger_enabled(request):
         _server_workspace(workspace)
@@ -877,20 +973,22 @@ def list_entries(
 ) -> dict[str, object]:
     if server_finance_core_enabled(request) and (entity.strip() or period_id.strip() or status.strip()):
         scoped_workspace = _server_finance_workspace(request, workspace, permission="finance_core.read")
-        records = execute_postgres_finance_core(
+        records = execute_postgres_finance_core_scoped(
             request,
-            lambda repository: repository.list_entries(
+            lambda repository, scope: repository.list_entries(
                 workspace=scoped_workspace,
-                organization_code=organization,
-                entity_code=entity,
+                organization_code=scope.organization_code,
+                entity_code=scope.entity_code,
                 period_id=period_id,
                 status=status,
                 limit=limit,
                 offset=offset,
                 actor_label=current_user.id,
             ),
+            organization_code=organization,
+            entity_code=entity,
         )
-        return _list_response("entries", records, limit=limit, offset=offset)
+        return _list_response("entries", _project_entries(records), limit=limit, offset=offset)
     if server_ledger_enabled(request):
         _server_workspace(workspace)
         _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
@@ -911,7 +1009,7 @@ def list_entries(
             )
 
         records = execute_postgres_ledger(request, operation)
-        return _list_response("entries", records, limit=limit, offset=offset)
+        return _list_response("entries", _project_entries(records), limit=limit, offset=offset)
     try:
         records = FinanceCoreService(_local_connection(connection)).list_entries(
             workspace=workspace,
@@ -925,7 +1023,7 @@ def list_entries(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entries_list_failed", exc) from exc
-    return _list_response("entries", records, limit=limit, offset=offset)
+    return _list_response("entries", _project_entries(records), limit=limit, offset=offset)
 
 
 @router.post("/entries")
@@ -935,7 +1033,22 @@ def create_entry(
     current_user: FinanceManage,
     connection: sqlite3.Connection | None = Depends(get_local_db),
 ) -> dict[str, object]:
-    if server_finance_core_enabled(request) and payload.entity_code.strip() and payload.period_id.strip() and payload.journal_code.strip():
+    if server_finance_core_enabled(request):
+        missing_scope = [
+            field
+            for field, value in (
+                ("entity_code", payload.entity_code),
+                ("period_id", payload.period_id),
+                ("journal_code", payload.journal_code),
+            )
+            if not value.strip()
+        ]
+        if missing_scope:
+            raise APIError(
+                status_code=400,
+                code="finance_core_entry_scope_required",
+                message="Server Finance Core entries require entity_code, period_id, and journal_code.",
+            )
         policy_amount = _entry_policy_amount(payload)
         scoped_workspace = _server_finance_workspace(
             request,
@@ -949,9 +1062,14 @@ def create_entry(
         values["lines"] = [line.model_dump() for line in payload.lines]
         values["actor_label"] = current_user.id
         return {
-            "entry": execute_postgres_finance_core(
-                request, lambda repository: repository.create_entry(**values)
-            )
+            "entry": _project_entry(execute_postgres_finance_core_scoped(
+                request,
+                lambda repository, scope: repository.create_entry(
+                    **{**values, "organization_code": scope.organization_code, "entity_code": scope.entity_code}
+                ),
+                organization_code=payload.organization_code,
+                entity_code=payload.entity_code,
+            ))
         }
     if server_ledger_enabled(request):
         policy_amount = _entry_policy_amount(payload)
@@ -973,7 +1091,7 @@ def create_entry(
                 request_id=str(getattr(request.state, "request_id", "")),
             ),
         )
-        return {"entry": record}
+        return {"entry": _project_entry(record)}
     try:
         values = payload.model_dump()
         values.pop("currency_code", None)
@@ -982,7 +1100,7 @@ def create_entry(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_save_failed", exc) from exc
-    return {"entry": record}
+    return {"entry": _project_entry(record)}
 
 
 @router.get("/entries/{entry_id}")
@@ -995,24 +1113,24 @@ def get_entry(
     if server_finance_core_enabled(request) and entry_id.startswith("GLE-"):
         _server_finance_workspace(request, "default", permission="finance_core.read")
         return {
-            "entry": execute_postgres_finance_core(
+            "entry": _project_entry(execute_postgres_finance_core(
                 request,
                 lambda repository: repository.get_entry(entry_id, actor_label=current_user.id),
-            )
+            ))
         }
     if server_ledger_enabled(request):
         _enforce_server_legacy_finance_permission(request, permission="finance_core.read")
         record = execute_postgres_ledger(
             request, lambda repository, tenant: repository.get_entry(tenant_id=tenant, entry_id=entry_id)
         )
-        return {"entry": record}
+        return {"entry": _project_entry(record)}
     try:
         record = FinanceCoreService(_local_connection(connection)).get_entry(
             entry_id, actor_label=current_user.username
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_not_found", exc, status_code=404) from exc
-    return {"entry": record}
+    return {"entry": _project_entry(record)}
 
 
 @router.post("/entries/{entry_id}/validate")
@@ -1026,12 +1144,12 @@ def validate_entry(
     if server_finance_core_enabled(request) and entry_id.startswith("GLE-"):
         _server_finance_workspace(request, "default", permission="finance_core.validate")
         return {
-            "entry": execute_postgres_finance_core(
+            "entry": _project_entry(execute_postgres_finance_core(
                 request,
                 lambda repository: repository.validate_entry(
                     entry_id, reason=payload.reason, actor_label=current_user.id
                 ),
-            )
+            ))
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("draft validation; server entries are posted atomically")
@@ -1041,7 +1159,7 @@ def validate_entry(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_validate_failed", exc) from exc
-    return {"entry": record}
+    return {"entry": _project_entry(record)}
 
 
 @router.post("/entries/{entry_id}/void")
@@ -1055,12 +1173,12 @@ def void_entry(
     if server_finance_core_enabled(request) and entry_id.startswith("GLE-"):
         _server_finance_workspace(request, "default", permission="finance_core.validate")
         return {
-            "entry": execute_postgres_finance_core(
+            "entry": _project_entry(execute_postgres_finance_core(
                 request,
                 lambda repository: repository.void_entry(
                     entry_id, reason=payload.reason, actor_label=current_user.id
                 ),
-            )
+            ))
         }
     if server_ledger_enabled(request):
         raise _server_unsupported("voiding; server entries are immutable and require reversal support")
@@ -1070,4 +1188,4 @@ def void_entry(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("finance_entry_void_failed", exc) from exc
-    return {"entry": record}
+    return {"entry": _project_entry(record)}

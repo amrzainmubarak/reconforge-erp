@@ -152,7 +152,7 @@ def test_observation_migration_is_additive_from_previous_sqlite_version(tmp_path
     path = tmp_path / "upgrade.db"
     assert run_migrations(path, target_version=42).current_version == 42
     upgraded = run_migrations(path)
-    assert upgraded.current_version == upgraded.latest_version == 43
+    assert upgraded.current_version == upgraded.latest_version == 46
     connection = connect(path)
     try:
         assert connection.execute(

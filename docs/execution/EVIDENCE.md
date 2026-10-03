@@ -2,6 +2,3087 @@
 
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
+## E-1120: Strict Receivables quantity inputs (2026-08-29)
+
+- Code evidence: SQLite Receivables `_quantity()` now calls
+  `parse_exact_amount()` before canonicalization and line-total arithmetic,
+  aligning it with the PostgreSQL adapter.
+- Test evidence: the focused Receivables/API/PostgreSQL selection reports 19
+  passed and 1 capability-gated PostgreSQL skip, including binary-floating,
+  scientific-notation, non-finite, missing, and existing invoice workflow
+  cases. The full locked Python 3.11 regression exits 0 at 100% with declared
+  capability-gated skips.
+- Gate evidence: local all-code Ruff passes; Mypy reports no issues in 540
+  source files; Bandit exits 0 with existing comment/`nosec` warnings; the
+  package build produces the sdist and wheel; `pip-audit` reports no known
+  vulnerabilities, while explicitly noting that unpublished local
+  `reconforge-erp 0.7.1` cannot be audited on PyPI.
+- Runtime evidence: a disposable local PostgreSQL 16 runtime with a
+  non-privileged application role ran the four-file Payables/Receivables
+  PostgreSQL and HTTP selection at exit 0. It covers the existing canonical
+  lifecycle, scope, and exact-value paths; the HTTP tests inject synthetic
+  authenticated principals and scope snapshots rather than an external
+  identity provider. The isolated test container was removed after the gate;
+  no pre-existing containers were modified.
+- Boundary: this is a local/tenant adapter input-integrity control. It does
+  not prove quantity-unit governance, tax correctness, statutory posting,
+  settlement, provider behavior, hosted or cross-version backend parity,
+  external identity, or production assurance.
+
+## E-1119: Strict persisted Payables quantity decoding (2026-08-29)
+
+- Code evidence: SQLite and PostgreSQL receipt-limit and three-way-match
+  paths decode persisted ordered, invoiced, and received quantities through
+  `_stored_quantity()` and `parse_exact_amount()`. PostgreSQL reads the
+  canonical `received_quantity_text` shadow rows before summing them.
+- Test evidence: the focused Payables/API/application/PostgreSQL selection
+  reports 40 passed and 1 capability-gated PostgreSQL skip, including
+  fail-closed stored-quantity decoder cases and the existing exact-scale
+  workflow coverage.
+- Gate evidence: focused Ruff and Mypy pass; the full locked Python 3.11
+  regression exits 0 at 100% with declared capability-gated skips. Security,
+  package, and diff gates remain separate evidence.
+- Boundary: this prevents malformed persisted quantity data from silently
+  entering the bounded receipt-limit or three-way-match arithmetic. It does
+  not prove inventory-unit governance, provider/source authenticity,
+  settlement, posting, or production assurance.
+
+## E-1118: Strict Payables quantity inputs (2026-08-29)
+
+- Code evidence: SQLite and PostgreSQL Payables `_quantity()` boundaries now
+  call `parse_exact_amount()`; PostgreSQL preserves the original value for
+  parsing after applying its text safety and length checks.
+- Test evidence: the focused Payables/API/application/PostgreSQL selection
+  reports 30 passed and 1 capability-gated PostgreSQL skip. It covers exact
+  arbitrary-scale quantities plus binary floating-point and scientific-
+  notation rejection in both adapters.
+- Gate evidence: focused Ruff, Mypy, and `git diff --check` pass; the full
+  locked Python 3.11 regression exits 0 at 100% with declared capability-gated
+  skips. Security and package gates remain separate evidence.
+- Boundary: this prevents non-exact quantity input from entering the bounded
+  Payables persistence and three-way-match path. It does not prove inventory
+  unit governance, statutory posting, settlement, provider behavior, or
+  production assurance.
+
+## E-1117: Strict amount lexemes in duplicate detection (2026-08-29)
+
+- Code evidence: `reconforge.domain.duplicate_detection._canonical_amount()`
+  now calls the shared `parse_exact_amount()` and wraps invalid input in the
+  existing backend-neutral duplicate-detection error.
+- Test evidence: the focused duplicate-detection and strategy-contract
+  selection reports 48 passed. The regression covers Python binary
+  floating-point rejection and both scientific-notation text spellings.
+- Gate evidence: focused Ruff and Mypy pass; the full locked Python 3.11
+  regression exits 0 at 100% with declared capability-gated skips, and
+  `git diff --check` passes.
+- Boundary: this aligns the duplicate-fingerprint amount lexical policy with
+  strict financial ingress. It does not prove probabilistic matching, fraud
+  classification, source authenticity, posting, or production assurance.
+
+## E-1116: Explicit financial input policy in Journal Controls (2026-08-29)
+
+- Code evidence: `journal_threshold()` and
+  `evaluate_journal_policies()` accept a named `FinancialInputPolicy`; the
+  SQLite and PostgreSQL journal adapters explicitly pass
+  `STRICT_FINANCIAL_INPUT_POLICY`.
+- Test evidence: the focused journal/application/control selection collected
+  10 tests: 9 passed and 1 capability-gated PostgreSQL test was skipped. It
+  covers strict float refusal and explicit legacy warning/compatibility
+  behavior.
+- Gate evidence: focused Ruff, Mypy, and `git diff --check` pass.
+- Boundary: this prevents implicit financial-policy selection in the reviewed
+  journal-control production adapters. It does not prove statutory posting,
+  source authenticity, provider behavior, or production assurance.
+
+## E-1115: Strict canonical Money in bank-control replay (2026-08-29)
+
+- Code evidence: `verify_bank_statement_payload()` now applies
+  `Money.from_strict_canonical_dict()` to the report tolerance and each
+  non-null decision variance before the nested decision digest is accepted.
+- Test evidence: the focused bank control/API/SQLite/PostgreSQL selection
+  passes 11/11 with one capability-gated PostgreSQL skip, including a
+  re-signed padded-money refusal; the full locked Python 3.11 regression
+  reaches 100% and exits 0.
+- Gate evidence: focused Ruff, focused Mypy, and `git diff --check` pass.
+- Boundary: this verifies canonical serialized Money in a local replay
+  artifact. It does not authenticate a bank or ERP source, prove settlement or
+  posting correctness, or establish production assurance.
+
+## E-1114: Current supply-chain claims follow zero npm SRI gap (2026-08-29)
+
+- Code/documentation evidence: the current policy validator reports 211 npm
+  registry entries and zero integrity gaps; current gap, whitepaper, and drift
+  surfaces no longer repeat the retired 155-entry wording. Historical records
+  remain dated evidence for earlier revisions.
+- Test evidence: `tests/test_current_supply_chain_claims.py` executes the
+  validator and checks the current surfaces.
+- Boundary: local lock integrity metadata does not prove package safety,
+  maintainer provenance, reachability, license suitability, hosted enforcement,
+  or external assurance.
+
+## E-1113: Strict canonical API and CLI Money inputs (2026-08-29)
+
+- Code evidence: the five consolidation API request adapters and the
+  intercompany elimination CLI use `Money.from_strict_canonical_dict()`;
+  the legacy ownership-change CLI two-field input remains unchanged.
+- Test evidence: focused API Money model, intercompany line, CLI, and domain
+  tests cover canonical success and padded amount refusal at the interface.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this is exact input-contract evidence. It is not statutory
+  accounting, provider, posting, or production-readiness evidence.
+
+## E-1112: Strict PostgreSQL ownership-change Money hydration (2026-08-29)
+
+- Code evidence: the PostgreSQL ownership-change request hydration helper
+  restores persisted Money through `Money.from_strict_canonical_dict()` before
+  request replay and row-level digest lineage checks.
+- Test evidence: the ownership-change persistence/domain selection covers
+  canonical hydration, binary-float percentage refusal, and non-canonical
+  persisted Money refusal.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this is persisted-artifact integrity evidence. It is not statutory
+  accounting, provider, posting, or production-readiness evidence.
+
+## E-1111: Extend strict canonical-money decoding to replay consumers (2026-08-29)
+
+- Code evidence: translation-result, worksheet, impairment-bridge, and
+  intercompany source-line replay consumers use
+  `Money.from_strict_canonical_dict()`; API request and compatibility readers
+  remain on the existing reader.
+- Test evidence: the focused translation/lifecycle/impairment/intercompany
+  selection passes 40/40, including re-signed padded-money refusal before
+  arithmetic or reproduction acceptance.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this is deterministic serialization and replay-integrity evidence
+  for non-posting artifacts. It is not statutory accounting, valuation,
+  posting, provider, or production-readiness evidence.
+
+## E-1110: Add a strict canonical-money replay reader (2026-08-29)
+
+- Code evidence: `Money.from_strict_canonical_dict()` delegates to the existing
+  policy/registry-aware restoration and then compares the complete supplied
+  mapping with `to_canonical_dict()`. Four financial replay verifiers use it;
+  the compatibility reader remains unchanged.
+- Test evidence: the focused money/acquisition/PPA/deferred-tax/impairment/
+  ownership-change selection passes 66/66, including padded/scientific amount,
+  lowercase-currency, and re-signed replay refusal cases.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this is deterministic serialization and replay-integrity evidence
+  for non-posting artifacts. It is not statutory accounting, tax treatment,
+  valuation assurance, posting, or production readiness evidence.
+
+## E-1109: Strict PPA and deferred-tax replay money (2026-08-28)
+
+- Code evidence: PPA and acquisition deferred-tax replay restore each money
+  object through `Money.from_canonical_dict()`, then compare raw amount and
+  currency text to the canonical producer representation before totals and
+  per-item arithmetic are accepted. Top-level reporting currency syntax is
+  explicitly fail-closed.
+- Test evidence: the acquisition/PPA/deferred-tax/impairment focused selection
+  passes 31/31, including re-signed padded-decimal and lowercase-currency PPA
+  and deferred-tax payload rejection.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this protects local non-posting artifact replay. It is not
+  statutory acquisition accounting or tax treatment, tax advice, valuation,
+  journal posting, or production-readiness evidence.
+
+## E-1108: Strict acquisition bridge replay amounts (2026-08-28)
+
+- Code evidence: acquisition bridge replay restores goodwill, bargain-purchase,
+  and every line amount through `Money.from_canonical_dict()`, checks canonical
+  exact decimal text and currency code against the normalized producer
+  representation, enforces reporting-currency equality, and retains exact
+  zero-sum checks.
+- Test evidence: `tests/test_consolidation_acquisition.py` passes 13/13,
+  including re-signed scientific and non-canonical summary/line payloads that
+  fail closed before arithmetic acceptance.
+- Gate evidence: the locked full Python 3.11 regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML/schema, and diff checks pass for the slice.
+- Boundary: this protects replay integrity of a local non-posting artifact. It
+  is not statutory acquisition accounting, valuation assurance, journal
+  posting, or production readiness evidence.
+
+## E-1107: Content-bound deployment-readiness evidence (2026-08-28)
+
+- Code evidence: `load_deployment_readiness_matrix()` now requires a closed
+  digest manifest covering every referenced evidence path and recomputes each
+  SHA-256 from the repository bytes. Path safety and regular-file checks remain
+  enforced before hashing.
+- Test evidence: the readiness suite validates the v1 JSON Schema, exact matrix
+  path coverage, stable CLI digest, tampered-file digest rejection, missing
+  digest rejection, and the existing fail-closed scalar boundaries.
+- Gate evidence: the focused deployment profile/readiness/runtime selection
+  passed 38/38 tests (19 matrix, 11 profile, 8 runtime-evidence tests). The
+  locked full Python 3.11 regression reached 100% with exit 0; Ruff, Mypy,
+  Bandit, pip-audit, package build, and diff checks also exited successfully.
+  Existing warnings and declared skips remain visible.
+- Boundary: this binds review references to exact repository content. It is not
+  a signature, independent assurance, proof of the underlying runtime event,
+  or deployment/production readiness.
+
+## E-824: Exact local container security disposition (2026-08-28)
+
+- Syft 1.51.0 generated the native SBOM for the Python 3.12.14 linux/amd64
+  candidate. Grype 0.117.0 imported a fresh official v6.1.9 database into an
+  isolated cache; `grype db status` reported valid, built
+  `2026-08-28T09:21:39Z`, and schema `v6.1.9`. The imported SQLite payload
+  SHA-256 is `4304a9eb9165b8ffd0613b0b60b0379444e1a9b5ef0882ca80547775f3bef054`.
+- The exact SBOM scan exited 0 and contained 16 active matches plus three
+  ignored matches. The repository validator returned `status=passed`, zero
+  blockers, and zero active exceptions. It records 68 packages, 94.11% license
+  metadata coverage, and three source-proven fixed Python 3.12.14 High
+  dispositions; the full vulnerability count remains visible.
+- The current evidence is bound to config
+  `sha256:08723531122c50615c42860fd299b9bb797ba67c231b7f1cb5b1cc8b3822cf0f`
+  and manifest
+  `sha256:3ddcdc5dc7636350f5919c6915a935940dac322e07483a7ffe01473fa7facf1b`
+  in `CONTAINER_SECURITY_LOCAL_2026-08-28.json`.
+- Boundary: this closes E-824's local exact-image disposition only. Hosted
+  clean-build, registry publication, signed provenance, legal license review,
+  vulnerability reachability, and production security effectiveness remain
+  open. ADR 0768 records the import and fail-closed verification procedure.
+
+## E-884: Gate Python 3.12 Alpine base-image upgrade (2026-08-28)
+
+- Code evidence: both Docker stages use the official digest-pinned Python 3.12
+  Alpine base, the locked Python 3.12 dependency command, and runtime cleanup
+  for Python 3.12 global pip/build paths. The reviewed base index digest is
+  `sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31`.
+- Runtime evidence: the no-cache linux/amd64 candidate build passed with image
+  digest `sha256:a96d87d994852b9fc7b9f647977413e37f5959a95f0e7d36bc66584a8b529e52`
+  and config digest
+  `sha256:08723531122c50615c42860fd299b9bb797ba67c231b7f1cb5b1cc8b3822cf0f`.
+  Hardened Doctor, sample validation, and demo generation passed with network
+  disabled, read-only root, dropped capabilities, and bounded tmpfs.
+- Matrix evidence: full locked all-extra Python 3.11 and 3.12 regressions both
+  exited 0; package build, air-gap/rollback drills, API foundation/scope,
+  engine parity, web install/typecheck/tests/build also exited 0. The previous
+  Python 3.11.16 `reconforge:current` image passed Doctor as the rollback
+  smoke.
+- Security evidence: Docker Scout 1.24.0 reported 82 candidate packages and
+  zero Critical/High/Medium/Low findings with exit 0. The exact release
+  Syft/Grype path was attempted; Syft produced the candidate SBOM, but Grype's
+  database refresh remained stale/blocked and was stopped. It is not reported
+  as a successful release gate.
+- Boundary: E-884 closes the local Python 3.12 candidate decision only. E-824
+  remains open for a fresh valid Grype database, hosted clean build, registry
+  publication, signed provenance, legal license review, and production proof.
+  ADR 0767 and `CONTAINER_SECURITY_PY312_CANDIDATE_2026-08-28.md` retain the
+  evidence and rollback procedure.
+
+## E-1106: Enforce strict ownership-change result replay amounts (2026-08-28)
+
+- Code evidence: ownership-change replay now strict-parses canonical scalar
+  percentage/derived fields and restores each line through
+  `Money.from_canonical_dict()` before currency-checked Decimal summation.
+- Test evidence: domain tests cover valid replay and re-signed scientific,
+  non-finite, non-canonical, and mismatched-currency financial payloads;
+  PostgreSQL and API ownership-change replay remain covered.
+- Gate evidence: the focused ownership-change suite collected 23 tests with 22
+  passes and one declared PostgreSQL capability skip; full regression reached
+  100% with exit 0 and empty stderr. Ruff, Mypy, Bandit, pip-audit, package
+  build, YAML, diff, and sdist membership gates pass.
+- Boundary: this is non-posting replay-integrity evidence only. It does not
+  establish statutory accounting treatment, journal posting, provider
+  behavior, settlement, or production assurance.
+
+## E-1105: Enforce strict canonical ERPNext write-back amounts (2026-08-28)
+
+- Code evidence: ERPNext Journal Entry and Payment Entry draft amounts use the
+  shared strict canonical helper; balance and one-sided arithmetic uses parsed
+  values before deterministic payload and digest construction.
+- Test evidence: Write-back suites cover canonical payloads, equivalent-input
+  digest convergence, invalid-value refusal, approval, feature-disabled
+  default, idempotent dispatch, TLS retry, secret isolation, and provider
+  payload identity.
+- Gate evidence: focused write-back/provider tests pass; full regression, Ruff,
+  Mypy, Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this proves draft/payload integrity only. It does not establish
+  live posting, provider acknowledgement authenticity, settlement,
+  production compensation, or production assurance.
+
+## E-1104: Enforce strict canonical ERPNext read amounts (2026-08-28)
+
+- Code evidence: ERPNext GL Entry and Payment Entry read models use the shared
+  canonical connector amount boundary; derived signed/non-zero checks use
+  strict parsed values before response digest construction.
+- Test evidence: ERPNext read suites cover canonical output,
+  scientific/non-finite/negative refusal, one-sided and non-zero invariants,
+  company scope, cursor/query behavior, token isolation, SDK inventory, and
+  TLS/retry contracts.
+- Gate evidence: focused ERPNext/SDK tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is synthetic provider-neutral read-boundary evidence. It does
+  not establish live ERPNext authenticity, posting, settlement, write-back, or
+  production assurance.
+
+## E-1103: Share strict canonical amount validation across reference connectors (2026-08-28)
+
+- Code evidence: `canonical_connector_amount()` is the shared response-model
+  boundary for REST, ERP, payment-statement, and generic database-reference
+  connectors. It applies `parse_exact_amount()` and
+  `canonical_decimal_text()` before digest serialization.
+- Test evidence: Connector and SDK suites cover canonical output,
+  scientific/non-finite refusal, account/entity/tenant scope, cursor and digest
+  replay, TLS sandbox behavior, and manifest inventory.
+- Gate evidence: focused connector tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is provider-neutral read-only connector evidence. It does not
+  establish live bank/ERP provider authenticity, settlement, payment
+  initiation, write-back, or production assurance.
+
+## E-1102: Enforce strict CAMT.053 decimal lexical boundary (2026-08-28)
+
+- Code evidence: CAMT.053 amount text is checked against the source decimal
+  lexical boundary, then parsed with `parse_exact_amount()` and serialized with
+  `canonical_decimal_text()` before signed amounts and source digests are
+  produced.
+- Test evidence: `tests/test_connector_camt053.py` covers equivalent decimal
+  formatting, scientific/separator/parenthesis refusal, non-finite refusal,
+  XML hardening, bounds, schema output, and payment-statement projection.
+- Gate evidence: focused CAMT.053 tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is offline synthetic ISO source-boundary evidence. It does
+  not establish bank dialect support, provider authentication, source
+  authenticity, settlement behavior, payment initiation, or production
+  assurance.
+
+## E-1101: Enforce strict canonical database-reference amounts (2026-08-28)
+
+- Code evidence: `DatabaseRecordRow.amount` uses `parse_exact_amount()` and
+  returns `canonical_decimal_text()`, so shared database-reference rows expose
+  one finite exact representation before response digest calculation.
+- Test evidence: `tests/test_connector_database_reference.py` covers
+  canonicalization and scientific/non-finite refusal; existing scope, duplicate,
+  cursor, and PostgreSQL transport tests remain green.
+- Gate evidence: focused connector tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is shared connector validation/serialization evidence. It does
+  not establish provider authenticity, external database certification,
+  cross-engine parity, capacity, or production financial assurance.
+
+## E-1100: Enforce strict PostgreSQL database-connector amount hydration (2026-08-28)
+
+- Code evidence: `_canonical_amount()` in the read-only PostgreSQL named-query
+  connector uses `parse_exact_amount()` and sends accepted values through the
+  existing canonical decimal serializer; safe type, non-finite, and malformed
+  connector error categories remain explicit.
+- Test evidence: `tests/test_postgres_database_reference.py` covers normal
+  read-only transport plus binary-float, scientific-text, boolean, and
+  non-finite Decimal rejection at `_row_from_values()`.
+- Gate evidence: focused connector tests pass with one declared live-
+  PostgreSQL capability skip; full regression, Ruff, Mypy, Bandit, pip-audit,
+  package build, YAML, and diff checks pass.
+- Boundary: this is connector input-integrity evidence. It does not establish
+  provider authenticity, driver certification, cross-engine parity, capacity,
+  or production financial assurance.
+
+## E-1099: Enforce strict PostgreSQL worker tolerance hydration (2026-08-28)
+
+- Code evidence: grouped and sequential PostgreSQL worker request builders use
+  `parse_exact_amount()` for `amount_tolerance`, retain non-negative bounds,
+  and pass canonical non-scientific text into strategy requests.
+- Test evidence: `tests/test_postgres_grouped_matching.py` and
+  `tests/test_postgres_sequential_matching.py` cover binary-float and
+  scientific-notation refusal; existing projection, ambiguity, digest, and
+  sequential strategy tests remain green.
+- Gate evidence: focused worker tests pass; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is worker rule-input consistency evidence. It does not
+  establish provider behavior, cross-engine parity, capacity, external IAM,
+  or production financial assurance.
+
+## E-1098: Enforce strict consolidation minor-amount verification (2026-08-28)
+
+- Code evidence: `PostgresConsolidationCloseRepository._amount_matches_minor()`
+  parses both persisted actual amounts and minor-unit-derived expected amounts
+  with `parse_exact_amount()` before equality verification.
+- Test evidence: `tests/test_postgres_consolidation_close.py` proves canonical
+  equality, mismatch refusal, and binary-float refusal; the SQLite close and
+  broader consolidation replay suites remain green.
+- Gate evidence: the focused close suite passes; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is bounded journal/effect replay evidence. It does not
+  establish statutory accounting treatment, posting correctness, provider
+  behavior, or production financial assurance.
+
+## E-1097: Enforce strict ownership-percentage hydration (2026-08-28)
+
+- Code evidence: PostgreSQL and SQLite direct-ownership readers and the
+  PostgreSQL ownership-change request replay reader use `parse_exact_amount()`
+  before constructing typed consolidation inputs. Domain range checks remain in
+  force after exact parsing.
+- Test evidence: `tests/test_postgres_consolidation_ownership.py`,
+  `tests/test_sqlite_consolidation_ownership.py`, and
+  `tests/test_postgres_consolidation_ownership_change.py` each reject a binary
+  float at their hydration boundary; existing replay, immutability, backup,
+  digest, and domain tests remain green.
+- Gate evidence: the focused ownership/domain suite passes with one declared
+  live-PostgreSQL capability skip; full regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this is exact adapter replay evidence. It does not establish
+  statutory accounting treatment, driver certification, provider behavior,
+  cross-engine parity, capacity, or production financial assurance.
+
+## E-1096: Bind PostgreSQL matching input persistence to the financial policy (2026-08-28)
+
+- Code evidence: `PostgresMatchingRepository._run_records()` passes the selected
+  `financial_input_policy` to both source-registration calls, and
+  `_register_inputs()` uses `parse_amount()` with that policy. Strict invalid
+  amounts are persisted as no usable amount and `valid=False`; explicit legacy
+  mode retains its compatibility conversion.
+- Test evidence: `tests/test_postgres_matching_application.py::test_source_record_hydration_applies_financial_input_policy`
+  proves strict binary-float rejection and legacy compatibility; the existing
+  complete-run, lineage, schema, and no-SQLite-dependency tests remain green.
+- Gate evidence: the focused PostgreSQL matching application suite passes with
+  one declared live-PostgreSQL capability skip; full regression, Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML, and diff checks pass.
+- Boundary: this proves one adapter-level input/evidence consistency contract.
+  It does not establish driver certification, provider authenticity,
+  cross-engine parity, capacity, or production financial assurance.
+
+## E-1095: Enforce strict PostgreSQL financial hydration (2026-08-28)
+
+- Code evidence: PostgreSQL policy-analysis scope amount bounds and ledger
+  trial-balance debit/credit totals use `parse_exact_amount()` at hydration.
+  Present binary floating-point, malformed, non-finite, and negative values
+  fail closed; a missing trial-balance aggregate retains the explicit zero
+  fallback.
+- Test evidence: the policy-scope and trial-balance float regressions cover the
+  two repository boundaries; existing PostgreSQL policy-analysis, ledger,
+  trial-balance, scope, and audit tests remain green.
+- Gate evidence: focused repository tests pass; `python -m pytest -q
+  --tb=short --maxfail=1` reaches 100% with exit 0; Ruff passes; Mypy reports
+  no issues in 539 source files; Bandit exits 0 with reviewed existing
+  suppression warnings; pip-audit reports no known vulnerabilities while
+  noting the local package is not on PyPI; the 0.7.1 wheel and sdist build
+  successfully; the sdist contains ADR 0755 and the changed repositories;
+  and YAML/diff checks pass.
+- Boundary: this is repository hydration/input-integrity evidence. It does not
+  establish PostgreSQL driver certification, statutory posting, external IAM,
+  provider behavior, or production financial assurance.
+
+## E-1094: Enforce strict parsing for persisted worker policy amounts (2026-08-28)
+
+- Code evidence: `PostgresReconciliationWorker._policy_amount_from_run()` now
+  uses `parse_exact_amount()` for the immutable `policy_amount` carried into
+  claim and lifecycle authorization. Binary floating-point, malformed,
+  non-finite, and negative values fail closed before policy evaluation.
+- Test evidence: `tests/test_postgres_reconciliation.py::test_postgres_reconciliation_worker_rejects_binary_float_policy_amount`
+  proves a decoded JSON float is refused; the existing worker, policy, scope,
+  resume, and persisted-rule tests remain green.
+- Gate evidence: the full Python regression reaches 100% with exit 0; focused
+  PostgreSQL reconciliation/sequential-worker tests pass; Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML, and diff gates pass. The package sdist
+  contains ADR 0754 and the changed worker module.
+- Boundary: this is persisted-rule input and authorization-boundary evidence.
+  It does not establish external IAM, distributed revocation, hosted
+  enforcement, posting correctness, provider behavior, or production
+  authorization effectiveness.
+
+## E-1093: Enforce strict financial inputs in sequential strategy adapters (2026-08-28)
+
+- Code evidence: `CarryForwardFifoStrategy` and `ReversalPairingStrategy` use
+  `parse_exact_amount()` for record amounts and strategy tolerances. The
+  adapters reject binary floating-point input before constructing domain
+  records or running matching, while exact text, integers, and Decimal values
+  remain supported.
+- Test evidence: `tests/test_matching_strategy_contract.py::test_sequential_strategy_adapters_reject_binary_float_amounts`
+  covers both adapters; the existing carry-forward, reversal, sequential
+  worker, replay, and strategy-contract tests remain green.
+- Gate evidence: the focused matching-strategy and sequential-worker suite
+  passes 47/47; `python -m pytest -q --tb=short --maxfail=1` reaches 100% with
+  exit 0; Ruff passes; Mypy reports no issues in 539 source files; Bandit exits
+  0 with reviewed existing suppression warnings; pip-audit reports no known
+  vulnerabilities while noting the local package is not on PyPI; the 0.7.1
+  wheel and sdist build successfully; the sdist contains ADR 0753 and both
+  changed adapters; and YAML/diff checks pass.
+- Boundary: this is strict adapter input evidence. It does not establish
+  posting correctness, provider authenticity, cross-engine parity, hosted
+  enforcement, capacity, or production financial assurance.
+
+## E-1092: Bound bank-control duplicate-reference evaluation (2026-08-28)
+
+- Code evidence: `run_bank_statement_control()` declares and validates limits
+  for records per side, candidates per normalized reference, and total
+  candidate evaluations. It refuses a dense reference or exhausted evaluation
+  budget before returning a partial run, and uses a referenced-ledger ID set
+  for final unmatched coverage.
+- Test evidence: `tests/test_bank_statement_control.py::test_bank_control_refuses_unbounded_duplicate_reference_candidates`
+  proves a candidate set above the declared ceiling is rejected. Existing
+  duplicate-reference ambiguity, permutation/replay, API, persistence, full
+  regression, and release gates remain green.
+- Gate evidence: the focused bank-control/API suite passes with one declared
+  capability skip; `python -m pytest -q --tb=short --maxfail=1` reaches 100%
+  with exit 0; Ruff passes; Mypy reports no issues in 539 source files; Bandit
+  exits 0 with reviewed existing suppression warnings; pip-audit reports no
+  known vulnerabilities while noting the local package is not on PyPI; the
+  0.7.1 wheel and sdist build successfully; and the sdist contains ADR 0752
+  and the changed bank-control module.
+- Boundary: this is a local deterministic input/algorithm guard. It does not
+  establish bank-source authenticity, live provider behavior, payment or
+  posting correctness, distributed capacity, or production banking assurance.
+
+## E-1091: Enforce hard partition limits during PostgreSQL input streaming (2026-08-28)
+
+- Code evidence: `PostgresReconciliationRepository.iter_input_partitions()`
+  validates `max_partition_records`, clamps the cursor batch to that ceiling,
+  and refuses accumulation when the current partition reaches the declared
+  ceiling before appending another input row. `PostgresReconciliationWorker`
+  passes the persisted `partition_max_records` rule through one shared
+  validation helper.
+- Test evidence: `tests/test_postgres_reconciliation.py::test_postgres_input_partition_limit_is_enforced_during_cursor_accumulation`
+  proves a one-record ceiling refuses the second row with an explicit
+  `PostgresReconciliationIntegrityError`; the full PostgreSQL reconciliation
+  file passes, including crash/resume tests.
+- Boundary: the guard limits Python materialization per hard partition. It does
+  not prove database-side resource isolation, total-run capacity, distributed
+  execution, hosted sizing, or production SLOs.
+
+## E-1090: Bound stock/GL candidate generation under dense partitions (2026-08-28)
+
+- Code evidence: `assign_stock_to_gl` partitions records by normalized work
+  order and currency and refuses a partition above the fixed 100,000-pair
+  candidate-generation ceiling before evaluating pair candidates. The refusal
+  creates one explicit ambiguity group covering every affected source row;
+  optimization metrics remain null because no assignment was evaluated.
+- Test evidence: the focused ambiguity/property/stock-GL suite proves a lowered
+  3-by-3 partition ceiling produces no matches, six ambiguity rows, the explicit
+  `candidate_generation_budget_exceeded` reason, and a balanced record-accounting
+  invariant. Full regression and release gates are recorded for this slice.
+- Boundary: this is a local algorithm safety bound. It does not prove
+  throughput, capacity, PostgreSQL/provider parity, distributed execution, or
+  production sizing.
+
+## E-1089: Enforce tenant provenance in execution-scope resolution (2026-08-28)
+
+- Code evidence: `request_execution_scope()` now compares the validated request
+  tenant with `ServerPrincipal.authorized_tenant_ids` before parsing or
+  returning workspace and narrower hierarchy scope. A non-empty mismatch is
+  refused with `tenant_scope_denied`.
+- Test evidence: the direct execution-scope regression proves that a principal
+  bound to `tenant-a` cannot resolve a `tenant-b` scope; existing workspace,
+  organization, entity, dependency, identity, full regression, and release
+  gates remain green for this slice.
+- Packaging evidence: `python -m build --no-isolation` succeeds, and direct
+  inspection of `reconforge_erp-0.7.1.tar.gz` confirms that ADR 0749 is included
+  in the source distribution.
+- Boundary: the empty tenant-grant compatibility seam remains explicit. This
+  is reusable local scope-provenance evidence, not independent tenant
+  membership, external IAM, distributed revocation, hosted enforcement, or
+  production authorization effectiveness.
+
+## E-1088: Bind generic server permission dependencies to tenant scope (2026-08-28)
+
+- Code evidence: the server branches of `require_permission` and
+  `require_any_permission` now include the validated request tenant and the
+  authenticated principal's bound tenant grant in `PolicyEvaluationContext`.
+  The explicit fallback for legacy unbound injected principals is limited to
+  that compatibility seam.
+- Test evidence: the new dependency regression proves that a principal bound
+  to `tenant-b` cannot satisfy a generic `db.read` dependency for a
+  `tenant-a` request. Focused dependency, scope, server-identity, operations,
+  and foundation tests plus the full Python and release gates are recorded for
+  this slice.
+- Packaging evidence: `python -m build --no-isolation` succeeds, and direct
+  inspection of `reconforge_erp-0.7.1.tar.gz` confirms that ADR 0748 is included
+  in the source distribution.
+- Boundary: this closes a local generic-dependency context gap. It does not
+  prove external IAM, independent tenant membership, distributed revocation,
+  hosted enforcement, or production authorization effectiveness.
+
+## E-1087: Bind authenticated server principals to tenant scope (2026-08-28)
+
+- Code evidence: `authenticate_server_request` records the validated request
+  tenant in `AuthenticatedServerRequest`; `server_principal_from_authentication`
+  carries it into `ServerPrincipal.authorized_tenant_ids`. Server-scoped policy
+  evaluation and the operations queue policy context now reject a bound sibling
+  tenant and reuse the authenticated tenant grant. Older tuple/test seams with
+  no tenant binding retain an explicit compatibility fallback.
+- Test evidence: the focused scope, operations, server-identity, and API
+  foundation suite passes with two declared capability skips; the new regression
+  proves that a principal bound to `tenant-b` cannot authorize a `tenant-a`
+  server mutation. Ruff and Mypy pass for all changed Python files.
+- Full-gate evidence: `python -m pytest -q --tb=short --maxfail=1` reaches
+  100% with no executed failure; full Ruff passes; Mypy reports no issues in
+  539 source files; Bandit exits successfully with its existing reviewed
+  `nosec`/comment warnings; and `pip-audit` reports no known vulnerabilities
+  while skipping the unpublished local package.
+- Packaging evidence: `python -m build --no-isolation` exits 0 and a direct
+  sdist inspection verifies ADR 0747 and `tests/test_api_execution_scope.py`
+  are included. `BACKLOG.yaml` parses successfully and `git diff --check`
+  passes.
+- Boundary: the binding strengthens provenance after the configured PostgreSQL
+  identity backend authenticates a tenant-scoped credential. It does not provide
+  independent tenant-membership evidence, external IAM, distributed revocation,
+  cross-region behavior, or production authorization effectiveness.
+
+## E-1086: Bound policy-decision cache freshness (2026-08-28)
+
+- Code evidence: `PolicyDecisionCache` validates a bounded `cache_ttl_seconds`
+  setting (1 to 3,600 seconds), timestamps each allowed entry with a monotonic
+  clock, and refuses to reuse an entry at or beyond its TTL. Denials and
+  delegated evaluations continue to bypass storage, while the shared-version
+  store remains the cross-process invalidation mechanism.
+- Test evidence: `tests/test_policy_cache.py` passes 8/8, including deterministic
+  expiry at the TTL boundary and invalid configuration rejection. Existing
+  shared-generation, scope-invalidation, denial, delegation, and outage
+  fallback tests remain green.
+- Full-gate evidence: `python -m pytest -q --tb=short --maxfail=1` passes
+  100% with no failures; Ruff passes; Mypy reports no issues in 539 source
+  files; Bandit exits successfully with its existing reviewed `nosec`/comment
+  warnings; and `pip-audit` reports no known vulnerabilities while skipping the
+  unpublished local package.
+- Packaging evidence: `python -m build --no-isolation` successfully produces
+  `reconforge_erp-0.7.1.tar.gz` and
+  `reconforge_erp-0.7.1-py3-none-any.whl`; a direct archive inspection verifies
+  the new ADR and `tests/test_policy_cache.py` are included in the sdist;
+  `BACKLOG.yaml` parses successfully and `git diff --check` passes.
+- Boundary: TTL is defense in depth for the opt-in local cache. It does not
+  replace request-time policy checks or shared-generation invalidation, and it
+  does not prove distributed IAM, instant revocation, hosted enforcement,
+  cross-region behavior, or production effectiveness.
+
+## E-1085: Prove cross-process engine replay stability (2026-08-28)
+
+- Code evidence: `tests/test_engine_process_replay.py` creates a bounded
+  500-record synthetic dataset and runs Pandas plus forced-partitioned DuckDB
+  in fresh subprocesses under `PYTHONHASHSEED=1` and `PYTHONHASHSEED=2`.
+  Each child serializes counts, summary rows, policy fields, and the
+  reconciliation signature into a closed comparison envelope.
+- Test evidence: `python -m pytest tests/test_engine_process_replay.py -q
+  --tb=short` passes 1/1; the focused engine-parity/matching suite passes
+  36/36; and `python -m pytest -q --tb=short --maxfail=1` reaches 100% with no
+  failures. Existing optional capability skips and the repository's known
+  deprecation/legacy-input warnings remain declared.
+- Quality and packaging evidence: Ruff passes; Mypy reports no issues in 539
+  source files; Bandit exits successfully with its existing `nosec`/comment
+  warnings; pip-audit reports no known vulnerabilities and records the local
+  distribution-not-on-PyPI note; package build produces wheel and sdist; the
+  sdist contains both ADR 0745 and `tests/test_engine_process_replay.py`;
+  `BACKLOG.yaml` parses successfully and `git diff --check` passes.
+- Boundary: this is bounded local subprocess replay evidence across the
+  declared Pandas and partitioned DuckDB paths. It does not prove every
+  supported Python/dependency version, hosted execution, PostgreSQL parity,
+  live-provider behavior, capacity, or production readiness.
+
+## E-1084: Freeze critical financial route permission contracts (2026-08-28)
+
+- Code evidence: `reconforge/api/authorization.py` defines the reviewed
+  critical route contract set. `validate_authorization_surface` rejects mode
+  or permission drift for those routes, and the full application invokes it
+  with `require_critical_routes=True`, refusing a missing critical route
+  before the application is served.
+- Test evidence: `tests/test_api_authorization_inventory.py` passes 7 tests,
+  including full application inventory construction, missing/unclassified
+  route refusal, mutating-handler boundary coverage, and explicit rejection of
+  a tampered finance-validation permission. The broader API dependency and
+  server-identity focused suite also passes 18 tests with one declared
+  capability skip.
+- Gate evidence observed on 2026-08-28: full `pytest -q --tb=short
+  --maxfail=1` completes at 100% with no failures; Ruff passes; Mypy reports
+  no issues in 539 source files; Bandit exits successfully with the existing
+  `nosec`/comment warnings; pip-audit reports no known vulnerabilities and
+  records the local distribution-not-on-PyPI note; package build produces
+  wheel and sdist artifacts; the 0.7.1 sdist contains ADR 0744; YAML parsing
+  and `git diff --check` pass.
+- Boundary: this freezes local route authorization contracts and supports
+  fail-closed review of RBAC/ABAC entry points; it does not authenticate an
+  external IdP, provide distributed permission revocation, prove hosted
+  enforcement, or establish production effectiveness.
+
+## E-1083: Keep CI service-container identity immutable and documentation-aligned (2026-08-28)
+
+- Code/workflow evidence: `.github/workflows/ci.yml` executes the
+  server-boundary PostgreSQL service as
+  `postgres:16-alpine@sha256:57c72fd2...07777` and the Redis service as
+  `redis:7.4-alpine@sha256:e7723ff...9219a2`; the same Redis digest is
+  supplied to `verify_redis_live.py`. The exact workflow identities are now
+  guarded by `tests/test_phase4_execution_contract.py`.
+- Test evidence: the focused phase-4 execution-contract suite and its Redis
+  live-report/supply-chain companions pass 42 tests. The full pytest suite
+  completes with no failures; Ruff, Mypy, Bandit, pip-audit, package build,
+  YAML, and diff gates also pass, with existing Bandit `nosec`/comment
+  warnings and the local distribution-not-on-PyPI audit note retained.
+- Boundary: digest pinning prevents tag drift in the reviewed workflow but
+  does not authenticate image provenance, establish freshness, prove hosted
+  execution, provide independent service assurance, or establish production
+  readiness.
+
+## E-1082: Bind PostgreSQL outbox workers to verified permission manifests (2026-08-28)
+
+- Code evidence: policy-supplier-backed `PostgresOutboxWorkerSettings` now
+  requires a `WorkerPermissionManifest` and binds worker ID, audit principal,
+  discovery permission, and execution permission at configuration time. The
+  discovery/claim policy check uses the manifest discovery grant before
+  connection access; publishing and failure lifecycle checks use the execution
+  grant before their side effects. Local SQLite `OutboxWorker` rejects these
+  hosted-only settings.
+- Test evidence: `tests/test_postgres_outbox.py` and
+  `tests/test_outbox_worker.py` pass 21/21, with two declared skips because a
+  live PostgreSQL service is not configured. Coverage includes manifestless
+  no-connection rejection, configuration drift, discovery/execution
+  separation, scope propagation, and revocation before publish. Full pytest,
+  Ruff, Mypy, Bandit, pip-audit, package build, source YAML, and diff checks
+  are the release gates for this slice.
+- Gate evidence observed on 2026-08-28: full `pytest -q --tb=short
+  --maxfail=1` completed at 100%; `ruff check .` passed; Mypy reported no
+  issues in 539 source files; Bandit exited successfully with existing
+  `nosec`/comment warnings; pip-audit reported no known vulnerabilities and
+  explicitly noted that the local `reconforge-erp` distribution is not on
+  PyPI; `python -m build --no-isolation` produced wheel and sdist artifacts;
+  the 0.7.1 sdist contains ADR 0742; source YAML parsing and `git diff
+  --check` passed.
+- Boundary: this proves the reviewed PostgreSQL outbox configuration and
+  policy boundary using local synthetic fixtures. It does not prove external
+  IAM provisioning, universal worker adoption, distributed revocation,
+  provider behavior, HA/DR, or production authorization effectiveness.
+
+## E-1081: Bind PostgreSQL scheduler workers to verified permission manifests (2026-08-28)
+
+- Code evidence: policy-supplier-backed `PostgresSchedulerWorkerSettings`
+  now requires a `WorkerPermissionManifest`, binds worker/principal identity,
+  and requires explicit discovery and execution permissions to match the
+  manifest. The pre-connection policy decision uses the discovery grant and
+  the immediate pre-dispatch recheck uses the execution grant.
+- Test evidence: `tests/test_postgres_scheduler_worker.py` passes 10/10,
+  covering manifestless no-connection rejection, configuration drift,
+  discovery/execution separation, scope propagation, and revocation before
+  dispatch. Full pytest, Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff checks are the release gates for this slice.
+- Boundary: this is local synthetic scheduler-worker policy evidence only. It
+  does not prove external IAM provisioning, universal worker adoption,
+  distributed revocation, provider behavior, HA/DR, or production
+  authorization effectiveness.
+
+## E-1080: Bind PostgreSQL reconciliation workers to verified permission manifests (2026-08-28)
+
+- Code evidence: policy-supplier-backed `PostgresReconciliationWorkerSettings`
+  now requires a `WorkerPermissionManifest` and checks worker identity,
+  audit principal, discovery grant, and execution grant at configuration time.
+  `_authorize_scope` validates every requested discovery or execution
+  permission against that fixed manifest before invoking the central policy
+  helper or opening a PostgreSQL transaction. The explicitly named unbound
+  local compatibility flag remains unchanged.
+- Test evidence: `tests/test_postgres_reconciliation.py` passes its complete
+  contract suite with one declared capability skip, including no-connection
+  rejection for a missing manifest and rejection of an unreviewed permission
+  override. Full pytest, Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff checks are the release gates for this slice.
+- Boundary: this proves the reviewed configuration and policy boundary for
+  the PostgreSQL reconciliation worker. It does not prove external IAM
+  provisioning, every worker uses this setting, distributed revocation,
+  provider behavior, HA/DR, or production authorization effectiveness.
+
+## E-1079: Bind governed durable workers to verified permission manifests (2026-08-28)
+
+- Code evidence: `GovernedDurableJobWorkerService` now requires a
+  `WorkerPermissionManifest` and validates its worker ID, service-account
+  principal ID, exact canonical tenant/workspace/organization/entity scope,
+  and execution permission before delegating to the durable-job repository.
+  The discovery permission is intentionally not accepted by the execution
+  facade. The backend-neutral worker primitive remains unchanged.
+- Test evidence: `tests/test_governed_worker_policy.py` and
+  `tests/test_worker_permission_manifest.py` pass 22/22. The regression covers
+  manifest-bound identity, principal, namespace, and permission substitution
+  denials, plus existing policy re-evaluation and lifecycle audit behavior.
+  Full pytest, Ruff, Mypy, Bandit, pip-audit, package build, source YAML, and
+  diff checks are the release gates for this slice.
+- Boundary: this proves the opt-in local governed facade consumes a verified
+  manifest. It does not prove every worker uses the facade, external IAM
+  provisioning, distributed revocation, provider behavior, HA/DR, or
+  production authorization effectiveness.
+
+## E-1078: Canonical matching requires explicit currency (2026-08-28)
+
+- Code evidence: `DeterministicMatchingEngine._ordered_records` now marks a
+  missing currency as `MISSING_CURRENCY` under
+  `canonical-multiset-occurrence-v1`; the quality boundary emits a bounded
+  high-severity data-quality exception and the candidate builder excludes the
+  record. The legacy compatibility identity path is intentionally unchanged.
+- Test evidence: the focused regression passes and proves that matching two
+  same-amount, same-reference records without currency returns two invalid
+  results, two `MISSING_CURRENCY` exceptions, and no matched result. Full
+  pytest passes at 100%; Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML validation, and diff checks also pass. The pip-audit run reports that
+  the local distribution name is not published on PyPI, so that package-name
+  limitation remains explicit.
+- Boundary: this closes a canonical missing-currency fail-open path. It does
+  not establish complete currency-registry coverage, FX correctness, provider
+  authenticity, production assurance, statutory accounting, or compliance.
+
+## E-1077: Tenant-bound emergency mutation policy (2026-08-28)
+
+- Code evidence: named emergency mutations re-evaluate their explicit
+  permissions through `enforce_server_tenant_permission` using the validated
+  request tenant immediately before repository work. Self-service activation
+  and target ending retain their existing human-session and repository guards;
+  only administrator ending receives the named administrative re-evaluation.
+- Test evidence: the focused helper test proves the exact permission and tenant
+  passed to the central boundary. Full pytest, Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff checks pass; live PostgreSQL evidence is
+  conditional on the declared DSN and is not inferred from skipped tests.
+- Boundary: this proves bounded tenant-bound policy provenance for the
+  emergency route. It does not establish PAM, external IAM, universal MFA,
+  distributed invalidation, or production effectiveness.
+
+## E-1076: Explicit emergency-access request authorization (2026-08-28)
+
+- Code evidence: the PostgreSQL emergency-access request route now depends on
+  `security.emergency.request`. The central policy registry classifies that
+  permission as human-only and privileged step-up protected. The route
+  inventory removes request creation from the identity-only allowlist and binds
+  the exact permission contract and digest.
+- Test evidence: the authorization inventory asserts the request route's
+  permission-bearing contract; policy parametrization covers service-account
+  denial and recent-step-up requirements; PostgreSQL emergency fixtures grant
+  the new permission explicitly. Focused tests, full pytest, Ruff, Mypy,
+  Bandit, pip-audit, package build, source YAML, and diff checks are the
+  release gates for this slice.
+- Boundary: this closes explicit request authorization only. Approval/review
+  independence and session-bound activation remain separately tested; no PAM,
+  external IAM, universal MFA, or production-effectiveness claim follows.
+
+## E-1075: Exact currency-bound enterprise demo trial balances (2026-08-28)
+
+- Code evidence: `reconforge/enterprise_demo.py` now stores account bases and
+  demo scaling factors as Decimal values and constructs each trial-balance
+  balance through `Money.from_exact` with the entity's currency and strict
+  precision. The CSV schema and field names remain compatible.
+- Test evidence: `tests/test_enterprise_demo.py` verifies that all generated
+  in-memory trial-balance balances are Decimal values and checks exact USD and
+  GBP outputs. The enterprise-demo suite and the full Python regression pass;
+  Ruff, Mypy, Bandit, pip-audit, package build, source YAML validation, and
+  diff checks also pass.
+- Boundary: this removes binary-float introduction from synthetic trial-balance
+  generation. It does not establish statutory accounting correctness, source
+  authenticity, live-rate correctness, or production assurance.
+
+## E-1074: Syft-derived CI image subject (2026-08-28)
+
+- Root cause evidence: on the fresh local BuildKit image, Docker's local
+  manifest-list identity was `sha256:a4e1b425a341d03ebb7d2d5017b4e2df183e5daf31a6e8e4f8f89e14b9d8e7b2`,
+  while Syft's native image document reported configuration
+  `sha256:915ea5d3c8b64f8c0163c5e4617eaa8f518cfc31e7c763e52ce7e1036b925fff`
+  and manifest `sha256:33b14b7cd8262f2f7f7a64843564c6e37a13faa276d92b90bb6acbaff24a188d`.
+  These are different OCI identities and must not be substituted for one
+  another.
+- Code evidence: `.github/scripts/extract_syft_image_config_digest.py` now
+  validates the native Syft image envelope and returns only `imageID`. Both
+  `.github/workflows/security.yml` and `.github/workflows/release.yml` invoke
+  it after SBOM generation and before Grype/evidence publication. Neither
+  workflow obtains the scan subject from Docker's local `.Id` anymore.
+- Test evidence: `tests/test_extract_syft_image_identity.py` proves valid
+  extraction and fail-closed wrong-platform handling. The identity,
+  supply-chain, signed-release, and container-hardening workflow suites pass
+  (`55` tests); Ruff, Mypy, `python .github/scripts/validate_supply_chain_policy.py`,
+  and source YAML validation also pass.
+- Boundary: this closes a CI evidence-subject integrity defect. It does not
+  establish a hosted run, signed provenance, OCI reproducibility, registry
+  publication, legal license compatibility, or production security.
+
+## 2026-08-28: current local runtime and release-gate refresh
+
+- Environment evidence: Windows host, Docker Engine `29.7.2`, Python
+  environment with the installed ReconForge package at version `0.7.1`, and
+  the repository branch `money-strict-bank-control`. The tracked worktree was
+  clean before this documentation update; pre-existing user-created
+  untracked execution files were not staged or modified.
+- CLI evidence: `reconforge doctor` exited `0`; package, configuration, sample
+  data, output path, and validation checks were reported healthy. The doctor
+  output contained `0` errors and `10` expected synthetic sample warnings.
+  `reconforge validate examples/sample_data` also exited `0` with `0` errors
+  and the same `10` documented sample-data warnings.
+- Demo evidence: `reconforge demo run --output
+  output/baseline-demo-20260828` exited `0` and produced the management pack,
+  executive report, dashboard, review register/state, evidence/client pack,
+  stock-GL and work-order reconciliation outputs, and rule results. The run
+  reported `10` validation issues, `13` stock-GL exceptions, `16` work-order
+  exceptions, `2` triggered rules, `14` evidence cases, and `1` review entry.
+  These are synthetic-demo observations, not production outcome claims.
+- Web evidence: `npm --prefix apps/web ci`, `typecheck`, `test:run`, `build`,
+  and `e2e` all exited `0`. The frontend unit suite passed `15` files and `75`
+  tests; the browser suite passed `16` tests and declared `5` environment-
+  bounded skips out of `21`. The production build transformed `2,383`
+  modules. The npm audit performed by the install reported `0` vulnerabilities.
+- Python/release-gate evidence: full pytest passed at `100%`; Ruff passed;
+  Mypy passed on `539` source files; Bandit passed; pip-audit exited `0` with
+  no known third-party vulnerabilities, while correctly reporting that the
+  local distribution is not published on PyPI and therefore cannot itself be
+  audited; `python -m build --no-isolation` passed; source YAML validation
+  reported `139` valid files; and `git diff --check` passed.
+- Docker boundary: a fresh current-source
+  `docker build --pull --no-cache --platform linux/amd64 -t
+  reconforge:current .` was attempted with Docker Engine `29.7.2` and failed
+  before producing a current image. Alpine `v3.24` exposed
+  `libcrypto3-3.5.7-r0` and `libssl3-3.5.7-r0`, while the Dockerfile requires
+  the security-pinned `3.5.8-r0` versions; `apk` exited `9` after the mirror
+  also reported a TLS unspecified error. This is external package-mirror
+  drift, not a successful build and not a reason to weaken the pins. E-824
+  remains open for a fresh reproducible build and the required current
+  scanner/provenance evidence. The previously retained image evidence is not
+  promoted as evidence for this source revision.
+
+## E-1073: Checksum-bound Alpine security APK retrieval (2026-08-28)
+
+- Code evidence: Both Docker stages now fetch the reviewed Alpine
+  `libcrypto3-3.5.8-r0.apk` and `libssl3-3.5.8-r0.apk` artifacts with
+  BuildKit checksum-bound `ADD` instructions, install the local APKs, and
+  remove the temporary files. The Dockerfile remains digest-pinned and does
+  not add the OpenSSL CLI.
+- Artifact evidence: The recorded SHA-256 values are
+  `161223a16f042b8e469e9441291e071464fd91d4f4bbe6f496ee8d0abd4e0701` for
+  libcrypto3 (1,978,546 bytes) and
+  `aca521e5ae4a321322a9d47ed64a1775f5ab1ffd215d1e9fc0433c58f7bfd037` for
+  libssl3 (379,265 bytes). A disposable base-image test installed both
+  artifacts successfully and upgraded the libraries from `3.5.7-r0` to
+  `3.5.8-r0`.
+- Docker evidence: `docker build --pull --no-cache --platform linux/amd64 -t
+  reconforge:current .` exited `0` and produced manifest list
+  `sha256:a4e1b425a341d03ebb7d2d5017b4e2df183e5daf31a6e8e4f8f89e14b9d8e7b2`.
+  Hardened `reconforge doctor` exited `0`; the image ran as UID/GID
+  `10001:10001`, with network disabled, a read-only root, all capabilities
+  dropped, and `no-new-privileges`. Installed packages were exactly
+  `libcrypto3-3.5.8-r0` and `libssl3-3.5.8-r0`; the OpenSSL CLI was absent.
+- Test evidence: Supply-chain and container-hardening suites pass. Full
+  pytest, Ruff over Python sources, Mypy, Bandit, pip-audit, package build,
+  source YAML validation, and diff checks pass. A prior diagnostic run that
+  applied Ruff to the Dockerfile itself is not a repository quality result;
+  Ruff is a Python linter and the Dockerfile was subsequently validated by
+  the real Docker build.
+- Boundary: this closes resilient retrieval of the reviewed local container
+  packages, not the E-824 release gate. Fresh Syft/Grype evidence for this
+  exact image, hosted clean-build/provenance, signed publication, and
+  independent production assurance remain required.
+
+## E-1072: Fail-closed local role responses (2026-08-28)
+
+- Code evidence: Local role inspection and role-permission responses now pass
+  through central allowlists. The role projector preserves only `id` and
+  `name`; the permission projector validates a string collection and preserves
+  only `role` and `permissions`. Malformed repository shapes return the
+  bounded `roles_projection_failed` API error.
+- Test evidence: Field-access tests inject future role and permission fields;
+  the authenticated local roles route injects a future repository field and
+  proves it is absent from the response. Focused tests and the full pytest
+  regression pass at `100%`; Ruff, Mypy (`539` source files), Bandit,
+  pip-audit, package build, source YAML validation (`139` files), and
+  `git diff --check` also pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: this slice controls local API response disclosure only. It does
+  not establish enterprise PostgreSQL role administration, authorization
+  correctness, or production effectiveness. ADR 0732 records rollback.
+
+## E-1071: Fail-closed local workflow responses
+
+- Code evidence: Local workflow object, allowed-transition, and history routes
+  now apply central projections to the reviewed state-machine fields.
+- Test evidence: field-access tests inject future object, transition, and event
+  fields; the workflow API/state-machine/schema suites pass. Focused Ruff,
+  Mypy, and pytest checks pass; full regression, Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff gates pass. pip-audit cannot audit the
+  local distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; PostgreSQL workflow
+  availability and production effectiveness remain separately bounded. ADR
+  0731 records rollback.
+
+## E-1070: Fail-closed connector write-back responses
+
+- Code evidence: Connector write-back intent and recovery-observation response
+  paths now use central projections for lifecycle fields and nested approval,
+  acknowledgement, and provider-observation data.
+- Test evidence: field-access tests inject future fields at each nested
+  lifecycle boundary; existing connector API and observation suites pass with
+  the shared helpers. Focused and full pytest checks pass; Ruff, Mypy, Bandit,
+  pip-audit, package build, source YAML, and diff gates pass. pip-audit cannot
+  audit the local distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; provider correctness,
+  external connector behavior, live PostgreSQL execution, and production
+  effectiveness remain separately bounded. ADR 0730 records rollback.
+
+## E-1069: Fail-closed evidence coverage responses
+
+- Code evidence: The evidence coverage route now projects the tenant/workspace
+  summary and nested per-object requirement counts through a central
+  allowlist for both SQLite and PostgreSQL adapters.
+- Test evidence: field-access tests inject future summary and object fields;
+  the PostgreSQL-shaped and local SQLite route tests prove those fields do not
+  escape. Focused and full pytest checks pass; Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff gates pass. pip-audit cannot audit the
+  local distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; evidence-store durability,
+  universal authorization, live PostgreSQL execution, and production
+  effectiveness remain separately bounded. ADR 0729 records rollback.
+
+## E-1068: Fail-closed access policy-analysis responses
+
+- Code evidence: The access policy-analysis route now projects deterministic
+  result fields and nested conflict findings through a central allowlist before
+  serialization.
+- Test evidence: field-access tests inject future result and finding fields;
+  the authenticated access-administration test injects future fields through
+  a route-shaped analysis result. Focused and full pytest checks pass; Ruff,
+  Mypy, Bandit, pip-audit, package build, source YAML, and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI.
+- Boundary: this controls response disclosure only; policy correctness,
+  external IAM, live PostgreSQL execution, and production effectiveness remain
+  separately bounded. ADR 0728 records rollback.
+
+## E-1067: Fail-closed Security Governance responses
+
+- Code evidence: Security Governance integration, retention-policy,
+  pagination, disable, policy-change, and evidence-retention routes now apply
+  central projections to records and nested lifecycle envelopes.
+- Test evidence: field-access tests inject unknown fields at integration,
+  retention-policy, pagination, nested mutation, and retention-result levels;
+  authenticated API tests inject future fields through the route serializer.
+  Focused Ruff, Mypy, and pytest checks pass. Full regression and release gates
+  pass, including Ruff, Mypy, Bandit, pip-audit, package build, source YAML,
+  and diff checks. pip-audit cannot audit the local distribution because it is
+  not published on PyPI.
+- Boundary: policy-analysis artifacts remain a separate contract. This controls
+  response disclosure only; security certification, external IAM, live
+  PostgreSQL behavior, and production effectiveness remain separately bounded.
+  ADR 0727 records rollback.
+
+## E-1066: Fail-closed access administration responses
+
+- Code evidence: Access administration permission, role list, role mutation,
+  and user-role assignment routes now apply central projections to records,
+  pagination, and nested lifecycle envelopes before serialization.
+- Test evidence: field-access tests inject unknown fields at permission, role,
+  pagination, nested role-change, and assignment levels; authenticated API
+  tests inject future fields through the route serializer. Focused Ruff, Mypy,
+  and pytest checks pass. Full regression, Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff gates pass. pip-audit cannot audit the
+  local distribution because it is not published on PyPI.
+- Boundary: policy-analysis artifacts remain a separate contract. This Slice
+  controls response disclosure only; universal IAM assurance, live PostgreSQL
+  behavior, distributed revocation, and production effectiveness remain
+  separately bounded. ADR 0726 records rollback.
+
+## E-1065: Fail-closed identity administration responses
+
+- Code evidence: Identity administration user/session list, status-change, and
+  revocation routes now apply central projections to records, pagination, and
+  nested lifecycle responses before serialization.
+- Test evidence: field-access tests inject unknown identity/session fields at
+  record, pagination, and mutation-envelope levels; authenticated API tests
+  inject future fields through the route serializer. Focused Ruff, Mypy, and
+  pytest checks pass. Full regression, Ruff, Mypy, Bandit, pip-audit, package
+  build, source YAML, and diff gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; external IAM assurance,
+  live PostgreSQL behavior, distributed revocation, and production
+  effectiveness remain separately bounded. ADR 0725 records rollback.
+
+## E-1064: Fail-closed projection for Finance Core snapshots
+
+- Code evidence: `/api/v1/finance-core/snapshot` now projects both local SQLite
+  and tenant-scoped PostgreSQL snapshots through a central recursive allowlist
+  covering the root, source, summary, master-data collections, entries, and
+  entry lines.
+- Test evidence: field-access and server-shaped API tests inject unknown fields
+  at the root and each nested snapshot boundary and prove they do not escape.
+  The focused suite and full regression pass; Ruff, Mypy, Bandit, pip-audit,
+  package build, source YAML, and diff gates pass. pip-audit cannot audit the
+  local distribution because it is not published on PyPI.
+- Boundary: this controls API disclosure only; statutory posting, accounting
+  correctness, universal field-level authorization, and production
+  effectiveness remain separately bounded. ADR 0724 records rollback.
+
+## E-1063: Fail-closed projection for consolidation source-bound artifacts
+
+- Code evidence: Intercompany Elimination, Consolidation Impairment, and
+  Acquisition Deferred Tax routes now apply central family-specific artifact
+  projections through nested payloads and source envelopes.
+- Test evidence: focused API fixtures inject unknown artifact fields;
+  field-access tests inject unknown nested Money, line/item, resolution,
+  proposal, and source fields. Target Ruff and Mypy checks pass; full
+  regression passes; Ruff, Mypy, Bandit, pip-audit, package build, source
+  YAML, and diff gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: this controls API disclosure only; statutory accounting,
+  valuation/tax conclusions, posting, and production effectiveness remain
+  separate concerns. ADR 0723 records rollback.
+
+## E-1062: Fail-closed projection for evidence-link mutation responses
+
+- Code evidence: the server evidence-link mutation route now applies central
+  link and source-envelope projections.
+- Test evidence: the authenticated server-shaped test injects an unknown link
+  field and proves it is absent; field-access tests cover the response shape.
+  Target Ruff and Mypy checks pass; full regression passes; Ruff, Mypy,
+  Bandit, pip-audit, package build, source YAML, and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI.
+- Boundary: this controls API disclosure only; evidence-store durability,
+  authorization breadth, and production effectiveness remain separate
+  concerns. ADR 0722 records rollback.
+
+## E-1061: Fail-closed projection for consolidation ownership-change artifacts
+
+- Code evidence: ownership-change prepare/read routes now apply a central
+  artifact projection covering request/result payloads, canonical Money,
+  adjustment lines, and source metadata.
+- Test evidence: focused API and field-access tests inject unknown fields at
+  artifact and nested payload boundaries. Target Ruff and Mypy checks pass;
+  full regression passes; Ruff, Mypy, Bandit, pip-audit, package build,
+  source YAML, and diff gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this controls API disclosure only; ownership-change accounting,
+  statutory treatment, posting, and production effectiveness remain separate
+  concerns. ADR 0721 records rollback.
+
+## E-1060: Fail-closed projection for consolidation PPA artifacts
+
+- Code evidence: PPA prepare/read routes now apply a central artifact
+  projection covering request/result payloads, canonical Money, valuation
+  items, goodwill bridge, bridge lines, and source metadata.
+- Test evidence: focused API and field-access tests inject unknown fields at
+  artifact and nested payload boundaries. Target Ruff and Mypy checks pass;
+  full regression passes; Ruff, Mypy, Bandit, pip-audit, package build,
+  source YAML, and diff gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this controls API disclosure only; PPA accounting correctness,
+  statutory treatment, posting, and production effectiveness remain separate
+  concerns. ADR 0720 records rollback.
+
+## E-1059: Fail-closed projection for consolidation ownership responses
+
+- Code evidence: ownership save and effective-resolution routes now apply
+  central nested projections to single-interest and collection responses
+  across local SQLite and tenant-scoped PostgreSQL paths.
+- Test evidence: focused API fixtures inject unknown fields into both the
+  PostgreSQL-shaped save and effective-resolution responses; field-access
+  tests cover the response and source shapes. Target Ruff and Mypy checks
+  pass. Full regression passes; Ruff, Mypy, Bandit, pip-audit, package build,
+  source YAML, and diff gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this controls response disclosure only; ownership master
+  correctness, statutory consolidation, and production effectiveness remain
+  separate concerns. ADR 0719 records rollback.
+
+## E-1058: Fail-closed projection for consolidation evidence-link responses
+
+- Code evidence: all five Consolidation Close evidence-link mutation routes now
+  apply one central compatibility-union projection to link and source output.
+- Test evidence: the focused server-shaped route test injects an unknown link
+  field and proves it is absent while the known intercompany link fields stay
+  available. The existing close-link suites cover lifecycle and binding
+  behavior; full regression and release-quality gates pass. pip-audit cannot
+  audit the local distribution because it is not published on PyPI.
+- Boundary: statutory posting, external accounting integration, and production
+  effectiveness remain separate concerns. ADR 0718 records rollback.
+
+## E-1057: Fail-closed projection for consolidation certification responses
+
+- Code evidence: consolidation-close certification prepare, review, and read
+  routes now apply one nested certification/source projection across local
+  SQLite and tenant-scoped PostgreSQL paths.
+- Test evidence: focused tests inject an unknown certification field through
+  local and PostgreSQL-shaped route results and prove it is absent; the full
+  certification workflow remains compatible. Full regression and
+  release-quality gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: statutory close, external accounting integration, and production
+  effectiveness remain separate concerns. ADR 0717 records rollback.
+
+## E-1056: Fail-closed projection for legacy audit verification responses
+
+- Code evidence: `/api/v1/audit/verify` now applies one central nested
+  projection to local SQLite and tenant-scoped PostgreSQL verification output.
+- Test evidence: focused route tests inject unknown result and issue fields into
+  local and PostgreSQL-shaped responses and prove they are absent; the
+  authenticated workflow test verifies the compatible response shape. Full
+  regression and release-quality gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this does not establish deployed audit effectiveness or production
+  assurance. ADR 0716 records rollback.
+
+## E-1055: Fail-closed projection for Master Currency Registry binding responses
+
+- Code evidence: local and tenant-scoped PostgreSQL Currency Registry binding
+  responses now pass through one central nested binding/source projection.
+- Test evidence: focused API projection tests inject an unknown binding field
+  into local and PostgreSQL-shaped route results and prove it is absent while
+  the reviewed binding and source fields remain available. Full regression and
+  release-quality gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: registry source correctness, live rate sourcing, and production
+  effectiveness remain separate concerns. ADR 0715 records rollback.
+
+## E-1054: Fail-closed projection for Master Currency Registry reconciliation
+
+- Code evidence: local and tenant-scoped PostgreSQL reconciliation responses
+  now pass through one central nested master-registry projection.
+- Test evidence: the focused master-data projection suite injects future fields
+  at top-level and in registry, issue, and binding objects and proves they are
+  absent. Full regression and release-quality gates pass. pip-audit cannot
+  audit the local distribution because it is not published on PyPI.
+- Boundary: registry source correctness, live rate sourcing, and production
+  effectiveness remain separate concerns. ADR 0714 records rollback.
+
+## E-1053: Explicit financial input policy in risk scoring
+
+- Code evidence: risk scoring now validates an explicit `FinancialInputPolicy`
+  and Stock, Work-order, and WIP paths propagate their selected policy.
+- Test evidence: the focused risk, reconciliation, and report suite passes;
+  its policy test proves binary floating-point input is accepted only through
+  an explicitly named legacy policy and is neutral under strict v2. Full
+  regression and release-quality gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: remaining legacy compatibility callers and production financial
+  assurance remain open. ADR 0713 records rollback.
+
+## E-1052: Fail-closed projection for Inventory movement void responses
+
+- Code evidence: the Inventory Core void endpoint now applies the existing
+  central `project_inventory_movement` allowlist in both local SQLite and
+  tenant-scoped PostgreSQL branches.
+- Test evidence: the authenticated server route test exercises voiding with a
+  synthetic future movement field and proves it is absent. Focused, full
+  regression, static, security, packaging, YAML, and diff gates pass.
+- Boundary: this does not establish inventory posting correctness, source
+  authenticity, broader authorization, or production effectiveness. ADR 0712
+  records rollback.
+
+## E-1051: Fail-closed projection for Metrics dashboard and lineage responses
+
+- Code evidence: the Metrics dashboard and lineage endpoints now apply
+  separate central allowlists to local SQLite and tenant-scoped PostgreSQL
+  rows before serialization.
+- Test evidence: Focused metric projection and authenticated server-route tests
+  inject future dashboard/lineage fields and prove they are absent. Full
+  regression, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  gates pass. pip-audit cannot audit the local distribution because it is not
+  published on PyPI.
+- Boundary: this does not establish production observability, SLOs, or
+  independent backend runtime assurance. ADR 0711 records rollback.
+
+## E-1050: Fail-closed projection for scope-grant list responses
+
+- Code evidence: the authenticated scope-grant list endpoint now projects each
+  repository mapping through `project_scope_grant` before returning it.
+- Test evidence: Focused allowlist and HTTP boundary tests inject a future
+  repository field and prove it is absent. Full regression, Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML, and diff gates pass. pip-audit cannot audit
+  the local distribution because it is not published on PyPI.
+- Boundary: grant authorization, immutable persistence, tenant enforcement,
+  and production effectiveness remain separate concerns. ADR 0710 records
+  rollback.
+
+## E-1049: Fail-closed projection for Auth Me identity responses
+
+- Code evidence: `/api/v1/auth/me` now projects its dynamic identity payload
+  through `project_auth_me`; the authorized scope envelope is recursively
+  bounded to workspaces, organizations, and legal entities.
+- Test evidence: Focused identity projector and authenticated route tests
+  inject future top-level and nested fields and prove they are absent. Full
+  regression, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  gates pass. pip-audit cannot audit the local distribution because it is not
+  published on PyPI.
+- Boundary: this is a bounded response disclosure control. It does not
+  establish universal IAM, external identity assurance, distributed revocation,
+  or production effectiveness. ADR 0709 records rollback.
+
+## E-1048: Fail-closed projection for Consolidation Close summary responses
+
+- Code evidence: `/api/v1/consolidation-close/summary` projects both local
+  SQLite and tenant-scoped PostgreSQL `ConsolidationCloseSummary` values
+  through the central lifecycle-count allowlist before serialization. The
+  outer source envelope remains the existing bounded static metadata.
+- Test evidence: `tests/test_field_access.py` covers all period, lock, run,
+  and reversal count fields and injects a future field. The server-boundary
+  test in `tests/test_api_consolidation_close.py` injects a future PostgreSQL
+  summary field through HTTP and proves it is absent. Focused tests, full
+  regression, Ruff, Mypy, Bandit, pip-audit, package build, YAML, and diff
+  gates pass for this slice. pip-audit cannot audit the local distribution
+  because it is not published on PyPI.
+- Boundary: this closes the reviewed Consolidation Close summary response
+  only. It does not establish universal field-level authorization, external
+  IAM, distributed revocation, statutory consolidation, or production
+  effectiveness. ADR 0708 records rollback.
+
+## E-1047: Fail-closed projection for Finance summary responses
+
+- Code evidence: `/api/v1/finance-core/summary` now applies
+  `project_finance_summary` to local Finance Core, tenant-scoped PostgreSQL
+  Finance Core, and legacy PostgreSQL ledger response shapes. The deliberate
+  union preserves known chart/account/dimension/journal and entry-status
+  counts, legacy posted-entry counts, and bounded source/unsupported metadata.
+  Unknown summary and nested source fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers the union and nested
+  source allowlists. `tests/test_api_server_finance_core.py` injects a future
+  summary field through the PostgreSQL Finance Core route fixture and proves
+  it is absent. Focused tests, full regression, Ruff, Mypy, Bandit, pip-audit,
+  package build, YAML, and diff gates pass for this slice. pip-audit cannot
+  audit the local distribution because it is not published on PyPI.
+- Boundary: this closes the reviewed Finance summary response family only. It
+  does not establish universal field-level authorization, external IAM,
+  distributed revocation, statutory accounting, posting assurance, or
+  production effectiveness. ADR 0707 records rollback.
+
+## E-1046: Fail-closed projection for Master Data summary responses
+
+- Code evidence: `/api/v1/master-data/summary` projects the local service
+  result and the explicitly constructed PostgreSQL summary through the same
+  `project_master_summary` allowlist. Known organization, legal-entity,
+  branch, period, currency, source, and unsupported-collection fields remain;
+  unknown future fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers the closed allowlist.
+  `tests/test_api_master_data_projection.py` replaces the local service with a
+  PostgreSQL-independent synthetic service response containing a future field
+  and proves it does not escape. The focused selector, full regression, Ruff,
+  Mypy, Bandit, pip-audit, package build, YAML, and diff gates pass for this
+  slice. pip-audit cannot audit the local distribution because it is not
+  published on PyPI.
+- Boundary: this closes the reviewed Master Data summary response only. It
+  does not establish universal field-level authorization, external IAM,
+  distributed revocation, source authenticity, or production effectiveness.
+  ADR 0706 records rollback.
+
+## E-1045: Fail-closed projection for Inventory Planning summary responses
+
+- Code evidence: `/api/v1/inventory-planning/summary` now projects both the
+  local SQLite service result and the tenant-scoped PostgreSQL repository
+  result through `project_inventory_planning_summary` before serialization.
+  The existing aggregate workspace/session/reorder fields remain visible;
+  unknown future summary fields are denied.
+- Test evidence: `tests/test_field_access.py` injects an unknown aggregate
+  field into the projector input. `tests/test_api_server_inventory_planning.py`
+  injects the same kind of future field through the PostgreSQL-shaped route
+  result and proves it is absent. The focused selector passes; full Python,
+  Ruff, Mypy, Bandit, pip-audit, build, YAML, and diff gates pass for this
+  commit. pip-audit cannot audit the local distribution because it is not
+  published on PyPI.
+- Boundary: this closes the reviewed Inventory Planning summary response only.
+  It does not establish universal field-level authorization, external IAM,
+  source authenticity, distributed revocation, or production effectiveness.
+  ADR 0705 records rollback.
+
+## E-824: Current-image scanner refresh was blocked by stale local database (2026-08-27)
+
+- Docker evidence: `docker build --pull --no-cache --platform linux/amd64`
+  succeeded. The built image subject was config
+  `sha256:0564d0392cc1a2f44346afef40e45343a2b734d3c8a1f145ce1b84cb69b6cf0d`
+  with manifest
+  `sha256:51d8c46ced833ae6f0a6d00d3bae8fec8fb3775d54fc212ab79a7a7a1e259b67`.
+  The hardened no-network/read-only/non-root `reconforge doctor` smoke test
+  exited 0.
+- Tool identity evidence: Syft 1.51.0 commit
+  `2293641e3bd628a01bb37639318d62c0ebe89b39` and Grype 0.117.0 commit
+  `b5fa92bbcbef655497e3be840a2f718380e2cdd3` matched the pinned releases on
+  the Windows host. Syft emitted a native subject-bound SBOM and Grype
+  exited 0 against the cached v6.1.9 database.
+- Failure evidence: `grype db update` failed with a TLS handshake timeout to
+  `grype.anchore.io`. The cached database was built on 2026-08-22 and was
+  outside the closed 120-hour age bound on 2026-08-27. Disabling age/update
+  validation was used only for diagnosis; the official validator rejected
+  that configuration as expected. No current scanner result was promoted to
+  release evidence and E-824 remains open.
+
+## E-1044: Fail-closed projection for Individual Cashflow API responses
+
+- Code evidence: `/api/v1/individual/cashflow-controls/run` projects the
+  local-only control run through central top-level, decision, canonical Money,
+  input-digest, and known status-count allowlists. Unknown result fields are
+  dropped before serialization and malformed nested collections fail closed.
+- Test evidence: `tests/test_field_access.py` covers recursive decisions,
+  Money values, status counts, and future fields. The authenticated route test
+  injects unknown result, decision, Money, and status fields and proves they do
+  not escape. Focused tests pass. Full `python -m pytest -q` passes 100%;
+  `python -m ruff check .`, `python -m mypy reconforge` (539 source files),
+  Bandit, pip-audit, `python -m build --no-isolation`, source YAML validation
+  (174 files), and `git diff --check` pass. pip-audit reports the local
+  distribution as unauditable because it is not published on PyPI. Generated
+  malformed/unsafe YAML fixtures under test output were excluded from source
+  validation by policy.
+- Boundary: this closes only the reviewed local Individual Cashflow response
+  family. It does not establish universal field-level authorization, external
+  IAM, bank authenticity, tax/legal treatment, posting, write-back, or
+  production effectiveness. ADR 0704 records rollback.
+
+## E-1043: Fail-closed projection for Inventory Planning API responses
+
+- Code evidence: `/api/v1/inventory-planning` count-session lifecycle,
+  count-session list, reorder-rule mutation/list, reorder signals, and
+  snapshot responses use central top-level and recursive session, line,
+  summary, rule, source, pagination, and signal allowlists across local SQLite
+  and PostgreSQL branches. Unknown adapter/storage fields are dropped before
+  serialization while quantities, approval metadata, workspace scope, and
+  lifecycle behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers recursive session lines
+  and summaries, reorder rules, signals, and snapshots.
+  `tests/test_api_server_inventory_planning.py` injects synthetic future fields
+  through create/read/list/snapshot/rule/signal route paths. Focused selectors
+  pass 37 tests plus 1 existing live-PostgreSQL skip. Full `python -m pytest
+  -q` passes 100%; `python -m ruff check .`, `python -m mypy reconforge`
+  (539 source files), Bandit, pip-audit, `python -m build --no-isolation`,
+  source YAML validation (174 files), and `git diff --check` pass. pip-audit
+  reports the local distribution as unauditable because it is not published on
+  PyPI. Generated malformed/unsafe YAML fixtures under test output were
+  excluded from source validation by policy.
+- Boundary: this closes only the reviewed Inventory Planning response family.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0703 records rollback.
+
+## E-1042: Fail-closed projection for Finance Core master API responses
+
+- Code evidence: Finance Core chart, account, dimension, dimension-value, and
+  journal list and mutation responses use central allowlists across local
+  SQLite, tenant-scoped PostgreSQL, and the bounded legacy ledger branch.
+  Unknown adapter/storage fields are dropped before serialization while
+  workspace scope, permissions, pagination, and accounting behavior remain
+  unchanged.
+- Test evidence: `tests/test_field_access.py` covers all five master resource
+  projectors. `tests/test_api_server_finance_core.py` injects a synthetic
+  future adapter field into server master mutation responses and proves it is
+  absent from chart and journal output. Focused selectors pass 42 tests; full
+  regression passes at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit,
+  package build, source YAML validation (174 files), and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI. Generated test-output fixtures with intentionally malformed or unsafe
+  YAML are excluded from source validation.
+- Boundary: this closes only the reviewed Finance Core master response family.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, or production effectiveness.
+  ADR 0702 records rollback.
+
+## E-1041: Fail-closed projection for Bank Statement Control API responses
+
+- Code evidence: `/api/v1/bank/statement-controls` create, list, and read
+  responses use central top-level and recursive report, money, decision, and
+  known status-count allowlists in both local SQLite and PostgreSQL branches.
+  Unknown adapter/storage fields are dropped before serialization; malformed
+  nested mappings fail closed and network dispatch, posting, persistence, and
+  workspace scope behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers report, amount tolerance,
+  amount variance, decision, and status-count projection.
+  `tests/test_api_bank_statement.py` injects synthetic future fields at
+  top-level and every reviewed nested response level across create/list/read.
+  Focused selectors pass 31 tests plus 1 existing live-PostgreSQL skip; full
+  regression passes at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit,
+  package build, source YAML validation (174 files), and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI. Generated test-output fixtures with intentionally malformed or unsafe
+  YAML are excluded from source validation.
+- Boundary: this closes only the reviewed Bank Statement Control response
+  family. It does not establish bank-source authenticity, payment initiation,
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, or production effectiveness. ADR 0701 records rollback.
+
+## E-1040: Fail-closed projection for Manufacturing Cost Control API responses
+
+- Code evidence: `/api/v1/manufacturing/cost-controls` create, list, and read
+  responses use central top-level and recursive report, money, quantity,
+  decision, and known status-count allowlists in both local SQLite and
+  PostgreSQL branches. Unknown adapter/storage fields are dropped before
+  serialization; malformed nested mappings fail closed and network dispatch,
+  posting, persistence, and workspace scope behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers report, amount tolerance,
+  maximum scrap quantity, decision quantities, decision money, and status-count
+  projection. `tests/test_api_manufacturing_cost_control.py` injects synthetic
+  future fields at top-level and every reviewed nested response level across
+  create/list/read. Focused selectors pass 31 tests plus 1 existing
+  live-PostgreSQL skip; `python -m pytest -q` passes at 100%. Ruff, Mypy (539
+  source files), Bandit, pip-audit, package build, source YAML validation (174
+  files), and diff gates pass. pip-audit cannot audit the local distribution
+  because it is not published on PyPI. Generated test-output fixtures with
+  intentionally malformed or unsafe YAML are excluded from source validation.
+- Boundary: this closes only the reviewed Manufacturing Cost Control response
+  family. It does not establish universal field-level authorization, external
+  IAM, distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0700 records rollback.
+
+## E-1039: Fail-closed projection for Retail Settlement API responses
+
+- Code evidence: `/api/v1/retail/settlements` create, list, and read responses
+  use central top-level and recursive report, money, decision, and known
+  status-count allowlists in both local SQLite and PostgreSQL branches. Unknown
+  adapter/storage fields are dropped before serialization; network dispatch,
+  posting, persistence, and workspace scope behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers the report, tolerance,
+  decision, variance, and status-count projections;
+  `tests/test_api_retail_settlement.py` injects future fields at top-level and
+  every reviewed nested response level across create/list/read. Focused
+  selectors pass 31 tests plus 1 existing live-PostgreSQL skip; `python -m
+  pytest -q` passes at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit,
+  package build, targeted safe YAML validation (9 files), and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI.
+- Boundary: this closes only the reviewed Retail Settlement response family.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0699 records rollback.
+
+## E-1038: Fail-closed projection for professional invoice/payment API responses
+
+- Code evidence: `/api/v1/professional/invoice-payments` create, list, and
+  read responses use central top-level and recursive report, money, and
+  decision allowlists in both local SQLite and PostgreSQL branches. Unknown
+  adapter/storage fields are dropped before serialization; network dispatch
+  remains disabled and the persisted evidence contract is unchanged.
+- Test evidence: `tests/test_field_access.py` covers report, money, decision,
+  and status-count projection; `tests/test_api_professional_invoice_payment.py`
+  injects future fields into top-level, report, tolerance, decision, and
+  variance adapter shapes across create/list/read responses. Focused selectors
+  pass 29 tests plus 1 existing skip; `python -m pytest -q` passes at 100%.
+  Ruff, Mypy (539 source files), Bandit, pip-audit, package build, targeted
+  safe YAML validation (9 files), and diff gates pass. pip-audit cannot audit
+  the local distribution because it is not published on PyPI.
+- Boundary: this closes only the professional invoice/payment response family.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0698 records rollback.
+
+## E-1037: Fail-closed projection for Receivables API responses
+
+- Code evidence: `/api/v1/receivables` customer, invoice, receipt,
+  credit-exposure, and aging responses use central top-level and recursive
+  nested allowlists across local SQLite and tenant-scoped PostgreSQL shapes.
+  Unknown adapter/storage fields are dropped before serialization while exact
+  minor-unit, date, lifecycle, and aging fields remain available.
+- Test evidence: `tests/test_field_access.py` covers customer, invoice/line,
+  receipt/allocation, credit-exposure, and aging/item projectors;
+  `tests/test_receivables_api.py` adds synthetic future columns to all reviewed
+  local AR tables and proves they are absent from mutation and read responses.
+  Focused selectors pass 24 tests plus 1 existing skip; `python -m pytest -q`
+  passes at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package
+  build, targeted safe YAML validation (9 files), and diff gates pass.
+  pip-audit cannot audit the local distribution because it is not published on
+  PyPI.
+- Boundary: this closes only the reviewed Receivables response family.
+  Universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, and production effectiveness
+  remain open. ADR 0697 records rollback.
+
+## E-1036: Fail-closed projection for Payables supplier-invoice API responses
+
+- Code evidence: `/api/v1/payables/invoices` create, list, submit, match, and
+  approve responses use central invoice, nested-line, and three-way-match
+  allowlists across local SQLite and PostgreSQL shapes. Unknown adapter/storage
+  fields are dropped before serialization while exact minor-unit and quantity
+  fields remain available.
+- Test evidence: `tests/test_field_access.py` covers invoice, line, and match
+  projectors; `tests/test_payables_api.py` adds synthetic future columns to
+  invoice and line tables and proves they are absent from create output.
+  Focused selectors pass 26 tests; `python -m pytest -q` passes at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted safe YAML
+  validation (9 files), and diff gates pass. pip-audit cannot audit the local
+  distribution because it is not published on PyPI.
+- Boundary: this closes only the Payables supplier-invoice response family.
+  Supplier, purchase-order, and goods-receipt projections are separate
+  slices; universal field-level authorization, external IAM, distributed
+  revocation, disclosure approval, source authenticity, and production
+  effectiveness remain open. ADR 0696 records rollback.
+
+## E-1035: Fail-closed projection for Payables goods-receipt API responses
+
+- Code evidence: `/api/v1/payables/receipts` posting responses use central
+  top-level and nested-line allowlists across local SQLite and PostgreSQL
+  shapes. Unknown adapter/storage fields are dropped before serialization
+  while the existing direct response and lifecycle behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers the receipt and line
+  projectors; `tests/test_payables_api.py` adds synthetic future columns to
+  both receipt tables and proves they are absent from the post response.
+  Focused selectors pass 24 tests; `python -m pytest -q` passes at 100%. Ruff,
+  Mypy (539 source files), Bandit, pip-audit, package build, targeted safe YAML
+  validation (9 files), and diff gates pass. pip-audit cannot audit the local
+  `reconforge-erp` distribution because it is not published on PyPI.
+- Boundary: this closes only the Payables goods-receipt response family.
+  Supplier invoices, three-way matching, universal field-level authorization,
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open. ADR 0695 records
+  rollback.
+
+## E-1034: Fail-closed projection for Payables purchase-order API responses
+
+- Code evidence: `/api/v1/payables/purchase-orders` create, submit, and approve
+  responses use central top-level and nested-line allowlists across local
+  SQLite and PostgreSQL shapes. Unknown adapter/storage fields are dropped
+  before serialization while the existing direct response shape and
+  lifecycle behavior remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers the purchase-order and
+  line projectors; `tests/test_payables_api.py` adds synthetic future columns
+  to both purchase-order tables and proves they are absent from the create
+  response. Focused selectors pass 22 tests; `python -m pytest -q` passes at
+  100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted safe YAML validation (9 files), and diff gates pass. pip-audit
+  cannot audit the local `reconforge-erp` distribution because it is not
+  published on PyPI.
+- Boundary: this closes only the Payables purchase-order response family.
+  Supplier invoices, receipts, three-way matching, universal field-level
+  authorization, external IAM, distributed revocation, disclosure approval,
+  source authenticity, and production effectiveness remain open. ADR 0694
+  records rollback.
+
+## E-1033: Fail-closed projection for Payables supplier API responses
+
+- Code evidence: `/api/v1/payables/suppliers` save and list responses use a
+  central supplier allowlist across local SQLite and PostgreSQL shapes. Future
+  adapter/storage fields are dropped before serialization while the existing
+  response shape, permissions, and pagination envelope remain unchanged.
+- Test evidence: `tests/test_field_access.py` covers the supplier projector;
+  `tests/test_payables_api.py` adds a synthetic future SQLite column and proves
+  it is absent from save and list responses. Focused selectors pass 20 tests;
+  `python -m pytest -q` passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted safe YAML validation (9 files), and diff
+  gates pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  because it is not published on PyPI.
+- Boundary: this closes only the Payables supplier-master response family.
+  Purchase orders, receipts, supplier invoices, three-way matching, universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, and production effectiveness remain open.
+  ADR 0693 records rollback.
+
+## E-1032: Fail-closed projection for Inventory Core operational API responses
+
+- Code evidence: `/api/v1/inventory` movement list/create/read/post/void,
+  on-hand, control-exceptions, summary, and snapshot responses use central
+  allowlists across local SQLite and PostgreSQL shapes. Movement lines,
+  balances, exceptions, snapshot source/summary, and snapshot collections are
+  projected recursively; unknown future adapter/storage fields are dropped
+  before serialization.
+- Test evidence: `tests/test_field_access.py` covers movement, on-hand,
+  control-exception, summary, and recursive snapshot projection. The server
+  route test injects synthetic future fields into the operational response
+  families and confirms they do not escape. Focused selectors pass 19 tests;
+  `python -m pytest -q` passes at 100%. Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted safe YAML validation (9 files), and diff
+  gates pass. pip-audit cannot audit the local `reconforge-erp` distribution
+  because it is not published on PyPI.
+- Boundary: this closes the reviewed Inventory Core operational response
+  family only. It does not establish universal field-level authorization,
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, or production effectiveness. The post/void routes retain
+  their existing step-up reauthentication gate. ADR 0692 records rollback.
+
+## E-1031: Fail-closed projection for Inventory Core master API responses
+
+- Code evidence: `/api/v1/inventory` unit-of-measure, item, warehouse,
+  location, and lot/serial list and mutation responses use central resource
+  allowlists across local SQLite and PostgreSQL shapes. Future adapter/storage
+  fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers all five resource
+  projections. `tests/test_api_inventory_core.py` covers the PostgreSQL route
+  projection with a synthetic future adapter field. Focused tests and the full
+  Python regression pass at 100%; Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML (9 files), and diff gates also pass.
+  pip-audit cannot audit the local `reconforge-erp` distribution name because
+  it is not published on PyPI.
+- Boundary: this closes the reviewed Inventory Core master-resource response
+  family only. Movement, on-hand, control-exception, summary, and snapshot
+  response projection remain separate slices. It does not establish universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, or production effectiveness. ADR 0691
+  records rollback.
+
+## E-1030: Fail-closed projection for Inventory Valuation Reversal API responses
+
+- Code evidence: `/api/v1/inventory-valuation/reversals` summary, snapshot,
+  list, create, read, approve, and cancel responses use central allowlists.
+  Reversal effects use an independent child allowlist, and snapshot source,
+  summary, and reversal collections are projected recursively. Unknown
+  adapter/storage fields are dropped and malformed nested records are rejected
+  before serialization.
+- Test evidence: `tests/test_field_access.py` covers unknown reversal, effect,
+  summary, and snapshot fields. `tests/test_inventory_valuation_reversal.py`
+  adds synthetic future columns to reversal/effect tables before the HTTP
+  lifecycle and proves they are absent from create, approve, list, and
+  snapshot responses. Focused tests and the full Python regression pass at
+  100%; Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted YAML (9 files), and diff gates also pass. pip-audit cannot audit
+  the local `reconforge-erp` distribution name because it is not published on
+  PyPI.
+- Boundary: this closes the reviewed valuation-reversal response family only.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0690 records rollback.
+
+## E-1029: Fail-closed projection for Inventory Valuation policy/layer/snapshot API responses
+
+- Code evidence: `/api/v1/inventory-valuation` policy list/save, cost-layer
+  list, summary, and snapshot responses use central allowlists. Snapshot
+  source, summary, policies, documents, and open cost layers are projected
+  recursively; unknown adapter/storage fields are dropped and malformed
+  nested records are rejected before serialization.
+- Test evidence: `tests/test_field_access.py` covers unknown policy, layer,
+  and snapshot fields. `tests/test_inventory_valuation.py` adds a synthetic
+  future column to policy, document, input-cost, valuation-line, cost-layer,
+  and consumption tables and proves it is absent from policy, layer, document,
+  and snapshot HTTP responses. Focused tests and the full Python regression
+  pass at 100%; Ruff, Mypy (539 source files), Bandit, pip-audit, package
+  build, targeted YAML (9 files), and diff gates also pass. pip-audit cannot
+  audit the local `reconforge-erp` distribution name because it is not
+  published on PyPI.
+- Boundary: this closes the reviewed Inventory Valuation policy/layer,
+  summary, and snapshot response family only. It does not establish universal
+  field-level authorization, external IAM, distributed revocation, disclosure
+  approval, source authenticity, or production effectiveness. ADR 0689
+  records rollback.
+
+## E-1028: Fail-closed projection for Inventory Valuation document API responses
+
+- Code evidence: `/api/v1/inventory-valuation` document list, create, read,
+  approve, and cancel responses use `project_inventory_valuation_document`
+  from the central field-access module. The top-level document and nested
+  input-cost, valuation-line, and layer-consumption contracts cover the
+  reviewed local SQLite and PostgreSQL shapes; unknown adapter/storage fields
+  are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers unknown document and
+  nested financial fields. `tests/test_inventory_valuation.py` adds a
+  synthetic future column to the valuation document tables and proves it is
+  absent from list and detail HTTP responses. Focused tests and the full
+  Python regression pass at 100%; Ruff, Mypy (539 source files), Bandit,
+  pip-audit, package build, targeted YAML (9 files), and diff gates also pass.
+  pip-audit cannot audit the local `reconforge-erp` distribution name because
+  it is not published on PyPI.
+- Boundary: this closes the reviewed Inventory Valuation document response
+  family only. Policy, cost-layer, and snapshot response projection remain
+  separate slices. It does not establish universal field-level
+  authorization, external IAM, distributed revocation, disclosure approval,
+  source authenticity, or production effectiveness. ADR 0688 records
+  rollback.
+
+## E-1027: Fail-closed projection for Master Data API responses
+
+- Code evidence: `/api/v1/master-data` currency, organization,
+  legal-entity, branch, and fiscal-period list/mutation responses use central
+  resource allowlists. The versioned snapshot uses a closed top-level
+  contract, projects each resource collection independently, and projects the
+  nested currency-registry result. Unknown future adapter/storage fields are
+  dropped; malformed nested records are rejected.
+- Test evidence: `tests/test_field_access.py` covers unknown snapshot and
+  nested resource fields; `tests/test_master_data.py` adds a synthetic future
+  column to all five local Master Data tables and proves it does not reach
+  list or snapshot responses. Focused tests and the full Python regression
+  pass at 100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package
+  build, targeted safe YAML validation (9 files), and diff checks also pass.
+  `pip-audit` cannot audit the local `reconforge-erp` distribution name
+  because it is not published on PyPI. A broad safe-load scan intentionally
+  rejects a synthetic hostile-tag YAML fixture; that fixture is not treated as
+  valid configuration.
+- Boundary: this closes the reviewed Master Data resource/snapshot response
+  family only. It does not establish universal field-level authorization,
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, or production effectiveness. ADR 0687 records rollback.
+
+## E-1026: Fail-closed projection for Finance Core ledger-entry API responses
+
+- Code evidence: `/api/v1/finance-core/entries` list, read, create, validate,
+  and void paths use `project_finance_entry` from the central field-access
+  module. The top-level entry and nested ledger-line response contracts cover
+  the reviewed local SQLite, PostgreSQL Finance Core, and bounded legacy ledger
+  shapes; unknown adapter/storage fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers unknown top-level and
+  nested entry fields; `tests/test_api_server_finance_core.py` covers the API
+  route projection. Focused tests and the full Python regression pass at
+  100%. Ruff, Mypy (539 source files), Bandit, pip-audit, package build,
+  targeted safe YAML validation (9 files), and diff checks also pass.
+  `pip-audit` cannot audit the local `reconforge-erp` distribution name
+  because it is not published on PyPI. A broad safe-load scan intentionally
+  rejects a synthetic hostile-tag YAML fixture; that fixture is not treated
+  as valid configuration.
+- Boundary: this closes the Finance Core ledger-entry response family only.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0686 records rollback.
+
+## E-1025: Fail-closed projection for reconciliation API responses
+
+- Code evidence: PostgreSQL `/api/v1/reconciliations` run, input, result, and
+  exception response paths use central allowlists in `reconforge.auth.field_access`.
+  Run responses project nested inputs/results/exceptions, and paginated child
+  responses project their respective record contracts.
+- Test evidence: `tests/test_field_access.py` covers unknown run and child
+  fields. `tests/test_api_server_reconciliation.py` covers unknown server
+  adapter fields across submitted/listed/cancelled/requeued runs and input/
+  result child responses. Focused tests and the full Python regression pass at
+  100%; Ruff, Mypy, Bandit, pip-audit, package build, YAML validation, and diff
+  checks also pass. pip-audit cannot audit the local `reconforge-erp`
+  distribution name because it is not published on PyPI.
+- Boundary: this closes the reconciliation response projection family only.
+  It does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0685 records rollback.
+
+## E-1024: Fail-closed projection for account reconciliation API responses
+
+- Code evidence: `/api/v1/accounts/reconciliations` list, read, create, and
+  lifecycle responses use central `project_account_reconciliation` allowlists.
+  The top-level record and nested reconciliation items use explicit reviewed
+  fields covering local SQLite and PostgreSQL shapes; unknown fields are
+  dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers unknown record and item
+  fields. `tests/test_api_accounts.py` covers an unknown server adapter field;
+  `tests/test_api_platform_routes.py` adds synthetic future columns to local
+  account record/item tables and proves the fields do not reach API responses.
+  Focused tests and the full Python regression pass at 100%; Ruff, Mypy,
+  Bandit, pip-audit, package build, YAML validation, and diff checks also pass.
+  pip-audit cannot audit the local `reconforge-erp` distribution name because
+  it is not published on PyPI.
+- Boundary: this closes the account-reconciliation response projection family
+  only. It does not establish universal field-level authorization, external
+  IAM, distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0684 records rollback.
+
+## E-1023: Fail-closed projection for consolidation-close API responses
+
+- Code evidence: consolidation-close period and run responses in
+  `/api/v1/consolidation-close` use central `project_consolidation_period` and
+  `project_consolidation_run` allowlists. The run projection also projects
+  nested journal lines, effect lines, and the reviewed evidence arrays. This
+  covers the local SQLite and PostgreSQL response shapes while excluding
+  internal worksheet payload/cache fields and unknown adapter/storage fields.
+- Test evidence: `tests/test_field_access.py` covers unknown top-level and
+  nested run fields. `tests/test_api_consolidation_close.py` adds synthetic
+  future columns to the period, run, and run-line SQLite tables and proves the
+  unknown column/value do not reach period or run responses. Focused tests and
+  the full Python regression pass at 100%; Ruff, Mypy, Bandit, pip-audit,
+  package build, YAML validation, and diff checks also pass. pip-audit cannot
+  audit the local `reconforge-erp` distribution name because it is not
+  published on PyPI.
+- Boundary: this closes the consolidation-close response projection surface
+  only. It does not establish universal field-level authorization, external
+  IAM, distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0683 records rollback.
+
+## E-1022: Fail-closed projection for Exception API responses
+
+- Code evidence: local `/api/v1/exceptions` list, assignment, and status
+  responses use `project_exception` from the central field-access module.
+  Unknown future SQLite storage fields are dropped before serialization.
+- Test evidence: `tests/test_field_access.py` covers the exception allowlist;
+  `tests/test_api_platform_routes.py` adds a synthetic future column to
+  `exceptions_queue` and proves list, assign, and status responses omit the
+  column and value. Full Python regression passes at 100%; Ruff, Mypy, Bandit,
+  pip-audit, package build, YAML validation, and diff checks also pass.
+  pip-audit cannot audit the local `reconforge-erp` distribution name because
+  it is not published on PyPI.
+- Boundary: this closes the local Exception API response family only. The
+  route remains refused in Server Profile; universal field-level
+  authorization, external IAM, distributed revocation, disclosure approval,
+  source authenticity, and production effectiveness remain open. ADR 0682
+  records rollback.
+
+## E-1021: Fail-closed projection for Close API responses
+
+- Code evidence: `/api/v1/close` period, task, and readiness responses use
+  `project_close_period`, `project_close_task`, and `project_close_readiness`
+  from the central field-access module before serialization. The allowlists
+  cover the reviewed local SQLite and PostgreSQL response shapes and drop
+  unknown future adapter/storage fields.
+- Test evidence: `tests/test_field_access.py` covers all three projection
+  contracts. `tests/test_api_platform_routes.py` adds synthetic future
+  columns to both local close tables and proves period, task, and readiness
+  responses do not expose the column or its value. Focused tests and the full
+  Python regression pass at 100%; Ruff, Mypy, Bandit, pip-audit, package build,
+  YAML validation, and diff checks also pass. pip-audit cannot audit the local
+  `reconforge-erp` distribution name because it is not published on PyPI.
+- Boundary: this closes the Close API response projection surface only. It
+  does not establish universal field-level authorization, external IAM,
+  distributed revocation, disclosure approval, source authenticity, or
+  production effectiveness. ADR 0681 records rollback.
+
+## E-1020: Fail-closed projection for Evidence mutation responses
+
+- Code evidence: evidence requirement and checksum verification responses use
+  central `EVIDENCE_REQUIREMENT_FIELDS` and `EVIDENCE_VERIFICATION_FIELDS`
+  allowlists. The route returns deterministic additive `field_access` metadata
+  and drops unknown adapter fields before serialization.
+- Test evidence: `tests/test_field_access.py` covers both mutation allowlists;
+  `tests/test_api_server_evidence.py` covers requirement and verification HTTP
+  envelopes. Focused tests, full Python regression at 100%, Ruff, Mypy, package
+  build, YAML validation, and diff checks pass.
+- Boundary: this closes two Server Profile mutation response contracts only.
+  Existing permissions and tenant transaction boundaries remain required;
+  external IAM, distributed revocation, disclosure approval, source
+  authenticity, and production effectiveness remain open. ADR 0680 records
+  rollback.
+
+## Fresh local Docker runtime check (2026-08-26)
+
+- Environment: Docker Engine `29.7.2` / Docker Desktop Linux builder. The
+  E-1019 boundary tree built successfully with `docker build --pull --no-cache
+  --platform linux/amd64 --tag reconforge:codex-e824 .`; the local image
+  inspection reported the `linux/amd64` image subject
+  `sha256:735c0c382112793dfcc0d713a06f86960434de5429f642c52c940b39f4751144`,
+  non-root `10001:10001` configuration, and Linux/amd64 platform.
+- Runtime command:
+  `docker run --rm --network=none --read-only --cap-drop=ALL
+  --security-opt=no-new-privileges reconforge:codex-e824 reconforge doctor`.
+  It passed package/config/sample-data/output/validation checks; validation
+  reported zero errors and ten warnings.
+- Boundary: this is a fresh local build/runtime smoke only. Syft and Grype
+  are not installed on this Windows host, so no new scanner evidence was
+  generated. E-824 remains open for the hosted clean-build, exact scanner
+  gate, signed SBOM/provenance, legal license review, and production
+  assurance.
+
+## E-1019: Fail-closed projection for legacy audit event responses
+
+- Code evidence: `reconforge.auth.field_access.project_audit_event` defines
+  one closed response policy for the local SQLite and PostgreSQL legacy audit
+  shapes. `reconforge/api/routes/audit.py` applies it after both adapters and
+  before the response is serialized. Sensitive aliases remain only as the
+  `[REDACTED]` compatibility marker; unknown fields are denied.
+- Test evidence: `tests/test_field_access.py` covers sensitive aliases,
+  unknown-field denial, and projection-digest stability. Local API and server
+  policy tests cover both response paths and retain the tenant policy
+  re-check. Focused tests pass; full regression, Ruff, Mypy, package build,
+  YAML validation, and diff checks are required for the final gate.
+- Boundary: this closes `/api/v1/audit/events` only. It does not establish
+  universal field-level authorization, external IAM, distributed revocation,
+  disclosure approval, source authenticity, or production effectiveness.
+  ADR 0679 records rollback.
+
+## E-1018: Fail-closed field projection for evidence record responses
+
+- Code evidence: local and Server Profile evidence list/get responses reuse the
+  central evidence record/link allowlist; Server Profile registration responses
+  are projected with the sensitive allowlist after authorization. Server list/
+  get calls pass the safe field set through central scoped policy.
+- Test evidence: local API tests prove safe list/get output; Server Profile
+  contracts prove safe list/get, sensitive registration, and field-scope
+  arguments; the field primitive tests prove unknown-field denial. Focused
+  tests pass (7 tests), plus Ruff, Mypy, and full Python regression.
+- Boundary: This closes the evidence record response family only. It does not
+  prove universal route/export/UI field enforcement, external IAM, distributed
+  revocation, live provider behavior, or production readiness. Package build,
+  YAML, and diff checks pass.
+
+## E-1017: Fail-closed field projection for evidence drill-down
+
+- Code evidence: `reconforge.auth.field_access` defines the reviewed evidence
+  record/link allowlists and `project_evidence_drill_down_record` projects
+  every evidence node. The route adds projection metadata and fails closed on
+  malformed adapter response shapes. Server Profile passes safe or sensitive
+  field sets through central scoped policy evaluation; sensitive mode remains
+  `evidence.manage`-gated.
+- Test evidence: The field primitive test proves masking, unknown-field
+  denial, nested-link projection, and digest difference between modes. Local
+  API and Server Profile contract tests prove redacted/sensitive behavior and
+  policy field sets. The focused suite passes (7 tests); Ruff, Mypy, full
+  Python regression, package build, YAML validation, and diff checks pass.
+- Boundary: This is one migrated evidence response surface. It does not prove
+  universal route/export/UI field enforcement, external IAM, distributed
+  revocation, live PostgreSQL effectiveness, or production readiness.
+
+## E-1016: Require explicit policy supplier before PostgreSQL Reconciliation execution
+
+- Code evidence: `PostgresReconciliationWorker._authorize_scope` fails closed
+  when all policy suppliers are absent, covering discovery, claim, and
+  execution rechecks before transaction access. The compatibility flag is
+  explicit and disabled by default.
+- Test evidence: Reconciliation, persisted-JSON, and grouped-runtime suites
+  cover missing policy, permission denial, revocation, scoped lanes, and
+  bounded legacy operation; focused tests, Ruff, and Mypy pass. The full
+  Python regression passes at 100%, and `python -m build --no-isolation`
+  succeeds.
+- Boundary: this closes the PostgreSQL Reconciliation worker only. It does not
+  prove external IAM, provider delivery, distributed revocation, HA/DR,
+  production SLOs, or production authorization effectiveness. ADR 0676
+  records rollback.
+
+## E-1015: Require explicit policy supplier before PostgreSQL Scheduler processing
+
+- Code evidence: `PostgresSchedulerWorker` fails closed for a valid lane when
+  all policy suppliers are absent, before opening a connection or processing a
+  schedule. The compatibility flag is explicit and disabled by default.
+- Test evidence: Scheduler worker and notification suites cover missing policy,
+  permission denial, revocation, exact scope, and bounded legacy operation;
+  the focused suite passes (`9 passed, 1 skipped`), Ruff passes, Mypy passes,
+  the full Python regression passes at 100%, and `python -m build
+  --no-isolation` succeeds.
+- Boundary: this closes PostgreSQL Scheduler only; E-1016 separately closes
+  the Reconciliation worker boundary. External IAM, provider delivery, HA/DR,
+  production SLOs, and production authorization effectiveness remain open.
+  ADR 0675 records rollback.
+
+## E-1014: Require explicit policy supplier before PostgreSQL Outbox publishing
+
+- Code evidence: `PostgresOutboxWorker._authorize_scope` fails closed when all
+  policy suppliers are absent. `allow_unbound_hosted_policy` defaults false
+  and the local SQLite worker rejects that compatibility setting.
+- Test evidence: PostgreSQL Outbox, payload, notification, and local-worker
+  suites pass; the new missing-policy test proves rejection before connection
+  access; permission denial and revocation still prove no external publish.
+  Ruff and Mypy pass.
+- Boundary: this closes PostgreSQL Outbox only; E-1015 and E-1016 separately
+  close the Scheduler and Reconciliation worker boundaries. External IAM,
+  provider delivery, HA/DR, production SLOs, and production authorization
+  effectiveness remain open. ADR 0674 records rollback.
+
+## E-1013: Persist Server Profile governed-job facade decisions through policy audit sink
+
+- Code evidence: the governed durable-job facade accepts an optional
+  provider-neutral `PolicyAuditSink`; Server Profile injects the existing
+  tenant-scoped PostgreSQL sink while local callers omit it. No PostgreSQL or
+  network dependency was added to the application layer.
+- Test evidence: the synthetic Server Profile route test captures one facade
+  policy decision through the injected sink; full Python regression, focused
+  API/application/worker tests, Ruff, Mypy, and package build pass.
+- Boundary: sink behavior is proven through the synthetic server boundary;
+  this does not prove universal API adoption, external IAM, distributed
+  revocation, provider interoperability, HA/DR, production SLOs, or
+  production authorization effectiveness. ADR 0673 records rollback.
+
+## E-1012: Use governed durable-job facade in Server Profile queue health
+
+- Code evidence: the PostgreSQL Server Profile queue-health route builds a
+  `PolicyEvaluationContext` from the verified `ServerPrincipal` and principal
+  scope grants, then calls `GovernedDurableJobApplicationService` with the
+  selected hierarchy and request ID. Existing tenant-policy recheck,
+  transaction-local scope, and RLS remain in place.
+- Test evidence: the synthetic Server Profile route test now supplies a
+  verified principal/scope snapshot and passes through the governed facade;
+  local API, application, worker, Ruff, and Mypy gates pass. Live PostgreSQL
+  execution remains environment-gated where declared.
+- Boundary: E-1013 proves sink persistence through the synthetic server
+  boundary, not an independent production audit exercise. This does not prove
+  universal API coverage, external IAM, distributed revocation, provider
+  interoperability, HA/DR, production SLOs, or production authorization
+  effectiveness. ADR 0672 records rollback.
+
+## E-1011: Route local operations queue health through governed durable-job facade
+
+- Code evidence: local `/api/v1/ops/durable-jobs/queue` resolves local RBAC
+  permissions and builds a tenant/workspace/organization/entity-bound policy
+  context, then calls `GovernedDurableJobApplicationService.queue_snapshot`
+  with the authenticated actor and request ID. The sanitized response is
+  unchanged. Server mode retains its PostgreSQL tenant-policy/RLS boundary.
+- Test evidence: API tests pass for sanitized authenticated local health,
+  governed-facade invocation, server tenant-policy recheck, and the available
+  live selector contract. Relevant application/worker policy tests, Ruff, and
+  Mypy pass.
+- Boundary: local SQLite route adoption only. This does not prove universal
+  API adoption, PostgreSQL application-facade adoption, external IAM,
+  distributed revocation, HA/DR, production SLOs, or production
+  authorization effectiveness. ADR 0671 records rollback.
+
+## E-1010: Govern durable-job application queue reads and requeue by exact scope
+
+- Code evidence: `GovernedDurableJobApplicationService` now owns policy-gated
+  `queue_snapshot` and `requeue` operations, with exact tenant/workspace/
+  organization/entity checks, derived durable-job or queue object/action
+  binding, request-ID propagation, and a persisted-scope check before requeue.
+- Test evidence: focused SQLite tests prove missing permission denies queue
+  visibility, an allowed queue projection reports the queued job, a wrong
+  entity cannot requeue the persisted job, and a failed job can be requeued
+  through the governed facade. The PostgreSQL governed fixture includes the
+  entity binding required by the stricter context contract.
+- Boundary: local application-facade and synthetic repository evidence only.
+  It does not prove API route adoption, external IAM, distributed revocation,
+  multi-host coordination, provider behavior, HA/DR, production SLOs, or
+  production authorization effectiveness. ADR 0670 records rollback.
+
+## E-1008: Re-evaluate governed durable-worker policy at every lifecycle boundary
+
+- Code evidence: `GovernedDurableJobWorkerService` now wraps every worker
+  lifecycle read/write boundary with an explicit policy context and permission.
+  It binds the requested tenant/workspace/organization/entity hierarchy exactly,
+  rejects a missing entity context for an entity lane, derives the evaluated
+  context from the actual durable-job ID and action, and sends the resulting
+  decision through `audit_policy_decision` before delegation.
+- Test evidence: `tests/test_governed_worker_policy.py` passes the existing
+  claim allow/deny contracts, an entity-omission denial, a permission-revoked
+  heartbeat with no lease extension, a permission-revoked completion with no
+  terminal mutation, a subsequent allowed completion, and a signature
+  inventory over every governed lifecycle method. `python -m ruff check`
+  and `python -m mypy reconforge/application/jobs.py` pass.
+- Boundary: this is local application-facade evidence with SQLite synthetic
+  jobs and service-account contexts. It does not prove external IAM,
+  distributed revocation/cache invalidation, multi-host worker coordination,
+  provider behavior, HA/DR, production SLOs, or production authorization
+  effectiveness. ADR 0669 records rollback.
+
+## E-974: Refresh current Community Compose schema, restart, and backup/restore runtime evidence
+
+- Build/runtime command: `docker compose -p reconforge-e974 -f compose.yaml
+  up -d --build` built the current `reconforge:community-local` image. Because
+  the host reserved `127.0.0.1:8765`, the smoke used the same Compose service
+  without host-port publication and checked the health endpoint from inside
+  the container.
+- Runtime evidence: Docker Engine `29.7.2`, Compose `v5.4.0`; container
+  `reconforge-e974-smoke` reached `healthy` before and after restart, API
+  health returned `status=ok`, SQLite reported `schema_version=46` and
+  `latest_schema_version=46`, UID was `10001:10001`, root was read-only,
+  capabilities were dropped, and the network was internal.
+- Backup/restore evidence: synthetic evidence was registered with
+  `retention_version=1`; `reconforge db backup` and `db backup-verify` passed
+  with SHA-256
+  `89cc18067098509ef0de3f08d720ffe52a3958ba54346aea94d4f556e98e9334`;
+  `reconforge db restore` passed into an independent target at schema `46`
+  with 113 restored tables, and direct SQLite verification found one evidence
+  row with retention version 1.
+- Artifact: `docs/execution/COMMUNITY_COMPOSE_RUNTIME_E974_2026-08-26.json`,
+  validated by its schema and `tests/test_current_community_compose_runtime_report.py`.
+- Boundary: this is one local Docker host with synthetic data and local
+  backup files. It does not prove host-loss recovery, encrypted production
+  key custody, independent HA/DR, external identity/provider interoperability,
+  production SLOs, or compliance. The temporary E-974 container/volume were
+  removed after capture. ADR 0668 records rollback.
+
+## E-973: Close SQLite evidence-retention shortening through migration, trigger, and version guard
+
+- Code evidence: migration `46` adds `evidence_registry.retention_version` and
+  the `evidence_registry_retention_floor_guard` trigger. The SQLite repository
+  validates the existing/requested floor before object-store I/O, preserves
+  the floor, versions extensions, and rejects shortening at the service
+  boundary.
+- Test evidence: `tests/test_evidence_object_storage.py` proves pre-upload
+  rejection, extension version `1 -> 2`, direct-SQL trigger refusal, and
+  backup-preserved version metadata. `tests/test_connector_writeback_observations.py`
+  proves additive migration from version 42 through the current head.
+- Backup evidence: `reconforge/db/backup.py` includes `retention_version` in
+  the explicit evidence field inventory and restore insert contract.
+- Boundary: this proves local SQLite retention-floor integrity only. It does
+  not prove legal hold, authorized deletion, WORM/object-lock semantics,
+  provider durability, privacy erasure, or production governance. ADR 0667
+  records rollback.
+
+## E-970: Refresh bounded PostgreSQL HA/DR repeated runtime evidence
+
+- Command: `python .github/scripts/verify_postgres_ha_dr_repeated.py
+  --executed-at 2026-08-26 --output
+  .tmp/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json`.
+- Runtime: Docker Engine `29.7.2`, PostgreSQL `17.10-alpine`, two disposable
+  nodes per run, one failure domain, exactly three runs. Every run passed
+  labelled-resource cleanup, recorded zero acknowledged transaction loss,
+  final sequence `4`, and the bounded failover/failback checks.
+- Measurements: failover RTO `11.270-11.721s` (max `11.721s`), failback RTO
+  `1.175-1.316s` (max `1.316s`), zero-loss runs `3/3`.
+- Artifact: `docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json`;
+  validated against `docs/schemas/ha_dr_repeated_drill_report.schema.json`,
+  tested by `tests/test_ha_dr_repeated_drill.py`, and added to `MANIFEST.in`.
+- Boundary: this is current single-host/manual-controller/synthetic evidence.
+  It does not prove independent failure domains, quorum/witness, automatic
+  failover, host/zone/site loss, production RPO/RTO SLOs, Enterprise readiness,
+  or Regulated readiness. The temporary labelled resources were absent after
+  completion.
+- ADR: `docs/adr/0664-refresh-postgresql-ha-dr-repeated-evidence.md`.
+
+## E-969: Refresh the mode-specific readiness matrix with current Community Compose evidence
+
+- Code/evidence source: `DEPLOYMENT_READINESS_MATRIX.v1.yaml` is reviewed on
+  `2026-08-26`; the Community external-dependency gate references the current
+  deployment profile, `compose.yaml`, `tests/test_compose_profile.py`, and ADR
+  0662.
+- Test evidence: the readiness matrix test requires those exact paths and the
+  explicit non-host-firewall boundary; focused readiness and Compose tests pass.
+- Boundary: this refresh makes the new local evidence discoverable in the
+  centralized matrix. It does not advance Team/Enterprise/Regulated status,
+  prove backup/restore, HA/DR, host firewall behavior, or production readiness.
+- ADR: `docs/adr/0663-refresh-community-readiness-matrix-evidence.md`.
+
+## E-968: Add a bounded Community Docker Compose profile with live local smoke
+
+- Code evidence: `compose.yaml` runs one local API service with an idempotent
+  SQLite initializer, named `/data` volume, loopback-only port publication,
+  internal network, read-only/non-root/capability-dropped runtime, and a local
+  healthcheck. `Dockerfile` creates the runtime-owned `/data` directory.
+- Test evidence: `tests/test_compose_profile.py` and the focused container /
+  release tests pass; `docker compose -f compose.yaml config --quiet` passes;
+  the image builds with `docker compose ... build --pull`.
+- Runtime evidence: a live one-off Compose service reached `healthy`. An
+  in-container HTTP request returned `status=ok`, SQLite reachable, schema
+  `45/45`, path summary `reconforge.db`, UID `10001`, and an existing
+  `/data/reconforge.db`. After restart it returned to `healthy` and retained
+  the database.
+- Environment boundary: the host reserved `127.0.0.1:8765`, and Docker
+  Desktop did not expose the temporary alternate host mapping, so host-port
+  reachability is not counted as application evidence. The profile remains a
+  bounded Community/local contract; no Team/Enterprise/Regulated, HA/DR,
+  hosted provenance, production availability, or compliance claim follows.
+- ADR: `docs/adr/0662-community-compose-local-profile.md`.
+
+## E-967: Synchronize Docker release documentation with the hardened workflow contract
+
+- Code evidence: README, deployment smoke, Docker verification, maintainer
+  release, and release-readiness surfaces carry the same bounded build/runtime
+  contract as the standalone workflow. At the time of E-967, the Docker
+  deployment guide explicitly stated that no Compose deployment contract was
+  shipped; E-968 now owns the current bounded Community profile.
+- Test evidence: `tests/test_release_readiness_docs.py` passes with the hardened
+  command set; YAML parsing and diff-check pass.
+- Boundary: this removes operator/documentation drift only. It did not create
+  Compose support at that time and does not prove hosted clean-build identity,
+  signed artifacts, or production deployment behavior. ADR 0661 records
+  rollback.
+
+## E-966: Align the standalone Docker workflow with the hardened release runtime gate
+
+- Code evidence: `.github/workflows/docker.yml` uses a fresh linux/amd64
+  no-cache build and a bounded hardened Doctor invocation; the job has a
+  finite timeout.
+- Test evidence: `tests/test_container_hardening_workflow.py` asserts the build
+  flags, timeout, and all four hardened runtime flags, and rejects the old
+  output-volume invocation. Supply-chain validation and the focused release /
+  container test set pass on the current HEAD.
+- Boundary: this is workflow/static evidence plus local bounded checks. It does
+  not prove hosted clean-build identity, signed release provenance, registry
+  reachability, vulnerability reachability/disposition, or production runtime
+  behavior. ADR 0660 records rollback.
+
+## E-965: Require every mutating API handler to reach a reviewed server boundary
+
+- Code evidence: `tests/test_api_authorization_inventory.py` parses every
+  mutating handler and requires a direct server-boundary marker or a
+  module-specific reviewed helper. The helper allowlist is explicit and small;
+  protocol modules remain explicit exceptions.
+- Test evidence: the focused authorization inventory and full Python regression
+  pass, with Ruff, Mypy, YAML, and diff-check also passing on the current HEAD.
+- Boundary: this is static omission detection. It does not prove helper runtime
+  semantics, route-specific scope arguments, RLS/SoD behavior, worker/export/UI
+  adoption, distributed invalidation, external IAM, HA/DR, or production
+  effectiveness. ADR 0659 records rollback.
+
+## E-964: Add a nonstandard-currency cross-engine parity regression
+
+- Code evidence: `tests/test_matching_properties.py` generates signed
+  synthetic JPY and KWD datasets and compares the Pandas result contract with
+  DuckDB full-scan and forced partitioned execution.
+- Test evidence: the focused matching parity command and the full
+  `python -m pytest -q` suite exit 0. The test asserts the manifest currency
+  policy (`0` and `3` minor units) and exact equality of signatures, policy
+  metadata, row counts, and summary counts. The full run emits only the
+  repository's known dependency/legacy-input warnings.
+- Boundary: this is local synthetic evidence for two currency policies and two
+  DuckDB execution modes. It does not establish every supported engine/version,
+  live provider/rate, capacity/soak, HA/DR, posting/write-back, or production
+  evidence. ADR 0658 records rollback.
+
+## E-963: Reject hosted worker policy configuration in the local outbox runtime
+
+- Code evidence: `OutboxWorker` rejects non-default actor, policy-supplier,
+  scope-supplier, and hosted-permission settings before assigning or opening a
+  local SQLite connection. `PostgresOutboxWorker` remains the explicit hosted
+  worker implementation for service-account and hierarchy policy checks.
+- Test evidence: the local outbox regression proves an unsupported hosted
+  policy configuration fails before the connection factory is called; the
+  existing PostgreSQL outbox policy and revocation-fence contracts remain
+  covered. Focused tests, Ruff, Mypy, full Python regression, YAML, and
+  diff-check are required for the final gate.
+- Boundary: this prevents silent policy-configuration loss in one local worker
+  constructor. It does not establish external IAM, distributed invalidation,
+  broker/provider semantics, HA/DR, or production authorization effectiveness.
+  ADR 0657 records rollback.
+
+## E-962: Add a regression gate for mutating route server boundaries
+
+- Code evidence: `tests/test_api_authorization_inventory.py` parses every
+  `reconforge/api/routes/*.py` module containing POST/PUT/PATCH/DELETE route
+  decorators and requires one of the reviewed server-boundary markers. Only
+  `auth.py`, `scim.py`, and `webauthn.py` are explicit protocol exceptions.
+- Test evidence: the authorization inventory and current full Python suite
+  pass with the new AST gate; Ruff, Mypy, YAML parsing, and diff-check also
+  pass. A future mutating module without a marker now fails before release
+  evidence can be claimed.
+- Boundary: this detects source-level omissions; it does not prove the
+  correctness of every scope argument, RLS policy, SoD path, worker/export/UI
+  adoption, distributed invalidation, external IAM, HA/DR, or production
+  effectiveness. ADR 0656 records rollback.
+
+## E-961: Fail closed for the local-only individual cashflow API in Server Profile
+
+- Code evidence: `POST /api/v1/individual/cashflow-controls/run` checks the
+  explicit `server_identity_enabled` boundary before executing the in-memory
+  control. Server Profile returns the safe code
+  `individual_cashflow_server_backend_unavailable`; Local Profile remains
+  unchanged.
+- Test evidence: `python -m pytest -q
+  tests/test_api_individual_cashflow.py
+  tests/test_api_server_local_boundaries.py` exits 0 with 5 passing tests.
+  The server test uses an authenticated synthetic server principal and an
+  unreachable PostgreSQL DSN, proving the route refuses before any local
+  persistence or provider behavior is inferred. Authorization inventory,
+  Ruff, Mypy, and `git diff --check` pass.
+- Boundary: this classifies a local-only route as unsupported in Server
+  Profile. It does not provide server-side cashflow persistence, bank
+  connectivity, posting, tax/legal treatment, external IAM, HA/DR, or
+  production readiness. ADR 0655 records rollback.
+
+## E-960: Make write-back rate limiting atomic and registration-scoped
+
+- Code evidence: `WritebackNetworkExecutor._apply_rate_limit` reserves the
+  next deadline while holding a `threading.Lock`, then sleeps outside the lock.
+  The reservation key is the immutable `WritebackNetworkRegistration.digest`,
+  not the reusable connector ID.
+- Test evidence: `python -m pytest -q
+  tests/test_connector_writeback_network.py` exits 0 with 35 passing tests.
+  The new concurrency test observes two distinct future reservations for three
+  simultaneous workers, and the scope test proves separate registration lanes
+  do not wait on one another.
+- Boundary: this is a process-local sender-side quota guard. It does not prove
+  distributed worker coordination, provider-enforced quotas, Retry-After
+  interoperability, live vendor behavior, HA/DR, or production readiness.
+  ADR 0654 records rollback.
+
+## E-923: Live PostgreSQL matching cross-engine replay
+
+- Runtime evidence: the existing live integration test passed with exit 0
+  against a disposable PostgreSQL 16 Alpine `linux/amd64` image bound to
+  `postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`.
+- The test completed four grouped and four sequential synthetic runs, checked
+  direct-strategy decision digests against persisted PostgreSQL worker lineage,
+  and asserted that another tenant could not read the run. No failed runs or
+  duplicate effects were observed. The structured evidence is
+  `POSTGRES_MATCHING_LIVE_2026-08-26.json`.
+- Boundary: this is one-host local runtime evidence. It does not prove
+  provider/live-rate authenticity, posting/write-back, capacity, soak, SLO,
+  HA/DR, hosted repetition, or production readiness. ADR 0653 records the
+  reversible evidence decision.
+
+## E-959: Refresh pinned container OpenSSL runtime libraries
+
+- Code evidence: both digest-pinned Docker stages install the exact
+  `libcrypto3=3.5.8-r0` and `libssl3=3.5.8-r0` packages; no OpenSSL CLI is added. The
+  change is guarded by `test_docker_stages_refresh_the_open_ssl_runtime_libraries_without_cli`.
+- Build/runtime evidence: `docker build --pull --no-cache --platform
+  linux/amd64 --tag reconforge:e824-openssl .` exited 0. The final image
+  reports `libcrypto3-3.5.8-r0` and `libssl3-3.5.8-r0`, retains user
+  `10001:10001`, and contains no `openssl` executable. Hardened
+  `reconforge doctor` exited 0 with network disabled, read-only root, and
+  bounded tmpfs mounts.
+- Scanner evidence: checksum-verified Syft 1.51.0 and Grype 0.117.0 were run
+  against the current image subject. The Grype v6.1.9 database was downloaded
+  with its published SHA-256 and imported locally before a network-none scan.
+  The fail-closed validator returned `status=passed`, zero blockers, and zero
+  active exceptions. It recorded 68 packages, 95.58 percent license metadata
+  coverage, and three fixed CPython High findings governed by the reviewed
+  OpenVEX document; no unexcepted Critical/High/Unknown finding remains.
+  The full bounded result is `CONTAINER_SECURITY_LOCAL_2026-08-26.json`.
+- Boundary: this is local exact-subject scanner evidence, not hosted clean-build,
+  registry publication, signed provenance, legal license compatibility, or
+  production-readiness evidence. E-824 therefore remains open for the hosted
+  gate. ADR 0652 records rollback.
+
+## E-957: Recheck consolidation period before run transitions
+
+- Code evidence: PostgreSQL consolidation `_transition` first resolves the
+  run's parent period, locks it with `FOR UPDATE`, rejects `Locked`, and then
+  re-reads/locks the run before applying the transition.
+- Test evidence: the existing SQLite locked-period reversal regression and the
+  PostgreSQL transition source contract pass; full Python, Ruff, Mypy, Bandit,
+  diff-check, and YAML verification are run at the slice head.
+- Boundary: this closes adapter parity for the supported consolidation
+  lifecycle only. It does not prove distributed locks, statutory/legal-book
+  posting, source-ERP write-back, HA/DR, or production assurance.
+
+## E-956: Serialize consolidation-close run preparation
+
+- Code evidence: PostgreSQL consolidation `prepare_run` locks the parent
+  period with `FOR UPDATE`; SQLite acquires `BEGIN IMMEDIATE`, re-reads the
+  period, and only then performs the locked-state check and idempotent run
+  insert.
+- Test evidence: focused SQLite transaction-boundary and locked-period tests,
+  PostgreSQL source contract, full Python regression, Ruff, Mypy, Bandit, and
+  diff-check pass. A disposable PostgreSQL 16.14 run through Alembic head with
+  `reconforge_app` (`rolsuper=false`, `rolbypassrls=false`) passes the live
+  tenant-isolated consolidation-close replay lifecycle.
+- Boundary: this is supported-adapter concurrency evidence, not distributed
+  locking, statutory/legal-book close, source-ERP posting, HA/DR, or production
+  assurance.
+
+## E-955: Serialize close mutations and protect lock evidence
+
+- Code evidence: PostgreSQL close task upsert/status and period status
+  mutations use the parent-period row lock; task status is re-read after the
+  lock. Re-locking a locked period is rejected. SQLite migration 45 and
+  PostgreSQL Alembic `0092_pg_close_lock_evidence` install immutable lock
+  evidence guards.
+- Test evidence: focused PostgreSQL close contracts, SQLite migration 45
+  backfill/trigger tests, Alembic chain tests, full Python regression, Ruff,
+  Mypy, Bandit, diff-check, and BACKLOG YAML parsing pass. The PostgreSQL
+  migration path is verified through the existing disposable upgrade gate;
+  cross-host race testing remains open.
+- Boundary: this proves adapter/database serialization for the generic close
+  workflow, not a distributed lock service, statutory close, source-ERP
+  posting, HA/DR, or production assurance. ADR 0648 records rollback.
+
+## E-954: Enforce independent close-period reopen actors
+
+- Code evidence: local SQLite migration 44 and PostgreSQL Alembic
+  `0091_pg_close_period_sod` add `locked_by`/`reopened_by`, backfill legacy
+  locked state with `legacy-unknown`, and install persistence-boundary SoD
+  guards. The local and PostgreSQL close adapters reject a reopen by the actor
+  who locked the period and require the locked state plus a reason.
+- Test evidence: migration-chain/schema contracts, PostgreSQL close adapter
+  contracts, local close lifecycle SoD, Ruff, Mypy, focused pytest, and
+  `git diff --check` are required for this slice. Live disposable PostgreSQL
+  execution and independent operational assurance remain separate evidence
+  gates.
+- Boundary: this is ReconForge close-workflow metadata. It does not lock a
+  source ERP, post statutory/legal-book journals, or establish HA/DR,
+  production IAM, compliance, or certification.
+- Rollback: restore the pre-migration SQLite backup; PostgreSQL downgrade
+  refuses to discard lock evidence while locked/reopened rows exist. ADR 0647
+  is the decision record.
+
+## E-953: Make API version scope backend-aware
+
+- Code evidence: `GET /api/v1/version` selects only the deployment scope label
+  from `server_identity_enabled`; package version and API version remain
+  unchanged, and no connection details are returned.
+- Focused API foundation tests cover the unchanged Local Profile label and the
+  PostgreSQL Server Profile label. Ruff, Mypy on the changed route, and
+  `git diff --check` pass. This is metadata-only evidence and does not claim
+  complete PostgreSQL coverage, hosted availability, HA/DR, production,
+  compliance, or certification. ADR 0646 records the decision.
+
+## E-952: Synchronize current-state PostgreSQL boundary wording
+
+- Code/evidence alignment: `docs/architecture/current-state.md` now lists the
+  bounded PostgreSQL server adapters represented by the current execution
+  evidence, identifies Alembic head `0090_pg_writeback_observations`, and
+  states that unsupported routes, statutory posting, external providers, and
+  production operations remain open. It no longer describes all recent
+  reconciliation/industry server routes as SQLite-only.
+- The documentation contract suite and `git diff --check` pass. No runtime,
+  migration, or persisted-data change was made. This repair changes wording
+  only and does not widen any Claims Evidence Matrix maturity or release claim.
+  ADR 0645 records the decision.
+
+## E-951: Make API health backend-aware for PostgreSQL Server Profile
+
+- Code evidence: `reconforge/api/routes/health.py` now selects the health
+  implementation from `server_identity_enabled`. Local Profile continues to
+  read SQLite migrations; Server Profile uses the existing PostgreSQL Alembic
+  revision provider and returns only backend, revision, pending-count, and
+  redacted path metadata.
+- Focused command `python -m pytest -q tests/test_api_foundation.py
+  tests/test_postgres_operations.py tests/test_release_readiness_docs.py
+  tests/test_phase4_execution_contract.py` exits `0` with all runnable tests
+  passing and one declared capability skip. Ruff, Mypy on the changed route,
+  and `git diff --check` pass.
+- Tests cover current PostgreSQL state, pending migrations, unavailable
+  migration state, non-disclosure of a driver error, and unchanged Local
+  Profile health. This
+  is a bounded operational probe correction; it does not prove complete
+  PostgreSQL module migrations, HA/DR, capacity, external IAM, production
+  readiness, compliance, or certification. ADR 0644 records the decision.
+
+## E-950: Remove the superseded Inventory Core fail-closed helper and documentation drift
+
+- Code evidence: all Inventory Core routes use `get_local_db` as the local
+  compatibility dependency and dispatch to `execute_postgres_inventory` when
+  the PostgreSQL server capability is enabled. The unused
+  `get_inventory_local_db` helper, `get_db` bridge, and obsolete 501 test cases
+  are removed; no implicit SQLite fallback is introduced.
+- Focused command `python -m pytest -q tests/test_api_inventory_core.py
+  tests/test_api_authorization_inventory.py tests/test_inventory_core.py` exits
+  `0` with 15 passing tests. Ruff, Mypy, and `git diff --check` pass.
+- E-941/ADR 0634 remain the current live PostgreSQL Inventory Core evidence;
+  E-939/ADR 0632 are historical interim evidence only. This slice repairs
+  auditability and documentation drift; it does not widen the existing
+  bounded one-host runtime, IAM, HA/DR, provider, capacity, or production
+  claims.
+- The post-repair live command `python -m pytest -q
+  tests/test_api_server_inventory_core.py -rs` also passes against the same
+  disposable PostgreSQL 16 image and `reconforge_app` role, with
+  `rolsuper=false` and `rolbypassrls=false`; the container is removed after the
+  run. This confirms the current FastAPI route reaches the server adapter
+  after the obsolete helper is removed.
+
+## E-949: Refuse incomplete Finance Core entry scope before legacy fallback
+
+- Code evidence: Server Profile `reconforge/api/routes/finance_core.py` now
+  enters the Finance Core branch whenever its backend is enabled, validates
+  `entity_code`, `period_id`, and `journal_code`, and returns
+  `finance_core_entry_scope_required` before invoking either the Finance Core
+  or legacy ledger adapter.
+- Focused command `python -m pytest -q tests/test_api_server_finance_core.py
+  tests/test_api_server_finance_core_live.py` exits `0`; Ruff, Mypy, and
+  `git diff --check` pass.
+- This closes an ambiguous server routing path only. It does not claim legacy
+  ledger removal, hosted parity, external IAM, HA/DR, provider integration,
+  capacity, production readiness, compliance, or certification. ADR 0642
+  records the decision.
+
+## E-948: Bind Finance Core API hierarchy codes to authenticated PostgreSQL scope
+
+- Code evidence: `reconforge/api/server_finance_core.py` adds a request-scoped
+  executor that resolves organization and legal-entity codes from authenticated
+  IDs, verifies workspace organization linkage, rejects mismatched payload
+  selectors, and passes canonical codes to the repository. Finance Core routes
+  use it for chart/account/dimension/journal selectors and ledger entry
+  lifecycle filters/creation; local mode is unchanged.
+- Focused command `python -m pytest -q
+  tests/test_api_server_finance_core.py tests/test_application_finance_core.py
+  tests/test_finance_core.py tests/test_postgres_finance_core.py
+  tests/test_api_server_finance_core_live.py` exits `0`; Ruff and Mypy pass
+  for the changed implementation and `git diff --check` passes.
+- Live command `python -m pytest tests/test_api_server_finance_core_live.py -q
+  -rs` passes against a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container. The fixture installs the ledger/outbox and master-data workspace
+  link schemas, uses a separate `reconforge_app` role, verifies
+  `rolsuper=false` and `rolbypassrls=false`, and removes the container after
+  the run. The runtime covers hierarchy binding, organization/entity spoof
+  rejection, exact entry lifecycle, maker/checker separation, and sibling
+  tenant isolation. This is one disposable host with synthetic data only.
+
+## E-947: Refuse local user SQLite access before opening a connection in Server Profile
+
+- Code evidence: every endpoint in `reconforge/api/routes/users.py` now uses
+  `get_local_db` and `_local_connection`, which evaluates
+  `local_identity_surface_disabled` before accepting a local connection.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_local_boundaries.py tests/test_api_users_roles.py
+  tests/test_api_identity_administration.py -k 'server or local_identity or
+  users or roles' --tb=short -ra` exits `0` with `7 passed`; Ruff and Mypy on
+  the changed route/test pass.
+- The synthetic Server Profile app uses an unreachable PostgreSQL DSN and
+  covers all local user and role route families. Authorized read routes return
+  `409 local_identity_surface_disabled`; higher-risk mutations can be denied
+  earlier by step-up policy, with no local SQLite fallback. Local user/role
+  tests remain green. This proves a fail-closed route boundary only, not
+  PostgreSQL identity administration, external IAM, SSO, HA/DR, or production
+  readiness. ADR 0640 records the decision.
+
+## E-946: Expose Inventory Valuation and Reversal through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/inventory_valuation.py` and
+  `reconforge/api/routes/inventory_valuation_reversal.py` now dispatch all
+  server-mode policy, document, cost-layer, summary, snapshot, reversal, and
+  lifecycle operations through `server_inventory_valuation`. The boundary
+  binds authenticated hierarchy, validates movement/document/reversal object
+  scope, binds actors, accepts canonical workspace IDs, and never opens local
+  SQLite in Server Profile.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_inventory_valuation.py tests/test_inventory_valuation.py
+  tests/test_inventory_valuation_reversal.py
+  tests/test_application_inventory_valuation.py
+  tests/test_application_inventory_valuation_reversal.py
+  tests/test_postgres_inventory_valuation.py
+  tests/test_postgres_inventory_valuation_reversal.py --tb=short -ra`
+  exits `0` locally; Ruff and Mypy pass for the changed implementation.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, explicit application/admin DSNs, and a separate application
+  role without superuser or `BYPASSRLS`. The HTTP contract exited `0` with
+  `1 passed`; it covers policy creation, receipt valuation exact `12.34`,
+  maker/checker approval, FIFO delivery valuation exact `4.94`, reversal
+  create/approve, snapshot, and denied workspace scope. The existing direct
+  PostgreSQL valuation and reversal contracts also passed in the same
+  disposable runtime.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, multi-host or
+  HA/DR behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0639
+  records the decision.
+
+## E-945: Expose Inventory Planning through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/inventory_planning.py` now dispatches
+  all count-session, reorder-rule, reorder-signal, summary, and snapshot
+  operations to `execute_postgres_inventory_planning` in server mode. The
+  boundary binds authenticated hierarchy, re-evaluates central policy,
+  validates count-session object scope, binds actors to authenticated
+  principals, accepts canonical workspace IDs, and never opens local SQLite in
+  server mode.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_inventory_planning.py tests/test_inventory_planning.py
+  tests/test_application_inventory_planning.py
+  tests/test_postgres_inventory_planning.py --tb=short -ra` exits `0`; Ruff
+  and source Mypy pass for the changed implementation.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, an explicit application DSN, and a separate application role
+  without superuser or `BYPASSRLS`. The HTTP contract plus the existing direct
+  PostgreSQL Planning lifecycle exited `0` with `7 passed`. It covers seeded
+  Inventory Core movement, count create/start/record/submit/approve,
+  maker-checker denial, exact `2.500` quantity, reorder rule/signal, actor and
+  hierarchy binding, and denied workspace scope. The fixture installs the
+  ledger outbox schema required by transactional planning evidence.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, multi-host or
+  HA/DR behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0638
+  records the decision.
+
+## E-944: Refuse SQLite-only Exceptions and Workflow fallback in Server Profile
+
+- Code evidence: `reconforge/api/routes/exceptions.py` and
+  `reconforge/api/routes/workflow.py` now use `get_local_db` and check the
+  server identity boundary before invoking SQLite services. Server requests
+  return `exceptions_server_backend_unavailable` or
+  `workflow_server_backend_unavailable` with HTTP 501; local requests retain
+  the existing service behavior.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_audit_workflow.py tests/test_api_service_accounts.py
+  tests/test_api_server_local_boundaries.py --tb=short -ra` exits `0`; Ruff
+  and Mypy on the changed routes also exit `0`.
+- `tests/test_api_server_local_boundaries.py` exercises three Exceptions
+  endpoints and four Workflow endpoints through a real FastAPI server-profile
+  app configured with an unreachable PostgreSQL DSN. All return 501 before a
+  local database is opened. The existing local workflow/audit tests continue
+  to pass. This proves fail-closed routing only; it does not prove PostgreSQL
+  Exceptions/Workflow support, external IAM, HA/DR, or production readiness.
+
+## E-943: Expose Payables through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/payables.py` now dispatches supplier,
+  purchase-order, goods-receipt, supplier-invoice, three-way-match, and
+  approval operations to the explicit PostgreSQL server boundary when
+  configured. `reconforge/api/server_payables.py` binds tenant/workspace
+  hierarchy, re-evaluates central scoped policy, validates object/supplier
+  scope, opens a `PostgresTenantBoundary` transaction, canonicalizes hierarchy
+  values, and maps unavailable/configuration failures to safe errors without
+  opening local SQLite. `PostgresPayablesRepository` accepts canonical
+  workspace IDs while preserving exact quantity serialization.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_payables.py tests/test_payables_api.py
+  tests/test_postgres_payables.py tests/test_payables.py --tb=short -ra`
+  exits `0`; the live-capability test skips only when no DSN is provisioned.
+  Ruff and source Mypy pass for the changed implementation.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, an explicit application DSN, and a separate application role
+  without superuser or `BYPASSRLS`. The HTTP contract plus the existing
+  PostgreSQL Payables adapter lifecycle exited `0` with `10 passed`. It covers
+  supplier/PO creation, exact `1.0000000000001` quantity, submit/approve,
+  goods receipt, supplier invoice, three-way match, maker denial, authenticated
+  checker/matcher actor binding, list projection, spoofed hierarchy binding,
+  and denied workspace scope. The disposable runtime creates the ledger
+  outbox schema required by append-only Payables events.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, multi-host or
+  HA/DR behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0636
+  records the decision.
+
+## E-942: Expose Receivables through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/receivables.py` now dispatches all
+  customer, invoice, receipt, credit-exposure, and aging operations to the
+  explicit PostgreSQL server boundary when configured. The boundary in
+  `reconforge/api/server_receivables.py` binds tenant/workspace hierarchy,
+  re-evaluates central scoped policy, validates object/customer scope, opens a
+  `PostgresTenantBoundary` transaction, canonicalizes hierarchy values, and
+  maps unavailable/configuration failures to safe errors without opening local
+  SQLite. `PostgresReceivablesRepository` accepts canonical workspace IDs and
+  retains exact minor-unit money plus arbitrary-scale quantity serialization.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_server_receivables.py tests/test_receivables_api.py
+  tests/test_postgres_receivables.py tests/test_application_receivables.py
+  --tb=short -ra` exits `0`; the live-capability tests skip only when no DSN is
+  provisioned. Ruff and source Mypy pass for the changed implementation.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, an explicit application DSN, and a separate application role
+  without superuser or `BYPASSRLS`. The new HTTP contract plus the existing
+  PostgreSQL Receivables adapter lifecycle exited `0` with `9 passed`. The
+  HTTP contract covers customer/invoice/receipt lifecycle, maker denial,
+  checker approval actor binding, credit exposure, aging, exact
+  `1.0000000000001` quantity output, spoofed hierarchy rejection by binding,
+  and denied workspace scope. The disposable runtime also creates the
+  outbox schema required by the append-only audit/outbox path.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, multi-host or
+  HA/DR behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0635
+  records the decision.
+
+## E-941: Expose Inventory Core through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/inventory_core.py` now dispatches all
+  19 operations to `execute_postgres_inventory` when the PostgreSQL server
+  profile is active. `reconforge/api/server_inventory_core.py` binds the
+  request hierarchy, re-evaluates central policy, validates movement object
+  scope, and opens a `PostgresTenantBoundary` transaction. The route never
+  opens tenant SQLite in server mode; unavailable configuration maps to a safe
+  error. Authenticated actor labels and canonical hierarchy values are used in
+  the PostgreSQL repository. PostgreSQL response metadata no longer claims a
+  local persistence source.
+- Focused command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_inventory_core.py tests/test_api_server_inventory_core.py
+  tests/test_api_authorization_inventory.py tests/test_postgres_inventory_core.py
+  --tb=short -ra` exits `0`; Ruff, source Mypy, and `git diff --check` also exit
+  `0` for the slice.
+- Live command uses a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, an explicit application DSN, and a separate application role
+  without superuser or `BYPASSRLS`. `tests/test_api_server_inventory_core.py`
+  plus the existing live Inventory Core adapter tests exit `0` with `10
+  passed`. The HTTP contract covers unit/item/warehouse/location CRUD, a
+  receipt movement, step-up-protected posting, exact `2.500` on-hand output,
+  snapshot output, actor/hierarchy binding, and denied workspace scope.
+- The disposable container is removed after the run. No customer or
+  production data is used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, HA/DR,
+  cross-host behavior, provider integration, capacity, backup/restore,
+  accessibility, compliance, certification, or production readiness. ADR 0634
+  records the decision; ADR 0632 is now historical/superseded for this path.
+
+## E-940: Expose Account Reconciliation through the live PostgreSQL API boundary
+
+- Code evidence: `reconforge/api/routes/accounts.py` now selects the explicit
+  PostgreSQL adapter whenever the server identity profile is enabled. The
+  route performs request hierarchy resolution and central scoped-policy
+  re-evaluation before `execute_postgres_accounts` opens a
+  `PostgresTenantBoundary` transaction. `reconforge/api/server_accounts.py`
+  maps unavailable/configuration failures to safe 503 responses and does not
+  open local SQLite. Server actor labels are derived from the authenticated
+  principal; payload reviewer/preparer identity is not authoritative.
+- Focused synthetic command
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_api_accounts.py tests/test_api_server_accounts.py
+  tests/test_postgres_accounts.py tests/test_api_authorization_inventory.py
+  --tb=short -ra` exited `0`; live capability tests were skipped when the
+  environment was not provisioned.
+- Live command used a disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container, Alembic head, a separate `reconforge_app` role created without
+  superuser, create-role/create-database, replication, or `BYPASSRLS`, and
+  explicit app/admin DSNs. `tests/test_api_server_accounts.py` plus
+  `tests/test_postgres_accounts.py` exited `0` with `7 passed`. The HTTP test
+  exercised create, prepare, submit, review, complete, list, exact decimal
+  output, authenticated actor binding, maker-checker separation, and denied
+  workspace scope through the real FastAPI and PostgreSQL boundaries.
+- The disposable container was removed after the run. No customer or
+  production data was used. This proves a bounded one-host synthetic server
+  contract only; it does not prove external IAM authenticity, HA/DR,
+  cross-host behavior, live providers, capacity, or production readiness.
+  ADR 0633 records the decision.
+
+## E-939: Historical interim Inventory Core server fail-closed boundary (superseded by E-941)
+
+- E-939 was the interim fail-closed guard before E-941 exposed the real
+  PostgreSQL Inventory Core HTTP boundary. Its 501 result applies only to the
+  pre-E-941 tree; E-950 removes the now-unused helper and updates the current
+  route/test inventory. ADR 0632 is historical and ADR 0634 is authoritative.
+
+## E-938: Verify live PostgreSQL server policy provenance
+
+- Runtime environment: Docker Desktop `29.7.2`, exact local image
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`,
+  one disposable container, two synthetic tenants, and a separate
+  `reconforge_app` login role created as `NOSUPERUSER NOCREATEDB NOCREATEROLE
+  NOINHERIT NOREPLICATION` without `BYPASSRLS`.
+- The command set
+  `.venv-windows\\Scripts\\python.exe -m pytest -q
+  tests/test_postgres_policy_provenance.py --tb=long -ra` with explicit app and
+  admin DSNs exited `0` with `1 passed`. `pg_isready` reported accepting
+  connections before the run.
+- The test passed through the real `_server_policy_audit_sink` and
+  `execute_postgres_policy_audit` boundary. The application role inserted one
+  tenant-scoped `authorization.policy_decision` event into
+  `domain_audit_events`; repository verification returned `ok=True`, the event
+  object ID and after-hash matched the policy decision digest, the second
+  tenant saw no event, and raw tenant/workspace/amount/request values were
+  absent from metadata.
+- Admin-only cleanup disabled the immutable trigger only for the explicit
+  tenant-specific teardown and restored it before closing the disposable
+  database. No production or customer data was used.
+- This is bounded one-host PostgreSQL 16 evidence. It does not prove external
+  IAM authenticity, cross-host RLS deployment, distributed invalidation,
+  HA/DR, provider behavior, or production authorization effectiveness.
+
+## E-937: Persist server policy provenance through a tenant-scoped sink
+
+- `audit_policy_decision` now accepts exactly one of a local SQLite connection,
+  backend-neutral append-only repository, or request-scoped `PolicyAuditSink`.
+  The sink is invoked only after the closed policy evidence is built and is
+  rejected when combined with a direct persistence argument.
+- `reconforge/api/server_audit.py` adds a short PostgreSQL transaction using the
+  configured identity factory and request tenant. The API dependency sink
+  appends `authorization.policy_decision` to `domain_audit_events`, binding the
+  event object ID and after-hash to the evidence digest and storing only closed
+  evidence plus a request digest.
+- `tests/test_api_dependencies.py` proves the sink wiring and asserts that
+  tenant, workspace, and raw request values do not enter event metadata.
+  `tests/test_policy_engine.py` proves all five dependency callsites retain
+  context binding, two local callsites use SQLite, and the three server
+  callsites use the server sink. Focused tests and Ruff, Mypy, and diff checks
+  exit `0`.
+- This is synthetic adapter evidence. The current environment has no live
+  PostgreSQL execution for this turn; RLS/grant behavior, external IAM
+  authenticity, distributed invalidation, and production effectiveness remain
+  unverified. The full Python regression nevertheless reaches `100%` and exits
+  `0`; its declared live-service and Windows-capability skips remain visible.
+  ADR 0631 records the boundary.
+
+## E-936: Separate policy provenance from business rollback assertions
+
+- The first full regression after E-935 found four expected-count failures in
+  financial idempotency, account workflow, and receivables rollback tests. The
+  failures were caused by newly durable `authorization.policy_decision`
+  events, not by business rows, business audit entries, or outbox effects
+  escaping rollback.
+- The test contract now counts business audit events with
+  `object_type <> 'authorization.policy_decision'` for rollback assertions.
+  The independent policy-ledger test continues to verify that the authorization
+  event is retained, redacted, digest-bound, and hash-chain verifiable.
+- The focused repair command for the four affected tests exited `0`; Ruff and
+  Mypy exited `0`; the full
+  `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra` run reached
+  `100%` and exited `0`. The run retained declared skips for unavailable
+  PostgreSQL/Redis/S3/network/Windows capabilities and existing warnings for
+  deprecated dependencies and intentional legacy financial-input paths.
+- This evidence confirms the local test contract and regression state only; it
+  does not close server-side durable policy storage, production IAM, external
+  services, container vulnerability E-824, or release publication gates.
+
+## E-935: Persist local policy evidence in the append-only audit ledger
+
+- `audit_policy_decision` now accepts `audit_connection`. With a local SQLite
+  connection it appends one immutable `authorization.policy_decision` event
+  whose object ID and `after_hash` equal the redacted evidence decision digest.
+- The event metadata contains the closed evidence object and a request-ID
+  digest only. A focused test proves audit-chain verification, evidence digest
+  binding, and absence of tenant/workspace/amount/request raw values.
+- Local API dependency, platform, workflow, and Studio callsites pass their
+  existing SQLite connection. Server workers and PostgreSQL-only paths remain
+  structured-log-only when no SQLite connection exists.
+- `tests/test_policy_engine.py tests/test_api_dependencies.py
+  tests/test_studio_auth.py tests/test_workflow_state_machine.py` pass; Ruff
+  and Mypy pass for the changed scope. This is local durable provenance only,
+  not server-side append-only, external IAM, distributed invalidation, or
+  production authorization evidence. ADR 0630 records the boundary.
+
+## E-934: Repair execution backlog dependency closure
+
+- The full Python regression reached the phase execution contract and failed at
+  `tests/test_phase_1_3_execution_contract.py::test_backlog_dependencies_are_closed_and_phase_ordered` because newly added E-931 referenced absent backlog ID E-930.
+- `docs/execution/BACKLOG.yaml` now keeps E-934 dependent on present E-933 and
+  makes E-931 independent; the repair changes metadata only. The focused
+  contract passes, and the rerun `.venv-windows\\Scripts\\python.exe -m pytest
+  -q --tb=short -ra` exits `0`; declared capability skips and existing
+  dependency/legacy-input warnings remain.
+
+## E-933: Enforce explicit policy on direct Money constructors
+
+- `tests/test_financial_input_policy.py` now scans every production direct
+  `Money(...)` call outside `reconforge/utils/money.py` and rejects omitted
+  `input_policy` or `strict_precision` choices. Typed helper parameters may be
+  propagated explicitly.
+- Existing production callers in reconciliation declare both policies; the
+  focused financial-input/P0 contract suite passes with no violations. The
+  contract allows explicit `strict_precision=False` only where the caller's
+  named compatibility behavior is intentional.
+- This is a source-policy guard. It does not prove dynamic runtime values,
+  legacy database column migration, cross-engine persistence parity, posting,
+  provider behavior, or production readiness. ADR 0629 records the boundary.
+
+## E-932: Verify the Docker build and bounded runtime
+
+- Environment: Docker Desktop `4.87.0` (236836), Linux Engine `29.7.2`,
+  `desktop-linux` builder on Windows. `docker build -t reconforge:baseline .`
+  exited `0`; the image uses the checked-in digest-pinned Python 3.11 Alpine
+  base and two-stage runtime.
+- `docker run --rm reconforge:baseline reconforge doctor` exited `0`:
+  package/config/sample-data/output-path/validation checks were OK, with `0`
+  validation errors and `10` sample-data warnings.
+- `docker run --rm reconforge:baseline reconforge validate examples/sample_data`
+  exited `0` with the same `10` warnings. These are visible synthetic fixture
+  quality observations, not silently converted errors.
+- `docker run --rm reconforge:baseline reconforge demo run --output
+  output/baseline-demo` exited `0` and emitted the management/executive HTML
+  outputs, workbooks, review register, evidence binder, client pack, and rule
+  results inside the disposable container.
+- Runtime package inspection reports `libcrypto3-3.5.7-r0` and
+  `libssl3-3.5.7-r0`; the `openssl` CLI is intentionally absent from the
+  trimmed runtime. E-824's current OpenSSL release block therefore remains
+  active. This evidence does not include a fresh Syft/Grype scan, signed SBOM,
+  provenance verification, registry publication, or production claim.
+
+## E-931: Verify the web quality and bilingual accessibility gates
+
+- `npm ci` completed from `apps/web/package-lock.json` under Node `v26.3.0` and
+  npm `11.16.0`; npm audited `161` installed packages with `0` reported
+  vulnerabilities.
+- `npm --prefix apps/web run typecheck` exited `0`.
+- `npm --prefix apps/web run test:run` exited `0` with `15` files and `75`
+  tests passed.
+- `npm --prefix apps/web run build` exited `0`; Vite `8.1.5` produced the
+  production bundle after TypeScript build checking.
+- Standard `npm --prefix apps/web run e2e` exited `0` with `16` passed and `5`
+  skipped of `21`. Passing tests include the Axe/RTL route gate, keyboard focus
+  and dialog restoration, color/reduced-motion behavior, source-path redaction,
+  industry route contracts, and responsive landmarks.
+- `$env:RECONFORGE_LIVE_HTTPS_HOSTING='1'; npm --prefix apps/web run e2e`
+  exited `0` with `17` passed and `4` skipped of `21`. The additional HTTPS
+  production-bundle test passed HSTS, CSP, same-origin health, no inline script
+  or style execution, and zero observed CSP violations.
+- The remaining skipped tests are explicit in
+  `apps/web/e2e/browser-session-live.spec.ts`: they require a provisioned local
+  API proxy and explicitly enabled synthetic mutations. No live IAM/session
+  provisioning or hosted deployment claim is inferred from the local suite.
+- This is local frontend quality/accessibility evidence only. It does not prove
+  independent WCAG conformance, screen-reader interoperability, hosted
+  deployment, authenticated provider behavior, production availability, or
+  release signing. ADR 0628 records the boundary.
+
+## E-930: Bind production policy audits to evaluated context
+
+- API dependencies, platform authorization, workflow transitions, durable-job
+  claims, hosted worker guards, Studio checks, and PostgreSQL scoped exports now
+  pass the exact evaluated `PolicyEvaluationContext` into
+  `audit_policy_decision`. The production AST inventory rejects an audit call
+  without `context=` outside the policy definition module.
+- The focused policy/API/worker/workflow/Studio collection passed `154` tests;
+  the full `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra`
+  regression exited `0` with `3,204` tests. Ruff, Mypy, and `git diff --check`
+  passed.
+- Bandit exited `0` with existing `nosec`/comment warnings; `pip-audit`
+  reported no known vulnerabilities and could not audit the local unpublished
+  package on PyPI; `python -m build --no-isolation` produced the 0.7.1 sdist
+  and wheel.
+- This is local caller-to-evidence provenance evidence only. It does not prove
+  authenticated principal provenance, correct context construction at every
+  boundary, append-only audit storage, external IAM/provider enforcement,
+  distributed invalidation, or production authorization effectiveness. ADR
+  0627 records the boundary.
+
+## E-929: Align deployment-readiness reader with JSON Schema
+
+- The reader and `deployment_readiness_matrix.v1.schema.json` now agree on
+  boolean-safe schema versioning, canonical `reviewed_on`, minimum claim
+  boundary, exact edition profile commands, and non-whitespace gate boundaries.
+  Runtime evidence-path containment/existence remains an intentional stronger
+  check than generic schema validation.
+- `python -m pytest -ra tests/test_deployment_readiness_matrix.py
+  tests/test_deployment_runtime_evidence.py tests/test_deployment_profiles.py
+  tests/test_deployment_admission.py` passed `36/36`; Ruff, Mypy, and YAML/JSON
+  parse checks passed.
+- `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra` exited `0`
+  after the change; the current collection is `3,204` tests. Declared service,
+  network, and Windows-capability skips plus existing dependency and
+  legacy-input warnings remain.
+- Bandit exited `0` with the repository's existing `nosec`/comment warnings;
+  `pip-audit` reported no known vulnerabilities and could not audit the local
+  unpublished package on PyPI; `python -m build --no-isolation` produced the
+  0.7.1 sdist and wheel; `git diff --check` passed.
+- This is offline contract-integrity evidence only. It does not prove current
+  evidence, deployment drills, external IAM/KMS/HSM, live dependencies,
+  independent failure domains, RPO/RTO, or production readiness. ADR 0626
+  records the boundary.
+
+## E-928: Refuse policy evidence built from a mismatched context
+
+- `build_policy_decision_evidence` now recomputes the expected context and
+  typed-scope digests from a supplied `PolicyEvaluationContext`. A pre-bound
+  `PolicyDecision` with a different context or scope digest raises before an
+  evidence artifact can be emitted; the no-context compatibility path remains
+  unchanged.
+- `python -m pytest tests/test_policy_engine.py tests/test_policy_cache.py`
+  passed `92/92`. The new tests cover a matching context, full-context
+  mismatch, and independent scope mismatch refusal in addition to replay,
+  redaction, closed-field, and tamper checks.
+- `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra` exited `0`
+  on the current Windows/Python 3.12 environment; the current collection is
+  `3,204` tests. Declared PostgreSQL/Redis/S3/network/Windows-privilege
+  capability skips and existing dependency/legacy-input warnings remain.
+- Ruff, Mypy, Bandit, pip-audit, package build, YAML/JSON parsing, and
+  `git diff --check` passed. Pip-audit reported no known vulnerabilities and
+  could not audit the local unpublished `reconforge-erp` package on PyPI.
+- This is local evidence-construction integrity only. It does not prove
+  authenticated context provenance, universal route/job/UI adoption,
+  append-only audit storage, external IAM/provider enforcement, distributed
+  invalidation, or production authorization effectiveness. ADR 0625 records
+  the boundary.
+
+## E-927: Explicit precision policy for every production Money construction
+
+- The production `Money.from_exact` inventory now has an explicit literal
+  `strict_precision=True` or `strict_precision=False` at every call site.
+  Domain source helpers reject registered-currency over-precision; derived
+  deferred-tax, NCI, and ownership-change calculations retain explicit
+  registry rounding.
+- `python -m pytest -q -ra tests/test_p0_correctness.py
+  tests/test_retail_settlement.py tests/test_manufacturing_cost_control.py
+  tests/test_consolidation_deferred_tax.py tests/test_consolidation_lifecycle.py
+  tests/test_consolidation_ownership_changes.py
+  tests/test_individual_cashflow_control.py` passed (`67` tests).
+- `tests/test_p0_correctness.py::test_production_money_construction_declares_rounding_policy`
+  passed; Ruff, Mypy, and `git diff --check` pass for the changed scope.
+- The full `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra`
+  regression collected 3,119 nodes and exited `0`; only declared capability
+  skips and the existing Starlette/httpx, SAML, and legacy-input warnings
+  remained. Package build, Bandit, and pip-audit also exited `0`; pip-audit
+  reported no known vulnerabilities and noted the local package is not on PyPI.
+- This is a local construction-policy and regression gate. It does not prove
+  complete financial-path coverage, source authenticity, posting, provider or
+  write-back behavior, PostgreSQL parity, HA/DR, or production readiness.
+
+## E-926: Fail-closed deployment-readiness evidence shape
+
+- `load_deployment_readiness_matrix` now rejects a `verified_scoped` gate with
+  no evidence files, any gate with an empty boundary, malformed status types,
+  and the existing unsupported `verified` edition status.
+- `verify_deployment_runtime_evidence` canonicalizes edition presentation via
+  the selected immutable profile before returning its digest-bound artifact.
+- `python -m pytest -q tests/test_deployment_readiness_matrix.py
+  tests/test_deployment_runtime_evidence.py tests/test_deployment_profiles.py
+  tests/test_deployment_admission.py` passed (`30` tests). Ruff and Mypy pass
+  for the deployment package.
+- This is an offline contract correction. It does not prove external services,
+  IAM, KMS/HSM, independent failure domains, RPO/RTO, provider behavior,
+  production recovery, or readiness.
+
+## E-925: Digest-bound central policy decision evidence
+
+- `CentralPolicyEngine.evaluate` and `evaluate_any` bind each decision to a
+  deterministic `context_digest` and typed `scope_digest`. The digest input
+  covers the permission snapshot, exact Decimal amounts/bounds, step-up state,
+  object/ownership context, delegation, requested fields, and SoD history while
+  keeping raw values out of the evidence payload.
+- `build_policy_decision_evidence` emits schema-v1 with only redacted digests
+  and bounded classifications. `verify_policy_decision_evidence` rejects
+  unknown fields, unsupported versions, malformed digests, and tampering.
+- `python -m pytest -q tests/test_policy_engine.py tests/test_policy_cache.py`
+  passed. The evidence tests cover deterministic replay, scope namespace
+  separation, actor presentation canonicalization, raw-value absence, and
+  mutation refusal. Ruff and Mypy pass for the policy implementation.
+- This is local policy/evidence-input evidence. No append-only sink, external
+  IAM/provider, universal authorization inventory, distributed cache
+  invalidation, or production effectiveness is claimed. ADR 0622 records the
+  boundary.
+
+## E-924: Strict currency precision at application financial ingress (2026-08-25)
+
+- `reconforge/application/` now constructs source and tolerance `Money` values
+  with `strict_precision=True`. This includes bank statement, individual
+  cashflow, manufacturing, professional invoice/payment, retail settlement,
+  and grouped matching application boundaries.
+- `python -m pytest -q tests/test_money_currency.py tests/test_bank_statement_control.py`
+  passed. The bank control regression rejects EUR `100.001` source input and
+  `0.001` tolerance rather than rounding either value.
+- `python -m pytest -q tests/test_p0_correctness.py tests/test_bank_statement_control.py tests/test_individual_cashflow_control.py tests/test_manufacturing_cost_control.py tests/test_professional_invoice_payment_control.py tests/test_retail_settlement.py`
+  passed; the P0 AST contract found no application `Money.from_exact` call
+  without an explicit strict precision keyword.
+- The related API, SQLite, and PostgreSQL-profile suites passed on Python
+  3.12.13; three live PostgreSQL tests remained skipped because no DSN was
+  provisioned. Ruff and Mypy passed for the changed application/test scope.
+- The full `.venv-windows\\Scripts\\python.exe -m pytest -q --tb=short -ra`
+  regression on Python 3.12.13 collected 3,119 test nodes, exited `0`, and
+  took `437,092 ms`; declared service/privilege capability skips and the
+  existing Starlette/httpx, SAML, and named legacy-input warnings remain.
+- This is bounded local input-integrity evidence. It does not prove hosted
+  PostgreSQL parity, source authenticity, live provider interoperability,
+  posting/write-back, HA/DR, or production readiness. ADR 0621 records the
+  reversible decision.
+
 ## E-923: Current publication branch uses a neutral name (2026-08-24)
 
 - The local checkout and GitHub remote now publish from
@@ -19045,3 +22126,108 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   - Boundary: local static/dependency evidence only; no penetration,
     reachability, malware, license, hosted, provenance, or production-security
     assurance follows.
+
+## E-971 — Opt-in Community local object-store retention path (2026-08-26; ADR 0665)
+
+- `reconforge evidence register` accepts `--storage-backend
+  local-object-store` and an explicit bounded `--storage-root`, using the
+  existing offline `LocalObjectStore` with tenant/workspace-separated keys,
+  immutable content, checksum manifests, and retention metadata. The default
+  `local` backend remains backward compatible and refuses retention because it
+  has no configured object store.
+- `reconforge evidence verify` accepts the same local backend/root and verifies
+  an object-backed record after the source path is removed. An expired retention
+  timestamp is rejected through the safe CLI error boundary before any registry
+  row or object file is created. Focused CLI/evidence/object-storage tests pass,
+  Ruff passes, Mypy passes, and the full local Python regression is green.
+- Boundary: the artifact proves a bounded offline retention primitive only. It
+  does not prove a complete Community retention/privacy administration workflow,
+  legal hold, authorized deletion/erasure, backup/restore coupling, WORM,
+  provider durability, independent failure domains, or production readiness.
+
+## E-972 — Disposable PostgreSQL identity and retention governance runtime (2026-08-26; ADR 0666)
+
+- A new labelled `postgres:17.10-alpine` container was created for this slice,
+  migrated from empty state through Alembic head `0092_pg_close_lock_evidence`,
+  and used only with synthetic tenant data. The application role was checked
+  as `rolsuper=false` and `rolbypassrls=false` before the live tests.
+- The following live tests passed `2/2`:
+  `tests/test_postgres_security_governance.py::test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated`
+  and
+  `tests/test_postgres_identity_administration.py::test_live_identity_admin_http_is_atomic_tenant_isolated_and_invalidates_sessions`.
+  The run covers tenant isolation, atomic integration/retention policy control,
+  non-shortening retention floor, session invalidation, step-up, and
+  last-administrator guards.
+- The closed report is
+  `docs/execution/POSTGRES_GOVERNANCE_RUNTIME_E972_2026-08-26.json`, validated
+  by `docs/schemas/postgres_governance_runtime_report.schema.json`; its
+  structural report digest is
+  `9bb319f7c40b60df240935175fe3375f5044adba61ef631f69844722a95b6cab`.
+- Boundary: this is fresh local single-host runtime evidence only. It does not
+  establish external identity-provider interoperability, distributed session
+  revocation, HA/DR, legal hold, WORM, privacy erasure, independent regulated
+  review, or production IAM assurance.
+
+- E-958 tenant/workspace binding for executable server write-back registrations
+  (2026-08-26; ADR 0651):
+  - `WritebackNetworkRegistration` now validates paired optional
+    `tenant_id`/`workspace_id` fields and includes a bound scope in its
+    registration digest while preserving the historical digest shape for
+    unbound inspection-only registrations.
+  - Dispatch, recovery, and compensation route lookup now requires the exact
+    authenticated tenant/workspace pair. `WritebackNetworkExecutor` repeats
+    the check for dispatch, recovery observation/application, and compensation
+    before payload or secret resolution. Unbound and cross-scope registrations
+    are rejected without provider I/O.
+  - Focused command:
+    `python -m pytest -q tests/test_connector_writeback_network.py
+    tests/test_connector_erpnext_writeback.py
+    tests/test_connector_provider_tls_sandbox.py tests/test_api_connectors.py
+    tests/test_api_server_identity.py` completed with all tests passing and one
+    pre-existing capability skip. The regression includes explicit API denial
+    for unbound/cross-scope registrations and executor denial before payload or
+    secret resolution.
+  - Boundary: local synthetic HTTP/executor and TLS-sandbox evidence only;
+    no live vendor interoperability, credential-vault assurance, distributed
+    registry consistency, accounting posting, HA/DR, or production readiness
+    follows.
+
+## E-1121 — P0 persistence, PostgreSQL hygiene, and evidence-bound Studio presentation (2026-08-30)
+
+- **Scope and commits:** `57d66bd4` boots the matching PostgreSQL live test
+  with the ledger/audit dependency it actually writes; `459ce612` introduces
+  admin-only, tenant-scoped PostgreSQL test cleanup; `09ad98bc` requires
+  strict-v2 policy for new matching writes at the application and SQLite
+  adapter boundaries; `e65249af` gates beta/stable module promotion on
+  readiness evidence; `324f8cf1` tests the static signed-release contract;
+  `cfc67208` makes bundled Studio fixtures visibly synthetic.
+- **Focused financial verification:** the matching-policy regression command
+  covering financial policy, application matching, SQLite matching-rule JSON,
+  platform determinism, and PostgreSQL writer contracts exited 0. Ruff and
+  Mypy passed. Expected legacy compatibility warnings remain confined to
+  explicit historical/binary-float compatibility coverage.
+- **Fresh PostgreSQL verification:** a new disposable
+  `postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777`
+  container with a non-superuser application role ran
+  `test_postgres_foundation.py`, `test_postgres_matching_application.py`,
+  `test_postgres_payables.py`, `test_postgres_receivables.py`, and
+  `test_postgres_durable_jobs.py` successfully. The 1M/10M durable profiles
+  were skipped only because their explicit opt-in was absent. Subsequent
+  direct count queries returned zero for all test-owned data tables, and a
+  trigger-state query returned an empty disabled-trigger set. The disposable
+  container was then removed.
+- **Integrated local validation:** full Python `pytest -q --tb=short -ra`
+  exited 0. Ruff, Mypy, Bandit, pip-audit, package build, and
+  `.github/scripts/validate_supply_chain_policy.py --as-of 2026-07-26` exited
+  0; the policy report recorded zero active exceptions and no known audited
+  dependency vulnerabilities. The local project distribution itself remains
+  unauditable by PyPI lookup because it is not published there.
+- **Studio and packaging verification:** Studio typecheck passed; Vitest
+  passed 15 files / 77 tests; the production build passed. Browser QA confirmed
+  the provenance banner in English and Arabic RTL. Docker image
+  `reconforge:codex-cfc67208` built successfully and `reconforge doctor`
+  passed inside it with zero validation errors and ten intentional sample-data
+  warnings.
+- **Boundary:** no external service, live customer dataset, GitHub-hosted run,
+  provider integration, security assessment, release signature, or production
+  deployment was performed or inferred from this evidence.

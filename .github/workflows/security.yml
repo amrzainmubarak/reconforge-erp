@@ -209,13 +209,13 @@ jobs:
           version="$(python -c 'import pathlib,tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
           local_image="reconforge-security:${GITHUB_SHA}"
           docker build --pull --no-cache --platform linux/amd64 --tag "$local_image" .
-          image_config_digest="$(docker image inspect --format '{{.Id}}' "$local_image")"
-          [[ "$image_config_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           "$SYFT_PATH" scan "$local_image" \
             --source-name "$IMAGE_NAME" \
             --source-version "$version" \
             --scope squashed \
             --output "syft-json=${RUNNER_TEMP}/image.syft.json"
+          image_config_digest="$(python .github/scripts/extract_syft_image_config_digest.py \
+            --syft-json "${RUNNER_TEMP}/image.syft.json")"
           "$GRYPE_PATH" db update
           "$GRYPE_PATH" "sbom:${RUNNER_TEMP}/image.syft.json" \
             --vex docs/security/container-runtime.openvex.json \

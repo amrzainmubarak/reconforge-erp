@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Mapping, Sequence
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -21,6 +22,13 @@ from reconforge.api.server_consolidation_close import (
 )
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.application.consolidation_close import ConsolidationCloseApplicationService
+from reconforge.auth.field_access import (
+    project_consolidation_certification_response,
+    project_consolidation_evidence_link_response,
+    project_consolidation_period,
+    project_consolidation_run,
+    project_consolidation_summary,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_lifecycle import (
@@ -180,6 +188,38 @@ def _server_source() -> dict[str, object]:
     return {"kind": "postgresql-consolidation-close", "server_mode": True}
 
 
+def _project_period(value: Mapping[str, object]) -> dict[str, object]:
+    return project_consolidation_period(value).visible
+
+
+def _project_periods(values: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+    return [_project_period(value) for value in values]
+
+
+def _project_run(value: Mapping[str, object]) -> dict[str, object]:
+    return project_consolidation_run(value).visible
+
+
+def _project_runs(values: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+    return [_project_run(value) for value in values]
+
+
+def _project_certification_response(
+    certification: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_certification_response(
+        {"certification": certification, "source": source}
+    ).visible
+
+
+def _project_evidence_link_response(
+    link: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_evidence_link_response(
+        {"link": link, "source": source}
+    ).visible
+
+
 @router.get("/periods")
 def list_periods(
     request: Request,
@@ -203,7 +243,7 @@ def list_periods(
             ),
         )
         _assert_records_workspace(records, scope.workspace_id)
-        return {"periods": records, "source": _server_source()}
+        return {"periods": _project_periods(records), "source": _server_source()}
 
     try:
         records = _repository(connection).list_periods(
@@ -211,7 +251,7 @@ def list_periods(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_periods_failed", exc) from exc
-    return {"periods": records, "source": {"kind": "sqlite-consolidation-close", "workspace": workspace}}
+    return {"periods": _project_periods(records), "source": {"kind": "sqlite-consolidation-close", "workspace": workspace}}
 
 
 @router.post("/periods")
@@ -247,7 +287,7 @@ def create_period(
             return period
 
         period = execute_postgres_consolidation_close(request, create)
-        return {"period": period, "source": _server_source()}
+        return {"period": _project_period(period), "source": _server_source()}
 
     try:
         period = ConsolidationCloseApplicationService(_repository(connection)).create_period(
@@ -262,7 +302,7 @@ def create_period(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_period_create_failed", exc) from exc
-    return {"period": period, "source": {"kind": "sqlite-consolidation-close", "workspace": payload.workspace}}
+    return {"period": _project_period(period), "source": {"kind": "sqlite-consolidation-close", "workspace": payload.workspace}}
 
 
 @router.post("/runs")
@@ -294,7 +334,7 @@ def prepare_run(
             ),
         )
         _assert_workspace(run, scope.workspace_id)
-        return {"run": run, "source": _server_source()}
+        return {"run": _project_run(run), "source": _server_source()}
 
     _assert_prepared_actor(worksheet, current_user.username)
     try:
@@ -306,7 +346,7 @@ def prepare_run(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_run_prepare_failed", exc) from exc
-    return {"run": run, "source": {"kind": "sqlite-consolidation-close", "workspace": payload.workspace}}
+    return {"run": _project_run(run), "source": {"kind": "sqlite-consolidation-close", "workspace": payload.workspace}}
 
 
 @router.post("/runs/{run_id}/approve")
@@ -337,7 +377,7 @@ def approve_run(
             ),
         )
         _assert_workspace(run, scope.workspace_id)
-        return {"run": run, "source": _server_source()}
+        return {"run": _project_run(run), "source": _server_source()}
     try:
         run = ConsolidationCloseApplicationService(_repository(connection)).approve_run(
             run_id,
@@ -347,7 +387,7 @@ def approve_run(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_run_approve_failed", exc) from exc
-    return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+    return {"run": _project_run(run), "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.post("/runs/{run_id}/post")
@@ -378,7 +418,7 @@ def post_run(
             ),
         )
         _assert_workspace(run, scope.workspace_id)
-        return {"run": run, "source": _server_source()}
+        return {"run": _project_run(run), "source": _server_source()}
     try:
         run = ConsolidationCloseApplicationService(_repository(connection)).post_run(
             run_id,
@@ -388,7 +428,7 @@ def post_run(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_run_post_failed", exc) from exc
-    return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+    return {"run": _project_run(run), "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.post("/runs/{run_id}/reversal/request")
@@ -419,7 +459,7 @@ def request_reversal(
             ),
         )
         _assert_workspace(run, scope.workspace_id)
-        return {"run": run, "source": _server_source()}
+        return {"run": _project_run(run), "source": _server_source()}
     try:
         run = ConsolidationCloseApplicationService(_repository(connection)).request_reversal(
             run_id,
@@ -429,7 +469,7 @@ def request_reversal(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_reversal_request_failed", exc) from exc
-    return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+    return {"run": _project_run(run), "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.post("/runs/{run_id}/reversal/approve")
@@ -460,7 +500,7 @@ def approve_reversal(
             ),
         )
         _assert_workspace(run, scope.workspace_id)
-        return {"run": run, "source": _server_source()}
+        return {"run": _project_run(run), "source": _server_source()}
     try:
         run = ConsolidationCloseApplicationService(_repository(connection)).approve_reversal(
             run_id,
@@ -470,7 +510,7 @@ def approve_reversal(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_reversal_approve_failed", exc) from exc
-    return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+    return {"run": _project_run(run), "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.post("/periods/{period_id}/lock")
@@ -501,7 +541,7 @@ def lock_period(
             ),
         )
         _assert_workspace(period, scope.workspace_id)
-        return {"period": period, "source": _server_source()}
+        return {"period": _project_period(period), "source": _server_source()}
     try:
         period = ConsolidationCloseApplicationService(_repository(connection)).lock_period(
             period_id,
@@ -511,7 +551,7 @@ def lock_period(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_period_lock_failed", exc) from exc
-    return {"period": period, "source": {"kind": "sqlite-consolidation-close"}}
+    return {"period": _project_period(period), "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.post("/periods/{period_id}/reopen")
@@ -542,7 +582,7 @@ def reopen_period(
             ),
         )
         _assert_workspace(period, scope.workspace_id)
-        return {"period": period, "source": _server_source()}
+        return {"period": _project_period(period), "source": _server_source()}
     try:
         period = ConsolidationCloseApplicationService(_repository(connection)).reopen_period(
             period_id,
@@ -552,7 +592,7 @@ def reopen_period(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_period_reopen_failed", exc) from exc
-    return {"period": period, "source": {"kind": "sqlite-consolidation-close"}}
+    return {"period": _project_period(period), "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.get("/periods/{period_id}")
@@ -571,13 +611,13 @@ def get_period(
             lambda repository, _tenant: repository.get_period(period_id, actor_label=current_user.id),
         )
         _assert_workspace(period, scope.workspace_id)
-        return {"period": period, "source": _server_source()}
+        return {"period": _project_period(period), "source": _server_source()}
 
     try:
         period = _repository(connection).get_period(period_id, actor_label=current_user.username)
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_period_failed", exc) from exc
-    return {"period": period, "source": {"kind": "sqlite-consolidation-close"}}
+    return {"period": _project_period(period), "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.get("/runs")
@@ -605,7 +645,7 @@ def list_runs(
             ),
         )
         _assert_records_workspace(records, scope.workspace_id)
-        return {"runs": records, "source": _server_source()}
+        return {"runs": _project_runs(records), "source": _server_source()}
 
     try:
         records = _repository(connection).list_runs(
@@ -613,7 +653,7 @@ def list_runs(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_runs_failed", exc) from exc
-    return {"runs": records, "source": {"kind": "sqlite-consolidation-close", "workspace": workspace}}
+    return {"runs": _project_runs(records), "source": {"kind": "sqlite-consolidation-close", "workspace": workspace}}
 
 
 @router.get("/runs/{run_id}")
@@ -632,13 +672,13 @@ def get_run(
             lambda repository, _tenant: repository.get_run(run_id, actor_label=current_user.id),
         )
         _assert_workspace(run, scope.workspace_id)
-        return {"run": run, "source": _server_source()}
+        return {"run": _project_run(run), "source": _server_source()}
 
     try:
         run = _repository(connection).get_run(run_id, actor_label=current_user.username)
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_run_failed", exc) from exc
-    return {"run": run, "source": {"kind": "sqlite-consolidation-close"}}
+    return {"run": _project_run(run), "source": {"kind": "sqlite-consolidation-close"}}
 
 
 @router.post("/runs/{run_id}/intercompany-evidence")
@@ -672,7 +712,7 @@ def attach_intercompany_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/impairment-evidence")
@@ -706,7 +746,7 @@ def attach_impairment_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/deferred-tax-evidence")
@@ -740,7 +780,7 @@ def attach_deferred_tax_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/ppa-evidence")
@@ -774,7 +814,7 @@ def attach_ppa_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/ownership-change-evidence")
@@ -808,7 +848,7 @@ def attach_ownership_change_evidence(
             actor_label=current_user.id,
         ),
     )
-    return {"link": link, "source": _server_source()}
+    return _project_evidence_link_response(link, _server_source())
 
 
 @router.post("/runs/{run_id}/certification")
@@ -840,7 +880,7 @@ def prepare_certification(
             )
 
         certification = execute_postgres_consolidation_close(request, prepare)
-        return {"certification": certification, "source": _server_source()}
+        return _project_certification_response(certification, _server_source())
 
     try:
         certification = _repository(connection).prepare_certification(
@@ -850,7 +890,7 @@ def prepare_certification(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_certification_prepare_failed", exc) from exc
-    return {"certification": certification, "source": {"kind": "sqlite-consolidation-close"}}
+    return _project_certification_response(certification, {"kind": "sqlite-consolidation-close"})
 
 
 @router.post("/runs/{run_id}/certification/review")
@@ -882,7 +922,7 @@ def review_certification(
             )
 
         certification = execute_postgres_consolidation_close(request, review)
-        return {"certification": certification, "source": _server_source()}
+        return _project_certification_response(certification, _server_source())
 
     try:
         certification = _repository(connection).review_certification(
@@ -892,7 +932,7 @@ def review_certification(
         )
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_certification_review_failed", exc) from exc
-    return {"certification": certification, "source": {"kind": "sqlite-consolidation-close"}}
+    return _project_certification_response(certification, {"kind": "sqlite-consolidation-close"})
 
 
 @router.get("/runs/{run_id}/certification")
@@ -913,13 +953,13 @@ def get_certification(
             return repository.get_certification(run_id, actor_label=current_user.id)
 
         certification = execute_postgres_consolidation_close(request, fetch)
-        return {"certification": certification, "source": _server_source()}
+        return _project_certification_response(certification, _server_source())
 
     try:
         certification = _repository(connection).get_certification(run_id, actor_label=current_user.username)
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_certification_failed", exc) from exc
-    return {"certification": certification, "source": {"kind": "sqlite-consolidation-close"}}
+    return _project_certification_response(certification, {"kind": "sqlite-consolidation-close"})
 
 
 @router.get("/summary")
@@ -940,10 +980,13 @@ def summary(
                 actor_label=current_user.id,
             ),
         )
-        return {"summary": value.to_dict(), "source": _server_source()}
+        return {"summary": project_consolidation_summary(value.to_dict()).visible, "source": _server_source()}
 
     try:
         value = _repository(connection).summary(workspace=workspace, actor_label=current_user.username)
     except (PlatformError, sqlite3.DatabaseError) as exc:
         raise _error("consolidation_summary_failed", exc) from exc
-    return {"summary": value.to_dict(), "source": {"kind": "sqlite-consolidation-close", "workspace": workspace}}
+    return {
+        "summary": project_consolidation_summary(value.to_dict()).visible,
+        "source": {"kind": "sqlite-consolidation-close", "workspace": workspace},
+    }

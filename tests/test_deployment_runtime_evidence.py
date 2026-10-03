@@ -42,6 +42,15 @@ def test_runtime_evidence_is_closed_digest_bound_and_reports_findings() -> None:
     assert evidence.digest == verify_deployment_runtime_evidence(dict(_payload())).digest
 
 
+def test_runtime_evidence_canonicalizes_edition_identity() -> None:
+    payload = _payload()
+    payload["edition"] = " TEAM "
+    evidence = verify_deployment_runtime_evidence(payload)
+
+    assert evidence.edition == "team"
+    assert evidence.to_dict()["edition"] == "team"
+
+
 @pytest.mark.parametrize(
     ("field", "value", "message"),
     [

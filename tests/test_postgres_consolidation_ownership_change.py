@@ -10,6 +10,7 @@ from reconforge.infrastructure.postgres_consolidation_ownership_change import (
     POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_SCHEMA_SQL,
     PostgresConsolidationOwnershipChangeError,
     PostgresConsolidationOwnershipChangeRepository,
+    _request_from_payload,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,3 +68,22 @@ def test_postgres_ownership_change_repository_rechecks_deterministic_result() ->
         PostgresConsolidationOwnershipChangeRepository._verify_result(
             request, result.__class__(**{**result.__dict__, "request_digest": "0" * 64})
         )
+
+
+def test_postgres_ownership_change_replay_rejects_binary_float_percentage() -> None:
+    from tests.test_consolidation_ownership_changes import _request
+
+    payload = _request().to_dict()
+    payload["prior_group_ownership_percentage"] = 0.80
+    with pytest.raises(PostgresConsolidationOwnershipChangeError, match="replay verification"):
+        _request_from_payload(payload)
+
+
+def test_postgres_ownership_change_replay_rejects_noncanonical_money_text() -> None:
+    from tests.test_consolidation_ownership_changes import _request
+
+    payload = _request().to_dict()
+    payload["net_assets"]["amount"] = "0100.00"  # type: ignore[index]
+
+    with pytest.raises(PostgresConsolidationOwnershipChangeError, match="replay verification"):
+        _request_from_payload(payload)

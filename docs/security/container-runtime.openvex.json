@@ -3,8 +3,8 @@
   "@id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
   "author": "ReconForge automated security review",
   "role": "Document Creator",
-  "timestamp": "2026-08-22T12:30:00Z",
-  "last_updated": "2026-08-22T12:30:00Z",
+  "timestamp": "2026-08-28T12:30:00Z",
+  "last_updated": "2026-08-28T12:30:00Z",
   "version": 1,
   "statements": [
     {
@@ -13,11 +13,11 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/python@3.11.16"
+          "@id": "pkg:generic/python@3.12.14"
         }
       ],
       "status": "fixed",
-      "impact_statement": "CPython 3.11.16 includes the 3.11 backport commit dae4b1a21f8df4570e30986affd61bbe4ade4cef, and the official 3.11.16 release record identifies gh-145599 as the fix for CVE-2026-3644."
+      "impact_statement": "The official Python 3.12.14 security release records gh-145599 as the CPython fix for CVE-2026-3644; the pinned image contains CPython 3.12.14."
     },
     {
       "vulnerability": {
@@ -25,11 +25,11 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/python@3.11.16"
+          "@id": "pkg:generic/python@3.12.14"
         }
       ],
       "status": "fixed",
-      "impact_statement": "CPython 3.11.16 includes the 3.11 backport commit 642865ddf4b232da1f3b1f7abcfa3254c4bfe785, and the official 3.11.16 release record identifies gh-145986 as the fix for CVE-2026-4224."
+      "impact_statement": "The official Python 3.12.14 security release records gh-145986 as the CPython fix for CVE-2026-4224; the pinned image contains CPython 3.12.14."
     },
     {
       "vulnerability": {
@@ -37,11 +37,11 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/python@3.11.16"
+          "@id": "pkg:generic/python@3.12.14"
         }
       ],
       "status": "fixed",
-      "impact_statement": "The signed CPython v3.11.16 tag is three commits after the merged 3.11 backport cbaecf9f16da611a646d507c1cbca265c588fc56 and also includes bundled Expat 2.8.3, which supplies the required XML_SetHashSalt16Bytes API."
+      "impact_statement": "The official Python 3.12.14 security release records gh-149018's improved XML hash-flooding protection and the bundled libexpat 2.8.3 update; the pinned image contains CPython 3.12.14."
     }
   ]
 }

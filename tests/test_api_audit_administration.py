@@ -93,6 +93,7 @@ def test_audit_administration_http_requires_human_assurance_and_redacts(tmp_path
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(routes, "execute_postgres_audit_administration", execute)
     monkeypatch.setattr(routes, "enforce_server_scoped_permissions", enforce_policy)
     root = tmp_path / "tenants"

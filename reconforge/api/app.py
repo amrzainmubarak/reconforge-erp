@@ -207,6 +207,12 @@ def create_api_app(
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
     app.state.postgres_scoped_exports_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
+    app.state.postgres_accounts_factory = app.state.postgres_identity_factory
+    app.state.postgres_inventory_core_factory = app.state.postgres_identity_factory
+    app.state.postgres_receivables_factory = app.state.postgres_identity_factory
+    app.state.postgres_payables_factory = app.state.postgres_identity_factory
+    app.state.postgres_inventory_planning_factory = app.state.postgres_identity_factory
+    app.state.postgres_inventory_valuation_factory = app.state.postgres_identity_factory
     app.state.postgres_bank_statement_factory = app.state.postgres_identity_factory
     app.state.postgres_writeback_factory = app.state.postgres_identity_factory
     app.state.postgres_retail_settlement_factory = app.state.postgres_identity_factory
@@ -457,7 +463,6 @@ def create_api_app(
             {
                 ("POST", "/api/v1/auth/logout"),
                 ("POST", "/api/v1/auth/step-up"),
-                ("POST", "/api/v1/auth/emergency-access/requests"),
                 ("GET", "/api/v1/auth/emergency-access/requests"),
                 ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/activate"),
                 ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/end"),
@@ -473,6 +478,6 @@ def create_api_app(
         (scim.router,), prefix="", public_routes=frozenset(), identity_routes=frozenset()
     )
     app.state.authorization_contracts = tuple(sorted((*core_contracts, *scim_contracts)))
-    validate_authorization_surface(app.state.authorization_contracts)
+    validate_authorization_surface(app.state.authorization_contracts, require_critical_routes=True)
     app.state.authorization_contract_digest = authorization_inventory_digest(app.state.authorization_contracts)
     return app

@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+import reconforge.reconciliation.matching as matching_module
 from reconforge.config import ReconForgeConfig
 from reconforge.engines.base import EngineResult
 from reconforge.engines.duckdb_engine import DuckDBEngine
@@ -161,6 +162,35 @@ def test_unresolved_policy_fails_closed_when_candidate_budget_is_exceeded() -> N
     assert set(result.all_exceptions["ambiguity_candidate_count"]) == {81}
     assert set(result.all_exceptions["ambiguity_optimal_cardinality"]) == {9}
     assert result.all_exceptions["ambiguity_group_id"].nunique() == 1
+    assert result.invariants["record_accounting_ok"] is True
+
+
+def test_candidate_generation_budget_refuses_cartesian_partition_before_matching(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stock = pd.DataFrame(
+        [
+            _stock_row(f"MOVE-GENERATION-{index}", currency="USD", amount="10.00", reference="REF-GENERATION")
+            for index in range(1, 4)
+        ]
+    )
+    gl = pd.DataFrame(
+        [
+            _gl_row(f"GL-GENERATION-{index}", currency="USD", amount="10.00", reference="REF-GENERATION")
+            for index in range(1, 4)
+        ]
+    )
+    monkeypatch.setattr(matching_module, "MAX_CANDIDATE_GENERATION_PAIRS", 8)
+
+    result = reconcile_stock_gl(stock, gl, ReconForgeConfig())
+
+    assert result.matched_transactions.empty
+    assert len(result.all_exceptions) == 6
+    assert set(result.all_exceptions["exception_type"]) == {"ambiguous_match"}
+    assert set(result.all_exceptions["ambiguity_reason"]) == {"candidate_generation_budget_exceeded"}
+    assert set(result.all_exceptions["ambiguity_candidate_count"]) == {9}
+    assert result.all_exceptions["ambiguity_optimal_cardinality"].isna().all()
+    assert result.all_exceptions["ambiguity_optimal_cost"].isna().all()
     assert result.invariants["record_accounting_ok"] is True
 
 

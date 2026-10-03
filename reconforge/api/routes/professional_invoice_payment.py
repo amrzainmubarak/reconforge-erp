@@ -22,6 +22,7 @@ from reconforge.api.server_professional_invoice_payment import (
     execute_postgres_professional_invoice_payment,
     server_professional_invoice_payment_enabled,
 )
+from reconforge.auth.field_access import project_professional_invoice_payment
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres import PostgresConfigurationError, validate_workspace_id
 from reconforge.infrastructure.sqlite_professional_invoice_payment import (
@@ -129,7 +130,7 @@ def persist_professional_invoice_payment(
 
         stored = execute_postgres_professional_invoice_payment(request, persist)
         return {
-            "invoice_payment": stored,
+            "invoice_payment": project_professional_invoice_payment(stored).visible,
             "source": {"kind": "postgresql-professional-invoice-payment", "server_mode": True},
             "network_dispatch": "disabled",
             "workspace": scope.workspace_id,
@@ -143,7 +144,7 @@ def persist_professional_invoice_payment(
     except ProfessionalInvoicePaymentPersistenceError as exc:
         raise _persistence_error(exc) from exc
     return {
-        "invoice_payment": stored,
+        "invoice_payment": project_professional_invoice_payment(stored).visible,
         "source": {"kind": "sqlite-professional-invoice-payment", "server_mode": False},
         "network_dispatch": "disabled",
     }
@@ -183,7 +184,7 @@ def list_professional_invoice_payments(
 
         records = execute_postgres_professional_invoice_payment(request, read)
         return {
-            "invoice_payments": records,
+            "invoice_payments": [project_professional_invoice_payment(record).visible for record in records],
             "workspace": scope.workspace_id,
             "limit": limit,
             "offset": offset,
@@ -199,7 +200,7 @@ def list_professional_invoice_payments(
     except ProfessionalInvoicePaymentPersistenceError as exc:
         raise _persistence_error(exc) from exc
     return {
-        "invoice_payments": records,
+        "invoice_payments": [project_professional_invoice_payment(record).visible for record in records],
         "workspace": resolved_workspace,
         "limit": limit,
         "offset": offset,
@@ -245,7 +246,7 @@ def get_professional_invoice_payment(
                 message="Professional invoice/payment evidence was not found.",
             )
         return {
-            "invoice_payment": record,
+            "invoice_payment": project_professional_invoice_payment(record).visible,
             "source": {"kind": "postgresql-professional-invoice-payment", "server_mode": True},
         }
     try:
@@ -262,7 +263,7 @@ def get_professional_invoice_payment(
             message="Professional invoice/payment evidence was not found.",
         )
     return {
-        "invoice_payment": record,
+        "invoice_payment": project_professional_invoice_payment(record).visible,
         "source": {"kind": "sqlite-professional-invoice-payment", "server_mode": False},
     }
 

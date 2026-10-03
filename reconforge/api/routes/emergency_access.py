@@ -8,9 +8,9 @@ from typing import Annotated, Any, Literal, TypeVar
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import get_current_user, require_permission
+from reconforge.api.dependencies import enforce_server_tenant_permission, get_current_user, require_permission
 from reconforge.api.errors import APIError
-from reconforge.api.server_identity import execute_postgres_emergency, server_identity_enabled
+from reconforge.api.server_identity import execute_postgres_emergency, request_tenant_id, server_identity_enabled
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres_emergency_access import EmergencyAccessRecord
 from reconforge.platform.common import ServerPrincipal, current_server_principal
@@ -20,6 +20,7 @@ T = TypeVar("T")
 
 EmergencyApprover = Annotated[LocalUser, Depends(require_permission("security.emergency.approve"))]
 EmergencyReviewer = Annotated[LocalUser, Depends(require_permission("security.emergency.review"))]
+EmergencyRequester = Annotated[LocalUser, Depends(require_permission("security.emergency.request"))]
 
 
 class EmergencyRequestBody(BaseModel):
@@ -90,13 +91,21 @@ def _execute(request: Request, operation: Callable[[Any, str], T]) -> T:
     return execute_postgres_emergency(request, operation)
 
 
+def _enforce_server_emergency_permission(request: Request, permission: str) -> None:
+    """Bind emergency mutations to the authenticated tenant policy context."""
+
+    if server_identity_enabled(request):
+        enforce_server_tenant_permission(request, permission=permission, tenant_id=request_tenant_id(request))
+
+
 @router.post("/requests")
 def request_access(
     body: EmergencyRequestBody,
     request: Request,
-    current_user: LocalUser = Depends(get_current_user),
+    current_user: EmergencyRequester,
 ) -> dict[str, object]:
     principal = _principal(request, current_user)
+    _enforce_server_emergency_permission(request, "security.emergency.request")
     record = _execute(
         request,
         lambda repository, tenant_id: repository.request_access(
@@ -143,6 +152,7 @@ def approve_access(
     current_user: EmergencyApprover,
 ) -> dict[str, object]:
     _principal(request, current_user)
+    _enforce_server_emergency_permission(request, "security.emergency.approve")
     record = _execute(
         request,
         lambda repository, tenant_id: repository.approve(
@@ -164,6 +174,7 @@ def reject_access(
     current_user: EmergencyApprover,
 ) -> dict[str, object]:
     _principal(request, current_user)
+    _enforce_server_emergency_permission(request, "security.emergency.approve")
     record = _execute(
         request,
         lambda repository, tenant_id: repository.reject(
@@ -210,6 +221,8 @@ def end_access(
 ) -> dict[str, object]:
     principal = _principal(request, current_user)
     can_administer = principal.step_up_active and "security.emergency.approve" in principal.base_permissions
+    if can_administer:
+        _enforce_server_emergency_permission(request, "security.emergency.approve")
     record = _execute(
         request,
         lambda repository, tenant_id: repository.end_access(
@@ -233,6 +246,7 @@ def review_access(
     current_user: EmergencyReviewer,
 ) -> dict[str, object]:
     _principal(request, current_user)
+    _enforce_server_emergency_permission(request, "security.emergency.review")
     record = _execute(
         request,
         lambda repository, tenant_id: repository.review(

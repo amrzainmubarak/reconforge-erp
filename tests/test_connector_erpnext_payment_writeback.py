@@ -120,7 +120,7 @@ def test_payment_entry_payload_is_exact_balanced_and_deterministic() -> None:
         "company": "Acme",
         "doctype": "Payment Entry",
         "docstatus": 0,
-        "paid_amount": "125.00",
+        "paid_amount": "125",
         "paid_from": "1100 - Cash",
         "paid_from_account_currency": "USD",
         "paid_to": "2100 - Supplier Payables",
@@ -128,11 +128,25 @@ def test_payment_entry_payload_is_exact_balanced_and_deterministic() -> None:
         "party": "SUP-001",
         "party_type": "Supplier",
         "posting_date": "2026-08-11",
-        "received_amount": "0.00",
+        "received_amount": "0",
         "reference_no": "PAY-2026-001",
         "remarks": "Synthetic provider-compatible draft",
     }
     assert hashlib.sha256(first.payload).hexdigest() == first.payload_digest
+
+
+def test_payment_entry_draft_canonicalizes_equivalent_amounts_before_payload_digest() -> None:
+    values = _draft().model_dump()
+    formatted = ErpNextPaymentEntryDraft.model_validate(
+        {**values, "paid_amount": "125.00", "received_amount": "0.00"}
+    )
+    canonical = ErpNextPaymentEntryDraft.model_validate(
+        {**values, "paid_amount": "125", "received_amount": "0"}
+    )
+    formatted_payload = build_erpnext_payment_entry_payload(formatted)
+    canonical_payload = build_erpnext_payment_entry_payload(canonical)
+    assert formatted_payload.payload == canonical_payload.payload
+    assert formatted_payload.payload_digest == canonical_payload.payload_digest
 
 
 @pytest.mark.parametrize(
@@ -141,6 +155,7 @@ def test_payment_entry_payload_is_exact_balanced_and_deterministic() -> None:
         {"paid_amount": "0", "received_amount": "0"},
         {"paid_amount": "1", "received_amount": "2"},
         {"paid_amount": "NaN"},
+        {"paid_amount": "1e2"},
         {"paid_amount": "-1"},
         {"paid_from": "1100 - Cash", "paid_to": "1100 - Cash"},
         {"paid_from_account_currency": "usd"},
@@ -183,7 +198,9 @@ def test_payment_entry_dispatch_requires_enablement_and_keeps_secret_out_of_rece
     )
     dispatched = dispatch_writeback(approved, policy=POLICY)
     registration = erpnext_payment_entry_writeback_registration(
-        credential_reference="vault://tenant-a/erpnext"
+        credential_reference="vault://tenant-a/erpnext",
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
     ).model_copy(update={"feature_enabled": True})
 
     class Payloads:

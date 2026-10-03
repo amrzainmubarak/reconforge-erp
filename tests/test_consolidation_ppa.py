@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -27,6 +28,14 @@ runner = CliRunner()
 
 def _money(value: str) -> Money:
     return Money.from_exact(Decimal(value), "USD", strict_precision=True)
+
+
+def _resign(payload: dict[str, object]) -> None:
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    payload["result_digest"] = sha256(
+        json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
 
 
 def _request(**overrides: object) -> AcquisitionPurchasePriceAllocationRequest:
@@ -125,6 +134,22 @@ def test_ppa_tamper_detection_catches_item_adjustment() -> None:
     payload = result.to_dict()
     payload["items"][0]["fair_value_adjustment"]["amount"] = "999.00"  # type: ignore[index]
     with pytest.raises(ConsolidationError, match="digest mismatch"):
+        verify_acquisition_purchase_price_allocation_payload(payload)
+
+
+def test_ppa_rejects_resigned_noncanonical_money() -> None:
+    result = prepare_acquisition_purchase_price_allocation(_request())
+
+    payload = result.to_dict()
+    payload["book_net_assets"]["amount"] = "070.00"  # type: ignore[index]
+    _resign(payload)
+    with pytest.raises(ConsolidationError, match="canonical exact decimal text"):
+        verify_acquisition_purchase_price_allocation_payload(payload)
+
+    payload = result.to_dict()
+    payload["items"][0]["book_value"]["currency"] = "usd"  # type: ignore[index]
+    _resign(payload)
+    with pytest.raises(ConsolidationError, match="canonical exact decimal text"):
         verify_acquisition_purchase_price_allocation_payload(payload)
 
 

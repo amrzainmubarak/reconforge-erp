@@ -21,11 +21,13 @@ from reconforge.infrastructure.postgres import (
 )
 from reconforge.infrastructure.postgres_domain import install_postgres_domain_schema
 from reconforge.infrastructure.postgres_finance_core import install_postgres_finance_core_schema
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import (
     POSTGRES_FISCAL_PERIOD_SCHEMA_SQL,
     POSTGRES_MASTER_DATA_SCHEMA_SQL,
     PostgresMasterDataRepository,
 )
+from reconforge.infrastructure.postgres_master_data_application import POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -53,10 +55,13 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_FISCAL_PERIOD_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
+            admin.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
             install_postgres_finance_core_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             tables = (
                 "tenants,organizations,currencies,legal_entities,fiscal_periods,domain_workspaces,"
+                "master_data_workspace_organizations,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,finance_charts,finance_accounts,"
                 "finance_dimensions,finance_dimension_values,finance_journals,finance_entries,"
                 "finance_entry_lines,finance_entry_line_dimensions"
@@ -82,6 +87,11 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
                     organization_code="ORG-A",
                     name="API Organization",
                     base_currency="USD",
+                )
+                connection.execute(
+                    """INSERT INTO reconforge.master_data_workspace_organizations
+                       (tenant_id,workspace_id,organization_id) VALUES (%s,%s,%s)""",
+                    (tenant, workspace, f"org-{tenant}"),
                 )
                 master.upsert_legal_entity(
                     tenant_id=tenant,
@@ -118,13 +128,23 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
         maker = LocalUser(id="maker", username="maker", display_name="Maker")
         checker = LocalUser(id="checker", username="checker", display_name="Checker")
 
+        with pytest.raises(APIError) as spoofed_organization:
+            routes.upsert_chart(
+                request,
+                routes.ChartRequest(chart_code="SPOOF", name="Spoofed", organization_code="ORG-SPOOF"),
+                maker,
+                None,
+            )
+        assert spoofed_organization.value.code == "organization_scope_denied"
+
         chart = routes.upsert_chart(
             request,
-            routes.ChartRequest(chart_code="DEFAULT", name="Default", organization_code="ORG-A"),
+            routes.ChartRequest(chart_code="DEFAULT", name="Default"),
             maker,
             None,
         )
         assert chart["chart"]["workspace_id"] == workspace_a
+        assert chart["chart"]["organization_code"] == "ORG-A"
         for code, name, account_type, normal_balance in (
             ("1000", "Cash", "Asset", "Debit"),
             ("3000", "Capital", "Equity", "Credit"),
@@ -152,6 +172,26 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             maker,
             None,
         )
+        with pytest.raises(APIError) as spoofed_entity:
+            routes.create_entry(
+                request,
+                routes.LedgerEntryRequest(
+                    entry_number="JE/API/SPOOF",
+                    organization_code="ORG-A",
+                    entity_code="ENTITY-SPOOF",
+                    period_id="period-api",
+                    journal_code="GENERAL",
+                    posting_date="2026-07-23",
+                    description="Spoofed Finance Core API entry",
+                    lines=[
+                        routes.LedgerLineRequest(account_code="1000", debit="1.00", credit="0"),
+                        routes.LedgerLineRequest(account_code="3000", debit="0", credit="1.00"),
+                    ],
+                ),
+                maker,
+                None,
+            )
+        assert spoofed_entity.value.code == "entity_scope_denied"
         created = routes.create_entry(
             request,
             routes.LedgerEntryRequest(

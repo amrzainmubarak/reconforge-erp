@@ -4,6 +4,7 @@ import importlib.util
 import inspect
 import os
 import re
+from decimal import Decimal
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Literal
@@ -19,6 +20,7 @@ from reconforge.infrastructure.postgres import (
     install_postgres_rls_schema,
 )
 from reconforge.infrastructure.postgres_domain import install_postgres_domain_schema
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_matching import (
     POSTGRES_MATCHING_APPLICATION_SCHEMA_SQL,
@@ -28,6 +30,7 @@ from reconforge.infrastructure.postgres_matching import (
 from reconforge.infrastructure.postgres_reconciliation import POSTGRES_RECONCILIATION_SCHEMA_SQL
 from reconforge.platform.common import PlatformError
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY, SOURCE_POSITION_COLUMN
+from reconforge.utils.money import LEGACY_FINANCIAL_INPUT_POLICY, STRICT_FINANCIAL_INPUT_POLICY
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -140,8 +143,8 @@ def test_postgres_matching_persists_complete_engine_output_without_sqlite() -> N
     repository.persistence = persistence  # type: ignore[assignment]
 
     result = repository._run_records(
-        left_records=_located_records([{"id": "L-1", "amount": "10.00", "date": "2026-07-28", "reference": "INV-1"}], "left.json"),
-        right_records=_located_records([{"id": "R-1", "amount": "10.00", "date": "2026-07-28", "reference": "INV-1"}], "right.json"),
+        left_records=_located_records([{"id": "L-1", "amount": "10.00", "currency": "USD", "date": "2026-07-28", "reference": "INV-1"}], "left.json"),
+        right_records=_located_records([{"id": "R-1", "amount": "10.00", "currency": "USD", "date": "2026-07-28", "reference": "INV-1"}], "right.json"),
         workspace="default", name="match", left_source="left.json", right_source="right.json",
         left_checksum="a" * 64, right_checksum="b" * 64,
         left_id_field="id", right_id_field="id", amount_field="amount", date_field="date",
@@ -176,6 +179,44 @@ def test_source_records_are_registered_with_exact_zero_and_no_internal_lineage()
     assert SOURCE_POSITION_COLUMN not in saved["attributes"]
 
 
+def test_source_record_hydration_applies_financial_input_policy() -> None:
+    connection = _Connection()
+    repository = PostgresMatchingRepository(connection, "tenant_a")
+    persistence = _Persistence()
+    repository.persistence = persistence  # type: ignore[assignment]
+    record = {"id": "L-1", "amount": 100.0, "date": "2026-07-28", "reference": "FLOAT"}
+
+    repository._register_inputs(
+        "match-strict",
+        "Left",
+        [record],
+        {1: ("L-1", "f" * 64)},
+        "amount",
+        "date",
+        "reference",
+        False,
+        financial_input_policy=STRICT_FINANCIAL_INPUT_POLICY,
+    )
+    strict_saved = persistence.inputs[-1]
+    assert strict_saved["amount"] is None
+    assert strict_saved["valid"] is False
+
+    repository._register_inputs(
+        "match-legacy",
+        "Left",
+        [record],
+        {1: ("L-1", "f" * 64)},
+        "amount",
+        "date",
+        "reference",
+        False,
+        financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+    )
+    legacy_saved = persistence.inputs[-1]
+    assert legacy_saved["amount"] == Decimal("100.0")
+    assert legacy_saved["valid"] is True
+
+
 def test_runtime_module_has_no_sqlite_dependency() -> None:
     source = (ROOT / "reconforge/infrastructure/postgres_matching.py").read_text(encoding="utf-8")
     assert "sqlite3" not in source
@@ -184,7 +225,7 @@ def test_runtime_module_has_no_sqlite_dependency() -> None:
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
 def test_live_postgres_matching_application_lifecycle_and_rls() -> None:
-    psycopg = pytest.importorskip("psycopg")
+    pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
     app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
@@ -196,11 +237,16 @@ def test_live_postgres_matching_application_lifecycle_and_rls() -> None:
     admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
     tenant_a, tenant_b = "matching_a_" + uuid4().hex[:8], "matching_b_" + uuid4().hex[:8]
     admin = admin_factory.connect()
+    tenants_created = False
     try:
         with admin.transaction():
             install_postgres_rls_schema(admin)
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
+            # Matching writes append-only audit and outbox records.  Those are
+            # platform dependencies, currently installed by the ledger-control
+            # schema, so a clean-database test must install that schema too.
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_RECONCILIATION_SCHEMA_SQL)
             admin.execute(POSTGRES_MATCHING_APPLICATION_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
@@ -212,7 +258,9 @@ def test_live_postgres_matching_application_lifecycle_and_rls() -> None:
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
             )
+            admin.execute(f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA reconforge TO {app_user}")
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)", (tenant_a, tenant_a, tenant_b, tenant_b))
+        tenants_created = True
         for tenant in (tenant_a, tenant_b):
             with PostgresTenantBoundary(factory).transaction(tenant) as connection:
                 connection.execute("INSERT INTO reconforge.domain_workspaces(tenant_id,id,name) VALUES (%s,%s,'Matching')", (tenant, f"workspace-{tenant}"))
@@ -240,10 +288,41 @@ def test_live_postgres_matching_application_lifecycle_and_rls() -> None:
             with pytest.raises(PlatformError, match="not found"):
                 repository.job_status(result.job_id)
     finally:
-        for tenant in (tenant_a, tenant_b):
-            try:
-                with PostgresTenantBoundary(factory).transaction(tenant) as connection:
-                    connection.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant,))
-            except psycopg.Error:
-                pass
-        admin.close()
+        try:
+            if tenants_created:
+                # Financial results and domain audit evidence deliberately
+                # reject ordinary deletion.  This disposable test fixture must
+                # remove only its own tenant data as an administrator, and it
+                # must surface any failure rather than contaminate later live
+                # runs by swallowing it.
+                with admin.transaction():
+                    protected_tables = (
+                        ("reconforge.domain_audit_events", "domain_audit_events_immutable"),
+                        ("reconforge.reconciliation_inputs", "reconciliation_inputs_immutable"),
+                        ("reconforge.reconciliation_results", "reconciliation_results_immutable"),
+                        ("reconforge.reconciliation_exceptions", "reconciliation_exceptions_immutable"),
+                        ("reconforge.reconciliation_runs", "reconciliation_runs_no_delete"),
+                    )
+                    for table, trigger in protected_tables:
+                        admin.execute(
+                            f"ALTER TABLE {table} DISABLE TRIGGER {trigger}"
+                        )
+                    admin.execute(
+                        "DELETE FROM reconforge.reconciliation_runs WHERE tenant_id IN (%s,%s)",
+                        (tenant_a, tenant_b),
+                    )
+                    admin.execute(
+                        "DELETE FROM reconforge.domain_periods WHERE tenant_id IN (%s,%s)",
+                        (tenant_a, tenant_b),
+                    )
+                    admin.execute(
+                        "DELETE FROM reconforge.domain_audit_events WHERE tenant_id IN (%s,%s)",
+                        (tenant_a, tenant_b),
+                    )
+                    admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
+                    for table, trigger in reversed(protected_tables):
+                        admin.execute(
+                            f"ALTER TABLE {table} ENABLE TRIGGER {trigger}"
+                        )
+        finally:
+            admin.close()

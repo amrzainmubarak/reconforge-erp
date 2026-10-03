@@ -73,6 +73,10 @@ from reconforge.infrastructure.postgres_jobs import (
     install_postgres_durable_job_schema,
 )
 from reconforge.infrastructure.sqlite_jobs import SQLiteDurableJobRepository
+from tests.postgres_test_hygiene import (
+    DURABLE_JOB_TENANT_CLEANUP_PLAN,
+    cleanup_postgres_test_tenants_as_admin,
+)
 
 
 def _submission(tenant_id: str) -> JobSubmission:
@@ -606,8 +610,10 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
             governed_context = PolicyEvaluationContext(
                 user_id="governed-operator", username="governed-operator",
                 user_permissions={"close.manage"}, tenant_id=tenant_a, workspace_id="workspace-a",
+                entity_id=governed_submission.entity_id,
                 authorized_tenant_ids=frozenset({tenant_a}),
                 authorized_workspace_ids=frozenset({"workspace-a"}),
+                authorized_entity_ids=frozenset({governed_submission.entity_id}),
             )
             denied_context = replace(governed_context, user_permissions=set())
             with pytest.raises(JobAuthorizationError, match="permission_missing"):
@@ -624,6 +630,7 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
             assert repository.get(tenant_id=tenant_b, job_id=governed_submission.job_id) is None
             governed_cancelled = governed.cancel(
                 tenant_id=tenant_a, workspace_id="workspace-a", job_id=governed_submission.job_id,
+                entity_id=governed_submission.entity_id,
                 actor_id="governed-operator", occurred_at="2026-07-27T09:00:15Z",
                 policy_context=governed_context, required_permission="close.manage",
             )
@@ -839,7 +846,14 @@ def test_live_postgres_job_application_contract_and_rls(tmp_path: Path) -> None:
         finally:
             connection.close()
     finally:
-        admin.close()
+        try:
+            cleanup_postgres_test_tenants_as_admin(
+                admin,
+                tenant_ids=(tenant_a, tenant_b),
+                plan=DURABLE_JOB_TENANT_CLEANUP_PLAN,
+            )
+        finally:
+            admin.close()
 
 
 def _run_live_postgres_durable_job_scale_profile(
@@ -905,11 +919,20 @@ def _run_live_postgres_durable_job_scale_profile(
             assert pool_snapshot.leased == 0
             assert 1 <= pool_snapshot.total <= pool_snapshot.max_size
     finally:
-        if connection is not None:
-            connection.close()
-        if hasattr(factory, "close"):
-            factory.close()
-        admin.close()
+        try:
+            if connection is not None:
+                connection.close()
+            if hasattr(factory, "close"):
+                factory.close()
+        finally:
+            try:
+                cleanup_postgres_test_tenants_as_admin(
+                    admin,
+                    tenant_ids=tenants,
+                    plan=DURABLE_JOB_TENANT_CLEANUP_PLAN,
+                )
+            finally:
+                admin.close()
 
 
 def _skip_unless_heavy_postgres_scale_enabled() -> None:
@@ -959,9 +982,18 @@ def _run_live_postgres_durable_job_backpressure_profile() -> None:
         assert result.rejected_attempts > 0
         assert result.observed_max_queue_depth <= profile.max_queued_jobs
     finally:
-        if connection is not None:
-            connection.close()
-        admin.close()
+        try:
+            if connection is not None:
+                connection.close()
+        finally:
+            try:
+                cleanup_postgres_test_tenants_as_admin(
+                    admin,
+                    tenant_ids=tenants,
+                    plan=DURABLE_JOB_TENANT_CLEANUP_PLAN,
+                )
+            finally:
+                admin.close()
 
 
 def _run_live_postgres_durable_job_soak_profile() -> None:
@@ -1011,9 +1043,18 @@ def _run_live_postgres_durable_job_soak_profile() -> None:
         assert result.total_partition_effects == profile.iterations * profile.declared_scale_profile.declared_partition_effects
         assert len(set(result.effect_digests)) == 1
     finally:
-        if connection is not None:
-            connection.close()
-        admin.close()
+        try:
+            if connection is not None:
+                connection.close()
+        finally:
+            try:
+                cleanup_postgres_test_tenants_as_admin(
+                    admin,
+                    tenant_ids=(tenant for tenants in tenant_sets for tenant in tenants),
+                    plan=DURABLE_JOB_TENANT_CLEANUP_PLAN,
+                )
+            finally:
+                admin.close()
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -1134,9 +1175,18 @@ def test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic() 
             lease_expires_at="2026-07-27T11:05:00Z",
         ) is None
     finally:
-        if connection is not None:
-            connection.close()
-        admin.close()
+        try:
+            if connection is not None:
+                connection.close()
+        finally:
+            try:
+                cleanup_postgres_test_tenants_as_admin(
+                    admin,
+                    tenant_ids=(tenant_id,),
+                    plan=DURABLE_JOB_TENANT_CLEANUP_PLAN,
+                )
+            finally:
+                admin.close()
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -1218,9 +1268,18 @@ def test_live_postgres_persistent_scheduler_coordinates_spawned_processes() -> N
                 (tenant_id,),
             ).fetchone()[0] == 0
     finally:
-        if connection is not None:
-            connection.close()
-        admin.close()
+        try:
+            if connection is not None:
+                connection.close()
+        finally:
+            try:
+                cleanup_postgres_test_tenants_as_admin(
+                    admin,
+                    tenant_ids=(tenant_id,),
+                    plan=DURABLE_JOB_TENANT_CLEANUP_PLAN,
+                )
+            finally:
+                admin.close()
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -1312,9 +1371,18 @@ def test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_e
             tenant_id=tenant_id, job_id=job.id
         )] == ["claimed", "taken_over", "released"]
     finally:
-        if connection is not None:
-            connection.close()
-        admin.close()
+        try:
+            if connection is not None:
+                connection.close()
+        finally:
+            try:
+                cleanup_postgres_test_tenants_as_admin(
+                    admin,
+                    tenant_ids=(tenant_id,),
+                    plan=DURABLE_JOB_TENANT_CLEANUP_PLAN,
+                )
+            finally:
+                admin.close()
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -1418,9 +1486,18 @@ def test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_du
             tenant_id=tenant_id, job_id=job.id
         )] == ["claimed", "taken_over", "released"]
     finally:
-        if worker_process is not None and worker_process.is_alive():
-            worker_process.terminate()
-            worker_process.join(timeout=5)
-        if connection is not None:
-            connection.close()
-        admin.close()
+        try:
+            if worker_process is not None and worker_process.is_alive():
+                worker_process.terminate()
+                worker_process.join(timeout=5)
+            if connection is not None:
+                connection.close()
+        finally:
+            try:
+                cleanup_postgres_test_tenants_as_admin(
+                    admin,
+                    tenant_ids=(tenant_id,),
+                    plan=DURABLE_JOB_TENANT_CLEANUP_PLAN,
+                )
+            finally:
+                admin.close()

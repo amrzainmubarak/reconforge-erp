@@ -10,6 +10,7 @@ from typing import Any
 
 from reconforge.application.scheduler import ScheduleProcessResult, SchedulerApplicationService
 from reconforge.auth.policy import PolicyEvaluationContext
+from reconforge.deployment.worker_permissions import WorkerPermissionManifest
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_scheduler import PostgresScheduleRepository
 from reconforge.workers.policy import WorkerPolicyContextSupplier, require_service_worker_policy
@@ -34,6 +35,9 @@ class PostgresSchedulerWorkerSettings:
     policy_context_scope_supplier: WorkerPolicyContextSupplier | None = None
     scope_supplier: Callable[[], Iterable[tuple[str, str | None, str | None]]] | None = None
     policy_permission: str = "schedule.run"
+    discovery_policy_permission: str | None = None
+    permission_manifest: WorkerPermissionManifest | None = None
+    allow_unbound_hosted_policy: bool = False
 
     def __post_init__(self) -> None:
         normalized = str(self.worker_id or "").strip()
@@ -48,12 +52,37 @@ class PostgresSchedulerWorkerSettings:
             raise PostgresSchedulerWorkerError("max_tenants must be between 1 and 100000.")
         if not self.policy_permission.strip():
             raise PostgresSchedulerWorkerError("policy_permission must be non-empty when configured.")
+        if self.discovery_policy_permission is not None and not self.discovery_policy_permission.strip():
+            raise PostgresSchedulerWorkerError("discovery_policy_permission must be non-empty when configured.")
+        if self.permission_manifest is not None:
+            if self.permission_manifest.worker_id.strip() != self.worker_id:
+                raise PostgresSchedulerWorkerError(
+                    "permission_manifest worker_id must match the scheduler worker_id."
+                )
+            if self.permission_manifest.principal_id.strip() != self.audit_actor_id:
+                raise PostgresSchedulerWorkerError(
+                    "permission_manifest principal_id must match the scheduler audit actor."
+                )
+            if self.permission_manifest.execution_permission.strip() != self.policy_permission.strip():
+                raise PostgresSchedulerWorkerError(
+                    "permission_manifest execution_permission must match policy_permission."
+                )
+            if self.permission_manifest.discovery_permission.strip() != self.discovery_authorization_permission:
+                raise PostgresSchedulerWorkerError(
+                    "permission_manifest discovery_permission must match discovery_policy_permission."
+                )
 
     @property
     def audit_actor_id(self) -> str:
         """Return the configured service actor, falling back to worker identity."""
 
         return self.actor_id.strip() or self.worker_id.strip()
+
+    @property
+    def discovery_authorization_permission(self) -> str:
+        """Return the least-privileged permission used to enumerate lanes."""
+
+        return (self.discovery_policy_permission or self.policy_permission).strip()
 
 
 @dataclass(frozen=True)
@@ -145,6 +174,21 @@ class PostgresSchedulerWorker:
             current = now.astimezone(UTC).replace(microsecond=0)
             results: list[ScheduleProcessResult] = []
             for tenant_id, workspace_id, entity_id in self._lanes():
+                if (
+                    self.settings.policy_context_supplier is None
+                    and self.settings.policy_context_scope_supplier is None
+                    and not self.settings.allow_unbound_hosted_policy
+                ):
+                    raise PostgresSchedulerWorkerError(
+                        "PostgreSQL scheduler worker requires an explicit service-account policy supplier."
+                    )
+                if (
+                    self.settings.policy_context_supplier is not None
+                    or self.settings.policy_context_scope_supplier is not None
+                ) and self.settings.permission_manifest is None:
+                    raise PostgresSchedulerWorkerError(
+                        "PostgreSQL scheduler worker requires a verified worker permission manifest."
+                    )
                 require_service_worker_policy(
                     tenant_id=tenant_id,
                     worker_id=self.settings.worker_id,
@@ -153,7 +197,7 @@ class PostgresSchedulerWorker:
                     policy_context_scope_supplier=self.settings.policy_context_scope_supplier,
                     workspace_id=workspace_id,
                     entity_id=entity_id,
-                    policy_permission=self.settings.policy_permission,
+                    policy_permission=self.settings.discovery_authorization_permission,
                     surface="postgres-scheduler.worker.claim",
                     error_factory=PostgresSchedulerWorkerError,
                 )

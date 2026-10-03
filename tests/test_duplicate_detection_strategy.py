@@ -66,7 +66,7 @@ def test_duplicate_detection_supports_explicit_identity_fields() -> None:
 
 def test_duplicate_detection_rejects_binary_float_and_duplicate_identity() -> None:
     strategy = DuplicateDetectionStrategy()
-    with pytest.raises(MatchingStrategyContractError, match="binary floating"):
+    with pytest.raises(MatchingStrategyContractError, match="finite exact values"):
         strategy.execute(
             MatchingStrategyRequest(
                 left_records=({"id": "L-1", "amount": 0.1},),
@@ -81,6 +81,18 @@ def test_duplicate_detection_rejects_binary_float_and_duplicate_identity() -> No
                     {"id": "L-1", "amount": "1"},
                     {"id": "L-1", "amount": "1"},
                 ),
+                right_records=(),
+                mode="duplicate-detection",
+            )
+        )
+
+
+@pytest.mark.parametrize("amount", ["1e2", "1E+2"])
+def test_duplicate_detection_rejects_scientific_amount_text(amount: str) -> None:
+    with pytest.raises(MatchingStrategyContractError, match="finite exact values"):
+        DuplicateDetectionStrategy().execute(
+            MatchingStrategyRequest(
+                left_records=(({"id": "L-1", "amount": amount}),),
                 right_records=(),
                 mode="duplicate-detection",
             )

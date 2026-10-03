@@ -108,14 +108,35 @@ def test_ownership_api_server_branch_binds_authenticated_workspace(tmp_path: Pat
     class Repository:
         connection = object()
 
+        class EffectiveInterest:
+            def to_input_dict(self) -> dict[str, object]:
+                return {
+                    "interest_id": "OWN-2026",
+                    "parent_entity_code": "PARENT",
+                    "subsidiary_entity_code": "SUB",
+                    "direct_ownership_percentage": "0.8",
+                    "effective_from": "2026-01-01",
+                    "effective_to": "",
+                    "version": "1.0.0",
+                    "source_digest": "a" * 64,
+                    "prepared_by": "admin",
+                    "approved_by": "reviewer-id",
+                    "approved_at": "2026-01-01T00:00:00Z",
+                    "future_adapter_field": "must-not-leak",
+                }
+
         def save_interest(self, interest: object, **kwargs: object) -> dict[str, object]:
             captured["interest"] = interest
             captured.update(kwargs)
-            return {"interest_id": "OWN-2026", "workspace_id": kwargs["workspace"]}
+            return {
+                "interest_id": "OWN-2026",
+                "workspace_id": kwargs["workspace"],
+                "future_adapter_field": "must-not-leak",
+            }
 
         def resolve_effective(self, **kwargs: object) -> tuple[object, ...]:
             captured["resolve"] = kwargs
-            return ()
+            return (self.EffectiveInterest(),)
 
     repository = Repository()
 
@@ -144,6 +165,16 @@ def test_ownership_api_server_branch_binds_authenticated_workspace(tmp_path: Pat
     ]
     assert captured["workspace"] == "workspace-a"
     assert captured["actor_label"] == captured["interest"].prepared_by  # type: ignore[union-attr]
+    assert "future_adapter_field" not in created.json()["interest"]
+
+    resolved = client.get(
+        "/api/v1/consolidation-ownership/effective",
+        headers=headers,
+        params={"group_code": "GLOBAL-GROUP", "reporting_date": "2026-08-01"},
+    )
+    assert resolved.status_code == 200, resolved.text
+    assert resolved.json()["interests"][0]["interest_id"] == "OWN-2026"
+    assert "future_adapter_field" not in resolved.json()["interests"][0]
 
     sibling = client.post(
         "/api/v1/consolidation-ownership/interests",

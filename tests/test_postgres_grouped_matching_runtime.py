@@ -279,6 +279,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                 worker_id="grouped-live-worker",
                 actor_id="grouped-live-worker",
                 poll_interval_seconds=0,
+                allow_unbound_hosted_policy=True,
             ),
         )
         summary = worker.process_once()
@@ -601,6 +602,7 @@ def test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_ten
                 worker_id="sequential-live-worker",
                 actor_id="sequential-live-worker",
                 poll_interval_seconds=0,
+                allow_unbound_hosted_policy=True,
             ),
         )
         sequential_summary = sequential_worker.process_once()
@@ -882,6 +884,7 @@ def test_live_postgres_grouped_matching_resumes_after_process_crash_without_dupl
                 actor_id="grouped-crash-worker-a",
                 poll_interval_seconds=0,
                 lease_seconds=1,
+                allow_unbound_hosted_policy=True,
             ),
         )
         with pytest.raises(_SyntheticProcessCrash, match="after checkpoint commit"):
@@ -906,6 +909,7 @@ def test_live_postgres_grouped_matching_resumes_after_process_crash_without_dupl
                 actor_id="grouped-crash-worker-b",
                 poll_interval_seconds=0,
                 lease_seconds=1,
+                allow_unbound_hosted_policy=True,
             ),
         )
         with pytest.raises(PostgresReconciliationBusyError, match="already leased"):

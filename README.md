@@ -256,10 +256,15 @@ Implementation status is tracked in the [engineering audit](docs/engineering-aud
 ## Docker
 
 ```bash
-docker build -t reconforge-erp .
-docker run --rm reconforge-erp reconforge doctor
-docker run --rm -v ${PWD}/output:/app/output reconforge-erp \
-  reconforge demo run --output output/demo
+docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
+docker run --rm --network=none --read-only --cap-drop=ALL \
+  --security-opt=no-new-privileges reconforge-erp reconforge doctor
+
+# Bounded demo smoke; artifacts are intentionally ephemeral.
+docker run --rm --network=none --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m,uid=10001,gid=10001,mode=0700 \
+  --tmpfs /app/output:rw,noexec,nosuid,size=256m,uid=10001,gid=10001,mode=0700 \
+  reconforge-erp reconforge demo run --output output/demo
 ```
 
 Use the [Docker deployment guide](docs/docker-deployment.md), [deployment smoke check](docs/deployment-smoke-check.md), and [Docker verification guide](docs/docker-verification.md). Runtime verification depends on a working local Docker environment and should be treated as a release gate, not inferred from the presence of a Dockerfile.

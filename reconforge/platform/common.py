@@ -53,6 +53,7 @@ class ServerPrincipal:
     base_permissions: frozenset[str] = frozenset()
     emergency_permissions: frozenset[str] = frozenset()
     emergency_access_id_by_permission: tuple[tuple[str, str], ...] = ()
+    authorized_tenant_ids: frozenset[str] = frozenset()
     authorized_workspace_ids: frozenset[str] = frozenset()
     authorized_organization_ids: frozenset[str] = frozenset()
     authorized_legal_entity_ids: frozenset[str] = frozenset()
@@ -469,15 +470,16 @@ def require_permission(connection: sqlite3.Connection, *, actor_label: str, perm
         return None
     principal = current_server_principal()
     if principal is not None:
+        policy_context = PolicyEvaluationContext(
+            user_id=principal.user.id,
+            username=principal.user.username,
+            user_permissions=principal.permissions,
+            principal_type=principal.principal_type,
+            step_up_active=principal.step_up_active,
+            step_up_enforced=True,
+        )
         decision = CentralPolicyEngine().evaluate(
-                PolicyEvaluationContext(
-                    user_id=principal.user.id,
-                    username=principal.user.username,
-                    user_permissions=principal.permissions,
-                    principal_type=principal.principal_type,
-                    step_up_active=principal.step_up_active,
-                    step_up_enforced=True,
-                ),
+            policy_context,
             required_permission=permission,
         )
         audit_policy_decision(
@@ -485,6 +487,8 @@ def require_permission(connection: sqlite3.Connection, *, actor_label: str, perm
             actor_id=user.id,
             required_permissions=frozenset({permission}),
             surface=f"platform:{permission}",
+            context=policy_context,
+            audit_connection=connection,
         )
         if not decision.allowed:
             raise PlatformError("Permission denied for this server workflow action.")
@@ -492,12 +496,13 @@ def require_permission(connection: sqlite3.Connection, *, actor_label: str, perm
     try:
         service = LocalAuthService(connection)
         permissions = service.roles.user_permissions(user.username)
+        policy_context = PolicyEvaluationContext(
+            user_id=user.id,
+            username=user.username,
+            user_permissions=permissions,
+        )
         decision = CentralPolicyEngine().evaluate(
-            PolicyEvaluationContext(
-                user_id=user.id,
-                username=user.username,
-                user_permissions=permissions,
-            ),
+            policy_context,
             required_permission=permission,
         )
     except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
@@ -507,6 +512,8 @@ def require_permission(connection: sqlite3.Connection, *, actor_label: str, perm
         actor_id=user.id,
         required_permissions=frozenset({permission}),
         surface=f"platform:{permission}",
+        context=policy_context,
+        audit_connection=connection,
     )
     if not decision.allowed:
         raise PlatformError("Permission denied for this local workflow action.")

@@ -60,6 +60,7 @@ def test_security_center_requires_human_permission_mfa_and_returns_only_closed_c
 
     monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
     monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "server_audit_administration_enabled", lambda _request: False)
     monkeypatch.setattr(routes, "execute_postgres_security_center", execute)
     monkeypatch.setattr(routes, "enforce_server_scoped_permissions", enforce_policy)
     root = tmp_path / "tenants"

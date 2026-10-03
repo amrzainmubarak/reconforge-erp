@@ -310,6 +310,24 @@ def test_money_serialization_and_dict_roundtrip() -> None:
         Money.from_canonical_dict(tampered)
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("amount", "0250.75"),
+        ("amount", "250.750"),
+        ("currency", "eur"),
+    ],
+)
+def test_strict_canonical_money_reader_requires_exact_producer_serialization(field: str, value: object) -> None:
+    canonical = Money("250.75", "EUR").to_canonical_dict()
+    assert Money.from_strict_canonical_dict(canonical).to_canonical_dict() == canonical
+
+    tampered = dict(canonical)
+    tampered[field] = value
+    with pytest.raises(InvalidAmountError, match="deterministic canonical serialization"):
+        Money.from_strict_canonical_dict(tampered)
+
+
 def test_exchange_rate_conversion() -> None:
     rate = ExchangeRate(
         base_currency="USD",

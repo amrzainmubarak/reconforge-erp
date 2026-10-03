@@ -11,7 +11,6 @@ import hashlib
 import hmac
 import json
 from collections.abc import Mapping, Sequence
-from decimal import Decimal, InvalidOperation
 from typing import Any, TypedDict
 
 from reconforge.application.consolidation_close import build_translation_evidence
@@ -45,7 +44,7 @@ from reconforge.infrastructure.postgres_intercompany_elimination import (
 )
 from reconforge.platform.common import PlatformError, normalize_text, platform_id
 from reconforge.platform.inventory_values import MAX_AMOUNT_MINOR
-from reconforge.utils.money import Money
+from reconforge.utils.money import Money, parse_exact_amount
 
 
 class JournalLineMaterial(TypedDict):
@@ -443,11 +442,11 @@ class PostgresConsolidationCloseRepository:
     def _amount_matches_minor(amount_decimal: Any, amount_minor: int, currency_code: str) -> bool:
         expected = Money.from_minor_units(amount_minor, currency_code).to_canonical_dict()["amount"]
         try:
-            actual_decimal = Decimal(str(amount_decimal))
-            expected_decimal = Decimal(str(expected))
-        except (InvalidOperation, ValueError):
+            actual_decimal = parse_exact_amount(amount_decimal)
+            expected_decimal = parse_exact_amount(expected)
+        except ValueError:
             return False
-        return actual_decimal.is_finite() and actual_decimal == expected_decimal
+        return actual_decimal == expected_decimal
 
     def _run_lines(
         self,
@@ -667,7 +666,7 @@ class PostgresConsolidationCloseRepository:
         with self.connection.transaction():
             self._scope()
             period = self.connection.execute(
-                "SELECT status FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s",
+                "SELECT status FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s FOR UPDATE",
                 (self.tenant_id, period_id),
             ).fetchone()
             if not period:
@@ -745,6 +744,20 @@ class PostgresConsolidationCloseRepository:
         actor = self._actor(actor_label)
         with self.connection.transaction():
             self._scope()
+            identity = self.connection.execute(
+                "SELECT period_id FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s",
+                (self.tenant_id, run_id),
+            ).fetchone()
+            if identity is None:
+                raise PlatformError("Consolidation run not found.")
+            period = self.connection.execute(
+                "SELECT status FROM reconforge.consolidation_close_periods WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                (self.tenant_id, str(identity["period_id"])),
+            ).fetchone()
+            if period is None:
+                raise PlatformError("Consolidation period not found.")
+            if str(period["status"]) == "Locked":
+                raise PlatformError("A locked consolidation period cannot accept a run transition.")
             row = self.connection.execute(
                 "SELECT * FROM reconforge.consolidation_close_runs WHERE tenant_id=%s AND id=%s FOR UPDATE",
                 (self.tenant_id, run_id),

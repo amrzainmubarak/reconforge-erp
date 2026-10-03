@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from collections.abc import Mapping, Sequence
+from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -18,6 +20,7 @@ from reconforge.api.dependencies import (
 from reconforge.api.errors import APIError
 from reconforge.api.server_close import execute_postgres_close, server_close_enabled
 from reconforge.api.server_identity import request_execution_scope
+from reconforge.auth.field_access import project_close_period, project_close_readiness, project_close_task
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_close import POSTGRES_DEFAULT_CLOSE_TASKS, PostgresCloseRepository
@@ -54,6 +57,26 @@ class ReopenRequest(BaseModel):
     reason: str
 
 
+def _project_period(value: Mapping[str, object]) -> dict[str, object]:
+    return project_close_period(value).visible
+
+
+def _project_periods(values: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+    return [_project_period(value) for value in values]
+
+
+def _project_task(value: Mapping[str, object]) -> dict[str, object]:
+    return project_close_task(value).visible
+
+
+def _project_tasks(values: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+    return [_project_task(value) for value in values]
+
+
+def _project_readiness(value: Mapping[str, object]) -> dict[str, object]:
+    return project_close_readiness(value).visible
+
+
 def _server_workspace(workspace: str) -> None:
     if workspace.strip().casefold() not in {"", "default"}:
         raise APIError(
@@ -78,7 +101,7 @@ def periods(
 
     if server_close_enabled(request):
         records = execute_postgres_close(request, lambda repository, tenant: repository.list_periods(tenant_id=tenant))
-        return {"periods": records, "source": {"kind": "postgresql-close-control", "server_mode": True}}
+        return {"periods": _project_periods(records), "source": {"kind": "postgresql-close-control", "server_mode": True}}
 
     try:
         if connection is None:
@@ -88,7 +111,7 @@ def periods(
         records = CloseManagementService(connection).list_periods()
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_periods_failed", message=str(exc)) from exc
-    return {"periods": records}
+    return {"periods": _project_periods(records)}
 
 
 @router.post("/periods")
@@ -146,7 +169,7 @@ def period_init(
             return repository.get_period(tenant_id=tenant, period_id=str(period["id"]))
 
         period = execute_postgres_close(request, operation)
-        return {"period": period, "source": {"kind": "postgresql-close-control", "server_mode": True}}
+        return {"period": _project_period(period), "source": {"kind": "postgresql-close-control", "server_mode": True}}
 
     try:
         if connection is None:
@@ -162,7 +185,7 @@ def period_init(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_period_init_failed", message=str(exc)) from exc
-    return {"period": period}
+    return {"period": _project_period(period)}
 
 
 @router.get("/tasks")
@@ -186,7 +209,7 @@ def tasks(
                 owner_user_id=owner,
             ),
         )
-        return {"tasks": records, "source": {"kind": "postgresql-close-control", "server_mode": True}}
+        return {"tasks": _project_tasks(records), "source": {"kind": "postgresql-close-control", "server_mode": True}}
 
     try:
         if connection is None:
@@ -196,7 +219,7 @@ def tasks(
         records = CloseManagementService(connection).list_tasks(period_id=period_id, status=status, owner=owner)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_tasks_failed", message=str(exc)) from exc
-    return {"tasks": records}
+    return {"tasks": _project_tasks(records)}
 
 
 @router.post("/tasks/{task_id}/status")
@@ -228,7 +251,7 @@ def task_status(
                 request_id=str(getattr(request.state, "request_id", "")),
             ),
         )
-        return {"task": task, "source": {"kind": "postgresql-close-control", "server_mode": True}}
+        return {"task": _project_task(task), "source": {"kind": "postgresql-close-control", "server_mode": True}}
 
     try:
         if connection is None:
@@ -243,7 +266,7 @@ def task_status(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_task_status_failed", message=str(exc)) from exc
-    return {"task": task}
+    return {"task": _project_task(task)}
 
 
 @router.get("/periods/{period_id}/readiness")
@@ -259,7 +282,7 @@ def readiness(
         value = execute_postgres_close(
             request, lambda repository, tenant: repository.readiness(tenant_id=tenant, period_id=period_id)
         )
-        return {"readiness": value, "source": {"kind": "postgresql-close-control", "server_mode": True}}
+        return {"readiness": _project_readiness(value), "source": {"kind": "postgresql-close-control", "server_mode": True}}
 
     try:
         if connection is None:
@@ -271,7 +294,7 @@ def readiness(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_readiness_failed", message=str(exc)) from exc
-    return {"readiness": readiness_value.__dict__}
+    return {"readiness": _project_readiness(asdict(readiness_value))}
 
 
 @router.post("/periods/{period_id}/lock")
@@ -301,7 +324,7 @@ def lock_period(
                 request_id=str(getattr(request.state, "request_id", "")),
             ),
         )
-        return {"period": period, "source": {"kind": "postgresql-close-control", "server_mode": True}}
+        return {"period": _project_period(period), "source": {"kind": "postgresql-close-control", "server_mode": True}}
 
     try:
         if connection is None:
@@ -311,7 +334,7 @@ def lock_period(
         period = CloseManagementService(connection).lock_period(period_id, actor_label=current_user.username)
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_lock_failed", message=str(exc)) from exc
-    return {"period": period}
+    return {"period": _project_period(period)}
 
 
 @router.post("/periods/{period_id}/reopen")
@@ -343,7 +366,7 @@ def reopen_period(
                 request_id=str(getattr(request.state, "request_id", "")),
             ),
         )
-        return {"period": period, "source": {"kind": "postgresql-close-control", "server_mode": True}}
+        return {"period": _project_period(period), "source": {"kind": "postgresql-close-control", "server_mode": True}}
 
     try:
         if connection is None:
@@ -355,4 +378,4 @@ def reopen_period(
         )
     except (DatabaseError, PlatformError) as exc:
         raise APIError(status_code=400, code="close_reopen_failed", message=str(exc)) from exc
-    return {"period": period}
+    return {"period": _project_period(period)}

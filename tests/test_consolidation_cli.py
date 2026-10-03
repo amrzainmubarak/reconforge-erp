@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 
 from reconforge.cli import app
 from tests.test_consolidation_ownership_changes import _request as ownership_change_request
+from tests.test_intercompany_elimination import _reciprocal_lines
 from tests.test_sqlite_consolidation_close import _database, _prepare
 
 runner = CliRunner()
@@ -97,3 +98,27 @@ def test_consolidation_cli_ownership_change_accepts_direct_record(tmp_path: Path
 
     assert result.exit_code == 0
     assert '"posted": false' in result.output
+
+
+def test_consolidation_cli_intercompany_rejects_noncanonical_money_text(tmp_path: Path) -> None:
+    lines = [line.to_dict() for line in _reciprocal_lines()]
+    lines[0]["amount"]["amount"] = "0100.00"  # type: ignore[index]
+    input_path = tmp_path / "intercompany-noncanonical.json"
+    input_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "reporting_currency": "USD",
+                "version": "1.0.0",
+                "prepared_by": "close-preparer",
+                "prepared_at": "2026-08-31T22:00:00Z",
+                "lines": lines,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["consolidation", "intercompany-eliminations", "--input", str(input_path)])
+
+    assert result.exit_code == 1
+    assert "deterministic" in result.output.lower()

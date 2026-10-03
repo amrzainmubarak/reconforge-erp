@@ -1213,3 +1213,9 @@ include tests/test_postgres_finance_scope.py
 include tests/test_postgres_finance_scope_restore.py
 include docs/operations/finance-scope-upgrade.md
 include docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json
+include docs/adr/0807-strict-worker-policy-and-sealed-input-replay.md
+include docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json
+include .github/scripts/verify_postgres_amlsim_reconciliation.py
+include tests/test_postgres_reconciliation_constraint_policy.py
+include tests/test_postgres_reconciliation_input_replay.py
+include tests/test_postgres_amlsim_workload_runner.py

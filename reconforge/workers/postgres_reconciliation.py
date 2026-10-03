@@ -27,7 +27,11 @@ from reconforge.io.persisted import (
     decode_postgres_reconciliation_rule,
 )
 from reconforge.observability import ObservabilityRuntime
-from reconforge.reconciliation.deterministic_engine import DeterministicMatchingEngine
+from reconforge.reconciliation.deterministic_engine import (
+    LEGACY_CONSTRAINT_POLICY,
+    STRICT_ONE_TO_ONE_CONSTRAINT_POLICY,
+    DeterministicMatchingEngine,
+)
 from reconforge.utils.money import (
     LEGACY_FINANCIAL_INPUT_POLICY,
     CurrencyRegistry,
@@ -242,6 +246,27 @@ class LocalDeterministicMatcherAdapter:
     def _stable_record_key(record: Mapping[str, object]) -> str:
         return json.dumps(dict(record), ensure_ascii=True, sort_keys=True, separators=(",", ":"), default=str)
 
+    @staticmethod
+    def _constraint_policy(rule: Mapping[str, Any]) -> str:
+        """Validate strict persisted options before historical coercions or work.
+
+        Missing policy deliberately replays the historical scored contract.
+        Strict rules cannot coerce strings, floats, or bools into date windows
+        or silently convert non-boolean/grouped settings to one-to-one mode.
+        """
+
+        value = rule.get("constraint_policy", LEGACY_CONSTRAINT_POLICY)
+        if not isinstance(value, str) or value not in (LEGACY_CONSTRAINT_POLICY, STRICT_ONE_TO_ONE_CONSTRAINT_POLICY):
+            raise PostgresReconciliationWorkerError("Unsupported matching constraint policy.")
+        if value == STRICT_ONE_TO_ONE_CONSTRAINT_POLICY:
+            window = rule.get("date_window_days", 0)
+            if isinstance(window, bool) or not isinstance(window, int) or window < 0:
+                raise PostgresReconciliationWorkerError("Strict date window must be a non-negative integer number of days.")
+            for name in ("allow_many_to_one", "allow_one_to_many", "allow_many_to_many"):
+                if rule.get(name, False) is not False:
+                    raise PostgresReconciliationWorkerError("Strict one-to-one constraints require false boolean grouped matching flags.")
+        return value
+
     @classmethod
     def _partition_output(
         cls,
@@ -297,6 +322,7 @@ class LocalDeterministicMatcherAdapter:
             record_identity_policy=str(
                 rule.get("record_identity_policy", LEGACY_RECORD_IDENTITY_POLICY),
             ),
+            constraint_policy=self._constraint_policy(rule),
         )
         return ReconciliationExecutionResult(results=output.results, exceptions=output.exceptions)
 
@@ -305,6 +331,7 @@ class LocalDeterministicMatcherAdapter:
         context: ReconciliationExecutionContext,
     ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], str, list[dict[str, Any]], list[dict[str, Any]]]:
         rule = self._json_object(context.run.get("rule_json", {}), "rule_json")
+        self._constraint_policy(rule)
         amount_field = str(rule.get("amount_field", "amount"))
         date_field = str(rule.get("date_field", "date"))
         reference_field = str(rule.get("reference_field", "reference"))

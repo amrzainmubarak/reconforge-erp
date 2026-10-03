@@ -307,6 +307,8 @@ class _CorruptClaimConnection:
 
         if sql == _RUNTIME_ROLE_SAFETY_SQL:
             return _Row((True,))
+        if sql == "SHOW transaction_isolation":
+            return _Row(("read committed",))
         self.executed.append(" ".join(sql.split()).lower())
         return _Row({"rule_json": "[]"})
 

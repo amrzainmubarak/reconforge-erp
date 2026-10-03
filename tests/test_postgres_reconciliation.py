@@ -108,6 +108,8 @@ class _ReconciliationConnection:
         self.executed.append((sql, params))
         if sql == _RUNTIME_ROLE_SAFETY_SQL:
             return _Cursor(row=(True,))
+        if sql == "SHOW transaction_isolation":
+            return _Cursor(row=("read committed",))
         normalized = " ".join(sql.split()).lower()
         if normalized.startswith("select pg_advisory_xact_lock") or normalized.startswith("select event_hash"):
             return _Cursor()

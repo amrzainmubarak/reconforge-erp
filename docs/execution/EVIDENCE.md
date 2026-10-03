@@ -2,6 +2,14 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Actual PostgreSQL AMLSim worker: [retained projection](POSTGRES_AMLSIM_WORKER_2026-10-03.json)
+  verifies original0094/0096 runtime artifacts and source hashes. Both persist42
+  pairs/48decisions with3unmatched per side, equal permutation lineage and
+  preserved legacy behavior. Exact replay, expired claim recovery, actual lock
+  races, unsupported-isolation refusal and sibling denial pass;257 focused tests
+  pass with two explicit live-DB skips. A raw SQL INSERT gap remains reproduced
+  and assigned to PROD030; repository sealing is not advertised as a DB guard.
+
 - Finance hierarchy0095: [frozen report](POSTGRES_FINANCE_SCOPE_2026-10-03.json)
   retains478 actual PostgreSQL passes with two native-client skips, two separate
   API contract passes, exact source hashes and independent race/affinity probes.

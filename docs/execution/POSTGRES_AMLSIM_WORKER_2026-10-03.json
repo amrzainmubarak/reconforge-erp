@@ -1,0 +1,769 @@
+{
+  "command": "python .github/scripts/verify_postgres_amlsim_reconciliation.py --migration-target head --output <report.json>",
+  "focused_tests": {
+    "log_sha256": "484edd18c359468125cb83ede8483a9d278dfdff7395a00fe97e98ef75174057",
+    "passed": 257,
+    "seconds": 4.25,
+    "skipped": 2
+  },
+  "independent_verification": {
+    "historical_decisions_unchanged": true,
+    "limitations": "Independent retained JSON checks; actual database assertions were executed by the production-worker runner.",
+    "report_digest": "2c702abf1e28d094c7a695c64ef5010e87d1bd5840cb21cd3fbe50968b31038f",
+    "status": "passed",
+    "verified": [
+      {
+        "decision_digest": "7ff97b414792d4d343c031724e844a05bbc525239a580504c1dc6734cc20d67f",
+        "file": "AMLSIM_POSTGRES_0094_SEALED_FINAL.json",
+        "legacy_decision_digest": "2599b77a7f5fc9d00dd7c27e6304019418dd23325741a3f07e76c1c6ddc15311",
+        "migration_revision": "0094_pg_finance_policy",
+        "report_digest": "65f508c3981e3430ebd06a585abdee3b060a9aac1f92925e0f750d38f79dc793",
+        "source_tree_digest": "61438e5ecceba9d33ab0c1a7133447883706df938b874d4ab3859c778435c3f9",
+        "wall_seconds": 16.188318
+      },
+      {
+        "decision_digest": "7ff97b414792d4d343c031724e844a05bbc525239a580504c1dc6734cc20d67f",
+        "file": "AMLSIM_POSTGRES_0096_SEALED_FINAL.json",
+        "legacy_decision_digest": "2599b77a7f5fc9d00dd7c27e6304019418dd23325741a3f07e76c1c6ddc15311",
+        "migration_revision": "0096_pg_master_authority",
+        "report_digest": "27f45c4ff3c7f31b58d823381abaf6214d349ad7f5dfc28b50430bf9b3c11888",
+        "source_tree_digest": "61438e5ecceba9d33ab0c1a7133447883706df938b874d4ab3859c778435c3f9",
+        "wall_seconds": 17.381862
+      }
+    ]
+  },
+  "limitations": [
+    "45-row synthetic correctness workload, not a capacity result or customer outcome",
+    "Repository/worker input sealing is not raw SQL INSERT immutability; PROD030 remains open",
+    "No HTTP ingestion or GL posting claim",
+    "Original prior failed and successful artifacts are retained unchanged"
+  ],
+  "observations": [
+    {
+      "claimed_completed_failed_input_manifests_sealed": true,
+      "completed_exact_replay_preserves_input_manifest": true,
+      "concurrency": {
+        "caller_isolation_unchanged": true,
+        "race-claim-first": {
+          "backend_lock_wait_observed": true,
+          "denied": true,
+          "initial_input_count": 0,
+          "reason": "Reconciliation inputs are sealed after execution starts or cancellation is requested."
+        },
+        "race-register-first": {
+          "backend_lock_wait_observed": true,
+          "denied": false,
+          "initial_input_count": 0,
+          "observed_input_count": 1
+        },
+        "race-snapshot": {
+          "backend_lock_wait_observed": false,
+          "denied": true,
+          "initial_input_count": 0,
+          "reason": "Reconciliation claim requires a READ COMMITTED transaction."
+        },
+        "read_committed_both_orderings_passed": true,
+        "refused_claim_has_no_execution_effect": true,
+        "refused_registration_has_no_input_effect": true,
+        "repeatable_read_claim_refused": true,
+        "repeatable_read_exact_replay_allowed": true,
+        "repeatable_read_new_registration_refused": true,
+        "repeatable_read_stale_snapshot_reproduced": false
+      },
+      "constraint_policy": "strict-one-to-one-v1",
+      "decision_projection_digest": "7ff97b414792d4d343c031724e844a05bbc525239a580504c1dc6734cc20d67f",
+      "disposable_database": "reconforge_amlsim_3174ab9ad00a4669ba91",
+      "disposable_database_removed": true,
+      "expired_claim_recovered_without_duplicate_decisions": true,
+      "left_records": 45,
+      "legacy_missing_policy_equal_to_explicit": true,
+      "legacy_rejected_by_independent_oracle": true,
+      "limitations": [
+        "45-row synthetic upstream sample only; not a scale benchmark",
+        "Currency/date epoch and two-sided faults assigned by the scenario",
+        "Repository submission plus durable worker/readback; no HTTP ingestion or financial posting",
+        "No customer results, AML efficacy or external audit acceptance claim"
+      ],
+      "migration_revision": "0094_pg_finance_policy",
+      "migration_source_manifest_digest": "8ec4bb9fbf76a69e1465ed4ba70eb0261a4aa9c8fb51ccc59c811f0c2a2b9be1",
+      "migration_target": "0094_pg_finance_policy",
+      "offline_reference_decision_digest": "77afd17193d43dcf4f96e5088181329cbff0ebd997926a533b50d1a57c4eefda",
+      "oracle": {
+        "matched_pairs": 42,
+        "oracle_passed": true,
+        "unmatched_left_ids": [
+          "L-11",
+          "L-2",
+          "L-4"
+        ],
+        "unmatched_right_ids": [
+          "R-10-duplicate",
+          "R-11",
+          "R-4"
+        ]
+      },
+      "original_artifact": {
+        "path": "output/verification-2026-10-03/AMLSIM_POSTGRES_0094_SEALED_FINAL.json",
+        "report_digest": "65f508c3981e3430ebd06a585abdee3b060a9aac1f92925e0f750d38f79dc793",
+        "sha256": "89b79e7d8d21ad50e6410f241b6b934c5d3141e92010d1da5c535a593d05b395"
+      },
+      "permutation_equal": true,
+      "platform": "Windows-11-10.0.26200-SP0",
+      "postgresql_version": "16.14",
+      "projection_note": "Full decisions and migration manifest remain in the original artifact; this committed projection preserves their digests and executable reproduction command.",
+      "python": "3.12.13",
+      "right_records": 45,
+      "runs": {
+        "invalid-date": {
+          "audit_actions": [
+            "run_claimed",
+            "run_created",
+            "run_failed"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "execution_attempt": 1,
+          "execution_error": "Strict date window must be a non-negative integer number of days.",
+          "execution_status": "Failed",
+          "input_count": 90,
+          "input_manifest_hash": "",
+          "result_count": 0,
+          "result_set_hash": "",
+          "result_statuses": {},
+          "rule_digest": "6e2791af89be0a94e9b9ecc2b3a4f805c12c146d2b0320118d12c1fadd755ff1"
+        },
+        "invalid-group": {
+          "audit_actions": [
+            "run_claimed",
+            "run_created",
+            "run_failed"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "execution_attempt": 1,
+          "execution_error": "Strict one-to-one constraints require false boolean grouped matching flags.",
+          "execution_status": "Failed",
+          "input_count": 90,
+          "input_manifest_hash": "",
+          "result_count": 0,
+          "result_set_hash": "",
+          "result_statuses": {},
+          "rule_digest": "db28b0fbfaa21d5929ab4e73c087111c2ff5d609013800482333a7300e987fd2"
+        },
+        "invalid-policy": {
+          "audit_actions": [
+            "run_claimed",
+            "run_created",
+            "run_failed"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "execution_attempt": 1,
+          "execution_error": "Unsupported matching constraint policy.",
+          "execution_status": "Failed",
+          "input_count": 90,
+          "input_manifest_hash": "",
+          "result_count": 0,
+          "result_set_hash": "",
+          "result_statuses": {},
+          "rule_digest": "d5a228396f4bfd281bb8ddd6eee91cb3483aa87cc3571583004baaf46a3584fc"
+        },
+        "legacy-explicit": {
+          "audit_actions": [
+            "run_claimed",
+            "run_completed",
+            "run_created"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "2599b77a7f5fc9d00dd7c27e6304019418dd23325741a3f07e76c1c6ddc15311",
+          "execution_attempt": 1,
+          "execution_error": "",
+          "execution_status": "Complete",
+          "input_count": 90,
+          "input_manifest_hash": "75541910147e1c7e8b9eb5cc051ff5506f14b432e0ca9c9ee8bd2a50edd12efa",
+          "result_count": 46,
+          "result_set_hash": "f28d8b06961500c9125ad9decd6ab694dd99ba0467e2bd71ab4da24eb08fd582",
+          "result_statuses": {
+            "Matched": 44,
+            "Unmatched": 2
+          },
+          "rule_digest": "267911c0e3dd014ee7944126128ee3762e9300af14534b175a05fa27449eaef9"
+        },
+        "legacy-missing": {
+          "audit_actions": [
+            "run_claimed",
+            "run_completed",
+            "run_created"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "2599b77a7f5fc9d00dd7c27e6304019418dd23325741a3f07e76c1c6ddc15311",
+          "execution_attempt": 1,
+          "execution_error": "",
+          "execution_status": "Complete",
+          "input_count": 90,
+          "input_manifest_hash": "d4f3cb6d0e198236735999a738652f6705e7677fe864dc029c1ce2e1922c3311",
+          "result_count": 46,
+          "result_set_hash": "84772d40dd717e9eb0b7a143dd88e4eecfc66258178a7edc1579126e8a149d0b",
+          "result_statuses": {
+            "Matched": 44,
+            "Unmatched": 2
+          },
+          "rule_digest": "258e4725b018587f3cef5ba1d14dc0abab1cb51df12bdcc1dea7655f52507d7d"
+        },
+        "permuted": {
+          "audit_actions": [
+            "run_claimed",
+            "run_completed",
+            "run_created"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "7ff97b414792d4d343c031724e844a05bbc525239a580504c1dc6734cc20d67f",
+          "execution_attempt": 1,
+          "execution_error": "",
+          "execution_status": "Complete",
+          "input_count": 90,
+          "input_manifest_hash": "072e077e3cbc8b57d0201b2c7a305c121b4833e3e838ae9d99197269f7b2f65e",
+          "result_count": 48,
+          "result_set_hash": "16a174e513275f9103f470f765bc614279a1a8fe781a09b8e76e49e9cb76457a",
+          "result_statuses": {
+            "Matched": 42,
+            "Unmatched": 6
+          },
+          "rule_digest": "9d66891cfa9fd17b30b692a5e4c5c2b8e80dbae14f61b9d4929c5850273a83c8"
+        },
+        "strict": {
+          "audit_actions": [
+            "run_claimed",
+            "run_completed",
+            "run_created"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-interrupted-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "7ff97b414792d4d343c031724e844a05bbc525239a580504c1dc6734cc20d67f",
+          "execution_attempt": 2,
+          "execution_error": "",
+          "execution_status": "Complete",
+          "input_count": 90,
+          "input_manifest_hash": "2f2597cd0ba6be463310455dea6addefee545c926b590af767fc2b91c7a336a5",
+          "result_count": 48,
+          "result_set_hash": "519d253c6ed0834f7d2dc697f85645bdf83eea6ead4e197ddc5a2946c756be68",
+          "result_statuses": {
+            "Matched": 42,
+            "Unmatched": 6
+          },
+          "rule_digest": "9d66891cfa9fd17b30b692a5e4c5c2b8e80dbae14f61b9d4929c5850273a83c8"
+        }
+      },
+      "schema_version": "reconforge-postgres-amlsim-evidence-v1",
+      "sibling_rls_read_denied": true,
+      "sibling_worker_denied": true,
+      "source": {
+        "canonical_source_digest": "9a650eb3bba228f6b519c0b00b2d18272a7fa80aabc2467c06ad5798299943f0",
+        "profile_digest": "a5603f7374d8971f610506a8ccec5f66f97f016192610a10cda3b0987572c7bd",
+        "projection": "amlsim-single-transfer-projection-v1",
+        "source": {
+          "commit": "7338a4bcb1af9bcfea2201ad7daccfe2a4d569ca",
+          "license": "Apache-2.0",
+          "path": "sample/outputs/tx.csv",
+          "repository": "https://github.com/IBM/AMLSim",
+          "sha256": "d119a5b009a99958a23054ba8b403a6f410cf79d62c60e3104240d927d821ce8"
+        }
+      },
+      "source_file_count": 649,
+      "source_files": {
+        ".github/scripts/verify_postgres_amlsim_reconciliation.py": "5f44fabcb1ca0fc2083fbc1fbe584c440facda7b0338359c16d7f885ce4895ac",
+        "reconforge/benchmark/amlsim_reconciliation.py": "2e53e74f1a7b9bfabf4e105da2484372f92cfb5724b3b38d1d9853cc41670285",
+        "reconforge/infrastructure/postgres_reconciliation.py": "153f2682fba35508b75cc03140502d029d0012849d0177218d076902a03738be",
+        "reconforge/reconciliation/deterministic_engine.py": "da30b51f0b95d3659a7e4fb1ad2e7e0a684d961e1c519963ff2cfac39d924de2",
+        "reconforge/workers/postgres_reconciliation.py": "1c6156872d0df271d141fa6cf4ff2231c20d9433ede45ee100beeeb23ecbe389"
+      },
+      "source_records": 45,
+      "source_tree_digest": "61438e5ecceba9d33ab0c1a7133447883706df938b874d4ab3859c778435c3f9",
+      "source_unchanged": true,
+      "started_at": "2026-10-03T05:51:07.526075+00:00",
+      "status": "passed",
+      "submission_replay_preserved_input_count": true,
+      "wall_seconds": 16.188318,
+      "worker_manifest": {
+        "discovery_permission": "match.discover",
+        "execution_permission": "match.run",
+        "granted_permissions": [
+          "match.discover",
+          "match.run"
+        ],
+        "principal_id": "amlsim-oracle-worker",
+        "scope": "tenant:amlsim-synthetic-a",
+        "worker_id": "amlsim-oracle-worker"
+      },
+      "worker_manifest_digest": "02d92c97012e7a351749e15679e4144b8bcb7abfc2498803ac561830a3fe5db3",
+      "worker_summary": {
+        "cancelled": 0,
+        "completed": 4,
+        "cycles": 1,
+        "discovered": 7,
+        "failed": 3,
+        "skipped": 0
+      }
+    },
+    {
+      "claimed_completed_failed_input_manifests_sealed": true,
+      "completed_exact_replay_preserves_input_manifest": true,
+      "concurrency": {
+        "caller_isolation_unchanged": true,
+        "race-claim-first": {
+          "backend_lock_wait_observed": true,
+          "denied": true,
+          "initial_input_count": 0,
+          "reason": "Reconciliation inputs are sealed after execution starts or cancellation is requested."
+        },
+        "race-register-first": {
+          "backend_lock_wait_observed": true,
+          "denied": false,
+          "initial_input_count": 0,
+          "observed_input_count": 1
+        },
+        "race-snapshot": {
+          "backend_lock_wait_observed": false,
+          "denied": true,
+          "initial_input_count": 0,
+          "reason": "Reconciliation claim requires a READ COMMITTED transaction."
+        },
+        "read_committed_both_orderings_passed": true,
+        "refused_claim_has_no_execution_effect": true,
+        "refused_registration_has_no_input_effect": true,
+        "repeatable_read_claim_refused": true,
+        "repeatable_read_exact_replay_allowed": true,
+        "repeatable_read_new_registration_refused": true,
+        "repeatable_read_stale_snapshot_reproduced": false
+      },
+      "constraint_policy": "strict-one-to-one-v1",
+      "decision_projection_digest": "7ff97b414792d4d343c031724e844a05bbc525239a580504c1dc6734cc20d67f",
+      "disposable_database": "reconforge_amlsim_309a84688bbe47cdac8c",
+      "disposable_database_removed": true,
+      "expired_claim_recovered_without_duplicate_decisions": true,
+      "left_records": 45,
+      "legacy_missing_policy_equal_to_explicit": true,
+      "legacy_rejected_by_independent_oracle": true,
+      "limitations": [
+        "45-row synthetic upstream sample only; not a scale benchmark",
+        "Currency/date epoch and two-sided faults assigned by the scenario",
+        "Repository submission plus durable worker/readback; no HTTP ingestion or financial posting",
+        "No customer results, AML efficacy or external audit acceptance claim"
+      ],
+      "migration_revision": "0096_pg_master_authority",
+      "migration_source_manifest_digest": "8ec4bb9fbf76a69e1465ed4ba70eb0261a4aa9c8fb51ccc59c811f0c2a2b9be1",
+      "migration_target": "head",
+      "offline_reference_decision_digest": "77afd17193d43dcf4f96e5088181329cbff0ebd997926a533b50d1a57c4eefda",
+      "oracle": {
+        "matched_pairs": 42,
+        "oracle_passed": true,
+        "unmatched_left_ids": [
+          "L-11",
+          "L-2",
+          "L-4"
+        ],
+        "unmatched_right_ids": [
+          "R-10-duplicate",
+          "R-11",
+          "R-4"
+        ]
+      },
+      "original_artifact": {
+        "path": "output/verification-2026-10-03/AMLSIM_POSTGRES_0096_SEALED_FINAL.json",
+        "report_digest": "27f45c4ff3c7f31b58d823381abaf6214d349ad7f5dfc28b50430bf9b3c11888",
+        "sha256": "f6403deaeab6eca7813598c22956afc32f64cebc51bb36ef91a15724139ad9a7"
+      },
+      "permutation_equal": true,
+      "platform": "Windows-11-10.0.26200-SP0",
+      "postgresql_version": "16.14",
+      "projection_note": "Full decisions and migration manifest remain in the original artifact; this committed projection preserves their digests and executable reproduction command.",
+      "python": "3.12.13",
+      "right_records": 45,
+      "runs": {
+        "invalid-date": {
+          "audit_actions": [
+            "run_claimed",
+            "run_created",
+            "run_failed"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "execution_attempt": 1,
+          "execution_error": "Strict date window must be a non-negative integer number of days.",
+          "execution_status": "Failed",
+          "input_count": 90,
+          "input_manifest_hash": "",
+          "result_count": 0,
+          "result_set_hash": "",
+          "result_statuses": {},
+          "rule_digest": "6e2791af89be0a94e9b9ecc2b3a4f805c12c146d2b0320118d12c1fadd755ff1"
+        },
+        "invalid-group": {
+          "audit_actions": [
+            "run_claimed",
+            "run_created",
+            "run_failed"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "execution_attempt": 1,
+          "execution_error": "Strict one-to-one constraints require false boolean grouped matching flags.",
+          "execution_status": "Failed",
+          "input_count": 90,
+          "input_manifest_hash": "",
+          "result_count": 0,
+          "result_set_hash": "",
+          "result_statuses": {},
+          "rule_digest": "db28b0fbfaa21d5929ab4e73c087111c2ff5d609013800482333a7300e987fd2"
+        },
+        "invalid-policy": {
+          "audit_actions": [
+            "run_claimed",
+            "run_created",
+            "run_failed"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "execution_attempt": 1,
+          "execution_error": "Unsupported matching constraint policy.",
+          "execution_status": "Failed",
+          "input_count": 90,
+          "input_manifest_hash": "",
+          "result_count": 0,
+          "result_set_hash": "",
+          "result_statuses": {},
+          "rule_digest": "d5a228396f4bfd281bb8ddd6eee91cb3483aa87cc3571583004baaf46a3584fc"
+        },
+        "legacy-explicit": {
+          "audit_actions": [
+            "run_claimed",
+            "run_completed",
+            "run_created"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "2599b77a7f5fc9d00dd7c27e6304019418dd23325741a3f07e76c1c6ddc15311",
+          "execution_attempt": 1,
+          "execution_error": "",
+          "execution_status": "Complete",
+          "input_count": 90,
+          "input_manifest_hash": "ec2aa045cded0113e16f0f7ebe6bd57b274fdcf31efccda2a4d3a9cee0c7471d",
+          "result_count": 46,
+          "result_set_hash": "19a868277a26b0272ea8dc2149567a376ecb65eeb741f396c706b2197d20f29d",
+          "result_statuses": {
+            "Matched": 44,
+            "Unmatched": 2
+          },
+          "rule_digest": "267911c0e3dd014ee7944126128ee3762e9300af14534b175a05fa27449eaef9"
+        },
+        "legacy-missing": {
+          "audit_actions": [
+            "run_claimed",
+            "run_completed",
+            "run_created"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "2599b77a7f5fc9d00dd7c27e6304019418dd23325741a3f07e76c1c6ddc15311",
+          "execution_attempt": 1,
+          "execution_error": "",
+          "execution_status": "Complete",
+          "input_count": 90,
+          "input_manifest_hash": "83fe77b46b2480018ea116008d71a759437719494c4770de1a8c9944a7bf2bab",
+          "result_count": 46,
+          "result_set_hash": "52f31869b6b80f6c60589dbf88e1443b36a92a83d9211c8806d0627fe8ac485d",
+          "result_statuses": {
+            "Matched": 44,
+            "Unmatched": 2
+          },
+          "rule_digest": "258e4725b018587f3cef5ba1d14dc0abab1cb51df12bdcc1dea7655f52507d7d"
+        },
+        "permuted": {
+          "audit_actions": [
+            "run_claimed",
+            "run_completed",
+            "run_created"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "7ff97b414792d4d343c031724e844a05bbc525239a580504c1dc6734cc20d67f",
+          "execution_attempt": 1,
+          "execution_error": "",
+          "execution_status": "Complete",
+          "input_count": 90,
+          "input_manifest_hash": "9e4a4c80c5a4283b8d77d0caa0dfab0f089a02c163a360650577bf0f0c90b8bc",
+          "result_count": 48,
+          "result_set_hash": "920897268c14dde241691280c03e85de701177d334f982bed0e8d6295c036713",
+          "result_statuses": {
+            "Matched": 42,
+            "Unmatched": 6
+          },
+          "rule_digest": "9d66891cfa9fd17b30b692a5e4c5c2b8e80dbae14f61b9d4929c5850273a83c8"
+        },
+        "strict": {
+          "audit_actions": [
+            "run_claimed",
+            "run_completed",
+            "run_created"
+          ],
+          "audit_actors": [
+            "amlsim-oracle-worker",
+            "synthetic-interrupted-worker",
+            "synthetic-workload-registrar"
+          ],
+          "decision_digest": "7ff97b414792d4d343c031724e844a05bbc525239a580504c1dc6734cc20d67f",
+          "execution_attempt": 2,
+          "execution_error": "",
+          "execution_status": "Complete",
+          "input_count": 90,
+          "input_manifest_hash": "d36ce4828621bf8c24007a2e17fa67c7fd9aacc4429da0e2fc06eb8c3fc23f0e",
+          "result_count": 48,
+          "result_set_hash": "68c9f92234df9dd964b9b821cccd7a106116a8e1fbf7561ee00ec485f211486c",
+          "result_statuses": {
+            "Matched": 42,
+            "Unmatched": 6
+          },
+          "rule_digest": "9d66891cfa9fd17b30b692a5e4c5c2b8e80dbae14f61b9d4929c5850273a83c8"
+        }
+      },
+      "schema_version": "reconforge-postgres-amlsim-evidence-v1",
+      "sibling_rls_read_denied": true,
+      "sibling_worker_denied": true,
+      "source": {
+        "canonical_source_digest": "9a650eb3bba228f6b519c0b00b2d18272a7fa80aabc2467c06ad5798299943f0",
+        "profile_digest": "a5603f7374d8971f610506a8ccec5f66f97f016192610a10cda3b0987572c7bd",
+        "projection": "amlsim-single-transfer-projection-v1",
+        "source": {
+          "commit": "7338a4bcb1af9bcfea2201ad7daccfe2a4d569ca",
+          "license": "Apache-2.0",
+          "path": "sample/outputs/tx.csv",
+          "repository": "https://github.com/IBM/AMLSim",
+          "sha256": "d119a5b009a99958a23054ba8b403a6f410cf79d62c60e3104240d927d821ce8"
+        }
+      },
+      "source_file_count": 649,
+      "source_files": {
+        ".github/scripts/verify_postgres_amlsim_reconciliation.py": "5f44fabcb1ca0fc2083fbc1fbe584c440facda7b0338359c16d7f885ce4895ac",
+        "reconforge/benchmark/amlsim_reconciliation.py": "2e53e74f1a7b9bfabf4e105da2484372f92cfb5724b3b38d1d9853cc41670285",
+        "reconforge/infrastructure/postgres_reconciliation.py": "153f2682fba35508b75cc03140502d029d0012849d0177218d076902a03738be",
+        "reconforge/reconciliation/deterministic_engine.py": "da30b51f0b95d3659a7e4fb1ad2e7e0a684d961e1c519963ff2cfac39d924de2",
+        "reconforge/workers/postgres_reconciliation.py": "1c6156872d0df271d141fa6cf4ff2231c20d9433ede45ee100beeeb23ecbe389"
+      },
+      "source_records": 45,
+      "source_tree_digest": "61438e5ecceba9d33ab0c1a7133447883706df938b874d4ab3859c778435c3f9",
+      "source_unchanged": true,
+      "started_at": "2026-10-03T05:51:48.770683+00:00",
+      "status": "passed",
+      "submission_replay_preserved_input_count": true,
+      "wall_seconds": 17.381862,
+      "worker_manifest": {
+        "discovery_permission": "match.discover",
+        "execution_permission": "match.run",
+        "granted_permissions": [
+          "match.discover",
+          "match.run"
+        ],
+        "principal_id": "amlsim-oracle-worker",
+        "scope": "tenant:amlsim-synthetic-a",
+        "worker_id": "amlsim-oracle-worker"
+      },
+      "worker_manifest_digest": "02d92c97012e7a351749e15679e4144b8bcb7abfc2498803ac561830a3fe5db3",
+      "worker_summary": {
+        "cancelled": 0,
+        "completed": 4,
+        "cycles": 1,
+        "discovered": 7,
+        "failed": 3,
+        "skipped": 0
+      }
+    }
+  ],
+  "raw_sql_gap": {
+    "completed_child_update_sqlstate": "55000",
+    "fresh_readback_after_insert": {
+      "execution_status": "Complete",
+      "input_count_after": 91,
+      "input_count_before": 90,
+      "status": "Complete",
+      "stored_input_manifest_unchanged": true,
+      "stored_input_manifest_verifies": false
+    },
+    "fresh_readback_after_relabel": {
+      "completed_at_retained": true,
+      "execution_attempt": 2,
+      "execution_status": "Complete",
+      "original_input_fingerprint_changed": false,
+      "status": "Complete"
+    },
+    "migration_target": "0094_pg_finance_policy",
+    "raw_insert_after_complete": {
+      "accepted": true
+    },
+    "raw_terminal_relabel": {
+      "accepted": false,
+      "sqlstate": "55000"
+    },
+    "report_digest": "b8502bb81e5758a8119acd9eac47df105f241a446906177ae06af30d58304159",
+    "role": {
+      "bypass_rls": false,
+      "createdb": false,
+      "createrole": false,
+      "name": "reconforge_app",
+      "superuser": false
+    },
+    "scope": "same-tenant direct SQL by restricted runtime role; actual durable worker completed the strict run",
+    "source_hashes": {
+      "alembic/env.py": "420071e721e2d7d36d78dac8ed723d3a384cbfd186e6409289e019ff6de4e96d",
+      "alembic/versions/0001_postgres_tenant_boundary.py": "11bc79d6bb6ddd14d0a703e3952a47dc4f321dda416a59f361f27b4f990912e9",
+      "alembic/versions/0002_postgres_master_data.py": "cbf79312013b3bf94252bac3fd4b80aa245ed06555e952db49ffdb292412d0b3",
+      "alembic/versions/0003_postgres_ledger.py": "dfecfa151d7f8c1588893abe43e2ffe2dd0d0db4b4c502cdff96fec07c347e7a",
+      "alembic/versions/0004_postgres_identity.py": "2c7f30bb02f9da62e48fa2015d768ec1d1951b931ef8e5913028aa617a336fbf",
+      "alembic/versions/0005_postgres_fiscal_periods.py": "0c0894f135af81eed58cfac7060a0736695d8ea7a5e9583f7a40927785b0a4d0",
+      "alembic/versions/0006_postgres_close.py": "5400939e824e4b5a70f8a65b4e9b9a67e3623e288ff1e8f9bcae922721024f78",
+      "alembic/versions/0007_postgres_outbox_delivery.py": "a4934e4f88181bbbf414e568c3dae9a68356603e73799ce560e79c3171abe150",
+      "alembic/versions/0008_postgres_evidence_registry.py": "f8fd790fd459de5380f153744a37311a00b83b4d8401e2fd2c291d3eb5ee4355",
+      "alembic/versions/0009_postgres_reconciliation_results.py": "17890d1e94ba397d5651eae12bd5ca1d972f436c9748c01138ac97bd6841e6be",
+      "alembic/versions/0010_postgres_reconciliation_execution.py": "30a23780800569c3ca5bdb9d9033bb1072698b7b75835e259dbd4057a8784827",
+      "alembic/versions/0011_postgres_reconciliation_checkpoints.py": "50be53d75264c038033845a50addbd54f6371f52c8a1da1c2a21b1edf29db44d",
+      "alembic/versions/0012_postgres_durable_jobs.py": "9e4c4772080cc895e6566aba6530576fc6c87cdec5f4e9d353fa36367ce58e9c",
+      "alembic/versions/0013_postgres_domain_uow.py": "385992fec2461cca8d314f2dc45104b77777a2e6ac2407949f2d4d066d51f6e7",
+      "alembic/versions/0014_postgres_operations.py": "397d578311789a6ed3c27433e2900610405e3fae3cec3a2eaa5f706197edb031",
+      "alembic/versions/0015_postgres_idempotency.py": "a55bcfb0d90aecc3df7b4d19b722ee2bb46dcd53678ae8dc51adc202f143cee8",
+      "alembic/versions/0016_postgres_journals.py": "2ce91ae67662ae9e6c10927bc734338d9931bc83b4ace96c7b38a6afbdc01754",
+      "alembic/versions/0017_postgres_control_testing.py": "315d1c99a32395e58e323e47869751b0ec19950afbc976ea96e9ed9b4cf22219",
+      "alembic/versions/0018_postgres_intercompany.py": "d67b37a5be141e4e76e4f4890b0fceb5d23b499a1713c302586686993a37a775",
+      "alembic/versions/0019_postgres_finance_core.py": "32da3d065b463f2f887cc2fb411c65dc6902236bf1317c9346793b38ec1324ec",
+      "alembic/versions/0020_postgres_master_data_application.py": "56ed073abd2c210141c7401c849f30faaed2d0bbce3279598a8fd4bf4523f6ba",
+      "alembic/versions/0021_postgres_payables.py": "c2afea4f52f8723b6390b3ef84033c24e83fb8840efd35e880fe90d5d941429f",
+      "alembic/versions/0022_postgres_receivables.py": "f0e2655361a9665cb72882bf7573da3e74ea3cbee4bbb12a5ea57623ec05a2a9",
+      "alembic/versions/0023_postgres_matching_application.py": "0212d5d3c7dfb7fd912c8fd2ffa0ddadf4b14bc3640a23d6d747f495344264f0",
+      "alembic/versions/0024_postgres_inventory_core.py": "68ddc3a17226c48b61b60e88c44c77471c41800a85324182e64635f8ee202f36",
+      "alembic/versions/0025_postgres_inventory_valuation.py": "34b0acb436a853de99487b1fc5d68298f6eb7d21809817597a294158c7043186",
+      "alembic/versions/0026_postgres_inventory_valuation_reversal.py": "491031dd41be173adfb1b6454a368175fa70ce460120ce8189ef0e3f6b1f1be3",
+      "alembic/versions/0027_postgres_inventory_planning.py": "7677a0bd8b9a6557c24fb15f667f521433b68f15adc79c06e3436bec1e2745d9",
+      "alembic/versions/0028_postgres_accounts.py": "b75e86be65c10432cec6738151801134bef490f12c56dc71f65cd85d712d2834",
+      "alembic/versions/0029_postgres_approvals.py": "0c2df7ec2b958ede8f66840f5c010c61f2f88080c57ac8ad1a1edbb8f97b14a2",
+      "alembic/versions/0030_postgres_close_application.py": "b292a1a0dc740e4d4916ee0ac3a596c6690648c837ea22fee2cae898e049b823",
+      "alembic/versions/0031_postgres_evidence_application.py": "15a82ac23c769f841159427582a858ad281aedb856d9b2c873ad09df170e60b1",
+      "alembic/versions/0032_postgres_exceptions.py": "96bcd21cb6b97b3fb2977f335398b7a58a12c4dfc5609c72c803334e7560367f",
+      "alembic/versions/0033_postgres_outbox_application.py": "27da2515ac19b2dbddc8aefb74ac04876e5e4420b626aeb1b5436a0bf16917d2",
+      "alembic/versions/0034_postgres_federation.py": "ac03fd27bfa383290a1f8a111d4e9ae43bad1faf85d7dcbd2d797ea2adf13122",
+      "alembic/versions/0035_postgres_scim.py": "e9a48dc735d2d929113b581b374071f609f7205aaa12ddfc1563157070bc8976",
+      "alembic/versions/0036_postgres_scim_auth.py": "7a7ca0f382132319e8dc04847ac6ffec6f370b06acfbe9139443c3d88a68f6d9",
+      "alembic/versions/0037_postgres_service_accounts.py": "d395727d758ca289be6f5b45b48540acc0e360435bc2ff21ee0d14aca9da9b27",
+      "alembic/versions/0038_postgres_privileged_sessions.py": "c689361589b8f016b5f9ec30010cda652fef13d27c7df8c80e7ea0b5bb28683a",
+      "alembic/versions/0039_postgres_emergency_access.py": "9c73e56d333a815e26192c39eebc02f3bb63521d06e0aba866360cd0387fe7e9",
+      "alembic/versions/0040_postgres_webauthn_mfa.py": "c9dd108003fb4aff11f2794c299a996ab72e8ecf1787c71a86d77d7cb1a1cc94",
+      "alembic/versions/0041_postgres_execution_scope.py": "afdeb961dfbb43b3d7a23be6c77d4c17538c88acba58b861d1a6102f856dc86d",
+      "alembic/versions/0042_postgres_job_scope.py": "162292f484204e82c5e011f713aea84f5fbb23bf5cf4e2703a6a9b84d71f3e3d",
+      "alembic/versions/0043_postgres_export_scope.py": "a968c495bfa65bdcae93bdef69c9f3f36ac60c98532db3122a09cf1ba85d516b",
+      "alembic/versions/0044_postgres_business_scope.py": "08404b0110e793a17f43769bde1154f336527c3d107528d2cb786cec53dad81e",
+      "alembic/versions/0045_postgres_workspace_attribution.py": "aafb212289b37d73053c5865ddc70490f2466f90199d9448cde3afeec151b4ca",
+      "alembic/versions/0046_postgres_scope_authority.py": "525d667f10464f3399bbfa8ce2cf568cfdbd8c2e12a7d32a2805cf6bf2d2723e",
+      "alembic/versions/0047_postgres_scheduler.py": "2ce30033b0d8e3b40b9a52d44ec4d06a19005be068a36301f4a06bed10f19121",
+      "alembic/versions/0048_postgres_notifications.py": "03998061fae14f9fbff57a8f3813cd38f4afe4b0935bd9f58afd828679cc00c1",
+      "alembic/versions/0049_security_center_acl.py": "191433f29c8d00093196f288cf1b6bc2d81dc3804c2fa8c4548f5d152627d29f",
+      "alembic/versions/0050_identity_administration_lifecycle.py": "4886d7c5682e3ebd899cbd61d167a78b95414097dada03d97f2ebffafd2661e1",
+      "alembic/versions/0051_access_policy_lifecycle.py": "04049fb9e69b8b2442876422b0129d3c8c24f4933bd2a23715832446f0c999d8",
+      "alembic/versions/0052_security_governance.py": "bf9a3af584de1c50bdaf95cf2e1c364518c40f91c22497e3ee7db8c27f129b5a",
+      "alembic/versions/0053_audit_administration_acl.py": "74a0e5106b6e5d4b5def6bb46791017d836e08aa3f173c79e76d89bb344b8a11",
+      "alembic/versions/0054_postgres_consolidation_ownership.py": "00e9f6b22be2e6efc503bd6078a665ea3939af5469cbcf4bfc5be5dcd675ccc4",
+      "alembic/versions/0055_postgres_consolidation_close.py": "302c00bbf7baeff40555a15eae1cf15cb47c8c01d9c0695416281641b3b6cbf9",
+      "alembic/versions/0056_postgres_policy_delegations.py": "ae1e5bf83397fed37d9288e01c2259b8c4065c79c827c160b68ce182827a2a13",
+      "alembic/versions/0057_postgres_consolidation_journal_lines.py": "39e7d34cf02d6c460c7958bd52b0d3917af11c43dda46b59f0123601b566c88c",
+      "alembic/versions/0058_postgres_policy_permission_scopes.py": "7c4cc67c108880ee0edddd0116f5408462ab7d186fa8b9183a85d4a16961de66",
+      "alembic/versions/0059_postgres_policy_scope_amount_bounds.py": "86baabc17b9a9350c670bdf7d03e4591b23489155d3bf6c55b71bcf314b507e2",
+      "alembic/versions/0060_postgres_consolidation_ppa.py": "7db1714a1b69dab6db5e533ad59cc5d7bec6e307991047724b285a9de6b2a2fc",
+      "alembic/versions/0061_postgres_writeback_intents.py": "279bacd4f9490fdf69ff44ec6f6c2c14eb8824a8a9df6767e00d3a4d061a60b2",
+      "alembic/versions/0062_postgres_outbox_consumer_receipts.py": "ee66bc0a8484ca09cf0dc824a0a0b3c595e9b17652a63929efa44b6c53da43f7",
+      "alembic/versions/0063_postgres_intercompany_eliminations.py": "2a8a08a9cd4b322a60fa0dccbcde84295097eead4e7a7f1e29844e6d9e0fae4b",
+      "alembic/versions/0064_postgres_close_intercompany_links.py": "0b8db24597d50855e2d9dd535068c95af7753ae20a19509abdb1d472e7b6d57f",
+      "alembic/versions/0065_postgres_consolidation_deferred_tax.py": "8711caadf721be462ab042e0cafbf6707f7b956a617ab88f5501823c74a4bb8e",
+      "alembic/versions/0066_postgres_consolidation_impairment.py": "fcb9eded3bcf1497ca1dc44f2a7fc7d73eab442b08aa062ac54c17e9fffaaca3",
+      "alembic/versions/0067_postgres_close_impairment_links.py": "0b8ca7eda2604b22c44df52ac4ca30b5303a20ca185ff8643897d963488ae7e9",
+      "alembic/versions/0068_postgres_close_deferred_tax_links.py": "ae2d6f4bfc1099b232f5d6de48d3c25dee1ecd714445b24eccb2ee81796281dc",
+      "alembic/versions/0069_postgres_close_ppa_links.py": "231ffec527b2269b641623460a6d62c1e9f3e04361c99ce4547871b796ce25b5",
+      "alembic/versions/0070_postgres_consolidation_ownership_change.py": "dc7604aeaaaf7b7bb27580b2d568b3556bf58829967a398c550d0444d0619dd4",
+      "alembic/versions/0071_postgres_close_ownership_change_links.py": "3b782b2d3f83369c4f85133f4ef86166fb4ba5e54cc5273b2184054c2913f0fc",
+      "alembic/versions/0072_postgres_reconciliation_entity_scope.py": "1067da5a30cc9da64df37dd05911a3571eb47e291d7df706a81d6dd8a23e18d2",
+      "alembic/versions/0073_postgres_outbox_scope.py": "28c1a2c6e1daf8672a6c03a2af51f5383676301bb0cdb8d09841788a03e98d3d",
+      "alembic/versions/0074_postgres_outbox_consumer_scope.py": "6ba6a507f0c84f067c9c820924228893d619dd84f449a8d60238cb5ad2c5b018",
+      "alembic/versions/0075_postgres_job_organization_scope.py": "24fac2f553f289a6ec369a904b7176e2a998f3efcea1e648e2e274d66171fe98",
+      "alembic/versions/0076_postgres_consolidation_ppa_scope.py": "3fa300edca6253f9128321b86a438cd770493ce980d13577572b07d2f703f793",
+      "alembic/versions/0077_postgres_consolidation_impairment_deferred_tax_scope.py": "4b5baa240cee0244f71f23526d4528d41cbdb1bea34041bdf26d9619bcb86be5",
+      "alembic/versions/0078_postgres_consolidation_close_scope.py": "7da4bccaa5d3bd39b03142f6e4a30ee10c7406d9b85c34af3b875d50126fa136",
+      "alembic/versions/0079_postgres_durable_job_scheduler_cursor.py": "044a14779bf2d0d770805891ab1ad1b24af08e8801ebbaafbc1e13439ca5592a",
+      "alembic/versions/0080_postgres_retail_settlement.py": "dfe1a91ea9c4821914e0d15b78629588eaff2cdcb6745d2a5174806d763c96f3",
+      "alembic/versions/0081_postgres_professional_invoice_payment.py": "02ddf57f6eb0e2eb5fbd02d8cda957b81723323fc9f5a00384ff525670284980",
+      "alembic/versions/0082_postgres_certification_evidence.py": "54d1d93d3e57853e78eb0b0c5134858605a3b7e88ae7d71c6e490d0e2fff4b74",
+      "alembic/versions/0083_postgres_manufacturing_cost_control.py": "235b0af1b6695a121977ba73e3c7f1bade71678eace102e770484b9f2d023760",
+      "alembic/versions/0084_postgres_bank_statement_control.py": "f70fad91de5fc56f801f0f6af6ac9597d0b41a577672218e8b0270982232e78b",
+      "alembic/versions/0085_postgres_inventory_reversal_definer.py": "af80fb5a0690c6c0f39d1823eb2bd10f85aa44d2f29629344462dad407d58d05",
+      "alembic/versions/0086_postgres_consolidation_close_reopened.py": "260f7d892c3bea434be2cc8e416cdf841a1d14b291503376928a7a4310e52686",
+      "alembic/versions/0087_postgres_currency_registry_binding.py": "eb11d411982c9e37900f80d54af58ef47be2f89eddae22f19c68dd689f626c10",
+      "alembic/versions/0088_postgres_currency_registry_snapshot.py": "000052bba7ec106a9a6793afa0657d80e53b1578baa8374a62b9fd9d85cda331",
+      "alembic/versions/0089_postgres_writeback_proposal_identity.py": "92e42b27e1ef043ce9be9a44130efadc61daa6953b85aa516e5f7e7e03a6a4b0",
+      "alembic/versions/0090_postgres_writeback_recovery_observations.py": "12b3b81eb88354494f19bffb16c35c1d2fc187a865588eb932a2517b62c64b4a",
+      "alembic/versions/0091_postgres_close_period_sod.py": "f4cff93bd1571cd2e0f5b20444ee0c6e7f126c43d409f04b8d56c3533e70871f",
+      "alembic/versions/0092_postgres_close_lock_evidence.py": "a4953734516a8f438283af8cca20f58edc92a49c24d0be233fd2545e277db9f0",
+      "alembic/versions/0093_postgres_metrics.py": "dd85c957a2dc7eec7b81d10f1e4047fe6336991620299134522c537867e6a4ab",
+      "alembic/versions/0094_postgres_finance_policy.py": "f1a82275ed43beb112d428104aa80d1e033f34f78d9e56efeadf7fc132835c58",
+      "alembic/versions/0095_postgres_finance_scope.py": "6db84e279ecc0cad97bfdb53af95529c0105d4c906289c0fc3eb22ac445f5850",
+      "alembic/versions/0096_postgres_master_data_authority.py": "312177a274d0c5345ee87c6c9d646c5d3318bffc9455ff1e3057fe1b6de0d70b",
+      "reconforge/infrastructure/postgres_reconciliation.py": "153f2682fba35508b75cc03140502d029d0012849d0177218d076902a03738be",
+      "reconforge/infrastructure/postgres_reconciliation_execution.py": "091698f6f3cb0a08d538ed1c367d75a00fe32c211abc8c0141afab959f48cd34"
+    },
+    "source_tree_digest": "61438e5ecceba9d33ab0c1a7133447883706df938b874d4ab3859c778435c3f9",
+    "source_unchanged": true,
+    "status": "defect_reproduced"
+  },
+  "report_digest": "a1324c7adc78da10e484b3bf6e95dae8ac58d4b56e6ebc7c121cf8ed49e67a95",
+  "schema_version": "reconforge-amlsim-worker-evidence-projection-v1",
+  "source_sha256": {
+    ".github/scripts/verify_postgres_amlsim_reconciliation.py": "5f44fabcb1ca0fc2083fbc1fbe584c440facda7b0338359c16d7f885ce4895ac",
+    "reconforge/infrastructure/postgres_reconciliation.py": "153f2682fba35508b75cc03140502d029d0012849d0177218d076902a03738be",
+    "reconforge/workers/postgres_reconciliation.py": "1c6156872d0df271d141fa6cf4ff2231c20d9433ede45ee100beeeb23ecbe389",
+    "tests/test_postgres_amlsim_workload_runner.py": "126b44f2dcad7dd7c4042594ef02596c8ec561c21f1ca5f9f40f8cb7865e17f8",
+    "tests/test_postgres_reconciliation.py": "1ef212d9191307a9a549a995507fc956d8fffefd8f885bf5b3c3a2617cce21dd",
+    "tests/test_postgres_reconciliation_constraint_policy.py": "5292c7cf4c66b31edc4f435173ce8c55f29fb3af85b1a7cd670a99b4a1f5790c",
+    "tests/test_postgres_reconciliation_input_replay.py": "183356726aa5dec56fd39681ff28142363ae3dda4087b224d16a1139babd41f3",
+    "tests/test_postgres_reconciliation_persisted_json.py": "708f8412a8e3dabb996a1e7e9c5c1d10a1e1ac025294c19a48b4197f5c2aeaad"
+  },
+  "status": "passed-bounded-repository-worker-contract"
+}

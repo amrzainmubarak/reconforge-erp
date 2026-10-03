@@ -229,10 +229,10 @@ tasks:
     priority: P1
     area: reconciliation-worker
     title: Carry strict matching policy through the actual PostgreSQL worker
-    status: in_progress
+    status: completed
     depends_on: [PROD-022, PROD-023]
     exit_evidence: >-
-      Validate and forward explicit constraint_policy without changing historical omission semantics; actual registered durable worker processes pinned45-row AMLSim input and persists decisions matching the independent oracle, source/rule/input/output digests and retry/isolation contracts. Unknown policies fail without decision effects; lifecycle failure evidence is retained.
+      Actual PostgreSQL0094/0096 worker persists42pairs/3unmatched eachside from pinned45rows; explicit strict policy, source/rule/input/result digests, permutation, exact replay, expiredclaim attempt2 and siblingdenial verified. Real READ COMMITTED lock orderings and repeatable-read refusal prevent staleinput capture;257focusedpasses/2explicit live skips. ADR0807/report bound repository/worker acceptance; rawSQL insertion is separate PROD030.
   - id: PROD-029
     priority: P0
     area: master-data-authority
@@ -241,6 +241,14 @@ tasks:
     depends_on: [PROD-025]
     exit_evidence: >-
       Five authenticated HTTP red cases alter broader organization/currency/fiscal-period state under narrowed selection; central authorization and SQL mutation guards must deny these while preserving canonical FOR SHARE reference locks and existing authorized administrator paths. Retain historical policy evidence compatibility; do not claim new permission-to-resource-level grants.
+  - id: PROD-030
+    priority: P0
+    area: reconciliation-evidence-integrity
+    title: Seal reconciliation child insertion at the PostgreSQL database boundary
+    status: in_progress
+    depends_on: [PROD-028]
+    exit_evidence: >-
+      Nonowner raw INSERT after Complete currently changes90inputs to91 while retainedmanifest no longer verifies. Add versioned parent-locking INSERT authority without inferred historical repairs; raw lifecycle refusal, repository replay, concurrent claims, migration and populated restore must pass. Existing completed UPDATE and terminal relabel protections remain enforced.
   - id: E-1120
     priority: P0
     area: financial-exactness

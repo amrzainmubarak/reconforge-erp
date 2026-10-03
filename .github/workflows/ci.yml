@@ -364,6 +364,22 @@ jobs:
           path: ${{ runner.temp }}/reconforge-writeback-recovery-compensation.json
           if-no-files-found: ignore
 
+      - name: Verify pinned AMLSim through the durable PostgreSQL worker
+        env:
+          RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
+          RECONFORGE_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
+        run: uv run --no-sync python .github/scripts/verify_postgres_amlsim_reconciliation.py --migration-target head --output "${RUNNER_TEMP}/reconforge-amlsim-postgres.json"
+
+      - name: Upload PostgreSQL AMLSim worker evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-amlsim-postgres-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/reconforge-amlsim-postgres.json
+            ${{ runner.temp }}/reconforge-amlsim-postgres.migration.log
+          if-no-files-found: ignore
+
       - name: Run live server-boundary tests
         env:
           RECONFORGE_POSTGRES_DSN: postgresql://postgres:postgres@localhost:5432/postgres

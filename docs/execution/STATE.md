@@ -13,11 +13,12 @@ reviewable in [Draft PR111](https://github.com/amrzainmubarak/reconforge-erp/pul
   PostgreSQL tests passed, followed by four caller-transaction ownership checks.
 - Explicit strict one-to-one constraints are committed and opt-in; 69 focused
   tests and 138 broader regressions pass. Default legacy matching digest is
-  unchanged. Hosted rule/worker adoption is still pending.
+  unchanged. Hosted worker adoption is now verified under ADR0807 below.
 - An actual licensed IBM AMLSim 45-row sample now runs through an offline
   adapter and independent fault oracle: 42 matched pairs, three unmatched rows
   on each side, and equal decisions under row permutation. This is in-process
-  synthetic evidence; larger data, worker execution and customer ROI remain open.
+  synthetic evidence; actual durable worker execution is now verified separately.
+  Larger data and customer ROI remain open.
 - Runtime capability admission is committed: 73 live PostgreSQL tests pass,
   zero skipped, after 27 reproduced unsafe-admission failures. See
   [runtime evidence](RUNTIME_GRANTS_2026-10-03.json) and ADR 0800.
@@ -55,8 +56,10 @@ restore on PostgreSQL16.14. Separate migration-chain restore passes16.14/17.10.
 ADR0805 and POSTGRES_FINANCE_SCOPE_2026-10-03.json retain the exact boundary.
 Authenticated HTTP review separately reproduces five narrowed master-data
 mutation gaps (PROD029); complete end-to-end isolation remains open. Durable
-AMLSim execution also exposed post-execution input insertion that can invalidate
-a stored manifest; its sealing repair is required before accepting PROD028.
+AMLSim execution now passes the strict oracle, exact replay and transaction-race
+contracts through0094/0096. ADR0807 accepts the bounded repository/worker path.
+Raw SQL post-completion input insertion remains reproduced separately under
+PROD030 and does not inherit that acceptance.
 
 ### Financial regression and browser checkpoint
 

@@ -1,0 +1,40 @@
+{
+  "introducing_commit": "852508968462ec9957e46e39bb2aab507960b572",
+  "matches": [
+    {
+      "type": "source_digest",
+      "source": "tests/test_api_server_identity.py",
+      "checked_commit": "cd67fc67",
+      "raw_source_sha256": "71d95ae8e609fc2e8332a7461505abb4f44e8f83af65e012c6a6c8dcb4a27539",
+      "git_blob_sha256": "71d95ae8e609fc2e8332a7461505abb4f44e8f83af65e012c6a6c8dcb4a27539",
+      "normalized_bytes_equal": true,
+      "findings": [
+        "docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:19",
+        "docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:76"
+      ]
+    },
+    {
+      "type": "public_signer_file_digest",
+      "public_file": "/etc/apk/keys/alpine-devel@lists.alpinelinux.org-6165ee59.rsa.pub",
+      "sha256": "207e4696d3c05f7cb05966aee557307151f1f00217af4143c1bcaf33b8df733f",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network=none",
+        "python:3.12-alpine@sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31",
+        "sha256sum",
+        "/etc/apk/keys/alpine-devel@lists.alpinelinux.org-6165ee59.rsa.pub"
+      ],
+      "exit_code": 0,
+      "finding": "docs/execution/OPENSSL_RUNTIME_2026-10-03.json:generic-api-key:30"
+    }
+  ],
+  "scope": "Three exact content-hash false positives, no broad rule/path allowance",
+  "scanner_version": "8.30.1",
+  "tree_findings": 0,
+  "history_findings": 0,
+  "history_commits_scanned": 1019,
+  "exact_fingerprints_added": 6,
+  "config_unchanged": true
+}

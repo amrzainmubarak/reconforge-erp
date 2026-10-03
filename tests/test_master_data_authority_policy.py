@@ -95,11 +95,11 @@ LEGACY_V1 = {
 }
 
 
-def test_new_v2_evidence_preserves_read_only_verification_of_unchanged_v1() -> None:
+def test_current_evidence_preserves_read_only_verification_of_unchanged_v1() -> None:
     context = _context("master_data.currency")
     decision = CentralPolicyEngine().evaluate(context, required_permission="master_data.manage")
     new = build_policy_decision_evidence(decision, actor_id="manager", required_permissions=frozenset({"master_data.manage"}), surface="synthetic-authority", context=context).to_dict()
-    assert POLICY_VERSION == "central-policy-v2"
+    assert POLICY_VERSION == "central-policy-v3"
     assert new["policy_version"] == POLICY_VERSION
     assert verify_policy_decision_evidence(new) == new
     assert verify_policy_decision_evidence(LEGACY_V1) == LEGACY_V1

@@ -23,6 +23,12 @@ from reconforge.auth.rbac import same_actor
 from reconforge.db.connection import DatabaseError
 from reconforge.domain.models import utc_now_text
 from reconforge.domain.receivables_aging import AgingCurrencyError, build_aging_report
+from reconforge.domain.receivables_receipt_replay import (
+    ReceiptReplayError,
+    receipt_replay_envelope,
+    receipt_replay_response,
+    receipt_request_digest,
+)
 from reconforge.io.persisted import (
     PersistedJsonError,
     decode_financial_idempotency_response,
@@ -422,10 +428,6 @@ class SQLiteReceivablesRepository:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             workspace_id = ensure_workspace(self.connection, workspace)
-            if idempotency_key:
-                previous = self._idempotent("receipt", workspace_id, idempotency_key)
-                if previous is not None:
-                    return previous
             number = normalize_key(receipt_number, default="")
             customer = self._customer_by_code(workspace_id, customer_code)
             currency = _currency(currency_code)
@@ -441,8 +443,22 @@ class SQLiteReceivablesRepository:
                 entity_code=entity_code,
             )
             normalized_allocations = _normalize_allocations(allocations)
+            if (organization_code.strip() and organization_id != customer["organization_id"]) or (entity_code.strip() and legal_entity_id != customer["legal_entity_id"]):
+                raise PlatformError("Receipt scope must match its customer.")
+            organization_id, legal_entity_id = customer["organization_id"], customer["legal_entity_id"]
             if sum(item.amount_minor for item in normalized_allocations) > amount:
                 raise PlatformError("Receipt allocations cannot exceed the receipt amount.")
+            digest = receipt_request_digest(workspace_id=workspace_id, organization_id=organization_id, legal_entity_id=legal_entity_id, customer_id=str(customer["id"]), receipt_number=number, receipt_date=receipt_day.isoformat(), currency_code=currency, amount_minor=amount, allocations=[(item.invoice_id, item.amount_minor) for item in normalized_allocations], actor_label=actor_label)
+            previous = self._idempotent("receipt", workspace_id, idempotency_key) if idempotency_key else None
+            if previous is not None:
+                try:
+                    response = receipt_replay_response(previous, digest)
+                except ReceiptReplayError as exc:
+                    raise PlatformError(str(exc)) from exc
+                authoritative = self.get_receipt(str(response.get("id", "")))
+                if any(authoritative[field] != response.get(field) for field in ("workspace_id", "organization_id", "legal_entity_id", "customer_id")):
+                    raise PlatformError("Receipt replay scope no longer matches the authoritative receipt.")
+                return response
             receipt_id = platform_id("ARREC", workspace_id, number)
             now = utc_now_text()
             self.connection.execute(
@@ -479,7 +495,7 @@ class SQLiteReceivablesRepository:
                     allocation=allocation,
                     now=now,
                 )
-            self._save_idempotency("receipt", workspace_id, idempotency_key, self.get_receipt(receipt_id))
+            self._save_idempotency("receipt", workspace_id, idempotency_key, receipt_replay_envelope(digest, self.get_receipt(receipt_id)))
             result = self.get_receipt(receipt_id)
             _finalize_event(
                 self.connection,
@@ -609,6 +625,15 @@ class SQLiteReceivablesRepository:
         result["allocated_minor"] = sum(int(item["amount_minor"]) for item in result["allocations"])
         result["unallocated_minor"] = int(result["amount_minor"]) - int(result["allocated_minor"])
         return result
+
+    def list_receipts(self, *, workspace: str = "default", customer_id: str = "", limit: int = 100, offset: int = 0, organization_id: str | None = None, legal_entity_id: str | None = None) -> dict[str, Any]:
+        if type(limit) is not int or type(offset) is not int or not 1 <= limit <= 1000 or not 0 <= offset <= 10_000_000:
+            raise PlatformError("Invalid receipt page bounds.")
+        workspace_id = ensure_workspace(self.connection, workspace)
+        args = (workspace_id, customer_id, customer_id, organization_id, organization_id, legal_entity_id, legal_entity_id)
+        count = self.connection.execute("SELECT count(*) AS total FROM ar_receipts WHERE workspace_id=? AND (?='' OR customer_id=?) AND (? IS NULL OR organization_id=?) AND (? IS NULL OR legal_entity_id=?)", args).fetchone()
+        rows = self.connection.execute("SELECT id FROM ar_receipts WHERE workspace_id=? AND (?='' OR customer_id=?) AND (? IS NULL OR organization_id=?) AND (? IS NULL OR legal_entity_id=?) ORDER BY receipt_date,receipt_number,id LIMIT ? OFFSET ?", (*args, limit, offset)).fetchall()
+        return {"receipts": [self.get_receipt(str(row["id"])) for row in rows], "pagination": {"limit": limit, "offset": offset, "total": int(count["total"])}}
 
     def list_customers(self, *, workspace: str = "", status: str = "") -> list[dict[str, Any]]:
         workspace_id = ensure_workspace(self.connection, workspace or "default")
@@ -741,7 +766,9 @@ class SQLiteReceivablesRepository:
             "SELECT COALESCE(SUM(amount_minor), 0) AS allocated FROM ar_receipt_allocations WHERE receipt_id = ?",
             (receipt_id,),
         ).fetchone()
-        receipt = self.connection.execute("SELECT amount_minor FROM ar_receipts WHERE id = ?", (receipt_id,)).fetchone()
+        receipt = self.connection.execute("SELECT amount_minor,organization_id,legal_entity_id FROM ar_receipts WHERE id = ?", (receipt_id,)).fetchone()
+        if receipt is not None and (receipt["organization_id"] != invoice["organization_id"] or receipt["legal_entity_id"] != invoice["legal_entity_id"]):
+            raise PlatformError("Receipt and invoice hierarchy must match.")
         if receipt is None or int(existing_receipt["allocated"]) + allocation.amount_minor > int(
             receipt["amount_minor"]
         ):

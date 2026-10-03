@@ -21,7 +21,7 @@ from reconforge.platform.common import PlatformError
 from reconforge.platform.inventory_values import code
 
 T = TypeVar("T")
-ReceivablesObject = Literal["invoice", "receipt"]
+ReceivablesObject = Literal["customer", "invoice", "receipt"]
 
 
 @dataclass(frozen=True)
@@ -121,6 +121,7 @@ def _validate_object_scope(
     object_id: str,
 ) -> None:
     queries = {
+        "customer": "SELECT workspace_id,organization_id,legal_entity_id FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s",
         "invoice": "SELECT workspace_id,organization_id,legal_entity_id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s",
         "receipt": "SELECT workspace_id,organization_id,legal_entity_id FROM reconforge.ar_receipts WHERE tenant_id=%s AND id=%s",
     }

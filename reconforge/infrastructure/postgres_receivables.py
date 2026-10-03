@@ -16,6 +16,12 @@ from typing import Any
 from reconforge.application.receivables import ReceiptAllocationInput, ReceivableInvoiceLineInput
 from reconforge.auth.rbac import same_actor
 from reconforge.domain.receivables_aging import AgingCurrencyError, build_aging_report
+from reconforge.domain.receivables_receipt_replay import (
+    ReceiptReplayError,
+    receipt_replay_envelope,
+    receipt_replay_response,
+    receipt_request_digest,
+)
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_repository_scope import (
@@ -562,7 +568,7 @@ class PostgresReceivablesRepository:
         if not normalized:
             return None
         row = self.connection.execute(
-            "SELECT response_json FROM reconforge.ar_idempotency_keys WHERE tenant_id=%s AND scope=%s AND idempotency_key=%s",
+            "SELECT response_json::text AS response_json FROM reconforge.ar_idempotency_keys WHERE tenant_id=%s AND scope=%s AND idempotency_key=%s",
             (self.tenant_id, f"{operation}:{workspace_id}", normalized),
         ).fetchone()
         if row is None:
@@ -812,6 +818,8 @@ class PostgresReceivablesRepository:
             candidate["workspace_id"] != receipt["workspace_id"]
             or candidate["customer_id"] != receipt["customer_id"]
             or candidate["currency_code"] != receipt["currency_code"]
+            or candidate["organization_id"] != receipt["organization_id"]
+            or candidate["legal_entity_id"] != receipt["legal_entity_id"]
         ):
             raise PlatformError("Receipt allocation scope, customer, and currency must match the invoice.")
         self.connection.execute(
@@ -828,6 +836,8 @@ class PostgresReceivablesRepository:
             invoice["workspace_id"] != receipt["workspace_id"]
             or invoice["customer_id"] != receipt["customer_id"]
             or invoice["currency_code"] != receipt["currency_code"]
+            or invoice["organization_id"] != receipt["organization_id"]
+            or invoice["legal_entity_id"] != receipt["legal_entity_id"]
         ):
             raise PlatformError("Receipt allocation scope, customer, and currency must match the invoice.")
         if invoice["status"] not in {"Approved", "PartiallyPaid"} or int(invoice["outstanding_minor"]) < amount:
@@ -878,13 +888,24 @@ class PostgresReceivablesRepository:
             raise PlatformError("Receipt allocations must contain each invoice at most once.")
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
-            previous = self._idempotent("receipt", workspace_id, idempotency_key)
-            if previous is not None:
-                return previous
             customer = self._customer_by_code(workspace_id, customer_code, lock=True)
             if customer["currency_code"] != currency:
                 raise PlatformError("Customer receipt currency must match the customer currency.")
             organization_id, entity_id = self._scope_ids(workspace_id, organization_code, entity_code)
+            if (organization_code.strip() and organization_id != customer["organization_id"]) or (entity_code.strip() and entity_id != customer["legal_entity_id"]):
+                raise PlatformError("Receipt scope must match its customer.")
+            organization_id, entity_id = customer["organization_id"], customer["legal_entity_id"]
+            digest = receipt_request_digest(workspace_id=workspace_id, organization_id=organization_id, legal_entity_id=entity_id, customer_id=str(customer["id"]), receipt_number=number, receipt_date=day.isoformat(), currency_code=currency, amount_minor=amount, allocations=normalized, actor_label=_text(actor_label, "Actor label"))
+            previous = self._idempotent("receipt", workspace_id, idempotency_key)
+            if previous is not None:
+                try:
+                    response = receipt_replay_response(previous, digest)
+                except ReceiptReplayError as exc:
+                    raise PlatformError(str(exc)) from exc
+                authoritative = self._receipt(str(response.get("id", "")))
+                if any(authoritative[field] != response.get(field) for field in ("workspace_id", "organization_id", "legal_entity_id", "customer_id")):
+                    raise PlatformError("Receipt replay scope no longer matches the authoritative receipt.")
+                return response
             receipt_id = platform_id("ARRCT", workspace_id, number)
             self.connection.execute(
                 "INSERT INTO reconforge.ar_receipts(tenant_id,id,workspace_id,organization_id,legal_entity_id,customer_id,receipt_number,receipt_date,currency_code,amount_minor,status,created_by,posted_by,posted_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Posted',%s,%s,now())",
@@ -908,7 +929,7 @@ class PostgresReceivablesRepository:
                 self._allocate(receipt, invoice_id, allocation_amount)
                 receipt["allocated_minor"] = int(receipt["allocated_minor"]) + allocation_amount
             result = self._receipt(receipt_id)
-            self._save_idempotency("receipt", workspace_id, idempotency_key, result)
+            self._save_idempotency("receipt", workspace_id, idempotency_key, receipt_replay_envelope(digest, result))
             self._event(
                 actor_label=actor_label,
                 object_type="ar_receipt",
@@ -965,6 +986,18 @@ class PostgresReceivablesRepository:
     def get_receipt(self, receipt_id: str) -> dict[str, Any]:
         with self._transaction():
             return self._receipt(receipt_id)
+
+    def list_receipts(self, *, workspace: str = "default", customer_id: str = "", limit: int = 100, offset: int = 0, organization_id: str | None = None, legal_entity_id: str | None = None) -> dict[str, Any]:
+        if type(limit) is not int or type(offset) is not int or not 1 <= limit <= 1000 or not 0 <= offset <= 10_000_000:
+            raise PlatformError("Invalid receipt page bounds.")
+        with self._transaction():
+            workspace_id = self._workspace_id(workspace, required=False)
+            if workspace_id is None:
+                return {"receipts": [], "pagination": {"limit": limit, "offset": offset, "total": 0}}
+            args = (self.tenant_id, workspace_id, customer_id, customer_id, organization_id, organization_id, legal_entity_id, legal_entity_id)
+            count = self.connection.execute("SELECT count(*) AS total FROM reconforge.ar_receipts WHERE tenant_id=%s AND workspace_id=%s AND (%s='' OR customer_id=%s) AND (%s::text IS NULL OR organization_id=%s) AND (%s::text IS NULL OR legal_entity_id=%s)", args).fetchone()
+            rows = self.connection.execute("SELECT id FROM reconforge.ar_receipts WHERE tenant_id=%s AND workspace_id=%s AND (%s='' OR customer_id=%s) AND (%s::text IS NULL OR organization_id=%s) AND (%s::text IS NULL OR legal_entity_id=%s) ORDER BY receipt_date,receipt_number,id LIMIT %s OFFSET %s", (*args, limit, offset)).fetchall()
+            return {"receipts": [self._receipt(str(row["id"] if isinstance(row, Mapping) else row[0])) for row in rows], "pagination": {"limit": limit, "offset": offset, "total": int(count["total"] if isinstance(count, Mapping) else count[0])}}
 
     def list_customers(self, *, workspace: str = "", status: str = "") -> list[dict[str, Any]]:
         with self._transaction():

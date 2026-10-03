@@ -221,9 +221,16 @@ def test_corrupt_exported_json_refuses_before_output_directory_or_audit_effect(
     database = _seed_export_rows(tmp_path)
     connection = connect(database, require_exists=True)
     try:
+        if table in {"finance_posting_effects", "finance_posting_commands"}:
+            from tests.test_sqlite_finance_posting import _post, _reviewed
+
+            _, _, repository, preview, _, checker = _reviewed(connection)
+            _post(repository, preview, checker)
         trigger_name = {
             "audit_events": "audit_events_no_update",
             "currency_registry_snapshots": "currency_snapshot_update_immutable",
+            "finance_posting_effects": "finance_posting_effect_update_immutable",
+            "finance_posting_commands": "finance_posting_command_update_immutable",
         }.get(table)
         trigger_sql = None
         if trigger_name is not None:

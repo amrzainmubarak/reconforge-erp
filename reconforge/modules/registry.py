@@ -366,14 +366,15 @@ _MODULES = (
         capability_status="foundation",
         summary=(
             "Governed charts, account hierarchy, dimensions, journals, balanced entries, trial-balance controls, "
+            "explicit reviewed Manual posting and full reversals with selected-period net activity, "
             "deterministic multi-entity translation artifacts, non-posting effective-ownership worksheets, and a "
             "governed local consolidation control-journal lifecycle."
         ),
         network_requirement="loopback-optional",
         default_enabled=True,
         dependencies=("platform.core", "platform.master-data"),
-        permissions=("finance_core.manage", "finance_core.read", "finance_core.validate"),
-        migration_versions=(8, 26),
+        permissions=("finance_core.manage", "finance_core.post", "finance_core.read", "finance_core.reverse", "finance_core.validate"),
+        migration_versions=(8, 26, 47, 48),
         domain_events=(
             "accounting_dimension_upserted",
             "accounting_dimension_value_upserted",
@@ -383,6 +384,8 @@ _MODULES = (
             "ledger_entry_draft_saved",
             "ledger_entry_validated",
             "ledger_entry_voided",
+            "finance_entry_posted",
+            "finance_reversal_prepared",
             "consolidation_period_created",
             "consolidation_period_locked",
             "consolidation_period_reopened",
@@ -404,6 +407,7 @@ _MODULES = (
             "consolidation-impairment-bridge.v1",
             "finance-core-snapshot.v1",
             "ledger-control-trial-balance.v1",
+            "finance-posting-api-v1",
         ),
         data_classification=(
             "consolidation-financial-control-data",
@@ -412,11 +416,10 @@ _MODULES = (
         ),
         retention_note="Records remain in the operator-selected local SQLite database and controlled local exports.",
         activation_note=(
-            "Requires migrations 7-8 for the local ledger and 25-26 for the optional consolidation lifecycle. "
-            "Translation and worksheet artifacts remain non-posting. Migration 25 persists only verified "
-            "worksheets and exact balanced control-journal effects through maker-checker, posting, reversal, and "
-            "period locks. It has a local SQLite/library boundary only and never mutates Finance Core entries, "
-            "legal books, or a source ERP."
+            "Migrations 7-8 define the ledger; 47-48 retain money policy and independently reviewed Manual postings. "
+            "Password-bound local commands or scoped PostgreSQL routes require explicit posting. Balance reports "
+            "include selected-period net activity only. Optional migrations 25-26 retain balanced consolidation "
+            "control effects; translation/worksheet artifacts remain non-posting and do not mutate source ERP books."
         ),
         test_evidence=(
             "tests/test_consolidation_lifecycle.py",
@@ -427,6 +430,14 @@ _MODULES = (
             "tests/test_consolidation_impairment.py",
             "tests/test_consolidation_statement.py",
             "tests/test_finance_core.py",
+            "tests/test_finance_posting_domain.py",
+            "tests/test_finance_posting_api_contract.py",
+            "tests/test_finance_posting_cli.py",
+            "tests/test_sqlite_finance_posting.py",
+            "tests/test_postgres_finance_posting.py",
+            "tests/test_postgres_finance_posting_concurrency.py",
+            "tests/test_postgres_finance_posting_api.py",
+            "tests/test_postgres_finance_posting_restore.py",
             "tests/test_sqlite_consolidation_close.py",
             "tests/test_postgres_consolidation_ppa.py",
             "tests/test_postgres_consolidation_ppa_runtime.py",

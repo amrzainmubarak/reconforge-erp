@@ -9,7 +9,7 @@ const identity = { id: "maker-id", username: "maker", permissions: ["receivables
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 function SessionControls() {
   const auth = useBrowserSession();
-  return <><button onClick={() => auth.begin({ tenantId: "tenant-a", csrfToken: "proof-a", expiresAt: new Date(Date.now() + 60_000).toISOString() }, "maker", auth.revision)}>Session A</button><button onClick={() => auth.begin({ tenantId: "tenant-b", csrfToken: "proof-b", expiresAt: new Date(Date.now() + 60_000).toISOString() }, "checker", auth.revision)}>Session B</button></>;
+  return <><button onClick={() => auth.begin({ tenantId: "tenant-a", csrfToken: "proof-a", expiresAt: new Date(Date.now() + 60_000).toISOString() }, "maker", auth.revision)}>Session A</button><button onClick={() => auth.begin({ tenantId: "tenant-b", csrfToken: "proof-b", expiresAt: new Date(Date.now() + 60_000).toISOString() }, "checker", auth.revision)}>Session B</button><button onClick={() => auth.elevate(new Date(Date.now() + 30_000).toISOString(), auth.revision)}>Elevate test session</button></>;
 }
 function setup(fetcher: typeof fetch, locale: Locale = "en") {
   vi.stubGlobal("fetch", fetcher);
@@ -99,6 +99,48 @@ test("ordinary validation rejection retains draft input without inventing succes
   expect(screen.getByLabelText("Invoice number")).toHaveValue("INV-1");
   expect(screen.getByLabelText("Invoice number")).not.toBeDisabled();
   expect(screen.queryByText(/server confirmed/)).not.toBeInTheDocument();
+});
+
+test("reviewing an existing invoice collapses the new invoice form without losing an unsaved draft", async () => {
+  setup(vi.fn(async (path: RequestInfo | URL) => String(path).includes("/invoices?") ? response({ invoices: [invoice], pagination: { total: 1 } }) : routes(path)));
+  await enterWorkspace(); fillDraft();
+  const summary = screen.getByText("New invoice");
+  expect(summary.closest("details")).toHaveAttribute("open");
+  fireEvent.click(screen.getByRole("button", { name: "Review INV-1" }));
+  await waitFor(() => expect(summary.closest("details")).not.toHaveAttribute("open"));
+  expect(screen.getByLabelText("Invoice number")).not.toBeVisible();
+  fireEvent.click(summary);
+  await waitFor(() => expect(screen.getByLabelText("Invoice number")).toBeVisible());
+  expect(screen.getByLabelText("Invoice number")).toHaveValue("INV-1");
+});
+
+test("an unknown cash request survives parent refresh and invoice creation controls", async () => {
+  const approved = { ...invoice, status: "Approved", row_version: 3, approved_by: "checker" };
+  const fetcher = vi.fn(async (path: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(path);
+    if (options?.method === "POST") throw new TypeError("Receipt outcome unknown");
+    if (url.includes("/invoices?")) return response({ invoices: [approved], pagination: { total: 1 } });
+    if (url.includes("/invoices/")) return response(approved);
+    if (url.includes("/customers/")) return response(customer);
+    if (url.includes("/receipts?")) return response({ receipts: [], pagination: { total: 0 } });
+    if (url.includes("/credit-exposure/")) return response({ customer_id: customer.id, currency_code: "USD", exposure_minor: 1376 });
+    return routes(path);
+  });
+  setup(fetcher); fireEvent.click(screen.getByText("Session A")); fireEvent.click(screen.getByText("Elevate test session"));
+  fireEvent.change(await screen.findByLabelText("Authorized workspace"), { target: { value: "workspace-a" } });
+  fireEvent.click(await screen.findByRole("button", { name: "Review INV-1" }));
+  const cash = within(screen.getByRole("region", { name: "Cash receipts and allocations" }));
+  await cash.findByLabelText("Receipt number");
+  for (const [label, value] of Object.entries({ "Receipt number": "RCPT-UNKNOWN", "Receipt date": "2026-10-03", "Received amount · minor units": "1000", "Apply now to this invoice · minor units": "400" })) fireEvent.change(cash.getByLabelText(label), { target: { value } });
+  fireEvent.click(cash.getByRole("button", { name: "Review cash action" })); fireEvent.click(cash.getByRole("button", { name: "Confirm financial action" }));
+  await cash.findByRole("button", { name: "Retry the exact request" });
+  expect(screen.getByRole("button", { name: "Refresh records" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Review INV-1" })).toBeDisabled();
+  fireEvent.click(screen.getByText("New invoice"));
+  expect(screen.getByLabelText("Invoice number")).toBeDisabled();
+  expect(await screen.findByRole("button", { name: "Save draft" })).toBeDisabled();
+  expect(cash.getByRole("button", { name: "Retry the exact request" })).toBeVisible();
+  expect(fetcher.mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(1);
 });
 
 test("workspace switch discards drafts and late mutation success", async () => {

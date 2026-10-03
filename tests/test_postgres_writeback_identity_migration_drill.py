@@ -12,7 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_identity_migration_drill.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0097_2026-10-03.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0098_2026-10-03.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration.py"
 
 
@@ -25,7 +25,7 @@ def _load_runner() -> ModuleType:
     return module
 
 
-@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03", "0094_2026-10-03", "CLEANUP_2026-10-03", "0094_CLEANUP_2026-10-03", "0095_2026-10-03", "0096_2026-10-03", "0097_2026-10-03"])
+@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03", "0094_2026-10-03", "CLEANUP_2026-10-03", "0094_CLEANUP_2026-10-03", "0095_2026-10-03", "0096_2026-10-03", "0097_2026-10-03", "0098_2026-10-03"])
 def test_retained_writeback_identity_migration_drill_is_closed_and_digest_bound(report_date: str) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     report = json.loads((ROOT / f"docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_{report_date}.json").read_text(encoding="utf-8"))
@@ -68,6 +68,7 @@ def test_drill_runner_and_retained_report_bind_the_same_runtime_contract() -> No
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0095_2026-10-03.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0096_2026-10-03.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0097_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0098_2026-10-03.json",
         "include docs/schemas/postgres_writeback_identity_migration_drill.schema.json",
         "include tests/test_postgres_writeback_identity_migration_drill.py",
     } <= manifest

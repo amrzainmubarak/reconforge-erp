@@ -55,6 +55,7 @@ from reconforge.api.routes import (
     evidence,
     exceptions,
     finance_core,
+    finance_posting,
     health,
     identity_administration,
     individual_cashflow,
@@ -406,6 +407,7 @@ def create_api_app(
     app.include_router(receivables.router, prefix="/api/v1")
     app.include_router(master_data.router, prefix="/api/v1")
     app.include_router(finance_core.router, prefix="/api/v1")
+    app.include_router(finance_posting.router, prefix="/api/v1")
     app.include_router(inventory_core.router, prefix="/api/v1")
     app.include_router(inventory_planning.router, prefix="/api/v1")
     app.include_router(inventory_valuation.router, prefix="/api/v1")
@@ -453,6 +455,7 @@ def create_api_app(
         receivables.router,
         master_data.router,
         finance_core.router,
+        finance_posting.router,
         inventory_core.router,
         inventory_planning.router,
         inventory_valuation.router,

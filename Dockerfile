@@ -7,10 +7,10 @@ FROM python:3.12-alpine@sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa
 # fetch the reviewed APK artifacts by URL and checksum. The repository index
 # can lag a fixed security package; an unverified or unavailable artifact must
 # fail the build closed.
-ADD --checksum=sha256:161223a16f042b8e469e9441291e071464fd91d4f4bbe6f496ee8d0abd4e0701 \
-    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcrypto3-3.5.8-r0.apk /tmp/libcrypto3.apk
-ADD --checksum=sha256:aca521e5ae4a321322a9d47ed64a1775f5ab1ffd215d1e9fc0433c58f7bfd037 \
-    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.8-r0.apk /tmp/libssl3.apk
+ADD --checksum=sha256:6632d758d8f5e9ea3b650fe966f23bbf9a202f8b8dceecac93da135dec5e3689 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcrypto3-3.5.9-r0.apk /tmp/libcrypto3.apk
+ADD --checksum=sha256:05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7ad01877 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.9-r0.apk /tmp/libssl3.apk
 RUN apk add --no-cache --upgrade \
     /tmp/libcrypto3.apk \
     /tmp/libssl3.apk \
@@ -45,10 +45,10 @@ FROM python:3.12-alpine@sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa
 # The official index can lag an Alpine security fix. Install only the
 # checksum-bound, reviewed OpenSSL runtime APKs so the final image contains
 # the fixed packages without adding the OpenSSL CLI to the trimmed runtime.
-ADD --checksum=sha256:161223a16f042b8e469e9441291e071464fd91d4f4bbe6f496ee8d0abd4e0701 \
-    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcrypto3-3.5.8-r0.apk /tmp/libcrypto3.apk
-ADD --checksum=sha256:aca521e5ae4a321322a9d47ed64a1775f5ab1ffd215d1e9fc0433c58f7bfd037 \
-    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.8-r0.apk /tmp/libssl3.apk
+ADD --checksum=sha256:6632d758d8f5e9ea3b650fe966f23bbf9a202f8b8dceecac93da135dec5e3689 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcrypto3-3.5.9-r0.apk /tmp/libcrypto3.apk
+ADD --checksum=sha256:05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7ad01877 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.9-r0.apk /tmp/libssl3.apk
 RUN apk add --no-cache --upgrade \
     /tmp/libcrypto3.apk \
     /tmp/libssl3.apk \

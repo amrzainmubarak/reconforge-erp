@@ -1,0 +1,235 @@
+{
+  "schema_version": "posting-cash-source-digest-findings-v1",
+  "observed_at": "2026-10-03",
+  "status": "verified-source-checksum-false-positives",
+  "source_commit": "43bafc9d1b99d8bf6ac50d34841b515484194f7b",
+  "source_branch": "codex/reviewed-posting-and-cash",
+  "scope": "Local managed PR112 checkout with the exact .gitleaksignore patch; not remote CI or whole-repository acceptance.",
+  "remote_failure": {
+    "run_id": "37113402235",
+    "job_id": "111175490703",
+    "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37113402235/job/111175490703"
+  },
+  "tool": {
+    "name": "gitleaks",
+    "version": "8.30.1",
+    "executable_sha256": "17157e2ee8b76fc8b1d8bee607a250e34b8a8023c8bc81822d4b5ee4d78fcb7c",
+    "new_download": false
+  },
+  "classification": {
+    "all_seven": "literal source-file SHA-256 metadata, not credentials",
+    "exact_source_git_blob_matches": 7,
+    "line_ending_normalization": false,
+    "current_tracked_source_blobs_identical": true,
+    "current_report_literals_identical": true,
+    "method": "Read each report at its finding Commit and StartLine; require a literal 64-character lowercase hex JSON member; SHA-256 the referenced source bytes from git show Commit:source_file and require exact equality."
+  },
+  "findings": [
+    {
+      "Fingerprint": "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/RECEIVABLES_CASH_2026-10-03.json:generic-api-key:13",
+      "Commit": "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35",
+      "File": "docs/execution/RECEIVABLES_CASH_2026-10-03.json",
+      "StartLine": 13,
+      "RuleID": "generic-api-key",
+      "source_file": "apps/web/src/components/AdminAccessMutations.tsx",
+      "source_blob_oid": "8e114018f4ab2d0b640d67a6443f0bae8e4f623e",
+      "source_blob_sha256": "22e9a2b33bd60a5a831a951ab4ad9e77fe0c4480929a4c98b311219ceeb63f45",
+      "source_blob_bytes": 9530
+    },
+    {
+      "Fingerprint": "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:28",
+      "Commit": "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35",
+      "File": "docs/execution/FINANCE_POSTING_2026-10-03.json",
+      "StartLine": 28,
+      "RuleID": "generic-api-key",
+      "source_file": "tests/test_finance_posting_api_contract.py",
+      "source_blob_oid": "7706d3a3cfc0ccc60e9c5e3da87685c8619fc66a",
+      "source_blob_sha256": "911b0b52ae5be411a16b5da7e7a0868bde8ac9671b7da3dbec23f6845186d7b0",
+      "source_blob_bytes": 6618
+    },
+    {
+      "Fingerprint": "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:33",
+      "Commit": "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35",
+      "File": "docs/execution/FINANCE_POSTING_2026-10-03.json",
+      "StartLine": 33,
+      "RuleID": "generic-api-key",
+      "source_file": "tests/test_postgres_finance_posting_api.py",
+      "source_blob_oid": "7026fceb4e0c092f8e86de05363bde3d01d3b6a3",
+      "source_blob_sha256": "c1ea9250da3fe8dd869bb09247cb224bf94241fc5d64023cce38da03ba75a1a7",
+      "source_blob_bytes": 11786
+    },
+    {
+      "Fingerprint": "f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:354",
+      "Commit": "f615f8a8073237613d419abedf09eb0eda823564",
+      "File": "docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json",
+      "StartLine": 354,
+      "RuleID": "generic-api-key",
+      "source_file": "alembic/versions/0036_postgres_scim_auth.py",
+      "source_blob_oid": "f3ed44abbbd01b1ccd5f139642a3fd7db8646c4c",
+      "source_blob_sha256": "7a7ca0f382132319e8dc04847ac6ffec6f370b06acfbe9139443c3d88a68f6d9",
+      "source_blob_bytes": 435
+    },
+    {
+      "Fingerprint": "f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:357",
+      "Commit": "f615f8a8073237613d419abedf09eb0eda823564",
+      "File": "docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json",
+      "StartLine": 357,
+      "RuleID": "generic-api-key",
+      "source_file": "alembic/versions/0039_postgres_emergency_access.py",
+      "source_blob_oid": "4c270ef84e7ac87d69a35f9cde8aa07b8a26b827",
+      "source_blob_sha256": "9c73e56d333a815e26192c39eebc02f3bb63521d06e0aba866360cd0387fe7e9",
+      "source_blob_bytes": 1006
+    },
+    {
+      "Fingerprint": "f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:358",
+      "Commit": "f615f8a8073237613d419abedf09eb0eda823564",
+      "File": "docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json",
+      "StartLine": 358,
+      "RuleID": "generic-api-key",
+      "source_file": "alembic/versions/0040_postgres_webauthn_mfa.py",
+      "source_blob_oid": "8d935bb8826b9430424416953109a409cb95930e",
+      "source_blob_sha256": "c9dd108003fb4aff11f2794c299a996ab72e8ecf1787c71a86d77d7cb1a1cc94",
+      "source_blob_bytes": 3111
+    },
+    {
+      "Fingerprint": "f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:369",
+      "Commit": "f615f8a8073237613d419abedf09eb0eda823564",
+      "File": "docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json",
+      "StartLine": 369,
+      "RuleID": "generic-api-key",
+      "source_file": "alembic/versions/0051_access_policy_lifecycle.py",
+      "source_blob_oid": "6887549207fa7d90cb70765cb56487842231c416",
+      "source_blob_sha256": "04049fb9e69b8b2442876422b0129d3c8c24f4933bd2a23715832446f0c999d8",
+      "source_blob_bytes": 7854
+    }
+  ],
+  "new_exact_fingerprint_union": [
+    "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:28",
+    "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:33",
+    "d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/RECEIVABLES_CASH_2026-10-03.json:generic-api-key:13",
+    "docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:28",
+    "docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:33",
+    "docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:354",
+    "docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:357",
+    "docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:358",
+    "docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:369",
+    "docs/execution/RECEIVABLES_CASH_2026-10-03.json:generic-api-key:13",
+    "f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:354",
+    "f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:357",
+    "f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:358",
+    "f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:369"
+  ],
+  "ignore_patch": {
+    "path": ".gitleaksignore",
+    "before_sha256": "66d132d6202ca728614bfeed559db7db5fae65c82da80d35e81d9c2bf5068f18",
+    "after_sha256": "d7008581e0d8d71301b407e34b926da92401661c6d5c8b4aa3cbc73983dccfe0",
+    "added_history_fingerprints": 7,
+    "added_current_tree_fingerprints": 7,
+    "previous_entries_preserved": true,
+    "broad_path_or_rule_exclusions_added": false
+  },
+  "before": {
+    "history_findings": 7,
+    "current_tree_findings": 7,
+    "history_exit_code": 1,
+    "current_tree_exit_code": 1
+  },
+  "after": {
+    "history_findings": 0,
+    "current_tree_findings": 0,
+    "checked_sources_unchanged": true,
+    "head_unchanged": true,
+    "diff_check_exit_code": 0
+  },
+  "scan_commands": [
+    {
+      "name": "gitleaks-history",
+      "command": [
+        "F:/reconforge-erp/.tmp/gitleaks-8.30.1/gitleaks.exe",
+        "git",
+        "--log-opts=--all",
+        "--config",
+        ".gitleaks.toml",
+        "--redact=100",
+        "--no-banner",
+        "--no-color",
+        "--timeout",
+        "120",
+        "--report-format",
+        "json",
+        "--report-path",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\ci-triage\\pr112-gitleaks-history-after-redacted.json",
+        "."
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 10.891
+    },
+    {
+      "name": "gitleaks-tree",
+      "command": [
+        "F:/reconforge-erp/.tmp/gitleaks-8.30.1/gitleaks.exe",
+        "dir",
+        "--config",
+        ".gitleaks.toml",
+        "--redact=100",
+        "--no-banner",
+        "--no-color",
+        "--timeout",
+        "120",
+        "--report-format",
+        "json",
+        "--report-path",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\ci-triage\\pr112-gitleaks-tree-after-redacted.json",
+        "."
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 3.282
+    }
+  ],
+  "policy_test_gate": {
+    "python_version": "Python 3.12.13",
+    "cwd": "C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp",
+    "pythonpath": "C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp",
+    "command": [
+      "F:/reconforge-erp/.venv-verify-20261003/Scripts/python.exe",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/test_supply_chain_policy.py",
+      "tests/test_current_supply_chain_claims.py",
+      "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\ci-triage\\pr112-gitleaks-policy-after.xml"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 14.938,
+    "passed": 35,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "local_artifact_directory": "F:/reconforge-erp/output/verification-2026-10-03/ci-triage",
+  "artifact_sha256": {
+    "pr112-gitleaks-history-before-redacted.json": "fe841ae687466839817006a10a54306e1a728814d2373678b9384b2b2e48d32f",
+    "pr112-gitleaks-history-before-redacted.log": "1b25dd48949ddd9eeee5008e18dab007449fff75b6d6648f7072316622474fef",
+    "pr112-gitleaks-tree-before-redacted.json": "46c35ed4bb401a732463035970254bcb98d258c22282662158940180cae7f7db",
+    "pr112-gitleaks-tree-before-redacted.log": "e24d86c75e51fae503554a981c895802cced15d0fc5b66e7b20d84b819ce2bce",
+    "pr112-gitleaks-history-after-redacted.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "pr112-gitleaks-history-after.log": "ebd6be5e2789bb8acbc8a7da7fdb6ad8b14d66133884038957ab201cbaa90c0b",
+    "pr112-gitleaks-tree-after-redacted.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "pr112-gitleaks-tree-after.log": "c12b089b99bb9b0c61723346b38cdd8560af947d8f1238479a99549cb1579d5d",
+    "pr112-gitleaks-policy-after.xml": "0b5ba9be33399d4bfc2a7f0c07a2d4d25d0753dc2c0ac6d26f162249ec930609",
+    "pr112-gitleaks-policy-after.log": "f784d91362c0bfcb642f7917353fa043b3ad1079a3c7f7c342048066ba34c5f1",
+    "pr112-gitleaks-source-review.json": "5422b547a86b14f6e53c5a4f0bffdc777f5e4841fff6c9db649f60a03102df87",
+    "pr112-gitleaks-acceptance.json": "cc2e16b0e2e071f390eb9035c8f0d6e00b60c2ef9616f859afec4742231b818a"
+  },
+  "retained_failed_full_regression": {
+    "path": "docs/execution/POSTING_CASH_REGRESSION_D4_2026-10-03.json",
+    "sha256": "c3262c32d010c235a9cfa0850901a9032dddcc3a15e8c9101c22c3c000a9030f",
+    "status": "failed",
+    "unchanged": true
+  },
+  "limits": [
+    "The historical d4 run remains 3829 passed, 309 skipped and 2 inventory failures.",
+    "This checkpoint verifies seven exact secret-scanner false positives and 35 policy tests only.",
+    "A fresh clean immutable full regression and global quality/build run are required after this documentation and ignore patch is committed."
+  ]
+}

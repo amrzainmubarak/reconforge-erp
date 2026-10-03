@@ -1,5 +1,13 @@
 ﻿# ReconForge Execution Evidence Log
 
+PR112's [source-checksum review](POSTING_CASH_SOURCE_DIGEST_FINDINGS_2026-10-03.json)
+binds seven exact Git-blob SHA-256 matches, fourteen narrow fingerprints and
+before/after artifact hashes at `43bafc9d`. Local Gitleaks 8.30.1 full-history
+and current-tree scans report zero findings in 10.891s and 3.282s; 35 policy tests
+pass with no skips in 14.938s process time. Checked sources and HEAD are stable.
+The prior d4 full-regression failure report is unchanged. These local checks do
+not establish a successful remote rerun or replace the pending clean full gate.
+
 ## Financial integrity and open-source workload increments (2026-10-03)
 
 - Exact trade arithmetic: [frozen evidence](EXACT_TRADE_PRIMITIVES_2026-10-03.json)

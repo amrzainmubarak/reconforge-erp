@@ -835,6 +835,12 @@ class PostgresInventoryValuationRepository:
                 raise PlatformError("Segregation of duties prevents approving your own inventory valuation.")
             movement = self._movement(str(document["movement_id"]))
             policy = self._policy(str(document["policy_id"]))
+            period = self.connection.execute(
+                "SELECT status FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s FOR SHARE",
+                (self.tenant_id, document["period_id"]),
+            ).fetchone()
+            if period is None or period["status"] != "Open":
+                raise PlatformError("Valuation approval requires an Open period.")
             if movement["status"] != "Posted" or movement["period_status"] != "Open":
                 raise PlatformError("Valuation approval requires a Posted movement in an Open period.")
             if (
@@ -863,6 +869,14 @@ class PostgresInventoryValuationRepository:
                 raise PlatformError(
                     "Valuation approval cannot generate a Finance Draft while required dimensions are configured."
                 )
+            # Serialize chronology and inbound creation with the same legacy FIFO
+            # keys used by outbound allocation and reviewed source posting.
+            fifo_keys = {
+                f"{document['legal_entity_id']}|{line['item_id']}|{line['inventory_lot_id'] or ''}"
+                for line in self._movement_lines(str(movement["id"]))
+            }
+            for lock_key in sorted(fifo_keys):
+                self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (lock_key,))
             earlier_sql = (
                 """SELECT e.movement_number FROM reconforge.inventory_movements c JOIN reconforge.inventory_movements e ON e.tenant_id=c.tenant_id AND e.workspace_id=c.workspace_id AND e.organization_id=c.organization_id AND e.legal_entity_id=c.legal_entity_id AND e.status='Posted' AND e.movement_type<>'Transfer' AND (e.movement_date<c.movement_date OR (e.movement_date=c.movement_date AND e.movement_number<c.movement_number)) WHERE c.tenant_id=%s AND c.id=%s AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents d WHERE d.tenant_id=e.tenant_id AND d.movement_id=e.id AND d.status='Approved') AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_reversals r WHERE r.tenant_id=e.tenant_id AND r.reversal_movement_id=e.id AND r.status='Approved') ORDER BY e.movement_date,e.movement_number LIMIT 1"""
                 if self._reversal_schema_available()

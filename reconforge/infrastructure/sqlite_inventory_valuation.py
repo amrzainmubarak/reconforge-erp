@@ -221,6 +221,8 @@ class SQLiteInventoryValuationRepositoryAdapter:
             self.repository.movement(clean_text(movement_id, "Movement ID")),
             "Inventory movement not found.",
         )
+        if str(movement["id"]).upper().startswith("IRP1-"):
+            raise PlatformError("Reviewed Inventory movements require their complete source valuation.")
         if str(movement["status"]) != "Posted":
             raise PlatformError("Only Posted inventory movements can be prepared for valuation.")
         if str(movement["movement_type"]) == "Transfer":

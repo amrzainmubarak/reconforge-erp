@@ -1,0 +1,268 @@
+version: "2026-08-25"
+purpose: >
+  Convert the remaining open expert-evaluation slices into issue-ready tasks
+  for execution planning and daily readiness reporting.
+scope:
+  objective: "المستودع قيمه تقييم خبراء واي اللي ناقص علشان يتم انهاءه باعلي معايير عالمية بروفيشنال"
+  source_docs:
+    - docs/execution/GLOBAL_PROFESSIONAL_EXECUTION_DASHBOARD.md
+    - docs/execution/EXPERT_GLOBAL_PROFESSIONAL_EXECUTION_MATRIX_WITH_OWNER_2026-08-25.md
+    - docs/execution/EXPERT_GLOBAL_PROFESSIONAL_14_DAY_CRITICAL_EXECUTION_PACK_2026-08-25.md
+    - docs/execution/GLOBAL_PROFESSIONAL_EXECUTION_CHECKLIST.md
+    - docs/execution/GLOBAL_PROFESSIONAL_PRE_MERGE_GATE.md
+    - docs/execution/CLAIMS_EVIDENCE_MATRIX.md
+    - docs/execution/STATE.md
+    - docs/execution/BACKLOG.yaml
+
+slices:
+  - id: "E-824"
+    title: "Security blocker: resolve exact-image CVE-2026-14456"
+    priority: "P0"
+    status: "blocked"
+    owner: "Container/Release"
+    due_window: "اليوم 1"
+    evidence_refs:
+      - "docs/execution/DEPENDENCY_RISK.md"
+      - "docs/execution/BASELINE.md"
+      - "docs/execution/SECURITY_BASELINE.md"
+    required_checks:
+      - "Rebuild exact image using OpenSSL 3.5.8+ or equivalent governed disposition"
+      - "Re-run SBOM/VEX + license + dependency scan path"
+      - "No High/Critical CVE in release image gate"
+    exit_criterion: "Backlog entry E-824 = completed"
+
+  - id: "E-1000"
+    title: "Finalize Global Expansion track and global claims boundary"
+    priority: "P0"
+    status: "in_progress"
+    owner: "Product/Architecture"
+    due_window: "الأيام 3-4"
+    evidence_refs:
+      - "docs/adr/0531-global-expansion-program-framework.md"
+      - "docs/execution/CLAIMS_EVIDENCE_MATRIX.md"
+      - "docs/execution/STATE.md"
+      - "docs/execution/BACKLOG.yaml"
+    required_checks:
+      - "Define bounded vs global claim boundary per slice"
+      - "Remove unsupported production language from claims"
+      - "Document completion and dependencies in state/backlog"
+    exit_criterion: "Global expansion claims have bounded wording or full evidence"
+
+  - id: "E-1001"
+    title: "Finalize global execution slice orchestration"
+    priority: "P0"
+    status: "in_progress"
+    owner: "Architecture"
+    due_window: "الأيام 3-4"
+    evidence_refs:
+      - "docs/execution/BACKLOG.yaml"
+      - "docs/execution/STATE.md"
+      - "docs/execution/GAP_MATRIX.md"
+    required_checks:
+      - "Close dependent slices for integrity/matching/connectors/identity/deployment"
+      - "Update dependencies map and avoid drift"
+      - "No claim boundary conflict after closure"
+    exit_criterion: "E-1001 moved to completed with declared dependency closure"
+
+  - id: "E-1002"
+    title: "Complete close/consolidation lifecycle evidence"
+    priority: "P0"
+    status: "in_progress"
+    owner: "Finance Platform"
+    due_window: "الأيام 5"
+    evidence_refs:
+      - "docs/execution/GAP_MATRIX.md"
+      - "docs/execution/BACKLOG.yaml"
+      - "docs/execution/EVIDENCE.md"
+    required_checks:
+      - "Lock/reopen/rollback/restore workflows proven"
+      - "Replay + immutable closure evidence"
+      - "No partial close state leaks"
+    exit_criterion: "Close lifecycle conditions met; related P4-FIN-002 dependency evidence advanced"
+
+  - id: "E-1003"
+    title: "Finish deterministic matching parity and ambiguity policy"
+    priority: "P0"
+    status: "in_progress"
+    owner: "Matching"
+    due_window: "الأيام 6"
+    evidence_refs:
+      - "docs/execution/CLAIMS_EVIDENCE_MATRIX.md"
+      - "docs/execution/STATE.md"
+    required_checks:
+      - "Cross-engine and cross-host determinism proof"
+      - "Reproducibility/permutation tests documented"
+      - "Clear ambiguity/unresolved policy and tie-breaker rules"
+    exit_criterion: "No production-ready matching claim without full parity evidence"
+
+  - id: "E-1004"
+    title: "Governed write-back with replayable compensation"
+    priority: "P0"
+    status: "in_progress"
+    owner: "Connectors/Security"
+    due_window: "الأيام 7"
+    evidence_refs:
+      - "docs/execution/GAP_MATRIX.md"
+      - "docs/execution/BACKLOG.yaml"
+    required_checks:
+      - "Read/write boundary enforced"
+      - "Compensation proof for write actions"
+      - "Transport/provider hardening applied"
+    exit_criterion: "Write-back claim remains false until all conformance items validated"
+
+  - id: "E-1005"
+    title: "Expand enterprise governance primitives (RBAC/ABAC/SoD)"
+    priority: "P0"
+    status: "in_progress"
+    owner: "IAM/Governance"
+    due_window: "الأيام 6"
+    evidence_refs:
+      - "docs/execution/STATE.md"
+      - "docs/execution/EVIDENCE.md"
+      - "docs/execution/GAP_MATRIX.md"
+    required_checks:
+      - "Self-approval path blocked/flagged"
+      - "Actor conflict checks for sensitive routes"
+      - "Audit/evidence linkage for high-risk actions"
+    exit_criterion: "No high-risk route remains without policy + evidence path"
+
+  - id: "E-884"
+    title: "Python base migration (3.12) and rollback evidence"
+    priority: "P1"
+    status: "planned"
+    owner: "Platform/Release"
+    due_window: "الأيام 2"
+    evidence_refs:
+      - "docs/execution/QUALITY_BASELINE.md"
+      - "docs/execution/SECURITY_BASELINE.md"
+      - "docs/execution/BASELINE.md"
+    required_checks:
+      - "Container and runtime builds pass with new base"
+      - "Rollback/rollback tests documented"
+      - "Dependency/security checks repeated"
+    exit_criterion: "Backlog entry E-884 completed"
+
+  - id: "E-1006"
+    title: "Mode-specific deployment-readiness evidence"
+    priority: "P1"
+    status: "in_progress"
+    owner: "Deployment"
+    due_window: "الأيام 8"
+    evidence_refs:
+      - "docs/execution/DEPLOYMENT_READINESS_MATRIX.v1.yaml"
+      - "docs/execution/STATE.md"
+      - "docs/execution/BACKLOG.yaml"
+    required_checks:
+      - "Community/team/enterprise/regulated proof matrices updated"
+      - "Mode-specific rollback manifest and runbook evidence"
+      - "No silent partial deployment in unverified mode"
+    exit_criterion: "All required deployment modes verified/scoped in readiness matrix"
+
+  - id: "E-1007"
+    title: "Fail-closed edition profile contract"
+    priority: "P1"
+    status: "in_progress"
+    owner: "Deployment/Security"
+    due_window: "الأيام 8-9"
+    evidence_refs:
+      - "docs/execution/STATE.md"
+      - "docs/execution/BACKLOG.yaml"
+    required_checks:
+      - "Profile validation guard prevents incomplete edition launch"
+      - "Edition claim digest enforcement"
+      - "Verified fail path and remediation path"
+    exit_criterion: "Incomplete edition profiles are not loadable"
+
+  - id: "P4-FIN-002"
+    title: "Governed close and consolidation lifecycle completion"
+    priority: "P4"
+    status: "in_progress"
+    owner: "Finance Platform"
+    due_window: "الأيام 11-14"
+    evidence_refs:
+      - "docs/execution/GAP_MATRIX.md"
+      - "docs/execution/STATE.md"
+      - "docs/execution/BACKLOG.yaml"
+    required_checks:
+      - "Statutory/legal/equity/intercompany boundaries covered"
+      - "Migration/rollback restore tests"
+      - "No unsupported production close claims"
+    exit_criterion: "All P4-FIN-002 bounded contexts either completed or explicitly deferred"
+
+  - id: "P4-CON-001"
+    title: "Live connector and write-back conformance"
+    priority: "P4"
+    status: "in_progress"
+    owner: "Connectors"
+    due_window: "الأيام 9-14"
+    evidence_refs:
+      - "docs/execution/GAP_MATRIX.md"
+      - "docs/execution/BACKLOG.yaml"
+      - "docs/execution/STATE.md"
+    required_checks:
+      - "Idempotency + cursor consistency tests"
+      - "Retry/backoff + recovery behavior validated"
+      - "Audit trail + compensation for connector write paths"
+    exit_criterion: "No live connector claim without conformance bundle"
+
+  - id: "P4-SCL-001"
+    title: "Scale, queue fairness, and durable durable-job behavior"
+    priority: "P4"
+    status: "in_progress"
+    owner: "Operations/Backend"
+    due_window: "الأيام 11-14"
+    evidence_refs:
+      - "docs/execution/STATE.md"
+      - "docs/execution/BACKLOG.yaml"
+    required_checks:
+      - "Soak/throughput benchmarks and repeatability evidence"
+      - "No duplicate effects and bounded retries"
+      - "Cancellation and backpressure behavior documented"
+    exit_criterion: "Published scale/ops evidence aligns with claimed deployment size"
+
+  - id: "P4-REL-001"
+    title: "HA/DR evidence and recovery runbooks"
+    priority: "P4"
+    status: "in_progress"
+    owner: "SRE/Infra"
+    due_window: "الأيام 11-14"
+    evidence_refs:
+      - "docs/execution/STATE.md"
+      - "docs/execution/BACKLOG.yaml"
+      - "docs/execution/GAP_MATRIX.md"
+    required_checks:
+      - "RPO/RTO repeatability drills"
+      - "site-loss and failover rehearsal evidence"
+      - "Recovery runbook updates"
+    exit_criterion: "No HA/DR production claim without cross-failure-domain rehearsal"
+
+  - id: "P4-IAM-001"
+    title: "Enterprise policy administration and exception governance"
+    priority: "P4"
+    status: "in_progress"
+    owner: "IAM/Platform"
+    due_window: "الأيام 11-14"
+    evidence_refs:
+      - "docs/execution/STATE.md"
+      - "docs/execution/BACKLOG.yaml"
+    required_checks:
+      - "Delegation and emergency workflows are controlled and logged"
+      - "Policy exceptions fully traced"
+      - "No self-approval / overbroad grant path"
+    exit_criterion: "Policy admin and emergency/evidence traces are complete and auditable"
+
+  - id: "P4-PLAT-001"
+    title: "Modular platform breadth and manifest closure"
+    priority: "P4"
+    status: "in_progress"
+    owner: "Platform Engineering"
+    due_window: "الأيام 11-14"
+    evidence_refs:
+      - "docs/execution/GAP_MATRIX.md"
+      - "docs/execution/BACKLOG.yaml"
+      - "docs/execution/STATE.md"
+    required_checks:
+      - "Manifest/adapters/migrations present per bounded context"
+      - "Rollback plans and tests documented"
+      - "No bounded context left implicitly claimed as production stable"
+    exit_criterion: "All critical bounded contexts have explicit evidence-backed status"

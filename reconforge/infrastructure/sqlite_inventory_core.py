@@ -1018,6 +1018,8 @@ class SQLiteInventoryCoreRepository:
             if self.unit_of_work is None:
                 self.connection.execute("BEGIN IMMEDIATE")
             movement = self._movement(movement_id)
+            if str(movement["id"]).upper().startswith("IRP1-"):
+                raise PlatformError("Reviewed Inventory movements require their complete source command.")
             if movement["status"] != "Draft":
                 raise PlatformError("Only Draft inventory movements can be posted.")
             if actor_user is not None and str(movement["created_by"]) == actor_user.username:
@@ -1070,6 +1072,8 @@ class SQLiteInventoryCoreRepository:
             if self.unit_of_work is None:
                 self.connection.execute("BEGIN IMMEDIATE")
             movement = self._movement(movement_id)
+            if str(movement["id"]).upper().startswith("IRP1-"):
+                raise PlatformError("Reviewed Inventory movements require their complete source inverse.")
             if movement["status"] != "Posted":
                 raise PlatformError("Only Posted inventory movements can be voided.")
             valuation_table = self.connection.execute(

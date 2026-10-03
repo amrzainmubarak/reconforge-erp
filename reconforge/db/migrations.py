@@ -59,6 +59,10 @@ from reconforge.db.schema import (
 from reconforge.infrastructure.finance_policy_schema import SQLITE_FINANCE_POLICY_MIGRATION_SQL
 from reconforge.infrastructure.receivables_policy_schema import SQLITE_RECEIVABLES_POLICY_MIGRATION_SQL
 from reconforge.infrastructure.sqlite_finance_posting_schema import SQLITE_FINANCE_POSTING_MIGRATION_SQL
+from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
+    SQLITE_INVENTORY_RECEIPT_MIGRATION_SQL,
+    atomic_receipt_upgrade,
+)
 
 
 @dataclass(frozen=True)
@@ -157,6 +161,7 @@ MIGRATIONS = [
     Migration(version=47, name="finance_currency_policy", sql=SQLITE_FINANCE_POLICY_MIGRATION_SQL),
     Migration(version=48, name="manual_finance_operational_posting", sql=SQLITE_FINANCE_POSTING_MIGRATION_SQL),
     Migration(version=49, name="receivables_retained_monetary_policy", sql=SQLITE_RECEIVABLES_POLICY_MIGRATION_SQL),
+    Migration(version=50, name="reviewed_inventory_receipt_posting", sql=SQLITE_INVENTORY_RECEIPT_MIGRATION_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """
@@ -199,6 +204,11 @@ def run_migrations(db_path: Path | str, *, target_version: int | None = None) ->
             if migration.version > selected_target:
                 continue
             if migration.version in already_applied:
+                continue
+            if migration.version == 50:
+                atomic_receipt_upgrade(connection, schema_sql=migration.sql, version=migration.version,
+                                       name=migration.name, applied_at=_utc_now())
+                applied_now.append(migration.version)
                 continue
             connection.executescript(migration.sql)
             connection.execute(

@@ -321,6 +321,14 @@ tasks:
     depends_on: [PROD-033, PROD-035]
     exit_evidence: >-
       ADR0823 accepted bounded core:331pass/0skip actual SQLite/PostgreSQL16.14 AR/API/cash/codec, nine owned and1208 participating hashes unchanged; separate native1pass with1,188,108-byte dump/restore and equal history/nonowner recovery. Two physical connections serialize exact/conflicting key; late audit/outbox/key/codec faults roll back all effects. Preserve historical Draft1/currentGETPaid, current authority and retained policy after suspended customer/terms/registry changes. True schema48-to49 raw backup and ambiguous legacy GET fallback; no guessed terms, receipt protocol or public AR export. Independent source review/root cleanup verification; original reds retained in RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json. Published92719305 separately passes whole4178/380explicit skips with3073stable tracked files, global quality/build and all hosted nine live shards/aggregate; CI/Security/Docker/CodeQL succeed. Conditional image scan remains skipped; INVOICE_RECOVERY_PUBLISHED_ACCEPTANCE_2026-10-03.json retains exact hashes and external PR121 working-base merge, main unchanged.
+  - id: PROD-040
+    priority: P1
+    area: fifo-chronology
+    title: Remove hash-dependent same-day receipt admission without changing financial history
+    status: planned
+    depends_on: [PROD-035, PROD-038]
+    exit_evidence: >-
+      PROD038 preserves legacy FIFO ordering by business date and movement number; deterministic reserved hash numbers can conservatively refuse a later prepared same-day receipt. Define a backend-neutral stable source-order contract with versioned migration/compatibility, retained allocation provenance and no historical repricing. Prove multiple same-day receipts in both request/commit orders, late and backdated sources, existing consumers, physical races, inverse dependencies, replay and unchanged earlier financial evidence. No FIFO ordering improvement is claimed by the current receipt checkpoint.
   - id: E-1120
     priority: P0
     area: financial-exactness

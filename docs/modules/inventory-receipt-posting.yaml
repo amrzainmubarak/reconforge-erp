@@ -62,5 +62,7 @@ limitations:
   - conservative-refusal-with-any-other-posted-or-voided-outbound-item-history
   - existing-fifo-equal-date-movement-number-order-can-refuse-later-prepared-receipt
   - postgres-read-committed-and-sqlite-foreign-keys-required
+  - postgres-ordinary-movement-post-void-transitions-require-read-committed
+  - receipt-location-must-disallow-negative-stock
   - no-purchase-ap-sales-ar-tax-fx-lot-serial-or-manufacturing-integration
   - no-universal-inventory-to-gl-or-customer-outcome-claim

@@ -1456,6 +1456,8 @@ class PostgresInventoryCoreRepository:
         void_reason = clean_text(reason, "Void reason", maximum=500)
         with self._transaction():
             movement = self._get_movement(movement_id, lock=True)
+            if str(movement["id"]).upper().startswith("IRP1-") or str(movement["movement_number"]).upper().startswith("IRP1-"):
+                raise PlatformError("Reviewed inventory receipts require their complete source inverse command.")
             if movement["status"] != "Posted":
                 raise PlatformError("Only Posted inventory movements can be voided.")
             valuation_table = self.connection.execute(

@@ -1020,6 +1020,8 @@ class SQLiteFinanceCoreRepository:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             entry = self._entry(entry_id)
+            if str(entry["id"]).upper().startswith("IRP1-"):
+                raise PlatformError("Reviewed Inventory entries require their complete source command.")
             if entry["status"] != "Draft":
                 raise PlatformError("Only Draft ledger-control entries can be validated.")
             if actor_user is not None and str(entry["created_by"]) == actor_user.username:
@@ -1077,6 +1079,8 @@ class SQLiteFinanceCoreRepository:
 
         require_permission(self.connection, actor_label=actor_label, permission=FINANCE_CORE_VALIDATE_PERMISSION)
         entry = self._entry(entry_id)
+        if str(entry["id"]).upper().startswith("IRP1-"):
+            raise PlatformError("Reviewed Inventory entries require their complete source inverse.")
         self._policies.entry(entry)
         if entry["status"] != "Validated":
             raise PlatformError("Only Validated ledger-control entries can be voided.")

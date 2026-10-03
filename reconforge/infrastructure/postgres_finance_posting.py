@@ -335,6 +335,12 @@ class PostgresFinancePostingRepository:
         ).fetchone()
         if not evidence:
             raise FinancePostingError("posting_evidence_invalid", "Retained posting evidence failed verification.")
+        if row["source_kind"] in {"InventoryReceipt", "InventoryReceiptReversal"}:
+            from reconforge.infrastructure.postgres_inventory_receipt_posting import (
+                verify_inventory_receipt_finance_effect,
+            )
+
+            verify_inventory_receipt_finance_effect(self.connection, self.tenant_id, row)
         return row
 
     def get_effect(self, effect_id: str, *, actor: PostingActor) -> dict[str, Any]:
@@ -349,6 +355,8 @@ class PostgresFinancePostingRepository:
         reason = text(reason, "reason", maximum=500)
         with self._transaction(write=True):
             entry = posting_entry(self.connection, self.tenant_id, text(entry_id, "entry_id"))
+            if entry["id"].upper().startswith("IRP1-") or entry["entry_number"].upper().startswith("IRP1-"):
+                raise FinancePostingError("posting_source_unsupported", "Reviewed inventory sources must post through their complete source command.")
             if entry["reverses_posting_id"]:
                 actor.require("finance_core.reverse")
             digest, replay = self._command(
@@ -449,6 +457,8 @@ class PostgresFinancePostingRepository:
         posting_date = _iso_date(posting_date, "Posting date").isoformat()
         with self._transaction(write=True):
             original = self._get_effect(text(effect_id, "effect_id"))
+            if original["source_kind"] not in {"Manual", "Reversal"}:
+                raise FinancePostingError("posting_source_unsupported", "Inventory postings require a reviewed full source inverse.")
             source = posting_entry(self.connection, self.tenant_id, original["entry_id"])
             digest, replay = self._command(
                 source,

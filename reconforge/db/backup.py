@@ -23,6 +23,11 @@ from reconforge.db.exporter import (
 )
 from reconforge.db.migrations import MIGRATIONS, database_status, run_migrations
 from reconforge.domain.models import utc_now_text
+from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
+    RECEIPT_BACKUP_COLUMNS,
+    RECEIPT_RESTORE_ADMISSION_TRIGGERS,
+    RECEIPT_TABLES,
+)
 from reconforge.io.structured import (
     StructuredDocumentError,
     StructuredDocumentPolicy,
@@ -169,6 +174,7 @@ BACKUP_TABLES = [
     "audit_ledger_state",
     "finance_posting_effects",
     "finance_posting_commands",
+    *RECEIPT_TABLES,
 ]
 
 CONSOLIDATION_BACKUP_TABLES = (
@@ -262,6 +268,10 @@ BACKUP_SELECT_QUERIES = {
     "ledger_entries": "SELECT * FROM ledger_entries ORDER BY workspace_id, posting_date, entry_number",
     "finance_posting_effects": "SELECT * FROM finance_posting_effects ORDER BY reverses_effect_id IS NOT NULL, id",
     "finance_posting_commands": "SELECT * FROM finance_posting_commands ORDER BY workspace_id, command_id",
+    "inventory_receipt_plans": "SELECT * FROM inventory_receipt_plans ORDER BY original_plan_id IS NOT NULL,id",
+    "inventory_receipt_reviews": "SELECT * FROM inventory_receipt_reviews ORDER BY id",
+    "inventory_receipt_links": "SELECT * FROM inventory_receipt_links ORDER BY original_plan_id IS NOT NULL,id",
+    "inventory_receipt_commands": "SELECT * FROM inventory_receipt_commands ORDER BY workspace_id,operation,command_id",
     "ledger_lines": "SELECT * FROM ledger_lines ORDER BY entry_id, line_number",
     "ledger_line_dimensions": "SELECT * FROM ledger_line_dimensions ORDER BY line_id, dimension_value_id",
     "inventory_movements": "SELECT * FROM inventory_movements ORDER BY workspace_id, movement_date, movement_number",
@@ -382,6 +392,10 @@ BACKUP_DELETE_QUERIES = {
     "ledger_entries": "DELETE FROM ledger_entries",
     "finance_posting_effects": "DELETE FROM finance_posting_effects",
     "finance_posting_commands": "DELETE FROM finance_posting_commands",
+    "inventory_receipt_plans": "DELETE FROM inventory_receipt_plans",
+    "inventory_receipt_reviews": "DELETE FROM inventory_receipt_reviews",
+    "inventory_receipt_links": "DELETE FROM inventory_receipt_links",
+    "inventory_receipt_commands": "DELETE FROM inventory_receipt_commands",
     "ledger_lines": "DELETE FROM ledger_lines",
     "ledger_line_dimensions": "DELETE FROM ledger_line_dimensions",
     "inventory_movements": "DELETE FROM inventory_movements",
@@ -2424,6 +2438,12 @@ BACKUP_INSERT_COLUMNS['finance_posting_effects'] = ('id', 'workspace_id', 'organ
 BACKUP_INSERT_QUERIES['finance_posting_effects'] = 'INSERT INTO finance_posting_effects (id,workspace_id,organization_id,legal_entity_id,entry_id,source_kind,source_id,purpose,reverses_effect_id,validation_digest,validation_contract_version,currency_code,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest,snapshot_json,posted_actor_id,posted_at,reason,audit_event_id,outbox_event_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
 BACKUP_INSERT_COLUMNS['finance_posting_commands'] = ('workspace_id', 'command_id', 'operation', 'actor_id', 'request_digest', 'result_json', 'created_at')
 BACKUP_INSERT_QUERIES['finance_posting_commands'] = 'INSERT INTO finance_posting_commands (workspace_id,command_id,operation,actor_id,request_digest,result_json,created_at) VALUES (?,?,?,?,?,?,?)'
+for _receipt_table, _receipt_columns in RECEIPT_BACKUP_COLUMNS.items():
+    BACKUP_INSERT_COLUMNS[_receipt_table] = _receipt_columns
+    # The names are a closed versioned schema tuple, never backup-provided SQL.
+    BACKUP_INSERT_QUERIES[_receipt_table] = (
+        f"INSERT INTO {_receipt_table} ({','.join(_receipt_columns)}) VALUES ({','.join('?' for _ in _receipt_columns)})"  # nosec B608
+    )
 
 
 @dataclass(frozen=True)
@@ -2641,9 +2661,11 @@ def _verify_receivables_policy_backup(connection: sqlite3.Connection) -> None:
 
 def _verify_posting_backup(connection: sqlite3.Connection) -> None:
     from reconforge.infrastructure.sqlite_finance_posting import verify_posting_storage
+    from reconforge.infrastructure.sqlite_inventory_receipt_posting import verify_receipt_storage
 
     try:
         verify_posting_storage(connection)
+        verify_receipt_storage(connection)
     except (TypeError, ValueError, sqlite3.DatabaseError) as exc:
         raise DBBridgeError("Backup operational posting integrity verification failed.") from exc
 
@@ -3234,6 +3256,15 @@ def restore_backup(
             _clear_restore_tables(connection)
             policy_insert_guards: list[str] = []
             posting_insert_guards: list[str] = []
+            receipt_insert_guards: list[str] = []
+            if backup_schema_version >= 50:
+                for trigger_name in RECEIPT_RESTORE_ADMISSION_TRIGGERS:
+                    guard = connection.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("Inventory receipt restore guard is unavailable.")
+                    receipt_insert_guards.append(str(guard["sql"]))
+                    # Only the unpublished target permits historical source assembly.
+                    connection.execute(f"DROP TRIGGER {trigger_name}")  # nosec B608
             if backup_schema_version >= 48:
                 for trigger_name in ("finance_posting_open_period", "finance_posting_receipt_backing_guard"):
                     guard = connection.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)).fetchone()
@@ -3274,7 +3305,7 @@ def restore_backup(
                 raise DBBridgeError("Backup table payload is invalid.")
             for table in BACKUP_TABLES:
                 rows = tables.get(table, [])
-                if table in {"finance_posting_effects", "finance_posting_commands"}:
+                if table in {"finance_posting_effects", "finance_posting_commands", *RECEIPT_TABLES}:
                     restored_tables.append(table)
                     continue
                 if table in CONSOLIDATION_BACKUP_TABLES:
@@ -3574,14 +3605,21 @@ def restore_backup(
                 if layer_balance_issue is not None:
                     raise DBBridgeError("Backup contains inconsistent FIFO layer balances.")
             if backup_schema_version >= 48:
+                if backup_schema_version >= 50:
+                    if any(table not in tables for table in RECEIPT_TABLES):
+                        raise DBBridgeError("Backup omits reviewed Inventory source tables.")
+                    for table in RECEIPT_TABLES[:3]:
+                        _insert_rows(connection, table=table, rows=tables[table])
                 effects = tables.get("finance_posting_effects", [])
                 if not isinstance(effects, list) or any(not isinstance(row, dict) for row in effects):
                     raise DBBridgeError("Backup posting effects are invalid.")
                 effects.sort(key=lambda row: (row.get("reverses_effect_id") is not None, str(row.get("id", ""))))
                 _insert_rows(connection, table="finance_posting_effects", rows=effects)
                 _insert_rows(connection, table="finance_posting_commands", rows=tables.get("finance_posting_commands", []))
+                if backup_schema_version >= 50:
+                    _insert_rows(connection, table="inventory_receipt_commands", rows=tables["inventory_receipt_commands"])
                 _verify_posting_backup(connection)
-            for guard_sql in policy_insert_guards + posting_insert_guards:
+            for guard_sql in policy_insert_guards + posting_insert_guards + receipt_insert_guards:
                 connection.execute(guard_sql)
             connection.commit()
             connection.execute("PRAGMA foreign_keys = ON")

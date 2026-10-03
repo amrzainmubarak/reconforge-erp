@@ -1,5 +1,23 @@
 # Execution State
 
+## Amr sprint handoff (2026-10-03)
+
+The user stopped PROD038 at a safe checkpoint and authorized a new Global
+Financial & Operations Platform sprint. The reviewed Inventory receipt source,
+adapters, migrations and synthetic tests are retained as paused implementation,
+without public API/UI acceptance or a completed capability claim. No further
+receipt feature work is authorized in this sprint. Pre-handoff Ruff passed and
+Mypy passed for 578 sources; bounded receipt tests passed locally while live
+PostgreSQL prerequisites were absent from that command. Full checkpoint acceptance
+and the new sprint's exact test evidence will be recorded separately.
+
+Amr owns architecture, integration, shared registration files and execution state.
+Three agents will use independent worktrees and branches with exclusive file
+ownership, inspect existing capabilities first, and implement bounded missing
+capabilities through existing domain/application/repository interfaces. Main stays
+unchanged. Platform expansion is a target, not a claim of complete ERP or banking
+readiness.
+
 ## Current publication checkpoint (2026-10-03)
 
 PROD038 implementation is active on amr/reviewed-inventory-receipt-posting from

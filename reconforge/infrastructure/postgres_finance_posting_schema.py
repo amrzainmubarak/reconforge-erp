@@ -1,5 +1,6 @@
 """PostgreSQL operational posting schema; review provenance is never backfilled."""
 
+from collections.abc import Mapping
 from typing import Any
 
 POSTGRES_FINANCE_POSTING_SCHEMA_SQL = r"""
@@ -235,3 +236,13 @@ CREATE TRIGGER finance_posting_command_guard BEFORE INSERT ON reconforge.finance
 
 def install_postgres_finance_posting_schema(connection: Any) -> None:
     connection.execute(POSTGRES_FINANCE_POSTING_SCHEMA_SQL)
+    row = connection.execute(
+        "SELECT to_regclass('reconforge.inventory_receipt_plans') IS NOT NULL AS installed"
+    ).fetchone()
+    installed = row["installed"] if isinstance(row, Mapping) else row[0]
+    if installed:
+        from reconforge.infrastructure.postgres_inventory_receipt_posting_schema import (
+            install_postgres_inventory_receipt_posting_schema,
+        )
+
+        install_postgres_inventory_receipt_posting_schema(connection)

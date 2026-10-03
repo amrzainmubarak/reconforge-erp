@@ -9,6 +9,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, Protocol, TypeVar
 
 if TYPE_CHECKING:
+    from reconforge.application.inventory_receipt_posting import InventoryReceiptFinanceParticipantProtocol
     from reconforge.infrastructure.sqlite_inventory_core import SQLiteInventoryCoreRepository
     from reconforge.infrastructure.sqlite_inventory_valuation import SQLiteInventoryValuationRepositoryAdapter
 
@@ -85,6 +86,13 @@ class SQLiteInventoryUnitOfWork:
 
         self.require_active(self.connection)
         return SQLiteInventoryValuationRepositoryAdapter(self.connection, unit_of_work=self)
+
+    def receipt_finance(self) -> InventoryReceiptFinanceParticipantProtocol:
+        """Materialize only this owner's persisted reviewed Inventory source."""
+        from reconforge.infrastructure.sqlite_inventory_receipt_finance import SQLiteInventoryReceiptFinanceParticipant
+
+        self.require_active(self.connection)
+        return SQLiteInventoryReceiptFinanceParticipant(self.connection, unit_of_work=self)
 
 
 class _InventoryAdapter(Protocol):

@@ -402,12 +402,24 @@ class SQLiteFinancePostingRepository:
             and entry["validator_actor_id"] is not None
             and entry["preparer_actor_id"] not in (entry["validator_actor_id"], effect["posted_actor_id"])
         )
-        valid = (
-            valid
-            and effect["reverses_effect_id"] == entry["reverses_posting_id"]
-            and effect["source_id"] == (entry["reverses_posting_id"] or entry["id"])
-        )
-        valid = valid and effect["source_kind"] == ("Reversal" if entry["reverses_posting_id"] else "Manual")
+        valid = valid and effect["reverses_effect_id"] == entry["reverses_posting_id"]
+        if effect["source_kind"] in {"InventoryReceipt", "InventoryReceiptReversal"}:
+            from reconforge.infrastructure.sqlite_inventory_receipt_posting import (
+                SQLiteInventoryReceiptPostingRepository,
+                verify_inventory_backing,
+            )
+            receipt = SQLiteInventoryReceiptPostingRepository(self.connection)
+            plan = receipt._plan(effect["source_id"], authorize=False)
+            review = receipt._review(plan)
+            link = receipt._one("SELECT * FROM inventory_receipt_links WHERE plan_id=?", (plan["plan_id"],))
+            verify_inventory_backing(receipt, plan, review, link)
+            valid = valid and effect["id"] == plan["artifacts"]["posting_effect_id"] and effect["entry_id"] == plan["artifacts"]["finance_entry_id"]
+            valid = valid and effect["snapshot"] == plan["finance_snapshot"] and entry["validator_actor_id"] == review["reviewer"]["user_id"]
+            valid = valid and effect["source_kind"] == ("InventoryReceipt" if plan["operation"] == "Receipt" else "InventoryReceiptReversal")
+            valid = valid and all(effect[key] == link[key] for key in ("posted_actor_id", "posted_at", "reason"))
+        else:
+            valid = valid and effect["source_id"] == (entry["reverses_posting_id"] or entry["id"])
+            valid = valid and effect["source_kind"] == ("Reversal" if entry["reverses_posting_id"] else "Manual")
         audit = self.connection.execute("SELECT * FROM audit_events WHERE id=?", (effect["audit_event_id"],)).fetchone()
         outbox = self.connection.execute(
             "SELECT * FROM outbox_events WHERE id=?", (effect["outbox_event_id"],)
@@ -447,6 +459,8 @@ class SQLiteFinancePostingRepository:
         reason = text(reason, "reason", maximum=500)
         with self._transaction(write=True):
             entry = posting_entry(self.connection, text(entry_id, "entry_id"))
+            if str(entry["id"]).upper().startswith("IRP1-") or str(entry["entry_number"]).upper().startswith("IRP1-"):
+                raise FinancePostingError("posting_source_owned", "Reviewed Inventory sources must use their complete receipt command.")
             if entry["reverses_posting_id"]:
                 actor.require("finance_core.reverse")
             digest, replay = self._command(
@@ -541,6 +555,8 @@ class SQLiteFinancePostingRepository:
         posting_date = _iso_date(posting_date, "Posting date").isoformat()
         with self._transaction(write=True):
             original = self._get_effect(text(effect_id, "effect_id"))
+            if original["source_kind"] in {"InventoryReceipt", "InventoryReceiptReversal"}:
+                raise FinancePostingError("posting_source_owned", "Reviewed Inventory sources require their complete unused receipt inverse.")
             source = posting_entry(self.connection, original["entry_id"])
             digest, replay = self._command(
                 source,

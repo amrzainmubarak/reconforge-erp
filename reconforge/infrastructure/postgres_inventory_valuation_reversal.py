@@ -388,6 +388,8 @@ class PostgresInventoryValuationReversalRepository:
         number = document_number(reversal_number, "Valuation reversal number")
         with self._transaction():
             original = self._original(original_valuation_document_id)
+            if str(original["id"]).upper().startswith("IRP1-"):
+                raise PlatformError("Reviewed inventory receipts require their complete source inverse command.")
             if original["status"] != "Approved" or not original["finance_entry_id"]:
                 raise PlatformError("Only an Approved valuation with Finance evidence can be reversed.")
             FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(original)

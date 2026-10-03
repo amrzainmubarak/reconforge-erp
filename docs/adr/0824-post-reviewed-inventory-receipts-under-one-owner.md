@@ -46,6 +46,23 @@ Exact retry uses current authority and independently verified original linkage;
 legitimate later consumption does not invalidate the original receipt success.
 Do not silently change a caller's PostgreSQL isolation.
 
+The0100 storage guard requires READ COMMITTED for ordinary movement posting and
+voiding status transitions as well as reviewed source mutations. It takes the
+existing physical/FIFO locks before observing receipt association, then checks
+nonnegative Internal stock only for receipt-associated resources. A repeatable-read
+absence snapshot cannot bypass this boundary. Ordinary Draft editing and read-only
+repeatable-read stay available; this declared write-profile restriction neither
+lowers caller isolation nor changes unrelated stock policy. New receipt admission
+requires an Internal location that disallows negative stock.
+
+Entity-scoped reference reads retain restrictive Finance metadata UPDATE RLS.
+Use sorted paired tenant/table/ID advisory locks followed by ordinary authorized
+SELECT for chart, journal and account admission; additive invoker mutation guards
+acquire the same SQL-derived keys. No scope GUC widening or definer privilege is
+introduced. Metadata Active races must wait and recheck. A DELETE can already hold
+a tuple lock before its advisory guard, so test complete success or full rollback,
+raw deletion refusal and safe identical retry; do not claim deadlock-free behavior.
+
 Full inverse is a new separately reviewed source using the existing Delivery
 movement kind and normal valuation-reversal Remove evidence. Prove its original
 receipt is unused under source/layer/dependency locks; matching remaining balance
@@ -59,6 +76,14 @@ outbound or Transfer movement for the same entity/item, excluding its own planne
 inverse. It may conservatively refuse an untouched receipt on a resource with
 older outbound history. This bounded limitation is explicit until source-allocation
 lineage can prove narrower dependency claims. Queries remain scoped and indexed.
+
+Preserve the existing FIFO chronology key of business date and movement number.
+Reserved generated movement numbers contain deterministic hashes, so a later
+prepared same-day receipt can sort before an already Approved receipt and be
+refused. Verify the same accepted/refused order on both engines and zero partial
+effects on refusal. This is a material v1 operational restriction, not an assertion
+that arbitrary same-day receipt order is supported. PROD040 separately addresses
+intraday ordering without silently changing retained valuation or consumption.
 
 Reserved schema identifiers: SQLite50 and PostgreSQL0100, based on inspected
 SQLite49/PostgreSQL0099. Keep historical SQL unchanged. SQLite needs an atomic

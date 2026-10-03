@@ -78,6 +78,8 @@ class SQLiteInventoryValuationReversalRepositoryAdapter:
 
         actor_user = require_permission(self.connection, actor_label=actor_label, permission=REVERSAL_MANAGE_PERMISSION)
         document_id = clean_text(original_valuation_document_id, "Original valuation document ID")
+        if document_id.upper().startswith("IRP1-"):
+            raise PlatformError("Reviewed Inventory sources require their complete unused receipt inverse.")
         movement_id = clean_text(reversal_movement_id, "Reversal movement ID")
         original = self._required(
             self.repository.original_document(document_id), "Original inventory valuation was not found."
@@ -157,6 +159,8 @@ class SQLiteInventoryValuationReversalRepositoryAdapter:
         approval_reason = clean_text(reason, "Approval reason", maximum=500)
         actor = actor_user.username if actor_user is not None else clean_text(actor_label, "Actor label")
         selected_id = clean_text(reversal_id, "Valuation reversal ID")
+        if selected_id.upper().startswith("IRP1-"):
+            raise PlatformError("Reviewed Inventory sources require their complete unused receipt inverse.")
         now = utc_now_text()
         reversal_number_value = ""
         finance_entry_id = ""

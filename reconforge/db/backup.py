@@ -979,6 +979,10 @@ BACKUP_INSERT_COLUMNS = {
         "void_reason",
         "created_at",
         "updated_at",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
     ),
     "ledger_lines": (
         "id",
@@ -1126,6 +1130,10 @@ BACKUP_INSERT_COLUMNS = {
         "cancel_reason",
         "created_at",
         "updated_at",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
     ),
     "inventory_valuation_input_costs": (
         "id",
@@ -1984,8 +1992,9 @@ BACKUP_INSERT_QUERIES = {
             finance_journal_id, entry_number, posting_date, currency_code, description,
             external_reference, source_type, status, created_by, validated_by,
             validated_at, validation_reason, voided_by, voided_at, void_reason,
-            created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, updated_at, currency_precision, currency_rounding_policy,
+            currency_registry_version, currency_registry_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "ledger_lines": """
         INSERT INTO ledger_lines (
@@ -2049,8 +2058,8 @@ BACKUP_INSERT_QUERIES = {
             movement_id, policy_id, valuation_number, valuation_date, currency_code,
             status, total_value_minor, finance_entry_id, created_by, approved_by,
             approved_at, approval_reason, cancelled_by, cancelled_at, cancel_reason,
-            created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, updated_at, currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "inventory_valuation_input_costs": """
         INSERT INTO inventory_valuation_input_costs (
@@ -3169,6 +3178,18 @@ def restore_backup(
         try:
             ensure_outbox_schema(connection)
             _clear_restore_tables(connection)
+            policy_insert_guards: list[str] = []
+            if backup_schema_version >= 47:
+                for trigger_name in ("ledger_currency_policy_required", "valuation_currency_policy_required"):
+                    guard = connection.execute(
+                        "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)
+                    ).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("Currency-policy restore guard is unavailable.")
+                    policy_insert_guards.append(str(guard["sql"]))
+                # The unpublished temporary database alone accepts retained legacy NULL policy rows.
+                connection.execute("DROP TRIGGER ledger_currency_policy_required")
+                connection.execute("DROP TRIGGER valuation_currency_policy_required")
             tables = backup["tables"]
             if not isinstance(tables, dict):
                 raise DBBridgeError("Backup table payload is invalid.")
@@ -3470,6 +3491,8 @@ def restore_backup(
                     ).fetchone()
                 if layer_balance_issue is not None:
                     raise DBBridgeError("Backup contains inconsistent FIFO layer balances.")
+            for guard_sql in policy_insert_guards:
+                connection.execute(guard_sql)
             connection.commit()
             connection.execute("PRAGMA foreign_keys = ON")
         finally:
@@ -3480,6 +3503,21 @@ def restore_backup(
             foreign_key_issues = connection.execute("PRAGMA foreign_key_check").fetchall()
             if foreign_key_issues:
                 raise DBBridgeError("Backup restore contains invalid table relationships.")
+            from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+
+            policies = FinancePolicyStore(connection)
+            for policy_row in connection.execute(
+                "SELECT DISTINCT currency_code,currency_precision,currency_rounding_policy,"
+                "currency_registry_version,currency_registry_digest FROM ledger_entries "
+                "UNION SELECT DISTINCT currency_code,currency_precision,currency_rounding_policy,"
+                "currency_registry_version,currency_registry_digest FROM inventory_valuation_documents"
+            ).fetchall():
+                values = dict(policy_row)
+                if all(values[column] is None for column in (
+                    "currency_precision", "currency_rounding_policy", "currency_registry_version", "currency_registry_digest"
+                )):
+                    continue
+                policies.entry(values)
             append_audit_event(
                 connection,
                 actor_label=actor_label,

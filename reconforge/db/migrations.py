@@ -56,6 +56,7 @@ from reconforge.db.schema import (
     WRITEBACK_RECONCILIATION_PERMISSION_SQL,
     WRITEBACK_RECOVERY_OBSERVATIONS_SCHEMA_SQL,
 )
+from reconforge.infrastructure.finance_policy_schema import SQLITE_FINANCE_POLICY_MIGRATION_SQL
 
 
 @dataclass(frozen=True)
@@ -151,6 +152,7 @@ MIGRATIONS = [
     Migration(version=44, name="close_period_segregation_of_duties", sql=CLOSE_PERIOD_SOD_MIGRATION_SQL),
     Migration(version=45, name="close_period_lock_evidence_immutability", sql=CLOSE_PERIOD_LOCK_EVIDENCE_MIGRATION_SQL),
     Migration(version=46, name="evidence_retention_governance", sql=EVIDENCE_RETENTION_GOVERNANCE_MIGRATION_SQL),
+    Migration(version=47, name="finance_currency_policy", sql=SQLITE_FINANCE_POLICY_MIGRATION_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """

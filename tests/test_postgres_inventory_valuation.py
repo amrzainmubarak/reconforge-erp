@@ -155,7 +155,7 @@ def test_fifo_approval_serializes_layers_and_creates_balanced_finance_draft() ->
     source = (ROOT / "reconforge/infrastructure/postgres_inventory_valuation.py").read_text(encoding="utf-8")
     assert "ROUND_HALF_EVEN" in source
     assert "pg_advisory_xact_lock" in source
-    assert "ORDER BY created_at,id FOR UPDATE" in source
+    assert "ORDER BY l.created_at,l.id FOR UPDATE OF l" in source
     assert "finance_entries" in source
     assert "finance_entry_lines" in source
     assert "Generated Inventory-to-Finance postings must balance" in source

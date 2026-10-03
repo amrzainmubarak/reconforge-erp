@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
 
 from reconforge.db import connect, run_migrations
-from reconforge.platform import PlatformError
 from reconforge.platform.master_data import MasterDataService
 from reconforge.utils.currency_registry_governance import reconcile_currency_registry
 from reconforge.utils.money import CurrencyRegistry, CurrencyRegistryContext, CurrencySpec, InvalidAmountError
@@ -174,15 +174,15 @@ def test_sqlite_binding_selects_persisted_operation_context_and_reports_installe
         assert result["status"] == "inconsistent"
         assert not any(issue["code"] == "minor_units_mismatch" for issue in result["issues"])
 
-        connection.execute(
-            "UPDATE currency_registry_snapshots SET snapshot_json = ? WHERE registry_digest = ?",
-            ('{"schema_version":1}', original_digest),
-        )
-        connection.commit()
+        with pytest.raises(sqlite3.DatabaseError, match="snapshots are immutable"):
+            connection.execute(
+                "UPDATE currency_registry_snapshots SET snapshot_json = ? WHERE registry_digest = ?",
+                ('{"schema_version":1}', original_digest),
+            )
+        connection.rollback()
         with pytest.raises(InvalidAmountError):
             CurrencyRegistryContext.from_snapshot({"schema_version": 1})
-        with pytest.raises(PlatformError, match="Bound currency registry snapshot is invalid"):
-            service.currency_registry_context(workspace="default")
+        assert service.currency_registry_context(workspace="default") == bound_context
     finally:
         connection.close()
 

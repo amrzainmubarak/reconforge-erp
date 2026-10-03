@@ -11,6 +11,7 @@ from typing import Any
 from reconforge.application.inventory_valuation_reversal import InventoryValuationReversalSummary
 from reconforge.auth.rbac import same_actor
 from reconforge.domain.models import utc_now_text
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.sqlite_inventory_valuation import INVENTORY_READ_PERMISSION
 from reconforge.infrastructure.sqlite_inventory_valuation_reversal_repository import (
     InventoryValuationReversalRepository,
@@ -85,6 +86,7 @@ class SQLiteInventoryValuationReversalRepositoryAdapter:
             raise PlatformError("Only an Approved inventory valuation can be reversed.")
         if not original.get("finance_entry_id"):
             raise PlatformError("Approved valuation is missing its protected Finance Core entry.")
+        FinancePolicyStore(self.connection).entry(original)
         if self.repository.active_reversal_for_document(document_id) is not None:
             raise PlatformError("This valuation already has an active reversal workflow.")
         movement = self._required(self.repository.movement(movement_id), "Reversal inventory movement was not found.")
@@ -506,6 +508,12 @@ class SQLiteInventoryValuationReversalRepositoryAdapter:
         created_at: str,
     ) -> str:
         original_entry_id = clean_text(original.get("finance_entry_id"), "Original Finance Core entry ID")
+        original_entry = self.repository.finance_entry(original_entry_id)
+        if original_entry is None:
+            raise PlatformError("Original Finance Core entry was not found.")
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(original_entry)
+        if monetary_policy.currency_code != reversal["currency_code"]:
+            raise PlatformError("finance_currency_policy_mismatch: reversal currency differs from source entry.")
         original_lines = self.repository.finance_lines(original_entry_id)
         if len(original_lines) < 2:
             raise PlatformError("Original Finance Core entry is missing balanced line evidence.")
@@ -536,6 +544,7 @@ class SQLiteInventoryValuationReversalRepositoryAdapter:
             "created_by": reversal["created_by"],
             "created_at": created_at,
             "updated_at": created_at,
+            **monetary_policy.metadata(),
         }
         lines = [
             {
@@ -556,11 +565,12 @@ class SQLiteInventoryValuationReversalRepositoryAdapter:
 
     def _public_reversal(self, reversal: Mapping[str, object], *, include_effects: bool) -> dict[str, Any]:
         result = dict(reversal)
-        currency = self._required(
-            self.repository.currency(str(result["currency_code"])),
-            "Valuation reversal currency is unavailable.",
+        original = self._required(
+            self.repository.original_document(str(reversal["original_valuation_document_id"])),
+            "Original inventory valuation was not found.",
         )
-        minor_units = int(currency["minor_units"])
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(original)
+        minor_units = monetary_policy.precision
         result["total_value"] = minor_to_text(int(str(result.pop("total_value_minor"))), minor_units)
         if "original_total_value_minor" in result:
             result["original_total_value"] = minor_to_text(

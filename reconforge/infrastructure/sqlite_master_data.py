@@ -145,6 +145,9 @@ class SQLiteMasterDataRepository:
         currency_name = _clean_name(name, "Currency name")
         if not 0 <= minor_units <= 6:
             raise PlatformError("Currency minor units must be between 0 and 6.")
+        existing = self.connection.execute("SELECT minor_units FROM currencies WHERE code=?", (currency,)).fetchone()
+        if existing is not None and int(existing["minor_units"]) != minor_units:
+            raise PlatformError("Currency code and precision are immutable; create an explicit new policy instead.")
         now = utc_now_text()
         try:
             self.connection.execute(
@@ -289,6 +292,12 @@ class SQLiteMasterDataRepository:
         if not currency_record["active"]:
             raise PlatformError("Legal entities require an active currency reference.")
         entity_id = platform_id("LE", str(organization["id"]), code)
+        existing = self.connection.execute(
+            "SELECT currency FROM legal_entities WHERE organization_id=? AND entity_code=?",
+            (organization["id"], code),
+        ).fetchone()
+        if existing is not None and str(existing["currency"]) != currency:
+            raise PlatformError("Legal entity functional currency is immutable.")
         now = utc_now_text()
         try:
             self.connection.execute(

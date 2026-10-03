@@ -413,6 +413,14 @@ class PostgresMasterDataRepository:
         currency_name = _required_text(name, "currency name")
         if not 0 <= int(minor_units) <= 6:
             raise PostgresMasterDataValidationError("minor_units must be between 0 and 6.")
+        existing = self.connection.execute(
+            "SELECT minor_units FROM reconforge.currencies WHERE tenant_id=%s AND code=%s FOR UPDATE",
+            (tenant, currency),
+        ).fetchone()
+        if existing is not None and int(_record(existing, ("minor_units",))["minor_units"]) != int(minor_units):
+            raise PostgresMasterDataValidationError(
+                "Currency code and precision are immutable; create an explicit new policy instead."
+            )
         before_state_hash = ""
         if actor_id is not None:
             before_state_hash = self._before_state_hash(
@@ -670,6 +678,12 @@ class PostgresMasterDataRepository:
         code = _code(entity_code, "entity code")
         entity_name = _required_text(name, "entity name")
         currency = _currency_code(currency_code)
+        existing = self.connection.execute(
+            "SELECT currency_code FROM reconforge.legal_entities WHERE tenant_id=%s AND id=%s FOR UPDATE",
+            (tenant, identifier),
+        ).fetchone()
+        if existing is not None and _record(existing, ("currency_code",))["currency_code"] != currency:
+            raise PostgresMasterDataValidationError("Legal entity functional currency is immutable.")
         before_state_hash = ""
         if actor_id is not None:
             before_state_hash = self._before_state_hash(

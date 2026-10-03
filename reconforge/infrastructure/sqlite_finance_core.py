@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -15,7 +16,9 @@ from reconforge.application.finance_core import (
     FinanceCoreSummary,
 )
 from reconforge.audit import AuditLedgerError
+from reconforge.domain.finance_policy import FinanceCurrencyPolicy, FinancePolicyError
 from reconforge.domain.models import utc_now_text
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.platform.common import (
     PlatformError,
     commit_audited,
@@ -24,7 +27,7 @@ from reconforge.platform.common import (
     platform_id,
     require_permission,
 )
-from reconforge.utils.money import InvalidAmountError, Money
+from reconforge.utils.money import CurrencyRegistryContext, InvalidAmountError, Money
 
 FINANCE_CORE_READ_PERMISSION = "finance_core.read"
 FINANCE_CORE_MANAGE_PERMISSION = "finance_core.manage"
@@ -109,9 +112,11 @@ def _public_record(row: sqlite3.Row) -> dict[str, Any]:
     return record
 
 
-def _amount_to_minor(value: object, currency_code: str, label: str) -> int:
+def _amount_to_minor(
+    value: object, currency_code: str, label: str, registry_context: CurrencyRegistryContext | None = None
+) -> int:
     try:
-        money = Money.from_exact(value, currency=currency_code, strict_precision=True)
+        money = Money.from_exact(value, currency=currency_code, strict_precision=True, registry_context=registry_context)
     except InvalidAmountError as exc:
         msg = str(exc)
         if "binary floating-point" in msg:
@@ -142,7 +147,23 @@ class SQLiteFinanceCoreRepository:
     def __init__(self, connection: sqlite3.Connection) -> None:
         ensure_platform_schema(connection)
         self.connection = connection
+        self._policies = FinancePolicyStore(connection)
         self._ensure_schema()
+
+    @contextmanager
+    def _read_transaction(self) -> Iterator[None]:
+        owns_transaction = not self.connection.in_transaction
+        if owns_transaction:
+            self.connection.execute("BEGIN")
+        try:
+            yield
+        except Exception:
+            if owns_transaction:
+                self.connection.rollback()
+            raise
+        else:
+            if owns_transaction:
+                self.connection.commit()
 
     def _ensure_schema(self) -> None:
         expected = {
@@ -774,94 +795,101 @@ class SQLiteFinanceCoreRepository:
         """Create or replace a balanced draft entry using exact currency minor units."""
 
         require_permission(self.connection, actor_label=actor_label, permission=FINANCE_CORE_MANAGE_PERMISSION)
-        workspace_name = _clean_text(workspace, "Workspace name")
-        workspace_id = ensure_workspace(self.connection, workspace_name)
-        organization = self._organization(workspace_id, _code(organization_code, "Organization code"))
-        if not organization["active"]:
-            raise PlatformError("Ledger-control entries require an active organization.")
-        entity = self._entity(str(organization["id"]), _code(entity_code, "Entity code"))
-        if not entity["active"]:
-            raise PlatformError("Ledger-control entries require an active legal entity.")
-        period = self._period(period_id, workspace_id)
-        if str(period["status"]) != "Open":
-            raise PlatformError("Ledger-control entries can be created only in an Open fiscal period.")
-        posted_on = _iso_date(posting_date, "Posting date")
-        period_start = _iso_date(period["start_date"], "Stored period start date")
-        period_end = _iso_date(period["end_date"], "Stored period end date")
-        if posted_on < period_start or posted_on > period_end:
-            raise PlatformError("Posting date must fall inside the selected fiscal period.")
-        journal = self._journal(workspace_id, str(organization["id"]), _code(journal_code, "Journal code"))
-        if not journal["active"]:
-            raise PlatformError("Ledger-control entries require an active finance journal.")
-        currency = self._currency(str(journal["currency_code"]))
-        if str(entity["currency"]).upper() != str(currency["code"]):
-            raise PlatformError("Journal and legal-entity currencies must match in this finance-core version.")
-        selected_source = _choice(source_type, "Entry source type", ENTRY_SOURCE_TYPES)
-        number = _entry_number(entry_number)
-        creator = _clean_text(actor_label or "local-cli", "Actor label")
-        if not 2 <= len(lines) <= MAX_ENTRY_LINES:
-            raise PlatformError(f"Ledger-control entries require between 2 and {MAX_ENTRY_LINES} lines.")
-        required_dimensions = self._required_dimensions(workspace_id, str(organization["id"]))
-        prepared_lines: list[dict[str, Any]] = []
-        total_debit = 0
-        total_credit = 0
-        for line_number, line in enumerate(lines, start=1):
-            if not isinstance(line, Mapping):
-                raise PlatformError("Each ledger line must be an object.")
-            account = self._account(str(journal["chart_id"]), _code(line.get("account_code"), "Account code"))
-            if not account["active"] or not account["allow_posting"]:
-                raise PlatformError("Ledger lines require an active posting-enabled account.")
-            if selected_source == "Manual" and not account["allow_manual_posting"]:
-                raise PlatformError("Manual entries cannot use an account that blocks manual posting.")
-            debit_minor = _amount_to_minor(line.get("debit", "0"), str(currency["code"]), "Line debit")
-            credit_minor = _amount_to_minor(line.get("credit", "0"), str(currency["code"]), "Line credit")
-            if (debit_minor > 0) == (credit_minor > 0):
-                raise PlatformError("Each ledger line must contain exactly one non-zero debit or credit amount.")
-            dimension_values = self._prepare_line_dimensions(
-                line.get("dimensions", {}),
-                workspace_id=workspace_id,
-                organization_id=str(organization["id"]),
-            )
-            missing = set(required_dimensions) - set(dimension_values)
-            if missing:
-                missing_codes = ", ".join(sorted(required_dimensions[item] for item in missing))
-                raise PlatformError(f"Ledger line is missing required dimensions: {missing_codes}.")
-            prepared_lines.append(
-                {
-                    "line_number": line_number,
-                    "account_id": account["id"],
-                    "description": _clean_text(
-                        line.get("description", ""), "Line description", maximum=500, required=False
-                    ),
-                    "debit_minor": debit_minor,
-                    "credit_minor": credit_minor,
-                    "dimension_values": tuple(dimension_values.values()),
-                }
-            )
-            total_debit += debit_minor
-            total_credit += credit_minor
-        if total_debit <= 0 or total_debit != total_credit:
-            raise PlatformError("Ledger-control entry debits and credits must balance to a non-zero amount.")
-        entry_id = platform_id("GLE", workspace_id, number)
-        now = utc_now_text()
-        existing = self.connection.execute(
-            "SELECT status, created_by, created_at FROM ledger_entries WHERE id = ?", (entry_id,)
-        ).fetchone()
-        if existing is not None and str(existing["status"]) != "Draft":
-            raise PlatformError("Only Draft ledger-control entries can be replaced.")
-        original_creator = str(existing["created_by"]) if existing is not None else creator
-        original_created_at = str(existing["created_at"]) if existing is not None else now
         try:
             self.connection.execute("BEGIN IMMEDIATE")
+            workspace_name = _clean_text(workspace, "Workspace name")
+            workspace_id = ensure_workspace(self.connection, workspace_name)
+            organization = self._organization(workspace_id, _code(organization_code, "Organization code"))
+            if not organization["active"]:
+                raise PlatformError("Ledger-control entries require an active organization.")
+            entity = self._entity(str(organization["id"]), _code(entity_code, "Entity code"))
+            if not entity["active"]:
+                raise PlatformError("Ledger-control entries require an active legal entity.")
+            period = self._period(period_id, workspace_id)
+            if str(period["status"]) != "Open":
+                raise PlatformError("Ledger-control entries can be created only in an Open fiscal period.")
+            posted_on = _iso_date(posting_date, "Posting date")
+            period_start = _iso_date(period["start_date"], "Stored period start date")
+            period_end = _iso_date(period["end_date"], "Stored period end date")
+            if posted_on < period_start or posted_on > period_end:
+                raise PlatformError("Posting date must fall inside the selected fiscal period.")
+            journal = self._journal(workspace_id, str(organization["id"]), _code(journal_code, "Journal code"))
+            if not journal["active"]:
+                raise PlatformError("Ledger-control entries require an active finance journal.")
+            currency = self._currency(str(journal["currency_code"]))
+            if str(entity["currency"]).upper() != str(currency["code"]):
+                raise PlatformError("Journal and legal-entity currencies must match in this finance-core version.")
+            selected_source = _choice(source_type, "Entry source type", ENTRY_SOURCE_TYPES)
+            number = _entry_number(entry_number)
+            entry_id = platform_id("GLE", workspace_id, number)
+            existing = self.connection.execute("SELECT * FROM ledger_entries WHERE id = ?", (entry_id,)).fetchone()
+            if existing is not None and str(existing["status"]) != "Draft":
+                raise PlatformError("Only Draft ledger-control entries can be replaced.")
+            policy, operation_context = self._policies.capture(
+                workspace_id=workspace_id, currency_code=str(currency["code"]), minor_units=int(currency["minor_units"]),
+                actor_label=actor_label or "local-cli", existing=None if existing is None else dict(existing),
+            )
+            creator = _clean_text(actor_label or "local-cli", "Actor label")
+            if not 2 <= len(lines) <= MAX_ENTRY_LINES:
+                raise PlatformError(f"Ledger-control entries require between 2 and {MAX_ENTRY_LINES} lines.")
+            required_dimensions = self._required_dimensions(workspace_id, str(organization["id"]))
+            prepared_lines: list[dict[str, Any]] = []
+            total_debit = 0
+            total_credit = 0
+            for line_number, line in enumerate(lines, start=1):
+                if not isinstance(line, Mapping):
+                    raise PlatformError("Each ledger line must be an object.")
+                account = self._account(str(journal["chart_id"]), _code(line.get("account_code"), "Account code"))
+                if not account["active"] or not account["allow_posting"]:
+                    raise PlatformError("Ledger lines require an active posting-enabled account.")
+                if selected_source == "Manual" and not account["allow_manual_posting"]:
+                    raise PlatformError("Manual entries cannot use an account that blocks manual posting.")
+                debit_minor = _amount_to_minor(line.get("debit", "0"), str(currency["code"]), "Line debit", operation_context)
+                credit_minor = _amount_to_minor(line.get("credit", "0"), str(currency["code"]), "Line credit", operation_context)
+                if (debit_minor > 0) == (credit_minor > 0):
+                    raise PlatformError("Each ledger line must contain exactly one non-zero debit or credit amount.")
+                dimension_values = self._prepare_line_dimensions(
+                    line.get("dimensions", {}),
+                    workspace_id=workspace_id,
+                    organization_id=str(organization["id"]),
+                )
+                missing = set(required_dimensions) - set(dimension_values)
+                if missing:
+                    missing_codes = ", ".join(sorted(required_dimensions[item] for item in missing))
+                    raise PlatformError(f"Ledger line is missing required dimensions: {missing_codes}.")
+                prepared_lines.append(
+                    {
+                        "line_number": line_number,
+                        "account_id": account["id"],
+                        "description": _clean_text(
+                            line.get("description", ""), "Line description", maximum=500, required=False
+                        ),
+                        "debit_minor": debit_minor,
+                        "credit_minor": credit_minor,
+                        "dimension_values": tuple(dimension_values.values()),
+                    }
+                )
+                total_debit += debit_minor
+                total_credit += credit_minor
+            if total_debit <= 0 or total_debit != total_credit:
+                raise PlatformError("Ledger-control entry debits and credits must balance to a non-zero amount.")
+            now = utc_now_text()
+            original_creator = str(existing["created_by"]) if existing is not None else creator
+            original_created_at = str(existing["created_at"]) if existing is not None else now
             if existing is not None:
+                self.connection.execute(
+                    "DELETE FROM ledger_line_dimensions WHERE line_id IN (SELECT id FROM ledger_lines WHERE entry_id=?)",
+                    (entry_id,),
+                )
                 self.connection.execute("DELETE FROM ledger_lines WHERE entry_id = ?", (entry_id,))
             self.connection.execute(
                 """
                 INSERT INTO ledger_entries (
                     id, workspace_id, organization_id, chart_id, legal_entity_id, period_id,
                     finance_journal_id, entry_number, posting_date, currency_code, description,
-                    external_reference, source_type, status, created_by, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?)
+                    external_reference, source_type, status, created_by, created_at, updated_at,
+                    currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(workspace_id, entry_number) DO UPDATE SET
                     organization_id = excluded.organization_id,
                     chart_id = excluded.chart_id,
@@ -892,6 +920,7 @@ class SQLiteFinanceCoreRepository:
                     original_creator,
                     original_created_at,
                     now,
+                    *policy.values(),
                 ),
             )
             for prepared in prepared_lines:
@@ -934,6 +963,7 @@ class SQLiteFinanceCoreRepository:
                     "line_count": len(prepared_lines),
                     "currency_code": currency["code"],
                     "total_minor": total_debit,
+                    **policy.metadata(),
                 },
                 emit_outbox=True,
                 outbox_payload={
@@ -941,6 +971,7 @@ class SQLiteFinanceCoreRepository:
                     "line_count": len(prepared_lines),
                     "currency_code": currency["code"],
                     "total_minor": total_debit,
+                    **policy.metadata(),
                 },
             )
         except (PlatformError, AuditLedgerError):
@@ -1014,6 +1045,7 @@ class SQLiteFinanceCoreRepository:
 
         require_permission(self.connection, actor_label=actor_label, permission=FINANCE_CORE_VALIDATE_PERMISSION)
         entry = self._entry(entry_id)
+        self._policies.entry(entry)
         if entry["status"] != "Validated":
             raise PlatformError("Only Validated ledger-control entries can be voided.")
         valuation_table = self.connection.execute(
@@ -1084,57 +1116,58 @@ class SQLiteFinanceCoreRepository:
 
     def get_entry(self, entry_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
         require_permission(self.connection, actor_label=actor_label, permission=FINANCE_CORE_READ_PERMISSION)
-        entry = self._entry(entry_id)
-        currency = self._currency(str(entry["currency_code"]))
-        try:
-            lines = self.connection.execute(
-                """
-                SELECT ledger_lines.*, accounts.account_code, accounts.account_name
-                FROM ledger_lines
-                JOIN accounts ON accounts.id = ledger_lines.account_id
-                WHERE ledger_lines.entry_id = ?
-                ORDER BY ledger_lines.line_number
-                """,
-                (entry_id,),
-            ).fetchall()
-            dimension_rows = self.connection.execute(
-                """
-                SELECT links.line_id, dimensions.dimension_code, values_.value_code, values_.name
-                FROM ledger_line_dimensions links
-                JOIN accounting_dimension_values values_ ON values_.id = links.dimension_value_id
-                JOIN accounting_dimensions dimensions ON dimensions.id = values_.dimension_id
-                JOIN ledger_lines ON ledger_lines.id = links.line_id
-                WHERE ledger_lines.entry_id = ?
-                ORDER BY links.line_id, dimensions.dimension_code
-                """,
-                (entry_id,),
-            ).fetchall()
-        except sqlite3.DatabaseError as exc:
-            raise PlatformError("Unable to read local ledger-control lines.") from exc
-        dimensions_by_line: dict[str, dict[str, str]] = {}
-        for row in dimension_rows:
-            dimensions_by_line.setdefault(str(row["line_id"]), {})[str(row["dimension_code"])] = str(row["value_code"])
-        public_lines: list[dict[str, Any]] = []
-        total_debit = 0
-        total_credit = 0
-        minor_units = int(currency["minor_units"])
-        for row in lines:
-            record = dict(row)
-            total_debit += int(record["debit_minor"])
-            total_credit += int(record["credit_minor"])
-            record["debit"] = _minor_to_text(int(record["debit_minor"]), minor_units)
-            record["credit"] = _minor_to_text(int(record["credit_minor"]), minor_units)
-            record["dimensions"] = dimensions_by_line.get(str(record["id"]), {})
-            public_lines.append(record)
-        result = dict(entry)
-        result["currency_minor_units"] = minor_units
-        result["total_debit_minor"] = total_debit
-        result["total_credit_minor"] = total_credit
-        result["total_debit"] = _minor_to_text(total_debit, minor_units)
-        result["total_credit"] = _minor_to_text(total_credit, minor_units)
-        result["balanced"] = total_debit > 0 and total_debit == total_credit and len(public_lines) >= 2
-        result["lines"] = public_lines
-        return result
+        with self._read_transaction():
+            entry = self._entry(entry_id)
+            policy, _ = self._policies.entry(entry)
+            try:
+                lines = self.connection.execute(
+                    """
+                    SELECT ledger_lines.*, accounts.account_code, accounts.account_name
+                    FROM ledger_lines
+                    JOIN accounts ON accounts.id = ledger_lines.account_id
+                    WHERE ledger_lines.entry_id = ?
+                    ORDER BY ledger_lines.line_number
+                    """,
+                    (entry_id,),
+                ).fetchall()
+                dimension_rows = self.connection.execute(
+                    """
+                    SELECT links.line_id, dimensions.dimension_code, values_.value_code, values_.name
+                    FROM ledger_line_dimensions links
+                    JOIN accounting_dimension_values values_ ON values_.id = links.dimension_value_id
+                    JOIN accounting_dimensions dimensions ON dimensions.id = values_.dimension_id
+                    JOIN ledger_lines ON ledger_lines.id = links.line_id
+                    WHERE ledger_lines.entry_id = ?
+                    ORDER BY links.line_id, dimensions.dimension_code
+                    """,
+                    (entry_id,),
+                ).fetchall()
+            except sqlite3.DatabaseError as exc:
+                raise PlatformError("Unable to read local ledger-control lines.") from exc
+            dimensions_by_line: dict[str, dict[str, str]] = {}
+            for row in dimension_rows:
+                dimensions_by_line.setdefault(str(row["line_id"]), {})[str(row["dimension_code"])] = str(row["value_code"])
+            public_lines: list[dict[str, Any]] = []
+            total_debit = 0
+            total_credit = 0
+            minor_units = policy.precision
+            for row in lines:
+                record = dict(row)
+                total_debit += int(record["debit_minor"])
+                total_credit += int(record["credit_minor"])
+                record["debit"] = _minor_to_text(int(record["debit_minor"]), minor_units)
+                record["credit"] = _minor_to_text(int(record["credit_minor"]), minor_units)
+                record["dimensions"] = dimensions_by_line.get(str(record["id"]), {})
+                public_lines.append(record)
+            result = dict(entry)
+            result["currency_minor_units"] = minor_units
+            result["total_debit_minor"] = total_debit
+            result["total_credit_minor"] = total_credit
+            result["total_debit"] = _minor_to_text(total_debit, minor_units)
+            result["total_credit"] = _minor_to_text(total_credit, minor_units)
+            result["balanced"] = total_debit > 0 and total_debit == total_credit and len(public_lines) >= 2
+            result["lines"] = public_lines
+            return result
 
     def list_entries(
         self,
@@ -1189,7 +1222,10 @@ class SQLiteFinanceCoreRepository:
         query += " ORDER BY ledger_entries.posting_date DESC, ledger_entries.entry_number LIMIT ? OFFSET ?"
         parameters.extend((page_limit, page_offset))
         try:
-            return [dict(row) for row in self.connection.execute(query, parameters).fetchall()]
+            return [
+                {**dict(row), "currency_policy_status": "unverified" if row["currency_registry_digest"] is None else "captured"}
+                for row in self.connection.execute(query, parameters).fetchall()
+            ]
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to list local ledger-control entries.") from exc
 
@@ -1205,78 +1241,96 @@ class SQLiteFinanceCoreRepository:
         """Aggregate validated local ledger-control lines for one entity and period."""
 
         require_permission(self.connection, actor_label=actor_label, permission=FINANCE_CORE_READ_PERMISSION)
-        workspace_id = self._workspace_id(workspace)
-        if workspace_id is None:
-            raise PlatformError("Workspace reference was not found.")
-        organization = self._organization(workspace_id, _code(organization_code, "Organization code"))
-        entity = self._entity(str(organization["id"]), _code(entity_code, "Entity code"))
-        period = self._period(period_id, workspace_id)
-        currency = self._currency(str(entity["currency"]).upper())
-        try:
-            rows = self.connection.execute(
-                """
-                SELECT accounts.account_code, accounts.account_name, accounts.account_type,
-                       accounts.normal_balance, SUM(ledger_lines.debit_minor) AS debit_minor,
-                       SUM(ledger_lines.credit_minor) AS credit_minor
-                FROM ledger_lines
-                JOIN ledger_entries ON ledger_entries.id = ledger_lines.entry_id
-                JOIN accounts ON accounts.id = ledger_lines.account_id
-                WHERE ledger_entries.workspace_id = ?
-                  AND ledger_entries.organization_id = ?
-                  AND ledger_entries.legal_entity_id = ?
-                  AND ledger_entries.period_id = ?
-                  AND ledger_entries.status = 'Validated'
-                GROUP BY accounts.id, accounts.account_code, accounts.account_name,
-                         accounts.account_type, accounts.normal_balance
-                ORDER BY accounts.account_code
-                """,
-                (workspace_id, organization["id"], entity["id"], period["id"]),
-            ).fetchall()
-        except sqlite3.DatabaseError as exc:
-            raise PlatformError("Unable to compute the local ledger-control trial balance.") from exc
-        minor_units = int(currency["minor_units"])
-        records: list[dict[str, object]] = []
-        total_debit = 0
-        total_credit = 0
-        for row in rows:
-            debit_minor = int(row["debit_minor"] or 0)
-            credit_minor = int(row["credit_minor"] or 0)
-            total_debit += debit_minor
-            total_credit += credit_minor
-            balance_minor = debit_minor - credit_minor
-            records.append(
-                {
-                    "account_code": row["account_code"],
-                    "account_name": row["account_name"],
-                    "account_type": row["account_type"],
-                    "normal_balance": row["normal_balance"],
-                    "debit_minor": debit_minor,
-                    "credit_minor": credit_minor,
-                    "balance_minor": balance_minor,
-                    "debit": _minor_to_text(debit_minor, minor_units),
-                    "credit": _minor_to_text(credit_minor, minor_units),
-                    "balance": _minor_to_text(balance_minor, minor_units),
-                }
-            )
-        return {
-            "schema_version": 1,
-            "source": {"kind": "local-ledger-control", "local_first": True, "external_calls": False},
-            "workspace": _clean_text(workspace, "Workspace name"),
-            "organization_code": organization["organization_code"],
-            "entity_code": entity["entity_code"],
-            "period_id": period["id"],
-            "period_name": period["name"],
-            "currency_code": currency["code"],
-            "currency_minor_units": minor_units,
-            "totals": {
-                "debit_minor": total_debit,
-                "credit_minor": total_credit,
-                "balanced": total_debit == total_credit,
-                "debit": _minor_to_text(total_debit, minor_units),
-                "credit": _minor_to_text(total_credit, minor_units),
-            },
-            "accounts": records,
-        }
+        with self._read_transaction():
+            workspace_id = self._workspace_id(workspace)
+            if workspace_id is None:
+                raise PlatformError("Workspace reference was not found.")
+            organization = self._organization(workspace_id, _code(organization_code, "Organization code"))
+            entity = self._entity(str(organization["id"]), _code(entity_code, "Entity code"))
+            period = self._period(period_id, workspace_id)
+            currency = self._currency(str(entity["currency"]).upper())
+            selected_policy: FinanceCurrencyPolicy | None = None
+            try:
+                policy_rows = self.connection.execute(
+                    """SELECT DISTINCT currency_code,currency_precision,currency_rounding_policy,
+                              currency_registry_version,currency_registry_digest FROM ledger_entries
+                       WHERE workspace_id=? AND organization_id=? AND legal_entity_id=? AND period_id=?
+                         AND status='Validated'""",
+                    (workspace_id, organization["id"], entity["id"], period["id"]),
+                ).fetchall()
+                for policy_row in policy_rows:
+                    policy, _ = self._policies.entry(dict(policy_row))
+                    if policy.currency_code != str(entity["currency"]).upper():
+                        raise PlatformError("finance_currency_policy_mismatch: entry and entity currencies differ.")
+                    if selected_policy is not None:
+                        selected_policy.require_compatible(policy)
+                    selected_policy = policy
+                rows = self.connection.execute(
+                    """
+                    SELECT accounts.account_code, accounts.account_name, accounts.account_type,
+                           accounts.normal_balance, SUM(ledger_lines.debit_minor) AS debit_minor,
+                           SUM(ledger_lines.credit_minor) AS credit_minor
+                    FROM ledger_lines
+                    JOIN ledger_entries ON ledger_entries.id = ledger_lines.entry_id
+                    JOIN accounts ON accounts.id = ledger_lines.account_id
+                    WHERE ledger_entries.workspace_id = ?
+                      AND ledger_entries.organization_id = ?
+                      AND ledger_entries.legal_entity_id = ?
+                      AND ledger_entries.period_id = ?
+                      AND ledger_entries.status = 'Validated'
+                    GROUP BY accounts.id, accounts.account_code, accounts.account_name,
+                             accounts.account_type, accounts.normal_balance
+                    ORDER BY accounts.account_code
+                    """,
+                    (workspace_id, organization["id"], entity["id"], period["id"]),
+                ).fetchall()
+            except FinancePolicyError as exc:
+                raise PlatformError(str(exc)) from exc
+            except sqlite3.DatabaseError as exc:
+                raise PlatformError("Unable to compute the local ledger-control trial balance.") from exc
+            minor_units = selected_policy.precision if selected_policy is not None else int(currency["minor_units"])
+            records: list[dict[str, object]] = []
+            total_debit = 0
+            total_credit = 0
+            for row in rows:
+                debit_minor = int(row["debit_minor"] or 0)
+                credit_minor = int(row["credit_minor"] or 0)
+                total_debit += debit_minor
+                total_credit += credit_minor
+                balance_minor = debit_minor - credit_minor
+                records.append(
+                    {
+                        "account_code": row["account_code"],
+                        "account_name": row["account_name"],
+                        "account_type": row["account_type"],
+                        "normal_balance": row["normal_balance"],
+                        "debit_minor": debit_minor,
+                        "credit_minor": credit_minor,
+                        "balance_minor": balance_minor,
+                        "debit": _minor_to_text(debit_minor, minor_units),
+                        "credit": _minor_to_text(credit_minor, minor_units),
+                        "balance": _minor_to_text(balance_minor, minor_units),
+                    }
+                )
+            return {
+                "schema_version": 1,
+                "source": {"kind": "local-ledger-control", "local_first": True, "external_calls": False},
+                "workspace": _clean_text(workspace, "Workspace name"),
+                "organization_code": organization["organization_code"],
+                "entity_code": entity["entity_code"],
+                "period_id": period["id"],
+                "period_name": period["name"],
+                "currency_code": currency["code"],
+                "currency_minor_units": minor_units,
+                "totals": {
+                    "debit_minor": total_debit,
+                    "credit_minor": total_credit,
+                    "balanced": total_debit == total_credit,
+                    "debit": _minor_to_text(total_debit, minor_units),
+                    "credit": _minor_to_text(total_credit, minor_units),
+                },
+                "accounts": records,
+            }
 
     def summary(self, *, workspace: str = "default", actor_label: str = "local-cli") -> FinanceCoreSummary:
         require_permission(self.connection, actor_label=actor_label, permission=FINANCE_CORE_READ_PERMISSION)
@@ -1349,6 +1403,7 @@ class SQLiteFinanceCoreRepository:
         }
 
     def _validate_entry_integrity(self, entry: dict[str, Any]) -> None:
+        self._policies.entry(entry)
         period = self._period(str(entry["period_id"]), str(entry["workspace_id"]))
         if period["status"] != "Open":
             raise PlatformError("Ledger-control entries can be validated only while their fiscal period is Open.")

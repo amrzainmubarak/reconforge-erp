@@ -743,7 +743,69 @@ def test_migration_12_preserves_and_locks_legacy_finance_line_dimensions(
             movement_date="2026-07-01",
             quantity="2.000",
         )
-        original = _approve_valuation(valuation, receipt, number="VAL-DIM", total_cost="40.03")
+        # Current adapters require evidence that schema-11 rows never captured.
+        # Insert the historical representation explicitly, without inventing policy.
+        original = {"id": "LEGACY-VAL-DIM", "finance_entry_id": "LEGACY-GL-DIM"}
+        connection.execute(
+            """INSERT INTO ledger_entries (
+                id, workspace_id, organization_id, chart_id, legal_entity_id, period_id,
+                finance_journal_id, entry_number, posting_date, currency_code, description,
+                source_type, created_by, created_at, updated_at
+            ) SELECT ?, m.workspace_id, m.organization_id, j.chart_id, m.legal_entity_id,
+                m.period_id, p.finance_journal_id, 'IV-VAL-DIM', m.movement_date,
+                p.currency_code, 'Historical inventory valuation', 'Generated',
+                'historical-preparer', m.created_at, m.created_at
+              FROM inventory_movements m JOIN inventory_valuation_policies p
+                ON p.legal_entity_id=m.legal_entity_id
+              JOIN finance_journals j ON j.id=p.finance_journal_id WHERE m.id=?""",
+            (original["finance_entry_id"], receipt["id"]),
+        )
+        for number, account, debit, credit in ((1, "1400", 4003, 0), (2, "2100", 0, 4003)):
+            connection.execute(
+                """INSERT INTO ledger_lines
+                    (id,entry_id,line_number,account_id,debit_minor,credit_minor,created_at)
+                    SELECT ?,?,?,id,?,?, '2026-07-01T00:00:00Z' FROM accounts WHERE account_code=?""",
+                (f"LEGACY-LINE-{number}", original["finance_entry_id"], number, debit, credit, account),
+            )
+        connection.execute(
+            """INSERT INTO inventory_valuation_documents (
+                id,workspace_id,organization_id,legal_entity_id,period_id,movement_id,policy_id,
+                valuation_number,valuation_date,currency_code,created_by,created_at,updated_at
+            ) SELECT ?,m.workspace_id,m.organization_id,m.legal_entity_id,m.period_id,m.id,p.id,
+                'VAL-DIM',m.movement_date,p.currency_code,'historical-preparer',m.created_at,m.created_at
+              FROM inventory_movements m JOIN inventory_valuation_policies p
+                ON p.legal_entity_id=m.legal_entity_id WHERE m.id=?""",
+            (original["id"], receipt["id"]),
+        )
+        connection.execute(
+            """INSERT INTO inventory_valuation_lines (
+                id,valuation_document_id,movement_line_id,line_number,flow_direction,item_id,uom_id,
+                quantity_scaled,quantity_precision,value_minor,inventory_account_id,offset_account_id,created_at
+            ) SELECT 'LEGACY-VAL-LINE',?,l.id,l.line_number,'Inbound',l.item_id,l.uom_id,
+                l.quantity_scaled,l.quantity_precision,4003,i.inventory_account_id,
+                p.receipt_clearing_account_id,l.created_at
+              FROM inventory_movement_lines l JOIN inventory_items i ON i.id=l.item_id
+              JOIN inventory_valuation_documents d ON d.movement_id=l.movement_id
+              JOIN inventory_valuation_policies p ON p.id=d.policy_id WHERE d.id=?""",
+            (original["id"], original["id"]),
+        )
+        connection.execute(
+            """INSERT INTO inventory_cost_layers (
+                id,source_valuation_line_id,legal_entity_id,item_id,uom_id,quantity_precision,
+                original_quantity_scaled,remaining_quantity_scaled,original_value_minor,
+                remaining_value_minor,currency_code,created_at
+            ) SELECT 'LEGACY-LAYER',l.id,d.legal_entity_id,l.item_id,l.uom_id,l.quantity_precision,
+                l.quantity_scaled,l.quantity_scaled,l.value_minor,l.value_minor,d.currency_code,l.created_at
+              FROM inventory_valuation_lines l JOIN inventory_valuation_documents d
+                ON d.id=l.valuation_document_id WHERE d.id=?""",
+            (original["id"],),
+        )
+        connection.execute(
+            """UPDATE inventory_valuation_documents SET status='Approved',total_value_minor=4003,
+                finance_entry_id=?,approved_by='historical-reviewer',approved_at=created_at,
+                approval_reason='Historical schema-11 fixture' WHERE id=?""",
+            (original["finance_entry_id"], original["id"]),
+        )
         original_line_ids = [
             str(row["id"])
             for row in connection.execute(
@@ -773,46 +835,49 @@ def test_migration_12_preserves_and_locks_legacy_finance_line_dimensions(
     connection = connect(path, require_exists=True)
     try:
         service = InventoryValuationReversalService(connection)
-        draft = service.create_reversal(
-            reversal_number="IVR-DIM",
-            original_valuation_document_id=str(original["id"]),
-            reversal_movement_id=str(mirror["id"]),
-            actor_label="reversal-preparer",
+        with pytest.raises(PlatformError, match="finance_currency_policy_unverified"):
+            service.create_reversal(
+                reversal_number="IVR-DIM",
+                original_valuation_document_id=str(original["id"]),
+                reversal_movement_id=str(mirror["id"]),
+                actor_label="reversal-preparer",
+            )
+        valuation = InventoryValuationService(connection)
+        with pytest.raises(PlatformError, match="finance_currency_policy_unverified"):
+            valuation.list_cost_layers()
+        outbound = valuation.create_document(
+            valuation_number="NEW-OUTBOUND", movement_id=str(mirror["id"]),
+            policy_code="FIFO", input_costs=[], actor_label="new-preparer",
         )
-        approved = service.approve_reversal(str(draft["id"]), reason="Legacy dimensions independently reviewed")
+        with pytest.raises(PlatformError, match="finance_currency_policy_unverified"):
+            valuation.approve_document(str(outbound["id"]), reason="Cannot interpret historical cost")
         dimension_rows = connection.execute(
             """
             SELECT entries.id AS entry_id, lines.line_number, dimensions.dimension_value_id
             FROM ledger_entries entries
             JOIN ledger_lines lines ON lines.entry_id = entries.id
             JOIN ledger_line_dimensions dimensions ON dimensions.line_id = lines.id
-            WHERE entries.id IN (?, ?)
+            WHERE entries.id = ?
             ORDER BY entries.id, lines.line_number, dimensions.dimension_value_id
             """,
-            (original["finance_entry_id"], approved["finance_entry_id"]),
+            (original["finance_entry_id"],),
         ).fetchall()
         by_entry: dict[str, list[tuple[int, str]]] = {}
         for row in dimension_rows:
             by_entry.setdefault(str(row["entry_id"]), []).append(
                 (int(row["line_number"]), str(row["dimension_value_id"]))
             )
-        assert by_entry[str(original["finance_entry_id"])] == by_entry[str(approved["finance_entry_id"])]
-
-        reversal_dimension = connection.execute(
-            """
-            SELECT dimensions.line_id, dimensions.dimension_value_id
-            FROM ledger_line_dimensions dimensions
-            JOIN ledger_lines lines ON lines.id = dimensions.line_id
-            WHERE lines.entry_id = ? LIMIT 1
-            """,
-            (approved["finance_entry_id"],),
-        ).fetchone()
-        with pytest.raises(sqlite3.DatabaseError, match="dimensions are immutable"):
-            connection.execute(
-                "DELETE FROM ledger_line_dimensions WHERE line_id = ? AND dimension_value_id = ?",
-                (reversal_dimension["line_id"], reversal_dimension["dimension_value_id"]),
-            )
-        connection.rollback()
+        assert by_entry[original["finance_entry_id"]] == [(1, value["id"]), (2, value["id"])]
+        assert connection.execute("SELECT COUNT(*) FROM ledger_entries").fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM inventory_valuation_reversal_effects").fetchone()[0] == 0
+        assert connection.execute("SELECT COUNT(*) FROM inventory_layer_consumptions").fetchone()[0] == 0
+        assert connection.execute("SELECT remaining_value_minor FROM inventory_cost_layers").fetchone()[0] == 4003
+        legacy = connection.execute("SELECT * FROM ledger_entries").fetchone()
+        assert legacy["currency_registry_digest"] is None
+        assert connection.execute(
+            "SELECT currency_registry_digest FROM inventory_valuation_documents WHERE id=?", (original["id"],)
+        ).fetchone()[0] is None
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
         with pytest.raises(sqlite3.DatabaseError, match="dimensions are immutable"):
             connection.execute(
                 "DELETE FROM ledger_line_dimensions WHERE line_id = ? AND dimension_value_id = ?",

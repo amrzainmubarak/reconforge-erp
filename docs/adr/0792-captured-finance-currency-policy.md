@@ -1,6 +1,6 @@
 # ADR 0792: Capture monetary interpretation with each Finance Core entry
 
-Date: 2026-10-03. Status: accepted for implementation. Scope: PROD-015.
+Date: 2026-10-03. Status: implemented; broader release acceptance pending. Scope: PROD-015.
 
 ## Context
 
@@ -13,7 +13,7 @@ workspace-filtered entry queries: sibling references may be invisible under RLS.
 
 Capture one verified currency registry policy within the write transaction and
 persist its code, precision, rounding policy, registry version and snapshot digest
-with every new Finance Core entry. Reuse the existing governed registry snapshots.
+with every new Finance Core entry and inventory valuation document. Reuse the existing governed registry snapshots.
 Reads, draft replacement, reversal and trial balance use that retained policy.
 Reject a missing/tampered binding instead of consulting mutable installed state.
 
@@ -37,5 +37,18 @@ rows exist. No amount rescaling or destructive historical rewrite is authorized.
 Verify exact amounts, not only balanced totals, across registry changes, workspace
 rebinds, sibling-workspace metadata access, independent tenants, direct SQL edits,
 concurrent creation and migration/restore. Financial API/UI claims wait for these
-tests. This slice does not establish policy capture for every AP/AR, inventory or
+tests. This slice does not establish policy capture for every AP/AR or
 consolidation writer; that inventory remains explicit follow-up work.
+
+Generated inventory GL entries reuse the valuation policy, reversals reuse the
+original GL policy, and FIFO consumption verifies the contributing source policy
+before changing layers. Differing registry provenance requires explicit
+reconciliation even when its current scale happens to agree. Public inventory
+response schemas retain their existing shapes.
+
+SQLite migration 47 and PostgreSQL 0094 implement this boundary. Reviewed logical
+restore preserves wholly unverified legacy rows in an unpublished temporary
+database, reinstates insert guards and validates captured policies before
+publishing. Populated PostgreSQL downgrade refuses to discard captured policy.
+See [upgrade contract](../operations/finance-policy-upgrade.md) and
+[focused verification](../execution/FINANCE_POLICY_2026-10-03.json).

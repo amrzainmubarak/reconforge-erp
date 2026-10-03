@@ -14,6 +14,8 @@ from typing import Any
 
 from reconforge.application.inventory_valuation import InventoryValuationSummary
 from reconforge.auth.rbac import same_actor
+from reconforge.domain.finance_policy import POLICY_COLUMNS, FinancePolicyError
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
@@ -484,12 +486,10 @@ class PostgresInventoryValuationRepository:
 
     def _public_document(self, document: Mapping[str, object], *, details: bool) -> dict[str, Any]:
         result = public_record(document)
-        currency = self._one(
-            "SELECT minor_units FROM reconforge.currencies WHERE tenant_id=%s AND code=%s",
-            (self.tenant_id, document["currency_code"]),
-            "Valuation currency is unavailable.",
-        )
-        minor_units = int(currency["minor_units"])
+        monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(document)
+        minor_units = monetary_policy.precision
+        for column in POLICY_COLUMNS:
+            result.pop(column, None)
         result["total_value"] = minor_to_text(int(result.pop("total_value_minor")), minor_units)
         if details:
             costs = self.connection.execute(
@@ -625,6 +625,10 @@ class PostgresInventoryValuationRepository:
                 (self.tenant_id, policy["currency_code"]),
                 "Valuation currency is unavailable.",
             )
+            monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).capture(
+                workspace_id=str(movement["workspace_id"]), currency_code=str(policy["currency_code"]),
+                minor_units=int(currency["minor_units"]), actor_label=clean_text(actor_label, "Actor label"),
+            )
             prepared: dict[int, int] = {}
             for value in input_costs:
                 if not isinstance(value, Mapping):
@@ -643,7 +647,7 @@ class PostgresInventoryValuationRepository:
                 raise PlatformError("Every inbound movement line requires exactly one input total cost.")
             document_id = platform_id("IVD", movement["workspace_id"], number)
             self.connection.execute(
-                """INSERT INTO reconforge.inventory_valuation_documents(tenant_id,id,workspace_id,organization_id,legal_entity_id,period_id,movement_id,policy_id,valuation_number,valuation_date,currency_code,status,created_by) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Draft',%s)""",
+                """INSERT INTO reconforge.inventory_valuation_documents(tenant_id,id,workspace_id,organization_id,legal_entity_id,period_id,movement_id,policy_id,valuation_number,valuation_date,currency_code,status,created_by,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Draft',%s,%s,%s,%s,%s)""",
                 (
                     self.tenant_id,
                     document_id,
@@ -657,6 +661,7 @@ class PostgresInventoryValuationRepository:
                     movement["movement_date"],
                     policy["currency_code"],
                     clean_text(actor_label, "Actor label"),
+                    *monetary_policy.values(),
                 ),
             )
             for line_number, total in sorted(prepared.items()):
@@ -745,6 +750,7 @@ class PostgresInventoryValuationRepository:
         movement: Mapping[str, Any],
         postings: Sequence[tuple[str, int, int]],
     ) -> str:
+        monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(document)
         grouped: dict[tuple[str, str], int] = {}
         for account, debit, credit in postings:
             if debit:
@@ -769,7 +775,7 @@ class PostgresInventoryValuationRepository:
         entry_id = platform_id("GLE", document["workspace_id"], entry_number)
         now = utc_now_text()
         self.connection.execute(
-            """INSERT INTO reconforge.finance_entries(tenant_id,id,workspace_id,journal_id,organization_code,entity_code,period_id,entry_number,posting_date,description,external_reference,source_type,status,currency_code,total_debit_minor,total_credit_minor,created_by,created_at,updated_at) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'InventoryValuation','Draft',%s,%s,%s,%s,%s,%s)""",
+            """INSERT INTO reconforge.finance_entries(tenant_id,id,workspace_id,journal_id,organization_code,entity_code,period_id,entry_number,posting_date,description,external_reference,source_type,status,currency_code,total_debit_minor,total_credit_minor,created_by,created_at,updated_at,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'InventoryValuation','Draft',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (
                 self.tenant_id,
                 entry_id,
@@ -788,6 +794,7 @@ class PostgresInventoryValuationRepository:
                 document["created_by"],
                 now,
                 now,
+                *monetary_policy.values(),
             ),
         )
         ordered = sorted(grouped.items(), key=lambda item: (item[0][1] != "debit", item[0][0]))
@@ -899,13 +906,30 @@ class PostgresInventoryValuationRepository:
                     self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (lock_key,))
                     needed = int(line["quantity_scaled"])
                     layers = self.connection.execute(
-                        """SELECT * FROM reconforge.inventory_cost_layers WHERE tenant_id=%s AND legal_entity_id=%s AND item_id=%s AND inventory_lot_id IS NOT DISTINCT FROM %s AND remaining_quantity_scaled>0 ORDER BY created_at,id FOR UPDATE""",
+                        """SELECT l.*,d.currency_precision,d.currency_rounding_policy,
+                            d.currency_registry_version,d.currency_registry_digest
+                            FROM reconforge.inventory_cost_layers l
+                            JOIN reconforge.inventory_valuation_lines v
+                              ON v.tenant_id=l.tenant_id AND v.id=l.source_valuation_line_id
+                            JOIN reconforge.inventory_valuation_documents d
+                              ON d.tenant_id=v.tenant_id AND d.id=v.valuation_document_id
+                            WHERE l.tenant_id=%s AND l.legal_entity_id=%s AND l.item_id=%s
+                              AND l.inventory_lot_id IS NOT DISTINCT FROM %s
+                              AND l.remaining_quantity_scaled>0 AND d.status='Approved'
+                            ORDER BY l.created_at,l.id FOR UPDATE OF l""",
                         (self.tenant_id, document["legal_entity_id"], line["item_id"], line["inventory_lot_id"]),
                     ).fetchall()
                     for layer_row in layers:
                         if needed <= 0:
                             break
                         layer = dict(layer_row)
+                        policy_store = FinancePolicyStore(self.connection, tenant_id=self.tenant_id)
+                        source_policy, _ = policy_store.entry(layer)
+                        document_policy, _ = policy_store.entry(document)
+                        try:
+                            document_policy.require_compatible(source_policy)
+                        except FinancePolicyError as exc:
+                            raise PlatformError(str(exc)) from exc
                         if (
                             int(layer["quantity_precision"]) != int(line["quantity_precision"])
                             or layer["uom_id"] != line["uom_id"]
@@ -1031,14 +1055,19 @@ class PostgresInventoryValuationRepository:
         with self._transaction():
             workspace_id = self._workspace_id(workspace)
             rows = self.connection.execute(
-                """SELECT l.*,i.item_code,u.uom_code,lot.lot_serial_code,e.entity_code,d.valuation_number,c.minor_units FROM reconforge.inventory_cost_layers l JOIN reconforge.inventory_items i ON i.tenant_id=l.tenant_id AND i.id=l.item_id JOIN reconforge.inventory_units_of_measure u ON u.tenant_id=l.tenant_id AND u.id=l.uom_id LEFT JOIN reconforge.inventory_lots lot ON lot.tenant_id=l.tenant_id AND lot.id=l.inventory_lot_id JOIN reconforge.legal_entities e ON e.tenant_id=l.tenant_id AND e.id=l.legal_entity_id JOIN reconforge.inventory_valuation_lines v ON v.tenant_id=l.tenant_id AND v.id=l.source_valuation_line_id JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=l.tenant_id AND d.id=v.valuation_document_id JOIN reconforge.currencies c ON c.tenant_id=l.tenant_id AND c.code=l.currency_code WHERE l.tenant_id=%s AND l.workspace_id=%s AND d.status='Approved' AND (%s=FALSE OR l.remaining_quantity_scaled>0) ORDER BY l.created_at,l.id LIMIT %s OFFSET %s""",
+                """SELECT l.*,i.item_code,u.uom_code,lot.lot_serial_code,e.entity_code,d.valuation_number,
+                d.currency_precision,d.currency_rounding_policy,d.currency_registry_version,d.currency_registry_digest
+                FROM reconforge.inventory_cost_layers l JOIN reconforge.inventory_items i ON i.tenant_id=l.tenant_id AND i.id=l.item_id JOIN reconforge.inventory_units_of_measure u ON u.tenant_id=l.tenant_id AND u.id=l.uom_id LEFT JOIN reconforge.inventory_lots lot ON lot.tenant_id=l.tenant_id AND lot.id=l.inventory_lot_id JOIN reconforge.legal_entities e ON e.tenant_id=l.tenant_id AND e.id=l.legal_entity_id JOIN reconforge.inventory_valuation_lines v ON v.tenant_id=l.tenant_id AND v.id=l.source_valuation_line_id JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=l.tenant_id AND d.id=v.valuation_document_id WHERE l.tenant_id=%s AND l.workspace_id=%s AND d.status='Approved' AND (%s=FALSE OR l.remaining_quantity_scaled>0) ORDER BY l.created_at,l.id LIMIT %s OFFSET %s""",
                 (self.tenant_id, workspace_id, open_only, limit, offset),
             ).fetchall()
             result = []
             for row in rows:
                 value = public_record(row)
                 precision = int(value["quantity_precision"])
-                minor = int(value.pop("minor_units"))
+                monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(value)
+                minor = monetary_policy.precision
+                for column in POLICY_COLUMNS:
+                    value.pop(column, None)
                 value["original_quantity"] = scaled_to_text(int(value.pop("original_quantity_scaled")), precision)
                 value["remaining_quantity"] = scaled_to_text(int(value.pop("remaining_quantity_scaled")), precision)
                 value["original_value"] = minor_to_text(int(value.pop("original_value_minor")), minor)

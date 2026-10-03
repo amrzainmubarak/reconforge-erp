@@ -12,7 +12,9 @@ from typing import Any
 
 from reconforge.application.inventory_valuation import InventoryValuationSummary
 from reconforge.auth.rbac import same_actor
+from reconforge.domain.finance_policy import POLICY_COLUMNS, FinanceCurrencyPolicy, FinancePolicyError
 from reconforge.domain.models import utc_now_text
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.sqlite_inventory_valuation_repository import (
     InventoryValuationRepository,
     SQLiteInventoryValuationRepository,
@@ -384,6 +386,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
                         allocations = self._fifo_allocations(
                             legal_entity_id=str(document["legal_entity_id"]),
                             line=line,
+                            monetary_policy=FinancePolicyStore(self.connection).entry(document)[0],
                         )
                         value_minor = sum(self._as_int(item["value_minor"]) for item in allocations)
                     if value_minor <= 0:
@@ -769,7 +772,9 @@ class SQLiteInventoryValuationRepositoryAdapter:
             return str(policy["cogs_account_id"])
         return str(policy["adjustment_account_id"])
 
-    def _fifo_allocations(self, *, legal_entity_id: str, line: Mapping[str, object]) -> list[dict[str, int | str]]:
+    def _fifo_allocations(
+        self, *, legal_entity_id: str, line: Mapping[str, object], monetary_policy: FinanceCurrencyPolicy
+    ) -> list[dict[str, int | str]]:
         needed = self._as_int(line["quantity_scaled"])
         precision = self._as_int(line["quantity_precision"])
         allocations: list[dict[str, int | str]] = []
@@ -781,6 +786,11 @@ class SQLiteInventoryValuationRepositoryAdapter:
                 raise PlatformError("FIFO layer unit precision does not match the outbound movement line.")
             if needed <= 0:
                 break
+            source_policy, _ = FinancePolicyStore(self.connection).entry(layer)
+            try:
+                monetary_policy.require_compatible(source_policy)
+            except FinancePolicyError as exc:
+                raise PlatformError(str(exc)) from exc
             remaining_quantity = self._as_int(layer["remaining_quantity_scaled"])
             remaining_value = self._as_int(layer["remaining_value_minor"])
             take = min(needed, remaining_quantity)
@@ -830,6 +840,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
         postings: Sequence[tuple[str, int, int, str]],
         created_at: str,
     ) -> str:
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(document)
         grouped: dict[tuple[str, str], int] = defaultdict(int)
         for account_id, debit_minor, credit_minor, _description in postings:
             if debit_minor:
@@ -865,6 +876,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
             "created_by": document["created_by"],
             "created_at": created_at,
             "updated_at": created_at,
+            **monetary_policy.metadata(),
         }
         ledger_lines: list[dict[str, object]] = []
         ordered = sorted(grouped.items(), key=lambda item: (item[0][1] != "debit", item[0][0]))
@@ -903,11 +915,10 @@ class SQLiteInventoryValuationRepositoryAdapter:
 
     def _public_document(self, document: Mapping[str, object], *, include_details: bool) -> dict[str, Any]:
         result: dict[str, Any] = dict(document)
-        currency = self._required(
-            self.repository.currency(str(document["currency_code"])),
-            "Valuation currency is unavailable.",
-        )
-        minor_units = int(currency["minor_units"])
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(document)
+        minor_units = monetary_policy.precision
+        for column in POLICY_COLUMNS:
+            result.pop(column, None)
         result["total_value"] = minor_to_text(self._as_int(result.pop("total_value_minor")), minor_units)
         if not include_details:
             return result
@@ -949,12 +960,11 @@ class SQLiteInventoryValuationRepositoryAdapter:
 
     def _public_layer(self, layer: Mapping[str, object]) -> dict[str, Any]:
         result: dict[str, Any] = dict(layer)
-        currency = self._required(
-            self.repository.currency(str(layer["currency_code"])),
-            "Valuation currency is unavailable.",
-        )
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(layer)
+        for column in POLICY_COLUMNS:
+            result.pop(column, None)
         precision = self._as_int(result["quantity_precision"])
-        minor_units = int(currency["minor_units"])
+        minor_units = monetary_policy.precision
         result["original_quantity"] = scaled_to_text(self._as_int(result.pop("original_quantity_scaled")), precision)
         result["remaining_quantity"] = scaled_to_text(self._as_int(result.pop("remaining_quantity_scaled")), precision)
         result["original_value"] = minor_to_text(self._as_int(result.pop("original_value_minor")), minor_units)

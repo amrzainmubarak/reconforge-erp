@@ -51,9 +51,11 @@ reviewable in [Draft PR111](https://github.com/amrzainmubarak/reconforge-erp/pul
   failures and an intermediate import error remain retained under ADR0812.
   Full-history secret scanning passes after seven exact source-checksum false
   positives were verified against Git blobs; no broad rule/path exclusions.
-  Hosted33b3fb5e Python3.11, web, object-storage, Docker, CodeQL and security
-  checks have passed; Python3.12 and the remaining server job were still running
-  at the recorded observation. Conditional release-image scanning was skipped.
+  Hosted33b3fb5e has now completed18 successful checks, including Python3.11/3.12,
+  web, object-storage, Docker, CodeQL, security, engine parity, server boundaries
+  and PostgreSQL HA/DR simulation. Conditional release-image scanning was skipped.
+  FOUNDATION_REMOTE_ACCEPTANCE_2026-10-03.json binds the observed exact head;
+  later operational posting and cash changes are outside that CI acceptance.
 - Next dependencies remain explicit scoped transaction composition, immutable
   operational posting, integrated trade cycles and connected financial writes.
   There is no available company pilot or external-auditor acceptance evidence.
@@ -91,23 +93,47 @@ restore/health checks pass with one live-service prerequisite skip. Exact source
 and the earlier lint failure are retained in SCOPED_FINANCE_VERIFICATION_2026-10-03.json.
 Later0097 and posting development are outside that full regression snapshot.
 
-PROD009 is now in progress: typed operational posting/review contracts are
-materialized, with SQLite48 and PostgreSQL0098 adapters under implementation.
-New effects require stable authenticated preparer/reviewer identities, an exact
-reviewed digest, explicit human posting authority and recent reauthentication.
-Existing Validated control entries are not adopted into operational balances.
-Acceptance still requires actual both-backend atomicity, database immutability,
-period races, restore, authenticated API/CLI and posted-only balance evidence.
+PROD009 is accepted as a bounded reviewed Manual posting/full-reversal kernel
+under ADR0811 and SQLite48/PostgreSQL0098. Stable authenticated preparation,
+independent review, immutable exact effects, current human authority, source-
+bound command replay, period locks and exact audit/outbox affinity are verified.
+SQLite101 tests pass without skips; PostgreSQL's final affected7 pass after the
+recorded SoD/evidence repairs. Actual HTTP and password-bound CLI pass. Populated
+native16.14 restore repeats missing/cross-source receipts and borrowed-evidence
+denials, retains2 effects/3 receipts/4 legacy-null records, and verifies cleanup
+and every history hash. The separately frozen16.14/17.10 chain reaches0098.
+FINANCE_POSTING_2026-10-03.json keeps overlapping and earlier source-drifting
+runs distinct. Reports explicitly describe selected-period net activity;
+cumulative opening/as-of balances and generated trade posting remain open.
 
-PROD031 is in progress for actual receipt/allocation writes in the React AR
-workspace. A PostgreSQL0097 probe retained receipt creation200, missing receipt
-GET404 and cached retries503: PostgreSQL JSONB replay decoding is broken before
-the hypothesized narrowed-scope cache exposure can be established. No leakage
-is claimed from that run. The slice adds authoritative scoped read-back, safe
-same-command recovery and human/step-up control specifically for cash actions;
-service draft/import capabilities and historical policy evidence remain valid.
-Actual browser persistence and negative security/recovery checks are required
-before completion. ADR0813 is reserved for this contract.
+PROD031 is accepted for actual scoped React receipt/allocation writes under
+ADR0813. The final production build passes19.9s actual HTTPS/PostgreSQL0097:
+one1376minor receipt, total1376 allocation, invoicePaid/version6, exposure0,
+and exactly1 posted/2 allocated event in audit and outbox. Exact receipt retry
+and allocation read-back recover lost responses without a duplicate effect.
+EN/AR keyboard/accessibility and390px layout pass;159 web tests and16 general
+browser tests pass. Sources remain unchanged and the owned database is removed.
+RECEIVABLES_CASH_2026-10-03.json retains the original JSONB503/GET404 and failed
+harness attempts unchanged. No leakage is inferred from the before probe.
+Policyv3 preserves historicalv1/v2 and service invoice/import capabilities.
+Cash remains an AR subledger operation; GL/inventory integration is separate.
+
+These sources are committed atd4e6baf8 and reviewable in
+[Draft PR112](https://github.com/amrzainmubarak/reconforge-erp/pull/112),
+stacked above DraftPR111 on codex/reviewed-posting-and-cash. Final frozen
+quality/package/interface gates pass. A separate clean managed checkout at
+exactlyd4e6baf8 now runs the whole-repository regression and quality/build gates
+with locked Python3.12.13; this remains pending until its exit and source
+identity are recorded. Subsequent work does not modify that checkpoint.
+The goal remains active. Source inspection for PROD010/011 confirms that AP
+receipts, Inventory movements, AR invoices and GL effects are not yet connected,
+and AP payment is not an implemented aggregate. A reproducible Decimal-context
+prerequisite changes quantity12345 into12000 and FIFO66 into67 at precision2;
+PROD035 must close it before generated stock/trade posting. PROD032/033/034
+track cumulative balances, retained AR precision and analogous AP replay.
+PROD034/035 are now in progress on a subsequent slice: actual PO/receipt/invoice
+recovery and context-independent quantity/FIFO primitives. AP payment remains
+absent and cannot be used as a purported replay fixture.
 
 ### Financial regression and browser checkpoint
 

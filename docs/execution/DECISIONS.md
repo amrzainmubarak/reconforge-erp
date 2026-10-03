@@ -1,5 +1,22 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-009 — Reviewed Manual operational effects (2026-10-03)
+
+ADR0811 accepts SQLite48/PG0098, exact reviewed content, stable preparer-only
+Draft replacement, independent human review/posting, current permissions,
+source-bound retry, full inverse correction and atomic evidence. Exact audit/
+outbox affinity and restore are verified. Historical provenance is not invented;
+the report is selected-period net activity. Automatic stock/subledger posting
+and cumulative opening/as-of balances are later explicit contracts.
+
+## D-PROD-008 — Scoped AR cash and authoritative recovery (2026-10-03)
+
+ADR0813 accepts versioned authoritative receipt read-back and cash-specific human
+assurance under policyv3 while retaining v1/v2 evidence. Unknown requests remain
+frozen through parent UI actions. Actual HTTPS persistence, accessibility and
+owned cleanup pass. Exact minor units stay visible until AR captures historical
+monetary policy; no implicit USD precision or GL effect is introduced.
+
 ## D-PROD-007 — Database sealing for processed reconciliation evidence (2026-10-03)
 
 ADR0810 closes raw child append/reparent/claimed-input mutations with exact

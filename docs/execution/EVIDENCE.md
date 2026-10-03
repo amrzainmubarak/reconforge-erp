@@ -2,6 +2,31 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- [Draft PR112](https://github.com/amrzainmubarak/reconforge-erp/pull/112)
+  retains posting/cash runtime checkpointd4e6baf8. A clean managed checkout
+  runs unfiltered whole-repository pytest and quality/build under Python3.12.13;
+  acceptance is pending, with commands/import path/head and output hashes being
+  recorded separately. The earlier whole-snapshot counts do not certifyd4.
+
+- Reviewed operational posting: [retained acceptance](FINANCE_POSTING_2026-10-03.json)
+  binds SQLite101/0skip, the final affected PG7/0skip, actual HTTP and local
+  password-bound commands, populated native33.297s restore and frozen16/17
+  migration chain. Original partial downgrade, fabricated/cross-source command,
+  checker replacement and borrowed audit/outbox failures remain retained.
+  The earlier81pass/one-native-skip run is explicitly source drifting and before
+  the final affinity repair. Net activity is restricted to the selected period.
+- React AR cash: [retained acceptance](RECEIVABLES_CASH_2026-10-03.json)
+  binds the final19.9s HTTPS0097 proof, one1376minor receipt/full allocation,
+  Paidv6/exposure0, exact audit/outbox1post+2allocate, source equality and cleanup.
+  EN/AR accessibility/keyboard/mobile,159 web tests,95 broad AR tests and2 actual
+  cash HTTP tests pass. Source binding/coordination/localization harness failures
+  remain separate. The underlying data is synthetic; GL integration is open.
+
+- Foundation hosted acceptance: [retained remote evidence](FOUNDATION_REMOTE_ACCEPTANCE_2026-10-03.json)
+  records18 successful checks and one conditional release-image skip on33b3fb5e.
+  Server boundaries completed successfully at08:10:26UTC. This certifies the
+  observed foundation checkpoint only, before the later posting/cash sources.
+
 - Remaining foundation server fixtures: [retained evidence](REMAINING_CI_FIXTURES_2026-10-03.json)
   binds the31pass/9fail before run, intermediate import failure and40pass/0skip
   repaired selection on33b3fb5e. Test-only owned audit cleanup stays transactional;

@@ -59,6 +59,7 @@ from reconforge.db.schema import (
 from reconforge.infrastructure.finance_policy_schema import SQLITE_FINANCE_POLICY_MIGRATION_SQL
 from reconforge.infrastructure.notification_inbox_schema import SQLITE_NOTIFICATION_INBOX_SQL
 from reconforge.infrastructure.receivables_policy_schema import SQLITE_RECEIVABLES_POLICY_MIGRATION_SQL
+from reconforge.infrastructure.sqlite_budget_control_schema import SQLITE_BUDGET_CONTROL_SCHEMA_SQL
 from reconforge.infrastructure.sqlite_finance_posting_schema import SQLITE_FINANCE_POSTING_MIGRATION_SQL
 from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
     SQLITE_INVENTORY_RECEIPT_MIGRATION_SQL,
@@ -164,6 +165,7 @@ MIGRATIONS = [
     Migration(version=49, name="receivables_retained_monetary_policy", sql=SQLITE_RECEIVABLES_POLICY_MIGRATION_SQL),
     Migration(version=50, name="reviewed_inventory_receipt_posting", sql=SQLITE_INVENTORY_RECEIPT_MIGRATION_SQL),
     Migration(version=51, name="retained_notification_inbox", sql=SQLITE_NOTIFICATION_INBOX_SQL),
+    Migration(version=52, name="governed_budget_control", sql=SQLITE_BUDGET_CONTROL_SCHEMA_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """
@@ -241,7 +243,7 @@ def run_migrations(db_path: Path | str, *, target_version: int | None = None) ->
                                        name=migration.name, applied_at=_utc_now())
                 applied_now.append(migration.version)
                 continue
-            if migration.version == 51:
+            if migration.version in {51, 52}:
                 _atomic_schema_upgrade(
                     connection,
                     schema_sql=migration.sql,

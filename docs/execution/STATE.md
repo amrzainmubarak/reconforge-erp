@@ -1,5 +1,20 @@
 # Execution State
 
+## Amr sprint governed budget-control completion (2026-10-03)
+
+AMR-GFO-003 is complete at its bounded backend/API foundation on the sprint
+branch. SQLite migration 52 and PostgreSQL revision 0102 retain exact
+minor-unit budget envelopes, independent approval, conserved commitments,
+scoped command receipts, audit and Outbox evidence. The central API factory,
+router, authorization inventory, module registry, PostgreSQL migration-status
+chain, and SQLite backup/restore admission are connected. Named synthetic
+evidence includes 27 SQLite/domain/API tests, 2 live PostgreSQL authority/API
+tests under a non-superuser/non-BYPASSRLS role, 2 PostgreSQL migration tests,
+and the live PostgreSQL operations status selection; focused Ruff and Mypy
+passed. The budget scope does not post purchase, payable, cash, banking, or
+general-ledger effects; it has no standalone UI or PostgreSQL native
+backup/restore orchestration.
+
 ## Amr sprint platform-core completion (2026-10-03)
 
 AMR-GFO-002 is complete on the sprint branch. SQLite migration 51 and

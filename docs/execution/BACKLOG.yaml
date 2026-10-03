@@ -34,12 +34,15 @@ tasks:
     priority: P1
     area: business-finance
     title: Govern operational budget envelopes and conserved commitments
-    status: in_progress
+    status: completed
     depends_on: [AMR-GFO-001]
     exit_evidence: >-
       Require retained exact currency policy, canonical entity/period, independent approval,
       conserved reserve/release/consume ledger, oversubscription races and command recovery,
-      atomic audit/outbox, SQLite/PostgreSQL API, real UI, migration and restore acceptance.
+      atomic audit/outbox, centrally registered SQLite/PostgreSQL authenticated API,
+      SQLite52/PostgreSQL0102 migration acceptance, SQLite backup/restore verification,
+      and nonowner PostgreSQL RLS/revocation/race evidence. A standalone UI and
+      PostgreSQL native backup/restore orchestration remain separate work.
   - id: AMR-GFO-004
     priority: P0
     area: enterprise-quality

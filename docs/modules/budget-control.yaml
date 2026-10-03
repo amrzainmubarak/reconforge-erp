@@ -1,0 +1,62 @@
+id: budget-control
+name: Governed operational budget envelopes and immutable commitments
+version: 1.0.0
+maturity: experimental
+implementation_status: registered_backend_foundation
+owner: financial-integrity
+dependencies: [platform.core, platform.identity, platform.master-data, finance.currency-policy, platform.audit-outbox]
+incompatible_versions: [mutable-budget-balances, cached-authority-only-budget-replay]
+data_classification: financial-sensitive
+retention_policy: retain-immutable-envelope-event-command-audit-and-outbox-evidence
+permissions: [budget_control.read, budget_control.manage, budget_control.approve]
+default_roles: [admin, controller]
+migrations: [sqlite52, postgresql0102]
+domain_invariants:
+  - positive-exact-minor-unit-limits-and-events-under-captured-currency-policy
+  - draft-submit-independent-human-approval-lifecycle
+  - current-persisted-identity-role-permission-and-hierarchy-authority-precede-every-read-write-and-replay
+  - request-principal-snapshot-can-only-narrow-never-regrant-current-authority
+  - available-equals-limit-minus-reserved-minus-consumed-at-every-retained-version
+  - immutable-envelope-definition-policy-events-and-command-receipts
+  - exact-scoped-command-digest-produces-one-business-effect
+  - replay-verifies-current-authority-and-authoritative-immutable-ledger-before-acknowledgement
+  - audit-outbox-event-and-command-receipt-commit-or-roll-back-together
+  - postgresql-read-committed-envelope-lock-and-sqlite-begin-immediate-serialize-capacity
+domain_events: [budget.created, budget.submit, budget.approve, budget.reserve, budget.release, budget.consume]
+api_routes:
+  - GET /api/v1/budget-control/envelopes
+  - GET /api/v1/budget-control/envelopes/{budget_id}
+  - POST /api/v1/budget-control/envelopes
+  - POST /api/v1/budget-control/envelopes/{budget_id}/submit
+  - POST /api/v1/budget-control/envelopes/{budget_id}/approve
+  - POST /api/v1/budget-control/envelopes/{budget_id}/commitments
+  - POST /api/v1/budget-control/envelopes/{budget_id}/commitments/{commitment_id}/events
+cli_commands: []
+ui_routes: []
+import_schemas: []
+export_schemas: [budget-envelope-v1, budget-commitment-evidence-v1]
+synthetic_fixtures: [tests/test_budget_control.py, tests/test_api_budget_control.py, tests/test_postgres_budget_control.py, tests/test_postgres_budget_control_migration.py]
+threat_model:
+  - stale-login-or-cached-role-authority-after-revocation
+  - cross-tenant-workspace-organization-or-entity-budget-access
+  - maker-self-approval-or-racing-checker-displacement
+  - changed-idempotency-command-content-and-borrowed-acknowledgement
+  - capacity-oversubscription-and-stale-version-write
+  - raw-update-delete-or-evidence-reference-tampering
+  - lost-acknowledgement-after-committed-effect
+  - partial-audit-outbox-command-or-event-commit
+  - privileged-restore-bypass-or-incomplete-history-publication
+benchmarks: []
+rollback_plan: preserve-pre-upgrade-backup-and-immutable-history-refuse-unverified-reader-or-lossy-restore
+test_matrix:
+  - tests/test_budget_control.py
+  - tests/test_api_budget_control.py
+  - tests/test_postgres_budget_control.py
+  - tests/test_postgres_budget_control_migration.py
+limitations:
+  - no-purchase-order-payable-cash-bank-or-general-ledger-posting-integration
+  - no-local-per-scope-grant-table; local-single-file-rbac-is-rechecked-and-the-requested-canonical-scope-is-bound
+  - no-standalone-ui
+  - no-postgresql-native-backup-restore-orchestration
+  - fixed-one-thousand-commitment-event-bound-per-envelope
+  - no-production-throughput-availability-regulatory-or-customer-outcome-claim

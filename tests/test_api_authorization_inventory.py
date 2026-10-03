@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 280
-EXPECTED_DIGEST = "356cfb78b5e888fccff0715e1a66eb6f66fea841f2ac7905b8a1cbcdbcfe4d7f"
+EXPECTED_ROUTE_COUNT = 287
+EXPECTED_DIGEST = "f6745d370dcb54e3162acf338a011a2504ac3057847fdefd4fa3d1050b7d99b9"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -54,6 +54,9 @@ HANDLER_BOUNDARY_HELPERS = {
     # server identity boundary, while retaining the explicitly local-only
     # SQLite path for Community mode.
     "notification_inbox.py": frozenset({"_call"}),
+    # `_call` derives a current local human principal or opens the selected
+    # PostgreSQL tenant scope before each budget mutation.
+    "budget_control.py": frozenset({"_call"}),
     "payables.py": frozenset({"_server_call"}),
     "receivables.py": frozenset({"_server_call"}),
     "reconciliation.py": frozenset({"_enforce_server_run_scope"}),

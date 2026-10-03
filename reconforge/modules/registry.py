@@ -457,6 +457,48 @@ _MODULES = (
         ),
     ),
     ModuleDescriptor(
+        module_id="finance.budget-control",
+        name="Governed operational budget control",
+        version="1.0.0",
+        maturity="experimental",
+        capability_status="foundation",
+        summary=(
+            "Scoped operational budget envelopes, independent approval, exact minor-unit commitments, "
+            "and retained command, audit, and outbox evidence."
+        ),
+        network_requirement="loopback-optional",
+        default_enabled=True,
+        dependencies=("finance.core", "platform.core", "platform.master-data"),
+        permissions=("budget_control.approve", "budget_control.manage", "budget_control.read"),
+        migration_versions=(52,),
+        domain_events=(
+            "budget.approve",
+            "budget.consume",
+            "budget.created",
+            "budget.release",
+            "budget.reserve",
+            "budget.submit",
+        ),
+        interfaces=("api", "library"),
+        import_contracts=(),
+        export_contracts=("budget-commitment-evidence.v1", "budget-envelope.v1"),
+        data_classification=("financial-sensitive",),
+        retention_note=(
+            "Envelope definitions, commitment events, command receipts, and linked audit/outbox evidence are retained "
+            "in the operator-selected database and verified before backup publication."
+        ),
+        activation_note=(
+            "Migration 52 enables exact local budget control; PostgreSQL uses the corresponding reviewed Alembic "
+            "revision and current scoped identity. This module creates no purchase order, payable, cash, or journal posting."
+        ),
+        test_evidence=(
+            "tests/test_api_budget_control.py",
+            "tests/test_budget_control.py",
+            "tests/test_postgres_budget_control.py",
+            "tests/test_postgres_budget_control_migration.py",
+        ),
+    ),
+    ModuleDescriptor(
         module_id="inventory.core",
         name="Inventory core movement ledger",
         version=__version__,

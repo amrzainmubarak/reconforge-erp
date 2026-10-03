@@ -42,6 +42,7 @@ from reconforge.api.routes import (
     audit_administration,
     auth,
     bank_statement,
+    budget_control,
     close,
     connectors,
     consolidation_close,
@@ -223,6 +224,7 @@ def create_api_app(
     app.state.postgres_retail_settlement_factory = app.state.postgres_identity_factory
     app.state.postgres_professional_invoice_payment_factory = app.state.postgres_identity_factory
     app.state.postgres_manufacturing_cost_control_factory = app.state.postgres_identity_factory
+    app.state.postgres_budget_control_factory = app.state.postgres_identity_factory
     app.state.federation_providers = dict(federation_providers or {})
     app.state.federation_verifiers = dict(federation_verifiers or {})
     app.state.federation_air_gap_mode = federation_air_gap_mode
@@ -404,6 +406,7 @@ def create_api_app(
     app.include_router(exceptions.router, prefix="/api/v1")
     app.include_router(metrics.router, prefix="/api/v1")
     app.include_router(notification_inbox.router, prefix="/api/v1")
+    app.include_router(budget_control.router, prefix="/api/v1")
     app.include_router(operations.router, prefix="/api/v1")
     app.include_router(payables.router, prefix="/api/v1")
     app.include_router(receivables.router, prefix="/api/v1")
@@ -453,6 +456,7 @@ def create_api_app(
         exceptions.router,
         metrics.router,
         notification_inbox.router,
+        budget_control.router,
         operations.router,
         payables.router,
         receivables.router,

@@ -87,6 +87,23 @@ _CRITICAL_ROUTE_CONTRACTS: dict[tuple[str, str], tuple[str, tuple[str, ...]]] = 
     ("POST", "/api/v1/finance-core/entries/{entry_id}/validate"): ("all", ("finance_core.validate",)),
     ("POST", "/api/v1/finance-core/entries/{entry_id}/void"): ("all", ("finance_core.validate",)),
     ("POST", "/api/v1/finance-core/entries/{entry_id}/post"): ("all", ("finance_core.post",)),
+    ("POST", "/api/v1/budget-control/envelopes"): ("all", ("budget_control.manage",)),
+    ("POST", "/api/v1/budget-control/envelopes/{budget_id}/submit"): (
+        "all",
+        ("budget_control.manage",),
+    ),
+    ("POST", "/api/v1/budget-control/envelopes/{budget_id}/approve"): (
+        "all",
+        ("budget_control.approve",),
+    ),
+    ("POST", "/api/v1/budget-control/envelopes/{budget_id}/commitments"): (
+        "all",
+        ("budget_control.manage",),
+    ),
+    ("POST", "/api/v1/budget-control/envelopes/{budget_id}/commitments/{commitment_id}/events"): (
+        "all",
+        ("budget_control.manage",),
+    ),
     ("GET", "/api/v1/finance-core/posted-balances-as-of"): (
         "any", ("finance_core.manage", "finance_core.post", "finance_core.read", "finance_core.validate"),
     ),

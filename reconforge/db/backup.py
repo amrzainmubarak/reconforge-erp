@@ -22,9 +22,12 @@ from reconforge.db.exporter import (
     write_json_file,
 )
 from reconforge.db.migrations import MIGRATIONS, database_status, run_migrations
+from reconforge.domain.budget_control import BudgetControlError
 from reconforge.domain.models import utc_now_text
 from reconforge.domain.notification_inbox import InboxPersistenceError
+from reconforge.infrastructure.budget_control_verification import verify_sqlite_budget_storage
 from reconforge.infrastructure.notification_inbox_verification import verify_sqlite_inbox_storage
+from reconforge.infrastructure.sqlite_budget_control_schema import BUDGET_RESTORE_ADMISSION_TRIGGERS
 from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
     RECEIPT_BACKUP_COLUMNS,
     RECEIPT_RESTORE_ADMISSION_TRIGGERS,
@@ -175,6 +178,9 @@ BACKUP_TABLES = [
     "workflow_transition_events",
     "legacy_import_records",
     "audit_events",
+    "budget_envelopes",
+    "budget_commitment_events",
+    "budget_commands",
     "audit_ledger_state",
     "finance_posting_effects",
     "finance_posting_commands",
@@ -348,6 +354,9 @@ BACKUP_SELECT_QUERIES = {
     "workflow_transition_events": "SELECT * FROM workflow_transition_events ORDER BY created_at, id",
     "legacy_import_records": "SELECT * FROM legacy_import_records ORDER BY source_type, object_type, object_id",
     "audit_events": "SELECT * FROM audit_events ORDER BY sequence",
+    "budget_envelopes": "SELECT * FROM budget_envelopes ORDER BY workspace_id, organization_id, legal_entity_id, created_at, id",
+    "budget_commitment_events": "SELECT * FROM budget_commitment_events ORDER BY budget_id, budget_version, id",
+    "budget_commands": "SELECT * FROM budget_commands ORDER BY workspace_id, command_id",
     "audit_ledger_state": "SELECT * FROM audit_ledger_state ORDER BY id",
 }
 
@@ -472,6 +481,9 @@ BACKUP_DELETE_QUERIES = {
     "workflow_transition_events": "DELETE FROM workflow_transition_events",
     "legacy_import_records": "DELETE FROM legacy_import_records",
     "audit_events": "DELETE FROM audit_events",
+    "budget_envelopes": "DELETE FROM budget_envelopes",
+    "budget_commitment_events": "DELETE FROM budget_commitment_events",
+    "budget_commands": "DELETE FROM budget_commands",
     "audit_ledger_state": "DELETE FROM audit_ledger_state",
 }
 
@@ -1770,6 +1782,61 @@ BACKUP_INSERT_COLUMNS = {
         "metadata_json",
         "created_at",
     ),
+    "budget_envelopes": (
+        "id",
+        "workspace_id",
+        "organization_id",
+        "legal_entity_id",
+        "period_id",
+        "budget_code",
+        "name",
+        "currency_code",
+        "limit_minor",
+        "reserved_minor",
+        "consumed_minor",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
+        "status",
+        "created_by",
+        "submitted_by",
+        "approved_by",
+        "reason",
+        "created_at",
+        "updated_at",
+        "row_version",
+    ),
+    "budget_commitment_events": (
+        "id",
+        "budget_id",
+        "commitment_id",
+        "operation",
+        "amount_minor",
+        "remaining_minor",
+        "operation_date",
+        "source_reference",
+        "reason",
+        "actor_id",
+        "created_at",
+        "budget_version",
+        "audit_event_id",
+        "outbox_event_id",
+        "request_digest",
+    ),
+    "budget_commands": (
+        "workspace_id",
+        "organization_id",
+        "legal_entity_id",
+        "command_id",
+        "request_digest",
+        "budget_id",
+        "actor_id",
+        "request_json",
+        "result_json",
+        "result_digest",
+        "created_at",
+    ),
     "audit_ledger_state": ("id", "last_sequence", "last_event_hash", "updated_at"),
 }
 
@@ -2461,6 +2528,27 @@ BACKUP_INSERT_QUERIES = {
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
+    "budget_envelopes": """
+        INSERT INTO budget_envelopes (
+            id, workspace_id, organization_id, legal_entity_id, period_id, budget_code, name, currency_code,
+            limit_minor, reserved_minor, consumed_minor, currency_precision, currency_rounding_policy,
+            currency_registry_version, currency_registry_digest, status, created_by, submitted_by, approved_by,
+            reason, created_at, updated_at, row_version
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "budget_commitment_events": """
+        INSERT INTO budget_commitment_events (
+            id, budget_id, commitment_id, operation, amount_minor, remaining_minor, operation_date,
+            source_reference, reason, actor_id, created_at, budget_version, audit_event_id, outbox_event_id,
+            request_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "budget_commands": """
+        INSERT INTO budget_commands (
+            workspace_id, organization_id, legal_entity_id, command_id, request_digest, budget_id, actor_id,
+            request_json, result_json, result_digest, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
     "audit_ledger_state": "INSERT INTO audit_ledger_state (id, last_sequence, last_event_hash, updated_at) VALUES (?, ?, ?, ?)",
 }
 
@@ -2723,10 +2811,32 @@ def _verify_notification_inbox_backup(
         raise DBBridgeError("Backup notification inbox integrity verification failed.") from exc
 
 
+def _verify_budget_control_backup(
+    connection: sqlite3.Connection,
+    *,
+    required: bool,
+) -> None:
+    """Verify immutable budget evidence only when its schema owns the tables."""
+
+    tables = ("budget_envelopes", "budget_commitment_events", "budget_commands")
+    present = tuple(_table_exists(connection, table) for table in tables)
+    if not any(present):
+        if required:
+            raise DBBridgeError("Backup budget-control tables are unavailable.")
+        return
+    if not all(present):
+        raise DBBridgeError("Backup budget-control schema is incomplete.")
+    try:
+        verify_sqlite_budget_storage(connection)
+    except (BudgetControlError, TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup budget-control integrity verification failed.") from exc
+
+
 def _backup_payload(connection: sqlite3.Connection, *, created_at: str, schema_version: int) -> dict[str, Any]:
     _verify_posting_backup(connection)
     _verify_receivables_policy_backup(connection)
     _verify_notification_inbox_backup(connection, required=schema_version >= 51)
+    _verify_budget_control_backup(connection, required=schema_version >= 52)
     return {
         "backup_format_version": BACKUP_FORMAT_VERSION,
         "created_at": created_at,
@@ -2758,6 +2868,7 @@ def create_backup(
         _verify_posting_backup(connection)
         _verify_receivables_policy_backup(connection)
         _verify_notification_inbox_backup(connection, required=schema_version >= 51)
+        _verify_budget_control_backup(connection, required=schema_version >= 52)
         resolve_output_dir(resolved_output_dir)
         ensure_outbox_schema(connection)
         append_audit_event(
@@ -3312,6 +3423,7 @@ def restore_backup(
             policy_insert_guards: list[str] = []
             posting_insert_guards: list[str] = []
             receipt_insert_guards: list[str] = []
+            budget_insert_guards: list[str] = []
             if backup_schema_version >= 50:
                 for trigger_name in RECEIPT_RESTORE_ADMISSION_TRIGGERS:
                     guard = connection.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)).fetchone()
@@ -3355,6 +3467,16 @@ def restore_backup(
                     policy_insert_guards.append(str(guard["sql"]))
                     # Trigger names come only from the closed restore-guard tuple above.
                     connection.execute(f"DROP TRIGGER {trigger_name}")
+            if backup_schema_version >= 52:
+                for trigger_name in BUDGET_RESTORE_ADMISSION_TRIGGERS:
+                    guard = connection.execute(
+                        "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)
+                    ).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("Budget-control restore guard is unavailable.")
+                    budget_insert_guards.append(str(guard["sql"]))
+                    # Only the unpublished target permits exact retained state assembly.
+                    connection.execute(f"DROP TRIGGER {trigger_name}")  # nosec B608
             tables = backup["tables"]
             if not isinstance(tables, dict):
                 raise DBBridgeError("Backup table payload is invalid.")
@@ -3362,6 +3484,10 @@ def restore_backup(
                 table not in tables for table in ("notification_inbox", "notification_inbox_reads")
             ):
                 raise DBBridgeError("Backup omits retained notification inbox tables.")
+            if backup_schema_version >= 52 and any(
+                table not in tables for table in ("budget_envelopes", "budget_commitment_events", "budget_commands")
+            ):
+                raise DBBridgeError("Backup omits retained budget-control tables.")
             for table in BACKUP_TABLES:
                 rows = tables.get(table, [])
                 if table in {"finance_posting_effects", "finance_posting_commands", *RECEIPT_TABLES}:
@@ -3678,8 +3804,9 @@ def restore_backup(
                 if backup_schema_version >= 50:
                     _insert_rows(connection, table="inventory_receipt_commands", rows=tables["inventory_receipt_commands"])
                 _verify_posting_backup(connection)
-            for guard_sql in policy_insert_guards + posting_insert_guards + receipt_insert_guards:
+            for guard_sql in policy_insert_guards + posting_insert_guards + receipt_insert_guards + budget_insert_guards:
                 connection.execute(guard_sql)
+            _verify_budget_control_backup(connection, required=backup_schema_version >= 52)
             connection.commit()
             connection.execute("PRAGMA foreign_keys = ON")
         finally:
@@ -3693,6 +3820,7 @@ def restore_backup(
             _verify_posting_backup(connection)
             _verify_receivables_policy_backup(connection)
             _verify_notification_inbox_backup(connection, required=True)
+            _verify_budget_control_backup(connection, required=True)
             from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 
             policies = FinancePolicyStore(connection)

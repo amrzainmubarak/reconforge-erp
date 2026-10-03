@@ -1,5 +1,20 @@
 # ReconForge Execution Evidence Log
 
+- AMR-GFO-003 governed budget control (2026-10-03): SQLite migration 52 and
+  PostgreSQL Alembic revision 0102 are centrally registered with the real
+  authenticated API, authorization-route inventory, module registry, and
+  PostgreSQL migration-status chain. `tests/test_budget_control.py` and
+  `tests/test_api_budget_control.py` passed 27 focused SQLite/domain/API tests,
+  including atomic migration rollback and native backup/restore tamper refusal.
+  `tests/test_postgres_budget_control.py` passed 2 authority/race/HTTP tests
+  under a synthetic non-superuser/non-BYPASSRLS application role.
+  `tests/test_postgres_budget_control_migration.py` passed 2 registered
+  upgrade/RLS/empty-downgrade/retained-evidence-refusal tests from 0101 to 0102.
+  `tests/test_postgres_operations.py` passed 8 live migration-status tests.
+  Focused Ruff and Mypy passed. This is bounded synthetic evidence; it does not
+  prove production capacity, external integration, standalone UI, PostgreSQL
+  native backup/restore orchestration, or a complete financial posting cycle.
+
 - AMR-GFO-002 retained notification inbox (2026-10-03): SQLite migration 51,
   PostgreSQL Alembic revision 0101, immutable/append-only evidence triggers,
   backup and restore admission, authorization inventory, and the authenticated

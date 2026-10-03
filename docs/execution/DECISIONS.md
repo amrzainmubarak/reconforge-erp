@@ -1,5 +1,17 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-AMR-GFO-003 — Governed budget control as a bounded financial authorization foundation (2026-10-03)
+
+ADR0826 is accepted with SQLite migration 52 and PostgreSQL revision 0102.
+Budget availability is an immutable, exact-minor-unit envelope and commitment
+ledger under current scoped authority, not a mutable cached balance or a
+downstream posting substitute. Central API registration, route-level permission
+contracts, current identity revalidation, audit/outbox co-commit, RLS, migration
+status, and SQLite backup/restore verification are part of the same slice.
+PostgreSQL downgrade refuses evidence loss. Purchase, payable, cash, banking,
+general-ledger effects, a standalone UI, and PostgreSQL native backup/restore
+orchestration remain outside this decision.
+
 ## D-PROD-018 — Independently verified invoice acknowledgement (2026-10-03)
 
 ADR0823 accepts exact request/source verification under current authority with

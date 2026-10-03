@@ -30,6 +30,11 @@ only an upper bound: it can narrow a request but cannot re-grant a revoked live
 permission or scope. PostgreSQL reads those authority rows with `FOR SHARE` and
 uses transaction-local RLS scope; SQLite re-reads local RBAC under `BEGIN
 IMMEDIATE`. Human writes require recent stronger authentication in server mode.
+The PostgreSQL repository rechecks the exact persisted session and an unexpired
+step-up assertion inside the budget write transaction, using the database clock,
+and holds a shared lock on that session until the business effect commits. A
+middleware snapshot therefore cannot carry a revoked session or expired
+assertion into a later financial write.
 The local authenticated route converts the real password-authenticated local
 session into a fresh server principal for that one call, then the repository
 performs the durable identity/RBAC check again.
@@ -39,6 +44,12 @@ and `budget_control.approve`. `manage` creates, submits, reserves, releases,
 and consumes; `approve` is required for independent approval; `read` retrieves
 the scoped envelope and event history. The database guard rejects an approval
 by the creator or submitter even if an application path regresses.
+
+PostgreSQL revision 0102 seeds those permissions and their `admin`/`controller`
+default-role grants for tenants and roles that already exist at upgrade time. Its
+versioned tenant and role triggers repeat the seed for a tenant or either
+default role created later. A revoked operator grant remains revoked: the seed
+uses conflict-safe inserts and never reactivates an existing row.
 
 Command IDs are scoped to tenant/workspace in PostgreSQL and workspace in local
 mode. They bind actor, canonical scope, and exact request digest. A matching
@@ -50,9 +61,10 @@ checks; SQLite uses `BEGIN IMMEDIATE`. The declared PostgreSQL write profile is
 `READ COMMITTED`; callers at another isolation are refused rather than silently
 changed.
 
-Storage is defined once by
-`SQLITE_BUDGET_CONTROL_SCHEMA_SQL` and
-`POSTGRES_BUDGET_CONTROL_SCHEMA_SQL`. The tables are:
+Storage is defined by the frozen `SQLITE_BUDGET_CONTROL_UPGRADE_SQL` artifact
+owned by SQLite migration 52 and by the frozen `UPGRADE_SQL` literal owned by
+Alembic revision 0102. Neither migration imports mutable runtime schema text.
+The tables are:
 
 - `budget_envelopes`: canonical scope, fixed budget definition and captured
   currency policy, lifecycle identities, cached conserved balances, and version.
@@ -67,8 +79,20 @@ SQLite defines equivalent tables and immutable/lifecycle/event guards. Both
 adapters emit budget audit and Outbox records in the same transaction as the
 business effect and receipt.
 
+The shared PostgreSQL runtime database credential and trusted server
+application are part of this slice's trusted computing base. RLS binds tenant
+and selected hierarchy, while the server rechecks user authority and stronger
+authentication before every budget mutation. The database trigger layer enforces
+structural lifecycle, conservation, and immutable evidence invariants; it does
+not prove an individual human actor's permission or stronger-authentication
+state against arbitrary SQL issued with that shared runtime credential. A valid
+direct DML sequence can therefore satisfy structural guards without being an
+authorized product workflow. Deployments that need a database-enforced human
+actor boundary require separate DB identities or a constrained database
+interface; this slice does not claim that boundary.
+
 SQLite migration **52** and PostgreSQL Alembic revision **0102** install the
-schema from the two reviewed constants. `create_api_app` registers the secured
+reviewed schema. `create_api_app` registers the secured
 PostgreSQL repository factory from the identity factory, exposes the authenticated
 router under `/api/v1`, and includes all mutation routes in the central
 permission-contract scan. The module descriptor is registered centrally. The
@@ -95,9 +119,13 @@ to discard any retained budget evidence.
 
 Acceptance evidence covers the full lifecycle, exact textual minor values,
 capacity conservation, command replay and conflicting reuse, audit/Outbox
-atomicity, raw trigger tamper refusal, independent maker/checker review,
+atomicity, SQLite raw trigger tamper refusal and PostgreSQL structural trigger
+admission, independent maker/checker review,
 parallel self-approval and oversubscription races, current-role revocation
-before retry, SQLite authenticated HTTP, SQLite migration rollback and
+before retry, stale-session and expired-step-up refusal inside the PostgreSQL
+write transaction, a session lock that blocks concurrent revocation until the
+financial transaction completes, frozen SQLite/Alembic migration identity tests,
+SQLite authenticated HTTP, SQLite migration rollback and
 backup/restore tamper refusal, and PostgreSQL authenticated HTTP with step-up,
 selected-scope binding, nonowner RLS, and live-role revocation. The PostgreSQL
 migration test separately applies the registered 0102 revision from 0101 and

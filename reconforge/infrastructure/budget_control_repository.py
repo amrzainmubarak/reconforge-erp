@@ -70,6 +70,17 @@ class BudgetControlRepositoryBase:
     def _identity(self, user_id: str, username: str) -> bool:
         raise NotImplementedError
 
+    def _assert_write_session(self, principal: Any) -> None:
+        """Revalidate a server-bound privileged session before a financial write.
+
+        Local mode has no separately persisted privileged-session ledger.  The
+        PostgreSQL adapter overrides this hook when it is reached through the
+        server boundary, so the authorization snapshot cannot outlive a
+        revoked session or expired stronger-authentication assertion.
+        """
+
+        return None
+
     def _authority(self, scope: BudgetScope, user_id: str, username: str) -> BudgetCurrentAuthority | None:
         raise NotImplementedError
 
@@ -91,6 +102,8 @@ class BudgetControlRepositoryBase:
             raise BudgetControlError("An authenticated persisted human identity is required.")
         if write and not principal.step_up_active:
             raise BudgetControlError("A current stronger authentication session is required.")
+        if write:
+            self._assert_write_session(principal)
         for value, grants in (
             (scope.workspace_id, principal.authorized_workspace_ids),
             (scope.organization_id, principal.authorized_organization_ids),

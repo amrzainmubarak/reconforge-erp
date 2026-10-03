@@ -4,10 +4,15 @@
   PostgreSQL Alembic revision 0102 are centrally registered with the real
   authenticated API, authorization-route inventory, module registry, and
   PostgreSQL migration-status chain. `tests/test_budget_control.py` and
-  `tests/test_api_budget_control.py` passed 27 focused SQLite/domain/API tests,
-  including atomic migration rollback and native backup/restore tamper refusal.
-  `tests/test_postgres_budget_control.py` passed 2 authority/race/HTTP tests
-  under a synthetic non-superuser/non-BYPASSRLS application role.
+  `tests/test_api_budget_control.py` passed 28 focused SQLite/domain/API tests,
+  including a static frozen-migration identity check, atomic migration rollback,
+  and native backup/restore tamper refusal.
+  `tests/test_postgres_budget_control.py` passed 4 authority/race/HTTP/session
+  tests under a synthetic non-superuser/non-BYPASSRLS application role,
+  including a stale request snapshot after step-up expiry or session revocation,
+  a held-session lock that blocks concurrent revocation until the financial
+  commit, and a valid direct-DML lifecycle sequence that documents the shared-
+  runtime authority boundary.
   `tests/test_postgres_budget_control_migration.py` passed 2 registered
   upgrade/RLS/empty-downgrade/retained-evidence-refusal tests from 0101 to 0102.
   `tests/test_postgres_operations.py` passed 8 live migration-status tests.

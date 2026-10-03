@@ -41,7 +41,8 @@ tasks:
       conserved reserve/release/consume ledger, oversubscription races and command recovery,
       atomic audit/outbox, centrally registered SQLite/PostgreSQL authenticated API,
       SQLite52/PostgreSQL0102 migration acceptance, SQLite backup/restore verification,
-      and nonowner PostgreSQL RLS/revocation/race evidence. A standalone UI and
+      frozen migration identity/default-permission seeding, and nonowner PostgreSQL
+      RLS/revocation/race/live-session/structural-boundary evidence. A standalone UI and
       PostgreSQL native backup/restore orchestration remain separate work.
   - id: AMR-GFO-004
     priority: P0

@@ -8,12 +8,17 @@ minor-unit budget envelopes, independent approval, conserved commitments,
 scoped command receipts, audit and Outbox evidence. The central API factory,
 router, authorization inventory, module registry, PostgreSQL migration-status
 chain, and SQLite backup/restore admission are connected. Named synthetic
-evidence includes 27 SQLite/domain/API tests, 2 live PostgreSQL authority/API
+evidence includes 28 SQLite/domain/API tests, 4 live PostgreSQL authority/API
 tests under a non-superuser/non-BYPASSRLS role, 2 PostgreSQL migration tests,
 and the live PostgreSQL operations status selection; focused Ruff and Mypy
-passed. The budget scope does not post purchase, payable, cash, banking, or
-general-ledger effects; it has no standalone UI or PostgreSQL native
-backup/restore orchestration.
+passed. Migration 52 and revision 0102 own frozen SQL artifacts, and revision
+0102 seeds the declared default roles for existing and future PostgreSQL tenants.
+PostgreSQL writes recheck and lock the actual session plus a live step-up
+assertion inside the budget transaction. The shared runtime database credential
+and trusted server application remain the authority boundary for human actor and
+SoD checks; database triggers prove structural invariants only. The budget scope
+does not post purchase, payable, cash, banking, or general-ledger effects; it has
+no standalone UI or PostgreSQL native backup/restore orchestration.
 
 ## Amr sprint platform-core completion (2026-10-03)
 

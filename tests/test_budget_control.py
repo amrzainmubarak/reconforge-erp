@@ -1,22 +1,26 @@
 from __future__ import annotations
 
+import ast
 import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from decimal import Decimal, localcontext
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+import reconforge.db.migration_52_budget_control as migration_52_module
+import reconforge.db.migrations as migration_module
 from reconforge.audit import verify_audit_events
 from reconforge.auth import LocalAuthService
 from reconforge.db import connect, run_migrations
 from reconforge.db.backup import create_backup, restore_backup
 from reconforge.db.exporter import DBBridgeError
-import reconforge.db.migrations as migration_module
+from reconforge.db.migration_52_budget_control import SQLITE_BUDGET_CONTROL_UPGRADE_SQL
 from reconforge.domain.budget_control import (
     BudgetControlError,
     BudgetDefinition,
@@ -27,10 +31,7 @@ from reconforge.domain.budget_control import (
 )
 from reconforge.infrastructure.budget_control_verification import verify_sqlite_budget_storage
 from reconforge.infrastructure.sqlite_budget_control import SQLiteBudgetControlRepository
-from reconforge.infrastructure.sqlite_budget_control_schema import (
-    BUDGET_RESTORE_ADMISSION_TRIGGERS,
-    SQLITE_BUDGET_CONTROL_SCHEMA_SQL,
-)
+from reconforge.infrastructure.sqlite_budget_control_schema import BUDGET_52_RESTORE_ADMISSION_TRIGGERS
 from reconforge.platform.common import ServerPrincipal, server_principal_context
 from reconforge.platform.master_data import MasterDataService
 
@@ -54,7 +55,7 @@ def budget_store(tmp_path: Path):
         str(row[0])
         for row in connection.execute("SELECT permission_name FROM role_permissions WHERE role_id=?", (owner_id,))
     }
-    assert PERMISSIONS <= assigned
+    assert assigned >= PERMISSIONS
     scope = BudgetScope(str(organization["workspace_id"]), str(organization["id"]), str(entity["id"]))
     principals = [ServerPrincipal(user=user, permissions=PERMISSIONS, step_up_active=True,
         authorized_workspace_ids=frozenset({scope.workspace_id}), authorized_organization_ids=frozenset({scope.organization_id}),
@@ -106,7 +107,7 @@ def test_registered_budget_migration_rolls_back_all_schema_and_permission_effect
     broken = migration_module.Migration(
         version=52,
         name="governed_budget_control",
-        sql=SQLITE_BUDGET_CONTROL_SCHEMA_SQL + "\nCREATE TABLE budget_envelopes (id TEXT);",
+        sql=SQLITE_BUDGET_CONTROL_UPGRADE_SQL + "\nCREATE TABLE budget_envelopes (id TEXT);",
     )
     monkeypatch.setattr(migration_module, "MIGRATIONS", (*migrations[:51], broken))
 
@@ -123,6 +124,31 @@ def test_registered_budget_migration_rolls_back_all_schema_and_permission_effect
         assert int(connection.execute("PRAGMA user_version").fetchone()[0]) == 51
     finally:
         connection.close()
+
+
+def test_registered_budget_migration_schema_is_frozen_as_a_literal() -> None:
+    """Fresh local installs cannot read mutable runtime schema text for v52."""
+
+    source = Path(migration_52_module.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    assignments = {
+        target.id: node.value
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        for target in node.targets
+        if isinstance(target, ast.Name)
+    }
+    literal = assignments.get("SQLITE_BUDGET_CONTROL_UPGRADE_SQL")
+    assert isinstance(literal, ast.Constant) and isinstance(literal.value, str)
+    assert sha256(SQLITE_BUDGET_CONTROL_UPGRADE_SQL.encode("utf-8")).hexdigest() == (
+        "a4d2e02d07d81f983eef9b24952565fbe1885cd79c120d7a2b920b892cb6284e"
+    )
+    assert "sqlite_budget_control_schema" not in source
+    assert migration_module.MIGRATIONS[51] == migration_module.Migration(
+        version=52,
+        name="governed_budget_control",
+        sql=SQLITE_BUDGET_CONTROL_UPGRADE_SQL,
+    )
 
 
 def test_backup_restore_retains_and_reverifies_budget_commitment_evidence(budget_store, tmp_path: Path) -> None:
@@ -155,7 +181,7 @@ def test_backup_restore_retains_and_reverifies_budget_commitment_evidence(budget
     restored_path = tmp_path / "budget-restored.db"
     restore_backup(restored_path, backup.backup_path)
     with connect(restored_path, require_exists=True) as restored:
-        assert set(BUDGET_RESTORE_ADMISSION_TRIGGERS) <= {
+        assert set(BUDGET_52_RESTORE_ADMISSION_TRIGGERS) <= {
             str(row["name"])
             for row in restored.execute("SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()
         }

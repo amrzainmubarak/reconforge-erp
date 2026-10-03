@@ -27,7 +27,7 @@ from reconforge.domain.models import utc_now_text
 from reconforge.domain.notification_inbox import InboxPersistenceError
 from reconforge.infrastructure.budget_control_verification import verify_sqlite_budget_storage
 from reconforge.infrastructure.notification_inbox_verification import verify_sqlite_inbox_storage
-from reconforge.infrastructure.sqlite_budget_control_schema import BUDGET_RESTORE_ADMISSION_TRIGGERS
+from reconforge.infrastructure.sqlite_budget_control_schema import BUDGET_52_RESTORE_ADMISSION_TRIGGERS
 from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
     RECEIPT_BACKUP_COLUMNS,
     RECEIPT_RESTORE_ADMISSION_TRIGGERS,
@@ -3468,7 +3468,7 @@ def restore_backup(
                     # Trigger names come only from the closed restore-guard tuple above.
                     connection.execute(f"DROP TRIGGER {trigger_name}")
             if backup_schema_version >= 52:
-                for trigger_name in BUDGET_RESTORE_ADMISSION_TRIGGERS:
+                for trigger_name in BUDGET_52_RESTORE_ADMISSION_TRIGGERS:
                     guard = connection.execute(
                         "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)
                     ).fetchone()

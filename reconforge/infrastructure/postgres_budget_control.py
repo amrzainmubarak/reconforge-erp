@@ -19,9 +19,10 @@ from reconforge.infrastructure.postgres_repository_scope import ensure_repositor
 class PostgresBudgetControlRepository(BudgetControlRepositoryBase):
     tenant_id: str
 
-    def __init__(self, connection: Any, tenant_id: str) -> None:
+    def __init__(self, connection: Any, tenant_id: str, *, require_live_session_assurance: bool = False) -> None:
         self.connection = connection
         self.tenant_id = validate_tenant_id(tenant_id)
+        self._require_live_session_assurance = require_live_session_assurance
 
     @contextmanager
     def _transaction(self, *, write: bool) -> Iterator[None]:
@@ -42,6 +43,36 @@ class PostgresBudgetControlRepository(BudgetControlRepositoryBase):
 
     def _identity(self, user_id: str, username: str) -> bool:
         return self.connection.execute("SELECT 1 FROM reconforge.identity_users WHERE tenant_id=%s AND id=%s AND username=%s AND NOT disabled FOR SHARE", (self.tenant_id, user_id, username)).fetchone() is not None
+
+    def _assert_write_session(self, principal: Any) -> None:
+        """Lock the actual human session and recheck its live assurance.
+
+        Middleware authentication is necessarily a request-start snapshot.  A
+        financial mutation instead verifies the same session inside the owning
+        transaction and holds a shared row lock until commit, so a concurrent
+        revocation cannot race a persisted budget effect.  Assertions are
+        append-only; ``clock_timestamp`` deliberately evaluates their expiry
+        at this check rather than at transaction start.
+        """
+
+        if not self._require_live_session_assurance:
+            return
+        session_id = getattr(principal, "session_id", None)
+        if not isinstance(session_id, str) or not session_id:
+            raise BudgetControlError("A current stronger authentication session is required.")
+        row = self.connection.execute(
+            "SELECT sessions.id FROM reconforge.identity_sessions sessions "
+            "WHERE sessions.tenant_id=%s AND sessions.id=%s AND sessions.user_id=%s "
+            "AND sessions.revoked_at IS NULL AND sessions.expires_at>clock_timestamp() "
+            "AND EXISTS(SELECT 1 FROM reconforge.identity_step_up_assertions assertions "
+            "WHERE assertions.tenant_id=sessions.tenant_id AND assertions.session_id=sessions.id "
+            "AND assertions.user_id=sessions.user_id AND assertions.verified_at<=clock_timestamp() "
+            "AND assertions.expires_at>clock_timestamp()) "
+            "FOR SHARE OF sessions",
+            (self.tenant_id, session_id, principal.user.id),
+        ).fetchone()
+        if row is None:
+            raise BudgetControlError("Budget session assurance is no longer active.")
 
     def _authority(self, scope: BudgetScope, user_id: str, username: str) -> BudgetCurrentAuthority | None:
         permission_rows = self.connection.execute(

@@ -53,7 +53,7 @@ def budget_api(tmp_path: Path) -> Iterator[tuple[TestClient, dict[str, str], dic
             str(row[0])
             for row in connection.execute("SELECT permission_name FROM role_permissions WHERE role_id=?", (role_id,))
         }
-        assert PERMISSIONS <= assigned
+        assert assigned >= PERMISSIONS
         scope = {
             "workspace_id": str(organization["workspace_id"]),
             "organization_id": str(organization["id"]),

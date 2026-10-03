@@ -96,7 +96,10 @@ def _call(request: Request, connection: sqlite3.Connection | None, current_user:
             return operation(SQLiteBudgetControlRepository(connection))
     except (BudgetControlError, PlatformError) as exc:
         message = str(exc)
-        denied = any(word in message.lower() for word in ("authority", "permission", "identity", "authentication"))
+        denied = any(
+            word in message.lower()
+            for word in ("authority", "permission", "identity", "authentication", "session", "assurance")
+        )
         raise APIError(status_code=403 if denied else 409, code="budget_control_denied" if denied else "budget_control_conflict", message=message) from exc
 
 

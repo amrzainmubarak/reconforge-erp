@@ -5,15 +5,20 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from hashlib import sha256
 from pathlib import Path
-from threading import Barrier
+from threading import Barrier, Event
 from typing import Any, Literal
 
 import pytest
 from alembic.script import ScriptDirectory
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from reconforge.api import create_api_app
+from reconforge.api.errors import APIError
+from reconforge.api.routes.budget_control import _call as call_budget_route
+from reconforge.api.server_budget_control import execute_postgres_budget_control
 from reconforge.auth.models import LocalUser
 from reconforge.domain.budget_control import BudgetControlError, BudgetDefinition, BudgetScope, CommitmentAction
 from reconforge.infrastructure.budget_control_verification import verify_postgres_budget_storage
@@ -250,6 +255,67 @@ def test_postgres_budget_rechecks_authority_replays_evidence_and_serializes_capa
             )
 
 
+def test_postgres_budget_structural_guards_document_shared_runtime_authority_boundary(
+    budget_postgres: dict[str, Any],
+) -> None:
+    """The nonowner runtime role cannot be mistaken for a human actor boundary."""
+
+    database = budget_postgres
+    users = database["users"]
+    permissions = database["permissions"]
+
+    class ExpectedRollback(Exception):
+        pass
+
+    with (
+        pytest.raises(ExpectedRollback),
+        database["boundary"].transaction(
+            TENANT,
+            workspace_id=SCOPE.workspace_id,
+            organization_id=SCOPE.organization_id,
+            legal_entity_id=SCOPE.legal_entity_id,
+        ) as connection,
+    ):
+        identity = PostgresIdentityRepository(connection)
+        identity.create_role(tenant_id=TENANT, role_name="budget-outsider")
+        outsider = identity.create_user(
+            tenant_id=TENANT,
+            user_id="budget-outsider",
+            username="outsider",
+            password=PASSWORD,
+            role_name="budget-outsider",
+        )
+        assert "budget_control.manage" not in identity.user_permissions(tenant_id=TENANT, user_id=outsider.id)
+        repository = PostgresBudgetControlRepository(connection, TENANT)
+        with server_principal_context(_principal(users["maker"], permissions["maker"])):
+            draft = repository.create(
+                SCOPE,
+                BudgetDefinition("TCB-BOUNDARY", "Synthetic trusted-boundary budget", "period", "EGP", 100),
+                command_id="tcb-boundary-create",
+            )
+        # This is direct DML through the nonowner runtime connection, not a
+        # product use case. The structural trigger cannot authenticate the
+        # claimed submitter, so it accepts an existing unprivileged user.
+        connection.execute(
+            "UPDATE reconforge.budget_envelopes SET status='Submitted',submitted_by=%s,reason=%s,"
+            "updated_at=%s,row_version=2 WHERE tenant_id=%s AND id=%s",
+            (outsider.id, "Synthetic direct submission", "2026-07-15T00:00:01Z", TENANT, draft["id"]),
+        )
+        connection.execute(
+            "UPDATE reconforge.budget_envelopes SET status='Approved',approved_by=%s,reason=%s,"
+            "updated_at=%s,row_version=3 WHERE tenant_id=%s AND id=%s",
+            (users["checker"].id, "Synthetic direct approval", "2026-07-15T00:00:02Z", TENANT, draft["id"]),
+        )
+        row = connection.execute(
+            "SELECT status,submitted_by,approved_by,row_version FROM reconforge.budget_envelopes "
+            "WHERE tenant_id=%s AND id=%s",
+            (TENANT, draft["id"]),
+        ).fetchone()
+        assert row is not None
+        assert tuple(row) == ("Approved", outsider.id, users["checker"].id, 3)
+        raise ExpectedRollback
+
+
 def _headers(token: str) -> dict[str, str]:
     return {
         "Authorization": f"Bearer {token}",
@@ -272,6 +338,216 @@ def _payload(*, command_id: str, legal_entity_id: str = SCOPE.legal_entity_id) -
         "limit_minor": "10000",
         "command_id": command_id,
     }
+
+
+def _server_budget_request(app: Any, principal: ServerPrincipal) -> Request:
+    """Model a request whose middleware snapshot predates a state change."""
+
+    return Request(
+        {
+            "type": "http",
+            "http_version": "1.1",
+            "method": "POST",
+            "scheme": "http",
+            "path": "/api/v1/budget-control/envelopes",
+            "raw_path": b"/api/v1/budget-control/envelopes",
+            "query_string": b"",
+            "headers": [
+                (b"x-reconforge-tenant", TENANT.encode("ascii")),
+                (b"x-reconforge-workspace", SCOPE.workspace_id.encode("ascii")),
+                (b"x-reconforge-organization", SCOPE.organization_id.encode("ascii")),
+                (b"x-reconforge-legal-entity", SCOPE.legal_entity_id.encode("ascii")),
+            ],
+            "client": ("127.0.0.1", 50000),
+            "server": ("testserver", 80),
+            "app": app,
+            "state": {"server_principal": principal},
+        }
+    )
+
+
+def _session_principal(database: dict[str, Any], session_id: str) -> ServerPrincipal:
+    return ServerPrincipal(
+        user=database["users"]["maker"],
+        permissions=database["permissions"]["maker"],
+        session_id=session_id,
+        step_up_active=True,
+        authorized_tenant_ids=frozenset({TENANT}),
+        authorized_workspace_ids=frozenset({SCOPE.workspace_id}),
+        authorized_organization_ids=frozenset({SCOPE.organization_id}),
+        authorized_legal_entity_ids=frozenset({SCOPE.legal_entity_id}),
+    )
+
+
+def _create_with_session(database: dict[str, Any], app: Any, session_id: str, *, code: str, command_id: str) -> dict[str, Any]:
+    return execute_postgres_budget_control(
+        _server_budget_request(app, _session_principal(database, session_id)),
+        SCOPE,
+        lambda repository: repository.create(
+            SCOPE,
+            BudgetDefinition(code, "Synthetic live-session budget", "period", "EGP", 100),
+            command_id=command_id,
+        ),
+    )
+
+
+def test_postgres_budget_writes_recheck_current_session_and_step_up_inside_transaction(
+    budget_postgres: dict[str, Any], tmp_path: Path
+) -> None:
+    """A stale middleware principal must not authorize a later financial write."""
+
+    psycopg = pytest.importorskip("psycopg")
+    database = budget_postgres
+    app_parameters = psycopg.conninfo.conninfo_to_dict(os.environ["RECONFORGE_TEST_POSTGRES_DSN"])
+    app_parameters["dbname"] = psycopg.conninfo.conninfo_to_dict(database["admin"])["dbname"]
+    tenant_root = tmp_path / "tenants-live-session"
+    tenant_root.mkdir()
+    app = create_api_app(
+        tmp_path / "unused-live-session.db",
+        tenant_db_root=tenant_root,
+        postgres_dsn=psycopg.conninfo.make_conninfo(**app_parameters),
+        postgres_require_tls=False,
+        postgres_pool_size=4,
+    )
+
+    def create_session(client: TestClient) -> tuple[str, str]:
+        login = client.post(
+            "/api/v1/auth/login",
+            headers={"X-ReconForge-Tenant": TENANT},
+            json={"username": "maker", "password": PASSWORD},
+        )
+        assert login.status_code == 200, login.text
+        token = str(login.json()["access_token"])
+        stepped_up = client.post("/api/v1/auth/step-up", headers=_headers(token), json={"password": PASSWORD})
+        assert stepped_up.status_code == 200, stepped_up.text
+        with database["boundary"].transaction(TENANT) as connection:
+            session = connection.execute(
+                "SELECT id FROM reconforge.identity_sessions WHERE tenant_id=%s AND user_id=%s AND token_hash=%s",
+                (TENANT, database["users"]["maker"].id, sha256(token.encode("utf-8")).hexdigest()),
+            ).fetchone()
+        assert session is not None
+        return token, str(session["id"])
+
+    with TestClient(app) as client:
+        _token, active_session_id = create_session(client)
+        created = _create_with_session(
+            database, app, active_session_id, code="LIVE-ASSURANCE", command_id="live-assurance-create"
+        )
+        assert created["budget_code"] == "LIVE-ASSURANCE"
+
+        session_locked = Event()
+        allow_commit = Event()
+
+        def write_after_session_lock(repository: PostgresBudgetControlRepository) -> dict[str, Any]:
+            repository._actor(SCOPE, MANAGE, write=True)
+            session_locked.set()
+            if not allow_commit.wait(timeout=10):
+                raise RuntimeError("Synthetic session-lock test did not receive its commit signal.")
+            return repository.create(
+                SCOPE,
+                BudgetDefinition("LOCKED-ASSURANCE", "Synthetic locked-session budget", "period", "EGP", 100),
+                command_id="locked-assurance-create",
+            )
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(
+                execute_postgres_budget_control,
+                _server_budget_request(app, _session_principal(database, active_session_id)),
+                SCOPE,
+                write_after_session_lock,
+            )
+            assert session_locked.wait(timeout=10)
+            with psycopg.connect(database["admin"], autocommit=True) as administrator:
+                administrator.execute("SET lock_timeout = '250ms'")
+                with pytest.raises(psycopg.errors.LockNotAvailable):
+                    administrator.execute(
+                        "UPDATE reconforge.identity_sessions SET revoked_at=clock_timestamp(),"
+                        "revoked_by='budget-session-lock-test',revocation_reason_code='security_response',"
+                        "lifecycle_version=lifecycle_version+1 WHERE tenant_id=%s AND id=%s AND revoked_at IS NULL",
+                        (TENANT, active_session_id),
+                    )
+                allow_commit.set()
+                locked = future.result(timeout=10)
+                assert locked["budget_code"] == "LOCKED-ASSURANCE"
+                administrator.execute(
+                    "UPDATE reconforge.identity_sessions SET revoked_at=clock_timestamp(),"
+                    "revoked_by='budget-session-lock-test',revocation_reason_code='security_response',"
+                    "lifecycle_version=lifecycle_version+1 WHERE tenant_id=%s AND id=%s AND revoked_at IS NULL",
+                    (TENANT, active_session_id),
+                )
+
+        _token, expired_session_id = create_session(client)
+        with psycopg.connect(database["admin"], autocommit=True) as administrator:
+            administrator.execute("SET session_replication_role=replica")
+            try:
+                administrator.execute(
+                    "UPDATE reconforge.identity_step_up_assertions "
+                    "SET verified_at=clock_timestamp()-interval '11 minutes',expires_at=clock_timestamp()-interval '1 minute' "
+                    "WHERE tenant_id=%s AND session_id=%s",
+                    (TENANT, expired_session_id),
+                )
+            finally:
+                administrator.execute("SET session_replication_role=origin")
+        with pytest.raises(BudgetControlError, match="session assurance"):
+            _create_with_session(
+                database, app, expired_session_id, code="EXPIRED-ASSURANCE", command_id="expired-assurance-create"
+            )
+
+        _token, future_assertion_session_id = create_session(client)
+        with psycopg.connect(database["admin"], autocommit=True) as administrator:
+            administrator.execute("SET session_replication_role=replica")
+            try:
+                administrator.execute(
+                    "UPDATE reconforge.identity_step_up_assertions "
+                    "SET verified_at=clock_timestamp()+interval '1 minute',expires_at=clock_timestamp()+interval '2 minutes' "
+                    "WHERE tenant_id=%s AND session_id=%s",
+                    (TENANT, future_assertion_session_id),
+                )
+            finally:
+                administrator.execute("SET session_replication_role=origin")
+        with pytest.raises(BudgetControlError, match="session assurance"):
+            _create_with_session(
+                database,
+                app,
+                future_assertion_session_id,
+                code="FUTURE-ASSERTION",
+                command_id="future-assertion-create",
+            )
+
+        _token, revoked_session_id = create_session(client)
+        with psycopg.connect(database["admin"], autocommit=True) as administrator:
+            administrator.execute(
+                "UPDATE reconforge.identity_sessions SET revoked_at=clock_timestamp(),revoked_by='budget-live-session-test',"
+                "revocation_reason_code='security_response',lifecycle_version=lifecycle_version+1 "
+                "WHERE tenant_id=%s AND id=%s AND revoked_at IS NULL",
+                (TENANT, revoked_session_id),
+            )
+        with pytest.raises(APIError) as denied:
+            call_budget_route(
+                _server_budget_request(app, _session_principal(database, revoked_session_id)),
+                None,
+                database["users"]["maker"],
+                SCOPE,
+                lambda repository: repository.create(
+                    SCOPE,
+                    BudgetDefinition("REVOKED-SESSION", "Synthetic revoked-session budget", "period", "EGP", 100),
+                    command_id="revoked-session-create",
+                ),
+            )
+        assert denied.value.status_code == 403
+        assert denied.value.code == "budget_control_denied"
+
+    with database["boundary"].transaction(
+        TENANT,
+        workspace_id=SCOPE.workspace_id,
+        organization_id=SCOPE.organization_id,
+        legal_entity_id=SCOPE.legal_entity_id,
+    ) as connection:
+        forbidden = connection.execute(
+            "SELECT budget_code FROM reconforge.budget_envelopes WHERE tenant_id=%s AND budget_code=ANY(%s)",
+            (TENANT, ["EXPIRED-ASSURANCE", "FUTURE-ASSERTION", "REVOKED-SESSION"]),
+        ).fetchall()
+        assert forbidden == []
 
 
 def test_postgres_budget_api_requires_step_up_binds_scope_and_rechecks_live_authority(

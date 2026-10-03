@@ -8,6 +8,17 @@ ledger under current scoped authority, not a mutable cached balance or a
 downstream posting substitute. Central API registration, route-level permission
 contracts, current identity revalidation, audit/outbox co-commit, RLS, migration
 status, and SQLite backup/restore verification are part of the same slice.
+For a PostgreSQL write reached through the server adapter, the repository also
+locks and rechecks the persisted human session plus a still-active step-up
+assertion inside the budget transaction; a request-start authorization snapshot
+cannot extend a revoked or expired privileged session.
+SQLite migration 52 and PostgreSQL revision 0102 own frozen SQL artifacts with
+static identity tests. Revision 0102 also seeds the three budget permissions and
+declared `admin`/`controller` grants for both pre-existing and future tenants and
+roles without reactivating revoked grants. Structural database guards are not a
+database-enforced individual human-authority boundary under a shared runtime
+credential; that credential and the trusted server application remain part of
+the authority computing base.
 PostgreSQL downgrade refuses evidence loss. Purchase, payable, cash, banking,
 general-ledger effects, a standalone UI, and PostgreSQL native backup/restore
 orchestration remain outside this decision.

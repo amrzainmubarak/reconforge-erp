@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import os
 import subprocess
 import sys
 from collections.abc import Iterator
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
@@ -14,12 +16,11 @@ from uuid import uuid4
 
 import pytest
 
-from reconforge.infrastructure.postgres_budget_control_schema import POSTGRES_BUDGET_CONTROL_SCHEMA_SQL
-
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "alembic/versions/0102_postgres_budget_control.py"
 PREVIOUS = "0101_pg_notification_inbox"
 CURRENT = "0102_pg_budget_control"
+BUDGET_PERMISSIONS = ("budget_control.approve", "budget_control.manage", "budget_control.read")
 pytestmark = pytest.mark.skipif(
     not os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN"),
     reason="requires owned live PostgreSQL fixture",
@@ -69,7 +70,30 @@ def current_revision(connection: Any) -> str:
     return str(row[0])
 
 
-def test_budget_migration_is_frozen_against_the_registered_schema() -> None:
+def assert_default_budget_permissions(connection: Any, tenant_id: str) -> None:
+    permissions = tuple(
+        connection.execute(
+            "SELECT name FROM reconforge.identity_permissions WHERE tenant_id=%s ORDER BY name",
+            (tenant_id,),
+        ).fetchall()
+    )
+    assert permissions == tuple((permission,) for permission in BUDGET_PERMISSIONS)
+    grants = tuple(
+        connection.execute(
+            "SELECT roles.name,grants.permission_name FROM reconforge.identity_role_permissions grants "
+            "JOIN reconforge.identity_roles roles ON roles.tenant_id=grants.tenant_id AND roles.id=grants.role_id "
+            "WHERE grants.tenant_id=%s ORDER BY roles.name,grants.permission_name",
+            (tenant_id,),
+        ).fetchall()
+    )
+    assert grants == tuple(
+        (role, permission)
+        for role in ("admin", "controller")
+        for permission in BUDGET_PERMISSIONS
+    )
+
+
+def test_budget_migration_is_frozen_and_has_no_runtime_schema_dependency() -> None:
     spec = importlib.util.spec_from_file_location("budget_frozen_migration", MIGRATION)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -77,16 +101,47 @@ def test_budget_migration_is_frozen_against_the_registered_schema() -> None:
 
     assert module.revision == CURRENT
     assert module.down_revision == PREVIOUS
-    assert module.POSTGRES_BUDGET_CONTROL_SCHEMA_SQL == POSTGRES_BUDGET_CONTROL_SCHEMA_SQL
+    tree = ast.parse(MIGRATION.read_text(encoding="utf-8"))
+    assignments = {
+        target.id: node.value
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        for target in node.targets
+        if isinstance(target, ast.Name)
+    }
+    assert all(
+        isinstance(assignments.get(name), ast.Constant) and isinstance(assignments[name].value, str)
+        for name in ("UPGRADE_SQL", "DOWNGRADE_SQL")
+    )
+    assert sha256(module.UPGRADE_SQL.encode("utf-8")).hexdigest() == "932836385248f08824a75cad70211e83fee2d808325b91d99f4b85a519dc4af6"
+    assert sha256(module.DOWNGRADE_SQL.encode("utf-8")).hexdigest() == "95e936569e2892ecfb8cf8ae7823e742c355af2fd3f376211aae4018d0984f6e"
+    source = MIGRATION.read_text(encoding="utf-8")
+    assert "postgres_budget_control_schema" not in source
+    assert "op.execute(UPGRADE_SQL)" in source
 
 
 def test_registered_budget_upgrade_is_forced_rls_and_downgrade_preserves_retained_evidence(prior_database: str) -> None:
     import psycopg
 
+    with psycopg.connect(prior_database, autocommit=True) as administrator:
+        administrator.execute("INSERT INTO reconforge.tenants(id,name) VALUES ('budget-existing','Budget existing')")
+        administrator.execute(
+            "INSERT INTO reconforge.identity_roles(tenant_id,id,name,description) VALUES "
+            "('budget-existing','role-existing-admin','admin',''),"
+            "('budget-existing','role-existing-controller','controller','')"
+        )
     result = migrate(prior_database, "upgrade", CURRENT)
     assert result.returncode == 0, result.stderr
     with psycopg.connect(prior_database, autocommit=True) as administrator:
         assert current_revision(administrator) == CURRENT
+        assert_default_budget_permissions(administrator, "budget-existing")
+        administrator.execute("INSERT INTO reconforge.tenants(id,name) VALUES ('budget-future','Budget future')")
+        administrator.execute(
+            "INSERT INTO reconforge.identity_roles(tenant_id,id,name,description) VALUES "
+            "('budget-future','role-future-admin','admin',''),"
+            "('budget-future','role-future-controller','controller','')"
+        )
+        assert_default_budget_permissions(administrator, "budget-future")
         tables = tuple(
             administrator.execute(
                 "SELECT c.relname,c.relrowsecurity,c.relforcerowsecurity "

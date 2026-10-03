@@ -261,15 +261,15 @@ tasks:
     priority: P1
     area: finance-core
     title: Verify cumulative balances and explicit opening carry-forward
-    status: in_progress
+    status: completed
     depends_on: [PROD-009]
     exit_evidence: >-
-      Additive business-date opening/activity/closing implementation and both-backend golden10000/0/2500 are under final immutable verification. Independent malformed-policy/nested-identity and eager-loading findings are repaired; exact API strings, source evidence, caller transactions and restored digests require a clean separate checkpoint. Earlier failed fixtures/source drift remain retained. Existing period-only TB contract is unchanged.
+      ADR0817 accepted on clean immutable866d943a:127local/0skip,4actualPG-HTTP/0skip, globalRuff/Mypy/Bandit/build and native16.14 restore35.505s wrapper with owned cleanup. Exact opening/activity/closing10000/-7500/2500, cross-period reversal,9007199254740993 HTTP text, caller ownership, SQLite multi-period restore and native selected-period as-of digests verified. Independent policy/identity/resource findings repaired, failed fixtures/source drift retained in POSTED_BALANCES_2026-10-03.json. Current recorded business-date history only; no knowledge-time/statutory close/automatic opening import.
   - id: PROD-033
     priority: P1
     area: receivables-money
     title: Capture AR currency precision and historical display provenance
-    status: planned
+    status: in_progress
     depends_on: [PROD-007, PROD-031]
     exit_evidence: >-
       Retain versioned precision/rounding provenance on invoices and receipts before converting historical minor units to major-unit UI amounts. Test zero/three-decimal currencies, registry changes, legacy unknown-policy data, mixed-currency totals and browser exactness; never infer a historical policy from today's currency code.
@@ -289,6 +289,14 @@ tasks:
     depends_on: [PROD-001]
     exit_evidence: >-
       ADR0814 accepted:227pass/0skip actual SQLite/PostgreSQL16.14 through0098, frozen runtime hashes and owned cleanup. Integer/rational arithmetic preserves quantity12345 and FIFO66 under hostile contexts; two-layer cost3.00 fully conserved. Existing standalone grammars/5000-digit local quantities preserved; new PG scientific-text/float refusals and pre-expansion1M-character ceiling explicit. Original red and superseded gates retained in EXACT_TRADE_PRIMITIVES_2026-10-03.json. Generated trade/GL remains separate.
+  - id: PROD-036
+    priority: P0
+    area: inventory-transaction-composition
+    title: Bind SQLite inventory mutations to an explicit owning unit of work
+    status: in_progress
+    depends_on: [PROD-009, PROD-035]
+    exit_evidence: >-
+      Actual red probes show unrelated caller rows committed by master upsert, erased by nested movement failure, and valuation/layer/generatedDraft/audit/outbox surviving a later owner failure. Explicit scoped owner/participants must prevent child finalization, preserve standalone compatibility, mark caught failures rollback-only and verify commit/rollback/late evidence faults plus existing count/planning/reversal/API paths. ADR0818 reserved; no generated operational GL claim.
   - id: E-1120
     priority: P0
     area: financial-exactness

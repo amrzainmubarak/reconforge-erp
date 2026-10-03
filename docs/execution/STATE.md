@@ -12,6 +12,22 @@ failed, and fresh immutable whole-repository and hosted acceptance are pending.
 
 ## Active financial-policy and open-workload slice (2026-10-03)
 
+PROD032 is accepted on clean immutable866d943a under ADR0817:127 local tests and
+4 actual PostgreSQL/HTTP tests pass without skips. Global Ruff/Mypy/Bandit/build
+and native16.14 restore pass with unchanged source/head and owned cleanup.
+POSTED_BALANCES_2026-10-03.json retains cross-period10000/0/2500 goldens, exact
+9007199254740993 API text, SQLite backup/caller ownership and restored as-of
+digests. Independent policy/identity/resource findings are repaired; earlier
+failed/source-drifting proofs remain separate. Business-date recorded history
+does not reconstruct historical knowledge-time or statutory fiscal close.
+
+PROD033 backend policy capture is now in progress after committed exact
+arithmetic; SQLite49/PostgreSQL0099 are reserved for verified new AR policy and
+explicitly unverified historical reads. PROD036 starts the Inventory ownership
+prerequisite: actual early commit/rollback and surviving valuation effects were
+reproduced before an explicit scoped unit-of-work repair. Complete purchase and
+sales GL cycles, real customer outcomes and auditor acceptance remain open.
+
 The goal remains active. Foundation changes are reviewable in
 [Draft PR 109](https://github.com/amrzainmubarak/reconforge-erp/pull/109), stacked
 against the preexisting `codex/p0-postgres-clean-boot` branch. They are not merged

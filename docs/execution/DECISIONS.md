@@ -1,5 +1,13 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-012 — Recorded-posting business-date balances (2026-10-03)
+
+ADR0817 accepts bounded exact opening/activity/closing over retained immutable
+effects, equal currency policies and verified source/evidence affinity. Clean
+866d943a passes127local/4actualPG-HTTP without skips, native restore and global
+quality/build. Later backdated effects can change a later business-date view;
+knowledge-time reconstruction, opening imports and statutory close are separate.
+
 ## D-PROD-011 — Authoritative AP creation recovery (2026-10-03)
 
 ADR0816 accepts closed source/request-bound PostgreSQL PO/receipt/invoice

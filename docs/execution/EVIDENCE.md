@@ -10,6 +10,14 @@ not establish a successful remote rerun or replace the pending clean full gate.
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Posted opening/closing: [immutable acceptance](POSTED_BALANCES_2026-10-03.json)
+  binds clean866d943a,127local/4actualPG-HTTP passes without skips, global quality/
+  build and35.505s native16.14 restore wrapper with source stability/owned cleanup.
+  SQLite/PG financial vectors and large API integers are independently asserted;
+  SQLite multi-period backup and PG selected-period restored as-of digests agree.
+  Original review findings and source-drifting runs remain retained. ADR0817
+  bounds this to recorded-posting business dates, not historical knowledge-time.
+
 - AP command recovery: [frozen evidence](PAYABLES_COMMAND_RECOVERY_2026-10-03.json)
   binds145pass/0skip, current authoritative PO/receipt/invoice state, actual
   concurrent lock waits and password-bound HTTP, inactive-parent recovery,

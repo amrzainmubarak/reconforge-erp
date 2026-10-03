@@ -1,6 +1,6 @@
 # 0817: Verified business-date opening, activity and closing
 
-Status: proposed, pending final source-bound verification, 2026-10-03.
+Status: accepted for bounded recorded-posting business-date balances, 2026-10-03.
 
 ## Decision
 
@@ -35,7 +35,11 @@ The existing selected-period trial-balance response remains unchanged.
 
 ## Evidence and rollback
 
-Final evidence belongs in POSTED_BALANCES_2026-10-03.json. Golden SQLite/PG
+POSTED_BALANCES_2026-10-03.json binds clean immutable866d943a,127 local passes
+and4 actual PostgreSQL/HTTP passes, all without skips. Global Ruff/Mypy/Bandit,
+build and diff checks pass on the same source; native16.14 restore takes35.505s
+including its wrapper and verifies owned source/restored database removal.
+Golden SQLite/PG
 results include opening10000, reversal to0, then closing2500 across July/August;
 an unposted entry and future September entry do not contribute. Actual HTTP
 preserves9007199254740993 exactly. SQLite caller ownership/backup restore and

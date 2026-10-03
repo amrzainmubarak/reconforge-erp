@@ -752,7 +752,12 @@ class SQLitePayablesRepository:
         require_permission(self.connection, actor_label=actor_label, permission="payables.approve")
         try:
             self.connection.execute("BEGIN IMMEDIATE")
-            return self._approve_supplier_invoice(invoice_id, expected_version=expected_version, actor_label=actor_label)
+            invoice = self.get_supplier_invoice(invoice_id)
+            if str(invoice["status"]) != "Matched":
+                raise PlatformError("Only a supplier invoice with a passed three-way match can be approved.")
+            if same_actor(invoice.get("created_by"), actor_label):
+                raise PlatformError("Separation of duties conflict: invoice creator cannot approve the same invoice.")
+            return self._approve_supplier_invoice(invoice, expected_version=expected_version, actor_label=actor_label)
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to approve supplier invoice.") from exc
@@ -761,15 +766,11 @@ class SQLitePayablesRepository:
             raise
 
     def _approve_supplier_invoice(
-        self, invoice_id: str, *, expected_version: int, actor_label: str
+        self, invoice: dict[str, Any], *, expected_version: int, actor_label: str
     ) -> dict[str, Any]:
         """Recheck cumulative consumption while holding the SQLite writer lock."""
 
-        invoice = self.get_supplier_invoice(invoice_id)
-        if str(invoice["status"]) != "Matched":
-            raise PlatformError("Only a supplier invoice with a passed three-way match can be approved.")
-        if same_actor(invoice.get("created_by"), actor_label):
-            raise PlatformError("Separation of duties conflict: invoice creator cannot approve the same invoice.")
+        invoice_id = str(invoice["id"])
         self._check_approval_quantity(invoice)
         now = utc_now_text()
         try:

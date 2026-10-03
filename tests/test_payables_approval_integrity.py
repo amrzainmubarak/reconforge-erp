@@ -168,6 +168,27 @@ def test_two_previously_matched_invoices_cannot_consume_one_receipt_twice(databa
     assert database.approval_evidence_counts() == (1, 1)
 
 
+@pytest.mark.parametrize("actor", ["maker", "MAKER", "  MaKeR  "])
+def test_supplier_invoice_creator_cannot_approve_and_denial_releases_lock(
+    database: PayablesDatabase, actor: str,
+) -> None:
+    with database.repository() as repository:
+        order, line = received_order(repository)
+        invoice = submitted_invoice(repository, order, line, "INV", "3")
+        assert repository.run_three_way_match(invoice).status == "Passed"
+        with pytest.raises(PlatformError, match="creator cannot approve"):
+            repository.approve_supplier_invoice(invoice, expected_version=3, actor_label=actor)
+        unchanged = repository.get_supplier_invoice(invoice)
+        assert unchanged["status"] == "Matched"
+        assert unchanged["row_version"] == 3
+        assert database.approval_evidence_counts() == (0, 0)
+        # A second connection can approve while the denied caller remains open.
+        with database.repository() as independent:
+            approved = independent.approve_supplier_invoice(invoice, expected_version=3, actor_label="checker")
+            assert approved["status"] == "Approved"
+    assert database.approval_evidence_counts() == (1, 1)
+
+
 def test_duplicate_po_line_references_are_aggregated_before_matching(database: PayablesDatabase) -> None:
     with database.repository() as repository:
         order, line = received_order(repository)

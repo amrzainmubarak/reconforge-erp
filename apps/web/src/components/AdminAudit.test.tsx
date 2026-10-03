@@ -1,7 +1,7 @@
-import { StrictMode } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode, useLayoutEffect, useRef, useState } from "react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { BrowserSessionProvider } from "../browserSession";
+import { BrowserSessionProvider, useBrowserSession } from "../browserSession";
 import { translate, type MessageKey } from "../i18n";
 import { AdminAudit } from "./AdminAudit";
 
@@ -71,4 +71,65 @@ test("sign-out revokes the cookie session with the selected tenant and CSRF proo
   expect(await screen.findByRole("heading", { name: "Sign in to administration" })).toBeInTheDocument();
   expect(fetcher).toHaveBeenCalledWith("/api/v1/auth/logout", expect.objectContaining({ method: "POST", credentials: "same-origin", headers: { Accept: "application/json", "X-ReconForge-Tenant": "tenant-a", "X-ReconForge-CSRF": "memory-only-proof" } }));
   expect(window.localStorage.getItem("reconforge.session")).toBeNull();
+});
+
+function ImmediateLogout({ timeline }: { timeline: string[] }) {
+  const auth = useBrowserSession();
+  const attemptedRevision = useRef(-1);
+  useLayoutEffect(() => {
+    if (!auth.session || attemptedRevision.current === auth.revision) return;
+    attemptedRevision.current = auth.revision;
+    const button = Array.from(document.querySelectorAll("button")).find((item) => item.textContent === "Sign out / switch tenant");
+    timeline.push(`committed-dom-before-passive:${Boolean(button)}`);
+    button?.click();
+  }, [auth.revision, auth.session, timeline]);
+  return null;
+}
+
+test.each([false, true])("immediate login-to-logout before passive read setup sends the authorized command (StrictMode %s)", async (strict) => {
+  const timeline: string[] = [];
+  const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input); timeline.push(url);
+    return reply(200, url.endsWith("/browser/login") ? { csrf_token: "memory-only-proof", expires_at: new Date(Date.now() + 60_000).toISOString() } : { revoked: true });
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const ui = <BrowserSessionProvider><AdminAudit locale="en" translate={t} /><ImmediateLogout timeline={timeline} /></BrowserSessionProvider>;
+  render(strict ? <StrictMode>{ui}</StrictMode> : ui);
+  fireEvent.change(screen.getByLabelText("Tenant ID"), { target: { value: "tenant-a" } });
+  fireEvent.change(screen.getByLabelText("Username"), { target: { value: "alice" } });
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "Synthetic-only!" } });
+  fireEvent.click(screen.getByRole("button", { name: "Sign in to administration" }));
+  await waitFor(() => expect(fetcher.mock.calls.filter(([path]) => String(path).endsWith("/logout"))).toHaveLength(1));
+  expect(await screen.findByRole("heading", { name: "Sign in to administration" })).toBeVisible();
+  expect(timeline).toEqual(["/api/v1/auth/browser/login", "committed-dom-before-passive:true", "/api/v1/auth/logout"]);
+  expect(fetcher).toHaveBeenLastCalledWith("/api/v1/auth/logout", expect.objectContaining({ credentials: "same-origin", method: "POST", headers: { Accept: "application/json", "X-ReconForge-Tenant": "tenant-a", "X-ReconForge-CSRF": "memory-only-proof" } }));
+  expect(screen.queryByText("Administration data is unavailable. No synthetic fallback was used.")).not.toBeInTheDocument();
+});
+
+function LifecycleHarness() {
+  const auth = useBrowserSession();
+  const [visible, setVisible] = useState(true);
+  return <><button onClick={() => auth.begin({ tenantId: "tenant-b", csrfToken: "proof-b", expiresAt: new Date(Date.now() + 60_000).toISOString() }, "bob", auth.revision)}>Switch authority</button><button onClick={() => setVisible((value) => !value)}>Toggle administration</button>{visible ? <AdminAudit locale="en" translate={t} /> : null}</>;
+}
+
+test.each(["new-tenant-success", "new-tenant-expired", "unmounted-view"] as const)("old logout completion cannot change the current authority: %s", async (scenario) => {
+  let resolve!: (value: ReturnType<typeof reply>) => void;
+  const pending = new Promise<ReturnType<typeof reply>>((done) => { resolve = done; });
+  const fetcher = vi.fn(async (input: RequestInfo | URL) => String(input).endsWith("/logout") ? pending : reply(200, { csrf_token: "memory-only-proof", expires_at: new Date(Date.now() + 60_000).toISOString() }));
+  vi.stubGlobal("fetch", fetcher);
+  render(<BrowserSessionProvider><LifecycleHarness /></BrowserSessionProvider>);
+  await signIn();
+  fireEvent.click(screen.getByRole("button", { name: "Sign out / switch tenant" }));
+  expect(fetcher.mock.calls.filter(([path]) => String(path).endsWith("/logout"))).toHaveLength(1);
+  if (scenario === "unmounted-view") {
+    fireEvent.click(screen.getByRole("button", { name: "Toggle administration" }));
+    expect(screen.queryByRole("main")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Toggle administration" }));
+  } else fireEvent.click(screen.getByRole("button", { name: "Switch authority" }));
+  await act(async () => resolve(scenario === "new-tenant-expired" ? reply(401, { error: { code: "invalid_token" } }) : reply(200, { revoked: true })));
+  expect(screen.getByRole("heading", { name: "Confirm privileged access" })).toBeVisible();
+  expect(screen.getByText(scenario === "unmounted-view" ? "tenant-a" : "tenant-b")).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "Sign in to administration" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(fetcher).toHaveBeenCalledTimes(2);
 });

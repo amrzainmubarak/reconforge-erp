@@ -45,6 +45,7 @@ from reconforge.infrastructure.postgres_service_accounts import (
     PostgresServiceAccountRepository,
 )
 from reconforge.platform.common import ServerPrincipal
+from tests.postgres_audit_fixture import delete_owned_policy_audit
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -201,6 +202,8 @@ def test_live_server_retail_settlement_http_routes_are_rls_scoped(tmp_path: Path
             admin.execute(POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL)
             admin.execute(POSTGRES_RETAIL_SETTLEMENT_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT ON reconforge.domain_audit_events TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT, UPDATE ON reconforge.domain_audit_ledger_state TO {app_user}")
             admin.execute(
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.tenants, reconforge.identity_permissions, "
                 f"reconforge.service_accounts, reconforge.service_account_permissions, "
@@ -310,6 +313,7 @@ def test_live_server_retail_settlement_http_routes_are_rls_scoped(tmp_path: Path
         if admin is not None:
             try:
                 with admin.transaction():
+                    delete_owned_policy_audit(admin, (tenant_a, tenant_b))
                     admin.execute(
                         "ALTER TABLE reconforge.retail_settlement_runs "
                         "DISABLE TRIGGER retail_settlement_runs_guard"

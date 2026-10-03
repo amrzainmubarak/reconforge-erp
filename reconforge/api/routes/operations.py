@@ -22,6 +22,7 @@ from reconforge.api.server_identity import (
 from reconforge.application.jobs import (
     DurableJobApplicationService,
     GovernedDurableJobApplicationService,
+    JobAuthorizationError,
 )
 from reconforge.auth.models import LocalUser
 from reconforge.auth.policy import PolicyEvaluationContext
@@ -199,6 +200,12 @@ def durable_job_queue(
             )
     except APIError:
         raise
+    except JobAuthorizationError as exc:
+        raise APIError(
+            status_code=403,
+            code="durable_job_queue_scope_denied",
+            message="Durable-job queue scope is not authorized.",
+        ) from exc
     except (PostgresJobRepositoryError, SQLiteJobRepositoryError, ValueError) as exc:
         raise APIError(
             status_code=400,

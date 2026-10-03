@@ -46,3 +46,11 @@ docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:692
 dbfdefeb1431cf1b4c89fef8242543d545c88b12:docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:703
 # Reviewed source-file SHA256 in immutable synthetic verification evidence: alembic/versions/0051_access_policy_lifecycle.py.
 docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:703
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_operations.py.
+b5075883e0c702f0a80df0d08ad6ed48655b2a3c:docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json:generic-api-key:65
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_operations.py.
+docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json:generic-api-key:65
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_server_identity.py.
+ca82cbffd50734965f1c67ea1c94445df46885d5:docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_server_identity.py.
+docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135

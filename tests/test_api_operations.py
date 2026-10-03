@@ -31,7 +31,10 @@ from reconforge.infrastructure.postgres_jobs import (
     PostgresDurableJobRepository,
     install_postgres_durable_job_schema,
 )
-from reconforge.infrastructure.postgres_scope_authority import POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL
+from reconforge.infrastructure.postgres_scope_authority import (
+    POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL,
+    PostgresScopeAuthorityRepository,
+)
 from reconforge.infrastructure.postgres_service_accounts import (
     POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL,
     PostgresServiceAccountRepository,
@@ -232,6 +235,9 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
             admin.execute(POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL)
             install_postgres_durable_job_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT ON reconforge.domain_audit_events TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT, UPDATE ON reconforge.domain_audit_ledger_state TO {app_user}")
+            admin.execute(f"GRANT SELECT ON reconforge.domain_workspaces,reconforge.organizations,reconforge.legal_entities TO {app_user}")
             admin.execute(
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.tenants, reconforge.identity_permissions, "
                 f"reconforge.service_accounts, reconforge.service_account_permissions, "
@@ -250,6 +256,10 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
                 "INSERT INTO reconforge.identity_permissions(tenant_id,name,description) VALUES (%s,'ops.read','Queue health')",
                 (tenant_a,),
             )
+            admin.execute("INSERT INTO reconforge.domain_workspaces(tenant_id,id,name) VALUES(%s,'workspace-a','Synthetic workspace')", (tenant_a,))
+            admin.execute("INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES(%s,'USD','Synthetic',2)", (tenant_a,))
+            admin.execute("INSERT INTO reconforge.organizations(tenant_id,id,name,organization_code,application_workspace_id) VALUES(%s,'organization-a','Synthetic organization','ORG-A','workspace-a')", (tenant_a,))
+            admin.execute("INSERT INTO reconforge.legal_entities(tenant_id,id,organization_id,entity_code,name,currency_code) VALUES(%s,'entity-a','organization-a','ENTITY-A','Synthetic entity','USD')", (tenant_a,))
 
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
             account_repository = PostgresServiceAccountRepository(connection)
@@ -267,6 +277,9 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
                 actor_id="security-admin",
                 ttl=timedelta(hours=1),
             )
+            authority = PostgresScopeAuthorityRepository(connection)
+            for scope_type, scope_id in (("workspace", "workspace-a"), ("legal_entity", "entity-a")):
+                authority.grant(tenant_id=tenant_a, grant_id="ops-grant-" + scope_id, principal_type="service_account", principal_id="svc-ops-api", scope_type=scope_type, scope_id=scope_id, actor_id="security-admin")
             DurableJobApplicationService(PostgresDurableJobRepository(connection)).submit(
                 JobSubmission(
                     job_id="ops-api-queued-" + uuid4().hex[:8],
@@ -308,15 +321,27 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
             assert "ops-api-queued" not in response.text
             assert "input_digest" not in response.text
 
+            for denied_scope in ({"workspace_id": "ungranted-workspace"}, {"workspace_id": "workspace-a", "entity_id": "ungranted-entity"}):
+                denied = client.get("/api/v1/ops/durable-jobs/queue", params=denied_scope, headers=headers)
+                assert denied.status_code == 403, denied.text
+                assert denied.json()["error"]["code"] == "durable_job_queue_scope_denied"
+                assert "ops-api-queued" not in denied.text
+
             cross_tenant = client.get(
                 "/api/v1/ops/durable-jobs/queue",
                 params={"tenant_id": tenant_b},
                 headers={"X-ReconForge-Tenant": tenant_b, "Authorization": f"Bearer {credential.token}"},
             )
             assert cross_tenant.status_code == 401
+            with admin.transaction():
+                assert admin.execute("SELECT count(*) FROM reconforge.domain_audit_events WHERE tenant_id=%s", (tenant_a,)).fetchone()[0] > 0
     finally:
         try:
             with admin.transaction():
+                admin.execute("ALTER TABLE reconforge.domain_audit_events DISABLE TRIGGER domain_audit_events_immutable")
+                admin.execute("DELETE FROM reconforge.domain_audit_events WHERE tenant_id IN (%s,%s)", (tenant_a, tenant_b))
+                admin.execute("ALTER TABLE reconforge.domain_audit_events ENABLE TRIGGER domain_audit_events_immutable")
+                admin.execute("ALTER TABLE reconforge.principal_scope_grants DISABLE TRIGGER principal_scope_grants_guard")
                 admin.execute(
                     "ALTER TABLE reconforge.service_account_events DISABLE TRIGGER trg_service_account_events_append_only"
                 )
@@ -334,6 +359,10 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
                     "durable_job_partition_effects",
                     "durable_jobs",
                     "identity_permissions",
+                    "legal_entities",
+                    "organizations",
+                    "currencies",
+                    "domain_workspaces",
                 ):
                     admin.execute(
                         f"DELETE FROM reconforge.{table} WHERE tenant_id IN (%s, %s)",  # nosec B608 - fixed allowlist
@@ -342,10 +371,13 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
                 admin.execute(
                     "ALTER TABLE reconforge.service_account_events ENABLE TRIGGER trg_service_account_events_append_only"
                 )
+                admin.execute("ALTER TABLE reconforge.principal_scope_grants ENABLE TRIGGER principal_scope_grants_guard")
                 admin.execute(
                     "DELETE FROM reconforge.tenants WHERE id IN (%s, %s)",
                     (tenant_a, tenant_b),
                 )
+                assert admin.execute("SELECT count(*) FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b)).fetchone()[0] == 0
+                assert admin.execute("SELECT tgenabled FROM pg_trigger WHERE tgname='domain_audit_events_immutable'").fetchone()[0] == "O"
         finally:
             try:
                 with admin.transaction():

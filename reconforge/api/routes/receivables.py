@@ -27,6 +27,7 @@ from reconforge.api.server_receivables import (
 )
 from reconforge.auth.field_access import (
     project_receivables_aging,
+    project_receivables_aging_by_currency,
     project_receivables_credit_exposure,
     project_receivables_customer,
     project_receivables_invoice,
@@ -34,6 +35,7 @@ from reconforge.auth.field_access import (
 )
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
+from reconforge.domain.receivables_aging import AgingCurrencyError, build_aging_report
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
 from reconforge.platform.common import PlatformError
 from reconforge.platform.receivables import ReceiptAllocationInput, ReceivableInvoiceLineInput, ReceivablesService
@@ -208,27 +210,28 @@ def _filter_records(records: list[dict[str, object]], scope: ReceivablesExecutio
     return [record for record in records if _record_in_scope(record, scope)]
 
 
-def _filter_aging(result: dict[str, object], scope: ReceivablesExecutionScope) -> dict[str, object]:
+def _filter_aging(result: dict[str, object], scope: ReceivablesExecutionScope, *, grouped: bool = False) -> dict[str, object]:
     raw_items = result.get("items")
-    items = [item for item in raw_items if isinstance(item, dict) and _record_in_scope(item, scope)] if isinstance(raw_items, list) else []
-    if scope.organization_id is None and scope.legal_entity_id is None:
-        items = raw_items if isinstance(raw_items, list) else []
-    buckets = {"Current": 0, "1-30": 0, "31-60": 0, "61-90": 0, "90+": 0}
+    raw_groups = result.get("currency_groups")
+    if isinstance(raw_groups, list):
+        raw_items = []
+        for group in raw_groups:
+            if not isinstance(group, dict) or not isinstance(group.get("items"), list):
+                raise PlatformError("Aging currency group is invalid.")
+            raw_items.extend(group["items"])
+    if not isinstance(raw_items, list):
+        raise PlatformError("Aging items are invalid.")
     public_items: list[dict[str, object]] = []
-    for item in items:
+    for item in raw_items:
         if not isinstance(item, dict):
+            raise PlatformError("Aging item is invalid.")
+        if not _record_in_scope(item, scope):
             continue
-        bucket = str(item.get("bucket", ""))
-        amount = int(item.get("outstanding_minor", 0))
-        if bucket in buckets:
-            buckets[bucket] += amount
         public_items.append({key: value for key, value in item.items() if key not in {"organization_id", "legal_entity_id"}})
-    return {
-        **result,
-        "items": public_items,
-        "bucket_totals_minor": buckets,
-        "total_outstanding_minor": sum(buckets.values()),
-    }
+    try:
+        return build_aging_report(str(result["as_of_date"]), public_items, grouped=grouped)
+    except AgingCurrencyError as exc:
+        raise PlatformError(str(exc)) from exc
 
 
 @router.post("/customers")
@@ -542,7 +545,7 @@ def aging_report(
             request,
             frozenset({"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"}),
             lambda repository, scope: _filter_aging(
-                repository.aging_report(workspace=scope.workspace_id, as_of_date=as_of_date), scope
+                repository.aging_report_by_currency(workspace=scope.workspace_id, as_of_date=as_of_date), scope
             ),
         )
         return project_receivables_aging(result).visible
@@ -551,3 +554,27 @@ def aging_report(
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_aging_failed", exc) from exc
     return project_receivables_aging(result).visible
+
+
+@router.get("/aging-by-currency")
+def aging_report_by_currency(
+    request: Request,
+    current_user: ReceivablesRead,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+    as_of_date: str = Query(min_length=10, max_length=10),
+    workspace: str = "default",
+) -> dict[str, object]:
+    if server_receivables_enabled(request):
+        result = _server_call(
+            request,
+            frozenset({"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"}),
+            lambda repository, scope: _filter_aging(
+                repository.aging_report_by_currency(workspace=scope.workspace_id, as_of_date=as_of_date), scope, grouped=True,
+            ),
+        )
+        return project_receivables_aging_by_currency(result).visible
+    try:
+        result = ReceivablesService(_local_connection(connection)).aging_report_by_currency(workspace=workspace, as_of_date=as_of_date)
+    except (DatabaseError, PlatformError) as exc:
+        raise _error("receivables_aging_failed", exc) from exc
+    return project_receivables_aging_by_currency(result).visible

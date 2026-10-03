@@ -1,0 +1,87 @@
+{
+  "limitations": [
+    "Current open balances aged by due date, not historical balance reconstruction",
+    "No implicit FX conversion or report-wide mixed-currency sum",
+    "Synthetic local and disposable PostgreSQL evidence only"
+  ],
+  "files": [
+    {
+      "sha256": "95668d7de7cc486187572f8bb8c31e6ec843478cd0e8d02404b17f7f3db1dad1",
+      "path": "docs/receivables.md"
+    },
+    {
+      "sha256": "5c4171fd7a4dd0005539bfe5384fdcf9b52183f0c215ebe47f3369f53181f44a",
+      "path": "reconforge/domain/receivables_aging.py"
+    },
+    {
+      "sha256": "8acd6d584533fa48e8fa77d3e1fdef4ee4329d38d4b97bb4a56dbadf696d4bfc",
+      "path": "reconforge/infrastructure/sqlite_receivables.py"
+    },
+    {
+      "sha256": "90bf9e1cd70c2a6bee14654f7330f7442f1b0e2bac0fd3b6a3a1069e9a9d0c3b",
+      "path": "reconforge/infrastructure/postgres_receivables.py"
+    },
+    {
+      "sha256": "0f8f4c046b85654ba4dbfdb6e089ccdf0925b7ee98f7f9f61521d9167eb3625f",
+      "path": "reconforge/application/receivables.py"
+    },
+    {
+      "sha256": "ee2a940ae2144d538f65974aa56e4633f3f7b4e418d7eed44f0d37fa7120093c",
+      "path": "reconforge/auth/field_access.py"
+    },
+    {
+      "sha256": "31a9b4ec1f1e6dd788e1f52a7aea372cc1a5f35e3b68759838986ee6d0d3966d",
+      "path": "reconforge/api/routes/receivables.py"
+    },
+    {
+      "sha256": "e3cafc83933de28bc75a6d432733ef05aaa2e4ae4e7f568410e596f27b5f6bac",
+      "path": "tests/test_receivables_aging_integrity.py"
+    },
+    {
+      "sha256": "1ea41de6d98c79e75a6c26e17e8365166b5e1c32caadc2171cae2268e980a32f",
+      "path": "tests/test_application_receivables.py"
+    },
+    {
+      "sha256": "82d6f528fae761e1e7161efa44c9c960ba7e87db495f9937793070a0753d64c4",
+      "path": "tests/test_postgres_receivables.py"
+    },
+    {
+      "sha256": "1489ee7c285bb23f1a5159fcc893b5f0318645e7ffb91fe15cbf4dc3dd446317",
+      "path": "tests/test_receivables_api.py"
+    },
+    {
+      "sha256": "da786bea9849ea6c449f1503a10177e670ff16e9c371b3edc09bf4fb400c276a",
+      "path": "tests/test_api_server_receivables.py"
+    }
+  ],
+  "static": {
+    "mypy": "pass: six source files",
+    "ruff": "pass",
+    "bandit": "pass",
+    "diff_check": "pass"
+  },
+  "expanded": {
+    "seconds": 115.99,
+    "log": "ar-aging-final.log",
+    "passed": 163,
+    "remaining_failure": "Shared authorization inventory EXPECTED_ROUTE_COUNT 265 versus 266 after additive aging-by-currency route; root owns update",
+    "failed": 1
+  },
+  "source_frozen": true,
+  "slice": "PROD020",
+  "database_migration": false,
+  "red": {
+    "seconds": 3.96,
+    "log": "ar-aging-red.log",
+    "passed": 0,
+    "failed": 8
+  },
+  "authorization_inventory_followup": {
+    "status": "closed",
+    "passed": 7,
+    "evidence_source": "Root coordination report; shared route inventory reviewed and updated to 266 with new route permission assertions",
+    "digest": "05ee58cd89410c5240a41cf016b55ea9d270c2e5f055508375c6dc3951bbc97b",
+    "owner": "root",
+    "seconds": 2.89
+  }
+}

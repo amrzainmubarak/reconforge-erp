@@ -22,6 +22,7 @@ from reconforge.application.receivables import (
 from reconforge.auth.rbac import same_actor
 from reconforge.db.connection import DatabaseError
 from reconforge.domain.models import utc_now_text
+from reconforge.domain.receivables_aging import AgingCurrencyError, build_aging_report
 from reconforge.io.persisted import (
     PersistedJsonError,
     decode_financial_idempotency_response,
@@ -654,13 +655,22 @@ class SQLiteReceivablesRepository:
                 self.connection.rollback()
 
     def aging_report(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
-        """Return deterministic open-item aging and bucket totals."""
+        """Return labeled single-currency aging; reject mixed-currency totals."""
+
+        return self._aging_report(workspace=workspace, as_of_date=as_of_date, grouped=False)
+
+    def aging_report_by_currency(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
+        return self._aging_report(workspace=workspace, as_of_date=as_of_date, grouped=True)
+
+    def _aging_report(self, *, workspace: str, as_of_date: str, grouped: bool) -> dict[str, Any]:
 
         workspace_id = ensure_workspace(self.connection, workspace)
         as_of = _date(as_of_date, field="aging as-of date")
         rows = self.connection.execute(
             """
-            SELECT invoices.*, customers.customer_code, customers.name AS customer_name
+            SELECT invoices.*, customers.customer_code, customers.name AS customer_name,
+                   COALESCE((SELECT SUM(amount_minor) FROM ar_receipt_allocations
+                             WHERE invoice_id = invoices.id), 0) AS allocated_minor
             FROM ar_invoices invoices
             JOIN ar_customers customers ON customers.id = invoices.customer_id
             WHERE invoices.workspace_id = ? AND invoices.status IN ('Approved', 'PartiallyPaid')
@@ -669,9 +679,8 @@ class SQLiteReceivablesRepository:
             (workspace_id,),
         ).fetchall()
         items: list[dict[str, Any]] = []
-        buckets = {"Current": 0, "1-30": 0, "31-60": 0, "61-90": 0, "90+": 0}
         for row in rows:
-            outstanding = int(row["total_minor"]) - self._invoice_allocated(str(row["id"]))
+            outstanding = int(row["total_minor"]) - int(row["allocated_minor"])
             if outstanding <= 0:
                 continue
             due = _date(str(row["due_date"]), field="stored due date")
@@ -687,7 +696,6 @@ class SQLiteReceivablesRepository:
                 if days_overdue <= 90
                 else "90+"
             )
-            buckets[bucket] += outstanding
             items.append(
                 {
                     "invoice_id": str(row["id"]),
@@ -703,12 +711,10 @@ class SQLiteReceivablesRepository:
                     "bucket": bucket,
                 },
             )
-        return {
-            "as_of_date": as_of.isoformat(),
-            "items": items,
-            "bucket_totals_minor": buckets,
-            "total_outstanding_minor": sum(buckets.values()),
-        }
+        try:
+            return build_aging_report(as_of.isoformat(), items, grouped=grouped)
+        except AgingCurrencyError as exc:
+            raise PlatformError(str(exc)) from exc
 
     def _insert_allocation(
         self,

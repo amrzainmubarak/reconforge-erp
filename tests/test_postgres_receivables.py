@@ -85,7 +85,7 @@ def test_all_receivables_signatures_match_application_contract() -> None:
     methods = (
         "upsert_customer", "create_invoice", "submit_invoice", "approve_invoice",
         "post_receipt", "allocate_receipt", "get_customer", "get_invoice",
-        "get_receipt", "list_customers", "list_invoices", "credit_exposure", "aging_report",
+        "get_receipt", "list_customers", "list_invoices", "credit_exposure", "aging_report", "aging_report_by_currency",
     )
     for method_name in methods:
         assert inspect.signature(getattr(PostgresReceivablesRepository, method_name)) == inspect.signature(

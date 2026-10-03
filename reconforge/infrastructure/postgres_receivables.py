@@ -15,6 +15,7 @@ from typing import Any
 
 from reconforge.application.receivables import ReceiptAllocationInput, ReceivableInvoiceLineInput
 from reconforge.auth.rbac import same_actor
+from reconforge.domain.receivables_aging import AgingCurrencyError, build_aging_report
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.io.persisted import (
@@ -999,11 +1000,17 @@ class PostgresReceivablesRepository:
             }
 
     def aging_report(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
+        return self._aging_report(workspace=workspace, as_of_date=as_of_date, grouped=False)
+
+    def aging_report_by_currency(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
+        return self._aging_report(workspace=workspace, as_of_date=as_of_date, grouped=True)
+
+    def _aging_report(self, *, workspace: str, as_of_date: str, grouped: bool) -> dict[str, Any]:
         as_of = _iso_date(as_of_date, "Aging as-of date")
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
             rows = self.connection.execute(
-                """SELECT i.id,i.organization_id,i.legal_entity_id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id""",
+                """SELECT i.id,i.organization_id,i.legal_entity_id,i.invoice_number,c.customer_code,c.name,i.currency_code,i.invoice_date,i.due_date,i.total_minor,COALESCE((SELECT SUM(a.amount_minor) FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=i.tenant_id AND a.invoice_id=i.id),0) AS allocated_minor FROM reconforge.ar_invoices i JOIN reconforge.ar_customers c ON c.tenant_id=i.tenant_id AND c.id=i.customer_id WHERE i.tenant_id=%s AND i.workspace_id=%s AND i.status IN ('Approved','PartiallyPaid') ORDER BY i.due_date,i.invoice_number,i.id""",
                 (self.tenant_id, workspace_id),
             ).fetchall()
             columns = (
@@ -1017,12 +1024,12 @@ class PostgresReceivablesRepository:
                 "invoice_date",
                 "due_date",
                 "total_minor",
+                "allocated_minor",
             )
-            buckets = {"Current": 0, "1-30": 0, "31-60": 0, "61-90": 0, "90+": 0}
             items = []
             for raw in rows:
                 row = _row(raw, columns)
-                outstanding = int(row["total_minor"]) - self._invoice_allocated(str(row["id"]))
+                outstanding = int(row["total_minor"]) - int(row["allocated_minor"])
                 if outstanding <= 0:
                     continue
                 due = date.fromisoformat(str(row["due_date"]))
@@ -1038,7 +1045,6 @@ class PostgresReceivablesRepository:
                     if days <= 90
                     else "90+"
                 )
-                buckets[bucket] += outstanding
                 items.append(
                     {
                         "invoice_id": row["id"],
@@ -1056,9 +1062,7 @@ class PostgresReceivablesRepository:
                         "bucket": bucket,
                     }
                 )
-            return {
-                "as_of_date": as_of.isoformat(),
-                "items": items,
-                "bucket_totals_minor": buckets,
-                "total_outstanding_minor": sum(buckets.values()),
-            }
+            try:
+                return build_aging_report(as_of.isoformat(), items, grouped=grouped)
+            except AgingCurrencyError as exc:
+                raise PlatformError(str(exc)) from exc

@@ -236,6 +236,26 @@ def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_govern
             assert invoices.json()["pagination"]["total"] == 1
             assert denied_workspace.status_code == 403
             assert denied_workspace.json()["error"]["code"] == "workspace_scope_denied"
+
+            assert aging.json()["currency_code"] == "USD"
+            euro_customer = client.post("/api/v1/receivables/customers", headers=maker_headers, json={
+                "customer_code": "CUS-EUR", "name": "Synthetic EUR Customer", "currency_code": "EUR", "credit_limit_minor": 10000,
+            })
+            assert euro_customer.status_code == 200, euro_customer.text
+            euro_invoice = client.post("/api/v1/receivables/invoices", headers=maker_headers, json={
+                "invoice_number": "INV-EUR", "customer_code": "CUS-EUR", "invoice_date": "2026-07-01", "currency_code": "EUR",
+                "lines": [{"description": "Synthetic EUR", "quantity": "1", "unit_price_minor": 300, "line_total_minor": 300}],
+            })
+            assert euro_invoice.status_code == 200, euro_invoice.text
+            euro_id = euro_invoice.json()["id"]
+            assert client.post(f"/api/v1/receivables/invoices/{euro_id}/submit", headers=maker_headers, json={"expected_version": 1}).status_code == 200
+            assert client.post(f"/api/v1/receivables/invoices/{euro_id}/approve", headers=checker_headers, json={"expected_version": 2}).status_code == 200
+            assert client.get("/api/v1/receivables/aging?as_of_date=2026-07-28", headers=checker_headers).status_code == 400
+            grouped = client.get("/api/v1/receivables/aging-by-currency?as_of_date=2026-07-28", headers=checker_headers)
+            assert grouped.status_code == 200, grouped.text
+            assert [(group["currency_code"], group["total_outstanding_minor"]) for group in grouped.json()["currency_groups"]] == [("EUR", 300), ("USD", 60)]
+            assert all("organization_id" not in item for group in grouped.json()["currency_groups"] for item in group["items"])
+            assert client.get("/api/v1/receivables/aging-by-currency?as_of_date=2026-07-28", headers={**checker_headers, "X-ReconForge-Workspace": "workspace-not-granted"}).status_code == 403
     finally:
         try:
             cleanup_postgres_test_tenants_as_admin(admin, tenant_ids=(tenant_id,), plan=RECEIVABLES_TENANT_CLEANUP_PLAN)

@@ -1159,8 +1159,10 @@ RECEIVABLES_CREDIT_EXPOSURE_FIELDS = frozenset(
     {"customer_id", "customer_code", "currency_code", "credit_limit_minor", "exposure_minor", "available_credit_minor", "credit_hold", "status"}
 )
 RECEIVABLES_AGING_FIELDS = frozenset(
-    {"as_of_date", "items", "bucket_totals_minor", "total_outstanding_minor"}
+    {"as_of_date", "currency_code", "items", "bucket_totals_minor", "total_outstanding_minor"}
 )
+RECEIVABLES_GROUPED_AGING_FIELDS = frozenset({"schema_version", "as_of_date", "currency_groups"})
+RECEIVABLES_AGING_GROUP_FIELDS = RECEIVABLES_AGING_FIELDS - {"as_of_date"}
 RECEIVABLES_AGING_ITEM_FIELDS = frozenset(
     {
         "invoice_id", "organization_id", "legal_entity_id", "invoice_number", "customer_code", "customer_name",
@@ -3324,6 +3326,24 @@ def project_receivables_aging(values: Mapping[str, object]) -> FieldProjection:
             projected_items.append(project_fields(item, allowed_fields=RECEIVABLES_AGING_ITEM_FIELDS).visible)
         record["items"] = projected_items
     return project_fields(record, allowed_fields=RECEIVABLES_AGING_FIELDS)
+
+
+def project_receivables_aging_by_currency(values: Mapping[str, object]) -> FieldProjection:
+    """Project currency groups recursively without exposing internal fields."""
+
+    record = dict(values)
+    groups = record.get("currency_groups")
+    if not isinstance(groups, list):
+        raise TypeError("receivables aging currency groups must be a list")
+    projected_groups: list[dict[str, object]] = []
+    for group in groups:
+        if not isinstance(group, Mapping):
+            raise TypeError("receivables aging currency group must be a mapping")
+        projected_groups.append(project_fields(
+            project_receivables_aging(group).visible, allowed_fields=RECEIVABLES_AGING_GROUP_FIELDS,
+        ).visible)
+    record["currency_groups"] = projected_groups
+    return project_fields(record, allowed_fields=RECEIVABLES_GROUPED_AGING_FIELDS)
 
 
 def project_professional_invoice_payment(values: Mapping[str, object]) -> FieldProjection:

@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 265
-EXPECTED_DIGEST = "fb0d04d1afd8f755eefcae1b42a21381c17b45b12d9c5d7e18bb1a4cdf0288d2"
+EXPECTED_ROUTE_COUNT = 266
+EXPECTED_DIGEST = "05ee58cd89410c5240a41cf016b55ea9d270c2e5f055508375c6dc3951bbc97b"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -82,6 +82,14 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     )
     assert emergency_request.mode == "all"
     assert emergency_request.permissions == ("security.emergency.request",)
+    grouped_aging = next(
+        contract for contract in contracts
+        if contract.method == "GET" and contract.path == "/api/v1/receivables/aging-by-currency"
+    )
+    assert grouped_aging.mode == "any"
+    assert grouped_aging.permissions == (
+        "receivables.approve", "receivables.credit_override", "receivables.manage", "receivables.read",
+    )
     validate_authorization_surface(contracts)
 
 

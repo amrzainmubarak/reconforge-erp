@@ -112,6 +112,32 @@ def test_customer_currency_and_inactive_approval_are_rejected_without_overriding
         assert approved.json()["row_version"] == 3
 
 
+def test_grouped_aging_api_keeps_currency_totals_separate(tmp_path: Path) -> None:
+    with _setup(tmp_path) as client:
+        prep = {"Authorization": f"Bearer {_token(client, 'prep')}"}
+        review = {"Authorization": f"Bearer {_token(client, 'review')}"}
+        for currency, amount in (("USD", 1200), ("JPY", 700), ("EGP", 3400)):
+            code = "CUS-" + currency
+            assert client.post("/api/v1/receivables/customers", headers=prep, json={
+                "customer_code": code, "name": "Synthetic", "currency_code": currency, "credit_limit_minor": 10000,
+            }).status_code == 200
+            created = client.post("/api/v1/receivables/invoices", headers=prep, json={
+                "invoice_number": currency, "customer_code": code, "invoice_date": "2026-07-01", "currency_code": currency,
+                "lines": [{"description": "Synthetic", "quantity": "1", "unit_price_minor": amount, "line_total_minor": amount}],
+            })
+            assert created.status_code == 200
+            invoice_id = created.json()["id"]
+            assert client.post(f"/api/v1/receivables/invoices/{invoice_id}/submit", headers=prep, json={"expected_version": 1}).status_code == 200
+            assert client.post(f"/api/v1/receivables/invoices/{invoice_id}/approve", headers=review, json={"expected_version": 2}).status_code == 200
+        assert client.get("/api/v1/receivables/aging?as_of_date=2026-08-01", headers=review).status_code == 400
+        grouped = client.get("/api/v1/receivables/aging-by-currency?as_of_date=2026-08-01", headers=review)
+        assert grouped.status_code == 200
+        body = grouped.json()
+        assert set(body) == {"schema_version", "as_of_date", "currency_groups"}
+        assert [(group["currency_code"], group["total_outstanding_minor"]) for group in body["currency_groups"]] == [("EGP", 3400), ("JPY", 700), ("USD", 1200)]
+        assert client.get("/api/v1/receivables/aging-by-currency?as_of_date=2026-08-01").status_code == 401
+
+
 def test_receivables_api_drops_future_storage_fields(tmp_path: Path) -> None:
     db_path = tmp_path / "receivables-projection.db"
     run_migrations(db_path)

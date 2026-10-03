@@ -61,13 +61,59 @@ deterministically.
 
 `GET /api/v1/receivables/aging?as_of_date=YYYY-MM-DD` returns open invoices,
 days overdue, `Current`, `1-30`, `31-60`, `61-90`, and `90+` bucket totals, plus
-the total outstanding value. `credit-exposure` reports limit, exposure,
-available credit, hold, and customer status.
+the total outstanding value and its `currency_code`. Its existing amounts and
+item fields are preserved for a single currency. An empty report has
+`currency_code: null` and zero totals. This endpoint rejects mixed-currency open
+items with HTTP 400 instead of adding incompatible minor units.
 
-Workspace aging currently aggregates its bucket totals without currency grouping.
-Use single-currency workspaces for those totals; mixed-currency aging is tracked
-separately as PROD-020. Customer credit exposure validates its currency and is
-not an FX conversion or a group-wide consolidated credit calculation.
+`GET /api/v1/receivables/aging-by-currency?as_of_date=YYYY-MM-DD` returns a
+separate versioned contract for mixed-currency workspaces:
+
+```json
+{
+  "schema_version": 1,
+  "as_of_date": "2026-08-01",
+  "currency_groups": [
+    {
+      "currency_code": "JPY",
+      "items": [{
+        "invoice_id": "ARINV-SYNTHETIC-JPY",
+        "invoice_number": "INV-JPY",
+        "customer_code": "CUS-JPY",
+        "customer_name": "Synthetic Customer",
+        "currency_code": "JPY",
+        "invoice_date": "2026-07-01",
+        "due_date": "2026-07-31",
+        "total_minor": 700,
+        "outstanding_minor": 700,
+        "days_overdue": 1,
+        "bucket": "1-30"
+      }],
+      "bucket_totals_minor": {"Current": 0, "1-30": 700, "31-60": 0, "61-90": 0, "90+": 0},
+      "total_outstanding_minor": 700
+    }
+  ]
+}
+```
+
+Each group contains its contributing items, totals only that currency's integer minor
+units, and appears in currency-code order. There is no report-wide monetary
+total and no implicit currency conversion. Paid invoices and zero outstanding
+balances do not create groups. An empty report has `currency_groups: []`.
+The Python application/facade exposes the same contract through
+`aging_report_by_currency`. No database migration is required.
+
+Both endpoints age **currently open balances** against due dates using
+`as_of_date`; they do not reconstruct historical balances or reverse receipts
+recorded after that date. Invoice values and receipt allocations are read in a
+single SQL statement. Server organization/entity scope is applied before
+recomputing totals; groups without visible items are removed. Existing read
+permissions apply to both endpoints, and their nested field projections are
+closed.
+
+`credit-exposure` reports limit, exposure, available credit, hold, and customer
+status. It validates the customer's currency and is not an FX conversion or a
+group-wide consolidated credit calculation.
 
 ## API and CLI
 
@@ -81,6 +127,7 @@ The authenticated API is under `/api/v1/receivables`:
 - `POST /receipts/{id}/allocate`
 - `GET /credit-exposure/{customer_code}`
 - `GET /aging`
+- `GET /aging-by-currency`
 
 The local CLI is under `reconforge receivables` and includes customer upsert,
 invoice creation/submission/approval, receipt posting, customer listing,

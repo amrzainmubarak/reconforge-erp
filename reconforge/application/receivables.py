@@ -103,6 +103,7 @@ class ReceivablesRepositoryProtocol(Protocol):
     def list_invoices(self, *, workspace: str = "default", status: str = "") -> list[dict[str, Any]]: ...
     def credit_exposure(self, customer_code: str, *, workspace: str = "default") -> dict[str, Any]: ...
     def aging_report(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]: ...
+    def aging_report_by_currency(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]: ...
 
 
 class ReceivablesApplicationService:
@@ -259,3 +260,6 @@ class ReceivablesApplicationService:
 
     def aging_report(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
         return self.repository.aging_report(workspace=workspace, as_of_date=as_of_date)
+
+    def aging_report_by_currency(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
+        return self.repository.aging_report_by_currency(workspace=workspace, as_of_date=as_of_date)

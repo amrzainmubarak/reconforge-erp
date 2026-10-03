@@ -37,7 +37,7 @@ tasks:
     priority: P0
     area: supply-chain
     title: Remediate October dependency disclosures
-    status: in_progress
+    status: completed
     depends_on: [PROD-001]
     exit_evidence: >-
       Reviewed targeted Python/npm locks, clean all-extra audits, compatibility tests and builds; preserve pre-fix findings.

@@ -1,5 +1,15 @@
 ﻿# Execution State
 
+## Verified foundation checkpoint (2026-10-03)
+
+An isolated checkout at `8c0951273c6eb6b0e395f12ffe5626821c2f9814` passed
+3412 tests, with167 explicit capability skips and24 warnings, in900.79s.
+Ruff, Mypy, Bandit, package build, Docker build and container doctor pass.
+Actual PostgreSQL CI separately passes409/410 selected with one missing-native-
+client-tools skip. No skip counts as a pass. Exact commands, timings and log
+hashes: [foundation verification](FOUNDATION_VERIFICATION_2026-10-03.json).
+Next-slice AR/currency/strict-matching work is outside this checkpoint.
+
 Updated: 2026-10-03
 
 ## Production foundation checkpoint; financial invariants continue

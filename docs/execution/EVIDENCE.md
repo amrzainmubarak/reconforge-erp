@@ -1,5 +1,15 @@
 ﻿# ReconForge Execution Evidence Log
 
+## Isolated final foundation acceptance (2026-10-03)
+
+Source `8c0951273c6eb6b0e395f12ffe5626821c2f9814`:3412 passed,167 skipped,
+zero failed,24 warnings in900.79s; command wall907.825s. Static/type/security
+checks and wheel/sdist build pass. Docker build197.709s and container doctor
+11.673s pass using the same checkout. Full details and retained failure-log
+hashes: [verification report](FOUNDATION_VERIFICATION_2026-10-03.json).
+The earlier five failing tests were repaired and the full rerun passed; the
+failed report remains retained. This is bounded synthetic engineering evidence.
+
 ## Production foundation focused verification (2026-10-03)
 
 - AP: 78 passed, zero skipped, 35.87s after public approval-surface repair; independent connection races, exact

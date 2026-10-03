@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-03",
+  "scope": "PROD-021 runtime effective-capability admission",
+  "python": "3.12.13",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "database": "Disposable PostgreSQL 16.14 databases; synthetic rows and unique temporary roles",
+  "command": "python -m pytest tests/test_postgres_runtime_role.py -o addopts= -q -ra --junitxml=output/verification-2026-10-03/runtime-grants-final.xml",
+  "results": {
+    "passed": 73,
+    "failed": 0,
+    "skipped": 0,
+    "pytest_seconds": 47.28,
+    "wall_seconds": 54.7888985
+  },
+  "before_fix": {
+    "failed": 27,
+    "passed": 1,
+    "selection": "First 28 regression cases before capability admission SQL"
+  },
+  "proofs": [
+    "Transaction-scoped tenant A can truncate both tenants with the unsafe grant; explicit rollback preserves original rows",
+    "Public callable definer routine returns both tenants despite tenant A scope before guard",
+    "Direct/inherited/SET/ADMIN/PUBLIC effective privileges rejected before business queries",
+    "No-INHERIT/no-SET/no-ADMIN memberships remain accepted",
+    "Installed definer trigger and scoped DML remain usable",
+    "New pooled TRUNCATE grant rejects/discards lease; revoke restores admission with new backend PID"
+  ],
+  "static_checks": {
+    "ruff": "pass",
+    "mypy": "pass",
+    "bandit": "pass",
+    "git_diff_check": "pass"
+  },
+  "source_sha256": {
+    "reconforge/infrastructure/postgres.py": "6390f50ea8a10ca3add06860029b1573f6a50bc19ad43adf6d9faccf059123fc",
+    "tests/test_postgres_runtime_role.py": "4e1f560e8cbb137f47d6a3a39a2086ed924d72f174ced26dcf040219619f8cde"
+  },
+  "retained_logs_sha256": {
+    "output/verification-2026-10-03/runtime-grants-red.log": "0c710362d7a155e0f348dc98c766cc64a07d3b1c50ed39f34d53c3d33474e146",
+    "output/verification-2026-10-03/runtime-grants-green.log": "8256ff908359e956c16a0ae785a512729dea6ab8a6c6efd4c01dcfaddd6fdfe6",
+    "output/verification-2026-10-03/runtime-grants-final.log": "37cf7a113234a7c4e5390c2ffeb34279b6a9fd31c3ee828954ede3cfcbfe41fe",
+    "output/verification-2026-10-03/runtime-grants-final.xml": "449f048e3ef5639015b7320ea41ea96d7b9d4cb39ff9c5220f329c167e73a1ca"
+  },
+  "limits": [
+    "No customer data or production grant mutation",
+    "DBAs, installed schema code and application tenant-scope selection remain trusted",
+    "Admission cannot prevent privilege changes by a DBA after checkout",
+    "Focused slice evidence; not full platform acceptance"
+  ]
+}

@@ -195,6 +195,145 @@ def _assert_rejected(database: Any) -> None:
         factory.close()
 
 
+def _grant_runtime_capability(database: Any, capability: str, recipient: str) -> None:
+    if capability in {"TRUNCATE", "TRIGGER", "REFERENCES"}:
+        database.sql(f"GRANT {capability} ON reconforge.runtime_probe TO {{}}", recipient)
+    elif capability == "schema_create":
+        database.sql("GRANT CREATE ON SCHEMA reconforge TO {}", recipient)
+    elif capability == "database_create":
+        name = database.admin.execute("SELECT current_database()").fetchone()[0]
+        database.sql("GRANT CREATE ON DATABASE {} TO {}", name, recipient)
+    else:
+        database.admin.execute(
+            "CREATE FUNCTION reconforge.runtime_definer() RETURNS bigint "
+            "LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog "
+            "AS 'SELECT count(*) FROM reconforge.runtime_probe'"
+        )
+        database.admin.execute("REVOKE EXECUTE ON FUNCTION reconforge.runtime_definer() FROM PUBLIC")
+        database.sql("GRANT EXECUTE ON FUNCTION reconforge.runtime_definer() TO {}", recipient)
+
+
+@pytest.mark.parametrize("capability", [
+    "TRUNCATE", "TRIGGER", "REFERENCES", "schema_create", "database_create", "definer_execute",
+])
+@pytest.mark.parametrize("route", ["direct", "inherited", "set_then_inherited", "admin_then_inherited"])
+def test_live_runtime_rejects_bypass_capability_grants(role_database: Any, capability: str, route: str) -> None:
+    database = role_database
+    login, hop, unsafe = (database.names[key] for key in ("login", "hop", "unsafe"))
+    recipient = login if route == "direct" else unsafe
+    _grant_runtime_capability(database, capability, recipient)
+    if route == "inherited":
+        database.sql("GRANT {} TO {} WITH INHERIT TRUE, SET FALSE", unsafe, login)
+    elif route != "direct":
+        database.sql("GRANT {} TO {} WITH INHERIT TRUE, SET FALSE", unsafe, hop)
+        if route == "set_then_inherited":
+            database.sql("GRANT {} TO {} WITH INHERIT FALSE, SET TRUE", hop, login)
+        else:
+            database.sql("GRANT {} TO {} WITH ADMIN TRUE, INHERIT FALSE, SET FALSE", hop, login)
+    _assert_rejected(database)
+
+
+def test_live_truncate_bypasses_rls_even_with_transaction_tenant_scope(role_database: Any) -> None:
+    database = role_database
+    _grant_runtime_capability(database, "TRUNCATE", database.names["login"])
+    psycopg = pytest.importorskip("psycopg")
+    with psycopg.connect(database.settings.dsn) as connection:
+        connection.execute("SELECT set_config('app.tenant_id', 'tenant_a', true)")
+        assert connection.execute("SELECT count(*) FROM reconforge.runtime_probe").fetchone()[0] == 1
+        connection.execute("TRUNCATE reconforge.runtime_probe")
+        connection.execute("SELECT set_config('app.tenant_id', 'tenant_b', true)")
+        assert connection.execute("SELECT count(*) FROM reconforge.runtime_probe").fetchone()[0] == 0
+        connection.rollback()
+    assert database.admin.execute("SELECT count(*) FROM reconforge.runtime_probe").fetchone()[0] == 2
+    _assert_rejected(database)
+
+
+def test_live_public_definer_execute_reads_other_tenant_despite_rls(role_database: Any) -> None:
+    database = role_database
+    _grant_runtime_capability(database, "definer_execute", database.names["unsafe"])
+    database.admin.execute("GRANT EXECUTE ON FUNCTION reconforge.runtime_definer() TO PUBLIC")
+    psycopg = pytest.importorskip("psycopg")
+    with psycopg.connect(database.settings.dsn) as connection:
+        connection.execute("SELECT set_config('app.tenant_id', 'tenant_a', true)")
+        assert connection.execute("SELECT count(*) FROM reconforge.runtime_probe").fetchone()[0] == 1
+        assert connection.execute("SELECT reconforge.runtime_definer()").fetchone()[0] == 2
+    _assert_rejected(database)
+
+
+@pytest.mark.parametrize("capability", [
+    "TRUNCATE", "TRIGGER", "REFERENCES", "schema_create", "database_create", "definer_execute",
+])
+def test_live_unreachable_capability_role_does_not_reject_safe_login(role_database: Any, capability: str) -> None:
+    database = role_database
+    _grant_runtime_capability(database, capability, database.names["unsafe"])
+    database.sql(
+        "GRANT {} TO {} WITH ADMIN FALSE, INHERIT FALSE, SET FALSE",
+        database.names["unsafe"], database.names["login"],
+    )
+    factory = PostgresRuntimePooledConnectionFactory(database.settings, max_size=1)
+    try:
+        connection = factory.connect()
+        assert connection.execute("SELECT count(*) FROM reconforge.runtime_probe").fetchone()[0] == 0
+        connection.close()
+    finally:
+        factory.close()
+
+
+def test_live_public_schema_create_is_not_a_safe_runtime_default(role_database: Any) -> None:
+    role_database.admin.execute("GRANT CREATE ON SCHEMA public TO PUBLIC")
+    _assert_rejected(role_database)
+
+
+def test_live_public_definer_procedure_is_rejected(role_database: Any) -> None:
+    role_database.admin.execute(
+        "CREATE PROCEDURE reconforge.runtime_definer_procedure() LANGUAGE plpgsql "
+        "SECURITY DEFINER SET search_path = pg_catalog AS 'BEGIN NULL; END'"
+    )
+    _assert_rejected(role_database)
+
+
+def test_live_installed_definer_trigger_does_not_require_runtime_ddl_or_direct_execution(role_database: Any) -> None:
+    database = role_database
+    database.admin.execute(
+        "CREATE FUNCTION reconforge.runtime_trigger() RETURNS trigger LANGUAGE plpgsql "
+        "SECURITY DEFINER SET search_path = pg_catalog AS 'BEGIN RETURN NEW; END'"
+    )
+    database.admin.execute(
+        "CREATE TRIGGER runtime_guard BEFORE INSERT ON reconforge.runtime_probe "
+        "FOR EACH ROW EXECUTE FUNCTION reconforge.runtime_trigger()"
+    )
+    database.sql("GRANT INSERT ON reconforge.runtime_probe TO {}", database.names["login"])
+    factory = PostgresRuntimePooledConnectionFactory(database.settings, max_size=1)
+    try:
+        boundary = PostgresTenantBoundary(factory)
+        with boundary.transaction("tenant_a") as connection:
+            connection.execute("INSERT INTO reconforge.runtime_probe VALUES ('tenant_a')")
+            assert connection.execute("SELECT count(*) FROM reconforge.runtime_probe").fetchone()[0] == 2
+        with boundary.transaction("tenant_b") as connection:
+            assert connection.execute("SELECT count(*) FROM reconforge.runtime_probe").fetchone()[0] == 1
+    finally:
+        factory.close()
+
+
+def test_live_pool_discards_new_truncate_grant_and_recovers_after_revoke(role_database: Any) -> None:
+    database = role_database
+    factory = PostgresRuntimePooledConnectionFactory(database.settings, max_size=1)
+    try:
+        connection = factory.connect()
+        pid = connection.execute("SELECT pg_backend_pid()").fetchone()[0]
+        connection.close()
+        _grant_runtime_capability(database, "TRUNCATE", database.names["login"])
+        with pytest.raises(PostgresRuntimeRoleError):
+            factory.connect()
+        assert factory.pool_snapshot.total == 0
+        database.sql("REVOKE TRUNCATE ON reconforge.runtime_probe FROM {}", database.names["login"])
+        connection = factory.connect()
+        assert connection.execute("SELECT pg_backend_pid()").fetchone()[0] != pid
+        connection.close()
+    finally:
+        factory.close()
+
+
 @pytest.mark.parametrize("attribute", ["SUPERUSER", "BYPASSRLS", "CREATEROLE", "CREATEDB", "REPLICATION"])
 def test_live_runtime_rejects_privileged_login_role(role_database: Any, attribute: str) -> None:
     role_database.sql(f"ALTER ROLE {{}} {attribute}", role_database.names["login"])

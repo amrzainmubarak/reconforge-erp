@@ -406,6 +406,37 @@ SELECT CURRENT_USER = SESSION_USER
          )
        WHERE pg_catalog.pg_has_role(identity.oid, privileged.oid, 'USAGE')
    )
+   AND NOT EXISTS (
+       SELECT 1 FROM runtime_identities identity
+       CROSS JOIN pg_catalog.pg_database database
+       WHERE database.datname = pg_catalog.current_database()
+         AND pg_catalog.has_database_privilege(identity.oid, database.oid, 'CREATE')
+   )
+   AND NOT EXISTS (
+       SELECT 1 FROM runtime_identities identity
+       CROSS JOIN pg_catalog.pg_namespace namespace
+       WHERE namespace.nspname !~ '^pg_' AND namespace.nspname <> 'information_schema'
+         AND pg_catalog.has_schema_privilege(identity.oid, namespace.oid, 'CREATE')
+   )
+   AND NOT EXISTS (
+       SELECT 1 FROM runtime_identities identity
+       CROSS JOIN pg_catalog.pg_class relation
+       JOIN pg_catalog.pg_namespace namespace ON namespace.oid = relation.relnamespace
+       WHERE namespace.nspname !~ '^pg_' AND namespace.nspname <> 'information_schema'
+         AND relation.relkind IN ('r', 'p', 'f')
+         AND pg_catalog.has_table_privilege(identity.oid, relation.oid, 'TRUNCATE,TRIGGER,REFERENCES')
+   )
+   AND NOT EXISTS (
+       SELECT 1 FROM runtime_identities identity
+       CROSS JOIN pg_catalog.pg_proc routine
+       JOIN pg_catalog.pg_namespace namespace ON namespace.oid = routine.pronamespace
+       WHERE namespace.nspname !~ '^pg_' AND namespace.nspname <> 'information_schema'
+         AND routine.prosecdef
+         AND routine.prorettype NOT IN (
+             'pg_catalog.trigger'::pg_catalog.regtype, 'pg_catalog.event_trigger'::pg_catalog.regtype
+         )
+         AND pg_catalog.has_function_privilege(identity.oid, routine.oid, 'EXECUTE')
+   )
    AS runtime_role_safe
 """
 
@@ -415,7 +446,11 @@ def _validate_runtime_connection(connection: Any) -> Any:
 
     One catalog query and rollback precede application transactions on every
     checkout; there is no cached safety result. This detects deployment role
-    mistakes and privilege drift between leases. Database administrators and
+    mistakes and privilege drift between leases, including effective DDL,
+    table-wide privileges and callable user-schema SECURITY DEFINER routines.
+    Installed trigger routines remain part of the trusted schema: PostgreSQL
+    forbids calling them directly and runtime TRIGGER/CREATE rights are denied.
+    Database administrators and
     application code remain trusted: a shared role can set tenant GUCs, and an
     administrator can change privileges after this check.
     """

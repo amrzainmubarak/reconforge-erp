@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
@@ -59,6 +61,9 @@ def test_auth_me_drops_future_identity_fields_before_serialization(tmp_path: Pat
             "disabled": False,
             "created_at": "2026-08-27T00:00:00Z",
             "future_identity_field": "must-not-escape",
+            "password_hash": "synthetic-confidential-hash",
+            "access_token": "synthetic-confidential-token",
+            "permissions": ["injected.manage"],
         }
 
     monkeypatch.setattr(auth_routes, "_user_payload", hostile_user_payload)
@@ -68,6 +73,87 @@ def test_auth_me_drops_future_identity_fields_before_serialization(tmp_path: Pat
     assert response.status_code == 200
     assert response.json()["username"] == admin_username
     assert "future_identity_field" not in response.text
+    assert "synthetic-confidential" not in response.text
+    assert "injected.manage" not in response.json()["permissions"]
+
+
+def test_auth_me_local_permissions_refresh_after_revocation_without_role_inference(tmp_path: Path) -> None:
+    client, db_path, _ = _client_with_users(tmp_path, create_aux_user=True)
+    connection = connect(db_path, require_exists=True)
+    try:
+        role_id = connection.execute("SELECT id FROM roles WHERE name = 'reviewer'").fetchone()[0]
+        connection.execute("DELETE FROM role_permissions WHERE role_id = ?", (role_id,))
+        connection.executemany(
+            "INSERT INTO role_permissions(role_id, permission_name) VALUES (?, ?)",
+            [(role_id, "receivables.manage"), (role_id, "receivables.read")],
+        )
+        connection.commit()
+        login = client.post("/api/v1/auth/login", json={"username": "admin-alt", "password": "Secret-123"})
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        initial = client.get("/api/v1/auth/me", headers=headers)
+        assert initial.status_code == 200
+        assert initial.json()["permissions"] == ["receivables.manage", "receivables.read"]
+        assert initial.json()["roles"] == ["reviewer"]
+        connection.execute("DELETE FROM role_permissions WHERE role_id = ?", (role_id,))
+        connection.commit()
+        refreshed = client.get("/api/v1/auth/me", headers=headers)
+        assert refreshed.status_code == 200
+        assert refreshed.json()["roles"] == ["reviewer"]
+        assert refreshed.json()["permissions"] == []
+    finally:
+        connection.close()
+
+
+@pytest.mark.parametrize("principal_type", ["user", "service_account"])
+def test_auth_me_server_permissions_are_current_request_authority(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, principal_type: str
+) -> None:
+    import reconforge.api.app as app_module
+    import reconforge.api.dependencies as dependencies
+    import reconforge.api.routes.auth as auth_routes
+    from reconforge.api.server_identity import AuthenticatedServerRequest, request_tenant_id
+    from reconforge.auth.models import LocalUser
+
+    permissions = frozenset({"receivables.read", "receivables.manage"})
+    user = LocalUser(id="operator-id", username="operator", display_name="Operator")
+
+    def authenticate(request: Any, token: str) -> AuthenticatedServerRequest | None:
+        if request_tenant_id(request) != "tenant-a" or token != "synthetic-session-token":
+            return None
+        return AuthenticatedServerRequest(
+            user=user,
+            permissions=permissions,
+            principal_type=principal_type,
+            tenant_id="tenant-a",
+            session_id="synthetic-confidential-session-id",
+            credential_id="synthetic-confidential-credential-id",
+        )
+
+    class Identity:
+        def user_roles(self, *, tenant_id: str, user_id: str) -> list[str]:
+            assert (tenant_id, user_id) == ("tenant-a", "operator-id")
+            return ["administrator"]  # A role label must not inflate the request's permissions.
+
+    monkeypatch.setattr(app_module, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(dependencies, "authenticate_server_request", authenticate)
+    monkeypatch.setattr(auth_routes, "execute_postgres_identity", lambda request, operation: operation(Identity(), request_tenant_id(request)))
+    client = TestClient(create_api_app(
+        tmp_path / "unused.db", tenant_db_root=tmp_path / "tenants",
+        postgres_dsn="postgresql://identity.test/postgres", postgres_require_tls=False,
+    ))
+    headers = {"X-ReconForge-Tenant": "tenant-a", "Authorization": "Bearer synthetic-session-token"}
+    initial = client.get("/api/v1/auth/me", headers=headers)
+    assert initial.status_code == 200
+    assert initial.json()["permissions"] == ["receivables.manage", "receivables.read"]
+    assert initial.json()["principal_type"] == principal_type
+    assert initial.json()["roles"] == (["administrator"] if principal_type == "user" else [])
+    assert "synthetic-confidential" not in initial.text
+    assert "synthetic-session-token" not in initial.text
+    permissions = frozenset()
+    refreshed = client.get("/api/v1/auth/me", headers=headers)
+    assert refreshed.status_code == 200
+    assert refreshed.json()["permissions"] == []
+    assert client.get("/api/v1/auth/me", headers={**headers, "X-ReconForge-Tenant": "tenant-b"}).status_code == 401
 
 
 def test_login_fails_with_wrong_password_and_disabled_user(tmp_path: Path) -> None:

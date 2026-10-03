@@ -814,6 +814,10 @@ def test_auth_me_projection_is_closed_across_identity_scopes() -> None:
             "created_at": "2026-08-27T00:00:00Z",
             "roles": ["reviewer"],
             "principal_type": "user",
+            "permissions": ["receivables.read"],
+            "credential_id": "must-not-escape",
+            "session_id": "must-not-escape",
+            "password_hash": "must-not-escape",
             "authorized_scopes": {
                 "workspaces": ["workspace-a"],
                 "organizations": ["org-a"],
@@ -830,6 +834,8 @@ def test_auth_me_projection_is_closed_across_identity_scopes() -> None:
         "legal_entities": ["entity-a"],
     }
     assert "future_identity_field" in result.denied_fields
+    assert result.visible["permissions"] == ["receivables.read"]
+    assert {"credential_id", "session_id", "password_hash"} <= set(result.denied_fields)
     assert "future_scope" not in str(result.visible["authorized_scopes"])
 
 

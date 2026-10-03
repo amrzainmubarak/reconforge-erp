@@ -531,9 +531,12 @@ def me(
 ) -> dict[str, object]:
     """Return the active API user without credential material."""
 
+    principal = current_server_principal()
+    permissions: set[str] | frozenset[str] = frozenset()
     try:
         if server_identity_enabled(request):
-            principal = current_server_principal()
+            if isinstance(principal, ServerPrincipal):
+                permissions = principal.permissions
             if isinstance(principal, ServerPrincipal) and principal.principal_type == "service_account":
                 roles = []
             else:
@@ -546,21 +549,21 @@ def me(
                 raise APIError(
                     status_code=500, code="db_not_configured", message="API database path is not configured."
                 )
-            roles = LocalAuthService(connection).roles.user_roles(current_user.username)
+            local_roles = LocalAuthService(connection).roles
+            roles = local_roles.user_roles(current_user.username)
+            permissions = local_roles.user_permissions(current_user.username)
     except APIError:
         raise
     except (DatabaseError, AuthRepositoryError, AuthServiceError) as exc:
         raise APIError(status_code=400, code="user_read_failed", message="Unable to read API user.") from exc
     payload = _user_payload(current_user)
     payload["roles"] = roles
-    principal = current_server_principal()
+    payload["permissions"] = sorted(permissions)
     payload["principal_type"] = principal.principal_type if isinstance(principal, ServerPrincipal) else "user"
     if isinstance(principal, ServerPrincipal) and principal.principal_type == "user":
         payload["step_up_active"] = principal.step_up_active
         payload["step_up_expires_at"] = principal.step_up_expires_at
         payload["step_up_method"] = principal.step_up_method
-    if isinstance(principal, ServerPrincipal) and principal.principal_type == "service_account":
-        payload["permissions"] = sorted(principal.permissions)
     if isinstance(principal, ServerPrincipal):
         payload["authorized_scopes"] = {
             "workspaces": sorted(principal.authorized_workspace_ids),

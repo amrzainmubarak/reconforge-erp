@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
+from reconforge.domain.finance_balances import verify_posted_balances
 from reconforge.domain.finance_posting import validation_digest
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
@@ -150,3 +151,48 @@ def test_live_api_scope_cookie_csrf_and_post_requires_recent_auth(posting_api: A
     assert posted.status_code == 200, posted.text
     assert client.get(f"/api/v1/finance-core/postings/{posted.json()['posting']['id']}", headers=sibling).status_code == 404
     assert not Path(client.app.state.db_path).exists()
+
+
+def test_live_api_cross_period_balances_exact_opening_cutoff_and_reversal(posting_api: Any) -> None:
+    import psycopg
+
+    db, client, headers = posting_api
+    maker, checker, reader = (headers[key] for key in ("api-maker", "api-checker", "api-reader"))
+    for actor in (maker, checker):
+        assert client.post("/api/v1/auth/step-up", headers=actor, json={"password": PASSWORD}).status_code == 200
+    with psycopg.connect(db["admin"], autocommit=True) as admin:
+        admin.execute("INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) VALUES('finance_scope','aug','August','2026-08-01','2026-08-31',2026,8,'shared')")
+    created = client.post("/api/v1/finance-core/entries", headers=maker, json=_draft("HTTP-OPENING", "90071992547409.93"))
+    assert created.status_code == 200, created.text
+    entry_id = created.json()["entry"]["id"]
+    assert client.post(f"/api/v1/finance-core/entries/{entry_id}/validate", headers=checker, json={"reason": "Independent opening review"}).status_code == 200
+    digest = client.get(f"/api/v1/finance-core/entries/{entry_id}/posting-preview", headers=reader).json()["review"]["validation_digest"]
+    posted = client.post(f"/api/v1/finance-core/entries/{entry_id}/post", headers=checker, json={"command_id": "HTTP-OPENING-POST", "expected_validation_digest": digest, "reason": "Explicit opening"})
+    assert posted.status_code == 200, posted.text
+    effect_id = posted.json()["posting"]["id"]
+    prepared = client.post(f"/api/v1/finance-core/postings/{effect_id}/reversal", headers=maker, json={"command_id": "HTTP-CROSS-PERIOD", "entry_number": "HTTP-AUG-INVERSE", "period_id": "aug", "posting_date": "2026-08-10", "reason": "Later period correction"})
+    assert prepared.status_code == 200, prepared.text
+    reversal_id = prepared.json()["reversal"]["entry_id"]
+    assert client.post(f"/api/v1/finance-core/entries/{reversal_id}/validate", headers=checker, json={"reason": "Independent later inverse"}).status_code == 200
+    digest = client.get(f"/api/v1/finance-core/entries/{reversal_id}/posting-preview", headers=reader).json()["review"]["validation_digest"]
+    assert client.post(f"/api/v1/finance-core/entries/{reversal_id}/post", headers=checker, json={"command_id": "HTTP-AUG-INVERSE-POST", "expected_validation_digest": digest, "reason": "Explicit correction"}).status_code == 200
+    target = "/api/v1/finance-core/posted-balances-as-of"
+    params = {"period_id": "aug", "organization_code": "ORG_A", "entity_code": "A1", "workspace": "shared", "as_of_date": "2026-08-05"}
+    early = client.get(target, headers=reader, params=params)
+    assert early.status_code == 200, early.text
+    result = early.json()["balances"]
+    assert result["totals"]["opening"]["balance_totals"]["debit_minor"] == "9007199254740993"
+    assert result["totals"]["activity"]["effect_count"] == 0
+    assert result["totals"]["closing"]["balance_totals"]["debit_minor"] == "9007199254740993"
+    verify_posted_balances(json.loads(result["report_json"]))
+    late = client.get(target, headers=reader, params={**params, "as_of_date": "2026-08-31"})
+    assert late.status_code == 200, late.text
+    result = late.json()["balances"]
+    assert result["totals"]["opening"]["effect_count"] == 1 and result["totals"]["activity"]["effect_count"] == 1
+    assert result["totals"]["closing"]["balance_totals"] == {"debit_minor": "0", "credit_minor": "0", "balanced": True}
+    assert result["totals"]["closing"]["turnover_totals"]["debit_minor"] == "18014398509481986"
+    verify_posted_balances(json.loads(result["report_json"]))
+    for replacements, status in (({"as_of_date": "2026-09-01"}, 400), ({"as_of_date": "20260805"}, 400), ({"period_id": "other_period"}, 403), ({"entity_code": "A2"}, 403), ({"workspace": "other"}, 403)):
+        denied = client.get(target, headers=reader, params={**params, **replacements})
+        assert denied.status_code == status, denied.text
+        assert "report_json" not in denied.text

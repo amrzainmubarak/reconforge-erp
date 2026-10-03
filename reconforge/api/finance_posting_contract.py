@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from reconforge.domain.finance_balances import AMOUNT_FIELDS, POLICY_FIELDS, verify_posted_balances
 from reconforge.domain.finance_posting import (
     PROVENANCE_FIELDS,
     canonical_json,
@@ -141,4 +142,32 @@ def project_posted_trial_balance(value: Mapping[str, Any]) -> dict[str, Any]:
             "credit_minor": _minor(balances["credit_minor"]),
             "balanced": balances["balanced"],
         },
+    }
+
+
+def project_posted_balances(value: Mapping[str, Any]) -> dict[str, Any]:
+    verify_posted_balances(value)
+    return {
+        "api_contract_version": API_POSTING_CONTRACT,
+        **{key: value[key] for key in (
+            "contract_version", "balance_scope", "workspace_id", "organization_id", "legal_entity_id", "organization_code",
+            "entity_code", "period_id", "period_start", "period_end", "as_of_date", "report_digest",
+        )},
+        "report_json": canonical_json(value),
+        "currency_policy": None if value["currency_policy"] is None else {key: value["currency_policy"][key] for key in POLICY_FIELDS},
+        "accounts": [{
+            "account_id": account["account_id"],
+            **{phase: {key: _minor(account[phase][key]) for key in AMOUNT_FIELDS} for phase in ("opening", "activity", "closing")},
+            "postings": [{
+                **{key: line[key] for key in ("effect_id", "entry_id", "period_id", "posting_date", "phase", "line_number")},
+                **{key: _minor(line[key]) for key in ("debit_minor", "credit_minor")},
+            } for line in account["postings"]],
+        } for account in value["accounts"]],
+        "totals": {phase: {
+            "effect_count": totals["effect_count"],
+            **{kind: {
+                "debit_minor": _minor(totals[kind]["debit_minor"]), "credit_minor": _minor(totals[kind]["credit_minor"]),
+                "balanced": totals[kind]["balanced"],
+            } for kind in ("turnover_totals", "balance_totals")},
+        } for phase, totals in value["totals"].items()},
     }

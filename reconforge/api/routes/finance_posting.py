@@ -20,6 +20,7 @@ from reconforge.api.dependencies import (
 )
 from reconforge.api.errors import APIError
 from reconforge.api.finance_posting_contract import (
+    project_posted_balances,
     project_posted_trial_balance,
     project_posting_effect,
     project_posting_preview,
@@ -88,7 +89,7 @@ def _error(exc: FinancePostingError) -> APIError:
         status = 403
     elif exc.code in {"posting_entry_not_found", "posting_effect_not_found"}:
         status = 404
-    elif exc.code in {"posting_command_conflict", "posting_review_changed", "posting_source_conflict", "posting_state_invalid", "posting_period_closed"}:
+    elif exc.code in {"posting_command_conflict", "posting_review_changed", "posting_source_conflict", "posting_state_invalid", "posting_period_closed", "posting_period_ambiguous"}:
         status = 409
     else:
         status = 400
@@ -203,5 +204,29 @@ def posted_trial_balance(
     def run(service: FinancePostingApplicationService, actor: PostingActor, bound: FinanceCoreExecutionScope) -> dict[str, Any]:
         value = service.posted_trial_balance(period_id=period_id, organization_code=bound.organization_code, entity_code=bound.entity_code, workspace=bound.workspace_id, actor=actor)
         return {"trial_balance": project_posted_trial_balance(value)}
+
+    return _execute(request, current_user, run, organization_code=code(organization_code, "Organization code"), entity_code=code(entity_code, "Entity code"))
+
+
+@router.get("/posted-balances-as-of")
+def posted_balances_as_of(
+    request: Request, current_user: PostingRead, period_id: str, as_of_date: str,
+    organization_code: str, entity_code: str, workspace: str = "default",
+) -> dict[str, Any]:
+    _authority(request, READ_PERMISSIONS)
+    scope = request_execution_scope(request)
+    if workspace.strip() not in {"default", scope.workspace_id}:
+        raise APIError(status_code=403, code="workspace_scope_denied", message="Posting workspace is outside the authorized scope.")
+
+    def run(service: FinancePostingApplicationService, actor: PostingActor, bound: FinanceCoreExecutionScope) -> dict[str, Any]:
+        value = service.posted_balances_as_of(
+            period_id=period_id, as_of_date=as_of_date, organization_code=bound.organization_code,
+            entity_code=bound.entity_code, workspace=bound.workspace_id, actor=actor,
+        )
+        enforce_server_scoped_permissions(
+            request, permissions=READ_PERMISSIONS, tenant_id=bound.tenant_id, workspace_id=value["workspace_id"],
+            organization_id=value["organization_id"], entity_id=value["legal_entity_id"],
+        )
+        return {"balances": project_posted_balances(value)}
 
     return _execute(request, current_user, run, organization_code=code(organization_code, "Organization code"), entity_code=code(entity_code, "Entity code"))

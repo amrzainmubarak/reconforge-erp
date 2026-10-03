@@ -1,6 +1,6 @@
 id: finance-operational-posting
 name: Reviewed Manual operational posting and full reversal
-version: 1.0.0
+version: 1.1.0
 maturity: experimental
 owner: finance-core
 dependencies: [finance.core, platform.core, platform.master-data]
@@ -23,6 +23,9 @@ domain_invariants:
   - audit-outbox-effect-and-command-receipt-commit-or-roll-back-together
   - legacy-missing-provenance-is-never-invented
   - balances-are-selected-period-net-activity-with-explicit-turnover
+  - business-date-opening-plus-activity-equals-cumulative-closing
+  - opening-current-and-closing-share-retained-currency-policy
+  - balance-contributions-verified-and-bounded-to-one-thousand-effects-ten-thousand-lines
 domain_events: [finance_entry_posted, finance_reversal_prepared]
 api_routes:
   - GET /api/v1/finance-core/entries/{entry_id}/posting-preview
@@ -30,6 +33,7 @@ api_routes:
   - GET /api/v1/finance-core/postings/{effect_id}
   - POST /api/v1/finance-core/postings/{effect_id}/reversal
   - GET /api/v1/finance-core/posted-trial-balance
+  - GET /api/v1/finance-core/posted-balances-as-of
 cli_commands:
   - reconforge finance-core posting draft
   - reconforge finance-core posting review
@@ -38,9 +42,10 @@ cli_commands:
   - reconforge finance-core posting effect
   - reconforge finance-core posting reverse
   - reconforge finance-core posting trial-balance
+  - reconforge finance-core posting balances-as-of
 ui_routes: []
 import_schemas: [LedgerEntryRequest, PostRequest, ReversalRequest]
-export_schemas: [finance-entry-review-v1, finance-posting-api-v1]
+export_schemas: [finance-entry-review-v1, finance-posting-api-v1, finance-posted-balances-v1]
 synthetic_fixtures: [tests/test_finance_core.py, tests/test_postgres_finance_posting.py]
 threat_model:
   - sibling-tenant-workspace-organization-entity-access
@@ -61,9 +66,13 @@ test_matrix:
   - tests/test_postgres_finance_posting_concurrency.py
   - tests/test_postgres_finance_posting_api.py
   - tests/test_postgres_finance_posting_restore.py
+  - tests/test_finance_balances.py
+  - tests/test_sqlite_finance_balances.py
+  - tests/test_postgres_finance_balances.py
 limitations:
   - manual-entries-and-full-kernel-reversals-only
-  - no-cumulative-opening-or-cross-period-closing-balance-yet
+  - as-of-is-currently-recorded-postings-by-business-date-not-historical-knowledge-time-or-statutory-close
+  - no-automatic-opening-import-fiscal-close-or-legacy-validated-entry-adoption
   - no-automatic-inventory-ar-ap-or-cash-to-gl-integration
   - sqlite-http-posting-awaits-recent-session-assurance-adapter
   - no-real-customer-performance-business-roi-or-independent-assurance

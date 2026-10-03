@@ -261,10 +261,10 @@ tasks:
     priority: P1
     area: finance-core
     title: Verify cumulative balances and explicit opening carry-forward
-    status: planned
+    status: in_progress
     depends_on: [PROD-009]
     exit_evidence: >-
-      Posted balances must distinguish opening, selected-period movements and cumulative as-of closing across multiple periods. Require exact policy-compatible aggregation, cross-period reversal, period/scope exclusion, drill-down, both-backend parity and restore. Current posting API explicitly reports selected-period-net-activity only.
+      Additive business-date opening/activity/closing implementation and both-backend golden10000/0/2500 are under final immutable verification. Independent malformed-policy/nested-identity and eager-loading findings are repaired; exact API strings, source evidence, caller transactions and restored digests require a clean separate checkpoint. Earlier failed fixtures/source drift remain retained. Existing period-only TB contract is unchanged.
   - id: PROD-033
     priority: P1
     area: receivables-money

@@ -296,7 +296,7 @@ modules:
         residual_risk_ids: [R-004]
         limitations:
           - Remaining explicit legacy financial readers outside this module retain a versioned compatibility boundary.
-          - Legacy entries without verified policy or authenticated review provenance cannot be operationally posted; no historical policy, actor, or seal is inferred. Posted reporting covers selected-period net activity only.
+          - Legacy entries without verified policy or authenticated review provenance cannot be operationally posted; no historical policy, actor, or seal is inferred. Posted reporting covers period activity and bounded recorded-postings business-date opening/closing; historical knowledge-time is not reconstructed.
       - threat_id: TM-T-003
         status: partial
         attack_surface: Finance manage/read/validate/post/reverse permissions, authenticated preparer-only Draft replacement, independent review and explicit posting, current permission checks before command replay, human step-up, CLI/API actor derivation, and consolidation approval/post/reversal/lock/reopen separation.
@@ -332,7 +332,7 @@ modules:
         limitations:
           - Artifact scope and checksum verification do not prove disclosure approval, WORM retention, production key custody, or recipient authorization.
           - Restore guards verify retained financial consistency and source/evidence affinity; the privileged database owner and restore operator remain trusted dependencies, not independently authenticated sources.
-    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_consolidation_ownership_changes.py, tests/test_consolidation_acquisition.py, tests/test_consolidation_ppa.py, tests/test_consolidation_impairment.py, tests/test_postgres_consolidation_ppa.py, tests/test_postgres_consolidation_ppa_runtime.py, tests/test_api_consolidation_ppa.py, tests/test_consolidation_statement.py, tests/test_finance_core.py, tests/test_finance_posting_domain.py, tests/test_finance_posting_api_contract.py, tests/test_finance_posting_cli.py, tests/test_sqlite_finance_posting.py, tests/test_postgres_finance_posting.py, tests/test_postgres_finance_posting_concurrency.py, tests/test_postgres_finance_posting_api.py, tests/test_postgres_finance_posting_restore.py, tests/test_sqlite_consolidation_close.py]
+    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_consolidation_ownership_changes.py, tests/test_consolidation_acquisition.py, tests/test_consolidation_ppa.py, tests/test_consolidation_impairment.py, tests/test_postgres_consolidation_ppa.py, tests/test_postgres_consolidation_ppa_runtime.py, tests/test_api_consolidation_ppa.py, tests/test_consolidation_statement.py, tests/test_finance_core.py, tests/test_finance_posting_domain.py, tests/test_finance_posting_api_contract.py, tests/test_finance_posting_cli.py, tests/test_sqlite_finance_posting.py, tests/test_postgres_finance_posting.py, tests/test_postgres_finance_posting_concurrency.py, tests/test_postgres_finance_posting_api.py, tests/test_postgres_finance_posting_restore.py, tests/test_finance_balances.py, tests/test_sqlite_finance_balances.py, tests/test_postgres_finance_balances.py, tests/test_sqlite_consolidation_close.py]
     assumptions:
       - Currency registry selection and source master data are reviewed before financial control use.
       - Operators approve source trial balances, group mappings, rate buckets, rate sources, and the CTA account before using a translation result.
@@ -342,7 +342,7 @@ modules:
       - New entries retain exact currency policy and stable review provenance; legacy NULL fields remain unverified, and current master-data changes must not reinterpret stored minor units.
     out_of_scope:
       - Full statutory acquisition-accounting judgment beyond the bounded PPA and impairment evidence artifacts, tax/deferred-tax effects, goodwill impairment methodology, bargain-purchase statutory treatment, equity-method or joint-arrangement accounting, historical FX recycling, NCI ownership changes, statutory accounting/statements, payment execution, source-ERP posting, legal books, production hosted-service assurance, and independent financial assurance. PostgreSQL PPA persistence remains bounded evidence storage.
-      - Automatic trade/subledger posting, complete Sales-to-Cash and Purchase-to-Payment GL cycles, cumulative opening/as-of balances, and unrestricted generated-source posting are outside this manual posting contract.
+      - Automatic trade/subledger posting, complete Sales-to-Cash and Purchase-to-Payment GL cycles, historical knowledge-time/fiscal-close balances, and unrestricted generated-source posting are outside this manual posting contract.
 
   - module_id: inventory.core
     registry_maturity: experimental

@@ -317,10 +317,10 @@ tasks:
     priority: P0
     area: receivables-command-recovery
     title: Bind invoice creation replay to exact request and authoritative source
-    status: planned
+    status: completed
     depends_on: [PROD-033, PROD-035]
     exit_evidence: >-
-      Actual SQLite/PostgreSQL HTTP rejects changed request and forged cached source/amounts before success; same exact key serializes and produces one business/audit/outbox effect. Preserve historical Draft acknowledgement, current scope/authority, retained policy and authorized workspace-global recovery. Legacy intent ambiguity fails closed with authorized GET fallback; no fabricated old payment terms.
+      ADR0823 accepted bounded core:331pass/0skip actual SQLite/PostgreSQL16.14 AR/API/cash/codec, nine owned and1208 participating hashes unchanged; separate native1pass with1,188,108-byte dump/restore and equal history/nonowner recovery. Two physical connections serialize exact/conflicting key; late audit/outbox/key/codec faults roll back all effects. Preserve historical Draft1/currentGETPaid, current authority and retained policy after suspended customer/terms/registry changes. True schema48-to49 raw backup and ambiguous legacy GET fallback; no guessed terms, receipt protocol or public AR export. Independent source review/root cleanup verification; original reds retained in RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json. New whole/hosted publication gates separate.
   - id: E-1120
     priority: P0
     area: financial-exactness

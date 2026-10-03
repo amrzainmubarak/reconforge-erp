@@ -1,0 +1,32 @@
+id: receivables-invoice-recovery
+name: Verified AR invoice creation acknowledgement recovery
+version: 1.0.0
+maturity: experimental
+owner: financial-integrity
+dependencies: [platform.core, platform.master-data, receivables-monetary-policy]
+incompatible_versions: [unchecked-cached-invoice-acknowledgements]
+data_classification: financial-sensitive
+retention_policy: retain-original-command-and-invoice-evidence
+permissions: [receivables.read, receivables.manage]
+default_roles: [admin, preparer]
+migrations: []
+domain_invariants:
+  - request-digest-is-not-source-authority
+  - exact-request-scope-and-ordered-source-lines-must-match
+  - retained-policy-and-original-attribution-must-verify
+  - original-draft-acknowledgement-is-distinct-from-current-state
+  - scoped-key-serializes-exact-and-conflicting-requests
+  - invoice-lines-command-audit-and-outbox-commit-or-rollback-together
+  - ambiguous-legacy-omitted-date-intent-fails-closed
+domain_events: [ar.invoice.created]
+api_routes: [/api/v1/receivables/invoices]
+cli_commands: []
+ui_routes: [/receivables]
+import_schemas: [independently-provable-legacy-raw-invoice-ack]
+export_schemas: []
+synthetic_fixtures: [tests/test_receivables_invoice_recovery.py, tests/test_receivables_invoice_replay_api.py]
+threat_model: [changed-request-key-reuse, corrupt-cache-source-redirection, fabricated-money-acknowledgement, revoked-recovery-authority, partial-creation-effects]
+benchmarks: []
+rollback_plan: preserve-command-history-refuse-unknown-envelope-use-authorized-current-get
+test_matrix: [tests/test_receivables_invoice_replay_domain.py, tests/test_receivables_invoice_replay.py, tests/test_receivables_invoice_recovery.py, tests/test_receivables_invoice_replay_api.py, tests/test_postgres_invoice_recovery_restore.py]
+limitations: [read-committed-concurrency-profile, active-canonical-hierarchy-required, legacy-omitted-date-get-fallback, public-db-export-excludes-ar-history, no-receipt-protocol-change, no-generated-gl]

@@ -2,7 +2,7 @@
 
 ## Current publication checkpoint (2026-10-03)
 
-PROD039 implementation is active on amr/verified-ar-invoice-recovery, based on
+PROD039 bounded local acceptance is complete on amr/verified-ar-invoice-recovery, based on
 published PR1204629a64b (tree-identical to retained PR114e63859d7).
 User-requested work labels are migrated:17local/7remote branches,5merge messages,
 33mapped commit IDs with equal trees/identities/timestamps. Six replacement
@@ -13,9 +13,14 @@ historical Draft acknowledgement and conservative ambiguous-legacy GET fallback.
 The immutable e81b4481-test local gate failed4114pass/366prerequisites/1old policy
 projection expectation; hosted3.12 failed the same assertion. Test-only e63859d7
 repairs that expectation with27focused/138overlapping contracts and private-field
-denials. Its fresh full gate runs in a separate clean detached checkout; new
-PRIMARY recovery edits are outside that acceptance. Retained before-fix evidence
-is AR_INVOICE_REPLAY_FINDINGS_2026-10-03.json; no repair is yet accepted.
+denials. Its fresh full gate now passes4115/366explicit prerequisites/0fail/0error
+with3,057stable tracked files and global quality/build. New PRIMARY recovery
+edits are outside that acceptance. Retained before-fix evidence
+is AR_INVOICE_REPLAY_FINDINGS_2026-10-03.json. The repair passes331AR/API/cash/codec
+tests without skips plus a separate native restore test. Nine owned/1,208Python
+sources remain unchanged; independent review finds no blocker and root confirms
+four owned databases absent. RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json records
+the frozen runtime, original failures and conservative legacy compatibility.
 
 AR API b9153400 exposes verified retained policy and exact integer/text amounts;
 corrected actual SQLite/PostgreSQL HTTP11/0skip proves positive Outbox counts.
@@ -34,12 +39,16 @@ the stale0098 proof contract. Original immutable8054 whole result remains FAILED
 4041pass/361prerequisites/1failure/0error. Updated local78-test proof gate passes.
 Hosted PR1128d76647c is successful; PR1138ba6772d timed out at30minutes; PR1148054
 failed its stale target/empty-digest secret finding. Exact reports remain separate.
-New full-regression and hosted acceptance on the publication head are pending;
-original exact-head outcomes are never reassigned to renamed commits.
+New invoice-recovery whole/hosted acceptance remains pending. Original e638
+hostedPython3.11/3.12 pass4117/364prerequisites each; finance-posting shard fails
+three stale0098 expectations after its fixture upgrades to0099. Current test-only
+repair must preserve the exact pre-downgrade revision and provenance columns;
+this failure is retained separately from local whole success. Original exact-head
+outcomes are never reassigned to renamed commits.
 
-Next PROD039 repairs confirmed AR invoice request/source replay identity using
-current authority and verified historical acknowledgements. A separate reviewed
-PROD038 receipt bundle precedes complete purchase/sales/GL cycles. No customer
+Next PROD038 implements a reviewed receipt bundle before complete purchase/sales/
+GL cycles. Its concrete source/owner/migration/restore design is reviewed; no
+generated Inventory effect has been implemented or accepted. No customer
 pilot,5M-transaction workload, measured labor savings or auditor acceptance exists.
 The goal remains active; no main merge or production deployment has occurred.
 

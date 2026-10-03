@@ -27,4 +27,4 @@ threat_model: [historical-money-reinterpretation, forged-policy-affinity, hidden
 benchmarks: []
 rollback_plan: preserve-verified-backup-downgrade-only-empty-or-all-null-policy
 test_matrix: [tests/test_receivables_monetary_policy.py, tests/test_receivables_policy_schema.py, tests/test_receivables_policy_capture.py, tests/test_receivables_policy_raw_guards.py, tests/test_postgres_receivables_policy_restore.py, tests/test_receivables_money_api_contract.py, tests/test_receivables_policy_api.py, apps/web/src/receivables-money.test.ts, apps/web/e2e/receivables-policy-live.spec.ts]
-limitations: [bounded-ar-workflow-only, browser-safe-integer-write-ceiling, invoice-replay-identity-follow-up, no-legacy-policy-repair, inactive-customer-retry-follow-up, no-generated-gl]
+limitations: [bounded-ar-workflow-only, browser-safe-integer-write-ceiling, legacy-invoice-omitted-date-get-fallback, no-legacy-policy-repair, inactive-receipt-parent-retry-follow-up, no-generated-gl]

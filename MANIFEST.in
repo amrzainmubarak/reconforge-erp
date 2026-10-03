@@ -1241,6 +1241,8 @@ include docs/adr/0812-isolate-policy-audit-fixture-cleanup.md
 include docs/execution/REMAINING_CI_FIXTURES_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0098_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0098_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0099_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0099_2026-10-03.json
 include docs/adr/0811-explicit-reviewed-operational-posting.md
 include docs/adr/0813-scoped-cash-recovery-and-human-authority.md
 include tests/test_finance_posting_api_contract.py

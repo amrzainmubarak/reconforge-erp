@@ -1,5 +1,16 @@
 # ReconForge Execution Evidence Log
 
+- Published invoice recovery92719305: INVOICE_RECOVERY_PUBLISHED_ACCEPTANCE_2026-10-03.json
+  retains unfiltered4558collected/4178pass/380explicit prerequisites/0failure/
+  0error/24warnings,977.84s pytest and3073unchanged tracked files. Global quality
+  and package build pass. Root independently verifies summary/JUnit counts,
+  original hashes and the clean detached subject. Hosted Python3.11/3.12 each
+  pass4180/378; all nine actual boundary shards and aggregate pass. CI37128668667,
+  Security37128668708,Docker37128668682,CodeQL37128668660 succeed; conditional
+  exact-image SBOM remains skipped. Counts are separate. PR121 was externally
+  merged by amrzainmubarak into the work base; main unchanged. New PROD038
+  sources are outside this acceptance, and historical failures remain retained.
+
 - Current downgrade test: POSTING_DOWNGRADE_TEST_REPAIR_2026-10-03.json retains
  actual3red/9deselected and12green/0skip restricted-role PostgreSQL16.14 cases,
  677stable runtime/migration/fixture hashes and15owned database removals. Only
@@ -13,7 +24,7 @@
  equivalent4629a64b is a content map, not a reassigned hosted result. Hosted
  finance-posting retains three stale fixed0098 assertions after0099 bootstrap;
  original failed shard and local whole success remain separate. New recovery
- runtime7f8b9173 needs its own whole/hosted acceptance.
+ runtime7f8b9173 is covered by its separate published92719305 acceptance above.
 - Invoice CI: INVOICE_RECOVERY_CI_2026-10-03.json retains39contract/supply-chain
  tests without skips and actual nine-shard/unknown Bash dispatch. All40prior
  verification commands remain, with one five-module source/HTTP/native recovery

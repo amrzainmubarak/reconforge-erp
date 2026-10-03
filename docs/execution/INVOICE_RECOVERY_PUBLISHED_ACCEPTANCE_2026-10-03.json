@@ -1,0 +1,515 @@
+{
+  "schema_version": "invoice-recovery-published-acceptance-v1",
+  "source_commit": "92719305c54d0e3085c0d6ab5b95be87c700cb21",
+  "status": "passed",
+  "source_invariance": {
+    "tracked_files": 3073,
+    "manifest_sha256": "cc8bb2de4004ca63a19bb19a93a9bc82a29b0856e1eb08c40b21d088780c9dbb",
+    "all_sources_head_and_import_unchanged": true,
+    "root_rechecked_clean_detached_subject": true
+  },
+  "local": {
+    "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "command": [
+      "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-ra",
+      "--tb=short",
+      "-o",
+      "addopts=",
+      "--junitxml",
+      "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\invoice-recovery-9271-pytest.xml"
+    ],
+    "counts": {
+      "tests": 4558,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 380,
+      "passed": 4178
+    },
+    "warnings": 24,
+    "process_duration_seconds": 981.822,
+    "terminal_pytest_duration_seconds": 977.84,
+    "junit_duration_seconds": 977.62,
+    "skip_classification": {
+      "postgresql_prerequisites": 371,
+      "redis": 3,
+      "s3": 2,
+      "windows_symbolic_links": 3,
+      "opt_in_public_network": 1
+    },
+    "exact_skip_reasons": {
+      "PROD-002 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 14,
+      "PROD-007 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 58,
+      "PROD031 live cash contract requires isolated PostgreSQL creation credentials; review 2026-10-10": 1,
+      "PROD033 API requires disposable live PostgreSQL app/admin profile; review 2026-10-03": 6,
+      "Windows symlink creation requires an external privilege": 1,
+      "live public network evidence is opt-in and may drift": 1,
+      "requires a disposable PostgreSQL administration service": 177,
+      "requires a live PostgreSQL application role": 2,
+      "requires a live PostgreSQL migration service": 1,
+      "requires a live PostgreSQL service": 21,
+      "requires a live Redis service": 3,
+      "requires a live S3-compatible service": 1,
+      "requires a live object-lock-enabled S3-compatible bucket": 1,
+      "requires disposable PostgreSQL source and maintenance services": 1,
+      "requires live PostgreSQL": 78,
+      "requires live PostgreSQL service": 12,
+      "symbolic links are not available in this environment": 1,
+      "symbolic-link creation is unavailable": 1
+    },
+    "quality": [
+      {
+        "name": "ruff",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "ruff",
+          "check",
+          "."
+        ],
+        "duration_seconds": 0.369,
+        "exit_code": 0,
+        "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+      },
+      {
+        "name": "mypy",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "mypy",
+          "reconforge"
+        ],
+        "duration_seconds": 1.909,
+        "exit_code": 0,
+        "log_sha256": "c25dcef4a733f219564cb690baa7fe1e277532c2fefe4be407a3d2bd903422d9"
+      },
+      {
+        "name": "bandit",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "bandit",
+          "-q",
+          "-r",
+          "reconforge"
+        ],
+        "duration_seconds": 19.25,
+        "exit_code": 0,
+        "log_sha256": "333497e37a41d213f0cbb24ee4451bf17bea751f0a656a0cea9493f11f9eee8f"
+      },
+      {
+        "name": "build",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "build",
+          "--no-isolation",
+          "--outdir",
+          "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\invoice-recovery-9271-dist"
+        ],
+        "duration_seconds": 34.654,
+        "exit_code": 0,
+        "log_sha256": "8a10bfa19ea561d0102b62a802ad0554845a053141f955a9a419086e68d8797a"
+      },
+      {
+        "name": "diff-check",
+        "command": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "duration_seconds": 0.071,
+        "exit_code": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "distribution_artifacts": [
+      {
+        "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\invoice-recovery-9271-dist\\reconforge_erp-0.7.1-py3-none-any.whl",
+        "sha256": "0efb41759f633f8c4dadaa072329d2cda10ca5f17a0f8e06e74694d716034fe8",
+        "bytes": 1915964
+      },
+      {
+        "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\invoice-recovery-9271-dist\\reconforge_erp-0.7.1.tar.gz",
+        "sha256": "cd54d84157ce164179e99e9656189a6d29f326c968ffb1f3ad379da4569cdeeb",
+        "bytes": 3185406
+      }
+    ],
+    "log_sha256": "f5a6d48abddbf8715889ef1788b5b63e37580877b035c0e89c0f720feaddfba0",
+    "junit_sha256": "9a211b9f56ecd7e0a554db36aa51dbb9a1282d41bc56513204a6424ff1cb1a65"
+  },
+  "hosted": {
+    "pr": 121,
+    "url": "https://github.com/amrzainmubarak/reconforge-erp/pull/121",
+    "runs": [
+      {
+        "name": "ci",
+        "id": 37128668667,
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37128668667",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "name": "object-storage",
+            "id": 111219142599,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:12:29Z"
+          },
+          {
+            "name": "postgres-ha-dr",
+            "id": 111219142644,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:51Z",
+            "completed_at": "2026-10-03T14:17:26Z"
+          },
+          {
+            "name": "test (3.12)",
+            "id": 111219142658,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:51Z",
+            "completed_at": "2026-10-03T14:22:40Z"
+          },
+          {
+            "name": "web",
+            "id": 111219142660,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:11:50Z"
+          },
+          {
+            "name": "engine-parity (3.12, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+            "id": 111219142683,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:10:58Z"
+          },
+          {
+            "name": "engine-parity (3.11, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+            "id": 111219142688,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:10:30Z"
+          },
+          {
+            "name": "engine-parity (3.11, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+            "id": 111219142717,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:10:38Z"
+          },
+          {
+            "name": "test (3.11)",
+            "id": 111219142727,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:21:42Z"
+          },
+          {
+            "name": "engine-parity (3.12, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+            "id": 111219142732,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:10:52Z"
+          },
+          {
+            "name": "docker-parity",
+            "id": 111221248409,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:22:44Z",
+            "completed_at": "2026-10-03T14:23:36Z"
+          },
+          {
+            "name": "server-boundaries (industry-close)",
+            "id": 111221248471,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:25:18Z",
+            "completed_at": "2026-10-03T14:27:13Z"
+          },
+          {
+            "name": "server-boundaries (receivables)",
+            "id": 111221248478,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:27:15Z",
+            "completed_at": "2026-10-03T14:30:12Z"
+          },
+          {
+            "name": "server-boundaries (parity)",
+            "id": 111221248510,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:22:43Z",
+            "completed_at": "2026-10-03T14:28:02Z"
+          },
+          {
+            "name": "server-boundaries (matching-runtime)",
+            "id": 111221248517,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:23:51Z",
+            "completed_at": "2026-10-03T14:30:54Z"
+          },
+          {
+            "name": "server-boundaries (durable-scale)",
+            "id": 111221248520,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:22:43Z",
+            "completed_at": "2026-10-03T14:31:52Z"
+          },
+          {
+            "name": "server-boundaries (inventory-payables)",
+            "id": 111221248522,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:30:15Z",
+            "completed_at": "2026-10-03T14:32:46Z"
+          },
+          {
+            "name": "server-boundaries (native)",
+            "id": 111221248541,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:22:43Z",
+            "completed_at": "2026-10-03T14:23:49Z"
+          },
+          {
+            "name": "server-boundaries (writeback)",
+            "id": 111221248549,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:22:45Z",
+            "completed_at": "2026-10-03T14:25:15Z"
+          },
+          {
+            "name": "server-boundaries (finance-posting)",
+            "id": 111221248593,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:28:05Z",
+            "completed_at": "2026-10-03T14:31:47Z"
+          },
+          {
+            "name": "server-boundaries",
+            "id": 111222980488,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:32:49Z",
+            "completed_at": "2026-10-03T14:32:53Z"
+          }
+        ],
+        "command": [
+          "gh",
+          "run",
+          "view",
+          "37128668667",
+          "--repo",
+          "amrzainmubarak/reconforge-erp",
+          "--json",
+          "headSha,status,conclusion,jobs,url,createdAt,updatedAt"
+        ]
+      },
+      {
+        "name": "security",
+        "id": 37128668708,
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37128668708",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "name": "Locked Python audit (3.11)",
+            "id": 111219142604,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:10:22Z"
+          },
+          {
+            "name": "Locked Python audit (3.12)",
+            "id": 111219142628,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:10:22Z"
+          },
+          {
+            "name": "Secret and npm policy gates",
+            "id": 111219142694,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:10:14Z"
+          },
+          {
+            "name": "Exact-image SBOM, vulnerability, and license gate",
+            "id": 111219143357,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-03T14:09:47Z",
+            "completed_at": "2026-10-03T14:09:47Z"
+          },
+          {
+            "name": "python-security",
+            "id": 111219244535,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:10:25Z",
+            "completed_at": "2026-10-03T14:10:29Z"
+          }
+        ],
+        "command": [
+          "gh",
+          "run",
+          "view",
+          "37128668708",
+          "--repo",
+          "amrzainmubarak/reconforge-erp",
+          "--json",
+          "headSha,status,conclusion,jobs,url,createdAt,updatedAt"
+        ]
+      },
+      {
+        "name": "docker",
+        "id": 37128668682,
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37128668682",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "name": "docker-build",
+            "id": 111219142610,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:10:17Z"
+          }
+        ],
+        "command": [
+          "gh",
+          "run",
+          "view",
+          "37128668682",
+          "--repo",
+          "amrzainmubarak/reconforge-erp",
+          "--json",
+          "headSha,status,conclusion,jobs,url,createdAt,updatedAt"
+        ]
+      },
+      {
+        "name": "codeql",
+        "id": 37128668660,
+        "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37128668660",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "name": "Analyze Python",
+            "id": 111219142565,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-03T14:09:50Z",
+            "completed_at": "2026-10-03T14:11:34Z"
+          }
+        ],
+        "command": [
+          "gh",
+          "run",
+          "view",
+          "37128668660",
+          "--repo",
+          "amrzainmubarak/reconforge-erp",
+          "--json",
+          "headSha,status,conclusion,jobs,url,createdAt,updatedAt"
+        ]
+      }
+    ],
+    "python_job_results": [
+      {
+        "python": "3.11",
+        "job_id": 111219142727,
+        "conclusion": "success",
+        "summaries": [
+          "2026-10-03T14:21:22.3941843Z 4180 passed, 378 skipped, 8 warnings in 658.11s (0:10:58)"
+        ],
+        "log_sha256": "69f91d37495a7745bb01d9acb148d932aadb84a34be18b587c2219c5b8b4b605",
+        "started_at": "2026-10-03T14:09:50Z",
+        "completed_at": "2026-10-03T14:21:42Z"
+      },
+      {
+        "python": "3.12",
+        "job_id": 111219142658,
+        "conclusion": "success",
+        "summaries": [
+          "2026-10-03T14:22:19.5756237Z 4180 passed, 378 skipped, 24 warnings in 713.70s (0:11:53)"
+        ],
+        "log_sha256": "3d6c01577cb5ff63bc7eaadf3d413b0c007b5854c0bbc3cfcf37dcaf8ff14691",
+        "started_at": "2026-10-03T14:09:51Z",
+        "completed_at": "2026-10-03T14:22:40Z"
+      }
+    ],
+    "python_report_observation": "The intermediate Python report remains unmodified; final workflow state is in the separately retained final report."
+  },
+  "remote_observation": {
+    "pr": {
+      "baseRefName": "amr/receivables-policy-and-inventory-composition",
+      "headRefName": "amr/verified-ar-invoice-recovery",
+      "headRefOid": "92719305c54d0e3085c0d6ab5b95be87c700cb21",
+      "mergeCommit": {
+        "oid": "f136be6d4ebaa5a27dde32d2582466ad439a6958"
+      },
+      "mergedAt": "2026-10-03T14:36:11Z",
+      "mergedBy": {
+        "id": "U_kgDODke_Wg",
+        "is_bot": false,
+        "login": "amrzainmubarak",
+        "name": "‪Amr Zain Mubarak"
+      },
+      "state": "MERGED"
+    },
+    "refs": [
+      "f136be6d4ebaa5a27dde32d2582466ad439a6958\trefs/heads/amr/receivables-policy-and-inventory-composition",
+      "b61ea56bb9c135fda12546e173795af3c243e4fb\trefs/heads/main"
+    ],
+    "note": "PR121 was merged by amrzainmubarak into its working base; root issued no merge command. Remote main remains b61ea56bb9c135fda12546e173795af3c243e4fb."
+  },
+  "retained_raw_artifacts": [
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\invoice-recovery-9271-summary.json",
+      "sha256": "44f309dc1c4b266ff6b573700115f21a231f8a132fc8828d67122e6f3a704fef",
+      "bytes": 8136
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\hosted-pr121-9271-final\\report.json",
+      "sha256": "6d7f37f99e7ead0598164997ba106338252c825f7db647ef1b0fcf28f6005312",
+      "bytes": 11212
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\hosted-pr121-9271-python-complete\\report.json",
+      "sha256": "f565137983ed568794852700be0ee77c74577ef1ea2f2013e4c82d622e1108e2",
+      "bytes": 1169
+    }
+  ],
+  "limits": [
+    "Local, hosted Python versions and live-shard counts are independent and never summed.",
+    "380 local prerequisite skips are not passed service checks; actual live boundary evidence is separately retained.",
+    "The conditional exact-image SBOM/vulnerability/license job was skipped, not passed.",
+    "Prior e81b/e638/8054 failures retain their original subjects and conclusions.",
+    "No result in this report applies to the in-progress PROD038 Inventory receipt sources.",
+    "This is bounded synthetic runtime acceptance, not a customer outcome, complete GL/trade-cycle claim or production deployment."
+  ]
+}

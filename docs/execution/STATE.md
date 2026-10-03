@@ -9,8 +9,15 @@ Immutable preparation and a conservative unused-inverse predicate are selected.
 Every artifact ID/number uses a closed reserved IRP1 namespace; migration rejects
 preexisting collisions and raw/public writes require exact reviewed ownership.
 The updated contract was independently reviewed; no receipt effect is accepted
-yet. Fresh AR9271whole/hosted acceptance continues in its unchanged detached
-checkout, outside the new Inventory source tree.
+yet. Fresh AR9271 whole/hosted acceptance is complete in its unchanged detached
+checkout, outside the new Inventory source tree:4178passed/380explicit skips,
+0failure/0error locally; both hosted Python versions4180/378 and all nine live
+boundary shards/aggregate succeed. CI/Security/Docker/CodeQL succeed; conditional
+image SBOM remains skipped. INVOICE_RECOVERY_PUBLISHED_ACCEPTANCE_2026-10-03.json
+binds this exact source and independently checked raw report hashes.
+GitHub records amrzainmubarak merging PR121 into its working base at14:36:11UTC;
+root issued no merge. Remote main remains b61ea56b. New Inventory work remains
+based on92719305; the external merge changes no active source file.
 
 PROD039 bounded local acceptance is complete on amr/verified-ar-invoice-recovery, based on
 published PR1204629a64b (tree-identical to retained PR114e63859d7).
@@ -49,7 +56,7 @@ the stale0098 proof contract. Original immutable8054 whole result remains FAILED
 4041pass/361prerequisites/1failure/0error. Updated local78-test proof gate passes.
 Hosted PR1128d76647c is successful; PR1138ba6772d timed out at30minutes; PR1148054
 failed its stale target/empty-digest secret finding. Exact reports remain separate.
-New invoice-recovery whole/hosted acceptance remains pending. Original e638
+New invoice-recovery9271 whole/hosted acceptance now passes separately. Original e638
 hostedPython3.11/3.12 pass4117/364prerequisites each; finance-posting shard fails
 three stale0098 expectations after its fixture upgrades to0099. The test-only
 repair now passes all12actual PostgreSQL concurrency cases without skips, with

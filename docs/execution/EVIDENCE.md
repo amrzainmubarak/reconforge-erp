@@ -1,5 +1,14 @@
 # ReconForge Execution Evidence Log
 
+- AR retained policy: RECEIVABLES_POLICY_2026-10-03.json binds216pass/0skip,
+  unchanged18 owned sources/tests, actual0099 nonowner checks and1,180,617-byte
+  native16.14 restore with eleven equal digests and cleanup. Runtime662aad3f
+  exposes backend metadata only; API/React interpretation remains a separate gate.
+- Inventory ownership: SQLITE_INVENTORY_COMPOSITION_2026-10-03.json binds120
+  passes/three PostgreSQL prerequisites plus overlapping21 independent passes,
+  six stable owned hashes and the repaired constructor counterexample. Runtime
+  75bdbe63 records a semantically identical test EOF normalization, followed by
+  39 passing publication/inventory checks. Finance result remains Draft.
 - Current bootstrap: POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json binds clean
   cd67fc67,96pass/0skip, unchanged historical0078, current constraints/policies,
   forced RLS/FK denials and restored0097 synthetic cleanup guards. Global

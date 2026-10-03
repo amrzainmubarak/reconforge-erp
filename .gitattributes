@@ -12,3 +12,6 @@
 Dockerfile text eol=lf
 Makefile text eol=lf
 *.sh text eol=lf
+
+# Retain the licensed upstream fixture's original bytes for SHA-256 verification.
+tests/fixtures/amlsim/LICENSE -text

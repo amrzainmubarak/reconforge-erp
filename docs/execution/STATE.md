@@ -59,8 +59,12 @@ snapshot trigger and two missing parser inventory entries. The failed run is
 retained; full acceptance awaits repair and a fresh isolated run. Ruff, Mypy,
 Bandit and packaging passed on that exact source.
 
-The four failures have reviewed repairs;66 focused tests pass. A fresh full
-run remains required. Nested PostgreSQL scope preservation is committed at
+The four failures have reviewed repairs;66 focused tests pass. A fresh isolated
+run at70dac5cf passes3632 tests, with243 explicit capability skips and24 warnings
+in877.33s. Ruff, Mypy, Bandit, packaging and whitespace checks also pass; the
+checkout stayed clean. `FINANCIAL_VERIFICATION_2026-10-03.json` binds commands,
+logs and skip reasons to that source. Later integrity work is outside this
+checkpoint. Nested PostgreSQL scope preservation is committed at
 3fce89f7:14 focused live passes and462 broad live passes with one explicit
 native-client skip. Independent follow-up reproduced same-workspace Finance
 organization/entity access via natural-key columns; PROD025 is a P0 closure gate.

@@ -2,6 +2,13 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Verified financial checkpoint: isolated clean70dac5cf passes3632 tests,
+  with243 explicit capability skips,24 warnings and no failures in877.33s.
+  Ruff, Mypy, Bandit, wheel/sdist and whitespace checks pass. The
+  [machine report](FINANCIAL_VERIFICATION_2026-10-03.json) retains exact commands,
+  log/JUnit hashes and skip reasons. Later SQLite atomicity,0095 hierarchy RLS
+  and strict worker forwarding are outside this source checkpoint.
+
 - SQLite AP exception atomicity: [frozen verification](SQLITE_EXCEPTION_ATOMICITY_2026-10-03.json)
   records six initial failures and two further SQL-error ownership failures,
   then54 passing tests. An eleven-case before/after replay proves that late AP
@@ -29,7 +36,7 @@
   includes exact source, commands and log digests. Static/security/package checks
   passed. Reviewed parser inventory additions and synthetic corruption/migration
   fixture corrections subsequently pass66 focused tests with one warning.
-  A fresh isolated whole-repository gate remains required.
+  A fresh isolated whole-repository gate at70dac5cf subsequently passed as above.
 - Owned-container cleanup: foundation ADR0804 fixes asynchronous Docker removal
   verification with full identity checks and successful absence queries. Primary
   migration0094 was freshly exercised after merge: PG17.10 drill15.692s and

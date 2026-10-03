@@ -12,7 +12,9 @@
 | Open-source workload adoption | `benchmark/amlsim_reconciliation.py`, pinned profile/data/license | Fault oracle, malformed-input and permutation tests | `OPEN_SOURCE_AMLSIM_2026-10-03.json`:45 upstream sample rows,42 matched pairs, three unmatched each side | Synthetic in-process acceptance | Runs a pinned IBM AMLSim sample with declared reconciliation faults; no5M transactions, AML efficacy, customer hours or auditor acceptance claim |
 
 The isolated financial regression atf48781e6 had four failures. Its reviewed
-repairs pass66 focused tests; the new full70dac5cf gate remains in progress.
+repairs pass66 focused tests; full70dac5cf now passes3632 tests with243 explicit
+capability skips,24 warnings and no failures. Its static/security/build gates
+also pass; `FINANCIAL_VERIFICATION_2026-10-03.json` binds the exact source.
 These bounded increments do not supersede outstanding production acceptance gates.
 
 The current audit maps all six requested production outcomes to code, tests, runtime, maturity and allowed wording. Complete GL/trade cycles, universal hard isolation and customer outcomes remain unproven. React administration already has real writes; financial views remain synthetic.

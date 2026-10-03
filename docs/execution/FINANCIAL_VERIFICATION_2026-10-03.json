@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "status": "passed_bounded_checkpoint",
+  "source_commit": "70dac5cf8bcbf1da37341a58680c1794cda31d48",
+  "source_checkout": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp",
+  "source_tracked_clean_after": true,
+  "summary": {
+    "tests": 3875,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 243,
+    "passed": 3632,
+    "warnings": 24,
+    "pytest_seconds": 877.33
+  },
+  "regression": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-ra",
+        "--tb=short",
+        "-o",
+        "addopts=",
+        "--junitxml",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\financial-final-pytest.xml"
+      ],
+      "source_commit": "70dac5cf8bcbf1da37341a58680c1794cda31d48",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T04:28:38.836409+00:00",
+      "duration_seconds": 881.568,
+      "exit_code": 0,
+      "log": "financial-final-pytest.log",
+      "log_sha256": "40a206912c8c459b9f6bba7ddec0f21c4a2a5c4098a56d5bc51ac05ffb0f122a"
+    }
+  ],
+  "quality": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "source_commit": "70dac5cf8bcbf1da37341a58680c1794cda31d48",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T04:28:38.831189+00:00",
+      "duration_seconds": 0.241,
+      "exit_code": 0,
+      "log": "financial-final-ruff.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "source_commit": "70dac5cf8bcbf1da37341a58680c1794cda31d48",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T04:28:39.077480+00:00",
+      "duration_seconds": 2.733,
+      "exit_code": 0,
+      "log": "financial-final-mypy.log",
+      "log_sha256": "a9dd7f63d61bf44d3e8bd338cdc6d38b452561328e42ada8bbcbfecd1cb32234"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "source_commit": "70dac5cf8bcbf1da37341a58680c1794cda31d48",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T04:28:41.810528+00:00",
+      "duration_seconds": 19.991,
+      "exit_code": 0,
+      "log": "financial-final-bandit.log",
+      "log_sha256": "53d2797b476436c2dc5cd2155e834db14ec755dbea400857572897bb548ce920"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\financial-final-dist"
+      ],
+      "source_commit": "70dac5cf8bcbf1da37341a58680c1794cda31d48",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T04:29:01.804101+00:00",
+      "duration_seconds": 23.783,
+      "exit_code": 0,
+      "log": "financial-final-build.log",
+      "log_sha256": "848b3125714b856b8c70f03d363a95fd99fac7177f61607f8abe6d4e188fa330"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "source_commit": "70dac5cf8bcbf1da37341a58680c1794cda31d48",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T04:29:25.588456+00:00",
+      "duration_seconds": 0.074,
+      "exit_code": 0,
+      "log": "financial-final-diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "capability_skips": {
+    "requires a live PostgreSQL migration service": 1,
+    "requires a live PostgreSQL service": 21,
+    "requires live PostgreSQL": 78,
+    "requires live PostgreSQL service": 12,
+    "live public network evidence is opt-in and may drift": 1,
+    "symbolic links are not available in this environment": 1,
+    "symbolic-link creation is unavailable": 1,
+    "requires a live S3-compatible service": 1,
+    "requires a live object-lock-enabled S3-compatible bucket": 1,
+    "Windows symlink creation requires an external privilege": 1,
+    "PROD-002 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 14,
+    "requires disposable PostgreSQL source and maintenance services": 1,
+    "requires a live PostgreSQL application role": 2,
+    "requires a disposable PostgreSQL administration service": 71,
+    "PROD-007 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 34,
+    "requires a live Redis service": 3
+  },
+  "junit_sha256": "20c02cb494100ef5f865d539c0d09f25ca02c41857318a482f65733ec47600c0",
+  "limitations": [
+    "No capability skip is counted as passing; actual PostgreSQL and HTTPS browser evidence is retained separately.",
+    "This source includes policy capture, runtime grants, nested scope preservation, grouped aging, strict pure matcher, AMLSim offline oracle, AR UI and native0094 restore evidence.",
+    "Later SQLite exception atomicity,0095 Finance hierarchy restrictions and strict durable-worker forwarding are outside this exact-source checkpoint.",
+    "No complete GL, integrated purchase/sales posting, scale, customer ROI, independent audit acceptance or production readiness claim."
+  ],
+  "report_digest": "5a73312e78cf8b545c406fa36ad88ab7cb5a1318adc0b9f19b6bc6112043f594"
+}

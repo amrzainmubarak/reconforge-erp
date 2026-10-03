@@ -1149,6 +1149,8 @@ include docs/adr/0790-exact-live-metric-localization.md
 include docs/adr/0791-retention-errors-and-live-migration-evidence.md
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_CLEANUP_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_CLEANUP_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-03.json
@@ -1160,3 +1162,4 @@ include .github/fixtures/minio-source/README.md
 include .github/scripts/build_minio_ci_fixture.py
 include tests/test_minio_ci_fixture.py
 include docs/adr/0802-source-pinned-disposable-object-storage-fixture.md
+include docs/adr/0804-owned-postgres-container-cleanup.md

@@ -2,6 +2,16 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Source-built storage fixture: actual GitHub
+  [job 111121404972](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37094452570/job/111121404972)
+  at `517e6a8f` passes source build/identity in 142s, live storage in 7s and
+  completes in 165s. Both real S3 tests pass without skips; all five observed
+  isolation/integrity/retention/cleanup checks pass. Original artifact bytes and
+  canonical digests are retained as [build provenance](MINIO_CI_SOURCE_BUILD_2026-10-03.json),
+  [storage report](S3_SOURCE_FIXTURE_LIVE_2026-10-03.json) and
+  [independent verification](MINIO_CI_REMOTE_VERIFICATION_2026-10-03.json).
+  They bind the same OCI config identity. The local builder-download timeout
+  remains a separate failed prerequisite attempt; it is not rewritten as success.
 - Monetary-policy retention: [source/hash report](FINANCE_POLICY_2026-10-03.json)
   binds 25 implemented files. Actual workflow-derived PostgreSQL selection:
   449 selected, 448 passed, zero failed, one native-client prerequisite skip;

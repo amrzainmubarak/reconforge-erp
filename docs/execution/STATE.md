@@ -32,8 +32,11 @@ into main. Current engineering work is on `codex/financial-policy-and-open-workl
   a new isolated whole-repository run is required.
 - Remote foundation CI exposed portable evidence-path validation and unavailable
   historical MinIO registry pulls. The path fix is pushed and passes 35 Windows
-  tests plus a Linux direct reader probe. A pinned, source-built MinIO fixture is
-  under evaluation for CI only; full remote acceptance is not yet asserted.
+  tests plus a Linux direct reader probe. The pinned source-built MinIO fixture
+  passed the real GitHub build and both live storage tests on `517e6a8f`, with
+  all five S3/Object Lock invariants verified. This is CI-only fixture evidence.
+  The remaining failed foundation server-boundaries job is under investigation;
+  full remote acceptance is not yet asserted.
 - Next dependencies remain explicit scoped transaction composition, immutable
   operational posting, integrated trade cycles and connected financial writes.
   There is no available company pilot or external-auditor acceptance evidence.

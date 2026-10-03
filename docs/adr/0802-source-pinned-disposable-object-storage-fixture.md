@@ -2,7 +2,7 @@
 
 Date: 2026-10-03
 
-Status: Implemented for Draft CI verification; source-image runtime pending
+Status: Implemented and source-image runtime verified for disposable CI
 
 ## Context
 
@@ -37,8 +37,16 @@ Windows symlink-privilege skip. This supplemental probe does not prove the new
 source image builds.
 
 The local source build timed out after 1800 seconds downloading the official
-builder. No compilation occurred. Draft GitHub CI must complete the source build,
-identity assertions and unchanged live storage tests before runtime acceptance.
-Preserve the blocked local attempt and the remote provenance/report separately.
+builder. No compilation occurred in that local attempt.
+
+GitHub subsequently completed the actual source build, identity assertions and
+unchanged live storage tests on commit `517e6a8f`: build 142s, live step 7s, whole
+object-storage job 165s. Both live tests passed without skips and all five
+invariants were observed. Source provenance and storage reports identify the
+same image config digest. The original artifact ZIP digest, report digests,
+source/module/license hashes and Git recipe/manifest hashes were independently
+verified. Retain the blocked local attempt separately from this successful
+[remote verification](../execution/MINIO_CI_REMOTE_VERIFICATION_2026-10-03.json).
+
 Reverting this CI-only slice does not affect user databases or product images;
 it restores the currently unavailable registry dependency.

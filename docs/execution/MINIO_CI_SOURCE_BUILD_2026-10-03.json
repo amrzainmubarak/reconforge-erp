@@ -1,0 +1,28 @@
+{
+  "builder_image": "golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195",
+  "fixture_id": "minio-source-ci-v1",
+  "image_config_digest": "sha256:0801d2cdb65007f733745562e407a58b41e5dc9c46b79a1a12f792743e1bb9f3",
+  "image_digest_kind": "oci-config",
+  "license": "AGPL-3.0-or-later",
+  "limitations": [
+    "archived and unmaintained upstream; synthetic CI fixture only",
+    "not a supported production provider or shipped ReconForge image"
+  ],
+  "manifest_sha256": "9189fb9592f8bb6a26caf1cccfff1fe8e701d0a58a53b1418a0c3ee08f28bb68",
+  "recipe_sha256": "cb6f84b278942d2e53dbf37d5d0942a1a9a136d9cef7fe6d644094df8dd3cdea",
+  "report_digest": "67d402cefb2b8c93f22f7ba7827dac75ff964e373c6388e5db77c38730e749ac",
+  "runtime_base": "scratch",
+  "schema_version": 1,
+  "scope": "synthetic-disposable-ci-only",
+  "source_archive_sha256": "8819e3e7817e46b7b3798f8f200ead208562e571563c2e040352378031abe9f2",
+  "source_archive_url": "https://codeload.github.com/minio/minio/tar.gz/07c3a429bfed433e49018cb0f78a52145d4bedeb",
+  "source_commit": "07c3a429bfed433e49018cb0f78a52145d4bedeb",
+  "source_file_sha256": {
+    "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+    "go.mod": "e362dbf17ddb50992fe199e0d777b3da147ec398e6db9e590fef2a573060acb1",
+    "go.sum": "e81f196b31076aa8928bcf74456d1a9c20113aca174089bc5c7d0642de3b316f"
+  },
+  "source_release": "RELEASE.2025-09-07T16-13-09Z",
+  "upstream_status": "archived-unmaintained",
+  "version_output": "minio version RELEASE.2025-09-07T16-13-09Z (commit-id=07c3a429bfed433e49018cb0f78a52145d4bedeb)\nRuntime: go1.27.1 linux/amd64\nLicense: GNU AGPLv3 - https://www.gnu.org/licenses/agpl-3.0.html\nCopyright: 2015-2025 MinIO, Inc."
+}

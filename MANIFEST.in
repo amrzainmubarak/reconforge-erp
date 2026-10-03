@@ -1163,3 +1163,5 @@ include .github/scripts/build_minio_ci_fixture.py
 include tests/test_minio_ci_fixture.py
 include docs/adr/0802-source-pinned-disposable-object-storage-fixture.md
 include docs/adr/0804-owned-postgres-container-cleanup.md
+include docs/adr/0809-typed-queue-authority-denials.md
+include docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json

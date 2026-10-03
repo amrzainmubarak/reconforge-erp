@@ -1,0 +1,67 @@
+{
+  "after": {
+    "cleanup_confirmed": true,
+    "command": "python output/verification-2026-10-03/ci-triage/run_operations_scope.py after",
+    "failed": 0,
+    "harness_seconds": 12.377306,
+    "passed": 4,
+    "pytest_seconds": 5.3,
+    "skipped": 0,
+    "warnings": 1
+  },
+  "before": {
+    "cleanup_confirmed": true,
+    "command": "python output/verification-2026-10-03/ci-triage/run_operations_scope.py before",
+    "failed": 1,
+    "harness_seconds": 15.7704893,
+    "passed": 3,
+    "pytest_seconds": 7.65,
+    "skipped": 0
+  },
+  "checks": [
+    "Granted workspace/entity queue returns200 with sanitized totals",
+    "Ungrant workspace returns403 fixed safe code",
+    "Ungrant entity returns403 fixed safe code",
+    "Cross-tenant service credential returns401",
+    "Own policy audit exists before fixture cleanup",
+    "Owned tenants removed and immutable audit trigger enabled after cleanup"
+  ],
+  "environment": {
+    "migration": "0093_pg_metrics",
+    "postgresql": "16.14",
+    "python": "3.12.13",
+    "role": "nonowner application, no SUPERUSER/BYPASSRLS",
+    "transport": "authenticated ASGI HTTP with PostgreSQL; real service account credential"
+  },
+  "limitations": [
+    "Focused regression; full successor remote CI pending",
+    "No production deployment",
+    "Fixture administrative cleanup does not expose a product deletion route"
+  ],
+  "logs_sha256": {
+    "operations-scope-after-migration.log": "722368e732c33674639c6c56579c11529c29f76308ba41d71f143b65a12c2ca9",
+    "operations-scope-after-pytest.log": "e527d6299f9dccda17801e07a8f9a101e2565895f13e67150a6939f493984ddd",
+    "operations-scope-before-pytest.log": "2bce82d5b644dec32a084f6f304fc6d1c5e9fe15b9c2a1e3ffa0b9fef1983a97",
+    "run_operations_scope.py": "8be36c20b7e1ead68890f60a53c13c4f79d767178a7c4a964e31eca6ba6d1130"
+  },
+  "quality": [
+    "ruff check reconforge/api/routes/operations.py tests/test_api_operations.py: pass",
+    "mypy reconforge/api/routes/operations.py: pass",
+    "git diff --check: pass"
+  ],
+  "remote_failure": {
+    "head": "889bef54",
+    "job": 111133074760,
+    "original_authority_error": "workspace_scope_denied",
+    "run": 37097929754,
+    "status": "failed",
+    "teardown_error": "domain_audit_events tenant FK"
+  },
+  "report_digest": "564f6fbdd804e34d52abce5d6db01fbad18b1651cbb1428980804124d3aee685",
+  "schema_version": "reconforge-queue-http-denial-evidence-v1",
+  "source_base_commit": "889bef54",
+  "source_sha256": {
+    "reconforge/api/routes/operations.py": "c523e79365dbb8972f33f7c00c70705ff15e40d8c59b5a1e2aa088baad16cbf0",
+    "tests/test_api_operations.py": "ff066e504b96076ac39cbe78761ce70c42f6d96a14152f4a585f70f3412ec085"
+  }
+}

@@ -1,0 +1,488 @@
+{
+  "after": {
+    "arguments": [
+      "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "tests/test_api_metrics.py",
+      "tests/test_postgres_manufacturing_cost_control.py",
+      "tests/test_api_server_manufacturing_cost_control.py",
+      "tests/test_postgres_retail_settlement.py",
+      "tests/test_api_server_retail_settlement.py",
+      "tests/test_postgres_professional_invoice_payment.py",
+      "tests/test_api_server_professional_invoice_payment.py",
+      "tests/test_postgres_consolidation_close.py::test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable",
+      "tests/test_postgres_federation.py::test_live_postgres_federation_replay_link_session_and_rls",
+      "tests/test_api_server_consolidation_close.py",
+      "tests/test_api_server_reconciliation_live.py",
+      "tests/test_api_server_inventory_core.py",
+      "tests/test_api_server_receivables.py",
+      "tests/test_api_server_payables.py",
+      "tests/test_api_server_local_boundaries.py",
+      "tests/test_api_server_inventory_planning.py",
+      "tests/test_api_server_inventory_valuation.py",
+      "tests/test_postgres_bank_statement.py",
+      "tests/test_api_server_bank_statement.py",
+      "-o",
+      "addopts=",
+      "-ra",
+      "--junitxml=C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp\\output\\verification-2026-10-03\\remaining-server-after-v2\\results.xml"
+    ],
+    "database": "reconforge_ci_general_8590397719484b07",
+    "database_cleaned": true,
+    "elapsed_seconds": 50.94210880000014,
+    "exit_code": 0,
+    "failures": [],
+    "git_head": "b5075883e0c702f0a80df0d08ad6ed48655b2a3c",
+    "migration_head": "0093_pg_metrics",
+    "native_tools": {
+      "createdb": null,
+      "dropdb": null,
+      "pg_config": null,
+      "pg_dump": null,
+      "pg_restore": null,
+      "psql": null
+    },
+    "original_artifact": {
+      "path": "output/verification-2026-10-03/remaining-server-after-v2/report.json",
+      "sha256": "f372ca3098f58590cf25fef22f90f24b979e4d0a52e105b0a159932abf7bbbbe"
+    },
+    "parity_modules": [
+      "tests/test_postgres_consolidation_close.py",
+      "tests/test_postgres_consolidation_ownership.py",
+      "tests/test_postgres_consolidation_ppa_runtime.py",
+      "tests/test_postgres_consolidation_ownership_change.py",
+      "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+      "tests/test_postgres_consolidation_impairment_runtime.py",
+      "tests/test_postgres_intercompany_elimination_runtime.py",
+      "tests/test_postgres_backup.py",
+      "tests/test_postgres_idempotency.py",
+      "tests/test_postgres_workspace_period_uow.py",
+      "tests/test_postgres_operations.py",
+      "tests/test_postgres_writeback.py",
+      "tests/test_application_metrics.py",
+      "tests/test_postgres_outbox.py",
+      "tests/test_postgres_scheduler.py",
+      "tests/test_postgres_notifications.py",
+      "tests/test_postgres_security_center.py",
+      "tests/test_postgres_identity_administration.py",
+      "tests/test_postgres_access_administration.py",
+      "tests/test_postgres_policy_analysis_runtime.py",
+      "tests/test_postgres_security_governance.py",
+      "tests/test_audit_browsing.py",
+      "tests/test_postgres_controls.py",
+      "tests/test_postgres_intercompany.py",
+      "tests/test_postgres_journals.py",
+      "tests/test_postgres_accounts.py",
+      "tests/test_postgres_approvals.py",
+      "tests/test_postgres_close_application.py",
+      "tests/test_postgres_evidence_application.py",
+      "tests/test_postgres_exceptions.py",
+      "tests/test_postgres_finance_core.py",
+      "tests/test_postgres_master_data_application.py",
+      "tests/test_postgres_inventory_core.py",
+      "tests/test_postgres_payables.py",
+      "tests/test_postgres_receivables.py",
+      "tests/test_postgres_matching_application.py",
+      "tests/test_postgres_inventory_valuation.py",
+      "tests/test_postgres_inventory_valuation_reversal.py",
+      "tests/test_postgres_inventory_planning.py"
+    ],
+    "postgres_version": "PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "pytest_log_sha256": "fb54ff16fa7d448e2ec6894d2fc92bcaed7407c651b04fbc86520996ac2761c1",
+    "python": "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+    "python_version": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "redis_address": "127.0.0.1:8289",
+    "redis_cleaned": true,
+    "redis_container": "reconforge-ci-redis-706198e99b94",
+    "redis_image": "redis@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2",
+    "skips": [],
+    "status": "completed",
+    "suites": [
+      {
+        "errors": "0",
+        "failures": "0",
+        "hostname": "DESKTOP-FDO3RD5",
+        "name": "pytest",
+        "skipped": "0",
+        "tests": "40",
+        "time": "39.289",
+        "timestamp": "2026-10-03T09:52:29.201793+03:00"
+      }
+    ],
+    "workflow_command": "uv run --no-sync pytest \"${parity_tests[@]}\" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_metrics_migration.py tests/test_postgres_runtime_role.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q"
+  },
+  "before": {
+    "arguments": [
+      "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "tests/test_api_metrics.py",
+      "tests/test_postgres_manufacturing_cost_control.py",
+      "tests/test_api_server_manufacturing_cost_control.py",
+      "tests/test_postgres_retail_settlement.py",
+      "tests/test_api_server_retail_settlement.py",
+      "tests/test_postgres_professional_invoice_payment.py",
+      "tests/test_api_server_professional_invoice_payment.py",
+      "tests/test_postgres_consolidation_close.py::test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable",
+      "tests/test_postgres_federation.py::test_live_postgres_federation_replay_link_session_and_rls",
+      "tests/test_api_server_consolidation_close.py",
+      "tests/test_api_server_reconciliation_live.py",
+      "tests/test_api_server_inventory_core.py",
+      "tests/test_api_server_receivables.py",
+      "tests/test_api_server_payables.py",
+      "tests/test_api_server_local_boundaries.py",
+      "tests/test_api_server_inventory_planning.py",
+      "tests/test_api_server_inventory_valuation.py",
+      "tests/test_postgres_bank_statement.py",
+      "tests/test_api_server_bank_statement.py",
+      "-o",
+      "addopts=",
+      "-ra",
+      "--junitxml=C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp\\output\\verification-2026-10-03\\remaining-server-before-v2\\results.xml"
+    ],
+    "database": "reconforge_ci_general_fae7d06b5a7345e7",
+    "database_cleaned": true,
+    "elapsed_seconds": 95.05993899999999,
+    "exit_code": 1,
+    "failures": [
+      {
+        "class": "tests.test_api_metrics",
+        "message": "psycopg.errors.ForeignKeyViolation: update or delete on table \"tenants\" violates foreign key constraint \"domain_audit_events_tenant_id_fkey\" on table \"domain_audit_events\"\nDETAIL:  Key (id)=(metrics_api_a_8c149a2c) is still referenced from table \"domain_audit_events\".",
+        "name": "test_live_server_metrics_http_routes_use_postgres_identity_and_rls"
+      },
+      {
+        "class": "tests.test_api_server_manufacturing_cost_control",
+        "message": "psycopg.errors.ForeignKeyViolation: update or delete on table \"tenants\" violates foreign key constraint \"domain_audit_events_tenant_id_fkey\" on table \"domain_audit_events\"\nDETAIL:  Key (id)=(mfg_http_a_6a040b73) is still referenced from table \"domain_audit_events\".",
+        "name": "test_live_server_manufacturing_cost_control_http_routes_are_rls_scoped"
+      },
+      {
+        "class": "tests.test_api_server_retail_settlement",
+        "message": "psycopg.errors.ForeignKeyViolation: update or delete on table \"tenants\" violates foreign key constraint \"domain_audit_events_tenant_id_fkey\" on table \"domain_audit_events\"\nDETAIL:  Key (id)=(rtl_http_a_ede9cd3f) is still referenced from table \"domain_audit_events\".",
+        "name": "test_live_server_retail_settlement_http_routes_are_rls_scoped"
+      },
+      {
+        "class": "tests.test_api_server_professional_invoice_payment",
+        "message": "psycopg.errors.ForeignKeyViolation: update or delete on table \"tenants\" violates foreign key constraint \"domain_audit_events_tenant_id_fkey\" on table \"domain_audit_events\"\nDETAIL:  Key (id)=(pip_http_a_6efcf0d2) is still referenced from table \"domain_audit_events\".",
+        "name": "test_live_server_professional_invoice_payment_http_routes_are_rls_scoped"
+      },
+      {
+        "class": "tests.test_api_server_consolidation_close",
+        "message": "psycopg.errors.ForeignKeyViolation: update or delete on table \"tenants\" violates foreign key constraint \"domain_audit_events_tenant_id_fkey\" on table \"domain_audit_events\"\nDETAIL:  Key (id)=(close_http_a_82752bb5) is still referenced from table \"domain_audit_events\".",
+        "name": "test_live_server_consolidation_close_http_routes_are_rls_scoped"
+      },
+      {
+        "class": "tests.test_api_server_reconciliation_live",
+        "message": "psycopg.errors.ForeignKeyViolation: update or delete on table \"tenants\" violates foreign key constraint \"domain_audit_events_tenant_id_fkey\" on table \"domain_audit_events\"\nDETAIL:  Key (id)=(recon_http_a_d13a83e7) is still referenced from table \"domain_audit_events\".",
+        "name": "test_live_server_reconciliation_http_routes_are_rls_scoped"
+      },
+      {
+        "class": "tests.test_api_server_inventory_planning",
+        "message": "AssertionError: {\"error\":{\"code\":\"inventory_planning_request_invalid\",\"message\":\"Authorized inventory planning organization was not found.\",\"request_id\":\"915d09f988754652ba0c231d8d78b6ce\"}}\nassert 400 == 200\n +  where 400 = <Response [400 Bad Request]>.status_code",
+        "name": "test_live_server_inventory_planning_http_lifecycle_is_scoped_exact_and_human_governed"
+      },
+      {
+        "class": "tests.test_api_server_inventory_valuation",
+        "message": "AssertionError: {\"error\":{\"code\":\"inventory_valuation_request_invalid\",\"message\":\"Authorized inventory valuation organization was not found.\",\"request_id\":\"db645530b56c4356b77774993cb045df\"}}\nassert 400 == 200\n +  where 400 = <Response [400 Bad Request]>.status_code",
+        "name": "test_live_server_inventory_valuation_and_reversal_http_contract_is_exact_and_scoped"
+      },
+      {
+        "class": "tests.test_api_server_bank_statement",
+        "message": "psycopg.errors.ForeignKeyViolation: update or delete on table \"tenants\" violates foreign key constraint \"domain_audit_events_tenant_id_fkey\" on table \"domain_audit_events\"\nDETAIL:  Key (id)=(bank_http_a_485a9c78) is still referenced from table \"domain_audit_events\".",
+        "name": "test_live_server_bank_statement_http_routes_are_rls_scoped"
+      }
+    ],
+    "git_head": "b5075883e0c702f0a80df0d08ad6ed48655b2a3c",
+    "migration_head": "0093_pg_metrics",
+    "native_tools": {
+      "createdb": null,
+      "dropdb": null,
+      "pg_config": null,
+      "pg_dump": null,
+      "pg_restore": null,
+      "psql": null
+    },
+    "original_artifact": {
+      "path": "output/verification-2026-10-03/remaining-server-before-v2/report.json",
+      "sha256": "20ea055f5d4e9c37ea398803f65f89b0ce943d46c4d4760aebfbd941f0bf071f"
+    },
+    "parity_modules": [
+      "tests/test_postgres_consolidation_close.py",
+      "tests/test_postgres_consolidation_ownership.py",
+      "tests/test_postgres_consolidation_ppa_runtime.py",
+      "tests/test_postgres_consolidation_ownership_change.py",
+      "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+      "tests/test_postgres_consolidation_impairment_runtime.py",
+      "tests/test_postgres_intercompany_elimination_runtime.py",
+      "tests/test_postgres_backup.py",
+      "tests/test_postgres_idempotency.py",
+      "tests/test_postgres_workspace_period_uow.py",
+      "tests/test_postgres_operations.py",
+      "tests/test_postgres_writeback.py",
+      "tests/test_application_metrics.py",
+      "tests/test_postgres_outbox.py",
+      "tests/test_postgres_scheduler.py",
+      "tests/test_postgres_notifications.py",
+      "tests/test_postgres_security_center.py",
+      "tests/test_postgres_identity_administration.py",
+      "tests/test_postgres_access_administration.py",
+      "tests/test_postgres_policy_analysis_runtime.py",
+      "tests/test_postgres_security_governance.py",
+      "tests/test_audit_browsing.py",
+      "tests/test_postgres_controls.py",
+      "tests/test_postgres_intercompany.py",
+      "tests/test_postgres_journals.py",
+      "tests/test_postgres_accounts.py",
+      "tests/test_postgres_approvals.py",
+      "tests/test_postgres_close_application.py",
+      "tests/test_postgres_evidence_application.py",
+      "tests/test_postgres_exceptions.py",
+      "tests/test_postgres_finance_core.py",
+      "tests/test_postgres_master_data_application.py",
+      "tests/test_postgres_inventory_core.py",
+      "tests/test_postgres_payables.py",
+      "tests/test_postgres_receivables.py",
+      "tests/test_postgres_matching_application.py",
+      "tests/test_postgres_inventory_valuation.py",
+      "tests/test_postgres_inventory_valuation_reversal.py",
+      "tests/test_postgres_inventory_planning.py"
+    ],
+    "postgres_version": "PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "pytest_log_sha256": "996b0d5455211bef3b173a19a9e051726c8e6c95c5866298cb0302f9e05d0102",
+    "python": "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+    "python_version": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "redis_address": "127.0.0.1:5605",
+    "redis_cleaned": true,
+    "redis_container": "reconforge-ci-redis-cb269ce9766b",
+    "redis_image": "redis@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2",
+    "skips": [],
+    "status": "completed",
+    "suites": [
+      {
+        "errors": "0",
+        "failures": "9",
+        "hostname": "DESKTOP-FDO3RD5",
+        "name": "pytest",
+        "skipped": "0",
+        "tests": "40",
+        "time": "83.487",
+        "timestamp": "2026-10-03T09:43:07.740461+03:00"
+      }
+    ],
+    "workflow_command": "uv run --no-sync pytest \"${parity_tests[@]}\" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_metrics_migration.py tests/test_postgres_runtime_role.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q"
+  },
+  "docker_drift": {
+    "alpine_key_verification_log_sha256": "a5d1a666601e950fd92c71da8d767479fda5dc24f11b6652da251f6cd3b4f7bf",
+    "download_observation": [
+      {
+        "bytes": 1978546,
+        "content_type": "application/octet-stream",
+        "filename": "libcrypto3-3.5.8-r0.apk",
+        "sha256": "161223a16f042b8e469e9441291e071464fd91d4f4bbe6f496ee8d0abd4e0701",
+        "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcrypto3-3.5.8-r0.apk"
+      },
+      {
+        "bytes": 379265,
+        "content_type": "application/octet-stream",
+        "filename": "libssl3-3.5.8-r0.apk",
+        "sha256": "aca521e5ae4a321322a9d47ed64a1775f5ab1ffd215d1e9fc0433c58f7bfd037",
+        "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.8-r0.apk"
+      }
+    ],
+    "first": "checksum mismatch; build refused",
+    "job_id": 111142040689,
+    "pin_changed": false,
+    "run_id": 37101117683,
+    "same_head_rerun": "success"
+  },
+  "limitations": [
+    "Only the selected40 tests, not the entire CI job, passed locally.",
+    "Fixtures use synthetic owned tenants and isolated database/Redis; administrative cleanup is never an application path.",
+    "Docker first failure and successful same-source rerun are both retained; upstream delivery cause is not established.",
+    "Exact false-positive commit/path/rule/line exceptions concern verified source SHA256 digests; no broad exclusion is added."
+  ],
+  "report_digest": "08f47ab5a63f608d75a09018415641c78c51195b4f5d8d5918a2759d9b1ef761",
+  "retained_import_failure": {
+    "arguments": [
+      "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "tests/test_api_metrics.py",
+      "tests/test_postgres_manufacturing_cost_control.py",
+      "tests/test_api_server_manufacturing_cost_control.py",
+      "tests/test_postgres_retail_settlement.py",
+      "tests/test_api_server_retail_settlement.py",
+      "tests/test_postgres_professional_invoice_payment.py",
+      "tests/test_api_server_professional_invoice_payment.py",
+      "tests/test_postgres_consolidation_close.py::test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable",
+      "tests/test_postgres_federation.py::test_live_postgres_federation_replay_link_session_and_rls",
+      "tests/test_api_server_consolidation_close.py",
+      "tests/test_api_server_reconciliation_live.py",
+      "tests/test_api_server_inventory_core.py",
+      "tests/test_api_server_receivables.py",
+      "tests/test_api_server_payables.py",
+      "tests/test_api_server_local_boundaries.py",
+      "tests/test_api_server_inventory_planning.py",
+      "tests/test_api_server_inventory_valuation.py",
+      "tests/test_postgres_bank_statement.py",
+      "tests/test_api_server_bank_statement.py",
+      "-o",
+      "addopts=",
+      "-ra",
+      "--junitxml=C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp\\output\\verification-2026-10-03\\remaining-server-after\\results.xml"
+    ],
+    "database": "reconforge_ci_general_5504d46ae9164a7e",
+    "database_cleaned": true,
+    "elapsed_seconds": 40.44076730000006,
+    "exit_code": 2,
+    "failures": [],
+    "git_head": "b5075883e0c702f0a80df0d08ad6ed48655b2a3c",
+    "migration_head": "0093_pg_metrics",
+    "native_tools": {
+      "createdb": null,
+      "dropdb": null,
+      "pg_config": null,
+      "pg_dump": null,
+      "pg_restore": null,
+      "psql": null
+    },
+    "original_artifact": {
+      "path": "output/verification-2026-10-03/remaining-server-after/report.json",
+      "sha256": "f5ecc7f2db2b4316358c31404d0011de83247bff8af4df787368d36984cec5fa"
+    },
+    "parity_modules": [
+      "tests/test_postgres_consolidation_close.py",
+      "tests/test_postgres_consolidation_ownership.py",
+      "tests/test_postgres_consolidation_ppa_runtime.py",
+      "tests/test_postgres_consolidation_ownership_change.py",
+      "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+      "tests/test_postgres_consolidation_impairment_runtime.py",
+      "tests/test_postgres_intercompany_elimination_runtime.py",
+      "tests/test_postgres_backup.py",
+      "tests/test_postgres_idempotency.py",
+      "tests/test_postgres_workspace_period_uow.py",
+      "tests/test_postgres_operations.py",
+      "tests/test_postgres_writeback.py",
+      "tests/test_application_metrics.py",
+      "tests/test_postgres_outbox.py",
+      "tests/test_postgres_scheduler.py",
+      "tests/test_postgres_notifications.py",
+      "tests/test_postgres_security_center.py",
+      "tests/test_postgres_identity_administration.py",
+      "tests/test_postgres_access_administration.py",
+      "tests/test_postgres_policy_analysis_runtime.py",
+      "tests/test_postgres_security_governance.py",
+      "tests/test_audit_browsing.py",
+      "tests/test_postgres_controls.py",
+      "tests/test_postgres_intercompany.py",
+      "tests/test_postgres_journals.py",
+      "tests/test_postgres_accounts.py",
+      "tests/test_postgres_approvals.py",
+      "tests/test_postgres_close_application.py",
+      "tests/test_postgres_evidence_application.py",
+      "tests/test_postgres_exceptions.py",
+      "tests/test_postgres_finance_core.py",
+      "tests/test_postgres_master_data_application.py",
+      "tests/test_postgres_inventory_core.py",
+      "tests/test_postgres_payables.py",
+      "tests/test_postgres_receivables.py",
+      "tests/test_postgres_matching_application.py",
+      "tests/test_postgres_inventory_valuation.py",
+      "tests/test_postgres_inventory_valuation_reversal.py",
+      "tests/test_postgres_inventory_planning.py"
+    ],
+    "postgres_version": "PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "pytest_log_sha256": "0a51bc2a43670165e71040d3df1cad80fe2c29de8d6444d3b3d16bcc42036162",
+    "python": "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+    "python_version": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "redis_address": "127.0.0.1:2818",
+    "redis_cleaned": true,
+    "redis_container": "reconforge-ci-redis-ce9b649f5f50",
+    "redis_image": "redis@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2",
+    "skips": [],
+    "status": "completed",
+    "suites": [
+      {
+        "errors": "7",
+        "failures": "0",
+        "hostname": "DESKTOP-FDO3RD5",
+        "name": "pytest",
+        "skipped": "0",
+        "tests": "7",
+        "time": "18.916",
+        "timestamp": "2026-10-03T09:49:33.897958+03:00"
+      }
+    ],
+    "workflow_command": "uv run --no-sync pytest \"${parity_tests[@]}\" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_metrics_migration.py tests/test_postgres_runtime_role.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q"
+  },
+  "schema_version": "reconforge-remaining-ci-fixtures-v1",
+  "secret_findings_review": [
+    {
+      "Commit": "b5075883e0c702f0a80df0d08ad6ed48655b2a3c",
+      "File": "docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json",
+      "Fingerprint": "b5075883e0c702f0a80df0d08ad6ed48655b2a3c:docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json:generic-api-key:65",
+      "RuleID": "generic-api-key",
+      "StartLine": 65,
+      "classification": "false-positive-source-file-sha256",
+      "source_file": "tests/test_api_operations.py",
+      "source_file_sha256": "ff066e504b96076ac39cbe78761ce70c42f6d96a14152f4a585f70f3412ec085"
+    },
+    {
+      "Commit": "ca82cbffd50734965f1c67ea1c94445df46885d5",
+      "File": "docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json",
+      "Fingerprint": "ca82cbffd50734965f1c67ea1c94445df46885d5:docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135",
+      "RuleID": "generic-api-key",
+      "StartLine": 135,
+      "classification": "false-positive-source-file-sha256",
+      "source_file": "tests/test_api_server_identity.py",
+      "source_file_sha256": "dc0d6becc31beb25607d2d0a0ea3a2bb752bc2a4bf017894e7900f6bbd467a81"
+    }
+  ],
+  "source_files": [
+    {
+      "path": "tests/postgres_audit_fixture.py",
+      "sha256": "a124724bce051d4278b01dc985d8182f8b1dd21ae060c2e3999eee370a11a669"
+    },
+    {
+      "path": "tests/test_api_metrics.py",
+      "sha256": "68fa416dbf38f86e39c11832eae0d78122f0d080371376b03a635b043b3a45bf"
+    },
+    {
+      "path": "tests/test_api_server_manufacturing_cost_control.py",
+      "sha256": "1869d9e9ee8cdb2ab066e7ab16c5bc90e815d18fddb7ce922402a55dba3708fb"
+    },
+    {
+      "path": "tests/test_api_server_retail_settlement.py",
+      "sha256": "e6373a8e2b5aac1d385fa47c218f2fbdcc939d5d469ab055fa8a6aa7c220b592"
+    },
+    {
+      "path": "tests/test_api_server_professional_invoice_payment.py",
+      "sha256": "eef56a2a03bbaa03caddad6b386870754d94de112bc144cfa7122bcac58bf352"
+    },
+    {
+      "path": "tests/test_api_server_consolidation_close.py",
+      "sha256": "63c96a12434b845ab8410bfad3c46e44354a977e72ccfea68753b2ec8159bda2"
+    },
+    {
+      "path": "tests/test_api_server_reconciliation_live.py",
+      "sha256": "a21572d66d1a1a93e68accf25e23b8647aee63b8486067b6926762ad1bf0a4f3"
+    },
+    {
+      "path": "tests/test_api_server_inventory_planning.py",
+      "sha256": "32d7c6d3c239662646f4f1ccf91f41dc0e2f7bdba9d5e1b9dbbedeebc8c2e197"
+    },
+    {
+      "path": "tests/test_api_server_inventory_valuation.py",
+      "sha256": "73d7e199fb76dd83873123bb43192b93f1c34f8c20c37dd4b4cb8f9723824e9c"
+    },
+    {
+      "path": "tests/test_api_server_bank_statement.py",
+      "sha256": "07c3e28118649ce814d159ac2f6f8574f9c771ea0af81f8f2b2313cabc3934f9"
+    },
+    {
+      "path": ".gitleaksignore",
+      "sha256": "22767fb4fb004038431169b18a06bb21ad0ee98fa92384bea7607fb24a5bc3bf"
+    }
+  ],
+  "status": "passed-bounded-local-selection"
+}

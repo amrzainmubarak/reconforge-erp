@@ -1202,3 +1202,8 @@ include docs/adr/0804-owned-postgres-container-cleanup.md
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0094_CLEANUP_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0094_CLEANUP_2026-10-03.json
 include docs/execution/FINANCIAL_CHECKPOINT_ATTEMPT_2026-10-03.json
+include docs/adr/0809-typed-queue-authority-denials.md
+include docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json
+include tests/postgres_audit_fixture.py
+include docs/adr/0812-isolate-policy-audit-fixture-cleanup.md
+include docs/execution/REMAINING_CI_FIXTURES_2026-10-03.json

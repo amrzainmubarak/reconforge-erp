@@ -203,8 +203,8 @@ def test_live_server_inventory_planning_http_lifecycle_is_scoped_exact_and_human
                 (tenant_id,),
             )
             connection.execute(
-                "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active) VALUES (%s,%s,'ORG','Organization','USD',TRUE)",
-                (tenant_id, organization_id),
+                "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active,application_workspace_id) VALUES (%s,%s,'ORG','Organization','USD',TRUE,%s)",
+                (tenant_id, organization_id, workspace_id),
             )
             connection.execute(
                 "INSERT INTO reconforge.master_data_workspace_organizations(tenant_id,workspace_id,organization_id) VALUES (%s,%s,%s)",
@@ -215,8 +215,8 @@ def test_live_server_inventory_planning_http_lifecycle_is_scoped_exact_and_human
                 (tenant_id, entity_id, organization_id),
             )
             connection.execute(
-                "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number) VALUES (%s,%s,'2026-07','2026-07-01','2026-07-31',2026,7)",
-                (tenant_id, period_id),
+                "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) VALUES (%s,%s,'2026-07','2026-07-01','2026-07-31',2026,7,%s)",
+                (tenant_id, period_id, workspace_id),
             )
             connection.execute(
                 "INSERT INTO reconforge.master_data_workspace_periods(tenant_id,workspace_id,period_id) VALUES (%s,%s,%s)",

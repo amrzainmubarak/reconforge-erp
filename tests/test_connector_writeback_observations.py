@@ -151,8 +151,12 @@ def test_observation_binding_rejects_retargeting_and_unknown_intent(tmp_path: Pa
 def test_observation_migration_is_additive_from_previous_sqlite_version(tmp_path: Path) -> None:
     path = tmp_path / "upgrade.db"
     assert run_migrations(path, target_version=42).current_version == 42
+    observation_upgrade = run_migrations(path, target_version=43)
+    assert observation_upgrade.current_version == 43
+    assert observation_upgrade.applied_versions == [43]
     upgraded = run_migrations(path)
-    assert upgraded.current_version == upgraded.latest_version == 46
+    assert upgraded.current_version == upgraded.latest_version
+    assert 47 in upgraded.applied_versions
     connection = connect(path)
     try:
         assert connection.execute(

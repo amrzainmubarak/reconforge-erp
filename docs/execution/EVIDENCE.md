@@ -2,6 +2,34 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Scoped PostgreSQL composition: [source-bound report](POSTGRES_REPOSITORY_SCOPE_2026-10-03.json)
+  retains14 focused live passes, no skips; broad actual CI462 passes with one
+  native-client prerequisite skip. Before repair, successful nested reads
+  cleared child scope and enabled sibling access; replay after repair preserves
+  all five GUCs and denies tenant switching/sibling writes. Both disposable
+  runtime services were cleaned. ADR0803 covers the eight adapters. Same-workspace
+  Finance natural-key hierarchy RLS and SQLite transaction composition remain open.
+- Actual AR React writes: [browser evidence](RECEIVABLES_UI_2026-10-03.json)
+  and [persistence](RECEIVABLES_UI_PERSISTENCE_2026-10-03.json) bind source hashes
+  to exact1376minor lifecycle, separate maker/checker and3audit/3outbox events.
+  The full141-test frontend suite passed before the final input-bound and
+  keyboard corrections;21 focused tests and then9 final component tests passed.
+  Actual HTTPS/PostgreSQL and existing accessibility/keyboard/mobile selection
+  passed11tests, followed by the final EN/AR mobile financial journey. Receipt,
+  customer creation, inventory and GL writes remain separate.
+- Isolated financial source f48781e6:3602 passed,240 skips,4 failures,24 warnings
+  in936.79s; [retained failed checkpoint](FINANCIAL_CHECKPOINT_ATTEMPT_2026-10-03.json)
+  includes exact source, commands and log digests. Static/security/package checks
+  passed. Reviewed parser inventory additions and synthetic corruption/migration
+  fixture corrections subsequently pass66 focused tests with one warning.
+  A fresh isolated whole-repository gate remains required.
+- Owned-container cleanup: foundation ADR0804 fixes asynchronous Docker removal
+  verification with full identity checks and successful absence queries. Primary
+  migration0094 was freshly exercised after merge: PG17.10 drill15.692s and
+  PG16.14/17.10 matrix30.282s, source unchanged and every check including cleanup
+  true. The new0094_CLEANUP reports retain exact runner bindings;33 focused
+  report/cleanup tests pass. All earlier reports remain historical evidence.
+
 - Source-built storage fixture: actual GitHub
   [job 111121404972](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37094452570/job/111121404972)
   at `517e6a8f` passes source build/identity in 142s, live storage in 7s and

@@ -1201,3 +1201,4 @@ include docs/execution/POSTGRES_REPOSITORY_SCOPE_2026-10-03.json
 include docs/adr/0804-owned-postgres-container-cleanup.md
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0094_CLEANUP_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0094_CLEANUP_2026-10-03.json
+include docs/execution/FINANCIAL_CHECKPOINT_ATTEMPT_2026-10-03.json

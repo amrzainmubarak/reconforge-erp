@@ -1,6 +1,6 @@
 schema_version: 1
 inventory_id: reconforge-file-ingestion
-reviewed_on: "2026-08-11"
+reviewed_on: "2026-10-03"
 owner: platform-security
 claim_boundary: >-
   This inventory proves repository-visible parser coverage and bounded controls only. It does not prove
@@ -845,7 +845,44 @@ surfaces:
     limitations:
       - The command verifies operator-supplied runtime facts and profile findings locally; it does not probe storage, identity, queue, object-store, key, or backup systems.
     next_action: Bind signed runtime evidence to an independently exercised deployment admission workflow before making mode-readiness claims.
+  - id: FI-043
+    name: Pinned synthetic AMLSim reconciliation workload
+    module_ids: [reconciliation.core]
+    trust: untrusted-local
+    entrypoints: [reconforge/benchmark/amlsim_reconciliation.py::parse_amlsim_sample]
+    formats: [csv]
+    parser_families: [csv-stdlib]
+    policy_coverage: complete
+    status: bounded
+    controls: [SEC-C-001, SEC-C-002, SEC-C-006]
+    test_evidence: [tests/test_amlsim_reconciliation.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - Only a profile-pinned synthetic single-transfer format is supported; currency and calendar are scenario assumptions, not upstream facts.
+      - Hash validation binds bytes to the selected profile and does not independently authenticate a user-supplied profile or prove malware absence.
+    next_action: Retain independent fault-oracle and provenance checks when introducing larger workloads or a worker execution path.
+  - id: FI-044
+    name: Retained financial currency policy snapshot reader
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints: [reconforge/domain/finance_policy.py::verified_registry_context]
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005]
+    test_evidence: [tests/test_finance_currency_policy.py, tests/test_postgres_finance_currency_policy.py]
+    residual_risk_ids: [R-018]
+    limitations:
+      - Text snapshots are bounded to1000000 UTF-8 bytes and reject duplicate keys before registry schema, version and digest validation; mapping inputs come from already-decoded database rows.
+      - The reader does not establish independent source authenticity or a general hostile JSON graph depth budget.
+    next_action: Preserve exact historical policy verification and add a shared graph-budget contract before accepting arbitrary external policy documents.
 direct_tabular_parser_allowlist:
+  - path: reconforge/benchmark/amlsim_reconciliation.py
+    parser: csv.DictReader
+    call_count: 1
+    surface_id: FI-043
+    rationale: Parses only byte-bounded SHA-256-pinned strict UTF-8 CSV; exact headers, complete rows, unique bounded IDs, exact amounts, single-transfer semantics and profile record ceilings reject source drift.
   - path: reconforge/io/ingress.py
     parser: csv.reader
     call_count: 1
@@ -887,6 +924,11 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/domain/finance_policy.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-044
+    rationale: Parses only retained snapshot text capped at1000000 UTF-8 bytes with duplicate-key rejection, then verifies the complete currency registry schema, policies, version and digest before financial interpretation.
   - path: reconforge/infrastructure/postgres_master_data.py
     parser: json.loads
     call_count: 1

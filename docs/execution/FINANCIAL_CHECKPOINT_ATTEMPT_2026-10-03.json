@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "status": "failed_retained_before_repairs",
+  "source_commit": "f48781e695533df577ca671b9f5a1b8f9a18f7aa",
+  "summary": {
+    "failed": 4,
+    "skipped": 240,
+    "passed": 3602,
+    "pytest_seconds": 936.79,
+    "warnings": 24
+  },
+  "regression": {
+    "command": [
+      "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-ra",
+      "--tb=short",
+      "-o",
+      "addopts=",
+      "--junitxml",
+      "F:\\reconforge-erp\\output\\verification-2026-10-03\\financial-pytest.xml"
+    ],
+    "source_commit": "f48781e695533df577ca671b9f5a1b8f9a18f7aa",
+    "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+    "started_at": "2026-10-03T06:54:44.846446+03:00",
+    "duration_seconds": 943.32,
+    "exit_code": 1,
+    "log": "financial-pytest.log",
+    "log_sha256": "8069be3202ab1ccb6d3a21ffab884d2c053e59223aa4becf9f539502d8e2bce6"
+  },
+  "quality": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "source_commit": "f48781e695533df577ca671b9f5a1b8f9a18f7aa",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T06:54:44.854424+03:00",
+      "duration_seconds": 0.41,
+      "exit_code": 0,
+      "log": "financial-ruff.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "source_commit": "f48781e695533df577ca671b9f5a1b8f9a18f7aa",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T06:54:45.265578+03:00",
+      "duration_seconds": 22.532,
+      "exit_code": 0,
+      "log": "financial-mypy.log",
+      "log_sha256": "08933fb101211407c97dbbae38d5b1a98d4ad9d6b94a0ace2ba9a59f11b445ac"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "source_commit": "f48781e695533df577ca671b9f5a1b8f9a18f7aa",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T06:55:07.797797+03:00",
+      "duration_seconds": 19.689,
+      "exit_code": 0,
+      "log": "financial-bandit.log",
+      "log_sha256": "98afbcf6a078ec87a95afabfa0f7faaa8da4bc7ec8960d99e909fad760631394"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\financial-dist"
+      ],
+      "source_commit": "f48781e695533df577ca671b9f5a1b8f9a18f7aa",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T06:55:27.487407+03:00",
+      "duration_seconds": 21.161,
+      "exit_code": 0,
+      "log": "financial-build.log",
+      "log_sha256": "9b6af85c29604426ed49b6e927d57ed0e07fefcfd5a8494a22541216916c6559"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "source_commit": "f48781e695533df577ca671b9f5a1b8f9a18f7aa",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T06:55:48.649974+03:00",
+      "duration_seconds": 0.142,
+      "exit_code": 0,
+      "log": "financial-diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "repairs": {
+    "scope": "Two reviewed parser inventory entries and additive migration / synthetic corruption fixtures; no production weakening",
+    "warnings": 1,
+    "focused_passed": 66,
+    "seconds": 32.63
+  }
+}

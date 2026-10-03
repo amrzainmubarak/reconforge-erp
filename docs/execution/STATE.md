@@ -29,14 +29,15 @@ into main. Current engineering work is on `codex/financial-policy-and-open-workl
   with two live-environment skips subsequently covered by PostgreSQL execution.
   Separate native-container migration/restore through 0094 passes on PostgreSQL
   16.14 and 17.10. These are outside the foundation full-regression checkpoint;
-  a new isolated whole-repository run is required.
+  the latest isolated whole-repository attempt and repairs are recorded below.
 - Remote foundation CI exposed portable evidence-path validation and unavailable
   historical MinIO registry pulls. The path fix is pushed and passes 35 Windows
   tests plus a Linux direct reader probe. The pinned source-built MinIO fixture
   passed the real GitHub build and both live storage tests on `517e6a8f`, with
   all five S3/Object Lock invariants verified. This is CI-only fixture evidence.
-  The remaining failed foundation server-boundaries job is under investigation;
-  full remote acceptance is not yet asserted.
+  The failed foundation server-boundaries job was traced to immediate Docker
+  removal verification. ADR0804 and freshly executed restore reports fix it;
+  pushed foundation a6776c69 awaits its independent remote checks.
 - Next dependencies remain explicit scoped transaction composition, immutable
   operational posting, integrated trade cycles and connected financial writes.
   There is no available company pilot or external-auditor acceptance evidence.
@@ -49,6 +50,13 @@ outdated SQLite schema assertion, a corruption fixture blocked by the immutable
 snapshot trigger and two missing parser inventory entries. The failed run is
 retained; full acceptance awaits repair and a fresh isolated run. Ruff, Mypy,
 Bandit and packaging passed on that exact source.
+
+The four failures have reviewed repairs;66 focused tests pass. A fresh full
+run remains required. Nested PostgreSQL scope preservation is committed at
+3fce89f7:14 focused live passes and462 broad live passes with one explicit
+native-client skip. Independent follow-up reproduced same-workspace Finance
+organization/entity access via natural-key columns; PROD025 is a P0 closure gate.
+SQLite composed commit ownership also remains open under PROD024.
 
 The AR React journey now has actual HTTPS/PostgreSQL evidence:1376 minor units
 persisted through draft, submission and independent approval, with valid audit

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 from typing import cast
@@ -220,9 +221,26 @@ def test_corrupt_exported_json_refuses_before_output_directory_or_audit_effect(
     database = _seed_export_rows(tmp_path)
     connection = connect(database, require_exists=True)
     try:
-        if table == "audit_events":
-            connection.execute("DROP TRIGGER audit_events_no_update")
+        trigger_name = {
+            "audit_events": "audit_events_no_update",
+            "currency_registry_snapshots": "currency_snapshot_update_immutable",
+        }.get(table)
+        trigger_sql = None
+        if trigger_name is not None:
+            trigger = connection.execute(
+                "SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = ?",
+                (trigger_name,),
+            ).fetchone()
+            assert trigger is not None
+            trigger_sql = str(trigger["sql"])
+            with pytest.raises(sqlite3.IntegrityError):
+                connection.execute(f"UPDATE {table} SET {column} = ?", (_CORRUPT,))
+            connection.rollback()
+            # Model out-of-band file corruption, then restore the production guard before export.
+            connection.execute(f"DROP TRIGGER {trigger_name}")
         connection.execute(f"UPDATE {table} SET {column} = ?", (_CORRUPT,))
+        if trigger_sql is not None:
+            connection.execute(trigger_sql)
         connection.commit()
         before_count = int(
             connection.execute("SELECT COUNT(*) AS count FROM audit_events").fetchone()["count"]

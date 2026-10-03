@@ -74,7 +74,6 @@ def test_matrix_subject_supply_chain_and_package_contracts_bind_current_sources(
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_CLEANUP_2026-10-03.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0095_2026-10-03.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0096_2026-10-03.json",
-        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0096_2026-10-03.json",
         "include docs/schemas/postgres_writeback_identity_migration_matrix.schema.json",
         "include tests/test_postgres_writeback_identity_migration_matrix.py",
         "include docs/adr/0541-prove-writeback-migration-supported-version-matrix.md",

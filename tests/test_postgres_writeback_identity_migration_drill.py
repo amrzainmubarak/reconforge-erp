@@ -67,7 +67,6 @@ def test_drill_runner_and_retained_report_bind_the_same_runtime_contract() -> No
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_CLEANUP_2026-10-03.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0095_2026-10-03.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0096_2026-10-03.json",
-        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0096_2026-10-03.json",
         "include docs/schemas/postgres_writeback_identity_migration_drill.schema.json",
         "include tests/test_postgres_writeback_identity_migration_drill.py",
     } <= manifest

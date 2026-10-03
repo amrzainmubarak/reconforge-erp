@@ -32,6 +32,12 @@ from reconforge.domain.receivables_receipt_replay import (
     receipt_replay_response,
     receipt_request_digest,
 )
+from reconforge.domain.receivables_replay import (
+    InvoiceReplayError,
+    invoice_creation_request,
+    invoice_replay_envelope,
+    verify_invoice_replay,
+)
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
@@ -494,6 +500,8 @@ class PostgresReceivablesRepository:
                 yield
         except PostgresRepositoryScopeError as exc:
             raise PlatformError(str(exc)) from exc
+        except InvoiceReplayError as exc:
+            raise PlatformError(str(exc)) from exc
         except (PlatformError, PostgresReceivablesError):
             raise
         except Exception as exc:
@@ -580,7 +588,7 @@ class PostgresReceivablesRepository:
             raise PlatformError("Customer not found.")
         return self._with_policy(_row(row, self._CUSTOMER))
 
-    def _customer_by_code(self, workspace_id: str, customer_code: str, *, lock: bool = False) -> dict[str, Any]:
+    def _customer_by_code(self, workspace_id: str, customer_code: str, *, lock: bool = False, require_active: bool = True) -> dict[str, Any]:
         row = self.connection.execute(
             "SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND workspace_id=%s AND customer_code=%s",
             (self.tenant_id, workspace_id, _code(customer_code, "Customer code")),
@@ -588,7 +596,7 @@ class PostgresReceivablesRepository:
         if row is None:
             raise PlatformError("Customer not found in the requested workspace.")
         result = self._customer(str(row["id"] if isinstance(row, Mapping) else row[0]), lock=lock)
-        if result["status"] != "Active":
+        if require_active and result["status"] != "Active":
             raise PlatformError("Customer is not Active.")
         self._assert_customer_currency(result)
         return result
@@ -625,6 +633,32 @@ class PostgresReceivablesRepository:
         result["allocated_minor"] = self._invoice_allocated(invoice_id)
         result["outstanding_minor"] = int(result["total_minor"]) - result["allocated_minor"]
         return result
+
+    def _invoice_recovery_source(self, invoice_id: str) -> dict[str, Any]:
+        # Parent UPDATE lock also blocks new FK-backed lines; SHARE locks freeze
+        # existing line values across the numeric check and ordinary projection.
+        found = self.connection.execute(
+            "SELECT id FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s FOR UPDATE",
+            (self.tenant_id, invoice_id),
+        ).fetchone()
+        if found is None:
+            raise PlatformError("Customer invoice not found.")
+        rows = self.connection.execute(
+            "SELECT quantity,quantity_text FROM reconforge.ar_invoice_lines WHERE tenant_id=%s AND invoice_id=%s FOR SHARE",
+            (self.tenant_id, invoice_id),
+        ).fetchall()
+        for row in rows:
+            values = _row(row, ("quantity", "quantity_text"))
+            number, text = values["quantity"], values["quantity_text"]
+            try:
+                if not isinstance(number, Decimal) or not number.is_finite() or not isinstance(text, str) or len(text) > 1_000_000:
+                    raise ValueError
+                parsed = Decimal(text)
+                if not parsed.is_finite() or number <= 0 or number != parsed:
+                    raise ValueError
+            except (ValueError, InvalidOperation) as exc:
+                raise PlatformError("Authoritative invoice numeric quantity differs from retained text.") from exc
+        return self._invoice(invoice_id)
 
     def _receipt(self, receipt_id: str) -> dict[str, Any]:
         row = self.connection.execute(
@@ -767,24 +801,39 @@ class PostgresReceivablesRepository:
             raise PlatformError("Invoice tax must equal the sum of invoice-line tax amounts.")
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
-            previous = self._idempotent("invoice", workspace_id, idempotency_key)
-            if previous is not None:
-                authoritative = self._invoice(str(previous.get("id", "")))
-                self._verify_replay_policy(previous, authoritative)
-                return previous
-            customer = self._customer_by_code(workspace_id, customer_code, lock=True)
+            key = _text(idempotency_key, "Idempotency key", maximum=200, required=False)
+            if key:
+                # Missing rows cannot be locked; serialize the scoped command before its parent.
+                self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (
+                    encode_financial_idempotency_response({"tenant": self.tenant_id, "workspace": workspace_id,
+                                                          "operation": "ar_invoice", "key": key}).text,
+                ))
+            customer = self._customer_by_code(workspace_id, customer_code, lock=True, require_active=False)
             if customer["currency_code"] != currency:
                 raise PlatformError("Customer invoice currency must match the customer currency.")
-            due = (
-                _iso_date(due_date, "Due date")
-                if due_date.strip()
-                else day + timedelta(days=int(customer["payment_terms_days"]))
-            )
-            if due < day:
+            explicit_due = _iso_date(due_date, "Due date") if due_date.strip() else None
+            if explicit_due is not None and explicit_due < day:
                 raise PlatformError("Due date cannot be before invoice date.")
             organization_id, entity_id = self._scope_ids(workspace_id, organization_code, entity_code)
             subtotal = sum(line[5] for line in normalized)
             invoice_id = platform_id("ARINV", workspace_id, customer["id"], number)
+            request = invoice_creation_request({
+                "id": invoice_id, "workspace_id": workspace_id, "organization_id": organization_id,
+                "legal_entity_id": entity_id, "customer_id": customer["id"], "invoice_number": number,
+                "invoice_date": day.isoformat(), "due_date": explicit_due.isoformat() if explicit_due else None,
+                "currency_code": currency, "subtotal_minor": subtotal, "tax_minor": tax, "total_minor": subtotal + tax,
+                "lines": [{"description": line[0], "quantity": line[2], "unit_price_minor": line[3],
+                           "tax_minor": line[4], "line_total_minor": line[5]} for line in normalized],
+            }, tenant_id=self.tenant_id)
+            previous = self._idempotent("invoice", workspace_id, idempotency_key)
+            if previous is not None:
+                authoritative = self._invoice_recovery_source(invoice_id)
+                response = verify_invoice_replay(previous, request, authoritative)
+                self._verify_replay_policy(response, authoritative)
+                return response
+            if customer["status"] != "Active":
+                raise PlatformError("Customer is not Active.")
+            due = explicit_due or day + timedelta(days=int(customer["payment_terms_days"]))
             policy = self._capture_policy(workspace_id, currency, actor_label, customer)
             self.connection.execute(
                 """INSERT INTO reconforge.ar_invoices(tenant_id,id,workspace_id,organization_id,legal_entity_id,customer_id,invoice_number,invoice_date,due_date,currency_code,subtotal_minor,tax_minor,total_minor,status,created_by,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'Draft',%s,%s,%s,%s,%s)""",
@@ -812,7 +861,7 @@ class PostgresReceivablesRepository:
                     (self.tenant_id, platform_id("ARINVL", invoice_id, line_number), invoice_id, line_number, *line),
                 )
             result = self._invoice(invoice_id)
-            self._save_idempotency("invoice", workspace_id, idempotency_key, result)
+            self._save_idempotency("invoice", workspace_id, idempotency_key, invoice_replay_envelope(request, result))
             self._event(
                 actor_label=actor_label,
                 object_type="ar_invoice",

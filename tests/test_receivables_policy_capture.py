@@ -157,7 +157,7 @@ def test_cached_policy_tamper_fails_before_any_effect(database: ReceivablesDatab
             else:
                 raw = connection.execute("SELECT response_json::text FROM reconforge.ar_idempotency_keys WHERE tenant_id=%s AND idempotency_key='cache-policy'", (database.tenant,)).fetchone()[0]
             cached = decode_financial_idempotency_response(raw).payload
-            response = cached if operation == "invoice" else cached["response"]
+            response = cached["response"]
             if tamper == "tuple":
                 response["currency_precision"] = 0
             elif tamper == "projection":
@@ -171,7 +171,7 @@ def test_cached_policy_tamper_fails_before_any_effect(database: ReceivablesDatab
             else:
                 connection.execute("UPDATE reconforge.ar_idempotency_keys SET response_json=%s::jsonb WHERE tenant_id=%s AND idempotency_key='cache-policy'", (encoded, database.tenant))
         before = database.evidence_counts()
-        with pytest.raises(PlatformError, match="ar_monetary_policy_invalid"):
+        with pytest.raises(PlatformError, match="ar_monetary_policy_invalid|acknowledgement"):
             create(**body)
         authoritative = repo.get_invoice(original["id"]) if operation == "invoice" else repo.get_receipt(original["id"])
         assert authoritative["monetary_policy"]["precision"] == 2

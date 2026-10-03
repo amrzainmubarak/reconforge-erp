@@ -280,7 +280,7 @@ def test_live_postgres_finance_core_lifecycle_exactness_and_rls() -> None:
                 "tenants,organizations,currencies,legal_entities,fiscal_periods,domain_workspaces,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,finance_charts,finance_accounts,"
                 "finance_dimensions,finance_dimension_values,finance_journals,finance_entries,"
-                "finance_entry_lines,finance_entry_line_dimensions"
+                "finance_entry_lines,finance_entry_line_dimensions,finance_posting_effects,finance_posting_commands"
             )
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"

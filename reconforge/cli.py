@@ -41,6 +41,7 @@ from reconforge.benchmark.reconciliation_execution import (
 )
 from reconforge.benchmark.runner import run_benchmark
 from reconforge.cli_bank_statement_control import bank_statement_app
+from reconforge.cli_finance_posting import posting_app
 from reconforge.cli_individual_cashflow_control import individual_cashflow_app
 from reconforge.cli_inventory_planning import inventory_planning_app
 from reconforge.cli_inventory_valuation import inventory_valuation_app
@@ -316,6 +317,7 @@ app.add_typer(modules_app, name="modules")
 app.add_typer(connectors_app, name="connectors")
 app.add_typer(master_data_app, name="master-data")
 app.add_typer(finance_core_app, name="finance-core")
+finance_core_app.add_typer(posting_app, name="posting")
 app.add_typer(inventory_app, name="inventory")
 app.add_typer(receivables_app, name="receivables")
 app.add_typer(outbox_app, name="outbox")

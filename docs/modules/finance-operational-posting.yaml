@@ -1,0 +1,69 @@
+id: finance-operational-posting
+name: Reviewed Manual operational posting and full reversal
+version: 1.0.0
+maturity: experimental
+owner: finance-core
+dependencies: [finance.core, platform.core, platform.master-data]
+incompatible_versions: [unsealed-legacy-entry-adoption, automatic-trade-posting]
+data_classification: financial-sensitive
+retention_policy: operator-retains-immutable-effects-commands-audit-and-review-provenance
+permissions: [finance_core.manage, finance_core.read, finance_core.validate, finance_core.post, finance_core.reverse]
+default_roles: [admin]
+migrations: [sqlite-47, sqlite-48, postgres-0094, postgres-0095, postgres-0096, postgres-0098]
+domain_invariants:
+  - exact-balanced-two-to-one-thousand-lines-under-captured-currency-policy
+  - authenticated-stable-preparer-and-independent-human-reviewer
+  - authenticated-draft-replacement-requires-original-preparer
+  - canonical-versioned-review-digest-binds-explicit-post
+  - posted-entries-lines-dimensions-effects-and-command-receipts-immutable
+  - same-command-and-content-produce-one-business-effect
+  - replay-verifies-authoritative-effect-or-linked-reversal-source
+  - original-policy-full-inverse-requires-separate-review-and-post
+  - period-open-check-and-parent-lock-belong-to-one-transaction
+  - audit-outbox-effect-and-command-receipt-commit-or-roll-back-together
+  - legacy-missing-provenance-is-never-invented
+  - balances-are-selected-period-net-activity-with-explicit-turnover
+domain_events: [finance_entry_posted, finance_reversal_prepared]
+api_routes:
+  - GET /api/v1/finance-core/entries/{entry_id}/posting-preview
+  - POST /api/v1/finance-core/entries/{entry_id}/post
+  - GET /api/v1/finance-core/postings/{effect_id}
+  - POST /api/v1/finance-core/postings/{effect_id}/reversal
+  - GET /api/v1/finance-core/posted-trial-balance
+cli_commands:
+  - reconforge finance-core posting draft
+  - reconforge finance-core posting review
+  - reconforge finance-core posting preview
+  - reconforge finance-core posting post
+  - reconforge finance-core posting effect
+  - reconforge finance-core posting reverse
+  - reconforge finance-core posting trial-balance
+ui_routes: []
+import_schemas: [LedgerEntryRequest, PostRequest, ReversalRequest]
+export_schemas: [finance-entry-review-v1, finance-posting-api-v1]
+synthetic_fixtures: [tests/test_finance_core.py, tests/test_postgres_finance_posting.py]
+threat_model:
+  - sibling-tenant-workspace-organization-entity-access
+  - forged-command-success-and-cross-source-receipt-substitution
+  - self-review-and-checker-replacement-of-maker-content
+  - stale-review-period-close-and-repeatable-read-child-races
+  - late-evidence-failure-and-lost-acknowledgement
+  - javascript-integer-rounding-and-unverified-historical-money-policy
+  - privileged-database-owner-is-an-operator-trust-boundary
+benchmarks: []
+rollback_plan: restore-compatible-pre-upgrade-backup-and-reconcile-new-writes-no-lossy-downgrade
+test_matrix:
+  - tests/test_finance_posting_domain.py
+  - tests/test_finance_posting_api_contract.py
+  - tests/test_finance_posting_cli.py
+  - tests/test_sqlite_finance_posting.py
+  - tests/test_postgres_finance_posting.py
+  - tests/test_postgres_finance_posting_concurrency.py
+  - tests/test_postgres_finance_posting_api.py
+  - tests/test_postgres_finance_posting_restore.py
+limitations:
+  - manual-entries-and-full-kernel-reversals-only
+  - no-cumulative-opening-or-cross-period-closing-balance-yet
+  - no-automatic-inventory-ar-ap-or-cash-to-gl-integration
+  - sqlite-http-posting-awaits-recent-session-assurance-adapter
+  - no-real-customer-performance-business-roi-or-independent-assurance

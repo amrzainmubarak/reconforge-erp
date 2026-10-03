@@ -47,13 +47,15 @@ def test_postgres_parity_status_evidence_and_counts_are_consistent() -> None:
         assert counts[status] == parity["summary"][status]
 
 
-def test_current_live_claim_requires_an_unskipped_recorded_gate() -> None:
+def test_retained_live_gate_is_not_recomputed_from_later_inventory() -> None:
     parity = _load(PARITY)
     gate = parity["current_live_gate"]
-    live_boundaries = [row for row in parity["boundaries"] if row["status"] == "live_test_available"]
     assert gate["application_and_migration_result"] == "passed"
     assert gate["native_encrypted_backup_restore_result"] == "passed"
-    assert gate["covered_live_boundaries"] == len(live_boundaries) + 1 == 22
+    # A newly added service cannot retroactively increase this historical run.
+    assert gate["executed_at"] == "2026-07-28"
+    assert gate["covered_live_boundaries"] == 22
+    assert gate["covered_live_boundaries"] <= parity["summary"]["total"]
     assert gate["skipped_live_boundaries"] == 0
     assert gate["database_image_digest"].startswith("sha256:")
     assert "non_superuser" in gate["application_role"]

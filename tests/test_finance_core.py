@@ -604,12 +604,15 @@ def test_migration_eight_preserves_accounts_and_assigns_default_chart(
         account = connection.execute("SELECT * FROM accounts WHERE id = 'ACC-old'").fetchone()
         chart = connection.execute("SELECT * FROM charts_of_accounts WHERE workspace_id = ?", (workspace_id,)).fetchone()
         permissions = connection.execute(
-            "SELECT COUNT(*) AS count FROM permissions WHERE name LIKE 'finance_core.%'"
-        ).fetchone()
+            "SELECT name FROM permissions WHERE name LIKE 'finance_core.%'"
+        ).fetchall()
         assert account is not None and chart is not None
         assert account["account_name"] == "Legacy Cash"
         assert account["chart_id"] == chart["id"]
-        assert permissions["count"] == 3
+        assert {row["name"] for row in permissions} == {
+            "finance_core.read", "finance_core.manage", "finance_core.validate",
+            "finance_core.post", "finance_core.reverse",
+        }
         new_account_id = ensure_account(
             connection, workspace_id=workspace_id, account_code="2000", account_name="Legacy Payable"
         )

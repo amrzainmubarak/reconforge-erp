@@ -199,6 +199,8 @@ def test_receivables_api_drops_future_storage_fields(tmp_path: Path) -> None:
     customers = client.get("/api/v1/receivables/customers", headers=admin_headers)
     invoices = client.get("/api/v1/receivables/invoices", headers=admin_headers)
     exposure = client.get("/api/v1/receivables/credit-exposure/CUS-FUTURE", headers=admin_headers)
+    receipt_read = client.get(f"/api/v1/receivables/receipts/{receipt.json()['id']}", headers=admin_headers)
+    receipts = client.get("/api/v1/receivables/receipts", headers=admin_headers)
     aging = client.get("/api/v1/receivables/aging?as_of_date=2026-08-26", headers=admin_headers)
 
     assert customer.status_code == 200, customer.text
@@ -212,5 +214,5 @@ def test_receivables_api_drops_future_storage_fields(tmp_path: Path) -> None:
     assert aging.status_code == 200, aging.text
     assert all(
         "unknown_" not in response.text
-        for response in (customer, invoice, receipt, customers, invoices, exposure, aging)
+        for response in (customer, invoice, receipt, customers, invoices, exposure, aging, receipt_read, receipts)
     )

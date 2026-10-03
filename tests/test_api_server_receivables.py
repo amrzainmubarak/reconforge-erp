@@ -86,6 +86,8 @@ def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_govern
                     user=maker,
                     permissions=frozenset({"receivables.read", "receivables.manage"}),
                     principal_type="user",
+                    step_up_active=True,
+                    step_up_method="password",
                     scope_authority=scope,
                 )
             if credential == "checker-token":

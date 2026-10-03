@@ -1,0 +1,115 @@
+{
+  "schema_version": "foundation-remote-acceptance-v1",
+  "observed_at": "2026-10-03T08:48:23.802511+00:00",
+  "head": "33b3fb5e8a0c7f219e8341d8537ea7b8d97392fb",
+  "pull_request": "https://github.com/amrzainmubarak/reconforge-erp/pull/109",
+  "run_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510",
+  "status": "completed",
+  "conclusion": "success",
+  "checks": [
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111158694746",
+      "name": "server-boundaries",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111158694769",
+      "name": "docker-parity",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/runs/111157774055",
+      "name": "CodeQL",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028612/job/111157553502",
+      "name": "python-security",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028792/job/111157459391",
+      "name": "Analyze Python",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028612/job/111157459031",
+      "name": "Locked Python audit (3.11)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028612/job/111157458838",
+      "name": "Locked Python audit (3.12)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028612/job/111157459014",
+      "name": "Secret and npm policy gates",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111157458676",
+      "name": "test (3.11)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111157458754",
+      "name": "engine-parity (3.11, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111157458761",
+      "name": "engine-parity (3.12, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028536/job/111157458610",
+      "name": "docker-build",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111157458701",
+      "name": "engine-parity (3.12, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111157458706",
+      "name": "test (3.12)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111157458720",
+      "name": "postgres-ha-dr",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111157458567",
+      "name": "object-storage",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111157458763",
+      "name": "engine-parity (3.11, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028510/job/111157458681",
+      "name": "web",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/37107028612/job/111157459616",
+      "name": "Exact-image SBOM, vulnerability, and license gate",
+      "state": "SKIPPED"
+    }
+  ],
+  "successful_checks": 18,
+  "conditional_skips": 1,
+  "raw_run_sha256": "eac93d7902f7281b4659ee2b6f4dc4d37dc290555b839d410dcf04dbfe70281b",
+  "limitations": [
+    "foundation head only; later posting/cash sources are not included",
+    "exact release-image SBOM/vulnerability/license gate is conditionally skipped",
+    "no main merge, production deployment, full isolation, customer ROI or external assurance"
+  ],
+  "report_digest": "affa57c0d0ab45820aaf31a7270595c1cda8d8e53893a1b5c4e5ac4f3a6b2db7"
+}

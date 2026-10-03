@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 266
-EXPECTED_DIGEST = "05ee58cd89410c5240a41cf016b55ea9d270c2e5f055508375c6dc3951bbc97b"
+EXPECTED_ROUTE_COUNT = 275
+EXPECTED_DIGEST = "6af0cd16b540ed6439c742a2810a9da9a080bb784b4a7df1141205e120b4257e"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -43,6 +43,7 @@ HANDLER_BOUNDARY_HELPERS = {
     "exceptions.py": frozenset({"_local_connection"}),
     "evidence.py": frozenset({"_enforce_server_evidence_permission"}),
     "finance_core.py": frozenset({"_server_finance_workspace"}),
+    "finance_posting.py": frozenset({"_authority"}),
     "identity_administration.py": frozenset({"_service"}),
     "inventory_core.py": frozenset({"_server_call"}),
     "inventory_planning.py": frozenset({"_server_call"}),

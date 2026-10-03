@@ -22,6 +22,7 @@ from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.platform.common import (
     PlatformError,
     commit_audited,
+    current_server_principal,
     ensure_platform_schema,
     ensure_workspace,
     platform_id,
@@ -39,6 +40,10 @@ JOURNAL_TYPES = ("General", "Sales", "Purchase", "Bank", "Cash", "Adjustment")
 ENTRY_SOURCE_TYPES = ("Manual", "Imported", "Generated")
 ENTRY_STATUSES = ("Draft", "Validated", "Voided")
 MAX_ENTRY_LINES = 1_000
+_POSTING_REVIEW_COLUMNS = (
+    "preparer_actor_id", "validator_actor_id", "validation_digest",
+    "validation_contract_version", "reverses_posting_id",
+)
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
 _ENTRY_NUMBER_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._/-]{0,63}$")
 _AMOUNT_PATTERN = re.compile(r"^(0|[0-9]+)(\.[0-9]+)?$")
@@ -110,6 +115,11 @@ def _public_record(row: sqlite3.Row) -> dict[str, Any]:
         if field in record:
             record[field] = bool(record[field])
     return record
+
+
+def _legacy_entry_record(row: Mapping[str, Any] | sqlite3.Row) -> dict[str, Any]:
+    """Keep additive operational review provenance outside the public v1 view."""
+    return {key: value for key, value in dict(row).items() if key not in _POSTING_REVIEW_COLUMNS}
 
 
 def _amount_to_minor(
@@ -794,7 +804,11 @@ class SQLiteFinanceCoreRepository:
     ) -> dict[str, Any]:
         """Create or replace a balanced draft entry using exact currency minor units."""
 
-        require_permission(self.connection, actor_label=actor_label, permission=FINANCE_CORE_MANAGE_PERMISSION)
+        if self.connection.in_transaction:
+            raise PlatformError("Finance entry preparation owns its transaction; use an explicit posting unit of work for composition.")
+        actor_user = require_permission(self.connection, actor_label=actor_label, permission=FINANCE_CORE_MANAGE_PERMISSION)
+        principal = current_server_principal()
+        preparer_actor_id = actor_user.id if actor_user is not None and principal is not None and principal.principal_type == "user" else None
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             workspace_name = _clean_text(workspace, "Workspace name")
@@ -825,6 +839,8 @@ class SQLiteFinanceCoreRepository:
             existing = self.connection.execute("SELECT * FROM ledger_entries WHERE id = ?", (entry_id,)).fetchone()
             if existing is not None and str(existing["status"]) != "Draft":
                 raise PlatformError("Only Draft ledger-control entries can be replaced.")
+            if existing is not None and existing["preparer_actor_id"] is not None and existing["preparer_actor_id"] != preparer_actor_id:
+                raise PlatformError("Only the authenticated original preparer may replace this Draft entry.")
             policy, operation_context = self._policies.capture(
                 workspace_id=workspace_id, currency_code=str(currency["code"]), minor_units=int(currency["minor_units"]),
                 actor_label=actor_label or "local-cli", existing=None if existing is None else dict(existing),
@@ -888,8 +904,9 @@ class SQLiteFinanceCoreRepository:
                     id, workspace_id, organization_id, chart_id, legal_entity_id, period_id,
                     finance_journal_id, entry_number, posting_date, currency_code, description,
                     external_reference, source_type, status, created_by, created_at, updated_at,
-                    currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?, ?, ?, ?)
+                    currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest,
+                    preparer_actor_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(workspace_id, entry_number) DO UPDATE SET
                     organization_id = excluded.organization_id,
                     chart_id = excluded.chart_id,
@@ -921,6 +938,7 @@ class SQLiteFinanceCoreRepository:
                     original_created_at,
                     now,
                     *policy.values(),
+                    preparer_actor_id if existing is None else existing["preparer_actor_id"],
                 ),
             )
             for prepared in prepared_lines:
@@ -991,6 +1009,8 @@ class SQLiteFinanceCoreRepository:
     ) -> dict[str, Any]:
         """Validate a balanced draft locally without posting anything to a source ERP."""
 
+        if self.connection.in_transaction:
+            raise PlatformError("Finance validation owns its transaction; pending caller work was not changed.")
         actor_user = require_permission(
             self.connection, actor_label=actor_label, permission=FINANCE_CORE_VALIDATE_PERMISSION
         )
@@ -1005,14 +1025,26 @@ class SQLiteFinanceCoreRepository:
             if actor_user is not None and str(entry["created_by"]) == actor_user.username:
                 raise PlatformError("Segregation of duties prevents validating your own ledger-control entry.")
             self._validate_entry_integrity(entry)
+            principal = current_server_principal()
+            reviewer = actor_user.id if actor_user is not None and principal is not None and principal.principal_type == "user" else None
+            seal = version = None
+            if reviewer is not None and entry["preparer_actor_id"] is not None:
+                if reviewer == entry["preparer_actor_id"]:
+                    raise PlatformError("Segregation of duties prevents validating your own ledger-control entry.")
+                from reconforge.domain.finance_posting import VALIDATION_CONTRACT_VERSION, validation_digest
+                from reconforge.infrastructure.sqlite_finance_posting import posting_snapshot
+
+                seal = validation_digest(posting_snapshot(self.connection, entry))
+                version = VALIDATION_CONTRACT_VERSION
             cursor = self.connection.execute(
                 """
                 UPDATE ledger_entries
                 SET status = 'Validated', validated_by = ?, validated_at = ?,
-                    validation_reason = ?, updated_at = ?
+                    validation_reason = ?, updated_at = ?, validator_actor_id = ?,
+                    validation_digest = ?, validation_contract_version = ?
                 WHERE id = ? AND status = 'Draft'
                 """,
-                (validator, now, validation_reason, now, entry_id),
+                (validator, now, validation_reason, now, reviewer if seal is not None else None, seal, version, entry_id),
             )
             if cursor.rowcount != 1:
                 raise PlatformError("Ledger-control entry changed concurrently; reload and retry.")
@@ -1159,7 +1191,7 @@ class SQLiteFinanceCoreRepository:
                 record["credit"] = _minor_to_text(int(record["credit_minor"]), minor_units)
                 record["dimensions"] = dimensions_by_line.get(str(record["id"]), {})
                 public_lines.append(record)
-            result = dict(entry)
+            result = _legacy_entry_record(entry)
             result["currency_minor_units"] = minor_units
             result["total_debit_minor"] = total_debit
             result["total_credit_minor"] = total_credit
@@ -1223,7 +1255,7 @@ class SQLiteFinanceCoreRepository:
         parameters.extend((page_limit, page_offset))
         try:
             return [
-                {**dict(row), "currency_policy_status": "unverified" if row["currency_registry_digest"] is None else "captured"}
+                {**_legacy_entry_record(row), "currency_policy_status": "unverified" if row["currency_registry_digest"] is None else "captured"}
                 for row in self.connection.execute(query, parameters).fetchall()
             ]
         except sqlite3.DatabaseError as exc:

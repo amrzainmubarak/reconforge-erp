@@ -20,7 +20,7 @@ from reconforge.infrastructure.postgres_repository_scope import (
     ensure_repository_tenant_scope,
 )
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
-from reconforge.platform.common import PlatformError, platform_id
+from reconforge.platform.common import PlatformError, current_server_principal, platform_id
 from reconforge.utils.money import CurrencyRegistryContext, InvalidAmountError, Money
 
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
@@ -283,6 +283,22 @@ class PostgresFinanceCoreRepository:
         PostgresAuditEventRepository(self.connection, self.tenant_id).append(
             actor_label=actor_label, object_type=object_type, object_id=object_id, action=action, metadata=metadata
         )
+
+    def _posting_provenance_available(self) -> bool:
+        # Historical migration fixtures remain readable without inventing review evidence.
+        return self.connection.execute(
+            "SELECT 1 FROM pg_attribute WHERE attrelid='reconforge.finance_entries'::regclass "
+            "AND attname='preparer_actor_id' AND NOT attisdropped"
+        ).fetchone() is not None
+
+    @staticmethod
+    def _authenticated_actor(actor_label: str) -> str | None:
+        principal = current_server_principal()
+        if principal is None or principal.principal_type != "user":
+            return None
+        if actor_label not in {principal.user.id, principal.user.username}:
+            raise PlatformError("Actor label does not match the authenticated human.")
+        return principal.user.id
 
     def upsert_chart(
         self,
@@ -1045,13 +1061,22 @@ class PostgresFinanceCoreRepository:
             created_at = (
                 str(existing["created_at"] if isinstance(existing, Mapping) else existing[3]) if existing else now
             )
+            provenance = self._posting_provenance_available()
+            authenticated_actor = self._authenticated_actor(actor_label) if provenance else None
+            if existing is not None and provenance:
+                stored = self.connection.execute(
+                    "SELECT preparer_actor_id FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s",
+                    (self.tenant_id, entry_id),
+                ).fetchone()
+                preparer = stored["preparer_actor_id"] if isinstance(stored, Mapping) else stored[0]
+                if preparer is not None and preparer != authenticated_actor:
+                    raise PlatformError("Only the captured preparer may replace an authenticated ledger Draft.")
             if existing is not None:
                 self.connection.execute(
                     "DELETE FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s",
                     (self.tenant_id, entry_id),
                 )
-            self.connection.execute(
-                """INSERT INTO reconforge.finance_entries
+            insert_sql = """INSERT INTO reconforge.finance_entries
                    (tenant_id,id,workspace_id,journal_id,organization_code,entity_code,period_id,entry_number,
                     posting_date,description,external_reference,source_type,status,currency_code,total_debit_minor,
                     total_credit_minor,created_by,created_at,updated_at,
@@ -1062,8 +1087,11 @@ class PostgresFinanceCoreRepository:
                     entity_code=excluded.entity_code,period_id=excluded.period_id,posting_date=excluded.posting_date,
                     description=excluded.description,external_reference=excluded.external_reference,
                     source_type=excluded.source_type,total_debit_minor=excluded.total_debit_minor,
-                    total_credit_minor=excluded.total_credit_minor,updated_at=excluded.updated_at""",
-                (
+                    total_credit_minor=excluded.total_credit_minor,updated_at=excluded.updated_at"""
+            if provenance:
+                insert_sql = insert_sql.replace("currency_registry_digest)", "currency_registry_digest,preparer_actor_id)", 1)
+                insert_sql = insert_sql.replace("%s)\n                   ON CONFLICT", "%s,%s)\n                   ON CONFLICT", 1)
+            insert_parameters: tuple[object, ...] = (
                     self.tenant_id,
                     entry_id,
                     workspace_id,
@@ -1083,8 +1111,10 @@ class PostgresFinanceCoreRepository:
                     created_at,
                     now,
                     *policy.values(),
-                ),
-            )
+                )
+            if provenance:
+                insert_parameters += (authenticated_actor,)
+            self.connection.execute(insert_sql, insert_parameters)
             for prepared in prepared_lines:
                 line_id = platform_id("GLL", entry_id, prepared["line_number"])
                 self.connection.execute(
@@ -1130,17 +1160,43 @@ class PostgresFinanceCoreRepository:
         validation_reason = _text(reason, "Validation reason", maximum=500)
         validator = _text(actor_label or "local-cli", "Actor label")
         with self._transaction():
+            initial = self._entry_row(identifier)
+            self.connection.execute(
+                "SELECT status FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s FOR SHARE",
+                (self.tenant_id, initial["period_id"]),
+            ).fetchone()
             entry = self._entry_row(identifier, lock=True)
+            if entry["period_id"] != initial["period_id"]:
+                raise PlatformError("Ledger-control period changed concurrently; reload and retry.")
             if entry["status"] != "Draft":
                 raise PlatformError("Only Draft ledger-control entries can be validated.")
             if str(entry["created_by"]) == validator:
                 raise PlatformError("Segregation of duties prevents validating your own ledger-control entry.")
             self._validate_entry_integrity(identifier)
             now = utc_now_text()
+            update_sql = """UPDATE reconforge.finance_entries SET status='Validated',validated_by=%s,validated_at=%s,
+                   validation_reason=%s,updated_at=%s WHERE tenant_id=%s AND id=%s AND status='Draft'"""
+            extra_parameters: tuple[object, ...] = ()
+            if self._posting_provenance_available():
+                from reconforge.domain.finance_posting import VALIDATION_CONTRACT_VERSION, validation_digest
+                from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot
+
+                provenance_entry = posting_entry(self.connection, self.tenant_id, identifier)
+                authenticated = self._authenticated_actor(actor_label)
+                if authenticated is not None and provenance_entry["preparer_actor_id"] is not None:
+                    if authenticated == provenance_entry["preparer_actor_id"]:
+                        raise PlatformError("Segregation of duties prevents validating your own ledger-control entry.")
+                    isolation = self.connection.execute("SHOW transaction_isolation").fetchone()
+                    if (isolation["transaction_isolation"] if isinstance(isolation, Mapping) else isolation[0]) != "read committed":
+                        raise PlatformError("Independent posting review requires READ COMMITTED.")
+                    seal = validation_digest(posting_snapshot(self.connection, self.tenant_id, provenance_entry))
+                    update_sql = """UPDATE reconforge.finance_entries SET status='Validated',validated_by=%s,validated_at=%s,
+                       validation_reason=%s,updated_at=%s,validator_actor_id=%s,validation_digest=%s,validation_contract_version=%s
+                       WHERE tenant_id=%s AND id=%s AND status='Draft'"""
+                    extra_parameters = (authenticated, seal, VALIDATION_CONTRACT_VERSION)
             cursor = self.connection.execute(
-                """UPDATE reconforge.finance_entries SET status='Validated',validated_by=%s,validated_at=%s,
-                   validation_reason=%s,updated_at=%s WHERE tenant_id=%s AND id=%s AND status='Draft'""",
-                (validator, now, validation_reason, now, self.tenant_id, identifier),
+                update_sql,
+                (validator, now, validation_reason, now, *extra_parameters, self.tenant_id, identifier),
             )
             if cursor.rowcount != 1:
                 raise PlatformError("Ledger-control entry changed concurrently; reload and retry.")
@@ -1160,6 +1216,11 @@ class PostgresFinanceCoreRepository:
         with self._transaction():
             entry = self._entry_row(identifier, lock=True)
             self._policies.entry(entry)
+            if self._posting_provenance_available() and self.connection.execute(
+                "SELECT 1 FROM reconforge.finance_posting_effects WHERE tenant_id=%s AND entry_id=%s",
+                (self.tenant_id, identifier),
+            ).fetchone():
+                raise PlatformError("Operationally posted entries are immutable; prepare a linked full reversal.")
             if entry["status"] != "Validated":
                 raise PlatformError("Only Validated ledger-control entries can be voided.")
             now = utc_now_text()
@@ -1741,6 +1802,7 @@ def install_postgres_finance_core_schema(connection: Any) -> None:
 
     connection.execute(POSTGRES_FINANCE_CORE_SCHEMA_SQL)
     from reconforge.infrastructure.finance_policy_schema import POSTGRES_FINANCE_POLICY_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_finance_posting_schema import install_postgres_finance_posting_schema
     from reconforge.infrastructure.postgres_finance_scope import install_postgres_finance_scope_schema
     from reconforge.infrastructure.postgres_master_data_application import (
         install_postgres_master_data_application_schema,
@@ -1749,3 +1811,4 @@ def install_postgres_finance_core_schema(connection: Any) -> None:
     install_postgres_master_data_application_schema(connection)
     connection.execute(POSTGRES_FINANCE_POLICY_SCHEMA_SQL)
     install_postgres_finance_scope_schema(connection)
+    install_postgres_finance_posting_schema(connection)

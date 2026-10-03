@@ -433,6 +433,7 @@ def enforce_server_scoped_permissions(
         "step_up_required",
         "mfa_required",
         "master_data_authority_denied",
+        "human_principal_required",
     } else "permission_denied"
     message = {
         "step_up_required": "Recent human reauthentication is required.",
@@ -442,6 +443,7 @@ def enforce_server_scoped_permissions(
         "organization_scope_denied": "Organization scope is not authorized.",
         "entity_scope_denied": "Legal-entity scope is not authorized.",
         "master_data_authority_denied": "The selected authority cannot mutate shared master data.",
+        "human_principal_required": "Human authentication is required.",
     }.get(code, "Permission denied.")
     raise APIError(status_code=403, code=code, message=message)
 

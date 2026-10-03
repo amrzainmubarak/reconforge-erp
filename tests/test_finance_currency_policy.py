@@ -158,7 +158,11 @@ def test_legacy_upgrade_and_both_backup_versions_retain_unverified_minor_units(
                     operation()
             with pytest.raises(sqlite3.DatabaseError, match="verified currency policy is required"):
                 connection.execute(
-                    "INSERT INTO ledger_entries SELECT 'new-legacy',workspace_id,organization_id,chart_id,legal_entity_id,"
+                    "INSERT INTO ledger_entries(id,workspace_id,organization_id,chart_id,legal_entity_id,period_id,"
+                    "finance_journal_id,entry_number,posting_date,currency_code,description,external_reference,source_type,"
+                    "status,created_by,validated_by,validated_at,validation_reason,voided_by,voided_at,void_reason,"
+                    "created_at,updated_at,currency_precision,currency_rounding_policy,currency_registry_version,"
+                    "currency_registry_digest) SELECT 'new-legacy',workspace_id,organization_id,chart_id,legal_entity_id,"
                     "period_id,finance_journal_id,'NEW-LEGACY',posting_date,currency_code,description,external_reference,"
                     "source_type,'Draft',created_by,validated_by,validated_at,validation_reason,voided_by,voided_at,"
                     "void_reason,created_at,updated_at,NULL,NULL,NULL,NULL FROM ledger_entries WHERE id='legacy'"

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "fixture_id": "minio-source-ci-v1",
+  "scope": "synthetic-disposable-ci-only",
+  "upstream_status": "archived-unmaintained",
+  "license": "AGPL-3.0-or-later",
+  "source_commit": "07c3a429bfed433e49018cb0f78a52145d4bedeb",
+  "source_release": "RELEASE.2025-09-07T16-13-09Z",
+  "source_archive_url": "https://codeload.github.com/minio/minio/tar.gz/07c3a429bfed433e49018cb0f78a52145d4bedeb",
+  "source_archive_sha256": "8819e3e7817e46b7b3798f8f200ead208562e571563c2e040352378031abe9f2",
+  "builder_image": "golang:1.27.1-bookworm@sha256:69a7b9788769bec032d238959b61854e9ae87f57be9029ec04e9885fabf99195",
+  "go_version": "go1.27.1",
+  "runtime_base": "scratch",
+  "runtime_user": "65532:65532",
+  "runtime_identity_kind": "oci-config"
+}

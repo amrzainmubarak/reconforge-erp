@@ -1149,6 +1149,8 @@ include docs/adr/0790-exact-live-metric-localization.md
 include docs/adr/0791-retention-errors-and-live-migration-evidence.md
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_CLEANUP_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_CLEANUP_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-03.json
@@ -1196,3 +1198,6 @@ include docs/execution/RECEIVABLES_UI_2026-10-03.json
 include docs/execution/RECEIVABLES_UI_PERSISTENCE_2026-10-03.json
 include docs/adr/0803-preserve-postgres-repository-scope.md
 include docs/execution/POSTGRES_REPOSITORY_SCOPE_2026-10-03.json
+include docs/adr/0804-owned-postgres-container-cleanup.md
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0094_CLEANUP_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0094_CLEANUP_2026-10-03.json

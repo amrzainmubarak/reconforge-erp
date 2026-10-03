@@ -1,16 +1,18 @@
 import hashlib
 import importlib.util
 import json
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
+from typing import Any
 
 import jsonschema
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_identity_migration_drill.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0094_2026-10-03.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0094_CLEANUP_2026-10-03.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration.py"
 
 
@@ -23,7 +25,7 @@ def _load_runner() -> ModuleType:
     return module
 
 
-@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03"])
+@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03", "0094_2026-10-03", "CLEANUP_2026-10-03", "0094_CLEANUP_2026-10-03"])
 def test_retained_writeback_identity_migration_drill_is_closed_and_digest_bound(report_date: str) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     report = json.loads((ROOT / f"docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_{report_date}.json").read_text(encoding="utf-8"))
@@ -62,6 +64,7 @@ def test_drill_runner_and_retained_report_bind_the_same_runtime_contract() -> No
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-03.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0094_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_CLEANUP_2026-10-03.json",
         "include docs/schemas/postgres_writeback_identity_migration_drill.schema.json",
         "include tests/test_postgres_writeback_identity_migration_drill.py",
     } <= manifest
@@ -114,3 +117,90 @@ def test_drill_schema_refuses_failed_or_undeclared_evidence(mutation: object, ex
     assert errors
     paths = {".".join(str(part) for part in error.path) for error in errors}
     assert expected_path in paths
+
+
+def _cleanup_fixture(monkeypatch: pytest.MonkeyPatch, runner: ModuleType) -> tuple[list[tuple[str, ...]], list[float]]:
+    commands: list[tuple[str, ...]] = []
+    elapsed = [0.0]
+
+    def run(command: tuple[str, ...], *, capture: bool = False) -> str:
+        commands.append(command)
+        return "a" * 64 if capture else ""
+
+    def sleep(seconds: float) -> None:
+        elapsed[0] += seconds
+
+    monkeypatch.setattr(runner, "_run", run)
+    monkeypatch.setattr(runner, "time", SimpleNamespace(monotonic=lambda: elapsed[0], sleep=sleep))
+    return commands, elapsed
+
+
+@pytest.mark.parametrize("delayed_probes", [0, 2])
+def test_owned_cleanup_waits_for_successfully_observed_removal(
+    monkeypatch: pytest.MonkeyPatch, delayed_probes: int,
+) -> None:
+    runner = _load_runner()
+    commands, elapsed = _cleanup_fixture(monkeypatch, runner)
+    probes = []
+
+    def probe(command: tuple[str, ...], **options: Any) -> SimpleNamespace:
+        probes.append(command)
+        assert 0 < options["timeout"] <= runner.CLEANUP_TIMEOUT_SECONDS
+        assert options["shell"] is False
+        assert command == ("docker", "ps", "--all", "--no-trunc", "--quiet", "--filter", "id=" + "a" * 64)
+        return SimpleNamespace(returncode=0, stdout="a" * 64 + "\n" if len(probes) <= delayed_probes else "")
+
+    monkeypatch.setattr(runner.subprocess, "run", probe)
+    runner._cleanup_owned_container("reconforge-owned-fixture", "a" * 64)
+    assert commands == [
+        ("docker", "inspect", "--format", "{{.Id}}", "reconforge-owned-fixture"),
+        ("docker", "stop", "--time", "10", "a" * 64),
+    ]
+    assert len(probes) == delayed_probes + 1
+    assert elapsed[0] < runner.CLEANUP_TIMEOUT_SECONDS
+
+
+def test_owned_cleanup_refuses_persistent_container_at_bounded_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+    runner = _load_runner()
+    _, elapsed = _cleanup_fixture(monkeypatch, runner)
+    monkeypatch.setattr(runner.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="a" * 64))
+    with pytest.raises(runner.DrillError, match="cleanup was not verified"):
+        runner._cleanup_owned_container("reconforge-owned-fixture", "a" * 64)
+    assert elapsed[0] == runner.CLEANUP_TIMEOUT_SECONDS
+
+
+@pytest.mark.parametrize("failure", ["daemon", "timeout", "unexpected_identity"])
+def test_owned_cleanup_never_turns_failed_or_unexpected_probe_into_absence(
+    monkeypatch: pytest.MonkeyPatch, failure: str,
+) -> None:
+    runner = _load_runner()
+    _, elapsed = _cleanup_fixture(monkeypatch, runner)
+
+    def probe(command: tuple[str, ...], **options: Any) -> SimpleNamespace:
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(command, options["timeout"])
+        return SimpleNamespace(returncode=1 if failure == "daemon" else 0, stdout="" if failure == "daemon" else "b" * 64)
+
+    monkeypatch.setattr(runner.subprocess, "run", probe)
+    with pytest.raises(runner.DrillError):
+        runner._cleanup_owned_container("reconforge-owned-fixture", "a" * 64)
+    assert elapsed[0] == 0
+
+
+def test_owned_cleanup_identity_mismatch_never_stops_container(monkeypatch: pytest.MonkeyPatch) -> None:
+    runner = _load_runner()
+    commands, _ = _cleanup_fixture(monkeypatch, runner)
+    with pytest.raises(runner.DrillError, match="unexpected Docker container"):
+        runner._cleanup_owned_container("reconforge-owned-fixture", "b" * 64)
+    assert commands == [("docker", "inspect", "--format", "{{.Id}}", "reconforge-owned-fixture")]
+
+
+@pytest.mark.parametrize("container_id", ["", "a" * 12, "a" * 63 + ";"])
+def test_owned_cleanup_requires_full_identity_before_any_docker_command(
+    monkeypatch: pytest.MonkeyPatch, container_id: str,
+) -> None:
+    runner = _load_runner()
+    commands, _ = _cleanup_fixture(monkeypatch, runner)
+    with pytest.raises(runner.DrillError, match="full Docker container identity"):
+        runner._cleanup_owned_container("reconforge-owned-fixture", container_id)
+    assert commands == []

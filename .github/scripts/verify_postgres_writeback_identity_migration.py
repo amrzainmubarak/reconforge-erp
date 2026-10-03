@@ -44,6 +44,8 @@ EXPECTED_AUDIT_ERROR = "existing connector write-back history violates immutable
 NOW = datetime(2026, 8, 22, 12, 0, tzinfo=UTC)
 MIGRATION_PATH = ROOT / "alembic/versions/0089_postgres_writeback_proposal_identity.py"
 SYNTHETIC_IDEMPOTENCY_KEY = "e826-" * 4
+CLEANUP_TIMEOUT_SECONDS = 5.0
+CLEANUP_POLL_SECONDS = 0.1
 
 
 class DrillError(RuntimeError):
@@ -73,6 +75,41 @@ def _run(
 
 def _dsn(port: str, database: str) -> str:
     return f"postgresql://postgres:{PASSWORD}@127.0.0.1:{port}/{database}"
+
+
+def _cleanup_owned_container(container: str, container_id: str) -> None:
+    if re.fullmatch(r"[0-9a-f]{64}", container_id) is None:
+        raise DrillError("cleanup requires a full Docker container identity")
+    inspected = _run(("docker", "inspect", "--format", "{{.Id}}", container), capture=True)
+    if inspected != container_id:
+        raise DrillError("refusing to stop an unexpected Docker container")
+    _run(("docker", "stop", "--time", "10", container_id))
+    # --rm removal can finish after stop returns. A failed inspect is also
+    # ambiguous when Docker is unavailable, so require a successful empty list.
+    deadline = time.monotonic() + CLEANUP_TIMEOUT_SECONDS
+    while (remaining := deadline - time.monotonic()) > 0:
+        try:
+            probe = subprocess.run(  # nosec B603 - fixed argv and validated full container identity
+                ("docker", "ps", "--all", "--no-trunc", "--quiet", "--filter", f"id={container_id}"),
+                cwd=ROOT,
+                shell=False,
+                check=False,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                timeout=remaining,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise DrillError("disposable PostgreSQL cleanup was not verified before its deadline") from exc
+        if probe.returncode != 0:
+            raise DrillError("disposable PostgreSQL cleanup query failed")
+        remaining_identity = probe.stdout.strip()
+        if not remaining_identity:
+            return
+        if remaining_identity != container_id:
+            raise DrillError("disposable PostgreSQL cleanup query returned an unexpected identity")
+        time.sleep(min(CLEANUP_POLL_SECONDS, max(0.0, deadline - time.monotonic())))
+    raise DrillError("disposable PostgreSQL cleanup was not verified before its deadline")
 
 
 def _wait_for_postgres(dsn: str) -> None:
@@ -402,20 +439,8 @@ def run_observation(
         }
     finally:
         if container_id:
-            inspected = _run(("docker", "inspect", "--format", "{{.Id}}", container), capture=True)
-            if inspected != container_id:
-                raise DrillError("refusing to stop an unexpected Docker container")
-            _run(("docker", "stop", container))
-            check = subprocess.run(  # nosec B603
-                ("docker", "inspect", container),
-                cwd=ROOT,
-                shell=False,
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=30,
-            )
-            cleanup_complete = check.returncode != 0
+            _cleanup_owned_container(container, container_id)
+            cleanup_complete = True
     if observation is None:
         raise DrillError("write-back identity migration drill did not produce evidence")
     if not cleanup_complete:

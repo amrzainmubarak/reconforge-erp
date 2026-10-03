@@ -1,5 +1,32 @@
 # Execution State
 
+## Current publication checkpoint (2026-10-03)
+
+AR API b9153400 exposes verified retained policy and exact integer/text amounts;
+corrected actual SQLite/PostgreSQL HTTP11/0skip proves positive Outbox counts.
+React31220e06 uses recorded precision/BigInt and major-unit inputs. Full web202
+passes; a fresh tracked-fixture HTTPS0099 run passes2 journeys in32.0s with
+unchanged sources and independent named database cleanup. JPY0/KWD3, large
+8999999999999999123minor, unresolved legacy raw units, EN/AR accessibility,
+390px and keyboard evidence remain bounded AR proof. ADR0821 and API/UI reports
+retain earlier196/1failure, deterministic AdminAudit repair and measurement fixes.
+Surface inventory now distinguishes synthetic previews and authenticated AR.
+
+CI a8a6dd36 preserves39 original commands in nine bounded live shards and a
+failing server-boundaries aggregate;109 local contracts and actual Bash dispatch
+pass. ed5fc707 reruns current0099 native history/restore on16.14/17.10 and closes
+the stale0098 proof contract. Original immutable8054 whole result remains FAILED:
+4041pass/361prerequisites/1failure/0error. Updated local78-test proof gate passes.
+Hosted PR1128d76647c is successful; PR1138ba6772d timed out at30minutes; PR1148054
+failed its stale target/empty-digest secret finding. Exact reports remain separate.
+New full-regression and hosted acceptance on the publication head are pending.
+
+Next PROD039 repairs confirmed AR invoice request/source replay identity using
+current authority and verified historical acknowledgements. A separate reviewed
+PROD038 receipt bundle precedes complete purchase/sales/GL cycles. No customer
+pilot,5M-transaction workload, measured labor savings or auditor acceptance exists.
+The goal remains active; no main merge or production deployment has occurred.
+
 Current-bootstrap repaircd67fc67 passes96 PostgreSQL/compatibility tests without
 skips plus global Ruff/Mypy/Bandit. Historical0078 SQL remains unchanged;
 repeat installation preserves catalog constraints and forced RLS. Matching
@@ -48,13 +75,13 @@ prerequisite skips; its independent global quality/build gates pass. Observed
 c56 hosted Python3.11/3.12/security/web/storage/Docker/HA-DR checks succeed, while
 server-boundaries failed two cases now repaired and verified locally under
 ADR0819. The observed PR113 Docker checksum failure is retained under ADR0820;
-its updated official pins pass the full local build. New hosted acceptance on
-PR112 8d76647c and PR113 8ba6772d remains a separate gate.
+its updated official pins pass the full local build. Updated hosted PR1128d76647c succeeds; PR1138ba6772d times out at30minutes.
+FINANCIAL_HOSTED_CHECKPOINTS_112_113_2026-10-03.json retains both exact subjects.
 
 PROD033 backend is committed at662aad3f under ADR0815:216 tests pass without
 skips, actual PostgreSQL0099 dump/restore retains eleven table digests, and
 captured policy remains stable after registry changes. All-null history stays
-explicitly unverified; API and React exposure is still in progress. PROD036 is
+explicitly unverified; API and React exposure now has separate ADR0821 acceptance. PROD036 is
 committed at75bdbe63 under ADR0818:120 passes/three live prerequisites plus an
 overlapping21-test independent review verify explicit SQLite ownership and
 rollback of caught constructor failures. Test EOF normalization is recorded and

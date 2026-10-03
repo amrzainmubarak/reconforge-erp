@@ -1,5 +1,22 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-016 — Observable bounded live CI (2026-10-03)
+
+ADR0822 preserves current verification commands and required gate naming across
+nine independent bounded shards. Every non-success outcome fails aggregation.
+Current0099 native proof retains historical reports; exact empty-digest scanner
+fingerprints do not broaden exclusions. Local contracts do not substitute for
+hosted execution or erase the failed8054/timeout113 subjects.
+
+## D-PROD-015 — Exact public AR money and active view authority (2026-10-03)
+
+ADR0821 exposes only closed retained policy and derived exact integer text.
+Browser major-unit writes use that recorded precision and a safe JSON integer
+ceiling; legacy unknown interpretation stays raw/read-only. Layout view lifetime
+and current security revision govern commands independently of read setup.
+Confirmed invoice request/cache source identity is a separate PROD039 repair;
+historical Draft acknowledgements and authorized workspace recovery must survive.
+
 ## D-PROD-014 — Explicit SQLite inventory owner (2026-10-03)
 
 ADR0818 accepts owner-bound adapters and caller-preserving denial of unbound

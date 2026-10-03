@@ -272,7 +272,7 @@ tasks:
     status: in_progress
     depends_on: [PROD-007, PROD-031]
     exit_evidence: >-
-      Backend662aad3f accepted under ADR0815:216pass/0skip SQLite49/actualPostgreSQL0099, eighteen owned hashes stable, actual populated16.14 restore eleven equal digests/cleanup and nonowner raw denials. JPY0/KWD3, registry changes, legacy unknown data, hidden-child concurrency, malformed master and tampered replay verified in RECEIVABLES_POLICY_2026-10-03.json. API closed policy/text companions and React exact major-unit display remain in progress; never infer historical policy from today's currency code.
+      Backend662aad3f accepted under ADR0815:216pass/0skip SQLite49/actualPostgreSQL0099, eighteen owned hashes stable, actual populated16.14 restore eleven equal digests/cleanup and nonowner raw denials. JPY0/KWD3, registry changes, legacy unknown data, hidden-child concurrency, malformed master and tampered replay verified in RECEIVABLES_POLICY_2026-10-03.json. ADR0821 API b9153400/React31220e06 separately pass corrected11actualHTTP/0skip, full202web and2fresh tracked-fixture HTTPS journeys; exact text/JPY0/KWD3/huge/legacy/EN-AR/390px verified. New whole/hosted publication gate pending; never infer historical policy from today's currency code.
   - id: PROD-034
     priority: P0
     area: payables-recovery
@@ -305,6 +305,22 @@ tasks:
     depends_on: [PROD-002]
     exit_evidence: >-
       Actual bootstrap probe on0098 rejects equal group/period names in different attributed entities because PostgreSQL's automatically generated legacy unique name differs from explicit truncation. Preserve historical0078; use a separately versioned catalog/column-bound migration with current-state checks, same-scope duplicate denial, sibling RLS, populated restore and safe downgrade refusal. Current-bootstrap ADR0819 deliberately leaves this constraint unchanged.
+  - id: PROD-038
+    priority: P1
+    area: generated-inventory-posting
+    title: Post one independently reviewed receipt and unconsumed reversal atomically
+    status: planned
+    depends_on: [PROD-009, PROD-015, PROD-035, PROD-036]
+    exit_evidence: >-
+      Both engines atomically record10units/value12000, retained FIFO origin, generated sealed DrInventory/CrGRNI effect and exact command/audit/outbox evidence. Stable human maker/checker, full unconsumed compensating reversal, no bypass through generic GL or legacy source correction, actual races/faults/native restore and downgrade refusal. No whole trade-cycle claim.
+  - id: PROD-039
+    priority: P0
+    area: receivables-command-recovery
+    title: Bind invoice creation replay to exact request and authoritative source
+    status: planned
+    depends_on: [PROD-033, PROD-035]
+    exit_evidence: >-
+      Actual SQLite/PostgreSQL HTTP rejects changed request and forged cached source/amounts before success; same exact key serializes and produces one business/audit/outbox effect. Preserve historical Draft acknowledgement, current scope/authority, retained policy and authorized workspace-global recovery. Legacy intent ambiguity fails closed with authorized GET fallback; no fabricated old payment terms.
   - id: E-1120
     priority: P0
     area: financial-exactness

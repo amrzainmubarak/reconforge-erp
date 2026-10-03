@@ -1194,3 +1194,5 @@ include docs/execution/MINIO_CI_REMOTE_VERIFICATION_2026-10-03.json
 include docs/adr/0801-receivables-browser-write-journey.md
 include docs/execution/RECEIVABLES_UI_2026-10-03.json
 include docs/execution/RECEIVABLES_UI_PERSISTENCE_2026-10-03.json
+include docs/adr/0803-preserve-postgres-repository-scope.md
+include docs/execution/POSTGRES_REPOSITORY_SCOPE_2026-10-03.json

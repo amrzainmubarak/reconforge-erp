@@ -25,6 +25,10 @@ from reconforge.domain.payables_quantities import (
 )
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import (
+    PostgresRepositoryScopeError,
+    ensure_repository_tenant_scope,
+)
 from reconforge.io.persisted import (
     PersistedJsonError,
     decode_financial_idempotency_response,
@@ -439,8 +443,10 @@ class PostgresPayablesRepository:
     def _transaction(self) -> Iterator[None]:
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, self.tenant_id)
+                ensure_repository_tenant_scope(self.connection, self.tenant_id)
                 yield
+        except PostgresRepositoryScopeError as exc:
+            raise PlatformError(str(exc)) from exc
         except (PlatformError, PostgresPayablesError):
             raise
         except Exception as exc:

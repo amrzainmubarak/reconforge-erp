@@ -8,8 +8,12 @@ from typing import Any
 
 from reconforge.application.inventory_planning import InventoryPlanningSummary
 from reconforge.auth.rbac import same_actor
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import (
+    PostgresRepositoryScopeError,
+    ensure_repository_tenant_scope,
+)
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
 from reconforge.platform.common import PlatformError, platform_id
 from reconforge.platform.inventory_values import (
@@ -162,8 +166,10 @@ class PostgresInventoryPlanningRepository:
     def _transaction(self) -> Iterator[None]:
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, self.tenant_id)
+                ensure_repository_tenant_scope(self.connection, self.tenant_id)
                 yield
+        except PostgresRepositoryScopeError as exc:
+            raise PlatformError(str(exc)) from exc
         except (PlatformError, PostgresInventoryPlanningError):
             raise
         except Exception as exc:

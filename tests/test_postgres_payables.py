@@ -159,6 +159,8 @@ class _Connection:
 
     def execute(self, query: str, parameters: tuple[object, ...] = ()) -> _Result:
         self.queries.append((query, parameters))
+        if "current_setting('app.tenant_id'" in query:
+            return _Result(one=(None, None, None, None, None))
         if "FROM reconforge.domain_workspaces" in query:
             return _Result(one={"id": "workspace-a"} if self.workspace else None)
         if "FROM reconforge.ap_suppliers" in query and "supplier_code=%s" in query:

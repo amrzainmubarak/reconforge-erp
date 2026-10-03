@@ -6,9 +6,11 @@ import sqlite3
 from collections.abc import Sequence
 from typing import Any
 
+from reconforge.audit import AuditLedgerError
 from reconforge.domain.models import utc_now_text
 from reconforge.platform.common import (
     PlatformError,
+    audit,
     commit_audited,
     ensure_platform_schema,
     ensure_workspace,
@@ -23,7 +25,11 @@ EXCEPTION_STATUSES = {"Open", "In Review", "Resolved", "Accepted Risk", "Closed"
 
 
 class SQLiteExceptionQueueRepository:
-    """Service for one local queue across finance workflow sources."""
+    """Service for one local queue across finance workflow sources.
+
+    With ``autocommit=False``, the caller owns the active transaction and must
+    commit or roll back the business writes and their audit evidence together.
+    """
 
     def __init__(self, connection: sqlite3.Connection, *, autocommit: bool = True) -> None:
         ensure_platform_schema(connection)
@@ -102,7 +108,8 @@ class SQLiteExceptionQueueRepository:
                 ),
             )
         except sqlite3.DatabaseError as exc:
-            self.connection.rollback()
+            if self.autocommit:
+                self.connection.rollback()
             raise PlatformError("Unable to save exception queue record.") from exc
         self._finalize(
             actor_label=actor_label,
@@ -249,7 +256,8 @@ class SQLiteExceptionQueueRepository:
                 (updates.get("owner"), updates.get("status"), updates["updated_at"], exception_id),
             )
         except sqlite3.DatabaseError as exc:
-            self.connection.rollback()
+            if self.autocommit:
+                self.connection.rollback()
             raise PlatformError("Unable to update exception queue record.") from exc
 
     def _finalize(
@@ -261,6 +269,8 @@ class SQLiteExceptionQueueRepository:
         action: str,
         metadata: dict[str, Any],
     ) -> None:
+        """Persist evidence, leaving finalization to the caller when autocommit is disabled."""
+
         if self.autocommit:
             commit_audited(
                 self.connection,
@@ -271,14 +281,19 @@ class SQLiteExceptionQueueRepository:
                 metadata=metadata,
             )
         else:
-            commit_audited(
-                self.connection,
-                actor_label=actor_label,
-                object_type=object_type,
-                object_id=object_id,
-                action=action,
-                metadata=metadata,
-            )
+            if not self.connection.in_transaction:
+                raise PlatformError("Caller-owned exception evidence requires an active transaction.")
+            try:
+                audit(
+                    self.connection,
+                    actor_label=actor_label,
+                    object_type=object_type,
+                    object_id=object_id,
+                    action=action,
+                    metadata=metadata,
+                )
+            except (AuditLedgerError, sqlite3.DatabaseError) as exc:
+                raise PlatformError("Unable to append exception audit evidence.") from exc
 
 
 def _allowed_status(status: str) -> str:

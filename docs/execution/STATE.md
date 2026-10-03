@@ -5,7 +5,8 @@
 The goal remains active. Foundation changes are reviewable in
 [Draft PR 109](https://github.com/amrzainmubarak/reconforge-erp/pull/109), stacked
 against the preexisting `codex/p0-postgres-clean-boot` branch. They are not merged
-into main. Current engineering work is on `codex/financial-policy-and-open-workloads`.
+into main. The financial checkpoint is in Draft PR110; the next integrity work
+is on `codex/scoped-finance-and-atomic-jobs`, stacked on that checkpoint.
 
 - AR customer/currency/credit invariants are committed: 89 focused SQLite/live
   PostgreSQL tests passed, followed by four caller-transaction ownership checks.
@@ -43,6 +44,13 @@ into main. Current engineering work is on `codex/financial-policy-and-open-workl
   There is no available company pilot or external-auditor acceptance evidence.
 
 ### Financial regression and browser checkpoint
+
+The next slice repairs a reproduced SQLite AP partial commit: exception writes
+with `autocommit=False` now keep evidence in the caller transaction and leave
+rollback to that owner.54 focused tests pass; after-fix fault injection leaves
+zero partial AP effects. ADR0806 records the exact boundary. Other SQLite
+aggregate transaction composition, Finance hierarchy RLS and durable strict-rule
+forwarding remain active work, separate from the isolated70dac5cf regression.
 
 Isolated source `f48781e695533df577ca671b9f5a1b8f9a18f7aa` completed:3602 passed,
 240 capability skips, four failures,24 warnings in936.79s. Failures identify an

@@ -221,10 +221,10 @@ tasks:
     priority: P0
     area: purchase-atomicity
     title: Keep SQLite AP exception evidence inside the caller transaction
-    status: in_progress
+    status: completed
     depends_on: [PROD-002]
     exit_evidence: >-
-      Injected final AP audit/outbox failures must roll back invoice transition, match row, exception, audit and outbox together. The exception adapter with autocommit=false must neither commit nor roll back the caller; standalone behavior remains supported. This closes the concrete partial-commit bug, not every SQLite adapter composition path.
+      Reproduced late AP audit/outbox failures now leave zero persisted invoice/match/exception/audit/outbox deltas;54 focused tests pass with standalone persistence and caller ownership verified. Exception autocommit=false neither commits nor rolls back the caller. ADR0806 and SQLITE_EXCEPTION_ATOMICITY_2026-10-03.json retain exact evidence; other SQLite aggregate composition remains open.
   - id: PROD-028
     priority: P1
     area: reconciliation-worker

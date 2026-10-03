@@ -2,6 +2,13 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- SQLite AP exception atomicity: [frozen verification](SQLITE_EXCEPTION_ATOMICITY_2026-10-03.json)
+  records six initial failures and two further SQL-error ownership failures,
+  then54 passing tests. An eleven-case before/after replay proves that late AP
+  audit/outbox failure leaves no invoice, match, exception or evidence deltas
+  after the repair. Standalone queue durability and caller commit/rollback are
+  preserved. Generic Finance/AR/Inventory composition gaps remain reproduced.
+
 - Scoped PostgreSQL composition: [source-bound report](POSTGRES_REPOSITORY_SCOPE_2026-10-03.json)
   retains14 focused live passes, no skips; broad actual CI462 passes with one
   native-client prerequisite skip. Before repair, successful nested reads

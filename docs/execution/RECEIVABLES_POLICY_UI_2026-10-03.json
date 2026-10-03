@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "status": "bounded_ar_api_and_react_accepted",
+  "synthetic_only": true,
+  "owned_sources": {
+    "apps/web/src/receivables-money.ts": "7315b4ae0e05e59785dceee921fa4cb9cb7af15a3bdce076cb8e8461f3a589fa",
+    "apps/web/src/receivables-money.test.ts": "6532703e3445a596fdd84c5dcc6dd6893c772face4e7af25a2ad0f359ff7721e",
+    "apps/web/src/receivables-test-fixtures.ts": "628b295131e0d40166f4431bbe975d37a1bc5d3b3715ae90fb57363e91721043",
+    "apps/web/src/receivables-data.ts": "e4334e4d093d0e84fb7bae06d3bf200c95771ff551e8bcaaf0187df8085d66bc",
+    "apps/web/src/receivables-data.test.ts": "c6e1539bf5d7a4a94158dacfcff05f7dd98af2fcd922a5e51599714176f8a647",
+    "apps/web/src/receivables-cash-data.test.ts": "24e40541829d1c2178b9e2fa4a56a41f0826a2d33c26b701b89ac79df9d9423b",
+    "apps/web/src/receivables-i18n.ts": "b207d4bdbf4d1fc2128863dc0a0e8097c90d50159cddbd1e052bd8faec92bd95",
+    "apps/web/src/components/ReceivablesPolicy.tsx": "6ae1aa425bdbbad90d2dfe5852c258d3562af57be58dcba50a7e6bb1f34b9ecd",
+    "apps/web/src/components/ReceivablesWorkspace.tsx": "461da38053882e06ce1d33e40391fa22fa0d657e1bfac76cbc3675f01453934f",
+    "apps/web/src/components/ReceivablesWorkspace.test.tsx": "b23cee61b11283d9dfe28db84fe8dc317d9be43a7f014fb858b2bd3c818b5705",
+    "apps/web/src/components/ReceivablesCash.tsx": "8310ed1a0c2af57e8e4514ad79c12023905b188551e392fd2a0c96e8c831d50b",
+    "apps/web/src/components/ReceivablesCash.test.tsx": "0ab9f34594cfcec2769ba06004f546b5f99307f279188c03ed00c2034122da24",
+    "apps/web/e2e/receivables-live.spec.ts": "22a50cc707da4af2cb0678e85f2ab3b53006a25d0ac880f98308830dab3b1313",
+    "apps/web/e2e/receivables-cash-live.spec.ts": "989e7bdcc3e89cbc89147fec2207b9fe5c3fad968264b45bf46224c41aac8c34",
+    "apps/web/e2e/receivables-policy-live.spec.ts": "1a16409e452732914936a568efed858290e5aca50362c304175771fcb3049024",
+    "apps/web/src/components/AdminAudit.tsx": "6549f4892706bab1b3608ccb345ba8c690426b1339b57c144c64a29e07639853",
+    "apps/web/src/components/AdminAudit.test.tsx": "f108b925c04f7f0070c068b104140cab3234251825b3137ce0fd6c2896c169a2",
+    "tests/receivables_policy_ui_runtime.py": "d9a8e9d127a09ac0bc6c3d7d8a1c011d695d5ea9862a4e4d5fcba1e49cc4b55d"
+  },
+  "focused_web": {
+    "passed": 77,
+    "failed": 0,
+    "seconds": 8.62
+  },
+  "prior_full_web": {
+    "passed": 196,
+    "failed": 1,
+    "unresolved": "unchanged AdminAudit sign-out; isolated diagnostic pass does not repair whole-run failure"
+  },
+  "admin_lifecycle": {
+    "schema_version": 1,
+    "status": "passed",
+    "cause": "Committed login-remounted view accepted click before passive effect created reads.current; command fetcher rejected before logout HTTP dispatch, then passive setup made catch appear current.",
+    "before": {
+      "deterministic_probe": "prod033-admin-passive-red.log",
+      "logout_request_count": 0,
+      "generic_alert": true,
+      "failed_assertions": 1
+    },
+    "repair": "Command authority is mounted view lifetime plus existing auth.isCurrent(revision). Layout cleanup invalidates old view and aborts reads. Read AbortController is lazy and no longer a mutation authorization prerequisite.",
+    "frozen_policy_file_count": 15,
+    "frozen_policy_changes": [],
+    "focused": {
+      "passed": 9,
+      "failed": 0,
+      "vitest_seconds": 3.77
+    },
+    "full_web": {
+      "passed": 202,
+      "failed": 0,
+      "files": 22,
+      "vitest_seconds": 22.87,
+      "elapsed_seconds": 26.2675464,
+      "command": "npm --prefix apps/web run test:run",
+      "exit_code": 0
+    },
+    "typecheck": {
+      "elapsed_seconds": 3.3173447,
+      "exit_code": 0,
+      "command": "npm --prefix apps/web run typecheck"
+    },
+    "build": {
+      "command": "npm --prefix apps/web run build",
+      "exit_code": 0,
+      "elapsed_seconds": 7.6401111
+    },
+    "diff_check_exit": 0,
+    "regressions": [
+      "immediate login-to-signout in normal React mode",
+      "immediate login-to-signout in StrictMode",
+      "old successful logout after tenant/revision change",
+      "old invalid-token logout after tenant/revision change",
+      "old completion after actual unmount/remount with same security revision",
+      "existing invalid_token and csrf_required recovery",
+      "existing step-up expiry recovery"
+    ],
+    "prior_results_retained": {
+      "full_web": "196 passed, 1 failed before repair",
+      "isolated_original_admin": "4 passed diagnostic only"
+    },
+    "boundaries": [
+      "No browserSession, AR policy, API, Python, dependency, or shared documentation changes.",
+      "Fetch mocks are deterministic component regressions; no new actual HTTPS browser proof is claimed for this repair.",
+      "Previous actual JPY/KWD browser evidence remains bound to its recorded source and artifact hashes; build output was rebuilt for this new AdminAudit source."
+    ],
+    "active_owned_processes": []
+  },
+  "publication_browser": {
+    "passed": 2,
+    "seconds": 32.0,
+    "server_exit": 0,
+    "source_changed": [],
+    "database_removed": true,
+    "target": "0099_pg_receivables_policy",
+    "huge_minor_exact": "8999999999999999123",
+    "huge_major_exact": "8999999999999999.123 KWD",
+    "currencies": [
+      {
+        "currency": "JPY",
+        "precision": 0,
+        "draft_minor": "1234",
+        "receipt_minor": "1000",
+        "allocation_minor": "500",
+        "outstanding_minor": "734"
+      },
+      {
+        "currency": "KWD",
+        "precision": 3,
+        "draft_minor": "1234",
+        "receipt_minor": "1000",
+        "allocation_minor": "500",
+        "outstanding_minor": "734"
+      }
+    ],
+    "command_elapsed_seconds": 34.1145343,
+    "database": "reconforge_cash_02b3f2dff844",
+    "database_removed_independent_control_query": true,
+    "tracked_fixture": "tests/receivables_policy_ui_runtime.py",
+    "source_count": 795,
+    "all_captured_source_hashes_unchanged": true,
+    "audit": [
+      {
+        "action": "ar_receipt_allocated",
+        "count": 2
+      },
+      {
+        "action": "ar_receipt_posted",
+        "count": 3
+      }
+    ],
+    "outbox": [
+      {
+        "event_type": "ar_receipt_allocated",
+        "count": 2
+      },
+      {
+        "event_type": "ar_receipt_posted",
+        "count": 3
+      }
+    ]
+  },
+  "earlier_browser": {
+    "passed": 2,
+    "seconds": 35.5,
+    "server_exit": 0,
+    "source_changed": [],
+    "database_removed": true,
+    "target": "0099_pg_receivables_policy",
+    "huge_minor_exact": "8999999999999999123",
+    "huge_major_exact": "8999999999999999.123 KWD",
+    "currencies": [
+      {
+        "currency": "JPY",
+        "precision": 0,
+        "draft_minor": "1234",
+        "receipt_minor": "1000",
+        "allocation_minor": "500",
+        "outstanding_minor": "734"
+      },
+      {
+        "currency": "KWD",
+        "precision": 3,
+        "draft_minor": "1234",
+        "receipt_minor": "1000",
+        "allocation_minor": "500",
+        "outstanding_minor": "734"
+      }
+    ]
+  },
+  "artifact_hashes": {
+    "output\\verification-2026-10-03\\PROD033-UI-ACCEPTANCE.json": "deefe4b007a7e2913f8f21e7fcce4baa20a1f96c15a39e0c5f5dcffa65ed959f",
+    "output\\verification-2026-10-03\\PROD033-ADMIN-LIFECYCLE-ACCEPTANCE.json": "452016918b440b0b566e9d1039c0a2c1e2e43ff0bd130e24086460f34ef34f3c",
+    "output\\verification-2026-10-03\\PROD033-UI-HANDOFF.md": "ec800119a96500c482a499da8be027812187146582e23d250b7c32560dc5d7ef",
+    "output\\verification-2026-10-03\\PROD033-ADMIN-LIFECYCLE-HANDOFF.md": "7180495b6b8c6a866c20f7e96e6ff49c0411fc225d6779e9f276a5d2df0cef4a",
+    "output\\verification-2026-10-03\\prod033-publication-browser.log": "c5abef2d28bfe176366e2a64a258de0c2e9b06bd58bc395edf3b6774ab3de491",
+    "output\\verification-2026-10-03\\prod033-publication-browser-command.json": "a82161664eb923296bd9c77f3471c470b5bfce7566ce2405cf06a681babc5c04",
+    "output\\verification-2026-10-03\\ar-api-ui-independent\\REVIEW.json": "ee55b3edaba5f3d612146ffaa4c334d960edbef24229bc8c23dacab80f90f18f",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\browser.json": "fcfa2b1f3cf96a772233edaaffefb472bac1667cb9e61d7d5350486aed93e4ae",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\fixture.json": "0d7566087229d20215e5b8e5d0b3a1bb59bd9f55ed816af14d2962ebfce6f8a6",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\persistence.json": "26334bfb14bedb29f6dfae7e3292bf9975e51138ed6864397afa2047161fb10f",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\policy-browser.json": "8ae72272644a02954e8c61b5b12b7a426ed4f9c220563e81caf04eff2517dbd9",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\source-before.json": "05eaf538619d2bcf0b1af19a400fd8e9bd55839809b277940d3df559133b38ed",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\cash-ar.png": "8bf48d0a06f4393528878c6a7c572c891793a7eddd94a7a18770868cc81c2dcc",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\cash-en.png": "8dd104d295ad2753d08fd3385b97a2ba512da75cab9e2f1f77b1b3a2e9896d07",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\cash-mobile-ar.png": "a78d056fe6470bbf19b974bc6327846dcce031f01ea8afca48ed2d872a228cfb",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\cash-mobile-en.png": "c47eeb3d4064904bad57bec3ac84a53bdd5317c2aa2db35f5a7ea99abf747e3d",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\cash-panel-mobile-ar.png": "868e2401c4763c41672176f2f90fb42eae820164793bebe36d7d79fee0e71093",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\cash-panel-mobile-en.png": "21f08a91a306b01d704d34041f845d355ee2fc71c5977863c86763df0d063be1",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\policy-huge-mobile-ar.png": "d7e7869b95bcad0dcc21c4689e9438d3059e75281a94f4c05a90b88e5d2ed4eb",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\policy-huge-mobile-en.png": "8dd9d54a02aa0769ad086c094c79121cd8dc50776f2346b0f06637c052ac082f",
+    "output\\verification-2026-10-03\\prod033-publication-browser\\policy-legacy-en.png": "ed1c28077ec265e73c03c2a51ff09acb00943d8ad40afff771d779a7ed40ab22"
+  },
+  "limits": [
+    "AR subledger only; no GL, FX conversion or full trade cycle",
+    "Prior196pass/1fail retained separately; repaired full202pass is a new run",
+    "Original ignored helper preserved; tracked helper differs only root resolution and Ruff imports/formatting, then executed in fresh browser proof",
+    "AdminAudit component behavior tested deterministically; new browser covers cash/policy paths, not immediate logout timing",
+    "API UI and independent test selections overlap, never sum counts",
+    "Invoice replay identity defect remains separate PROD039",
+    "New whole-repository and hosted gates remain pending"
+  ]
+}

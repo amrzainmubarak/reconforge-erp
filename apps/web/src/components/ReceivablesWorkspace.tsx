@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { FilePlus2, RefreshCw } from "lucide-react";
 import { useBrowserSession } from "../browserSession";
 import { AdminApiError, beginBrowserAdminSession, endBrowserAdminSession, stepUpBrowserAdminSession } from "../data";
-import { formatExactDecimal } from "../locale-format";
+import { formatArMoney, hasCapturedPolicy, majorToMinor, type ArMoneyRecord, type ArMinor } from "../receivables-money";
+import { ReceivablesPolicy } from "./ReceivablesPolicy";
 import { arTranslate, type ArMessage } from "../receivables-i18n";
 import { arFetch, draftRequest, invoiceAmounts, loadArIdentity, loadArPage, parseCustomer, parseInvoice, transitionRequest, type ArCustomer, type ArInvoice, type ArPage, type ArRequest, type ReceivablesIdentity } from "../receivables-data";
 import type { Locale } from "../types";
@@ -15,7 +16,7 @@ function statusMessage(status: string, locale: Locale): string {
 
 function errorKey(error: unknown): ArMessage {
   if (error instanceof AdminApiError) return error.status === 403 ? "denied" : error.status >= 500 ? "unavailable" : "failed";
-  if (error instanceof Error && ["ar_amount_invalid", "ar_quantity_invalid", "ar_contract_invalid"].includes(error.message)) return error.message as ArMessage;
+  if (error instanceof Error && ["ar_amount_invalid", "ar_major_amount_invalid", "ar_monetary_policy_unverified", "ar_monetary_policy_mismatch", "ar_quantity_invalid", "ar_contract_invalid"].includes(error.message)) return error.message as ArMessage;
   return "unavailable";
 }
 
@@ -133,9 +134,16 @@ function ReceivablesBody({ workspace, identity, locale, onAccessRefresh }: { wor
     return () => controller.abort();
   }, [workspace, customerOffset, invoiceOffset, attempt, auth.session, auth.revision, auth.isCurrent, auth.recover]);
   const customer = customers?.records.find((item) => item.id === customerId);
+  const inputPolicy = useRef("");
+  useEffect(() => {
+    if (!customer || pending) return;
+    const key = JSON.stringify([customer.id, customer.currency_code, customer.monetary_policy ?? null]);
+    if (inputPolicy.current && inputPolicy.current !== key) { setPrice(""); setTax("0"); }
+    inputPolicy.current = key;
+  }, [customer, pending]);
   let amounts: ReturnType<typeof invoiceAmounts> | null = null;
-  try { if (price) amounts = invoiceAmounts(quantity, price, tax); } catch { /* Validation is announced on submission. */ }
-  const money = (value: number | bigint, currency: string) => `${formatExactDecimal(String(value), locale)} ${currency} · ${t("minor")}`;
+  try { if (price && customer) amounts = invoiceAmounts(quantity, String(majorToMinor(price, customer)), String(majorToMinor(tax, customer))); } catch { /* Validation is announced on submission. */ }
+  const money = (value: ArMinor | bigint, record: ArMoneyRecord) => formatArMoney(value, record, locale, t("minor"));
 
   async function send(request: ArRequest) {
     if (!auth.session || mutationLock.current) return;
@@ -170,26 +178,26 @@ function ReceivablesBody({ workspace, identity, locale, onAccessRefresh }: { wor
     {!customers || !invoices ? <p role="status">{t("loading")}</p> : null}
     {manage ? <details className="panel ar-draft" open={draftOpen} onToggle={(event) => setDraftOpen(event.currentTarget.open)}><summary>{t("newInvoice")}</summary><p>{t("customerNote")}</p><form onSubmit={save}>
       <fieldset aria-label={t("draft")} disabled={busy || cashLocked || Boolean(pending) || Boolean(draftSaved)}>
-        <label className="ar-wide">{t("customer")}<select required value={customerId} onChange={(event) => setCustomerId(event.target.value)}><option value="">{t("chooseCustomer")}</option>{customers?.records.filter((item) => item.status === "Active").map((item) => <option key={item.id} value={item.id}>{item.customer_code} · {item.name} · {item.currency_code}</option>)}</select></label>
+        <label className="ar-wide">{t("customer")}<select required value={customerId} onChange={(event) => { setCustomerId(event.target.value); setPrice(""); setTax("0"); }}><option value="">{t("chooseCustomer")}</option>{customers?.records.filter((item) => item.status === "Active").map((item) => <option key={item.id} value={item.id}>{item.customer_code} · {item.name} · {item.currency_code}</option>)}</select></label>
         {customers ? <Pagination offset={customerOffset} total={customers.total} change={(value) => { setCustomerId(""); setCustomerOffset(value); }} t={t} /> : null}
         <label>{t("number")}<input required maxLength={100} value={number} onChange={(event) => setNumber(event.target.value)} /></label>
         <label>{t("invoiceDate")}<input required type="date" value={invoiceDate} onChange={(event) => setInvoiceDate(event.target.value)} /></label>
         <label>{t("dueDate")}<input required type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} /></label>
         <label className="ar-wide">{t("description")}<input required maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
         <label>{t("quantity")}<input required inputMode="decimal" dir="ltr" maxLength={64} aria-invalid={error === "ar_quantity_invalid"} value={quantity} onChange={(event) => setQuantity(event.target.value)} aria-describedby="ar-minor-note" /></label>
-        <label>{t("price")}<input required inputMode="numeric" dir="ltr" maxLength={64} aria-invalid={error === "ar_amount_invalid"} value={price} onChange={(event) => setPrice(event.target.value)} aria-describedby="ar-minor-note" /></label>
-        <label>{t("tax")}<input required inputMode="numeric" dir="ltr" maxLength={64} aria-invalid={error === "ar_amount_invalid"} value={tax} onChange={(event) => setTax(event.target.value)} aria-describedby="ar-minor-note" /></label>
+        <label>{t("price")} · {customer?.currency_code ?? "—"}<input required disabled={!hasCapturedPolicy(customer)} inputMode="decimal" dir="ltr" maxLength={64} aria-invalid={error === "ar_amount_invalid" || error === "ar_major_amount_invalid"} value={price} onChange={(event) => setPrice(event.target.value)} aria-describedby="ar-minor-note" /></label>
+        <label>{t("tax")} · {customer?.currency_code ?? "—"}<input required disabled={!hasCapturedPolicy(customer)} inputMode="decimal" dir="ltr" maxLength={64} aria-invalid={error === "ar_amount_invalid" || error === "ar_major_amount_invalid"} value={tax} onChange={(event) => setTax(event.target.value)} aria-describedby="ar-minor-note" /></label>
       </fieldset>
-      <p id="ar-minor-note" className="ar-hint">{t("minorNote")}</p>
-      {amounts && customer ? <div className="ar-amounts"><span>{t("subtotal")}: <bdi>{money(amounts.subtotal, customer.currency_code)}</bdi></span><strong>{t("total")}: <bdi>{money(amounts.total, customer.currency_code)}</bdi></strong></div> : null}
-      {draftSaved ? <button className="secondary-button" type="button" disabled={cashLocked} onClick={clearDraft}>{t("newDraft")}</button> : <button className="primary-button" disabled={busy || cashLocked || Boolean(pending) || !customers}>{t("save")}</button>}
+      {customer ? <ReceivablesPolicy record={customer} locale={locale} id="ar-minor-note" /> : <p id="ar-minor-note" className="ar-hint">{t("chooseCustomer")}</p>}
+      {amounts && customer ? <div className="ar-amounts"><span>{t("subtotal")}: <bdi>{money(amounts.subtotal, customer)}</bdi></span><strong>{t("total")}: <bdi>{money(amounts.total, customer)}</bdi></strong></div> : null}
+      {draftSaved ? <button className="secondary-button" type="button" disabled={cashLocked} onClick={clearDraft}>{t("newDraft")}</button> : <button className="primary-button" disabled={busy || cashLocked || Boolean(pending) || !customers || !hasCapturedPolicy(customer)}>{t("save")}</button>}
     </form></details> : <p>{t("readOnly")}</p>}
-    <section className="panel ar-invoices" aria-label={t("invoices")}><h2>{t("invoices")}</h2>{invoices?.records.length === 0 ? <p>{t("empty")}</p> : null}<p id="ar-table-instructions" className="ar-hint">{t("tableNavigation")}</p><div className="table-scroll" role="region" aria-label={t("invoiceTable")} aria-describedby="ar-table-instructions" tabIndex={0}><table className="live-table"><thead><tr><th>{t("number")}</th><th>{t("status")}</th><th>{t("total")}</th><th>{t("due")}</th><th>{t("view")}</th></tr></thead><tbody>{invoices?.records.map((invoice) => <tr key={invoice.id}><th scope="row"><bdi>{invoice.invoice_number}</bdi></th><td>{statusMessage(invoice.status, locale)}</td><td><bdi>{money(invoice.total_minor, invoice.currency_code)}</bdi></td><td><bdi>{invoice.due_date}</bdi></td><td><button type="button" className="secondary-button" disabled={busy || Boolean(pending) || cashLocked} onClick={() => { setSelected(invoice); setDraftOpen(false); setConfirming(false); setNotice(false); }}>{t("view")} <bdi>{invoice.invoice_number}</bdi></button></td></tr>)}</tbody></table></div>{invoices ? <Pagination offset={invoiceOffset} total={invoices.total} change={setInvoiceOffset} t={t} /> : null}</section>
-    {selected ? <section className="panel ar-review" aria-label={t("review")}><h2>{t("review")} · <bdi>{selected.invoice_number}</bdi></h2><dl className="ar-record"><div><dt>{t("identifier")}</dt><dd><bdi>{selected.id}</bdi></dd></div><div><dt>{t("status")}</dt><dd>{statusMessage(selected.status, locale)}</dd></div><div><dt>{t("version")}</dt><dd>{selected.row_version}</dd></div><div><dt>{t("creator")}</dt><dd><bdi>{selected.created_by}</bdi></dd></div><div><dt>{t("approver")}</dt><dd><bdi>{selected.approved_by || "—"}</bdi></dd></div><div><dt>{t("total")}</dt><dd><bdi>{money(selected.total_minor, selected.currency_code)}</bdi></dd></div><div><dt>{t("outstanding")}</dt><dd><bdi>{money(selected.outstanding_minor, selected.currency_code)}</bdi></dd></div></dl>
-      <ul className="ar-lines">{selected.lines.map((line, index) => <li key={index}><span>{line.description}</span><bdi>{line.quantity} × {money(line.unit_price_minor, selected.currency_code)}</bdi><span>{t("subtotal")}: <bdi>{money(line.line_total_minor, selected.currency_code)}</bdi> · {t("tax")}: <bdi>{money(line.tax_minor, selected.currency_code)}</bdi></span></li>)}</ul>
-      {manage && selected.status === "Draft" ? <button className="primary-button" type="button" disabled={busy || Boolean(pending) || !invoices} onClick={() => void send(transitionRequest(selected, "submit"))}>{t("submit")}</button> : null}
+    <section className="panel ar-invoices" aria-label={t("invoices")}><h2>{t("invoices")}</h2>{invoices?.records.length === 0 ? <p>{t("empty")}</p> : null}<p id="ar-table-instructions" className="ar-hint">{t("tableNavigation")}</p><div className="table-scroll" role="region" aria-label={t("invoiceTable")} aria-describedby="ar-table-instructions" tabIndex={0}><table className="live-table"><thead><tr><th>{t("number")}</th><th>{t("status")}</th><th>{t("total")}</th><th>{t("due")}</th><th>{t("view")}</th></tr></thead><tbody>{invoices?.records.map((invoice) => <tr key={invoice.id}><th scope="row"><bdi>{invoice.invoice_number}</bdi></th><td>{statusMessage(invoice.status, locale)}</td><td><bdi>{money(invoice.total_minor, invoice)}</bdi></td><td><bdi>{invoice.due_date}</bdi></td><td><button type="button" className="secondary-button" disabled={busy || Boolean(pending) || cashLocked} onClick={() => { setSelected(invoice); setDraftOpen(false); setConfirming(false); setNotice(false); }}>{t("view")} <bdi>{invoice.invoice_number}</bdi></button></td></tr>)}</tbody></table></div>{invoices ? <Pagination offset={invoiceOffset} total={invoices.total} change={setInvoiceOffset} t={t} /> : null}</section>
+    {selected ? <section className="panel ar-review" aria-label={t("review")}><h2>{t("review")} · <bdi>{selected.invoice_number}</bdi></h2><dl className="ar-record"><div><dt>{t("identifier")}</dt><dd><bdi>{selected.id}</bdi></dd></div><div><dt>{t("status")}</dt><dd>{statusMessage(selected.status, locale)}</dd></div><div><dt>{t("version")}</dt><dd>{selected.row_version}</dd></div><div><dt>{t("creator")}</dt><dd><bdi>{selected.created_by}</bdi></dd></div><div><dt>{t("approver")}</dt><dd><bdi>{selected.approved_by || "—"}</bdi></dd></div><div><dt>{t("total")}</dt><dd><bdi>{money(selected.total_minor, selected)}</bdi></dd></div><div><dt>{t("outstanding")}</dt><dd><bdi>{money(selected.outstanding_minor, selected)}</bdi></dd></div></dl>
+      <ReceivablesPolicy record={selected} locale={locale} /><ul className="ar-lines">{selected.lines.map((line, index) => <li key={index}><span>{line.description}</span><bdi>{line.quantity} × {money(line.unit_price_minor, selected)}</bdi><span>{t("subtotal")}: <bdi>{money(line.line_total_minor, selected)}</bdi> · {t("tax")}: <bdi>{money(line.tax_minor, selected)}</bdi></span></li>)}</ul>
+      {manage && hasCapturedPolicy(selected) && selected.status === "Draft" ? <button className="primary-button" type="button" disabled={busy || Boolean(pending) || !invoices} onClick={() => void send(transitionRequest(selected, "submit"))}>{t("submit")}</button> : null}
       {selected.status === "Submitted" && ownInvoice ? <p>{t("sameActor")}</p> : null}
-      {approve && selected.status === "Submitted" && !ownInvoice ? confirming ? <div className="ar-confirm"><p>{t("approvalNote")}</p><strong><bdi>{selected.invoice_number} · {money(selected.total_minor, selected.currency_code)}</bdi></strong><div className="ar-toolbar"><button className="primary-button" type="button" disabled={busy || Boolean(pending) || !invoices} onClick={() => void send(transitionRequest(selected, "approve"))}>{t("confirm")}</button><button className="secondary-button" type="button" disabled={busy} onClick={() => setConfirming(false)}>{t("cancel")}</button></div></div> : <button className="primary-button" type="button" disabled={busy || Boolean(pending) || !invoices} onClick={() => setConfirming(true)}>{t("approve")}</button> : null}
+      {approve && hasCapturedPolicy(selected) && selected.status === "Submitted" && !ownInvoice ? confirming ? <div className="ar-confirm"><p>{t("approvalNote")}</p><strong><bdi>{selected.invoice_number} · {money(selected.total_minor, selected)}</bdi></strong><div className="ar-toolbar"><button className="primary-button" type="button" disabled={busy || Boolean(pending) || !invoices} onClick={() => void send(transitionRequest(selected, "approve"))}>{t("confirm")}</button><button className="secondary-button" type="button" disabled={busy} onClick={() => setConfirming(false)}>{t("cancel")}</button></div></div> : <button className="primary-button" type="button" disabled={busy || Boolean(pending) || !invoices} onClick={() => setConfirming(true)}>{t("approve")}</button> : null}
     </section> : null}
     {selected && ["Approved", "PartiallyPaid", "Paid"].includes(selected.status) ? <ReceivablesCash key={selected.id} invoiceId={selected.id} workspace={workspace} identity={identity} locale={locale} onLockChange={setCashLocked} onAccessRefresh={onAccessRefresh} onChanged={() => setAttempt((value) => value + 1)} /> : null}
   </>;

@@ -1,15 +1,16 @@
+import { policyFor } from "./receivables-test-fixtures";
 import { arFetch, draftRequest, invoiceAmounts, minorInteger, parseInvoice, transitionRequest } from "./receivables-data";
 import { AdminApiError } from "./data";
 
-export const arCustomer = { id: "cus-1", customer_code: "CUS-1", name: "Synthetic customer", currency_code: "USD", status: "Active", credit_hold: false };
-export const arInvoice = { id: "inv-1", customer_id: "cus-1", invoice_number: "INV-1", invoice_date: "2026-10-03", due_date: "2026-10-31", currency_code: "USD", status: "Draft", created_by: "maker-id", approved_by: null, row_version: 1, subtotal_minor: 1251, tax_minor: 125, total_minor: 1376, outstanding_minor: 1376, lines: [{ description: "Synthetic service", quantity: "1.25", unit_price_minor: 1001, line_total_minor: 1251, tax_minor: 125 }] };
+export const arCustomer = { id: "cus-1", customer_code: "CUS-1", name: "Synthetic customer", currency_code: "USD", monetary_policy: policyFor(), status: "Active", credit_hold: false };
+export const arInvoice = { id: "inv-1", customer_id: "cus-1", invoice_number: "INV-1", invoice_date: "2026-10-03", due_date: "2026-10-31", currency_code: "USD", monetary_policy: policyFor(), status: "Draft", created_by: "maker-id", approved_by: null, row_version: 1, subtotal_minor: 1251, tax_minor: 125, total_minor: 1376, outstanding_minor: 1376, lines: [{ description: "Synthetic service", quantity: "1.25", unit_price_minor: 1001, line_total_minor: 1251, tax_minor: 125 }] };
 const session = { tenantId: "tenant-a", csrfToken: "memory-only", expiresAt: "2030-01-01T00:00:00Z" };
 
 test("exact HALF_UP arithmetic and JSON serialization use integer minor units", () => {
   expect(invoiceAmounts("1.25", "1001", "125")).toEqual({ subtotal: 1251n, tax: 125n, total: 1376n });
   expect(invoiceAmounts("0.5", "1", "0").subtotal).toBe(1n);
   expect(invoiceAmounts("0.49999999999", "1", "0").subtotal).toBe(0n);
-  const request = draftRequest({ number: "INV-1", customer: arCustomer, invoiceDate: "2026-10-03", dueDate: "2026-10-31", description: "Synthetic service", quantity: "1.25", price: "1001", tax: "125" }, "workspace-a", "fixed-key");
+  const request = draftRequest({ number: "INV-1", customer: arCustomer, invoiceDate: "2026-10-03", dueDate: "2026-10-31", description: "Synthetic service", quantity: "1.25", price: "10.01", tax: "1.25" }, "workspace-a", "fixed-key");
   expect(request.body).toMatchObject({ tax_minor: 125, idempotency_key: "fixed-key", lines: [{ quantity: "1.25", unit_price_minor: 1001, line_total_minor: 1251, tax_minor: 125 }] });
   expect(JSON.stringify(request.body)).not.toContain("e+");
 });

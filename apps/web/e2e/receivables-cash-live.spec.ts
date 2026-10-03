@@ -38,7 +38,7 @@ test("real HTTPS cash posting, exact retry and allocation readback settle the ap
   await page.getByRole("combobox", { name: "Authorized workspace", exact: true }).selectOption("cash-work");
   await page.getByRole("button", { name: "Review INV-CASH-A", exact: true }).click();
   await cash.getByLabel("Receipt number", { exact: true }).fill("CASH-UI-001"); await cash.getByLabel("Receipt date", { exact: true }).fill("2026-10-03");
-  await cash.getByLabel("Received amount · minor units", { exact: true }).fill("1376"); await cash.getByLabel("Apply now to this invoice · minor units", { exact: true }).fill("400");
+  await cash.getByLabel("Received amount · USD", { exact: true }).fill("13.76"); await cash.getByLabel("Apply now to this invoice · USD", { exact: true }).fill("4.00");
   const writes: string[] = [];
   let postedId = "";
   await page.route("**/api/v1/receivables/receipts", async (route) => {
@@ -66,23 +66,23 @@ test("real HTTPS cash posting, exact retry and allocation readback settle the ap
   await cash.getByRole("button", { name: "Retry the exact request", exact: true }).click();
   const retry = await retried; expect(retry.status()).toBe(200); expect(retry.request().postData()).toBe(writes[0]); evidence.exact_retry_same_payload = true;
   await expect(cash).toContainText("server confirmed the cash action");
-  const evidenceDetails = cash.locator("details.ar-evidence > summary");
+  const evidenceDetails = cash.getByText("Evidence details", { exact: true });
   await expect(cash.getByText(postedId, { exact: true })).not.toBeVisible();
   await evidenceDetails.focus(); await page.keyboard.press("Enter");
   await expect(cash.getByText(postedId, { exact: true })).toBeVisible();
   await page.keyboard.press("Space");
   await expect(cash.getByText(postedId, { exact: true })).not.toBeVisible();
-  await cash.getByLabel("Additional allocation · minor units", { exact: true }).fill("200");
+  await cash.getByLabel("Additional allocation · USD", { exact: true }).fill("2.00");
   await page.route(`**/api/v1/receivables/receipts/${postedId}/allocate`, async (route) => {
     const result = await route.fetch(); expect(result.status()).toBe(200); evidence.lost_allocation_response = await result.json(); await route.abort("failed");
   });
   await cash.getByRole("button", { name: "Review allocation", exact: true }).click(); await cash.getByRole("button", { name: "Confirm financial action", exact: true }).click();
   await cash.getByRole("button", { name: "Refresh authoritative receipt and invoice", exact: true }).click();
   await expect(cash).toContainText("They do not identify whether the earlier request succeeded");
-  await expect(cash.getByLabel("Additional allocation · minor units", { exact: true })).toBeDisabled();
+  await expect(cash.getByLabel("Additional allocation · USD", { exact: true })).toBeDisabled();
   await page.unroute(`**/api/v1/receivables/receipts/${postedId}/allocate`);
   await cash.getByRole("button", { name: "Use these current balances", exact: true }).click();
-  await cash.getByLabel("Additional allocation · minor units", { exact: true }).fill("776");
+  await cash.getByLabel("Additional allocation · USD", { exact: true }).fill("7.76");
   await cash.getByRole("button", { name: "Review allocation", exact: true }).click(); await cash.getByRole("button", { name: "Confirm financial action", exact: true }).click();
   await expect(cash).toContainText("This invoice has no approved open balance");
   const states = await page.evaluate(async ({ id, proof }) => {
@@ -109,7 +109,7 @@ test("real HTTPS cash posting, exact retry and allocation readback settle the ap
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expect(newInvoice.locator("..")).not.toHaveAttribute("open", "");
     const localizedCash = page.locator(".ar-cash");
-    await localizedCash.locator("details.ar-evidence > summary").focus(); await page.keyboard.press("Enter");
+    await localizedCash.getByText(locale === "ar" ? "تفاصيل الأدلة" : "Evidence details", { exact: true }).focus(); await page.keyboard.press("Enter");
     await expect(localizedCash.getByText(postedId, { exact: true })).toBeVisible();
     await page.keyboard.press("Space");
     await expect(localizedCash.getByText(postedId, { exact: true })).not.toBeVisible();

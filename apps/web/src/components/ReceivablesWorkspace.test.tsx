@@ -1,10 +1,11 @@
+import { policyFor } from "../receivables-test-fixtures";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { BrowserSessionProvider, useBrowserSession } from "../browserSession";
 import { ReceivablesWorkspace } from "./ReceivablesWorkspace";
 import type { Locale } from "../types";
 
-const customer = { id: "cus-1", customer_code: "CUS-1", name: "Synthetic customer", currency_code: "USD", status: "Active", credit_hold: false };
-const invoice = { id: "inv-1", customer_id: "cus-1", invoice_number: "INV-1", invoice_date: "2026-10-03", due_date: "2026-10-31", currency_code: "USD", status: "Draft", created_by: "maker-id", approved_by: null, row_version: 1, subtotal_minor: 1251, tax_minor: 125, total_minor: 1376, outstanding_minor: 1376, lines: [{ description: "Synthetic service", quantity: "1.25", unit_price_minor: 1001, line_total_minor: 1251, tax_minor: 125 }] };
+const customer = { id: "cus-1", customer_code: "CUS-1", name: "Synthetic customer", currency_code: "USD", monetary_policy: policyFor(), status: "Active", credit_hold: false };
+const invoice = { id: "inv-1", customer_id: "cus-1", invoice_number: "INV-1", invoice_date: "2026-10-03", due_date: "2026-10-31", currency_code: "USD", monetary_policy: policyFor(), status: "Draft", created_by: "maker-id", approved_by: null, row_version: 1, subtotal_minor: 1251, tax_minor: 125, total_minor: 1376, outstanding_minor: 1376, lines: [{ description: "Synthetic service", quantity: "1.25", unit_price_minor: 1001, line_total_minor: 1251, tax_minor: 125 }] };
 const identity = { id: "maker-id", username: "maker", permissions: ["receivables.manage", "receivables.approve"], principal_type: "user", authorized_scopes: { workspaces: ["workspace-a", "workspace-b"] } };
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 function SessionControls() {
@@ -27,7 +28,7 @@ async function enterWorkspace() {
   await screen.findByRole("option", { name: /CUS-1/ });
 }
 function fillDraft() {
-  for (const [label, value] of Object.entries({ Customer: "cus-1", "Invoice number": "INV-1", "Invoice date": "2026-10-03", "Due date": "2026-10-31", "Line description": "Synthetic service", Quantity: "1.25", "Unit price · minor units": "1001", "Line tax · minor units": "125" })) fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  for (const [label, value] of Object.entries({ Customer: "cus-1", "Invoice number": "INV-1", "Invoice date": "2026-10-03", "Due date": "2026-10-31", "Line description": "Synthetic service", Quantity: "1.25", "Unit price · USD": "10.01", "Line tax · USD": "1.25" })) fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
 
 test("real draft request, submitted version and creator separation are presented from responses", async () => {
@@ -38,7 +39,7 @@ test("real draft request, submitted version and creator separation are presented
     return routes(path);
   });
   setup(fetcher); await enterWorkspace(); fillDraft();
-  expect(screen.getByText(/1,376 USD/)).toBeVisible();
+  expect(screen.getByText(/13.76 USD/)).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
   await screen.findByRole("button", { name: "Submit for review" });
   const create = fetcher.mock.calls.find(([, options]) => options?.method === "POST");
@@ -131,7 +132,7 @@ test("an unknown cash request survives parent refresh and invoice creation contr
   fireEvent.click(await screen.findByRole("button", { name: "Review INV-1" }));
   const cash = within(screen.getByRole("region", { name: "Cash receipts and allocations" }));
   await cash.findByLabelText("Receipt number");
-  for (const [label, value] of Object.entries({ "Receipt number": "RCPT-UNKNOWN", "Receipt date": "2026-10-03", "Received amount · minor units": "1000", "Apply now to this invoice · minor units": "400" })) fireEvent.change(cash.getByLabelText(label), { target: { value } });
+  for (const [label, value] of Object.entries({ "Receipt number": "RCPT-UNKNOWN", "Receipt date": "2026-10-03", "Received amount · USD": "10.00", "Apply now to this invoice · USD": "4.00" })) fireEvent.change(cash.getByLabelText(label), { target: { value } });
   fireEvent.click(cash.getByRole("button", { name: "Review cash action" })); fireEvent.click(cash.getByRole("button", { name: "Confirm financial action" }));
   await cash.findByRole("button", { name: "Retry the exact request" });
   expect(screen.getByRole("button", { name: "Refresh records" })).toBeDisabled();
@@ -188,4 +189,45 @@ test("Arabic view has RTL, labeled controls and no fabricated records", async ()
   expect(table).toHaveAttribute("aria-describedby", "ar-table-instructions");
   table.focus();
   expect(table).toHaveFocus();
+});
+
+test.each([["en", "JPY", 0, "1234", "1,234 JPY"], ["ar", "KWD", 3, "١٫٢٣٤", "١٫٢٣٤ KWD"]] as const)("%s invoice input uses retained %s precision and exact transport", async (locale, currency, precision, entered, displayed) => {
+  const scopedCustomer = { ...customer, currency_code: currency, monetary_policy: policyFor(currency, precision) };
+  const fetcher = vi.fn(async (path: RequestInfo | URL, options?: RequestInit) => {
+    if (options?.method === "POST") return response({ error: { code: "synthetic_validation" } }, 400);
+    if (String(path).includes("/customers?")) return response({ customers: [scopedCustomer], pagination: { total: 1 } });
+    return routes(path);
+  });
+  setup(fetcher, locale); fireEvent.click(screen.getByText("Session A"));
+  fireEvent.change(await screen.findByLabelText(locale === "ar" ? "مساحة العمل المصرح بها" : "Authorized workspace"), { target: { value: "workspace-a" } });
+  await screen.findByRole("option", { name: /CUS-1/ });
+  fireEvent.change(screen.getByLabelText(locale === "ar" ? "العميل" : "Customer"), { target: { value: "cus-1" } });
+  const price = screen.getByLabelText(`${locale === "ar" ? "سعر الوحدة" : "Unit price"} · ${currency}`);
+  expect(price).toHaveAttribute("inputmode", "decimal"); expect(price).toHaveAttribute("aria-describedby", "ar-minor-note");
+  price.focus(); expect(price).toHaveFocus(); fireEvent.change(price, { target: { value: entered } });
+  expect(screen.getAllByText(displayed).length).toBeGreaterThan(0);
+  fireEvent.submit(price.closest("form")!);
+  await waitFor(() => expect(fetcher.mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(1));
+  const body = JSON.parse(String(fetcher.mock.calls.find(([, options]) => options?.method === "POST")?.[1]?.body));
+  expect(body.lines[0]).toMatchObject({ unit_price_minor: 1234, line_total_minor: 1234, tax_minor: 0 });
+  expect(body).not.toHaveProperty("monetary_policy");
+});
+
+test("older API monetary metadata absence keeps historical raw reads but disables new effects", async () => {
+  const oldCustomer = { ...customer, monetary_policy: undefined }, oldInvoice = { ...invoice, monetary_policy: undefined };
+  const fetcher = vi.fn(async (path: RequestInfo | URL, options?: RequestInit) => {
+    if (options?.method === "POST") throw new Error("Unexpected mutation");
+    if (String(path).includes("/customers?")) return response({ customers: [oldCustomer], pagination: { total: 1 } });
+    if (String(path).includes("/invoices?")) return response({ invoices: [oldInvoice], pagination: { total: 1 } });
+    return routes(path);
+  });
+  setup(fetcher); await enterWorkspace();
+  fireEvent.change(screen.getByLabelText("Customer"), { target: { value: "cus-1" } });
+  expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled();
+  expect(screen.getByLabelText("Unit price · USD")).toBeDisabled();
+  expect(screen.getByText(/Historical currency precision is unverified/)).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Review INV-1" }));
+  expect(screen.getAllByText("1,376 USD · minor units").length).toBeGreaterThan(0);
+  expect(screen.queryByRole("button", { name: "Submit for review" })).not.toBeInTheDocument();
+  expect(fetcher.mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(0);
 });

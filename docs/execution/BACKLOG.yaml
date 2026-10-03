@@ -77,7 +77,7 @@ tasks:
     priority: P1
     area: finance-core
     title: Implement immutable operational posting kernel
-    status: planned
+    status: in_progress
     depends_on: [PROD-002, PROD-007, PROD-015, PROD-024, PROD-025]
     exit_evidence: >-
       Balanced exact journal lines, immutable posting/reversals, locked periods, unique source effect, TB/drill-down, migration/restore and concurrency proof.
@@ -184,7 +184,7 @@ tasks:
     status: in_progress
     depends_on: [PROD-001]
     exit_evidence: >-
-      Pinned source/license inventory and actual 45-row AMLSim offline adapter/oracle pass: 42 matched pairs, three unmatched each side after four seeded faults. Source/rule/decision digests and permutation verified. Larger datasets, PostgreSQL workers and measured scale progression remain pending. No customer ROI inference.
+      Pinned source/license inventory and actual45-row AMLSim oracle/worker pass through PostgreSQL0097:42matched pairs and three unmatched eachside after four seeded faults. Source/rule/decision digests, permutation, exact replay and expired-claim recovery verified. Larger datasets and measured scale progression remain pending. No customer ROI inference.
   - id: PROD-023
     priority: P0
     area: matching-constraints
@@ -249,6 +249,14 @@ tasks:
     depends_on: [PROD-028]
     exit_evidence: >-
       Reproduced raw append, reparent and claimed-input mutation paths are closed by0097 parent-locking guards on all three child tables.9 live tests pass; one host-native-client skip is covered by actual populated Docker-native restore with restored denials/replay/newinput.257 compatibility tests pass with2 opt-in skips; actual45-row worker and16/17 migration matrix pass. ADR0810/report preserve historical damaged-manifest visibility and trusted-owner boundary; no scale/customer outcome claim.
+  - id: PROD-031
+    priority: P0
+    area: studio-receivables-cash
+    title: Deliver scoped cash receipt allocation and authoritative recovery
+    status: in_progress
+    depends_on: [PROD-005, PROD-007, PROD-026, PROD-029]
+    exit_evidence: >-
+      Actual PostgreSQL0097 before probe retains creation200, missing GET404 and cached retry503 caused by JSONB replay decoding. Require versioned exact request binding, scope-checked receipt read-back, human step-up for post/allocate, historical policy verification and actual EN/AR React persistence, unknown-response recovery, CSRF, sibling-scope and stale-version denials. No leakage or operational GL integration claim from the before probe.
   - id: E-1120
     priority: P0
     area: financial-exactness

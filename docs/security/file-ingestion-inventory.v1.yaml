@@ -877,6 +877,25 @@ surfaces:
       - Text snapshots are bounded to1000000 UTF-8 bytes and reject duplicate keys before registry schema, version and digest validation; mapping inputs come from already-decoded database rows.
       - The reader does not establish independent source authenticity or a general hostile JSON graph depth budget.
     next_action: Preserve exact historical policy verification and add a shared graph-budget contract before accepting arbitrary external policy documents.
+  - id: FI-045
+    name: PostgreSQL manual posting effect and command JSONB readers
+    module_ids: [finance.core]
+    trust: internal-persisted
+    entrypoints:
+      - reconforge/infrastructure/postgres_finance_posting.py::PostgresFinancePostingRepository._command
+      - reconforge/infrastructure/postgres_finance_posting.py::PostgresFinancePostingRepository._get_effect
+    formats: [json]
+    parser_families: [json-stdlib]
+    policy_coverage: partial
+    status: partial
+    controls: [SEC-C-002, SEC-C-004, SEC-C-005, SEC-C-006]
+    test_evidence: [tests/test_finance_posting_domain.py, tests/test_postgres_finance_posting.py, tests/test_postgres_finance_posting_concurrency.py, tests/test_postgres_finance_posting_restore.py]
+    residual_risk_ids: [R-015, R-018]
+    limitations:
+      - Canonical producers and PostgreSQL CHECK constraints limit each stored snapshot or command result to 2097152 bytes of JSONB text; typed snapshot, digest, requested-source, scope, and audit/outbox binding checks run after decoding.
+      - Driver-decoded JSONB and the two json.loads text fallbacks do not provide application pre-parse byte, graph-depth, node, or duplicate-key budgets; JSONB normalization is not duplicate-key rejection of arbitrary external JSON.
+      - The database/schema owner and restore operator remain trusted dependencies that can bypass storage guards; this internal persisted reader is not an authorized upload parser or proof of independent source authenticity.
+    next_action: Add a shared bounded decoder for textual fallbacks before widening this internal producer/database boundary; retain typed source and evidence verification after decoding.
 direct_tabular_parser_allowlist:
   - path: reconforge/benchmark/amlsim_reconciliation.py
     parser: csv.DictReader
@@ -924,6 +943,11 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/infrastructure/postgres_finance_posting.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-045
+    rationale: Reads internal canonical posting JSONB/text with 2 MiB database constraints, then verifies typed content, digest and backing-source/evidence affinity; neither fallback applies an application pre-parse graph budget, so coverage remains partial.
   - path: reconforge/domain/finance_policy.py
     parser: json.loads
     call_count: 1

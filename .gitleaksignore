@@ -75,3 +75,11 @@ docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:358
 # Reviewed exact Git-blob SHA256 in immutable synthetic evidence: alembic/versions/0051_access_policy_lifecycle.py.
 f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:369
 docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:369
+# Verified public Alpine signer-file SHA256 from the exact pinned base, not a private key.
+852508968462ec9957e46e39bb2aab507960b572:docs/execution/OPENSSL_RUNTIME_2026-10-03.json:generic-api-key:30
+docs/execution/OPENSSL_RUNTIME_2026-10-03.json:generic-api-key:30
+# Verified exact cd67fc67 Git-blob SHA256 for tests/test_api_server_identity.py.
+852508968462ec9957e46e39bb2aab507960b572:docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:19
+docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:19
+852508968462ec9957e46e39bb2aab507960b572:docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:76
+docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:76

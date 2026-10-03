@@ -1,4 +1,20 @@
-﻿# Execution State
+# Execution State
+
+Current-bootstrap repaircd67fc67 passes96 PostgreSQL/compatibility tests without
+skips plus global Ruff/Mypy/Bandit. Historical0078 SQL remains unchanged;
+repeat installation preserves catalog constraints and forced RLS. Matching
+synthetic cleanup restores0097 guards. ADR0819 and retained evidence preserve
+original failures and the separate legacy global close-uniqueness gap.
+
+OpenSSL pins68bfea5b match two official signed Alpine indexes and existing base
+keys. A52.180s full local Docker build and six functional commands pass, including
+constrained offline doctor and OpenSSL3.5.9. ADR0820 and OPENSSL_RUNTIME evidence
+retain the exact image digest and original unexplained hosted checksum failures.
+
+Clean immutablec56 whole regression passes3,831/309 prerequisite skips/0fail with
+unchanged2,988-file manifests and global quality/build success. See retained
+POSTING_CASH_REGRESSION_C56 evidence. Skipped service cases are not successes.
+Subsequent hosted acceptance belongs to the new subject and remains pending.
 
 PR112 source-checksum review on `43bafc9d` verifies all seven new Gitleaks
 findings against the exact source Git blobs. Fourteen exact history/current-tree
@@ -8,7 +24,8 @@ allowlist. Gitleaks 8.30.1 now reports zero findings in both local scans;
 remained unchanged during verification. See
 [retained checksum review](POSTING_CASH_SOURCE_DIGEST_FINDINGS_2026-10-03.json).
 This is a separate local checkpoint: the historical d4 full regression remains
-failed, and fresh immutable whole-repository and hosted acceptance are pending.
+failed; the subsequent clean c56 whole gate is retained above. Hosted acceptance
+remains separate and pending on the new subject.
 
 ## Active financial-policy and open-workload slice (2026-10-03)
 

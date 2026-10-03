@@ -264,10 +264,11 @@ def test_live_downgrade_refuses_partial_operator_provenance(posting_database: di
             ).format(psycopg.sql.Identifier(column)),
             (db["entries"]["A1"],),
         )
+        before_revision = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
     with pytest.raises(Exception, match="Refusing to discard"):
         command.downgrade(db["config"], "0097_pg_reconciliation_seal")
     with psycopg.connect(db["admin"]) as admin:
-        assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0098_pg_finance_posting"
+        assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == before_revision
         assert (
             admin.execute(
                 psycopg.sql.SQL("SELECT {} FROM reconforge.finance_entries WHERE id=%s").format(

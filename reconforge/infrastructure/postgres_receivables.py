@@ -10,11 +10,12 @@ from __future__ import annotations
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date, timedelta
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from reconforge.application.receivables import ReceiptAllocationInput, ReceivableInvoiceLineInput
 from reconforge.auth.rbac import same_actor
+from reconforge.domain.quantities import quantity_decimal_text, quantity_product_minor
 from reconforge.domain.receivables_aging import AgingCurrencyError, build_aging_report
 from reconforge.domain.receivables_receipt_replay import (
     ReceiptReplayError,
@@ -280,15 +281,17 @@ def _iso_date(value: object, label: str) -> date:
 
 
 def _quantity(value: object, label: str) -> tuple[Decimal, str]:
+    if type(value) not in (str, int, Decimal):
+        raise PlatformError(f"{label} must be an exact decimal quantity.")
     raw = _text(value, label, maximum=80)
+    if type(value) is str and ("e" in raw.lower()):
+        raise PlatformError(f"{label} must be an exact decimal quantity without scientific notation.")
     try:
         result = Decimal(raw)
+        text = quantity_decimal_text(result)
     except (InvalidOperation, ValueError) as exc:
         raise PlatformError(f"{label} must be an exact decimal quantity.") from exc
-    if not result.is_finite() or result <= 0:
-        raise PlatformError(f"{label} must be finite and positive.")
-    normalized = result.normalize()
-    return result, format(normalized, "f")
+    return result, text
 
 
 def _row(value: Any, columns: tuple[str, ...]) -> dict[str, Any]:
@@ -310,7 +313,7 @@ def _normalize_lines(lines: Sequence[ReceivableInvoiceLineInput]) -> list[tuple[
         unit_price = _minor(line.unit_price_minor, f"Invoice line {number} unit price")
         line_total = _minor(line.line_total_minor, f"Invoice line {number} total")
         tax = _minor(line.tax_minor, f"Invoice line {number} tax")
-        expected = int((quantity * Decimal(unit_price)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        expected = quantity_product_minor(quantity, unit_price)
         if expected != line_total:
             raise PlatformError(f"Invoice line {number} total does not equal quantity multiplied by unit price.")
         normalized.append(

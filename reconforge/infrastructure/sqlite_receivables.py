@@ -12,7 +12,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Sequence
 from datetime import date, timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Any
 
 from reconforge.application.receivables import (
@@ -22,6 +22,7 @@ from reconforge.application.receivables import (
 from reconforge.auth.rbac import same_actor
 from reconforge.db.connection import DatabaseError
 from reconforge.domain.models import utc_now_text
+from reconforge.domain.quantities import quantity_decimal_text, quantity_product_minor
 from reconforge.domain.receivables_aging import AgingCurrencyError, build_aging_report
 from reconforge.domain.receivables_receipt_replay import (
     ReceiptReplayError,
@@ -1039,16 +1040,11 @@ def _date(value: str, *, field: str) -> date:
 
 def _quantity(value: object, *, field: str) -> str:
     try:
-        quantity = parse_exact_amount(value)
-    except InvalidAmountError as exc:
+        if type(value) not in (str, int, Decimal) or (isinstance(value, str) and value.strip().startswith("(")):
+            raise ValueError("Quantity must be supplied as a positive exact value.")
+        return quantity_decimal_text(parse_exact_amount(value))
+    except (InvalidAmountError, ValueError) as exc:
         raise PlatformError(f"Invalid quantity in field '{field}'.") from exc
-    if quantity <= 0:
-        raise PlatformError(f"Quantity in field '{field}' must be finite and positive.")
-    return format(quantity.normalize(), "f")
-
-
-def _rounded_minor(value: Decimal) -> int:
-    return int(value.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def _normalize_lines(lines: Sequence[ReceivableInvoiceLineInput]) -> list[ReceivableInvoiceLineInput]:
@@ -1058,7 +1054,7 @@ def _normalize_lines(lines: Sequence[ReceivableInvoiceLineInput]) -> list[Receiv
         unit_price = _minor(line.unit_price_minor, field=f"invoice line {number} unit price")
         line_total = _minor(line.line_total_minor, field=f"invoice line {number} total")
         tax = _minor(line.tax_minor, field=f"invoice line {number} tax")
-        if _rounded_minor(Decimal(quantity) * Decimal(unit_price)) != line_total:
+        if quantity_product_minor(Decimal(quantity), unit_price) != line_total:
             raise PlatformError(f"Invoice line {number} total does not equal quantity multiplied by unit price.")
         normalized.append(
             ReceivableInvoiceLineInput(

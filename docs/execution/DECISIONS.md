@@ -1,5 +1,13 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-010 — Context-independent quantities and FIFO (2026-10-03)
+
+ADR0814 accepts exact coefficient/scale conversion, integer HALF_UP AR products
+and integer HALF_EVEN FIFO allocations. Existing lexical boundaries stay owned
+by their adapters. Strict PG text/coercion denials and a1M-character expansion
+ceiling are explicit; historical data is not reinterpreted. The227-test bounded
+gate is independent of complete trade posting and retained AR money policy.
+
 ## D-PROD-009 — Reviewed Manual operational effects (2026-10-03)
 
 ADR0811 accepts SQLite48/PG0098, exact reviewed content, stable preparer-only

@@ -1,0 +1,66 @@
+id: inventory-receipt-posting
+name: Independently reviewed receipt and complete unused inverse
+version: 1.0.0
+maturity: experimental
+implementation_status: in_progress
+owner: financial-integrity
+dependencies: [inventory.core, finance.core, platform.core, sqlite-inventory-composition]
+incompatible_versions: [unreviewed-generated-operational-posting, generic-gl-only-inventory-correction]
+data_classification: financial-sensitive
+retention_policy: retain-immutable-source-review-link-command-and-financial-evidence
+permissions:
+  - inventory.read
+  - inventory.manage
+  - inventory.post
+  - inventory.valuation.manage
+  - inventory.valuation.approve
+  - inventory.valuation.reverse.manage
+  - inventory.valuation.reverse.approve
+  - finance_core.read
+  - finance_core.manage
+  - finance_core.validate
+  - finance_core.post
+  - finance_core.reverse
+default_roles: [admin]
+migrations: []
+reserved_migrations: [sqlite50, postgresql0100]
+domain_invariants:
+  - immutable-plan-captures-exact-source-mapping-and-monetary-policy
+  - stable-persisted-human-identities-separate-preparer-from-reviewer-and-poster
+  - current-authority-precedes-command-recovery
+  - reserved-artifact-identities-and-numbers-require-exact-reviewed-ownership
+  - complete-physical-value-finance-and-evidence-effects-share-one-owner
+  - caught-participant-failure-poisons-the-owner-until-full-rollback
+  - deferred-source-links-and-content-guards-refuse-partial-commit
+  - inverse-preserves-original-receipt-and-removes-only-proven-unused-value
+  - original-recovery-remains-valid-after-legitimate-later-consumption
+domain_events: [inventory_receipt_prepared, inventory_receipt_reviewed, inventory_receipt_committed, finance_entry_posted]
+api_routes: []
+cli_commands: []
+ui_routes: []
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/test_inventory_receipt_posting_domain.py]
+threat_model:
+  - unreviewed-generated-source-posting
+  - self-review-and-stale-authority
+  - reserved-namespace-absence-race-and-child-substitution
+  - cache-source-or-evidence-substitution
+  - partial-owner-commit-and-swallowed-child-failure
+  - generic-correction-bypass-and-consumed-then-restored-layer
+  - tenant-workspace-entity-affinity-loss
+  - incomplete-migration-or-restore-publication
+benchmarks: []
+rollback_plan: preserve-verified-pre-upgrade-backup-and-operational-history-refuse-populated-lossy-downgrade
+test_matrix: [tests/test_inventory_receipt_posting_domain.py]
+planned_adapter_test_matrix: [tests/test_sqlite_inventory_receipt_posting.py, tests/test_postgres_inventory_receipt_posting.py, tests/test_sqlite_inventory_composition.py, tests/test_sqlite_finance_posting.py]
+limitations:
+  - backend-acceptance-and-interface-registration-in-progress
+  - one-untracked-stock-item-base-uom-internal-location-and-fifo-mapping
+  - positive-exact-quantity-and-minor-cost-in-functional-currency
+  - full-unused-inverse-only-no-plan-edit
+  - conservative-refusal-with-any-other-posted-or-voided-outbound-item-history
+  - existing-fifo-equal-date-movement-number-order-can-refuse-later-prepared-receipt
+  - postgres-read-committed-and-sqlite-foreign-keys-required
+  - no-purchase-ap-sales-ar-tax-fx-lot-serial-or-manufacturing-integration
+  - no-universal-inventory-to-gl-or-customer-outcome-claim

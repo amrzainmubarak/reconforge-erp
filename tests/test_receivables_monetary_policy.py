@@ -128,17 +128,24 @@ def test_public_policy_is_closed_and_ignores_untrusted_record_metadata() -> None
     assert "private" not in str(public) and "forged" not in str(public)
 
 
-def test_backend_metadata_does_not_silently_expand_existing_http_contract() -> None:
+def test_http_contract_exposes_closed_public_policy_without_storage_metadata() -> None:
     from reconforge.auth.field_access import (
         project_receivables_customer,
         project_receivables_invoice,
         project_receivables_receipt,
     )
 
-    values = {"id": "synthetic", **record(), "monetary_policy": verify_receivables_policy(record(), snapshot=SNAPSHOT).public_metadata()}
+    public = verify_receivables_policy(record(), snapshot=SNAPSHOT).public_metadata()
+    values = {
+        "id": "synthetic", **record(),
+        "monetary_policy": {**public, "future_private_field": "private"},
+        "snapshot_json": {"secret": "private"}, "source_path": "private/server/path",
+    }
     for projection in (project_receivables_customer, project_receivables_invoice, project_receivables_receipt):
         visible = projection(values).visible
-        assert visible == {"id": "synthetic", "currency_code": "JPY"}
+        assert visible == {"id": "synthetic", "currency_code": "JPY", "monetary_policy": public}
+        assert set(visible["monetary_policy"]) == PUBLIC_FIELDS
+        assert "private" not in str(visible)
 
 
 def test_legacy_replay_stays_unverified_without_invented_metadata() -> None:

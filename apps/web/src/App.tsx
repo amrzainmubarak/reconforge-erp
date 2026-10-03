@@ -8,6 +8,7 @@ import { loadStudioOverview } from "./data";
 import { translate, type MessageKey } from "./i18n";
 import { usePreferences } from "./preferences";
 import type { StudioOverviewWithProvenance, StudioPage, ThemePreference } from "./types";
+import { BrowserSessionProvider } from "./browserSession";
 
 const themes: ThemePreference[] = ["system", "light", "dark"];
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
@@ -55,6 +56,10 @@ function pathForPage(page: StudioPage): string {
 }
 
 export default function App() {
+  return <BrowserSessionProvider><StudioApp /></BrowserSessionProvider>;
+}
+
+function StudioApp() {
   const preferences = usePreferences();
   const t = useCallback((key: MessageKey) => translate(preferences.locale, key), [preferences.locale]);
   const [data, setData] = useState<StudioOverviewWithProvenance | null>(null);
@@ -209,7 +214,7 @@ export default function App() {
           <Suspense fallback={<LoadingView translate={t} />}><RuleStudio locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "live" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><LiveStudio locale={preferences.locale} translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><LiveStudio locale={preferences.locale} translate={t} onSignIn={() => navigate("adminAudit")} /></Suspense>
         ) : null}
         {activePage === "adminAudit" ? (
           <Suspense fallback={<LoadingView translate={t} />}><AdminAudit locale={preferences.locale} translate={t} /></Suspense>

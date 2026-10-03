@@ -830,6 +830,7 @@ function isLiveMetric(value: unknown): value is LiveStudioMetric {
 }
 
 export interface LiveStudioLoadOptions {
+  session?: BrowserAdminSession | null;
   baseUrl?: string;
   period?: string;
   staleAfterSeconds?: number;
@@ -842,16 +843,22 @@ export async function loadLiveStudioContract(options: LiveStudioLoadOptions = {}
   const staleAfterSeconds = options.staleAfterSeconds ?? 300;
   if (!Number.isInteger(staleAfterSeconds) || staleAfterSeconds < 30 || staleAfterSeconds > 86_400) throw new Error("Live Studio stale threshold must be between 30 and 86400 seconds.");
   const base = (options.baseUrl ?? "").replace(/\/$/, "");
+  if (options.session && base && new URL(base, window.location.href).origin !== window.location.origin) throw new Error("Authenticated live metrics require the same origin.");
   const query = options.period ? `?period=${encodeURIComponent(options.period)}` : "";
   const response = await (options.fetcher ?? fetch)(`${base}${LIVE_METRICS_PATH}${query}`, {
     cache: "no-store",
     credentials: "same-origin",
-    headers: { Accept: "application/json" },
+    headers: options.session ? adminHeaders(options.session.tenantId) : { Accept: "application/json" },
     signal: options.signal,
   });
-  if (response.status === 401) throw new Error("Live Studio authentication is required.");
-  if (response.status === 403) throw new Error("Live Studio metrics.read permission is required.");
-  if (!response.ok) throw new Error(`Live Studio contract could not be loaded (${response.status}).`);
+  if (!response.ok) {
+    try { await adminResponse(response); }
+    catch (error) {
+      if (!(error instanceof AdminApiError)) throw error;
+      const message = response.status === 401 ? "Live Studio authentication is required." : response.status === 403 ? "Live Studio metrics.read permission is required." : `Live Studio contract could not be loaded (${response.status}).`;
+      throw new AdminApiError(error.status, error.code, message);
+    }
+  }
   const payload: unknown = await response.json();
   if (!isObject(payload) || Object.keys(payload).some((key) => key !== "metrics") || !Array.isArray(payload.metrics) || !payload.metrics.every(isLiveMetric)) throw new Error("Live Studio response does not match the authorized metrics contract.");
   const metrics = [...payload.metrics].sort((left, right) => left.period_name.localeCompare(right.period_name) || left.metric_key.localeCompare(right.metric_key));
@@ -872,13 +879,14 @@ export async function loadLiveStudioContract(options: LiveStudioLoadOptions = {}
 }
 
 export class AdminApiError extends Error {
-  constructor(readonly status: number, readonly code: string) {
-    super(code);
+  constructor(readonly status: number, readonly code: string, message: string = code) {
+    super(message);
   }
 }
 
 const adminPaths = {
   login: "/api/v1/auth/browser/login",
+  logout: "/api/v1/auth/logout",
   stepUp: "/api/v1/auth/step-up",
   events: "/api/v1/admin/audit/events",
   verify: "/api/v1/admin/audit/verify",
@@ -914,6 +922,10 @@ export async function stepUpBrowserAdminSession(session: BrowserAdminSession, pa
   const body: unknown = await (await adminResponse(response)).json();
   if (!isObject(body) || !isText(body.expires_at) || Object.keys(body).some((key) => key !== "method" && key !== "expires_at")) throw new Error("step_up_contract_invalid");
   return body.expires_at;
+}
+
+export async function endBrowserAdminSession(session: BrowserAdminSession, fetcher?: typeof fetch): Promise<void> {
+  await adminResponse(await (fetcher ?? fetch)(adminPaths.logout, { method: "POST", cache: "no-store", credentials: "same-origin", headers: adminHeaders(session.tenantId, session.csrfToken) }));
 }
 
 function isAdminEvent(value: unknown): value is AdminAuditEvent {

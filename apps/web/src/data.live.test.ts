@@ -25,6 +25,19 @@ test("loads the guarded same-origin live contract with exact values", async () =
   expect(result.metrics[0].value_text).toBe("91.00");
 });
 
+test("authenticated live metrics carry the selected tenant without disclosing a CSRF proof on reads", async () => {
+  const fetcher = vi.fn(async () => reply(200, { metrics: [metric] }));
+  await loadLiveStudioContract({ fetcher, session: { tenantId: "tenant-a", csrfToken: "private-proof", expiresAt: "2026-10-03T11:00:00Z" } });
+  expect(fetcher).toHaveBeenCalledWith("/api/v1/metrics/dashboard", expect.objectContaining({ credentials: "same-origin", headers: { Accept: "application/json", "X-ReconForge-Tenant": "tenant-a" } }));
+  expect(JSON.stringify(fetcher.mock.calls)).not.toContain("private-proof");
+});
+
+test("tenant context cannot be sent to an external metrics origin", async () => {
+  const fetcher = vi.fn();
+  await expect(loadLiveStudioContract({ fetcher, baseUrl: "https://outside.invalid", session: { tenantId: "tenant-a", csrfToken: "private-proof", expiresAt: "2026-10-03T11:00:00Z" } })).rejects.toThrow("same origin");
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
 test("keeps unclassified data out of the live operational-evidence state", () => {
   expect(classifyStudioDataProvenance({ metrics: [] })).toEqual({
     state: "unknown",

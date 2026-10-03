@@ -1,12 +1,13 @@
 import { AlertTriangle, CheckCircle2, KeyRound, RefreshCw, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { AdminApiError, beginBrowserAdminSession, loadAdminAccessPermissions, loadAdminAccessRoles, loadAdminAuditPage, loadAdminIdentitySessions, loadAdminIdentityUsers, loadAdminIntegrations, loadAdminRetentionPolicies, loadAdminSecurityCenter, revokeAdminIdentitySession, setAdminIdentityUserDisabled, stepUpBrowserAdminSession, verifyAdminAudit } from "../data";
+import { AdminApiError, beginBrowserAdminSession, endBrowserAdminSession, loadAdminAccessPermissions, loadAdminAccessRoles, loadAdminAuditPage, loadAdminIdentitySessions, loadAdminIdentityUsers, loadAdminIntegrations, loadAdminRetentionPolicies, loadAdminSecurityCenter, revokeAdminIdentitySession, setAdminIdentityUserDisabled, stepUpBrowserAdminSession, verifyAdminAudit } from "../data";
 import type { MessageKey } from "../i18n";
 import type { Locale, AdminAccessPermission, AdminAccessRole, AdminAuditEvent, AdminAuditVerification, AdminIdentitySession, AdminIdentityUser, AdminIntegration, AdminRetentionPolicy, AdminSecuritySnapshot, BrowserAdminSession } from "../types";
 import { AdminAccessMutations } from "./AdminAccessMutations";
 import { formatCount } from "../locale-format";
 import { AdminGovernanceMutations } from "./AdminGovernanceMutations";
+import { useBrowserSession } from "../browserSession";
 
 
 function errorKey(error: unknown): MessageKey {
@@ -49,12 +50,18 @@ function securityValue(snapshot: AdminSecuritySnapshot, sectionId: AdminSecurity
 }
 
 export function AdminAudit({ translate, locale }: { translate: (key: MessageKey) => string; locale: Locale }) {
-  const [tenantId, setTenantId] = useState("");
-  const [username, setUsername] = useState("");
+  const { revision } = useBrowserSession();
+  // Changing the security boundary discards every privileged view and pending form.
+  return <AdminAuditView key={revision} translate={translate} locale={locale} />;
+}
+
+function AdminAuditView({ translate, locale }: { translate: (key: MessageKey) => string; locale: Locale }) {
+  const auth = useBrowserSession();
+  const { session, stepUpExpiresAt } = auth;
+  const [tenantId, setTenantId] = useState(session?.tenantId ?? "");
+  const [username, setUsername] = useState(auth.username);
   const [password, setPassword] = useState("");
   const [stepUpPassword, setStepUpPassword] = useState("");
-  const [session, setSession] = useState<BrowserAdminSession | null>(null);
-  const [stepUpExpiresAt, setStepUpExpiresAt] = useState("");
   const [events, setEvents] = useState<AdminAuditEvent[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [verification, setVerification] = useState<AdminAuditVerification[]>([]);
@@ -82,45 +89,71 @@ export function AdminAudit({ translate, locale }: { translate: (key: MessageKey)
   const [governanceLoading, setGovernanceLoading] = useState(false);
   const [error, setError] = useState<MessageKey | null>(null);
   const [busy, setBusy] = useState(false);
+  const reads = useRef<AbortController | null>(null);
+  const current = () => Boolean(reads.current && !reads.current.signal.aborted && auth.isCurrent(auth.revision));
+  const fetcher: typeof fetch = (input, options) => {
+    if (!current()) return Promise.reject(new DOMException("Session changed.", "AbortError"));
+    const safe = !options?.method || ["GET", "HEAD"].includes(options.method);
+    return fetch(input, { ...options, ...(safe ? { signal: reads.current!.signal } : {}) });
+  };
+  const handleError = (caught: unknown) => {
+    if (current() && !auth.recover(caught, auth.revision)) setError(errorKey(caught));
+  };
 
   const refresh = async (active: BrowserAdminSession, cursor?: string) => {
-    const [page, chains] = await Promise.all([loadAdminAuditPage(active, cursor), verifyAdminAudit(active)]);
+    const [page, chains] = await Promise.all([loadAdminAuditPage(active, cursor, fetcher), verifyAdminAudit(active, fetcher)]);
+    if (!current()) return;
     setEvents((current) => cursor ? [...current, ...page.events] : page.events);
     setNextCursor(page.nextCursor); setVerification(chains);
     if (!cursor) {
       setSecurityLoading(true); setSecurityUnavailable(false); setSecuritySnapshot(null);
-      void loadAdminSecurityCenter(active).then((snapshot) => setSecuritySnapshot(snapshot)).catch(() => setSecurityUnavailable(true)).finally(() => setSecurityLoading(false));
+      void loadAdminSecurityCenter(active, fetcher).then((snapshot) => { if (current()) setSecuritySnapshot(snapshot); }).catch((caught) => { if (current()) { handleError(caught); setSecurityUnavailable(true); } }).finally(() => { if (current()) setSecurityLoading(false); });
       setIdentityLoading(true); setIdentityUnavailable(false); setIdentityUsers(null); setIdentitySessions(null);
-      void Promise.all([loadAdminIdentityUsers(active), loadAdminIdentitySessions(active)]).then(([users, sessions]) => { setIdentityUsers(users); setIdentitySessions(sessions); }).catch(() => setIdentityUnavailable(true)).finally(() => setIdentityLoading(false));
+      void Promise.all([loadAdminIdentityUsers(active, fetcher), loadAdminIdentitySessions(active, fetcher)]).then(([users, sessions]) => { if (current()) { setIdentityUsers(users); setIdentitySessions(sessions); } }).catch((caught) => { if (current()) { handleError(caught); setIdentityUnavailable(true); } }).finally(() => { if (current()) setIdentityLoading(false); });
       setAccessLoading(true); setAccessUnavailable(false); setAccessPermissions(null); setAccessRoles(null);
-      void Promise.all([loadAdminAccessPermissions(active), loadAdminAccessRoles(active)]).then(([permissions, roles]) => { setAccessPermissions(permissions); setAccessRoles(roles); }).catch(() => setAccessUnavailable(true)).finally(() => setAccessLoading(false));
+      void Promise.all([loadAdminAccessPermissions(active, fetcher), loadAdminAccessRoles(active, fetcher)]).then(([permissions, roles]) => { if (current()) { setAccessPermissions(permissions); setAccessRoles(roles); } }).catch((caught) => { if (current()) { handleError(caught); setAccessUnavailable(true); } }).finally(() => { if (current()) setAccessLoading(false); });
       setGovernanceLoading(true); setGovernanceUnavailable(false); setIntegrations(null); setRetentionPolicies(null);
-      void Promise.all([loadAdminIntegrations(active), loadAdminRetentionPolicies(active)]).then(([listedIntegrations, policies]) => { setIntegrations(listedIntegrations); setRetentionPolicies(policies); }).catch(() => setGovernanceUnavailable(true)).finally(() => setGovernanceLoading(false));
+      void Promise.all([loadAdminIntegrations(active, fetcher), loadAdminRetentionPolicies(active, fetcher)]).then(([listedIntegrations, policies]) => { if (current()) { setIntegrations(listedIntegrations); setRetentionPolicies(policies); } }).catch((caught) => { if (current()) { handleError(caught); setGovernanceUnavailable(true); } }).finally(() => { if (current()) setGovernanceLoading(false); });
     }
   };
+  useEffect(() => {
+    const controller = new AbortController();
+    reads.current = controller;
+    if (session && stepUpExpiresAt) void refresh(session).catch(handleError);
+    return () => controller.abort();
+  // A security revision remounts this view; locale changes must not restart reads.
+  }, []);
   const signIn = async (event: React.FormEvent) => {
     event.preventDefault(); setBusy(true); setError(null);
-    try { const active = await beginBrowserAdminSession({ tenantId, username, password }); setSession(active); setPassword(""); setStepUpPassword(""); setEvents([]); setVerification([]); setSecuritySnapshot(null); setSecurityUnavailable(false); setIdentityUsers(null); setIdentitySessions(null); setIdentityUnavailable(false); setIdentityActionSession(null); setIdentityActionConfirmation(""); setIdentityActionNotice(null); setIdentityActionRevokedSessions(null); setIdentityUserAction(null); setIdentityUserConfirmation(""); setAccessPermissions(null); setAccessRoles(null); setAccessUnavailable(false); setIntegrations(null); setRetentionPolicies(null); setGovernanceUnavailable(false); setStepUpExpiresAt(""); }
+    try { const active = await beginBrowserAdminSession({ tenantId, username, password, fetcher }); if (current()) auth.begin(active, username, auth.revision); }
     catch (caught) { setError(errorKey(caught)); } finally { setBusy(false); }
   };
   const stepUp = async (event: React.FormEvent) => {
     event.preventDefault(); if (!session) return; setBusy(true); setError(null);
-    try { const expires = await stepUpBrowserAdminSession(session, stepUpPassword); setStepUpExpiresAt(expires); setStepUpPassword(""); await refresh(session); }
-    catch (caught) { setError(errorKey(caught)); } finally { setBusy(false); }
+    try { const expires = await stepUpBrowserAdminSession(session, stepUpPassword, fetcher); if (current()) auth.elevate(expires, auth.revision); }
+    catch (caught) { handleError(caught); } finally { setBusy(false); }
+  };
+  const signOut = async () => {
+    if (!session) return;
+    setBusy(true); setError(null);
+    try { await endBrowserAdminSession(session, fetcher); if (current()) auth.clear(auth.revision); }
+    catch (caught) { handleError(caught); }
+    finally { if (current()) setBusy(false); }
   };
   const revokeSession = async (event: React.FormEvent) => {
     event.preventDefault(); if (!session || !identityActionSession || identityActionConfirmation.trim() !== "REVOKE") return;
     setBusy(true); setError(null); setIdentityActionNotice(null); setIdentityActionRevokedSessions(null);
     try {
-      const result = await revokeAdminIdentitySession(session, identityActionSession, identityActionReason);
+      const result = await revokeAdminIdentitySession(session, identityActionSession, identityActionReason, fetcher);
+      if (!current()) return;
       if (result.revokedCurrentSession) {
-        setSession(null); setStepUpExpiresAt(""); setEvents([]); setVerification([]); setSecuritySnapshot(null); setSecurityUnavailable(false); setIdentityUsers(null); setIdentitySessions(null); setIdentityUnavailable(false); setAccessPermissions(null); setAccessRoles(null); setAccessUnavailable(false); setIntegrations(null); setRetentionPolicies(null); setGovernanceUnavailable(false); setIdentityActionNotice("adminIdentityCurrentSessionRevoked");
+        auth.clear(auth.revision, "adminIdentityCurrentSessionRevoked");
       } else {
         setIdentitySessions((current) => current?.map((item) => item.id === result.session.id ? result.session : item) ?? current);
         setIdentityActionNotice(result.transitioned ? "adminIdentitySessionRevoked" : "adminIdentitySessionAlreadyRevoked");
       }
       setIdentityActionSession(null); setIdentityActionConfirmation("");
-    } catch (caught) { setError(errorKey(caught)); } finally { setBusy(false); }
+    } catch (caught) { handleError(caught); } finally { setBusy(false); }
   };
   const changeUserStatus = async (event: React.FormEvent) => {
     event.preventDefault(); if (!session || !identityUserAction) return;
@@ -128,24 +161,27 @@ export function AdminAudit({ translate, locale }: { translate: (key: MessageKey)
     if (identityUserConfirmation.trim() !== expected) return;
     setBusy(true); setError(null); setIdentityActionNotice(null); setIdentityActionRevokedSessions(null);
     try {
-      const result = await setAdminIdentityUserDisabled(session, identityUserAction.user, identityUserAction.disabled);
+      const result = await setAdminIdentityUserDisabled(session, identityUserAction.user, identityUserAction.disabled, fetcher);
+      if (!current()) return;
       setIdentityUsers((current) => current?.map((item) => item.id === result.user.id ? result.user : item) ?? current);
       setIdentityActionRevokedSessions(result.revokedSessions);
       setIdentityActionNotice(result.transitioned ? (result.user.disabled ? "adminIdentityUserDisabled" : "adminIdentityUserEnabled") : "adminIdentityUserAlreadyInState");
       setIdentityUserAction(null); setIdentityUserConfirmation("");
-      try { setIdentitySessions(await loadAdminIdentitySessions(session)); setIdentityUnavailable(false); }
-      catch { setIdentitySessions(null); setIdentityUnavailable(true); }
-    } catch (caught) { setError(errorKey(caught)); }
+      try { const sessions = await loadAdminIdentitySessions(session, fetcher); if (current()) { setIdentitySessions(sessions); setIdentityUnavailable(false); } }
+      catch (caught) { if (current()) { handleError(caught); setIdentitySessions(null); setIdentityUnavailable(true); } }
+    } catch (caught) { handleError(caught); }
     finally { setBusy(false); }
   };
   const refreshAccessAdministration = async () => {
     if (!session) return;
-    const [listedPermissions, listedRoles, listedUsers, listedSessions] = await Promise.all([loadAdminAccessPermissions(session), loadAdminAccessRoles(session), loadAdminIdentityUsers(session), loadAdminIdentitySessions(session)]);
+    const [listedPermissions, listedRoles, listedUsers, listedSessions] = await Promise.all([loadAdminAccessPermissions(session, fetcher), loadAdminAccessRoles(session, fetcher), loadAdminIdentityUsers(session, fetcher), loadAdminIdentitySessions(session, fetcher)]);
+    if (!current()) return;
     setAccessPermissions(listedPermissions); setAccessRoles(listedRoles); setIdentityUsers(listedUsers); setIdentitySessions(listedSessions); setAccessUnavailable(false); setIdentityUnavailable(false);
   };
   const refreshGovernanceAdministration = async () => {
     if (!session) return;
-    const [listedIntegrations, listedPolicies] = await Promise.all([loadAdminIntegrations(session), loadAdminRetentionPolicies(session)]);
+    const [listedIntegrations, listedPolicies] = await Promise.all([loadAdminIntegrations(session, fetcher), loadAdminRetentionPolicies(session, fetcher)]);
+    if (!current()) return;
     setIntegrations(listedIntegrations); setRetentionPolicies(listedPolicies); setGovernanceUnavailable(false);
   };
 
@@ -155,6 +191,8 @@ export function AdminAudit({ translate, locale }: { translate: (key: MessageKey)
       <div className="contract-badge"><ShieldCheck size={20} aria-hidden="true" /><span>{translate("adminBoundary")}<strong>/api/v1/admin/audit/*</strong></span></div>
     </section>
     <p className="live-boundary"><KeyRound size={17} aria-hidden="true" />{translate("adminSessionBoundary")}</p>
+    {auth.notice ? <p className="mapping-error" role="alert">{translate(auth.notice)}</p> : null}
+    {session ? <div className="live-freshness"><span>{translate("adminTenant")}: <strong>{session.tenantId}</strong> · {auth.username}</span><button type="button" className="secondary-button" disabled={busy} onClick={() => void signOut()}>{translate("adminSignOut")}</button></div> : null}
     {error ? <p className="mapping-error" role="alert"><AlertTriangle size={16} aria-hidden="true" />{translate(error)}</p> : null}
     {identityActionNotice ? <p className="admin-security-status" role="status"><CheckCircle2 size={16} aria-hidden="true" />{translate(identityActionNotice)}{identityActionRevokedSessions !== null ? <span>{translate("adminIdentityRevokedSessions")}: {identityActionRevokedSessions}</span> : null}</p> : null}
     {!session ? <section className="panel admin-form"><h2>{translate("adminSignIn")}</h2><form onSubmit={signIn}><label>{translate("adminTenant")}<input required value={tenantId} onChange={(event) => setTenantId(event.target.value)} autoComplete="organization" /></label><label>{translate("adminUsername")}<input required value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" /></label><label>{translate("adminPassword")}<input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" /></label><button className="primary-button" disabled={busy}>{translate("adminSignIn")}</button></form></section> : null}
@@ -184,9 +222,9 @@ export function AdminAudit({ translate, locale }: { translate: (key: MessageKey)
           {identityActionSession ? <form className="admin-form admin-identity-action" aria-label={translate("adminIdentityRevokeTitle")} onSubmit={revokeSession}><h3>{translate("adminIdentityRevokeTitle")}</h3><p>{translate("adminIdentityRevokeHelp")}</p><p><strong>{identityActionSession.username}</strong></p><label>{translate("adminIdentityRevokeReason")}<select value={identityActionReason} onChange={(event) => setIdentityActionReason(event.target.value as SessionRevocationReason)}><option value="security_response">{translate("adminIdentityReasonSecurity")}</option><option value="access_change">{translate("adminIdentityReasonAccess")}</option><option value="administrative_cleanup">{translate("adminIdentityReasonCleanup")}</option><option value="user_request">{translate("adminIdentityReasonUser")}</option></select></label><label>{translate("adminIdentityRevokeConfirmation")}<input required value={identityActionConfirmation} onChange={(event) => setIdentityActionConfirmation(event.target.value)} autoComplete="off" placeholder="REVOKE" /></label><p>{translate("adminIdentityRevokeWarning")}</p><div className="admin-action-row"><button className="primary-button" disabled={busy || identityActionConfirmation.trim() !== "REVOKE"}>{translate("adminIdentityConfirmRevoke")}</button><button type="button" className="secondary-button" disabled={busy} onClick={() => { setIdentityActionSession(null); setIdentityActionConfirmation(""); }}>{translate("adminIdentityCancel")}</button></div></form> : null}
         </> : null}
       </section>
-      <section className="panel admin-identity" aria-labelledby="admin-access-title"><div><h2 id="admin-access-title">{translate("adminAccessTitle")}</h2><p>{translate("adminAccessBoundary")}</p></div>{accessLoading ? <p className="admin-security-status" role="status">{translate("adminAccessLoading")}</p> : null}{accessUnavailable ? <p className="admin-security-status" role="status"><AlertTriangle size={16} aria-hidden="true" />{translate("adminAccessUnavailable")}</p> : null}{accessPermissions && accessRoles && identityUsers ? <AdminAccessMutations session={session} currentUsername={username} permissions={accessPermissions} roles={accessRoles} users={identityUsers} translate={translate} refresh={refreshAccessAdministration} onError={(caught) => setError(errorKey(caught))} /> : null}</section>
-      <section className="panel admin-identity" aria-labelledby="admin-governance-title"><div><h2 id="admin-governance-title">{translate("adminGovernanceTitle")}</h2><p>{translate("adminGovernanceBoundary")}</p></div>{governanceLoading ? <p className="admin-security-status" role="status">{translate("adminGovernanceLoading")}</p> : null}{governanceUnavailable ? <p className="admin-security-status" role="status"><AlertTriangle size={16} aria-hidden="true" />{translate("adminGovernanceUnavailable")}</p> : null}{integrations && retentionPolicies ? <AdminGovernanceMutations session={session} integrations={integrations} policies={retentionPolicies} translate={translate} refresh={refreshGovernanceAdministration} onError={(caught) => setError(errorKey(caught))} /> : null}</section>
-      {nextCursor ? <button className="secondary-button" disabled={busy} onClick={() => { setBusy(true); setError(null); void refresh(session, nextCursor).catch((caught) => setError(errorKey(caught))).finally(() => setBusy(false)); }}><RefreshCw size={16} aria-hidden="true" />{translate("adminLoadMore")}</button> : null}
+      <section className="panel admin-identity" aria-labelledby="admin-access-title"><div><h2 id="admin-access-title">{translate("adminAccessTitle")}</h2><p>{translate("adminAccessBoundary")}</p></div>{accessLoading ? <p className="admin-security-status" role="status">{translate("adminAccessLoading")}</p> : null}{accessUnavailable ? <p className="admin-security-status" role="status"><AlertTriangle size={16} aria-hidden="true" />{translate("adminAccessUnavailable")}</p> : null}{accessPermissions && accessRoles && identityUsers ? <AdminAccessMutations session={session} currentUsername={username} permissions={accessPermissions} roles={accessRoles} users={identityUsers} translate={translate} refresh={refreshAccessAdministration} onError={handleError} /> : null}</section>
+      <section className="panel admin-identity" aria-labelledby="admin-governance-title"><div><h2 id="admin-governance-title">{translate("adminGovernanceTitle")}</h2><p>{translate("adminGovernanceBoundary")}</p></div>{governanceLoading ? <p className="admin-security-status" role="status">{translate("adminGovernanceLoading")}</p> : null}{governanceUnavailable ? <p className="admin-security-status" role="status"><AlertTriangle size={16} aria-hidden="true" />{translate("adminGovernanceUnavailable")}</p> : null}{integrations && retentionPolicies ? <AdminGovernanceMutations session={session} integrations={integrations} policies={retentionPolicies} translate={translate} refresh={refreshGovernanceAdministration} onError={handleError} /> : null}</section>
+      {nextCursor ? <button className="secondary-button" disabled={busy} onClick={() => { setBusy(true); setError(null); void refresh(session, nextCursor).catch(handleError).finally(() => setBusy(false)); }}><RefreshCw size={16} aria-hidden="true" />{translate("adminLoadMore")}</button> : null}
     </> : null}
   </main>;
 }

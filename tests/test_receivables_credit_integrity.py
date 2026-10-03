@@ -191,6 +191,34 @@ def test_legacy_currency_mismatch_cannot_relabel_credit_exposure(database: Recei
             repository.credit_exposure("CUS")
 
 
+@pytest.mark.parametrize("status", ["Active", "Suspended"])
+def test_sqlite_credit_exposure_preserves_callers_pending_writes(tmp_path: Path, status: str) -> None:
+    path = tmp_path / "credit-exposure-composition.db"
+    run_migrations(path)
+    connection = connect(path, require_exists=True)
+    observer = connect(path, require_exists=True)
+    try:
+        repository = SQLiteReceivablesRepository(connection)
+        customer(repository, status=status)
+        connection.execute("CREATE TABLE caller_notes (note TEXT NOT NULL)")
+        connection.commit()
+        connection.execute("INSERT INTO caller_notes(note) VALUES ('unrelated pending caller write')")
+        assert connection.in_transaction
+        if status == "Active":
+            assert repository.credit_exposure("CUS")["exposure_minor"] == 0
+        else:
+            with pytest.raises(PlatformError, match="Active"):
+                repository.credit_exposure("CUS")
+        assert connection.in_transaction
+        assert connection.execute("SELECT COUNT(*) FROM caller_notes").fetchone()[0] == 1
+        assert observer.execute("SELECT COUNT(*) FROM caller_notes").fetchone()[0] == 0
+        connection.commit()
+        assert observer.execute("SELECT COUNT(*) FROM caller_notes").fetchone()[0] == 1
+    finally:
+        observer.close()
+        connection.close()
+
+
 def test_concurrent_approvals_cannot_overrun_customer_credit(database: ReceivablesDatabase) -> None:
     with database.repository() as repository:
         customer(repository)

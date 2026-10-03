@@ -631,8 +631,10 @@ class SQLiteReceivablesRepository:
         return [self.get_invoice(str(row["id"])) for row in rows]
 
     def credit_exposure(self, customer_code: str, *, workspace: str = "default") -> dict[str, Any]:
+        owns_transaction = not self.connection.in_transaction
         try:
-            self.connection.execute("BEGIN IMMEDIATE")
+            if owns_transaction:
+                self.connection.execute("BEGIN IMMEDIATE")
             workspace_id = ensure_workspace(self.connection, workspace)
             customer = self._customer_by_code(workspace_id, customer_code)
             exposure = self._customer_exposure(str(customer["id"]))
@@ -648,7 +650,7 @@ class SQLiteReceivablesRepository:
                 "status": str(customer["status"]),
             }
         finally:
-            if self.connection.in_transaction:
+            if owns_transaction and self.connection.in_transaction:
                 self.connection.rollback()
 
     def aging_report(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:

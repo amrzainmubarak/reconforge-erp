@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: "2026-08-01"
+updated_at: "2026-10-03"
 claim_boundary: >-
   This inventory measures source coupling. A partial repository does not prove
   backend neutrality, and only a connection-free application service may be
@@ -181,6 +181,11 @@ application_services:
     service: FinanceCoreApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_finance_core.SQLiteFinanceCoreRepository
+  - file: finance_posting.py
+    service: FinancePostingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_finance_posting.SQLiteFinancePostingRepository
+    postgres_adapter: reconforge.infrastructure.postgres_finance_posting.PostgresFinancePostingRepository
   - file: inventory_core.py
     service: InventoryCoreApplicationService
     status: backend_neutral
@@ -214,4 +219,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 45
+  backend_neutral_application: 46

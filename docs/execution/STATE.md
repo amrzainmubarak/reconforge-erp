@@ -1,6 +1,121 @@
-﻿# Execution State
+# Execution State
+
+## Current publication checkpoint (2026-10-03)
+
+PROD039 bounded local acceptance is complete on amr/verified-ar-invoice-recovery, based on
+published PR1204629a64b (tree-identical to retained PR114e63859d7).
+User-requested work labels are migrated:17local/7remote branches,5merge messages,
+33mapped commit IDs with equal trees/identities/timestamps. Six replacement
+Draft PRs115-120 preserve the original109-114 review/run links. Main is unchanged.
+AMR_WORK_LABEL_MIGRATION_2026-10-03.json records the mapping and verified bundle.
+ADR0823 records exact identity/source verification,
+historical Draft acknowledgement and conservative ambiguous-legacy GET fallback.
+The immutable e81b4481-test local gate failed4114pass/366prerequisites/1old policy
+projection expectation; hosted3.12 failed the same assertion. Test-only e63859d7
+repairs that expectation with27focused/138overlapping contracts and private-field
+denials. Its fresh full gate now passes4115/366explicit prerequisites/0fail/0error
+with3,057stable tracked files and global quality/build. New PRIMARY recovery
+edits are outside that acceptance. Retained before-fix evidence
+is AR_INVOICE_REPLAY_FINDINGS_2026-10-03.json. The repair passes331AR/API/cash/codec
+tests without skips plus a separate native restore test. Nine owned/1,208Python
+sources remain unchanged; independent review finds no blocker and root confirms
+four owned databases absent. RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json records
+the frozen runtime, original failures and conservative legacy compatibility.
+
+AR API b9153400 exposes verified retained policy and exact integer/text amounts;
+corrected actual SQLite/PostgreSQL HTTP11/0skip proves positive Outbox counts.
+React31220e06 uses recorded precision/BigInt and major-unit inputs. Full web202
+passes; a fresh tracked-fixture HTTPS0099 run passes2 journeys in32.0s with
+unchanged sources and independent named database cleanup. JPY0/KWD3, large
+8999999999999999123minor, unresolved legacy raw units, EN/AR accessibility,
+390px and keyboard evidence remain bounded AR proof. ADR0821 and API/UI reports
+retain earlier196/1failure, deterministic AdminAudit repair and measurement fixes.
+Surface inventory now distinguishes synthetic previews and authenticated AR.
+
+CI a8a6dd36 preserves39 original commands in nine bounded live shards and a
+failing server-boundaries aggregate;109 local contracts and actual Bash dispatch
+pass. ed5fc707 reruns current0099 native history/restore on16.14/17.10 and closes
+the stale0098 proof contract. Original immutable8054 whole result remains FAILED:
+4041pass/361prerequisites/1failure/0error. Updated local78-test proof gate passes.
+Hosted PR1128d76647c is successful; PR1138ba6772d timed out at30minutes; PR1148054
+failed its stale target/empty-digest secret finding. Exact reports remain separate.
+New invoice-recovery whole/hosted acceptance remains pending. Original e638
+hostedPython3.11/3.12 pass4117/364prerequisites each; finance-posting shard fails
+three stale0098 expectations after its fixture upgrades to0099. The test-only
+repair now passes all12actual PostgreSQL concurrency cases without skips, with
+677stable runtime/migration/fixture hashes and15owned red/green databases removed.
+The exact pre-downgrade revision and provenance columns are both preserved;
+this failure is retained separately from local whole success. Original exact-head
+outcomes are never reassigned to renamed commits.
+
+Next PROD038 implements a reviewed receipt bundle before complete purchase/sales/
+GL cycles. Its concrete source/owner/migration/restore design is reviewed; no
+generated Inventory effect has been implemented or accepted. No customer
+pilot,5M-transaction workload, measured labor savings or auditor acceptance exists.
+The goal remains active; no main merge or production deployment has occurred.
+
+Current-bootstrap repaircd67fc67 passes96 PostgreSQL/compatibility tests without
+skips plus global Ruff/Mypy/Bandit. Historical0078 SQL remains unchanged;
+repeat installation preserves catalog constraints and forced RLS. Matching
+synthetic cleanup restores0097 guards. ADR0819 and retained evidence preserve
+original failures and the separate legacy global close-uniqueness gap.
+
+OpenSSL pins68bfea5b match two official signed Alpine indexes and existing base
+keys. A52.180s full local Docker build and six functional commands pass, including
+constrained offline doctor and OpenSSL3.5.9. ADR0820 and OPENSSL_RUNTIME evidence
+retain the exact image digest and original unexplained hosted checksum failures.
+
+Clean immutablec56 whole regression passes3,831/309 prerequisite skips/0fail with
+unchanged2,988-file manifests and global quality/build success. See retained
+POSTING_CASH_REGRESSION_C56 evidence. Skipped service cases are not successes.
+Subsequent hosted acceptance belongs to the new subject and remains pending.
+
+PR112 source-checksum review on `43bafc9d` verifies all seven new Gitleaks
+findings against the exact source Git blobs. Fourteen exact history/current-tree
+fingerprints preserve the existing exclusions without a broad path or rule
+allowlist. Gitleaks 8.30.1 now reports zero findings in both local scans;
+35 supply-chain policy tests pass with no skips. The checked sources and HEAD
+remained unchanged during verification. See
+[retained checksum review](POSTING_CASH_SOURCE_DIGEST_FINDINGS_2026-10-03.json).
+This is a separate local checkpoint: the historical d4 full regression remains
+failed; the subsequent clean c56 whole gate is retained above. Hosted acceptance
+remains separate and pending on the new subject.
 
 ## Active financial-policy and open-workload slice (2026-10-03)
+
+PROD032 is accepted on clean immutable866d943a under ADR0817:127 local tests and
+4 actual PostgreSQL/HTTP tests pass without skips. Global Ruff/Mypy/Bandit/build
+and native16.14 restore pass with unchanged source/head and owned cleanup.
+POSTED_BALANCES_2026-10-03.json retains cross-period10000/0/2500 goldens, exact
+9007199254740993 API text, SQLite backup/caller ownership and restored as-of
+digests. Independent policy/identity/resource findings are repaired; earlier
+failed/source-drifting proofs remain separate. Business-date recorded history
+does not reconstruct historical knowledge-time or statutory fiscal close.
+
+The exact-arithmetic/AP-recovery/as-of slice is reviewable in
+[Draft PR113](https://github.com/amrzainmubarak/reconforge-erp/pull/113), stacked
+on PR112 with its actual latest ancestry. Root commitsdf071e48/76d2a8b4/866d943a
+separate the three runtime changes;1942b7af records acceptance. PRIMARY now uses
+codex/receivables-policy-and-inventory-composition for subsequent work. Neither
+PR is merged or deployed. The managed c56 whole regression passes with309
+prerequisite skips; its independent global quality/build gates pass. Observed
+c56 hosted Python3.11/3.12/security/web/storage/Docker/HA-DR checks succeed, while
+server-boundaries failed two cases now repaired and verified locally under
+ADR0819. The observed PR113 Docker checksum failure is retained under ADR0820;
+its updated official pins pass the full local build. Updated hosted PR1128d76647c succeeds; PR1138ba6772d times out at30minutes.
+FINANCIAL_HOSTED_CHECKPOINTS_112_113_2026-10-03.json retains both exact subjects.
+
+PROD033 backend is committed at662aad3f under ADR0815:216 tests pass without
+skips, actual PostgreSQL0099 dump/restore retains eleven table digests, and
+captured policy remains stable after registry changes. All-null history stays
+explicitly unverified; API and React exposure now has separate ADR0821 acceptance. PROD036 is
+committed at75bdbe63 under ADR0818:120 passes/three live prerequisites plus an
+overlapping21-test independent review verify explicit SQLite ownership and
+rollback of caught constructor failures. Test EOF normalization is recorded and
+39 publication/inventory tests pass without skips. Root revision/inventory
+checks pass25 with one live prerequisite; global Ruff/Mypy/Bandit pass on the
+backend checkpoint. Complete purchase and
+sales GL cycles, real customer outcomes and auditor acceptance remain open.
 
 The goal remains active. Foundation changes are reviewable in
 [Draft PR 109](https://github.com/amrzainmubarak/reconforge-erp/pull/109), stacked
@@ -51,9 +166,11 @@ reviewable in [Draft PR111](https://github.com/amrzainmubarak/reconforge-erp/pul
   failures and an intermediate import error remain retained under ADR0812.
   Full-history secret scanning passes after seven exact source-checksum false
   positives were verified against Git blobs; no broad rule/path exclusions.
-  Hosted33b3fb5e Python3.11, web, object-storage, Docker, CodeQL and security
-  checks have passed; Python3.12 and the remaining server job were still running
-  at the recorded observation. Conditional release-image scanning was skipped.
+  Hosted33b3fb5e has now completed18 successful checks, including Python3.11/3.12,
+  web, object-storage, Docker, CodeQL, security, engine parity, server boundaries
+  and PostgreSQL HA/DR simulation. Conditional release-image scanning was skipped.
+  FOUNDATION_REMOTE_ACCEPTANCE_2026-10-03.json binds the observed exact head;
+  later operational posting and cash changes are outside that CI acceptance.
 - Next dependencies remain explicit scoped transaction composition, immutable
   operational posting, integrated trade cycles and connected financial writes.
   There is no available company pilot or external-auditor acceptance evidence.
@@ -91,23 +208,73 @@ restore/health checks pass with one live-service prerequisite skip. Exact source
 and the earlier lint failure are retained in SCOPED_FINANCE_VERIFICATION_2026-10-03.json.
 Later0097 and posting development are outside that full regression snapshot.
 
-PROD009 is now in progress: typed operational posting/review contracts are
-materialized, with SQLite48 and PostgreSQL0098 adapters under implementation.
-New effects require stable authenticated preparer/reviewer identities, an exact
-reviewed digest, explicit human posting authority and recent reauthentication.
-Existing Validated control entries are not adopted into operational balances.
-Acceptance still requires actual both-backend atomicity, database immutability,
-period races, restore, authenticated API/CLI and posted-only balance evidence.
+PROD009 is accepted as a bounded reviewed Manual posting/full-reversal kernel
+under ADR0811 and SQLite48/PostgreSQL0098. Stable authenticated preparation,
+independent review, immutable exact effects, current human authority, source-
+bound command replay, period locks and exact audit/outbox affinity are verified.
+SQLite101 tests pass without skips; PostgreSQL's final affected7 pass after the
+recorded SoD/evidence repairs. Actual HTTP and password-bound CLI pass. Populated
+native16.14 restore repeats missing/cross-source receipts and borrowed-evidence
+denials, retains2 effects/3 receipts/4 legacy-null records, and verifies cleanup
+and every history hash. The separately frozen16.14/17.10 chain reaches0098.
+FINANCE_POSTING_2026-10-03.json keeps overlapping and earlier source-drifting
+runs distinct. Reports explicitly describe selected-period net activity;
+cumulative opening/as-of balances and generated trade posting remain open.
 
-PROD031 is in progress for actual receipt/allocation writes in the React AR
-workspace. A PostgreSQL0097 probe retained receipt creation200, missing receipt
-GET404 and cached retries503: PostgreSQL JSONB replay decoding is broken before
-the hypothesized narrowed-scope cache exposure can be established. No leakage
-is claimed from that run. The slice adds authoritative scoped read-back, safe
-same-command recovery and human/step-up control specifically for cash actions;
-service draft/import capabilities and historical policy evidence remain valid.
-Actual browser persistence and negative security/recovery checks are required
-before completion. ADR0813 is reserved for this contract.
+PROD031 is accepted for actual scoped React receipt/allocation writes under
+ADR0813. The final production build passes19.9s actual HTTPS/PostgreSQL0097:
+one1376minor receipt, total1376 allocation, invoicePaid/version6, exposure0,
+and exactly1 posted/2 allocated event in audit and outbox. Exact receipt retry
+and allocation read-back recover lost responses without a duplicate effect.
+EN/AR keyboard/accessibility and390px layout pass;159 web tests and16 general
+browser tests pass. Sources remain unchanged and the owned database is removed.
+RECEIVABLES_CASH_2026-10-03.json retains the original JSONB503/GET404 and failed
+harness attempts unchanged. No leakage is inferred from the before probe.
+Policyv3 preserves historicalv1/v2 and service invoice/import capabilities.
+Cash remains an AR subledger operation; GL/inventory integration is separate.
+
+These sources are committed atd4e6baf8 and reviewable in
+[Draft PR112](https://github.com/amrzainmubarak/reconforge-erp/pull/112),
+stacked above DraftPR111 on codex/reviewed-posting-and-cash. Final frozen
+quality/package/interface gates pass. The separate clean managed checkout at
+exactlyd4e6baf8 completed with3829 passes,309 capability skips and2 failures in
+1787.40s under locked Python3.12.13. The failures are missing PostgreSQL posting
+JSON-parser inventory and missing Finance posting test evidence in the threat
+model index. Ruff/Mypy/Bandit/build pass with unchanged head and a clean tracked
+tree. POSTING_CASH_REGRESSION_D4_2026-10-03.json permanently retains the failed
+checkpoint. Both inventory repairs pass51 focused tests; a fresh immutable
+whole-repository run remains required. Subsequent work does not modifyd4.
+Hosted PR112 also reproduced both inventory failures; its Python3.11 matrix
+was cancelled and dependent server boundaries skipped. Seven new full-history
+Gitleaks findings are under exact fingerprint/source review; hosted acceptance
+is not claimed. The earlier foundation acceptance remains a separate source.
+The goal remains active. Source inspection for PROD010/011 confirms that AP
+receipts, Inventory movements, AR invoices and GL effects are not yet connected,
+and AP payment is not an implemented aggregate. A reproducible Decimal-context
+prerequisite changes quantity12345 into12000 and FIFO66 into67 at precision2;
+PROD035 must close it before generated stock/trade posting. PROD032/033/034
+track cumulative balances, retained AR precision and analogous AP replay.
+PROD034/035 are now in progress on a subsequent slice: actual PO/receipt/invoice
+recovery and context-independent quantity/FIFO primitives. AP payment remains
+absent and cannot be used as a purported replay fixture.
+
+PROD035 is now accepted under ADR0814:227 tests pass with no skips on frozen
+SQLite/PostgreSQL16.14 sources through0098, plus Ruff/Mypy/Bandit and owned
+database cleanup. Quantity/FIFO results no longer depend on Decimal context;
+ordinary standalone grammar and5000-digit local quantities remain readable.
+Explicit PG new-input refusals and fixed expansion limits are documented.
+EXACT_TRADE_PRIMITIVES_2026-10-03.json retains original/superseded evidence.
+This closes the arithmetic prerequisite only; trade posting and AR policy remain
+separate implementation work.
+
+PROD034 is accepted under ADR0816 after independent inactive-parent review:
+145pass/0skip, unchanged11 dependency hashes, actual concurrent/nonowner/HTTP
+execution, owned cleanup and quality gates. New command envelopes bind the
+request and authoritative source; recovery returns current workflow state with
+no duplicate business evidence. Inactive-parent recovery and fresh-write denial
+are separately verified. PAYABLES_COMMAND_RECOVERY_2026-10-03.json keeps the
+earlier138-pass source and failed probes distinct. Legacy receipt historical
+hierarchy remains unknown; supplier payment and trade GL are not implemented.
 
 ### Financial regression and browser checkpoint
 

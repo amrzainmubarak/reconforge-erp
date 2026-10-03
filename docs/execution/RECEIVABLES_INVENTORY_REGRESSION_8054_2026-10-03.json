@@ -1,0 +1,208 @@
+{
+  "schema_version": "immutable-backend-verification-summary-v1",
+  "source_commit": "8054cd454e14f29a6d0316029aa88acafdaab0a1",
+  "status": "failed",
+  "scope": "Full unfiltered local Python baseline plus global quality/build; optional service prerequisites are explicit skips.",
+  "python": {
+    "source_commit": "8054cd454e14f29a6d0316029aa88acafdaab0a1",
+    "tracked_tree_clean": true,
+    "version": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "executable": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+    "import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+    "version_info": [
+      3,
+      12,
+      13
+    ],
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "tracked_file_count": 3033,
+  "all_tracked_source_manifest_sha256": "96bb8a9b82d073ea0db423a6af7d8577d03a1c9fa11467171bc6251f05302103",
+  "all_sources_head_and_import_unchanged": true,
+  "pytest": {
+    "command": [
+      "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-ra",
+      "--tb=short",
+      "-o",
+      "addopts=",
+      "--junitxml",
+      "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\receivables-inventory-8054-pytest.xml"
+    ],
+    "cwd": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp",
+    "pythonpath": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp",
+    "cleared_environment_names": [],
+    "started_at": "2026-10-03T11:59:12.388372+00:00",
+    "duration_seconds": 1832.239,
+    "pytest_duration_seconds": 1825.828,
+    "counts": {
+      "tests": 4403,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 361,
+      "passed": 4041
+    },
+    "warning_count": 24,
+    "skip_reasons": {
+      "PROD-002 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 14,
+      "PROD-007 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 45,
+      "PROD031 live cash contract requires isolated PostgreSQL creation credentials; review 2026-10-10": 1,
+      "Windows symlink creation requires an external privilege": 1,
+      "live public network evidence is opt-in and may drift": 1,
+      "requires a disposable PostgreSQL administration service": 177,
+      "requires a live PostgreSQL application role": 2,
+      "requires a live PostgreSQL migration service": 1,
+      "requires a live PostgreSQL service": 21,
+      "requires a live Redis service": 3,
+      "requires a live S3-compatible service": 1,
+      "requires a live object-lock-enabled S3-compatible bucket": 1,
+      "requires disposable PostgreSQL source and maintenance services": 1,
+      "requires live PostgreSQL": 78,
+      "requires live PostgreSQL service": 12,
+      "symbolic links are not available in this environment": 1,
+      "symbolic-link creation is unavailable": 1
+    },
+    "failures": [
+      {
+        "test": "tests.test_postgres_writeback_identity_migration_drill.test_drill_runner_and_retained_report_bind_the_same_runtime_contract",
+        "kind": "failure",
+        "message": "AssertionError: assert '0099_pg_receivables_policy' == '0098_pg_finance_posting'\n  \n  - 0098_pg_finance_posting\n  + 0099_pg_receivables_policy",
+        "detail": "tests\\test_postgres_writeback_identity_migration_drill.py:50: in test_drill_runner_and_retained_report_bind_the_same_runtime_contract\n    assert ScriptDirectory.from_config(Config(str(ROOT / \"alembic.ini\"))).get_current_head() == runner.TARGET_REVISION\nE   AssertionError: assert '0099_pg_receivables_policy' == '0098_pg_finance_posting'\nE     \nE     - 0098_pg_finance_posting\nE     + 0099_pg_receivables_policy"
+      }
+    ],
+    "log_sha256": "499e82b7fa3218cf83254fcdc115958b99c38b4f96d75f38b0bd57027e6ecbd7",
+    "junit_sha256": "c039cd3cb8570cfedd7b5ca14b3e4d155f57fb017fee2b3923607402b3cf227c"
+  },
+  "full_skip_case_inventory": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\receivables-inventory-8054-regression.json",
+  "quality": [
+    {
+      "name": "ruff",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "started_at": "2026-10-03T11:59:12.398667+00:00",
+      "duration_seconds": 0.432,
+      "exit_code": 0,
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "started_at": "2026-10-03T11:59:15.645220+00:00",
+      "duration_seconds": 12.687,
+      "exit_code": 0,
+      "log_sha256": "fbc2b5dfdc741a9a17afd9b8ecad20b0b4126c4c75b247521992f209ed3e3713"
+    },
+    {
+      "name": "bandit",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "started_at": "2026-10-03T11:59:31.062543+00:00",
+      "duration_seconds": 34.127,
+      "exit_code": 0,
+      "log_sha256": "333497e37a41d213f0cbb24ee4451bf17bea751f0a656a0cea9493f11f9eee8f"
+    },
+    {
+      "name": "build",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\receivables-inventory-8054-dist"
+      ],
+      "started_at": "2026-10-03T12:00:07.806539+00:00",
+      "duration_seconds": 42.786,
+      "exit_code": 0,
+      "log_sha256": "93ebc51501f71270e9d8d436189a3cac5a6432c18481b99470b8d40e37f4748b"
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-03T12:00:53.226060+00:00",
+      "duration_seconds": 0.093,
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "distribution_artifacts": [
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\receivables-inventory-8054-dist\\reconforge_erp-0.7.1-py3-none-any.whl",
+      "sha256": "e695b88b696af508ddefbce29b50aaec8cbca5e2b218bdc3b9a30827ba2d6329",
+      "bytes": 1911169
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\receivables-inventory-8054-dist\\reconforge_erp-0.7.1.tar.gz",
+      "sha256": "d3b20ac33a611ae1d566f3ef2b361d9e068a34cbfc2a25477e5f5dd22830b39d",
+      "bytes": 3162639
+    }
+  ],
+  "retained_artifacts": {
+    "receivables-inventory-8054-bandit.log": {
+      "bytes": 21533,
+      "sha256": "333497e37a41d213f0cbb24ee4451bf17bea751f0a656a0cea9493f11f9eee8f"
+    },
+    "receivables-inventory-8054-build.log": {
+      "bytes": 380824,
+      "sha256": "93ebc51501f71270e9d8d436189a3cac5a6432c18481b99470b8d40e37f4748b"
+    },
+    "receivables-inventory-8054-diff-check.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "receivables-inventory-8054-mypy.log": {
+      "bytes": 46,
+      "sha256": "fbc2b5dfdc741a9a17afd9b8ecad20b0b4126c4c75b247521992f209ed3e3713"
+    },
+    "receivables-inventory-8054-pytest.log": {
+      "bytes": 75141,
+      "sha256": "499e82b7fa3218cf83254fcdc115958b99c38b4f96d75f38b0bd57027e6ecbd7"
+    },
+    "receivables-inventory-8054-pytest.xml": {
+      "bytes": 790082,
+      "sha256": "c039cd3cb8570cfedd7b5ca14b3e4d155f57fb017fee2b3923607402b3cf227c"
+    },
+    "receivables-inventory-8054-quality-source-manifest.json": {
+      "bytes": 367310,
+      "sha256": "96bb8a9b82d073ea0db423a6af7d8577d03a1c9fa11467171bc6251f05302103"
+    },
+    "receivables-inventory-8054-quality.json": {
+      "bytes": 11348,
+      "sha256": "ac1f3fbc63c77ea907a5f823e8590daedc82c09bf16b9e53b0ab2dbd94d8873a"
+    },
+    "receivables-inventory-8054-regression-source-manifest.json": {
+      "bytes": 367310,
+      "sha256": "96bb8a9b82d073ea0db423a6af7d8577d03a1c9fa11467171bc6251f05302103"
+    },
+    "receivables-inventory-8054-regression.json": {
+      "bytes": 159328,
+      "sha256": "dd11de92a75ce6fa892f5795d384b981dd409dde89c2bdd09482109530b032df"
+    },
+    "receivables-inventory-8054-ruff.log": {
+      "bytes": 19,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    }
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "schema_version": "immutable-backend-verification-summary-v1",
+  "source_commit": "e63859d7a3fa186f091db88ac9f011bdfe60910c",
+  "status": "passed",
+  "scope": "Full unfiltered local Python baseline plus global quality/build; optional service prerequisites are explicit skips.",
+  "python": {
+    "source_commit": "e63859d7a3fa186f091db88ac9f011bdfe60910c",
+    "tracked_tree_clean": true,
+    "version": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "executable": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+    "import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+    "version_info": [
+      3,
+      12,
+      13
+    ],
+    "platform": "Windows-11-10.0.26200-SP0"
+  },
+  "tracked_file_count": 3057,
+  "all_tracked_source_manifest_sha256": "69760a88a825195c25d3587dd391ba62f8c61706fdd45fea04acbce3d8bae601",
+  "all_sources_head_and_import_unchanged": true,
+  "pytest": {
+    "command": [
+      "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "-ra",
+      "--tb=short",
+      "-o",
+      "addopts=",
+      "--junitxml",
+      "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\ar-policy-e638-pytest.xml"
+    ],
+    "cwd": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp",
+    "pythonpath": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp",
+    "cleared_environment_names": [],
+    "started_at": "2026-10-03T13:30:51.097725+00:00",
+    "duration_seconds": 1214.011,
+    "pytest_duration_seconds": 1206.595,
+    "counts": {
+      "tests": 4481,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 366,
+      "passed": 4115
+    },
+    "warning_count": 24,
+    "skip_reasons": {
+      "PROD-002 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 14,
+      "PROD-007 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 45,
+      "PROD031 live cash contract requires isolated PostgreSQL creation credentials; review 2026-10-10": 1,
+      "PROD033 API requires disposable live PostgreSQL app/admin profile; review 2026-10-03": 5,
+      "Windows symlink creation requires an external privilege": 1,
+      "live public network evidence is opt-in and may drift": 1,
+      "requires a disposable PostgreSQL administration service": 177,
+      "requires a live PostgreSQL application role": 2,
+      "requires a live PostgreSQL migration service": 1,
+      "requires a live PostgreSQL service": 21,
+      "requires a live Redis service": 3,
+      "requires a live S3-compatible service": 1,
+      "requires a live object-lock-enabled S3-compatible bucket": 1,
+      "requires disposable PostgreSQL source and maintenance services": 1,
+      "requires live PostgreSQL": 78,
+      "requires live PostgreSQL service": 12,
+      "symbolic links are not available in this environment": 1,
+      "symbolic-link creation is unavailable": 1
+    },
+    "failures": [],
+    "log_sha256": "d582296c7dc45342cada3900a477a0255592437666c37af66a6fb13241917925",
+    "junit_sha256": "7c7b9e6796c32bd9cb6096217dc999c8d27dc8ee6afb310739de67fbddf71a57"
+  },
+  "full_skip_case_inventory": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\ar-policy-e638-regression.json",
+  "quality": [
+    {
+      "name": "ruff",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "started_at": "2026-10-03T13:30:51.101072+00:00",
+      "duration_seconds": 0.249,
+      "exit_code": 0,
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "started_at": "2026-10-03T13:30:52.819717+00:00",
+      "duration_seconds": 1.511,
+      "exit_code": 0,
+      "log_sha256": "fbc2b5dfdc741a9a17afd9b8ecad20b0b4126c4c75b247521992f209ed3e3713"
+    },
+    {
+      "name": "bandit",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "started_at": "2026-10-03T13:30:55.725425+00:00",
+      "duration_seconds": 16.322,
+      "exit_code": 0,
+      "log_sha256": "333497e37a41d213f0cbb24ee4451bf17bea751f0a656a0cea9493f11f9eee8f"
+    },
+    {
+      "name": "build",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\ar-policy-e638-dist"
+      ],
+      "started_at": "2026-10-03T13:31:13.471417+00:00",
+      "duration_seconds": 26.88,
+      "exit_code": 0,
+      "log_sha256": "f58fcbb0ef07e06f310d4824da2be892429c4eeffbb5e29fd2f50ce30cfa6ffa"
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-03T13:31:42.482630+00:00",
+      "duration_seconds": 0.062,
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "distribution_artifacts": [
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\ar-policy-e638-dist\\reconforge_erp-0.7.1-py3-none-any.whl",
+      "sha256": "2b58417d34f28118e2b6ac1c119a0e997a000c66b1d69a769e2f008b8cae2200",
+      "bytes": 1912612
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\ar-policy-e638-dist\\reconforge_erp-0.7.1.tar.gz",
+      "sha256": "082be34c33dab8c1f3bae6f790df01f1ad7e65dcb9a2e2059c2bfc5a29b45f91",
+      "bytes": 3173036
+    }
+  ],
+  "retained_artifacts": {
+    "ar-policy-e638-bandit.log": {
+      "bytes": 21533,
+      "sha256": "333497e37a41d213f0cbb24ee4451bf17bea751f0a656a0cea9493f11f9eee8f"
+    },
+    "ar-policy-e638-build.log": {
+      "bytes": 381308,
+      "sha256": "f58fcbb0ef07e06f310d4824da2be892429c4eeffbb5e29fd2f50ce30cfa6ffa"
+    },
+    "ar-policy-e638-diff-check.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "ar-policy-e638-mypy.log": {
+      "bytes": 46,
+      "sha256": "fbc2b5dfdc741a9a17afd9b8ecad20b0b4126c4c75b247521992f209ed3e3713"
+    },
+    "ar-policy-e638-pytest.log": {
+      "bytes": 75297,
+      "sha256": "d582296c7dc45342cada3900a477a0255592437666c37af66a6fb13241917925"
+    },
+    "ar-policy-e638-pytest.xml": {
+      "bytes": 805241,
+      "sha256": "7c7b9e6796c32bd9cb6096217dc999c8d27dc8ee6afb310739de67fbddf71a57"
+    },
+    "ar-policy-e638-quality-source-manifest.json": {
+      "bytes": 370414,
+      "sha256": "69760a88a825195c25d3587dd391ba62f8c61706fdd45fea04acbce3d8bae601"
+    },
+    "ar-policy-e638-quality.json": {
+      "bytes": 11238,
+      "sha256": "ac9e0a432676fb9fb8f4b95842b18f1e69878321d60c2230a3f54759bbaf1f9c"
+    },
+    "ar-policy-e638-regression-source-manifest.json": {
+      "bytes": 370414,
+      "sha256": "69760a88a825195c25d3587dd391ba62f8c61706fdd45fea04acbce3d8bae601"
+    },
+    "ar-policy-e638-regression.json": {
+      "bytes": 161069,
+      "sha256": "d5fd4d3edf5dfa1f4155f03f75933d284bdff888cc89c229007dbc30281d7503"
+    },
+    "ar-policy-e638-ruff.log": {
+      "bytes": 19,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    }
+  },
+  "provenance": {
+    "original_summary_path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\ar-policy-e638-summary.json",
+    "original_summary_sha256": "20e123cf69e906a0c83a8b3027270131b7bbb553b520dd1650c21a6768ff174e",
+    "equivalent_renamed_head": "4629a64baeb4c1e127dd13afdb5024ac3e2205d8",
+    "source_tree_equal_only": true,
+    "new_invoice_recovery_excluded": true
+  },
+  "separate_hosted_failure": {
+    "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\hosted-pr114-e638-finance-failure\\report.json",
+    "sha256": "c2ac323ac32fc467179fc60bcc80de28226de83c427580220ce1cde2733b4d8a",
+    "run_id": 37126377256,
+    "classification": "Three retained downgrade cases refuse mutation correctly but still assert fixed0098 after fixture upgrades to0099. Independent test-only repair remains pending."
+  }
+}

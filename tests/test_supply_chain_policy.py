@@ -188,10 +188,10 @@ def test_docker_stages_refresh_the_open_ssl_runtime_libraries_without_cli() -> N
 
     assert len(stages) == 2
     assert all("apk add --no-cache --upgrade" in stage for stage in stages)
-    assert dockerfile.count("libcrypto3-3.5.8-r0.apk") == 2
-    assert dockerfile.count("libssl3-3.5.8-r0.apk") == 2
-    assert dockerfile.count("sha256:161223a16f042b8e469e9441291e071464fd91d4f4bbe6f496ee8d0abd4e0701") == 2
-    assert dockerfile.count("sha256:aca521e5ae4a321322a9d47ed64a1775f5ab1ffd215d1e9fc0433c58f7bfd037") == 2
+    assert dockerfile.count("libcrypto3-3.5.9-r0.apk") == 2
+    assert dockerfile.count("libssl3-3.5.9-r0.apk") == 2
+    assert dockerfile.count("sha256:6632d758d8f5e9ea3b650fe966f23bbf9a202f8b8dceecac93da135dec5e3689") == 2
+    assert dockerfile.count("sha256:05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7ad01877") == 2
     assert dockerfile.count("/tmp/libcrypto3.apk") == 6
     assert dockerfile.count("/tmp/libssl3.apk") == 6
     assert "openssl " not in dockerfile

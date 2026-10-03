@@ -20,8 +20,8 @@ if TYPE_CHECKING:
     from reconforge.platform.common import ServerPrincipal
 
 _POLICY_LOGGER = logging.getLogger("reconforge.authorization")
-POLICY_VERSION = "central-policy-v2"
-_READABLE_POLICY_VERSIONS = frozenset({"central-policy-v1", POLICY_VERSION})
+POLICY_VERSION = "central-policy-v3"
+_READABLE_POLICY_VERSIONS = frozenset({"central-policy-v1", "central-policy-v2", POLICY_VERSION})
 POLICY_DECISION_EVIDENCE_SCHEMA_VERSION = 1
 PrincipalType = Literal["user", "service_account"]
 HUMAN_ONLY_PERMISSIONS = frozenset(
@@ -32,6 +32,8 @@ HUMAN_ONLY_PERMISSIONS = frozenset(
         "audit.verify",
         "close.manage",
         "finance_core.manage",
+        "finance_core.post",
+        "finance_core.reverse",
         "finance_core.validate",
         "inventory.post",
         "receivables.credit_override",
@@ -56,6 +58,8 @@ PRIVILEGED_STEP_UP_PERMISSIONS = frozenset(
         "audit.verify",
         "close.manage",
         "finance_core.manage",
+        "finance_core.post",
+        "finance_core.reverse",
         "finance_core.validate",
         "inventory.post",
         "receivables.credit_override",
@@ -649,20 +653,26 @@ class CentralPolicyEngine:
                 reason=f"Deny: missing required permission '{required_permission}'.",
                 reason_code="permission_missing",
             )
-        if ctx.principal_type == "service_account" and permission_requires_human(required_permission):
+        cash_action = (
+            required_permission == "receivables.manage"
+            and ctx.object_type == "receivables.receipt"
+            and ctx.action in {"post", "allocate"}
+        )
+        privileged_action = required_permission in PRIVILEGED_STEP_UP_PERMISSIONS or cash_action
+        if ctx.principal_type == "service_account" and (permission_requires_human(required_permission) or cash_action):
             return PolicyDecision(
                 allowed=False,
                 reason="Deny: service accounts cannot perform a human-governed action.",
                 reason_code="human_principal_required",
             )
-        if ctx.step_up_enforced and required_permission in PRIVILEGED_STEP_UP_PERMISSIONS and not ctx.step_up_active:
+        if (ctx.step_up_enforced or cash_action) and privileged_action and not ctx.step_up_active:
             return PolicyDecision(
                 allowed=False,
                 reason="Deny: this privileged action requires recent human reauthentication.",
                 reason_code="step_up_required",
             )
         if (
-            required_permission in PRIVILEGED_STEP_UP_PERMISSIONS
+            privileged_action
             and ctx.required_step_up_method is not None
             and ctx.step_up_method != ctx.required_step_up_method
         ):

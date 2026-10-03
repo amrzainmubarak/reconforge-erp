@@ -41,17 +41,33 @@ class ReceivablesDatabase:
             connection.close()
 
     def seed_legacy_currency(self, customer_id: str, currency: str) -> None:
-        """Represent a pre-fix customer edit without using the guarded public API."""
+        """Administrative fixture of unresolved pre-49/0099 history, never a product bypass."""
+        assignments = "currency_precision=NULL,currency_rounding_policy=NULL,currency_registry_version=NULL,currency_registry_digest=NULL"
         if self.path is not None:
             connection = connect(self.path, require_exists=True)
             try:
-                connection.execute("UPDATE ar_customers SET currency_code=? WHERE id=?", (currency, customer_id))
+                connection.execute("BEGIN IMMEDIATE")
+                guards = connection.execute("SELECT name,sql FROM sqlite_master WHERE type='trigger' AND tbl_name IN ('ar_customers','ar_invoices','ar_receipts')").fetchall()
+                for guard in guards:
+                    connection.execute(f"DROP TRIGGER {guard['name']}")
+                for table in ("ar_invoices", "ar_receipts"):
+                    connection.execute(f"UPDATE {table} SET {assignments} WHERE customer_id=?", (customer_id,))
+                connection.execute(f"UPDATE ar_customers SET {assignments},currency_code=? WHERE id=?", (currency, customer_id))
+                for guard in guards:
+                    connection.execute(guard['sql'])
                 connection.commit()
             finally:
                 connection.close()
         else:
             with self.admin.transaction():
-                self.admin.execute("UPDATE reconforge.ar_customers SET currency_code=%s WHERE tenant_id=%s AND id=%s", (currency, self.tenant, customer_id))
+                for table in ("ar_customers", "ar_invoices", "ar_receipts"):
+                    self.admin.execute(f"ALTER TABLE reconforge.{table} DISABLE TRIGGER USER")
+                for table in ("ar_invoices", "ar_receipts"):
+                    self.admin.execute(f"UPDATE reconforge.{table} SET {assignments} WHERE tenant_id=%s AND customer_id=%s", (self.tenant, customer_id))
+                self.admin.execute(f"UPDATE reconforge.ar_customers SET {assignments},currency_code=%s WHERE tenant_id=%s AND id=%s", (currency, self.tenant, customer_id))
+                self.admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
+                for table in ("ar_customers", "ar_invoices", "ar_receipts"):
+                    self.admin.execute(f"ALTER TABLE reconforge.{table} ENABLE TRIGGER USER")
 
     def cancel_draft(self, invoice_id: str) -> None:
         if self.path is not None:

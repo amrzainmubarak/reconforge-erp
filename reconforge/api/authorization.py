@@ -86,6 +86,13 @@ _CRITICAL_ROUTE_CONTRACTS: dict[tuple[str, str], tuple[str, tuple[str, ...]]] = 
     ),
     ("POST", "/api/v1/finance-core/entries/{entry_id}/validate"): ("all", ("finance_core.validate",)),
     ("POST", "/api/v1/finance-core/entries/{entry_id}/void"): ("all", ("finance_core.validate",)),
+    ("POST", "/api/v1/finance-core/entries/{entry_id}/post"): ("all", ("finance_core.post",)),
+    ("GET", "/api/v1/finance-core/posted-balances-as-of"): (
+        "any", ("finance_core.manage", "finance_core.post", "finance_core.read", "finance_core.validate"),
+    ),
+    ("POST", "/api/v1/finance-core/postings/{effect_id}/reversal"): (
+        "all", ("finance_core.manage", "finance_core.reverse"),
+    ),
     ("POST", "/api/v1/inventory/movements/{movement_id}/post"): ("all", ("inventory.post",)),
     ("POST", "/api/v1/inventory/movements/{movement_id}/void"): ("all", ("inventory.post",)),
     ("POST", "/api/v1/consolidation-close/periods/{period_id}/lock"): ("all", ("finance_core.validate",)),

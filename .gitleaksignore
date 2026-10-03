@@ -54,3 +54,46 @@ docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json:generic-api-key:65
 ca82cbffd50734965f1c67ea1c94445df46885d5:docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135
 # Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_server_identity.py.
 docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: apps/web/src/components/AdminAccessMutations.tsx.
+d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/RECEIVABLES_CASH_2026-10-03.json:generic-api-key:13
+docs/execution/RECEIVABLES_CASH_2026-10-03.json:generic-api-key:13
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: tests/test_finance_posting_api_contract.py.
+d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:28
+docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:28
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: tests/test_postgres_finance_posting_api.py.
+d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:33
+docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:33
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: alembic/versions/0036_postgres_scim_auth.py.
+f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:354
+docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:354
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: alembic/versions/0039_postgres_emergency_access.py.
+f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:357
+docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:357
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: alembic/versions/0040_postgres_webauthn_mfa.py.
+f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:358
+docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:358
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: alembic/versions/0051_access_policy_lifecycle.py.
+f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:369
+docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:369
+# Verified public Alpine signer-file SHA256 from the exact pinned base, not a private key.
+852508968462ec9957e46e39bb2aab507960b572:docs/execution/OPENSSL_RUNTIME_2026-10-03.json:generic-api-key:30
+docs/execution/OPENSSL_RUNTIME_2026-10-03.json:generic-api-key:30
+# Verified exact cd67fc67 Git-blob SHA256 for tests/test_api_server_identity.py.
+852508968462ec9957e46e39bb2aab507960b572:docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:19
+docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:19
+852508968462ec9957e46e39bb2aab507960b572:docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:76
+docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:76
+# Verified SHA256 of canonical empty JSON array in synthetic native restore evidence.
+662aad3ff0c0f48cb0fcda33f3a178cdec7322d0:docs/execution/RECEIVABLES_POLICY_2026-10-03.json:generic-api-key:29
+docs/execution/RECEIVABLES_POLICY_2026-10-03.json:generic-api-key:29
+# Reviewed AR API source/evidence SHA256 literals; exact identities only.
+b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:113
+docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:113
+b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:114
+docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:114
+b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:115
+docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:115
+b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:116
+docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:116
+b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:122
+docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:122

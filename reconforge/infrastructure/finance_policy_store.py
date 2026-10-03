@@ -61,8 +61,9 @@ class FinancePolicyStore:
             raise PlatformError(str(exc)) from exc
 
     def capture(
-        self, *, workspace_id: str, currency_code: str, minor_units: int, actor_label: str,
+        self, *, workspace_id: str, currency_code: str, minor_units: int | None, actor_label: str,
         existing: Mapping[str, object] | None = None,
+        allow_missing_master: bool = False,
     ) -> tuple[FinanceCurrencyPolicy, CurrencyRegistryContext]:
         try:
             if existing is not None:
@@ -89,7 +90,9 @@ class FinancePolicyStore:
                     if context.registry_manifest.registry_version != binding["registry_version"]:
                         raise FinancePolicyError("finance_currency_policy_invalid: workspace binding version mismatch.")
                 policy = FinanceCurrencyPolicy.capture(currency_code, context)
-            if policy.precision != minor_units:
+            if (minor_units is None and not allow_missing_master) or (
+                minor_units is not None and policy.precision != minor_units
+            ):
                 raise FinancePolicyError(
                     "finance_currency_policy_mismatch: currency master precision differs from the captured policy."
                 )

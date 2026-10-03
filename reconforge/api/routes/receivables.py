@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from collections.abc import Callable
 from decimal import Decimal
 from typing import Annotated, TypeVar
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from reconforge.api.dependencies import (
     enforce_server_scoped_permission,
@@ -56,13 +57,31 @@ ReceivablesApprove = Annotated[LocalUser, Depends(require_permission("receivable
 T = TypeVar("T")
 
 
+def _exact_minor_input(value: object) -> int:
+    """Reject lossy JSON coercion before Pydantic or financial arithmetic.
+
+    Retain integer-string clients, including surrounding whitespace and sign.
+    Decimal and exponent spellings cannot establish an exact integer input.
+    """
+    if type(value) is int:
+        return value
+    if isinstance(value, str) and len(value) <= 128:
+        text = value.strip()
+        if re.fullmatch(r"[+-]?[0-9]+", text):
+            return int(text)
+    raise ValueError("Money requires an exact integer or bounded integer string in minor units.")
+
+
+ExactMinor = Annotated[int, BeforeValidator(_exact_minor_input)]
+
+
 class CustomerRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     customer_code: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=200)
     currency_code: str = Field(min_length=3, max_length=3)
-    credit_limit_minor: int = Field(ge=0)
+    credit_limit_minor: ExactMinor = Field(ge=0)
     credit_hold: bool = False
     payment_terms_days: int = Field(default=0, ge=0, le=3_650)
     workspace: str = Field(default="default", min_length=1, max_length=160)
@@ -77,9 +96,9 @@ class InvoiceLineRequest(BaseModel):
 
     description: str = Field(default="", max_length=500)
     quantity: str = Field(min_length=1, max_length=64)
-    unit_price_minor: int = Field(ge=0)
-    line_total_minor: int = Field(ge=0)
-    tax_minor: int = Field(default=0, ge=0)
+    unit_price_minor: ExactMinor = Field(ge=0)
+    line_total_minor: ExactMinor = Field(ge=0)
+    tax_minor: ExactMinor = Field(default=0, ge=0)
 
 
 class InvoiceRequest(BaseModel):
@@ -89,7 +108,7 @@ class InvoiceRequest(BaseModel):
     customer_code: str = Field(min_length=1, max_length=64)
     invoice_date: str = Field(min_length=10, max_length=10)
     currency_code: str = Field(min_length=3, max_length=3)
-    tax_minor: int = Field(default=0, ge=0)
+    tax_minor: ExactMinor = Field(default=0, ge=0)
     lines: list[InvoiceLineRequest] = Field(min_length=1, max_length=1_000)
     due_date: str = Field(default="", max_length=10)
     workspace: str = Field(default="default", min_length=1, max_length=160)
@@ -112,7 +131,7 @@ class ReceiptAllocationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     invoice_id: str = Field(min_length=1, max_length=160)
-    amount_minor: int = Field(gt=0)
+    amount_minor: ExactMinor = Field(gt=0)
 
 
 class AllocateReceiptRequest(ReceiptAllocationRequest):
@@ -126,7 +145,7 @@ class ReceiptRequest(BaseModel):
     customer_code: str = Field(min_length=1, max_length=64)
     receipt_date: str = Field(min_length=10, max_length=10)
     currency_code: str = Field(min_length=3, max_length=3)
-    amount_minor: int = Field(gt=0)
+    amount_minor: ExactMinor = Field(gt=0)
     allocations: list[ReceiptAllocationRequest] = Field(default_factory=list, max_length=1_000)
     workspace: str = Field(default="default", min_length=1, max_length=160)
     organization_code: str = Field(default="", max_length=64)
@@ -153,6 +172,7 @@ def _server_scope(
     permissions: frozenset[str],
     *,
     amount: Decimal | None = None,
+    cash_action: str | None = None,
 ) -> RequestExecutionScope:
     scope = request_execution_scope(request)
     if len(permissions) == 1:
@@ -164,6 +184,8 @@ def _server_scope(
             organization_id=scope.organization_id,
             entity_id=scope.legal_entity_id,
             amount=amount,
+            object_type="receivables.receipt" if cash_action else None,
+            action=cash_action,
         )
     else:
         enforce_server_scoped_permissions(
@@ -188,8 +210,9 @@ def _server_call(
     entity_code: str = "",
     object_refs: tuple[tuple[ReceivablesObject, str], ...] = (),
     customer_code: str = "",
+    cash_action: str | None = None,
 ) -> T:
-    _server_scope(request, permissions, amount=amount)
+    _server_scope(request, permissions, amount=amount, cash_action=cash_action)
     return execute_postgres_receivables(
         request,
         operation,
@@ -300,6 +323,18 @@ def list_customers(
     }
 
 
+@router.get("/customers/{customer_id}")
+def get_customer(customer_id: str, request: Request, current_user: ReceivablesRead, connection: sqlite3.Connection | None = Depends(get_local_db)) -> dict[str, object]:
+    if server_receivables_enabled(request):
+        record = _server_call(request, frozenset({"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"}), lambda repository, _scope: repository.get_customer(customer_id), object_refs=(("customer", customer_id),))
+    else:
+        try:
+            record = ReceivablesService(_local_connection(connection)).get_customer(customer_id)
+        except (DatabaseError, PlatformError) as exc:
+            raise _error("receivables_customer_read_failed", exc) from exc
+    return project_receivables_customer(record).visible
+
+
 @router.post("/invoices")
 def create_invoice(
     request: Request,
@@ -368,6 +403,18 @@ def list_invoices(
         "invoices": [project_receivables_invoice(record).visible for record in records[offset : offset + limit]],
         "pagination": {"limit": limit, "offset": offset, "total": len(records)},
     }
+
+
+@router.get("/invoices/{invoice_id}")
+def get_invoice(invoice_id: str, request: Request, current_user: ReceivablesRead, connection: sqlite3.Connection | None = Depends(get_local_db)) -> dict[str, object]:
+    if server_receivables_enabled(request):
+        record = _server_call(request, frozenset({"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"}), lambda repository, _scope: repository.get_invoice(invoice_id), object_refs=(("invoice", invoice_id),))
+    else:
+        try:
+            record = ReceivablesService(_local_connection(connection)).get_invoice(invoice_id)
+        except (DatabaseError, PlatformError) as exc:
+            raise _error("receivables_invoice_read_failed", exc) from exc
+    return project_receivables_invoice(record).visible
 
 
 @router.post("/invoices/{invoice_id}/submit")
@@ -460,6 +507,7 @@ def post_receipt(
             ),
             amount=Decimal(payload.amount_minor),
             customer_code=payload.customer_code,
+            cash_action="post",
         )
         return project_receivables_receipt(record).visible
     try:
@@ -470,6 +518,52 @@ def post_receipt(
         )
     except (DatabaseError, PlatformError) as exc:
         raise _error("receivables_receipt_post_failed", exc) from exc
+    return project_receivables_receipt(record).visible
+
+
+@router.get("/receipts")
+def list_receipts(
+    request: Request,
+    current_user: ReceivablesRead,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+    workspace: str = "default",
+    customer_id: str = Query(default="", max_length=160),
+    limit: PageLimit = 100,
+    offset: PageOffset = 0,
+) -> dict[str, object]:
+    if server_receivables_enabled(request):
+        result = _server_call(
+            request,
+            frozenset({"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"}),
+            lambda repository, scope: repository.list_receipts(workspace=scope.workspace_id, customer_id=customer_id, limit=limit, offset=offset, organization_id=scope.organization_id, legal_entity_id=scope.legal_entity_id),
+        )
+    else:
+        try:
+            result = ReceivablesService(_local_connection(connection)).list_receipts(workspace=workspace, customer_id=customer_id, limit=limit, offset=offset)
+        except (DatabaseError, PlatformError) as exc:
+            raise _error("receivables_receipt_list_failed", exc) from exc
+    return {"receipts": [project_receivables_receipt(record).visible for record in result["receipts"]], "pagination": result["pagination"]}
+
+
+@router.get("/receipts/{receipt_id}")
+def get_receipt(
+    receipt_id: str,
+    request: Request,
+    current_user: ReceivablesRead,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    if server_receivables_enabled(request):
+        record = _server_call(
+            request,
+            frozenset({"receivables.read", "receivables.manage", "receivables.approve", "receivables.credit_override"}),
+            lambda repository, _scope: repository.get_receipt(receipt_id),
+            object_refs=(("receipt", receipt_id),),
+        )
+    else:
+        try:
+            record = ReceivablesService(_local_connection(connection)).get_receipt(receipt_id)
+        except (DatabaseError, PlatformError) as exc:
+            raise _error("receivables_receipt_read_failed", exc) from exc
     return project_receivables_receipt(record).visible
 
 
@@ -494,6 +588,7 @@ def allocate_receipt(
             ),
             amount=Decimal(payload.amount_minor),
             object_refs=(("receipt", receipt_id), ("invoice", payload.invoice_id)),
+            cash_action="allocate",
         )
         return project_receivables_receipt(record).visible
     try:

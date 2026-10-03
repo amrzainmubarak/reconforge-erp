@@ -23,7 +23,7 @@ from reconforge.infrastructure.postgres import (
 from reconforge.infrastructure.postgres_domain import install_postgres_domain_schema
 from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
-from reconforge.infrastructure.postgres_receivables import POSTGRES_RECEIVABLES_SCHEMA_SQL
+from reconforge.infrastructure.postgres_receivables import install_postgres_receivables_schema
 from tests.postgres_test_hygiene import RECEIVABLES_TENANT_CLEANUP_PLAN, cleanup_postgres_test_tenants_as_admin
 
 
@@ -48,13 +48,13 @@ def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_govern
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
-            admin.execute(POSTGRES_RECEIVABLES_SCHEMA_SQL)
+            install_postgres_receivables_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             tables = (
                 "tenants,organizations,currencies,legal_entities,domain_workspaces,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,"
                 "ar_customers,ar_invoices,ar_invoice_lines,ar_receipts,"
-                "ar_receipt_allocations,ar_idempotency_keys"
+                "ar_receipt_allocations,ar_idempotency_keys,currency_registry_bindings,currency_registry_snapshots"
             )
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
@@ -86,6 +86,8 @@ def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_govern
                     user=maker,
                     permissions=frozenset({"receivables.read", "receivables.manage"}),
                     principal_type="user",
+                    step_up_active=True,
+                    step_up_method="password",
                     scope_authority=scope,
                 )
             if credential == "checker-token":

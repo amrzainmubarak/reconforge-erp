@@ -1161,7 +1161,11 @@ html[data-density="compact"] td { padding-block: 7px; }
 .ar-workspace h2 { margin-block-start: 0; }
 .ar-workspace label { display: grid; gap: 7px; font-weight: 650; font-size: 13px; }
 .ar-workspace input, .ar-workspace select { width: 100%; min-height: 44px; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); background: var(--surface); }
-.ar-workspace input:focus-visible, .ar-workspace select:focus-visible, .ar-workspace button:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+.ar-workspace input:focus-visible, .ar-workspace select:focus-visible, .ar-workspace button:focus-visible, .ar-workspace summary:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+.ar-workspace summary { cursor: pointer; min-height: 44px; padding-block: 12px; font-weight: 650; }
+.ar-draft > summary { font-size: 16px; }
+.ar-evidence { border-block-start: 1px solid var(--border); margin-block: 16px; }
+.ar-evidence > summary { font-size: 13px; color: var(--text-secondary); }
 .ar-scope { max-width: 700px; }
 .ar-draft fieldset { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 0; margin: 20px 0; border: 0; min-width: 0; }
 .ar-wide, .ar-draft .ar-pagination { grid-column: 1 / -1; }

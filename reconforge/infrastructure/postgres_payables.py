@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
@@ -23,6 +23,7 @@ from reconforge.domain.payables_quantities import (
     quantity_text,
     rounded_minor,
 )
+from reconforge.domain.payables_replay import PayablesReplayError, creation_identity, replay_envelope, verify_replay
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_repository_scope import (
@@ -472,6 +473,7 @@ class PostgresPayablesRepository:
         *,
         organization_code: str,
         entity_code: str,
+        require_active: bool = True,
     ) -> tuple[str | None, str | None]:
         organization_id: str | None = None
         entity_id: str | None = None
@@ -482,8 +484,8 @@ class PostgresPayablesRepository:
                    JOIN reconforge.master_data_workspace_organizations w
                      ON w.tenant_id=o.tenant_id AND w.organization_id=o.id
                    WHERE o.tenant_id=%s AND w.workspace_id=%s
-                     AND o.organization_code=%s AND o.active=TRUE""",
-                (self.tenant_id, workspace_id, code),
+                     AND o.organization_code=%s AND (NOT %s OR o.active=TRUE)""",
+                (self.tenant_id, workspace_id, code, require_active),
             ).fetchone()
             if row is None:
                 raise PlatformError("Payables organization was not found or inactive in this workspace.")
@@ -494,8 +496,8 @@ class PostgresPayablesRepository:
             code = _code(entity_code, "Entity code")
             row = self.connection.execute(
                 """SELECT id FROM reconforge.legal_entities
-                   WHERE tenant_id=%s AND organization_id=%s AND entity_code=%s AND active=TRUE""",
-                (self.tenant_id, organization_id, code),
+                   WHERE tenant_id=%s AND organization_id=%s AND entity_code=%s AND (NOT %s OR active=TRUE)""",
+                (self.tenant_id, organization_id, code, require_active),
             ).fetchone()
             if row is None:
                 raise PlatformError("Payables legal entity was not found or inactive.")
@@ -532,7 +534,9 @@ class PostgresPayablesRepository:
             metadata=metadata,
         )
 
-    def _supplier_by_code(self, workspace_id: str, supplier_code: str) -> dict[str, Any]:
+    def _supplier_by_code(
+        self, workspace_id: str, supplier_code: str, *, require_active: bool = True,
+    ) -> dict[str, Any]:
         row = self.connection.execute(
             """SELECT id,workspace_id,organization_id,legal_entity_id,supplier_code,name,
                       currency_code,tax_identifier,status,created_at,updated_at,row_version
@@ -543,31 +547,43 @@ class PostgresPayablesRepository:
         if row is None:
             raise PlatformError("Supplier not found in the requested workspace.")
         supplier = _row(row, self._SUPPLIER_COLUMNS)
-        if supplier["status"] != "Active":
+        if require_active and supplier["status"] != "Active":
             raise PlatformError("Supplier must be active.")
         return supplier
 
-    def _branch_id(self, organization_id: str | None, entity_id: str | None, branch_code: str) -> str | None:
+    def _branch_id(
+        self, organization_id: str | None, entity_id: str | None, branch_code: str, *, require_active: bool = True,
+    ) -> str | None:
         if not branch_code.strip():
             return None
         if organization_id is None:
             raise PlatformError("Organization code is required when a branch code is supplied.")
         row = self.connection.execute(
             """SELECT id FROM reconforge.branches
-               WHERE tenant_id=%s AND organization_id=%s AND branch_code=%s AND active=TRUE
-                 AND (%s IS NULL OR legal_entity_id=%s)""",
-            (self.tenant_id, organization_id, _code(branch_code, "Branch code"), entity_id, entity_id),
+               WHERE tenant_id=%s AND organization_id=%s AND branch_code=%s AND (NOT %s OR active=TRUE)
+                 AND (%s::text IS NULL OR legal_entity_id=%s)""",
+            (self.tenant_id, organization_id, _code(branch_code, "Branch code"), require_active, entity_id, entity_id),
         ).fetchone()
         if row is None:
             raise PlatformError("Payables branch was not found or inactive.")
         return str(row["id"] if isinstance(row, Mapping) else row[0])
 
-    def _idempotent(self, operation: str, workspace_id: str, key: str) -> dict[str, Any] | None:
+    def _idempotent(
+        self, operation: str, workspace_id: str, key: str, request: dict[str, Any]
+    ) -> dict[str, Any] | None:
         normalized = _text(key, "Idempotency key", maximum=200, required=False)
         if not normalized:
             return None
+        self.connection.execute(
+            "SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+            (
+                encode_financial_idempotency_response(
+                    {"tenant": self.tenant_id, "operation": operation, "workspace": workspace_id, "key": normalized}
+                ).text,
+            ),
+        )
         row = self.connection.execute(
-            """SELECT response_json FROM reconforge.ap_idempotency_keys
+            """SELECT response_json::text AS response_json FROM reconforge.ap_idempotency_keys
                WHERE tenant_id=%s AND scope=%s AND idempotency_key=%s""",
             (self.tenant_id, f"{operation}:{workspace_id}", normalized),
         ).fetchone()
@@ -575,16 +591,34 @@ class PostgresPayablesRepository:
             return None
         raw = row["response_json"] if isinstance(row, Mapping) else row[0]
         try:
-            return decode_financial_idempotency_response(raw).payload
+            stored = decode_financial_idempotency_response(raw).payload
         except PersistedJsonError as exc:
             raise PostgresPayablesError("Stored Payables idempotency response is invalid.") from exc
+        # The caller's canonical request determines the source, never the cache.
+        getters: dict[str, Callable[[str], dict[str, Any]]] = {
+            "purchase_order": self._purchase_order,
+            "goods_receipt": self._receipt,
+            "supplier_invoice": self._supplier_invoice,
+        }
+        authoritative = getters[operation](request["id"])
+        receipt_scope = None
+        if operation == "goods_receipt":
+            parent = self._purchase_order(authoritative["purchase_order_id"])
+            receipt_scope = {key: parent[key] for key in ("organization_id", "legal_entity_id")}
+        try:
+            verify_replay(operation, stored, request, authoritative, receipt_scope=receipt_scope)
+        except PayablesReplayError as exc:
+            raise PlatformError(str(exc)) from exc
+        return authoritative
 
-    def _save_idempotency(self, operation: str, workspace_id: str, key: str, result: dict[str, Any]) -> None:
+    def _save_idempotency(
+        self, operation: str, workspace_id: str, key: str, result: dict[str, Any], request: dict[str, Any]
+    ) -> None:
         normalized = _text(key, "Idempotency key", maximum=200, required=False)
         if not normalized:
             return
         try:
-            document = encode_financial_idempotency_response(result)
+            document = encode_financial_idempotency_response(replay_envelope(operation, request, result))
         except PersistedJsonError as exc:
             raise PostgresPayablesError("Payables idempotency response is invalid.") from exc
         self.connection.execute(
@@ -859,19 +893,51 @@ class PostgresPayablesRepository:
             workspace_id = self._workspace_id(workspace)
             if workspace_id is None:
                 raise PostgresPayablesError("Payables workspace was not found for this tenant.")
-            previous = self._idempotent("purchase_order", workspace_id, idempotency_key)
+            # Exact recovery still resolves authorized parent identities, but a
+            # later deactivation cannot turn a read-only replay into a new write.
+            supplier = self._supplier_by_code(workspace_id, supplier_code, require_active=False)
+            organization_id, entity_id = self._scope_ids(
+                workspace_id,
+                organization_code=organization_code,
+                entity_code=entity_code,
+                require_active=False,
+            )
+            branch_id = self._branch_id(organization_id, entity_id, branch_code, require_active=False)
+            po_id = platform_id("APPO", workspace_id, number)
+            request = creation_identity(
+                "purchase_order",
+                {
+                    "id": po_id,
+                    "workspace_id": workspace_id,
+                    "organization_id": organization_id,
+                    "legal_entity_id": entity_id,
+                    "branch_id": branch_id,
+                    "supplier_id": supplier["id"],
+                    "po_number": number,
+                    "order_date": ordered_on.isoformat() if ordered_on else None,
+                    "expected_date": expected_on.isoformat() if expected_on else None,
+                    "currency_code": currency,
+                    "created_by": _text(actor_label, "Actor label", maximum=160),
+                    "lines": [
+                        {
+                            "item_code": item,
+                            "ordered_quantity": quantity_text,
+                            "unit_price_minor": unit_price,
+                            "description": description,
+                            "tax_minor": tax,
+                        }
+                        for item, _quantity, quantity_text, unit_price, description, tax in normalized_lines
+                    ],
+                },
+            )
+            previous = self._idempotent("purchase_order", workspace_id, idempotency_key, request)
             if previous is not None:
                 return previous
             supplier = self._supplier_by_code(workspace_id, supplier_code)
             if supplier["currency_code"] != currency:
                 raise PlatformError("Purchase order currency must match the supplier currency.")
-            organization_id, entity_id = self._scope_ids(
-                workspace_id,
-                organization_code=organization_code,
-                entity_code=entity_code,
-            )
-            branch_id = self._branch_id(organization_id, entity_id, branch_code)
-            po_id = platform_id("APPO", workspace_id, number)
+            self._scope_ids(workspace_id, organization_code=organization_code, entity_code=entity_code)
+            self._branch_id(organization_id, entity_id, branch_code)
             row = self.connection.execute(
                 """INSERT INTO reconforge.ap_purchase_orders
                    (tenant_id,id,workspace_id,organization_id,legal_entity_id,branch_id,
@@ -919,7 +985,7 @@ class PostgresPayablesRepository:
                     ),
                 )
             result = self._purchase_order(po_id)
-            self._save_idempotency("purchase_order", workspace_id, idempotency_key, result)
+            self._save_idempotency("purchase_order", workspace_id, idempotency_key, result, request)
             self._event(
                 actor_label=actor_label,
                 object_type="ap_purchase_order",
@@ -1032,7 +1098,28 @@ class PostgresPayablesRepository:
             workspace_id = self._workspace_id(workspace)
             if workspace_id is None:
                 raise PostgresPayablesError("Payables workspace was not found for this tenant.")
-            previous = self._idempotent("goods_receipt", workspace_id, idempotency_key)
+            order = self._purchase_order(purchase_order_id)
+            if order["workspace_id"] != workspace_id:
+                raise PlatformError("Goods receipt and purchase order workspace must match.")
+            receipt_id = platform_id("APGR", workspace_id, number)
+            request = creation_identity(
+                "goods_receipt",
+                {
+                    "id": receipt_id,
+                    "workspace_id": workspace_id,
+                    "purchase_order_id": order["id"],
+                    "organization_id": order["organization_id"],
+                    "legal_entity_id": order["legal_entity_id"],
+                    "receipt_number": number,
+                    "receipt_date": received_on.isoformat() if received_on else None,
+                    "created_by": _text(actor_label, "Actor label", maximum=160),
+                    "lines": [
+                        {"purchase_order_line_id": line_id, "received_quantity": quantity_text}
+                        for line_id, (_quantity, quantity_text) in sorted(normalized_quantities.items())
+                    ],
+                },
+            )
+            previous = self._idempotent("goods_receipt", workspace_id, idempotency_key, request)
             if previous is not None:
                 return previous
             order = self._purchase_order(purchase_order_id, lock=True)
@@ -1046,7 +1133,6 @@ class PostgresPayablesRepository:
                 ordered = _stored_quantity(line_rows[line_id]["ordered_quantity"], f"ordered quantity {line_id}")
                 if exact_sum((self._received_quantity(line_id), quantity)) > ordered:
                     raise PlatformError(f"Receipt exceeds ordered quantity for line {line_id}.")
-            receipt_id = platform_id("APGR", workspace_id, number)
             row = self.connection.execute(
                 """INSERT INTO reconforge.ap_goods_receipts
                    (tenant_id,id,workspace_id,purchase_order_id,receipt_number,receipt_date,
@@ -1082,7 +1168,7 @@ class PostgresPayablesRepository:
                     ),
                 )
             result = self._receipt(receipt_id)
-            self._save_idempotency("goods_receipt", workspace_id, idempotency_key, result)
+            self._save_idempotency("goods_receipt", workspace_id, idempotency_key, result, request)
             self._event(
                 actor_label=actor_label,
                 object_type="ap_goods_receipt",
@@ -1129,16 +1215,12 @@ class PostgresPayablesRepository:
             workspace_id = self._workspace_id(workspace)
             if workspace_id is None:
                 raise PostgresPayablesError("Payables workspace was not found for this tenant.")
-            previous = self._idempotent("supplier_invoice", workspace_id, idempotency_key)
-            if previous is not None:
-                return previous
-            supplier = self._supplier_by_code(workspace_id, supplier_code)
-            if supplier["currency_code"] != currency:
-                raise PlatformError("Supplier invoice currency must match the supplier currency.")
+            supplier = self._supplier_by_code(workspace_id, supplier_code, require_active=False)
             organization_id, entity_id = self._scope_ids(
                 workspace_id,
                 organization_code=organization_code,
                 entity_code=entity_code,
+                require_active=False,
             )
             po_id = _text(purchase_order_id, "Purchase order id", maximum=128, required=False)
             po = self._purchase_order(po_id) if po_id else None
@@ -1153,6 +1235,42 @@ class PostgresPayablesRepository:
                 if po is not None and po_line_id not in po_lines:
                     raise PlatformError(f"Invoice line references an unknown purchase-order line: {po_line_id}.")
             invoice_id = platform_id("APINV", workspace_id, supplier["id"], number)
+            request = creation_identity(
+                "supplier_invoice",
+                {
+                    "id": invoice_id,
+                    "workspace_id": workspace_id,
+                    "organization_id": organization_id,
+                    "legal_entity_id": entity_id,
+                    "supplier_id": supplier["id"],
+                    "purchase_order_id": po_id or None,
+                    "invoice_number": number,
+                    "invoice_date": invoiced_on.isoformat() if invoiced_on else None,
+                    "due_date": due_on.isoformat() if due_on else None,
+                    "currency_code": currency,
+                    "tax_minor": tax,
+                    "total_minor": total,
+                    "created_by": _text(actor_label, "Actor label", maximum=160),
+                    "lines": [
+                        {
+                            "purchase_order_line_id": line_id or None,
+                            "invoiced_quantity": quantity_text,
+                            "unit_price_minor": price,
+                            "line_total_minor": line_total,
+                            "description": description,
+                            "tax_minor": line_tax,
+                        }
+                        for line_id, _quantity, quantity_text, price, line_total, description, line_tax in normalized_lines
+                    ],
+                },
+            )
+            previous = self._idempotent("supplier_invoice", workspace_id, idempotency_key, request)
+            if previous is not None:
+                return previous
+            supplier = self._supplier_by_code(workspace_id, supplier_code)
+            if supplier["currency_code"] != currency:
+                raise PlatformError("Supplier invoice currency must match the supplier currency.")
+            self._scope_ids(workspace_id, organization_code=organization_code, entity_code=entity_code)
             row = self.connection.execute(
                 """INSERT INTO reconforge.ap_supplier_invoices
                    (tenant_id,id,workspace_id,organization_id,legal_entity_id,supplier_id,
@@ -1209,7 +1327,7 @@ class PostgresPayablesRepository:
                     ),
                 )
             result = self._supplier_invoice(invoice_id)
-            self._save_idempotency("supplier_invoice", workspace_id, idempotency_key, result)
+            self._save_idempotency("supplier_invoice", workspace_id, idempotency_key, result, request)
             self._event(
                 actor_label=actor_label,
                 object_type="ap_supplier_invoice",

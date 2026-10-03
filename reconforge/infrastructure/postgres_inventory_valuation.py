@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from decimal import ROUND_HALF_EVEN, Decimal
 from hashlib import sha256
 from typing import Any
 
 from reconforge.application.inventory_valuation import InventoryValuationSummary
 from reconforge.auth.rbac import same_actor
 from reconforge.domain.finance_policy import POLICY_COLUMNS, FinancePolicyError
+from reconforge.domain.inventory_costing import allocate_fifo_value
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
@@ -741,13 +741,10 @@ class PostgresInventoryValuationRepository:
 
     @staticmethod
     def _allocated_value(remaining_value: int, remaining_quantity: int, consumed_quantity: int) -> int:
-        if consumed_quantity == remaining_quantity:
-            return remaining_value
-        exact = Decimal(remaining_value) * Decimal(consumed_quantity) / Decimal(remaining_quantity)
-        value = int(exact.to_integral_value(rounding=ROUND_HALF_EVEN))
-        if value <= 0 or value >= remaining_value:
-            raise PlatformError("A partial FIFO issue cannot be represented exactly enough in currency minor units.")
-        return value
+        try:
+            return allocate_fifo_value(remaining_value, remaining_quantity, consumed_quantity)
+        except ValueError as exc:
+            raise PlatformError(str(exc)) from exc
 
     def _finance_draft(
         self,

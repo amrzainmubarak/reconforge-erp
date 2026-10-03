@@ -77,10 +77,10 @@ tasks:
     priority: P1
     area: finance-core
     title: Implement immutable operational posting kernel
-    status: in_progress
+    status: completed
     depends_on: [PROD-002, PROD-007, PROD-015, PROD-024, PROD-025]
     exit_evidence: >-
-      Balanced exact journal lines, immutable posting/reversals, locked periods, unique source effect, TB/drill-down, migration/restore and concurrency proof.
+      ADR0811 accepts reviewed Manual/full-reversal effects at SQLite48/PG0098. SQLite101/0skip; PG final7/0skip, earlier81/one native skip explicitly separate. Actual password-bound HTTP/CLI, populated16.14 native restore with2effects/3commands/4legacy-null and source-bound16/17 chain pass. Command/evidence substitution, checker draft replacement, period/transaction races and late evidence faults are tested. TB is selected-period-net-activity; cumulative opening and generated trade integration remain separate.
   - id: PROD-010
     priority: P1
     area: purchase-cycle
@@ -253,10 +253,74 @@ tasks:
     priority: P0
     area: studio-receivables-cash
     title: Deliver scoped cash receipt allocation and authoritative recovery
-    status: in_progress
+    status: completed
     depends_on: [PROD-005, PROD-007, PROD-026, PROD-029]
     exit_evidence: >-
-      Actual PostgreSQL0097 before probe retains creation200, missing GET404 and cached retry503 caused by JSONB replay decoding. Require versioned exact request binding, scope-checked receipt read-back, human step-up for post/allocate, historical policy verification and actual EN/AR React persistence, unknown-response recovery, CSRF, sibling-scope and stale-version denials. No leakage or operational GL integration claim from the before probe.
+      ADR0813 accepted: frozen real HTTPS0097 browser19.9s, one1376minor receipt/full allocation, Paidv6/exposure0, audit/outbox1post+2allocate and owned cleanup. EN/AR keyboard/accessibility/390px pass;159 web tests,16 general browser,95 broad AR and2 dedicated cash tests pass. Versioned scope-checked replay and human cash assurance retain v1/v2 evidence/service invoice paths. Original codec and harness failures preserved. No automatic GL claim.
+  - id: PROD-032
+    priority: P1
+    area: finance-core
+    title: Verify cumulative balances and explicit opening carry-forward
+    status: completed
+    depends_on: [PROD-009]
+    exit_evidence: >-
+      ADR0817 accepted on clean immutable866d943a:127local/0skip,4actualPG-HTTP/0skip, globalRuff/Mypy/Bandit/build and native16.14 restore35.505s wrapper with owned cleanup. Exact opening/activity/closing10000/-7500/2500, cross-period reversal,9007199254740993 HTTP text, caller ownership, SQLite multi-period restore and native selected-period as-of digests verified. Independent policy/identity/resource findings repaired, failed fixtures/source drift retained in POSTED_BALANCES_2026-10-03.json. Current recorded business-date history only; no knowledge-time/statutory close/automatic opening import.
+  - id: PROD-033
+    priority: P1
+    area: receivables-money
+    title: Capture AR currency precision and historical display provenance
+    status: in_progress
+    depends_on: [PROD-007, PROD-031]
+    exit_evidence: >-
+      Backend662aad3f accepted under ADR0815:216pass/0skip SQLite49/actualPostgreSQL0099, eighteen owned hashes stable, actual populated16.14 restore eleven equal digests/cleanup and nonowner raw denials. JPY0/KWD3, registry changes, legacy unknown data, hidden-child concurrency, malformed master and tampered replay verified in RECEIVABLES_POLICY_2026-10-03.json. ADR0821 API b9153400/React31220e06 separately pass corrected11actualHTTP/0skip, full202web and2fresh tracked-fixture HTTPS journeys; exact text/JPY0/KWD3/huge/legacy/EN-AR/390px verified. New whole/hosted publication gate pending; never infer historical policy from today's currency code.
+  - id: PROD-034
+    priority: P0
+    area: payables-recovery
+    title: Reproduce and close analogous PostgreSQL AP JSONB command replay
+    status: completed
+    depends_on: [PROD-002, PROD-031]
+    exit_evidence: >-
+      ADR0816 accepted: final145pass/0skip actual nonowner PostgreSQL with source equality/cleanup, concurrency/password-bound HTTP, exact PO/receipt/invoice current-state recovery, altered/cross-scope denial and no repeat business evidence. Inactive-parent recovery preserves fresh-write prerequisites; nullable branch SQL is typed. PAYABLES_COMMAND_RECOVERY_2026-10-03.json retains original JSONB failures/138-pass source and independent review. Legacy receipt original hierarchy remains unverifiable; AP payment/GL absent.
+  - id: PROD-035
+    priority: P0
+    area: exact-quantity-and-fifo
+    title: Remove ambient Decimal context from AR quantities and FIFO allocation
+    status: completed
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      ADR0814 accepted:227pass/0skip actual SQLite/PostgreSQL16.14 through0098, frozen runtime hashes and owned cleanup. Integer/rational arithmetic preserves quantity12345 and FIFO66 under hostile contexts; two-layer cost3.00 fully conserved. Existing standalone grammars/5000-digit local quantities preserved; new PG scientific-text/float refusals and pre-expansion1M-character ceiling explicit. Original red and superseded gates retained in EXACT_TRADE_PRIMITIVES_2026-10-03.json. Generated trade/GL remains separate.
+  - id: PROD-036
+    priority: P0
+    area: inventory-transaction-composition
+    title: Bind SQLite inventory mutations to an explicit owning unit of work
+    status: completed
+    depends_on: [PROD-009, PROD-035]
+    exit_evidence: >-
+      ADR0818 accepts explicit SQLite owner composition:120pass/3 live PostgreSQL prerequisites and21 overlapping independent passes/0skip, six owned hashes unchanged. Bound children never finalize, caught failures including constructor rejection poison the owner, independent observers see no partial effects, commit/audit/outbox faults roll back. Original premature commit/data-loss, cold-import and constructor red probes retained in SQLITE_INVENTORY_COMPOSITION_2026-10-03.json. Finance result remains Draft; generated operational GL and PostgreSQL bundle composition remain separate.
+  - id: PROD-037
+    priority: P1
+    area: postgres-consolidation-hierarchy
+    title: Version the retained legacy global close unique-constraint repair
+    status: planned
+    depends_on: [PROD-002]
+    exit_evidence: >-
+      Actual bootstrap probe on0098 rejects equal group/period names in different attributed entities because PostgreSQL's automatically generated legacy unique name differs from explicit truncation. Preserve historical0078; use a separately versioned catalog/column-bound migration with current-state checks, same-scope duplicate denial, sibling RLS, populated restore and safe downgrade refusal. Current-bootstrap ADR0819 deliberately leaves this constraint unchanged.
+  - id: PROD-038
+    priority: P1
+    area: generated-inventory-posting
+    title: Post one independently reviewed receipt and unconsumed reversal atomically
+    status: planned
+    depends_on: [PROD-009, PROD-015, PROD-035, PROD-036]
+    exit_evidence: >-
+      Both engines atomically record10units/value12000, retained FIFO origin, generated sealed DrInventory/CrGRNI effect and exact command/audit/outbox evidence. Stable human maker/checker, full unconsumed compensating reversal, no bypass through generic GL or legacy source correction, actual races/faults/native restore and downgrade refusal. No whole trade-cycle claim.
+  - id: PROD-039
+    priority: P0
+    area: receivables-command-recovery
+    title: Bind invoice creation replay to exact request and authoritative source
+    status: completed
+    depends_on: [PROD-033, PROD-035]
+    exit_evidence: >-
+      ADR0823 accepted bounded core:331pass/0skip actual SQLite/PostgreSQL16.14 AR/API/cash/codec, nine owned and1208 participating hashes unchanged; separate native1pass with1,188,108-byte dump/restore and equal history/nonowner recovery. Two physical connections serialize exact/conflicting key; late audit/outbox/key/codec faults roll back all effects. Preserve historical Draft1/currentGETPaid, current authority and retained policy after suspended customer/terms/registry changes. True schema48-to49 raw backup and ambiguous legacy GET fallback; no guessed terms, receipt protocol or public AR export. Independent source review/root cleanup verification; original reds retained in RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json. New whole/hosted publication gates separate.
   - id: E-1120
     priority: P0
     area: financial-exactness

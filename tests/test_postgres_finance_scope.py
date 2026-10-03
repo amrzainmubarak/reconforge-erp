@@ -94,6 +94,11 @@ def finance_database(isolated_postgres_migration_dsn: str):
             # Retain an explicit pre-0095 legacy row, without a guessed upgrade backfill.
             admin.execute("UPDATE reconforge.organizations SET application_workspace_id=NULL WHERE id='org_legacy'")
         command.upgrade(config, "head")
+        with psycopg.connect(isolated_postgres_migration_dsn, autocommit=True) as admin:
+            # Upgrade introduces posting tables used by Finance integrity triggers.
+            admin.execute(psycopg.sql.SQL(
+                "GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.finance_posting_effects,reconforge.finance_posting_commands TO {}"
+            ).format(psycopg.sql.Identifier(params["user"])))
         yield {"factory": factory, "boundary": boundary, "entries": entries, "ids": ids, "admin": isolated_postgres_migration_dsn, "config": config, "before_policies": before_policies}
     finally:
         factory.close()

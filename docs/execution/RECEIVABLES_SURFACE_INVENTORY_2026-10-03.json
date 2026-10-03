@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "status": "bounded_inventory_consistent",
+  "subject_files": {
+    "reconforge/modules/registry.py": "cc16a4486ba371f390ea75981d2c4a7a6233915a3bda5b5eafb3438a2edc07db",
+    "docs/security/threat-model.md": "e1e5a9af0656ec8349ee7644fad28168aa291fc47ee45e089b35b0da2743f747",
+    "docs/security/threat-model-index.v1.yaml": "6f8590c01b2c49c3ea54baadfbd7f3c6082d1cb5d59e0d598f996beabc599ff9",
+    "docs/risk-register.yaml": "4484534c9e4ee915dee59ba09b750c982d2733c1b21b366e9f74a285aa591096"
+  },
+  "runs": [
+    {
+      "artifact": "output\\verification-2026-10-03\\prod033-publication-metadata-fixed.xml",
+      "sha256": "51a0175899faf9c5ca1eaa1f60d94ac28c53f2e73141df798cad59f2fbf80d24",
+      "name": "pytest",
+      "errors": "0",
+      "failures": "1",
+      "skipped": "0",
+      "tests": "38",
+      "time": "15.999",
+      "timestamp": "2026-10-03T15:46:27.476931+03:00",
+      "hostname": "DESKTOP-FDO3RD5"
+    },
+    {
+      "artifact": "output\\verification-2026-10-03\\prod033-publication-metadata-final.xml",
+      "sha256": "276d3b56a8a43993fa381a0d8993b0d9e51033d1921e76349725513efab39a9f",
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "38",
+      "time": "13.669",
+      "timestamp": "2026-10-03T15:49:45.314105+03:00",
+      "hostname": "DESKTOP-FDO3RD5"
+    },
+    {
+      "artifact": "output\\verification-2026-10-03\\prod033-publication-metadata-release.xml",
+      "sha256": "8215882410aef016b3db6259f321e8aa29d77fde46fbc478d6a0d9e1e656bf62",
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "38",
+      "time": "13.380",
+      "timestamp": "2026-10-03T15:53:28.804549+03:00",
+      "hostname": "DESKTOP-FDO3RD5"
+    },
+    {
+      "artifact": "output\\verification-2026-10-03\\prod033-security-metadata.xml",
+      "sha256": "6d623fea889ce13fdb7733c0c5d0396f919269427ad772685f6d52c639ba0c57",
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "14",
+      "time": "0.950",
+      "timestamp": "2026-10-03T15:55:23.088723+03:00",
+      "hostname": "DESKTOP-FDO3RD5"
+    }
+  ],
+  "setup_error_retained": "First invocation named nonexistent test_threat_model_inventory.py and exited4 before collection. Correct test module is test_threat_model_index.py.",
+  "repaired_failure": "Studio api interface first lacked mirrored threat-index metadata. Update now includes financial-sensitive AR assets, current authorization/monetary controls and explicit remaining threats.",
+  "ruff_exit": 0,
+  "mypy_exit": 0,
+  "mypy_source_count": 569,
+  "financial_api_ui_sources_changed": false,
+  "scope": "Metadata only after prior frozen cash/policy browser run; no financial command, stored money or UI source edits",
+  "whole_gate": "new immutable committed-head and hosted verification remain separate",
+  "bandit": {
+    "exit_code": 0,
+    "scope": "all reconforge",
+    "artifact": "output/verification-2026-10-03/prod033-publication-bandit.log",
+    "sha256": "333497e37a41d213f0cbb24ee4451bf17bea751f0a656a0cea9493f11f9eee8f"
+  }
+}

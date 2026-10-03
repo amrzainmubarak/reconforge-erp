@@ -167,6 +167,8 @@ BACKUP_TABLES = [
     "legacy_import_records",
     "audit_events",
     "audit_ledger_state",
+    "finance_posting_effects",
+    "finance_posting_commands",
 ]
 
 CONSOLIDATION_BACKUP_TABLES = (
@@ -258,6 +260,8 @@ BACKUP_SELECT_QUERIES = {
     "inventory_lots": "SELECT * FROM inventory_lots ORDER BY item_id, organization_id, lot_serial_code",
     "finance_journals": "SELECT * FROM finance_journals ORDER BY workspace_id, organization_id, journal_code",
     "ledger_entries": "SELECT * FROM ledger_entries ORDER BY workspace_id, posting_date, entry_number",
+    "finance_posting_effects": "SELECT * FROM finance_posting_effects ORDER BY reverses_effect_id IS NOT NULL, id",
+    "finance_posting_commands": "SELECT * FROM finance_posting_commands ORDER BY workspace_id, command_id",
     "ledger_lines": "SELECT * FROM ledger_lines ORDER BY entry_id, line_number",
     "ledger_line_dimensions": "SELECT * FROM ledger_line_dimensions ORDER BY line_id, dimension_value_id",
     "inventory_movements": "SELECT * FROM inventory_movements ORDER BY workspace_id, movement_date, movement_number",
@@ -376,6 +380,8 @@ BACKUP_DELETE_QUERIES = {
     "inventory_lots": "DELETE FROM inventory_lots",
     "finance_journals": "DELETE FROM finance_journals",
     "ledger_entries": "DELETE FROM ledger_entries",
+    "finance_posting_effects": "DELETE FROM finance_posting_effects",
+    "finance_posting_commands": "DELETE FROM finance_posting_commands",
     "ledger_lines": "DELETE FROM ledger_lines",
     "ledger_line_dimensions": "DELETE FROM ledger_line_dimensions",
     "inventory_movements": "DELETE FROM inventory_movements",
@@ -857,6 +863,10 @@ BACKUP_INSERT_COLUMNS = {
         "created_at",
         "updated_at",
         "row_version",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
     ),
     "ar_invoices": (
         "id",
@@ -882,6 +892,10 @@ BACKUP_INSERT_COLUMNS = {
         "created_at",
         "updated_at",
         "row_version",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
     ),
     "ar_invoice_lines": (
         "id",
@@ -911,6 +925,10 @@ BACKUP_INSERT_COLUMNS = {
         "created_at",
         "updated_at",
         "row_version",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
     ),
     "ar_receipt_allocations": ("id", "workspace_id", "receipt_id", "invoice_id", "amount_minor", "created_at"),
     "ar_idempotency_keys": ("scope", "idempotency_key", "response_json", "created_at"),
@@ -983,6 +1001,11 @@ BACKUP_INSERT_COLUMNS = {
         "currency_rounding_policy",
         "currency_registry_version",
         "currency_registry_digest",
+        "preparer_actor_id",
+        "validator_actor_id",
+        "validation_digest",
+        "validation_contract_version",
+        "reverses_posting_id",
     ),
     "ledger_lines": (
         "id",
@@ -1935,16 +1958,16 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO ar_customers (
             id, workspace_id, organization_id, legal_entity_id, customer_code, name,
             currency_code, tax_identifier, payment_terms_days, credit_limit_minor, credit_hold,
-            status, created_at, updated_at, row_version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            status, created_at, updated_at, row_version, currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "ar_invoices": """
         INSERT INTO ar_invoices (
             id, workspace_id, organization_id, legal_entity_id, customer_id, invoice_number,
             invoice_date, due_date, currency_code, subtotal_minor, tax_minor, total_minor,
             status, created_by, approved_by, approved_at, credit_override_reason, cancelled_by, cancelled_at, cancel_reason,
-            created_at, updated_at, row_version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, updated_at, row_version, currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "ar_invoice_lines": """
         INSERT INTO ar_invoice_lines (
@@ -1956,8 +1979,8 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO ar_receipts (
             id, workspace_id, organization_id, legal_entity_id, customer_id, receipt_number,
             receipt_date, currency_code, amount_minor, status, created_by, posted_by, posted_at,
-            created_at, updated_at, row_version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, updated_at, row_version, currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "ar_receipt_allocations": """
         INSERT INTO ar_receipt_allocations (id, workspace_id, receipt_id, invoice_id, amount_minor, created_at)
@@ -1993,8 +2016,9 @@ BACKUP_INSERT_QUERIES = {
             external_reference, source_type, status, created_by, validated_by,
             validated_at, validation_reason, voided_by, voided_at, void_reason,
             created_at, updated_at, currency_precision, currency_rounding_policy,
-            currency_registry_version, currency_registry_digest
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            currency_registry_version, currency_registry_digest, preparer_actor_id, validator_actor_id,
+            validation_digest, validation_contract_version, reverses_posting_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "ledger_lines": """
         INSERT INTO ledger_lines (
@@ -2395,6 +2419,13 @@ BACKUP_INSERT_QUERIES = {
 }
 
 
+# Closed additive posting backup schema; identifiers never come from backup input.
+BACKUP_INSERT_COLUMNS['finance_posting_effects'] = ('id', 'workspace_id', 'organization_id', 'legal_entity_id', 'entry_id', 'source_kind', 'source_id', 'purpose', 'reverses_effect_id', 'validation_digest', 'validation_contract_version', 'currency_code', 'currency_precision', 'currency_rounding_policy', 'currency_registry_version', 'currency_registry_digest', 'snapshot_json', 'posted_actor_id', 'posted_at', 'reason', 'audit_event_id', 'outbox_event_id')
+BACKUP_INSERT_QUERIES['finance_posting_effects'] = 'INSERT INTO finance_posting_effects (id,workspace_id,organization_id,legal_entity_id,entry_id,source_kind,source_id,purpose,reverses_effect_id,validation_digest,validation_contract_version,currency_code,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest,snapshot_json,posted_actor_id,posted_at,reason,audit_event_id,outbox_event_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+BACKUP_INSERT_COLUMNS['finance_posting_commands'] = ('workspace_id', 'command_id', 'operation', 'actor_id', 'request_digest', 'result_json', 'created_at')
+BACKUP_INSERT_QUERIES['finance_posting_commands'] = 'INSERT INTO finance_posting_commands (workspace_id,command_id,operation,actor_id,request_digest,result_json,created_at) VALUES (?,?,?,?,?,?,?)'
+
+
 @dataclass(frozen=True)
 class DBBackupResult:
     """Files written for one local DB backup."""
@@ -2599,7 +2630,27 @@ def _validate_backup_document(backup: dict[str, Any]) -> int:
     return schema_version
 
 
+def _verify_receivables_policy_backup(connection: sqlite3.Connection) -> None:
+    from reconforge.infrastructure.receivables_policy_storage import verify_sqlite_receivables_policy_storage
+
+    try:
+        verify_sqlite_receivables_policy_storage(connection)
+    except (TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup AR monetary-policy integrity verification failed.") from exc
+
+
+def _verify_posting_backup(connection: sqlite3.Connection) -> None:
+    from reconforge.infrastructure.sqlite_finance_posting import verify_posting_storage
+
+    try:
+        verify_posting_storage(connection)
+    except (TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup operational posting integrity verification failed.") from exc
+
+
 def _backup_payload(connection: sqlite3.Connection, *, created_at: str, schema_version: int) -> dict[str, Any]:
+    _verify_posting_backup(connection)
+    _verify_receivables_policy_backup(connection)
     return {
         "backup_format_version": BACKUP_FORMAT_VERSION,
         "created_at": created_at,
@@ -2622,12 +2673,15 @@ def create_backup(
 
     resolved_db_path = resolve_db_path(db_path)
     schema_version = _schema_version(resolved_db_path)
-    resolved_output_dir = resolve_output_dir(output_dir)
+    resolved_output_dir = resolve_local_path(output_dir)
     created_at = utc_now_text()
     backup_path = resolved_output_dir / "backup.json"
     manifest_path = resolved_output_dir / "manifest.json"
     connection = connect(resolved_db_path, require_exists=True)
     try:
+        _verify_posting_backup(connection)
+        _verify_receivables_policy_backup(connection)
+        resolve_output_dir(resolved_output_dir)
         ensure_outbox_schema(connection)
         append_audit_event(
             connection,
@@ -3179,6 +3233,16 @@ def restore_backup(
             ensure_outbox_schema(connection)
             _clear_restore_tables(connection)
             policy_insert_guards: list[str] = []
+            posting_insert_guards: list[str] = []
+            if backup_schema_version >= 48:
+                for trigger_name in ("finance_posting_open_period", "finance_posting_receipt_backing_guard"):
+                    guard = connection.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("Posting restore guard is unavailable.")
+                    posting_insert_guards.append(str(guard["sql"]))
+                # Only this unpublished database may restore historical closed periods and advanced reversal receipts.
+                connection.execute("DROP TRIGGER finance_posting_open_period")
+                connection.execute("DROP TRIGGER finance_posting_receipt_backing_guard")
             if backup_schema_version >= 47:
                 for trigger_name in ("ledger_currency_policy_required", "valuation_currency_policy_required"):
                     guard = connection.execute(
@@ -3190,11 +3254,29 @@ def restore_backup(
                 # The unpublished temporary database alone accepts retained legacy NULL policy rows.
                 connection.execute("DROP TRIGGER ledger_currency_policy_required")
                 connection.execute("DROP TRIGGER valuation_currency_policy_required")
+            if backup_schema_version >= 49:
+                # Only the unpublished restore database accepts retained unresolved rows.
+                ar_restore_guards = (
+                    "ar_customers_currency_policy_required", "ar_invoices_currency_policy_required",
+                    "ar_receipts_currency_policy_required", "ar_invoices_customer_policy_affinity",
+                    "ar_receipts_customer_policy_affinity", "ar_allocation_policy_affinity",
+                    "ar_line_policy_insert_new",
+                )
+                for trigger_name in ar_restore_guards:
+                    guard = connection.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("AR policy restore guard is unavailable.")
+                    policy_insert_guards.append(str(guard["sql"]))
+                    # Trigger names come only from the closed restore-guard tuple above.
+                    connection.execute(f"DROP TRIGGER {trigger_name}")
             tables = backup["tables"]
             if not isinstance(tables, dict):
                 raise DBBridgeError("Backup table payload is invalid.")
             for table in BACKUP_TABLES:
                 rows = tables.get(table, [])
+                if table in {"finance_posting_effects", "finance_posting_commands"}:
+                    restored_tables.append(table)
+                    continue
                 if table in CONSOLIDATION_BACKUP_TABLES:
                     restored_tables.append(table)
                     continue
@@ -3491,7 +3573,15 @@ def restore_backup(
                     ).fetchone()
                 if layer_balance_issue is not None:
                     raise DBBridgeError("Backup contains inconsistent FIFO layer balances.")
-            for guard_sql in policy_insert_guards:
+            if backup_schema_version >= 48:
+                effects = tables.get("finance_posting_effects", [])
+                if not isinstance(effects, list) or any(not isinstance(row, dict) for row in effects):
+                    raise DBBridgeError("Backup posting effects are invalid.")
+                effects.sort(key=lambda row: (row.get("reverses_effect_id") is not None, str(row.get("id", ""))))
+                _insert_rows(connection, table="finance_posting_effects", rows=effects)
+                _insert_rows(connection, table="finance_posting_commands", rows=tables.get("finance_posting_commands", []))
+                _verify_posting_backup(connection)
+            for guard_sql in policy_insert_guards + posting_insert_guards:
                 connection.execute(guard_sql)
             connection.commit()
             connection.execute("PRAGMA foreign_keys = ON")
@@ -3503,6 +3593,8 @@ def restore_backup(
             foreign_key_issues = connection.execute("PRAGMA foreign_key_check").fetchall()
             if foreign_key_issues:
                 raise DBBridgeError("Backup restore contains invalid table relationships.")
+            _verify_posting_backup(connection)
+            _verify_receivables_policy_backup(connection)
             from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 
             policies = FinancePolicyStore(connection)

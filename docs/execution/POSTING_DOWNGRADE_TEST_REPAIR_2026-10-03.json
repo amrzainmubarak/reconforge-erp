@@ -1,0 +1,92 @@
+{
+  "schema_version": "narrow-test-repair-acceptance-v1",
+  "status": "passed",
+  "owned_files": [
+    "tests/test_postgres_finance_posting_concurrency.py"
+  ],
+  "source_commit_at_run_start": "28ddc19fea6fd934c652492dff8ccf0f5b45a845",
+  "test_before_sha256": "c19cde7fc0044228747c91ab0b880a33e58b3c558bd045f0255060d13385eca4",
+  "test_after_sha256": "0ecc1cdd6ea8c6ba6d0e03564fad8871c13350820d8f31d9a2b14c993fd870da",
+  "fix": "Read actual pre-downgrade Alembic revision from the database; require identical revision and retained partial provenance after refusal. No runtime or migration modification.",
+  "before": {
+    "failed": 3,
+    "deselected": 9,
+    "skipped": 0,
+    "process_seconds": 105.203,
+    "pytest_summary": "=========== 3 failed, 9 deselected, 9 warnings in 96.18s (0:01:36) ============",
+    "owned_databases_removed": 3
+  },
+  "after": {
+    "passed": 12,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "process_seconds": 107.36,
+    "pytest_summary": "================= 12 passed, 30 warnings in 104.26s (0:01:44) =================",
+    "owned_databases_removed": 12
+  },
+  "runtime_sources_unchanged": true,
+  "tracked_runtime_migration_fixture_hash_count": 677,
+  "only_changed_source_between_runs": [
+    "tests/test_postgres_finance_posting_concurrency.py"
+  ],
+  "actual_runtime_role": "reconforge_app",
+  "actual_role_flags_per_case": "rolsuper=false,rolbypassrls=false,rolcreatedb=false,rolcreaterole=false",
+  "restricted_runtime_checks": 12,
+  "server_version": "PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "quality": [
+    {
+      "command": "python -m ruff check tests/test_postgres_finance_posting_concurrency.py",
+      "exit_code": 0,
+      "output": "All checks passed!"
+    },
+    {
+      "command": "git diff --check -- tests/test_postgres_finance_posting_concurrency.py",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "artifacts": {
+    "red\\report.json": {
+      "sha256": "2c5ef52b4e80e18b47c82b57ba28aaa4618825472747c633851e72f8230d7c5f",
+      "bytes": 166006
+    },
+    "red\\pytest.log": {
+      "sha256": "9c1e7424c188484a08ca624d8d31e2991c1833cbfbdb6f3057f045f961109837",
+      "bytes": 57225
+    },
+    "red\\results.xml": {
+      "sha256": "ecc85c118fdce7f8529f08e8c4991938557b1a89503a99b82b73173524e671dd",
+      "bytes": 2515
+    },
+    "green\\report.json": {
+      "sha256": "6179d159af1feae95aa25aad873221c04eabf1ca7ebf7a7e778529dbdc263e2b",
+      "bytes": 166798
+    },
+    "green\\pytest.log": {
+      "sha256": "db6ad87be973ec774b0cadc89df9baf7f4a42fb9d8559be9442fc959971dc3a0",
+      "bytes": 1087
+    },
+    "green\\results.xml": {
+      "sha256": "f45f4e353fc21dd2e6500e1f8a4f5473e96007117d6c283d8d21f7f91a1f8ac9",
+      "bytes": 2098
+    },
+    "repair.diff": {
+      "sha256": "60dad28e15f8d134cadc4539c65a3f8afdc46329c6b6e239e5e401e8d3e4fdfa",
+      "bytes": 1136
+    },
+    "run.py": {
+      "sha256": "601bfc2e3850dc9b306c85f448ee39208c100b773ceea0a7258992f6d43e5f44",
+      "bytes": 3531
+    },
+    "owned_database_probe.py": {
+      "sha256": "01f6340e5450a9a8243deb46adf4799276d81635a0a0a7c685a8c90cffe97c3a",
+      "bytes": 727
+    }
+  },
+  "limits": [
+    "Focused live concurrency acceptance only; not a new unfiltered whole-project acceptance.",
+    "Historical e638 local and hosted results are preserved separately.",
+    "The other downgrade test intentionally pins its own migration to 0098 and retains that exact assertion."
+  ]
+}

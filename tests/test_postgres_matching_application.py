@@ -303,6 +303,23 @@ def test_live_postgres_matching_application_lifecycle_and_rls() -> None:
                         ("reconforge.reconciliation_exceptions", "reconciliation_exceptions_immutable"),
                         ("reconforge.reconciliation_runs", "reconciliation_runs_no_delete"),
                     )
+                    # Revision0097 also guards child deletes. The historical
+                    # minimal installer does not create that guard, so suspend
+                    # it only when present on this test's migrated database.
+                    child_guards = tuple(
+                        (table, "reconciliation_child_write_guard")
+                        for table in (
+                            "reconforge.reconciliation_inputs",
+                            "reconforge.reconciliation_results",
+                            "reconforge.reconciliation_exceptions",
+                        )
+                        if admin.execute(
+                            "SELECT 1 FROM pg_trigger WHERE tgrelid=%s::regclass "
+                            "AND tgname='reconciliation_child_write_guard' AND tgenabled='O'",
+                            (table,),
+                        ).fetchone() is not None
+                    )
+                    protected_tables += child_guards
                     for table, trigger in protected_tables:
                         admin.execute(
                             f"ALTER TABLE {table} DISABLE TRIGGER {trigger}"
@@ -324,5 +341,10 @@ def test_live_postgres_matching_application_lifecycle_and_rls() -> None:
                         admin.execute(
                             f"ALTER TABLE {table} ENABLE TRIGGER {trigger}"
                         )
+                    for table, trigger in child_guards:
+                        assert admin.execute(
+                            "SELECT tgenabled FROM pg_trigger WHERE tgrelid=%s::regclass AND tgname=%s",
+                            (table, trigger),
+                        ).fetchone()[0] == "O"
         finally:
             admin.close()

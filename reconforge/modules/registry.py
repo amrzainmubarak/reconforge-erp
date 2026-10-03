@@ -523,6 +523,7 @@ _MODULES = (
         test_evidence=(
             "apps/web/src/App.test.tsx",
             "tests/test_inventory_core.py",
+            "tests/test_sqlite_inventory_composition.py",
             "tests/test_inventory_planning.py",
             "tests/test_inventory_valuation.py",
             "tests/test_inventory_valuation_reversal.py",

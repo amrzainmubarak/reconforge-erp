@@ -1570,8 +1570,8 @@ def test_receivables_projection_is_closed_recursively() -> None:
 
     assert customer.visible == {"customer_code": "CUS-1", "id": "customer-1"}
     assert invoice.visible["lines"] == [{"id": "line-1", "quantity": "2"}]
-    assert receipt.visible["allocations"] == [{"amount_minor": 10, "id": "allocation-1"}]
-    assert exposure.visible == {"customer_code": "CUS-1", "exposure_minor": 10}
+    assert receipt.visible["allocations"] == [{"amount_minor": 10, "amount_minor_text": "10", "id": "allocation-1"}]
+    assert exposure.visible == {"customer_code": "CUS-1", "exposure_minor": 10, "exposure_minor_text": "10"}
     assert aging.visible["items"] == [{"invoice_id": "invoice-1", "outstanding_minor": 10}]
     assert "must-not-escape" not in str([customer.visible, invoice.visible, receipt.visible, exposure.visible, aging.visible])
 

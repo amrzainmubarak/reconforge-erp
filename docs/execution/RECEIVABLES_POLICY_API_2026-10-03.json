@@ -1,0 +1,141 @@
+{
+  "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+  "sqlite": "3.53.1",
+  "commands": [
+    {
+      "name": "pytest",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_receivables_policy_api.py",
+        "-q",
+        "--tb=short",
+        "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod033-api-outbox-corrected\\results.xml"
+      ],
+      "exit_code": 0,
+      "seconds": 141.01
+    },
+    {
+      "name": "ruff",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "tests/test_receivables_policy_api.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.294
+    }
+  ],
+  "source_changed": [],
+  "suites": [
+    {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "11",
+      "time": "137.008",
+      "timestamp": "2026-10-03T15:31:41.802304+03:00",
+      "hostname": "DESKTOP-FDO3RD5"
+    }
+  ],
+  "tests": [
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_retains_history_replay_and_exact_nested_amounts_after_rebind[sqlite-JPY-0]",
+      "time": "4.021"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_retains_history_replay_and_exact_nested_amounts_after_rebind[sqlite-KWD-3]",
+      "time": "4.193"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_retains_history_replay_and_exact_nested_amounts_after_rebind[postgres-JPY-0]",
+      "time": "22.320"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_retains_history_replay_and_exact_nested_amounts_after_rebind[postgres-KWD-3]",
+      "time": "21.558"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_large_integers_and_negative_credit_keep_canonical_text[sqlite]",
+      "time": "3.691"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_large_integers_and_negative_credit_keep_canonical_text[postgres]",
+      "time": "19.209"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_money_coercion_is_rejected_before_financial_effects[sqlite]",
+      "time": "6.988"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_money_coercion_is_rejected_before_financial_effects[postgres]",
+      "time": "24.830"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_authority_is_checked_before_retained_snapshot_lookup[sqlite]",
+      "time": "3.236"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_policy_http_authority_is_checked_before_retained_snapshot_lookup[postgres]",
+      "time": "19.730"
+    },
+    {
+      "classname": "tests.test_receivables_policy_api",
+      "name": "test_true_pre49_customer_invoice_receipt_remain_unverified_through_http",
+      "time": "3.518"
+    }
+  ],
+  "correction": "Previous PG outbox event_type ar.% excluded underscore event types. Exact tenant plus AR aggregate_type now measures them. JPY/KWD lifecycle asserts five newly retained outbox events and malformed-input gate requires nonzero evidence. Original report/logs preserved.",
+  "scope": "Real local password HTTP and live disposable PostgreSQL password+step-up HTTP; exact AR read/write projections and policy history only.",
+  "cleanup": "Each PostgreSQL case uses existing synthetic_cash_runtime context; finally drops only its own UUID-named database and asserts absence. A teardown failure is a test error.",
+  "schema_version": 1,
+  "selected_source_count": 672,
+  "full_source_bound_report": {
+    "path": "output\\verification-2026-10-03\\PROD033-API-OUTBOX-CORRECTED-ACCEPTANCE.json",
+    "sha256": "b1a004f5ba54b016dec5d23815f32f4ef31b675ec2738e003e634896de04860b"
+  },
+  "owned_sources": {
+    "reconforge/api/routes/receivables.py": "455554d57f342a3530641663cbb0ab20d5491ef4b811ffe790cdfc35c2cf00ff",
+    "reconforge/auth/field_access.py": "4d6d5e9856786d69ac32d5aa508e49b7f1d5490d511c59465a4fd5d20af5a363",
+    "tests/test_receivables_policy_api.py": "5ff1fdb5f22e2bea63eb0d506a92472e3906b54d0bbce05b22c4aa8e434fc326",
+    "tests/test_receivables_money_api_contract.py": "17a8e76597ecb9a36c0181281ae1836760d4a1dc2e02c3a1373d4ef04a2974b7",
+    "tests/test_field_access.py": "78925227774c97c23aadf4b0652dd5f7f4219331310088d8348cd576d7cadb8e"
+  },
+  "artifacts": {
+    "output\\verification-2026-10-03\\prod033-api-outbox-corrected\\results.xml": "fc8975eaa6737b9b8fb085fa3b1d447fcbe031090053bce9ed3aeb4b5f9a93e0",
+    "output\\verification-2026-10-03\\prod033-api-outbox-corrected\\pytest.log": "f8c301da330c295369556594477767fc1d8916f81526c85d331d895fcc1262b0",
+    "output\\verification-2026-10-03\\PROD033-API-CONTRACT-CHECKPOINT.json": "a98c25d21e47fe352c6acbe39c6ab5276dc9d4028ac3f3f254c4119b22eff395",
+    "output\\verification-2026-10-03\\prod033-api-contract-fixed.xml": "cb5d5abbe93dc4f9abb65d6951b81f4d4cc5f6ec16d7f1e2a2e852fa02a77b9d"
+  },
+  "broader_local_contract": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "1",
+    "tests": "121",
+    "time": "25.182",
+    "timestamp": "2026-10-03T15:02:25.555997+03:00",
+    "hostname": "DESKTOP-FDO3RD5"
+  },
+  "limits": [
+    "AR subledger policy and exact public amounts only; no generated GL or full sales cycle",
+    "Original outbox assertion weakness retained and corrected with positive counts",
+    "Authoritative invoice request/source replay identity gap remains separate PROD039",
+    "Current customer Active receipt-retry restriction remains separate",
+    "Independent selections overlap and are not summed"
+  ]
+}

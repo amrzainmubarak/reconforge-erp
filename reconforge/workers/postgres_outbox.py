@@ -223,6 +223,14 @@ class PostgresOutboxWorker:
                         organization_id=organization_id,
                         legal_entity_id=legal_entity_id,
                     )
+                    with PostgresTenantBoundary(self.connection_factory).transaction(
+                        tenant_id, organization_id=organization_id, workspace_id=workspace_id,
+                        legal_entity_id=legal_entity_id,
+                    ) as connection:
+                        PostgresOutboxRepository(connection).assert_claim(
+                            tenant_id=tenant_id, event_id=event.id, worker_id=self.settings.worker_id,
+                            lease_generation=event.lease_generation,
+                        )
                     try:
                         self._publish(event)
                     except Exception as exc:  # noqa: BLE001 - publisher failures become retry state.
@@ -248,6 +256,7 @@ class PostgresOutboxWorker:
                                 error=str(exc),
                                 max_attempts=self.settings.max_attempts,
                                 retry_base_seconds=self.settings.retry_base_seconds,
+                                lease_generation=event.lease_generation,
                             )
                         dead_lettered_count += int(dead_lettered)
                     else:
@@ -269,6 +278,7 @@ class PostgresOutboxWorker:
                                 tenant_id=tenant_id,
                                 event_id=event.id,
                                 worker_id=self.settings.worker_id,
+                                lease_generation=event.lease_generation,
                             )
                         published_count += 1
             except PostgresOutboxWorkerError:

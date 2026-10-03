@@ -46,13 +46,17 @@ class OutboxService:
         """Claim and attempt a bounded batch without hiding publisher failures."""
         return self.service.process_once(publisher=publisher, worker_id=worker_id, limit=limit)
 
-    def mark_published(self, *, event_id: str, worker_id: str) -> None:
+    def mark_published(self, *, event_id: str, worker_id: str, lease_generation: int | None = None) -> None:
         """Mark a leased event published only for the worker holding its lease."""
-        self.service.mark_published(event_id=event_id, worker_id=worker_id)
+        self.service.mark_published(event_id=event_id, worker_id=worker_id, lease_generation=lease_generation)
 
-    def mark_failed(self, *, event_id: str, worker_id: str, error: str) -> bool:
+    def mark_failed(
+        self, *, event_id: str, worker_id: str, error: str, lease_generation: int | None = None
+    ) -> bool:
         """Record a bounded failure and return whether the event entered dead-letter state."""
-        return self.service.mark_failed(event_id=event_id, worker_id=worker_id, error=error)
+        return self.service.mark_failed(
+            event_id=event_id, worker_id=worker_id, error=error, lease_generation=lease_generation
+        )
 
     def requeue_dead_letter(self, *, event_id: str) -> None:
         """Reset one dead-lettered event for an explicit operator replay."""

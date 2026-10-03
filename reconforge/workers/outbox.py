@@ -11,6 +11,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from math import isfinite
 from threading import Event
 
 from reconforge.auth.policy import PolicyEvaluationContext
@@ -47,11 +48,15 @@ class OutboxWorkerSettings:
     def __post_init__(self) -> None:
         if not self.worker_id.strip() or len(self.worker_id.strip()) > 160:
             raise OutboxWorkerError("worker_id must be a non-empty value of at most 160 characters.")
-        if self.poll_interval_seconds < 0:
+        if not isfinite(self.poll_interval_seconds) or self.poll_interval_seconds < 0:
             raise OutboxWorkerError("poll_interval_seconds cannot be negative.")
-        if not 1 <= self.batch_size <= 1_000:
+        if type(self.batch_size) is not int or not 1 <= self.batch_size <= 1_000:
             raise OutboxWorkerError("batch_size must be between 1 and 1000.")
-        if self.max_attempts < 1 or self.lease_seconds < 1 or self.retry_base_seconds < 0:
+        if (
+            type(self.max_attempts) is not int or not 1 <= self.max_attempts <= 100
+            or type(self.lease_seconds) is not int or not 1 <= self.lease_seconds <= 86400
+            or type(self.retry_base_seconds) is not int or not 0 <= self.retry_base_seconds <= 86400
+        ):
             raise OutboxWorkerError("Outbox retry and lease settings are invalid.")
         if not 1 <= int(self.max_tenants) <= 100_000:
             raise OutboxWorkerError("max_tenants must be between 1 and 100000.")

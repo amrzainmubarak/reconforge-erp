@@ -20,6 +20,7 @@ from reconforge.benchmark.postgres_outbox_scale import (
     verify_postgres_outbox_scale_result,
 )
 from reconforge.deployment import WorkerPermissionManifest
+from reconforge.infrastructure.outbox_fencing_schema import POSTGRES_OUTBOX_FENCING_SCHEMA_SQL
 from reconforge.infrastructure.postgres import (
     _RUNTIME_ROLE_SAFETY_SQL,
     PostgresConnectionFactory,
@@ -111,11 +112,14 @@ class _FakeConnection:
                         "workspace-a",
                         "org-a",
                         "entity-a",
+                        1,
                     )
                 ]
             )
         if normalized.startswith("select attempt_count"):
             return _Cursor(row=(self.attempt_count,))
+        if normalized.startswith("select 1 from reconforge.outbox_events"):
+            return _Cursor(row=(1,))
         if normalized.startswith("update reconforge.outbox_events"):
             return _Cursor(rowcount=0 if params and "other-worker" in params else 1)
         if normalized.startswith("select tenant_id, event_id"):
@@ -253,7 +257,7 @@ def test_postgres_outbox_worker_publishes_with_idempotent_event_id(
     assert result.published == 1
     assert result.failed == 0
     assert published == ["evt-1"]
-    assert connection.commits == 2
+    assert connection.commits == 3
     assert policy_permissions == ["outbox.discover", "outbox.publish", "outbox.publish"]
 
 
@@ -480,7 +484,7 @@ def test_postgres_outbox_worker_processes_exact_hierarchy_lane() -> None:
         "set_config('app.legal_entity_id'" in sql and params == ("entity-a",)
         for sql, params in connection.executed
     )
-    claim_params = next(params for sql, params in connection.executed if "FOR UPDATE SKIP LOCKED" in sql)
+    claim_params = next(params for sql, params in connection.executed if "WITH candidates" in sql)
     assert claim_params[:4] == ("tenant_a", "workspace-a", "org-a", "entity-a")
 
 
@@ -606,6 +610,7 @@ def test_live_postgres_outbox_application_claim_retry_dead_replay_publish_and_rl
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_OUTBOX_APPLICATION_SCHEMA_SQL)
+            admin.execute(POSTGRES_OUTBOX_FENCING_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {app_user}")
             admin.execute(
@@ -649,7 +654,9 @@ def test_live_postgres_outbox_application_claim_retry_dead_replay_publish_and_rl
             )
             replayed = replay.claim_pending(worker_id="worker-c", limit=1)
             assert len(replayed) == 1
-            replay.mark_published(event_id=replayed[0].id, worker_id="worker-c")
+            replay.mark_published(
+                event_id=replayed[0].id, worker_id="worker-c", lease_generation=replayed[0].lease_generation
+            )
             assert len(replay.list_events(status="published")) == 1
         with PostgresTenantBoundary(factory).transaction(tenant_b) as connection:
             isolated = TenantBoundPostgresOutboxRepository(
@@ -687,6 +694,7 @@ def test_live_postgres_outbox_bounded_multi_worker_delivery_profile() -> None:
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_OUTBOX_APPLICATION_SCHEMA_SQL)
+            admin.execute(POSTGRES_OUTBOX_FENCING_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {app_user}")
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES(%s,%s)", (tenant_id, tenant_id))

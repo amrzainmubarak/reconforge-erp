@@ -1,0 +1,48 @@
+id: outbox-fencing-recovery
+name: Lease-fenced transactional outbox recovery evidence
+version: 1.0.0
+maturity: experimental
+owner: platform-reliability
+dependencies: [platform.core, platform.audit]
+incompatible_versions: [unfenced-outbox-acknowledgement]
+data_classification: operational-sensitive
+retention_policy: retain-immutable-delivery-transitions-with-parent-outbox-event
+permissions: [outbox.publish, outbox.replay, audit.read]
+default_roles: [admin]
+migrations: []
+domain_invariants:
+  - every-current-claim-has-an-exact-monotonic-lease-generation
+  - same-worker-label-cannot-acknowledge-or-fail-a-newer-generation
+  - historical-pre-fencing-claims-are-explicitly-watermarked-not-invented
+  - expired-final-attempt-enters-terminal-dead-letter-state
+  - state-transition-and-delivery-evidence-commit-or-roll-back-together
+  - retained-post-floor-claim-generations-are-contiguous-and-unique
+domain_events: []
+api_routes: []
+cli_commands: []
+ui_routes: []
+import_schemas: []
+export_schemas: [outbox-delivery-evidence-v1]
+synthetic_fixtures:
+  - tests/test_outbox_fencing_recovery.py
+  - tests/test_postgres_outbox_fencing_recovery.py
+threat_model:
+  - reused-worker-identity-after-crash
+  - stale-acknowledgement-or-failure-after-lease-expiry
+  - concurrent-claim-race
+  - missing-or-forged-delivery-evidence
+  - sibling-tenant-or-hierarchy-evidence-read
+  - external-publisher-delivery-after-local-lease-expiry
+benchmarks:
+  - docs/execution/benchmarks/amr-outbox-fencing-recovery-v1.md
+rollback_plan: retain-evidence-and-restore-a-verified-pre-activation-backup
+test_matrix:
+  - tests/test_outbox_fencing_recovery.py
+  - tests/test_outbox_evidence_continuity.py
+  - tests/test_postgres_outbox_fencing_recovery.py
+  - tests/test_postgres_outbox.py
+  - tests/test_postgres_outbox_consumer.py
+limitations:
+  - activation-is-blocked-until-sqlite-postgresql-and-backup-migrations-land
+  - bounded-at-least-once-delivery-only-without-a-cooperative-external-sink
+  - no-broker-provider-ha-or-production-performance-claim

@@ -21,7 +21,7 @@ tasks:
     priority: P0
     area: financial-correctness
     title: Serialize cumulative AP approval with exact quantities
-    status: planned
+    status: completed
     depends_on: [PROD-001]
     exit_evidence: >-
       Duplicate invoices and repeated PO lines cannot exceed received/ordered quantities; exact context-independent quantities; SQLite/PostgreSQL concurrent approvals and rollback verified.
@@ -29,15 +29,15 @@ tasks:
     priority: P0
     area: postgres-ci
     title: Restore unfiltered live PostgreSQL parity gate
-    status: planned
+    status: completed
     depends_on: [PROD-001]
     exit_evidence: >-
-      Real collection includes every intended parity boundary; four scale selections remain separate; migration/RLS nodes cannot be silently deselected.
+      Actual broad selection410 tests:409 passed, one missing-native-PG-client prerequisite skip; scale selections separate; migration/RLS cannot be silently deselected.
   - id: PROD-004
     priority: P0
     area: supply-chain
     title: Remediate October dependency disclosures
-    status: planned
+    status: in_progress
     depends_on: [PROD-001]
     exit_evidence: >-
       Reviewed targeted Python/npm locks, clean all-extra audits, compatibility tests and builds; preserve pre-fix findings.
@@ -45,7 +45,7 @@ tasks:
     priority: P0
     area: studio-session
     title: Share live tenant session and restore reauthentication
-    status: planned
+    status: completed
     depends_on: [PROD-001]
     exit_evidence: >-
       Real browser login to tenant metrics succeeds; sibling tenant denied; stale responses hidden; expiry and step-up recover without stored credentials.
@@ -53,7 +53,7 @@ tasks:
     priority: P0
     area: tenant-isolation
     title: Reject unsafe PostgreSQL runtime roles
-    status: planned
+    status: completed
     depends_on: [PROD-003]
     exit_evidence: >-
       Runtime SUPERUSER/BYPASSRLS/unsafe ownership fail closed on checkout/readiness; migration administrators stay separate; reuse and revocation tested.
@@ -61,7 +61,7 @@ tasks:
     priority: P0
     area: receivables
     title: Protect AR currency and customer-state invariants
-    status: planned
+    status: in_progress
     depends_on: [PROD-001]
     exit_evidence: >-
       Currency cannot relabel existing documents; inactive customer approval is rejected; exposure remains currency-consistent across backends.
@@ -133,7 +133,7 @@ tasks:
     priority: P0
     area: inventory-integrity
     title: Serialize cumulative PostgreSQL goods receipts
-    status: planned
+    status: completed
     depends_on: [PROD-002]
     exit_evidence: >-
       Two independent receipts cannot exceed PO quantity; deterministic parent lock, exact sums and rollback evidence.
@@ -141,7 +141,7 @@ tasks:
     priority: P0
     area: postgres-bootstrap
     title: Migrate metrics schema on clean PostgreSQL boot
-    status: planned
+    status: completed
     depends_on: [PROD-003]
     exit_evidence: >-
       Empty database upgraded only with Alembic supports real metrics compute/read; seeded public definitions and forced-RLS snapshots; populated rollback preserves data or refuses safely.
@@ -149,10 +149,42 @@ tasks:
     priority: P1
     area: studio-money
     title: Preserve exact financial metric display
-    status: planned
+    status: completed
     depends_on: [PROD-005]
     exit_evidence: >-
       Large integer and long decimal value_text render without Number conversion or silent six-place rounding; locale/RTL and exact text tests.
+  - id: PROD-019
+    priority: P0
+    area: hosted-api
+    title: Preserve hosted business routes and typed authentication denials
+    status: completed
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      Hosted cookie resources load; API routes precede SPA; unknown API paths remain JSON404; middleware preserves safe denial status and request/security headers. Seven pre-fix failures now pass.
+  - id: PROD-020
+    priority: P0
+    area: receivables-reporting
+    title: Prevent mixed-currency aging totals
+    status: planned
+    depends_on: [PROD-007]
+    exit_evidence: >-
+      USD/JPY/EGP minor units never produce an unlabeled aggregate; versioned currency-grouped totals or explicit legacy refusal; historical inconsistent currency data fails closed.
+  - id: PROD-021
+    priority: P0
+    area: database-privileges
+    title: Verify least-privilege runtime grants against RLS-bypassing operations
+    status: planned
+    depends_on: [PROD-006]
+    exit_evidence: >-
+      Deployment grants exclude TRUNCATE, schema CREATE and arbitrary definer execution; tenant data destruction/read bypass attempts fail under real runtime role; migration administration remains separate.
+  - id: PROD-022
+    priority: P1
+    area: open-source-workloads
+    title: Build reproducible financial workloads from verified open sources
+    status: in_progress
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      Pinned source/license provenance, local synthetic input mapping, exact currency/time validation, separate discrepancy oracle and measured scale progression. Source research complete; generator/import execution remains pending. No customer ROI inference.
   - id: E-1120
     priority: P0
     area: financial-exactness

@@ -48,7 +48,7 @@ It is deliberately positioned as a **finance-controls platform**, not a replacem
 
 ## Product tour
 
-The views below are rendered by the real React Studio from versioned, synthetic ReconForge contracts. The modern Studio is currently a read-only experimental client; mutation workflows remain in the current local Studio and CLI.
+The views below are rendered by the real React Studio from versioned, synthetic ReconForge contracts. Financial showcase pages are read-only and experimental. The modern Studio also includes authenticated administration writes and tenant-bound live metrics; complete financial write workflows remain under development. See the [current production audit and acceptance gates](docs/execution/PRODUCTION_AUDIT_2026-10-03.md).
 
 ![ReconForge executive control dashboard](docs/assets/screenshots/dashboard.png)
 
@@ -207,7 +207,7 @@ Read the [current-state architecture](docs/architecture/current-state.md), [targ
 
 ## Control packs and mappings
 
-ReconForge ships 19 control-pack directories covering audit basics, inventory valuation, purchase-to-pay, month-end close, fixed assets, warehouse controls, WIP, fleet/workshop/service operations, high-risk transactions, and fraud indicators.
+ReconForge ships 24 control-pack directories covering audit basics, inventory valuation, purchase-to-pay, month-end close, fixed assets, warehouse controls, WIP, fleet/workshop/service operations, high-risk transactions, and fraud indicators.
 
 ```bash
 reconforge rules validate --pack control-packs/audit-basic

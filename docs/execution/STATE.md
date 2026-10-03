@@ -2,6 +2,37 @@
 
 Updated: 2026-10-03
 
+## Production foundation checkpoint; financial invariants continue
+
+- Committed clean metrics migration 0093, dependency remediation, exact cumulative
+  AP approval/receipt guards, runtime-role admission, hosted API routing and CI selection.
+- AP focused gate: 78 passed, zero skipped; duplicate liability reproduction falls
+  from 6000 to 3000 minor units. Existing historical violations remain reviewable.
+- Runtime-role gate: 37 passed, zero skipped; existing live workers: 65 passed.
+  Metrics migration/rollback gate: 3 passed with live PostgreSQL.
+- Ruff, Mypy (541 sources), Bandit and wheel/sdist build pass on the updated lock.
+  Python locked audit profiles and full/production npm audits have zero findings.
+- Full first Python regression: 3402 passed, 164 skipped, five failed. Those five
+  exposed approval-surface discovery and outdated report source bindings. The
+  repaired focused selection passes 49 tests; a fresh full run is pending.
+- Actual PostgreSQL CI general selection: 409 passed, zero failed, one missing
+  native-client prerequisite skip (410 selected). Fresh PostgreSQL 16/17
+  migration, idempotency, receiver failover and recovery matrices all passed;
+  dated reports preserve historical evidence unchanged.
+- React: 120 tests passed, typecheck/build passed; standard E2E 16 passed/six
+  opt-in skips. Four existing live admin flows, new live metrics and hosted HTTPS
+  cookie/static/API checks passed separately. Exact English/Arabic metric text
+  no longer passes through binary floating point. No full release claim.
+- Remaining P0 work includes AR status/currency, immutable monetary interpretation,
+  mixed-currency aging and runtime database grants; PROD-019 through PROD-021 record
+  newly reproduced hosting/reporting/privilege acceptance requirements.
+- The user confirmed the full individual-to-bank/institution scope; a first
+  integrated cycle is an engineering dependency gate, not a narrower target market.
+- Complete GL, trade cycles, financial UI and company outcomes remain active.
+  The user reports no company pilot is available and requests strong open-source
+  references/workloads instead. PROD-022 records pinned official sources and the
+  next executable import/benchmark contract. No real company data was accessed.
+
 ## PROD-001 — Current production-objective baseline (2026-10-03)
 
 - Previous goal turn classified as progress: fresh environment/runtime measurements,
@@ -13,8 +44,8 @@ Updated: 2026-10-03
   monetary/quantity/AP/AR defects and a clean-boot metrics migration gap.
 - [Audit](PRODUCTION_AUDIT_2026-10-03.md), [snapshot](BASELINE_2026-10-03.json),
   [roadmap](PRODUCTION_ROADMAP_2026-10-03.md); PROD-002 through PROD-018 remain open.
-- Next: transactional AP exactness, live CI selection, targeted dependency fixes,
-  shared Studio session, then clean-boot metrics and remaining financial/role gates.
+- Original baseline next actions were AP, CI, dependencies and browser session;
+  current checkpoint above records their implementation and remaining gates.
 - The complete PostgreSQL/GL/trade-cycle/financial-UI/customer-outcome objective
   remains active and unverified. No customer data, production change or release.
 

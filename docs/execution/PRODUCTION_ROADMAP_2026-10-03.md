@@ -4,6 +4,11 @@ Date: 2026-10-03 (Africa/Cairo). Source baseline:
 `1551e8ae69a2982961a315c40be1c4ac2b8c8bc5`.
 Owner: ReconForge maintainers. This is an execution plan, not a maturity claim.
 
+User steering: the full individual-to-bank/institution scope remains the target.
+No company pilot is currently available. The [open-source engineering track](OPEN_SOURCE_ENGINEERING_2026-10-03.md)
+supplies verified references and planned synthetic workload execution; it does not
+replace the separately measured company-outcome gate.
+
 ## Outcome and product boundary
 
 The acceptance target is a customer-operated workflow whose input counts,

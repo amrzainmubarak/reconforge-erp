@@ -49,6 +49,11 @@ For the public origin, verify all of the following rather than only receiving a
   are present on HTML and API responses;
 - an unapproved Host receives 400;
 - an unknown asset path returns 404 and is not replaced with HTML;
+- unknown API/SCIM paths return JSON 404 rather than the SPA shell; metrics and
+  financial API paths still dispatch to their authenticated routers;
+- after login, reload `/live` and load lazy JavaScript/CSS resources with the
+  HttpOnly session cookie present; these public resources need no tenant header,
+  while business API requests must carry the selected tenant;
 - browser login creates only the `__Host-reconforge_session` Secure, HttpOnly,
   SameSite=Strict cookie, and unsafe cookie requests without the bound CSRF
   proof fail;

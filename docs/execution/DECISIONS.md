@@ -1,5 +1,17 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-002 — Close reproduced foundation defects before posting (2026-10-03)
+
+ADRs 0783-0791 record clean-boot metrics, unfiltered CI selection, targeted
+dependency remediation, exact cumulative AP quantities, shared browser session,
+runtime-role admission, hosted SPA/API dispatch, exact live decimal localization,
+typed retention errors and newly executed versioned evidence. Keep migration credentials
+separate and record the runtime guard's actual threat boundary. Matching no longer
+reserves receipt capacity; approval rechecks it atomically, permitting valid
+partial invoices. Preserve historical evidence rather than rewriting preexisting
+over-approvals or rounded quantities. Full acceptance of GL/trade cycles still
+depends on fixing mutable currency interpretation and AR invariants.
+
 ## D-PROD-001 — Correct invariants before production breadth (2026-10-03)
 
 Use the existing modular monolith and preserve local Community operation. The new

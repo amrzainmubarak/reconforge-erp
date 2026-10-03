@@ -1,5 +1,41 @@
 ﻿# ReconForge Execution Evidence Log
 
+## Production foundation focused verification (2026-10-03)
+
+- AP: 78 passed, zero skipped, 35.87s after public approval-surface repair; independent connection races, exact
+  Fraction property oracle, HTTP rejection and audit/outbox rollback. Retained
+  source hashes and before/after reproductions under the baseline finance audit.
+- Runtime role/API guard: 37 passed, zero skipped, 11.02s. Existing live workers:
+  65 passed, zero skipped on a separate database migrated to head.
+- Clean metrics migration: 3 live tests passed, including nonempty metrics,
+  cross-tenant RLS and guarded downgrade. Existing migration chain also passes.
+- Hosted middleware/dispatch: 32 passed, one missing-live-DSN skip, 18.04s;
+  seven new hosting regressions failed before the change. Separate role tests
+  exercise real API rejection. Browser HTTPS cookie verification subsequently
+  passed: 12 assets and authorized metrics return 200, missing tenant returns
+  400 and an unknown API route returns JSON404, without CSP/browser errors.
+- Locked Python audits for profiles 3.11 and 3.12 and full/production npm audit:
+  zero known findings. Unpublished ReconForge itself has no PyPI advisory result.
+- Updated-lock Ruff, Mypy, Bandit, build and diff checks pass; machine timings
+  and log hashes are in output/verification-2026-10-03/final-quality.json.
+- First full regression: 3402 passed, 164 skipped, five failures, 785.06s. Failures
+  are retained in final-pytest.log before repair. AP surface discovery and four
+  current-source report bindings are repaired; focused report/AP inventory gate
+  is 49 passed in 6.52s. Final full checkpoint regression remains pending.
+- Actual CI general selection: 409 passed, zero failed, one explicit missing
+  native PostgreSQL client-tools skip, 119.681s; fresh head-0093 PostgreSQL16.14
+  safe application role and pinned Redis. Disposable resources cleaned. Failed
+  intermediate runs preserve the retention409-to503 defect, stale period-state
+  expectation and guarded-downgrade fixture correction.
+- Newly generated PostgreSQL16/17 identity migration, receiver idempotency,
+  receiver failover and recovery compensation matrices all pass. Standalone
+  identity migration/restore also passed on PostgreSQL17.10. Reports dated
+  2026-10-03 bind current sources and dependency policy; old reports are unchanged.
+- Web: 120 passed, typecheck/build passed; standard E2E16 passed/six opt-in skips.
+  Existing four live admin tests, new live metrics browser test and hosted HTTPS
+  checks pass separately. Exact-decimal component regressions failed before fix.
+  Failed harness runs remain preserved; none count as successful acceptance.
+
 ## PROD-001 — Fresh measured audit (2026-10-03)
 
 - Source `1551e8ae69a2982961a315c40be1c4ac2b8c8bc5`; fresh locked Python 3.12.13.

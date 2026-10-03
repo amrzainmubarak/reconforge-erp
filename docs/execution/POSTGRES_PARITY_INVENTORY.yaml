@@ -1,10 +1,17 @@
 schema_version: 1
-updated_at: "2026-08-22"
+updated_at: "2026-10-03"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0089_pg_writeback_identity"
+current_source_migration_head: "0093_pg_metrics"
+production_foundation_review:
+  executed_at: "2026-10-03"
+  evidence: "PRODUCTION_AUDIT_2026-10-03.md"
+  note: >-
+    Historical live gates below retain their original dates and scope. Current
+    schema provisioning and role/CI-selection regressions are recorded separately;
+    collection is not execution and adapters alone do not prove production parity.
 currency_registry_binding_contract:
   id: E-711
   executed_at: "2026-08-11"

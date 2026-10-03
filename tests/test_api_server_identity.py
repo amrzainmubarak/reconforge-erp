@@ -1423,7 +1423,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             json={"expected_version": 2, "reason": "Live synthetic independent reopen."},
         )
         assert reopened_period.status_code == 200, reopened_period.text
-        assert reopened_period.json()["period"]["status"] == "Open"
+        assert reopened_period.json()["period"]["status"] == "Reopened"
         close_sibling = client.get(
             "/api/v1/consolidation-close/periods",
             headers={**authenticated_headers, "X-ReconForge-Workspace": "workspace-b"},

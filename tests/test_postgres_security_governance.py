@@ -529,12 +529,15 @@ def test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated
             head_before_guarded_downgrade = admin.execute(
                 "SELECT version_num FROM alembic_version"
             ).fetchone()[0]
+            snapshots_before_guarded_downgrade = admin.execute(
+                "SELECT count(*) FROM reconforge.metric_snapshots"
+            ).fetchone()[0]
         monkeypatch.setenv("RECONFORGE_POSTGRES_DSN", admin_dsn)
         with pytest.raises(
             Exception,
             match=(
-                "refusing to discard (?:governed retention policy|connector write-back intent evidence|"
-                "certification evidence bindings)"
+                "(?:refusing to discard (?:governed retention policy|connector write-back intent evidence|"
+                "certification evidence bindings)|metrics downgrade refused: snapshots are retained)"
             ),
         ):
             command.downgrade(Config(str(Path("alembic.ini").resolve())), "0051_access_policy_lifecycle")
@@ -544,6 +547,10 @@ def test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated
             assert (
                 admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
                 == head_before_guarded_downgrade
+            )
+            assert (
+                admin.execute("SELECT count(*) FROM reconforge.metric_snapshots").fetchone()[0]
+                == snapshots_before_guarded_downgrade
             )
             assert admin.execute(
                 "SELECT count(*) FROM reconforge.retention_policies WHERE tenant_id=%s", (tenant_a,)

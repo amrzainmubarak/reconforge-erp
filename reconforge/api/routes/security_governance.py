@@ -444,21 +444,18 @@ def apply_retention_policy(
     request: Request,
     current_user: ManageSecurityPolicy,
 ) -> dict[str, object]:
+    result = _service(
+        request,
+        lambda service, _tenant: service.apply_retention_policy(
+            actor_user_id=current_user.id,
+            policy_id=policy_id,
+            evidence_id=evidence_id,
+            expected_retention_version=payload.expected_retention_version,
+            reason_code=payload.reason_code,
+        ),
+    )
     try:
-        return project_security_evidence_retention(
-            asdict(
-                _service(
-                    request,
-                    lambda service, _tenant: service.apply_retention_policy(
-                        actor_user_id=current_user.id,
-                        policy_id=policy_id,
-                        evidence_id=evidence_id,
-                        expected_retention_version=payload.expected_retention_version,
-                        reason_code=payload.reason_code,
-                    ),
-                )
-            )
-        ).visible
+        return project_security_evidence_retention(asdict(result)).visible
     except (TypeError, ValueError) as exc:
         raise APIError(
             status_code=503,

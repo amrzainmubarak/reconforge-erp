@@ -15,6 +15,7 @@ from reconforge.application.security_governance import (
     RetentionPolicyChange,
     RetentionPolicyPage,
     RetentionPolicySummary,
+    SecurityGovernanceError,
 )
 from reconforge.auth import LocalAuthService
 from reconforge.auth.models import LocalUser
@@ -241,6 +242,38 @@ def test_security_governance_http_is_human_mfa_governed_paginated_and_redacted(
     )
     assert applied.status_code == 200 and applied.json()["retention_extended"] is True
     assert "future_policy_field" not in applied.text
+    original_apply = repository.apply_retention_policy
+    for error_code, status_code in (
+        ("retention_version_conflict", 409),
+        ("retention_evidence_not_found", 404),
+        ("retention_policy_retired", 409),
+    ):
+        def reject_retention(*, code: str = error_code, **kwargs: object) -> EvidenceRetentionChange:
+            raise SecurityGovernanceError(code, "Retention policy could not be applied.")
+
+        monkeypatch.setattr(repository, "apply_retention_policy", reject_retention)
+        denied = client.post(
+            "/api/v1/admin/security/retention-policies/rtp-" + "a" * 32 + "/evidence/evidence-1",
+            headers=headers("human-ok"),
+            json={"expected_retention_version": 1, "reason_code": "policy_application"},
+        )
+        assert denied.status_code == status_code, denied.text
+        assert denied.json()["error"]["code"] == error_code
+
+    monkeypatch.setattr(repository, "apply_retention_policy", original_apply)
+
+    def malformed_projection(value: Any) -> Any:
+        raise ValueError("Sensitive internal retention projection detail.")
+
+    monkeypatch.setattr(routes, "project_security_evidence_retention", malformed_projection)
+    malformed = client.post(
+        "/api/v1/admin/security/retention-policies/rtp-" + "a" * 32 + "/evidence/evidence-1",
+        headers=headers("human-ok"),
+        json={"expected_retention_version": 1, "reason_code": "policy_application"},
+    )
+    assert malformed.status_code == 503
+    assert malformed.json()["error"]["code"] == "security_retention_projection_failed"
+    assert "Sensitive internal" not in malformed.text
     hostile = client.post(
         "/api/v1/admin/security/retention-policies",
         headers=headers("human-ok"),

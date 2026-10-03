@@ -1226,3 +1226,11 @@ include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0096_2026-10-
 include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0096_2026-10-03.json
 include tests/test_master_data_authority_policy.py
 include tests/test_postgres_master_data_authority.py
+include docs/adr/0810-seal-reconciliation-child-writes.md
+include docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0097_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0097_2026-10-03.json
+include tests/test_postgres_reconciliation_input_seal.py
+include tests/test_postgres_reconciliation_seal_restore.py
+include docs/execution/SOURCE_DIGEST_FINDINGS_2026-10-03.json
+include docs/execution/SCOPED_FINANCE_VERIFICATION_2026-10-03.json

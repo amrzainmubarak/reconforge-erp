@@ -61,15 +61,26 @@ preserves the workspace-only currency administration limitation; complete
 end-to-end isolation remains open. Durable
 AMLSim execution now passes the strict oracle, exact replay and transaction-race
 contracts through0094/0096. ADR0807 accepts the bounded repository/worker path.
-Raw SQL post-completion child insertion and child reparenting remain reproduced
-separately under PROD030 and do not inherit that acceptance.
+Raw SQL post-completion child insertion, reparenting and claimed-input mutation
+are now guarded by PostgreSQL0097 (PROD030). Nine live tests pass; the actual
+populated native restore repeats all three append denials and preserves exact
+read-only replay. The45-row worker and native16/17 chain also pass with unchanged
+sources and owned cleanup. ADR0810 records the READ COMMITTED requirement and
+historical damaged-manifest boundary. This is separate from scale/ROI evidence.
 
 The isolated ca82 whole-repository run is retained as failed:3647 passed,
 259 capability skips, one stale health migration-count assertion and24 warnings
 in788.16s. Ruff/Mypy/Bandit/build passed on that source. The exact pending-count
 test now derives the registered successor count and checks the latest revision;
-a new isolated whole-repository run remains required. See
+a fresh isolated run has now passed as recorded below. See
 SCOPED_FINANCE_REGRESSION_CA82_2026-10-03.json.
+
+Isolated83662639 passes3758 tests,270 prerequisite skips and24 warnings in
+1057.61s. Ruff found two duplicated retained-report set members, repaired in
+ab8e134b with no production change. All quality gates pass onab8e134b;60 focused
+restore/health checks pass with one live-service prerequisite skip. Exact sources
+and the earlier lint failure are retained in SCOPED_FINANCE_VERIFICATION_2026-10-03.json.
+Later0097 and posting development are outside that full regression snapshot.
 
 ### Financial regression and browser checkpoint
 

@@ -1,0 +1,156 @@
+{
+  "focused_after_repair": {
+    "log": {
+      "path": "output/verification-2026-10-03/scoped-ab8-restore-health-focused.log",
+      "sha256": "78f1b6d5a40c7dca6ec6b915e02ef9c43e7299da7d9bd43a4c9cf32f0dfbf6ec"
+    },
+    "passed": 60,
+    "seconds": 8.9,
+    "skipped": 1
+  },
+  "limitations": [
+    "Full pytest executed83662639; quality and focused restore/health executedab8e134b.",
+    "Later0097, in-progress posting, and later foundation fixes are outside this snapshot.",
+    "Environment prerequisite skips are retained; live component tests and native proofs are separate evidence."
+  ],
+  "pytest": {
+    "failed": 0,
+    "passed": 3758,
+    "seconds": 1057.61,
+    "skipped": 270,
+    "warnings": 24,
+    "xml": {
+      "path": "output/verification-2026-10-03/scoped-836-pytest.xml",
+      "sha256": "a8793910cfe6309e82c35016f30e057df2da859fdab8090d27231d98bda0efd8"
+    }
+  },
+  "quality": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "duration_seconds": 0.208,
+      "exit_code": 0,
+      "log": "scoped-ab8-ruff.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "source_commit": "ab8e134b5ec849451cd5bf2c63f573fbf62408e9",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T07:07:48.511777+00:00"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "duration_seconds": 3.754,
+      "exit_code": 0,
+      "log": "scoped-ab8-mypy.log",
+      "log_sha256": "baeb477be73139a914f212b0e62014caf49a514469da31518d42354a13c9ed71",
+      "source_commit": "ab8e134b5ec849451cd5bf2c63f573fbf62408e9",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T07:07:48.716583+00:00"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "duration_seconds": 21.285,
+      "exit_code": 0,
+      "log": "scoped-ab8-bandit.log",
+      "log_sha256": "33129eb5f5b89873ae23bc7f90189ba6a27fa9fd70992e1dea5648ee3c2b413c",
+      "source_commit": "ab8e134b5ec849451cd5bf2c63f573fbf62408e9",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T07:07:52.477041+00:00"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\scoped-ab8-dist"
+      ],
+      "duration_seconds": 21.192,
+      "exit_code": 0,
+      "log": "scoped-ab8-build.log",
+      "log_sha256": "e265e3ae181559806e61d3d18aa605cd62b1fe38ecc9450f4ab8d429d12f8edd",
+      "source_commit": "ab8e134b5ec849451cd5bf2c63f573fbf62408e9",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T07:08:13.759469+00:00"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "duration_seconds": 0.072,
+      "exit_code": 0,
+      "log": "scoped-ab8-diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "ab8e134b5ec849451cd5bf2c63f573fbf62408e9",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T07:08:34.956351+00:00"
+    }
+  ],
+  "regression": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-ra",
+        "--tb=short",
+        "-o",
+        "addopts=",
+        "--junitxml",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\scoped-836-pytest.xml"
+      ],
+      "duration_seconds": 1062.696,
+      "exit_code": 0,
+      "log": "scoped-836-pytest.log",
+      "log_sha256": "5e67833a2e561892ce0908ab92746469847bd0f6b4e6521f80f1370def6b3cd6",
+      "source_commit": "83662639057c806ec718dc1f17bccd37356ba156",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T06:37:14.445688+00:00"
+    }
+  ],
+  "report_digest": "c14ba90042a9fc0ffe99a63e99c5570247b3c3eafeebe887c881643f0acb1346",
+  "retained_ruff_failure": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "duration_seconds": 0.244,
+      "exit_code": 1,
+      "log": "scoped-836-ruff.log",
+      "log_sha256": "5dde5bbfd01ec5f098bd45e1499d0266bbbdb3ecc6dfd9dd4c049c3a15ae365d",
+      "source_commit": "83662639057c806ec718dc1f17bccd37356ba156",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T06:37:14.440492+00:00"
+    }
+  ],
+  "schema_version": "reconforge-scoped-finance-verification-v1",
+  "source_delta": {
+    "change": "Remove two duplicate set items in retained-report tests; production unchanged",
+    "from": "83662639057c806ec718dc1f17bccd37356ba156",
+    "to": "ab8e134b5ec849451cd5bf2c63f573fbf62408e9"
+  },
+  "status": "verified-scoped-snapshot-with-test-only-lint-repair"
+}

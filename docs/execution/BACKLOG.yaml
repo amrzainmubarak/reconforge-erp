@@ -244,11 +244,11 @@ tasks:
   - id: PROD-030
     priority: P0
     area: reconciliation-evidence-integrity
-    title: Seal reconciliation child insertion at the PostgreSQL database boundary
-    status: in_progress
+    title: Seal reconciliation child mutations at the PostgreSQL database boundary
+    status: completed
     depends_on: [PROD-028]
     exit_evidence: >-
-      Nonowner raw INSERT after Complete currently changes90inputs to91 while retainedmanifest no longer verifies. Add versioned parent-locking INSERT authority without inferred historical repairs; raw lifecycle refusal, repository replay, concurrent claims, migration and populated restore must pass. Existing completed UPDATE and terminal relabel protections remain enforced.
+      Reproduced raw append, reparent and claimed-input mutation paths are closed by0097 parent-locking guards on all three child tables.9 live tests pass; one host-native-client skip is covered by actual populated Docker-native restore with restored denials/replay/newinput.257 compatibility tests pass with2 opt-in skips; actual45-row worker and16/17 migration matrix pass. ADR0810/report preserve historical damaged-manifest visibility and trusted-owner boundary; no scale/customer outcome claim.
   - id: E-1120
     priority: P0
     area: financial-exactness

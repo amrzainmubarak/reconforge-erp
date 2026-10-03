@@ -2,6 +2,17 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Database reconciliation sealing0097: [retained evidence](POSTGRES_RECONCILIATION_SEAL_2026-10-03.json)
+  binds9 passing live tests,257 compatibility passes/two opt-in skips, actual
+  populated native restore12.962403s and the actual45-row worker17.176481s.
+  Restore retained all three guards/history, denied restricted-role append to
+  completed children, and allowed exact replay/new initial input. The16/17
+  native chain also passes; before probes remain unchanged. ADR0810 applies.
+- [Scoped whole-repository snapshot](SCOPED_FINANCE_VERIFICATION_2026-10-03.json):
+  3758pass/270skip/0fail at83662639,1057.61s. A two-test-line lint repair atab8e134b
+  passes all quality gates and60 focused restore/health tests with one service
+  skip. Later slices do not inherit this whole-snapshot acceptance.
+
 - Master-data authority0096: [retained evidence](MASTER_DATA_AUTHORITY_2026-10-03.json)
   binds the five before-fix HTTP failures and196 passing combined tests with
   zero skips. Native populated Finance restore took13.330392s on16.14,

@@ -26,3 +26,23 @@ db48dad77c29debf8b09bc44d41f0f0f702fc479:docs/execution/STATE.md:generic-api-key
 90b0cfba2702372dcc8e10ef618b44be40eee5ba:docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json:generic-api-key:170
 c88b8c03666e1f61ac34a58ebe7591e07b878561:.github/scripts/verify_postgres_writeback_observation_matrix.py:generic-api-key:106
 c88b8c03666e1f61ac34a58ebe7591e07b878561:.github/scripts/verify_postgres_writeback_observation_matrix.py:generic-api-key:117
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_server_identity.py.
+83662639057c806ec718dc1f17bccd37356ba156:docs/execution/MASTER_DATA_AUTHORITY_2026-10-03.json:generic-api-key:807
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_server_identity.py.
+docs/execution/MASTER_DATA_AUTHORITY_2026-10-03.json:generic-api-key:807
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: alembic/versions/0036_postgres_scim_auth.py.
+dbfdefeb1431cf1b4c89fef8242543d545c88b12:docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:688
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: alembic/versions/0036_postgres_scim_auth.py.
+docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:688
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: alembic/versions/0039_postgres_emergency_access.py.
+dbfdefeb1431cf1b4c89fef8242543d545c88b12:docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:691
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: alembic/versions/0039_postgres_emergency_access.py.
+docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:691
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: alembic/versions/0040_postgres_webauthn_mfa.py.
+dbfdefeb1431cf1b4c89fef8242543d545c88b12:docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:692
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: alembic/versions/0040_postgres_webauthn_mfa.py.
+docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:692
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: alembic/versions/0051_access_policy_lifecycle.py.
+dbfdefeb1431cf1b4c89fef8242543d545c88b12:docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:703
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: alembic/versions/0051_access_policy_lifecycle.py.
+docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:703

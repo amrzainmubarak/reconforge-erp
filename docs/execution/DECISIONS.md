@@ -1,5 +1,14 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-007 — Database sealing for processed reconciliation evidence (2026-10-03)
+
+ADR0810 closes raw child append/reparent/claimed-input mutations with exact
+parent locks and READ COMMITTED admission. Active worker and initial synchronous
+output creation remain valid; claimed inputs and terminal outputs are sealed.
+Existing historical mismatches remain visible. Actual native restore repeats
+denials/replay and the45-row worker preserves decision digests. Trusted owners,
+scale, customer outcomes and operational posting remain separate boundaries.
+
 ## D-PROD-006 — Shared master-data mutation authority (2026-10-03)
 
 ADR0808 accepts central policy v2 and PostgreSQL0096 mutation guards for the

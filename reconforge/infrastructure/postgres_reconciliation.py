@@ -1942,6 +1942,16 @@ class PostgresReconciliationRepository:
         return [self._record(row, self._EXCEPTION_COLUMNS) for row in cursor.fetchall()]
 
 
+def install_postgres_reconciliation_schema(connection: Any) -> None:
+    """Install current reconciliation DDL while preserving the historical base constant."""
+    from reconforge.infrastructure.postgres_reconciliation_input_seal import (
+        install_postgres_reconciliation_input_seal_schema,
+    )
+
+    connection.execute(POSTGRES_RECONCILIATION_SCHEMA_SQL)
+    install_postgres_reconciliation_input_seal_schema(connection)
+
+
 POSTGRES_RECONCILIATION_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS reconforge.reconciliation_runs (
     tenant_id TEXT NOT NULL,

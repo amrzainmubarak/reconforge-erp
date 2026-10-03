@@ -123,6 +123,32 @@ def test_runtime_reader_rejects_invalid_evidence_digest_manifest(
         load_deployment_readiness_matrix(matrix_path)
 
 
+@pytest.mark.parametrize("path", [
+    "/outside-evidence.txt",
+    "C:\\outside-evidence.txt",
+    "C:/outside-evidence.txt",
+    "C:outside-evidence.txt",
+    "\\\\server\\share\\outside-evidence.txt",
+    "//server/share/outside-evidence.txt",
+    "\\outside-evidence.txt",
+    "\\\\?\\C:\\outside-evidence.txt",
+])
+@pytest.mark.parametrize("location", ["gate", "digest"])
+def test_runtime_reader_rejects_anchored_evidence_paths_on_every_host(
+    tmp_path: Path, path: str, location: str,
+) -> None:
+    matrix_path, source = _copy_matrix_fixture(tmp_path)
+    if location == "gate":
+        source["editions"][0]["gates"][0]["evidence"][0] = path
+        message = "evidence paths must be relative"
+    else:
+        source["evidence_digests"][0]["path"] = path
+        message = "evidence digest paths must be relative"
+    matrix_path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+    with pytest.raises(DeploymentReadinessError, match=message):
+        load_deployment_readiness_matrix(matrix_path)
+
+
 def test_runtime_reader_produces_stable_digest_and_selects_one_edition() -> None:
     matrix = load_deployment_readiness_matrix(MATRIX_PATH)
     selected = matrix.select("regulated")

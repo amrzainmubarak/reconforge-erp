@@ -273,13 +273,18 @@ _MODULES = (
         version=__version__,
         maturity="experimental",
         capability_status="foundation",
-        summary="Local SQLite, users/RBAC, workflow, audit-ledger, API-session, policy-analysis, and import/export foundations.",
+        summary=(
+            "Local SQLite, users/RBAC, workflow, audit-ledger, API-session, policy-analysis, import/export, "
+            "and retained operational-notification foundations."
+        ),
         network_requirement="loopback-optional",
         default_enabled=True,
-        permissions=("audit.read", "audit.verify", "db.read", "roles.manage", "users.manage"),
-        migration_versions=(1, 2, 3, 4, 5),
-        domain_events=("audit.event.appended", "workflow.transitioned"),
-        interfaces=("api", "cli", "current-studio", "library"),
+        permissions=(
+            "audit.read", "audit.verify", "db.read", "notifications.publish", "notifications.read", "roles.manage", "users.manage"
+        ),
+        migration_versions=(1, 2, 3, 4, 5, 51),
+        domain_events=("audit.event.appended", "notification.inbox_published.v1", "notification.inbox_read.v1", "workflow.transitioned"),
+        interfaces=("api", "cli", "current-studio", "library", "modern-studio"),
         import_contracts=("local-db-bridge.v1",),
         export_contracts=("audit-ledger.v1", "enterprise-policy-conflict-analysis.v1", "local-db-export.v1"),
         data_classification=("authentication-metadata", "financial-workflow-metadata"),
@@ -287,6 +292,7 @@ _MODULES = (
         activation_note="Available locally after explicit database initialization; the API binds to loopback by default.",
         test_evidence=(
             "tests/test_api_foundation.py",
+            "tests/test_api_notification_inbox.py",
             "tests/test_db_backup_structured_ingress.py",
             "tests/test_db_export_import.py",
             "tests/test_db_import_structured_ingress.py",
@@ -294,7 +300,9 @@ _MODULES = (
             "tests/test_postgres_policy_analysis.py",
             "tests/test_postgres_policy_analysis_runtime.py",
             "tests/test_postgres_policy_scopes.py",
+            "tests/test_postgres_notification_inbox.py",
             "tests/test_studio_auth.py",
+            "tests/test_notification_inbox.py",
             "tests/test_upgrade_orchestrator.py",
         ),
     ),

@@ -27,7 +27,6 @@ from reconforge.domain.notification_inbox import (
     InboxScope,
     InboxTopic,
 )
-from reconforge.infrastructure.notification_inbox_schema import POSTGRES_NOTIFICATION_INBOX_SQL
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.postgres_notification_inbox import PostgresNotificationInboxRepository
@@ -60,11 +59,10 @@ def database():
     app_factory = PostgresConnectionFactory(PostgresSettings(dsn=isolated_app, require_tls=False))
     try:
         os.environ["RECONFORGE_POSTGRES_DSN"] = isolated_admin
-        command.upgrade(Config("alembic.ini"), "0100_pg_inventory_receipt")
+        command.upgrade(Config("alembic.ini"), "0101_pg_notification_inbox")
         admin = admin_factory.connect()
         try:
             with admin.transaction():
-                admin.execute(POSTGRES_NOTIFICATION_INBOX_SQL)
                 admin.execute(sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(role)))
                 admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}").format(sql.Identifier(role)))
                 admin.execute(sql.SQL("GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA reconforge TO {}").format(sql.Identifier(role)))

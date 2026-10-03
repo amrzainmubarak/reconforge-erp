@@ -66,6 +66,7 @@ from reconforge.api.routes import (
     manufacturing_cost_control,
     master_data,
     metrics,
+    notification_inbox,
     operations,
     payables,
     professional_invoice_payment,
@@ -402,6 +403,7 @@ def create_api_app(
     app.include_router(individual_cashflow.router, prefix="/api/v1")
     app.include_router(exceptions.router, prefix="/api/v1")
     app.include_router(metrics.router, prefix="/api/v1")
+    app.include_router(notification_inbox.router, prefix="/api/v1")
     app.include_router(operations.router, prefix="/api/v1")
     app.include_router(payables.router, prefix="/api/v1")
     app.include_router(receivables.router, prefix="/api/v1")
@@ -450,6 +452,7 @@ def create_api_app(
         individual_cashflow.router,
         exceptions.router,
         metrics.router,
+        notification_inbox.router,
         operations.router,
         payables.router,
         receivables.router,

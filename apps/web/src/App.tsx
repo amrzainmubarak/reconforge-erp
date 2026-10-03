@@ -24,6 +24,7 @@ const MappingStudio = lazy(() => import("./components/MappingStudio").then((modu
 const RuleStudio = lazy(() => import("./components/RuleStudio").then((module) => ({ default: module.RuleStudio })));
 const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) => ({ default: module.LiveStudio })));
 const AdminAudit = lazy(() => import("./components/AdminAudit").then((module) => ({ default: module.AdminAudit })));
+const NotificationInbox = lazy(() => import("./components/NotificationInbox").then((module) => ({ default: module.NotificationInbox })));
 const ReceivablesWorkspace = lazy(() => import("./components/ReceivablesWorkspace").then((module) => ({ default: module.ReceivablesWorkspace })));
 
 function pageFromPath(pathname: string): StudioPage {
@@ -40,6 +41,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/rules")) return "rules";
   if (normalized.endsWith("/live")) return "live";
   if (normalized.endsWith("/admin-audit")) return "adminAudit";
+  if (normalized.endsWith("/notifications")) return "notifications";
   if (normalized.endsWith("/receivables")) return "receivables";
   return "dashboard";
 }
@@ -162,7 +164,7 @@ function StudioApp() {
           onMobileMenu={() => setMobileMenuOpen(true)}
           noticeCount={data?.notices.length ?? 0}
           activePage={activePage}
-          liveIdentity={activePage === "receivables" ? auth.username || t("arSignedOut") : undefined}
+          liveIdentity={activePage === "receivables" || activePage === "notifications" ? auth.username || t("arSignedOut") : undefined}
         />
 
         {openPanel === "accessibility" ? (
@@ -176,9 +178,9 @@ function StudioApp() {
             onTheme={preferences.setTheme}
           />
         ) : null}
-        {openPanel === "notifications" && data && activePage !== "receivables" ? <NoticesPanel notices={data.notices} translate={t} locale={preferences.locale} /> : null}
-        {openPanel === "quick" && activePage !== "receivables" ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
-        {openPanel === "profile" && activePage !== "receivables" ? <ProfilePanel translate={t} /> : null}
+        {openPanel === "notifications" && data && activePage !== "receivables" && activePage !== "notifications" ? <NoticesPanel notices={data.notices} translate={t} locale={preferences.locale} /> : null}
+        {openPanel === "quick" && activePage !== "receivables" && activePage !== "notifications" ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
+        {openPanel === "profile" && activePage !== "receivables" && activePage !== "notifications" ? <ProfilePanel translate={t} /> : null}
 
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}
@@ -222,6 +224,9 @@ function StudioApp() {
         ) : null}
         {activePage === "adminAudit" ? (
           <Suspense fallback={<LoadingView translate={t} />}><AdminAudit locale={preferences.locale} translate={t} /></Suspense>
+        ) : null}
+        {activePage === "notifications" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><NotificationInbox locale={preferences.locale} /></Suspense>
         ) : null}
         {activePage === "receivables" ? (
           <Suspense fallback={<LoadingView translate={t} />}><ReceivablesWorkspace locale={preferences.locale} /></Suspense>

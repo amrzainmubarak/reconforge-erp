@@ -7,18 +7,14 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
-from reconforge.api.routes.notification_inbox import router
 from reconforge.auth import LocalAuthService
 from reconforge.db import connect, run_migrations
-from reconforge.infrastructure.notification_inbox_schema import SQLITE_NOTIFICATION_INBOX_SQL
 
 
 def _client(tmp_path: Path) -> tuple[TestClient, str]:
     path = tmp_path / "inbox-api.db"
     run_migrations(path)
     with connect(path) as connection:
-        if not connection.execute("SELECT 1 FROM sqlite_master WHERE name='notification_inbox'").fetchone():
-            connection.executescript(SQLITE_NOTIFICATION_INBOX_SQL)
         for workspace in ("default", "sibling"):
             connection.execute("INSERT INTO workspaces(id,name,local_first_note,created_at) VALUES(?,?,'synthetic','2026-10-03T00:00:00Z')", (workspace, workspace))
         connection.commit()
@@ -27,8 +23,6 @@ def _client(tmp_path: Path) -> tuple[TestClient, str]:
         recipient = auth.create_user(username="reviewer", password="Synthetic-123", role="reviewer")
         auth.create_user(username="other", password="Synthetic-123", role="auditor-readonly")
     app = create_api_app(path)
-    if not any(getattr(route, "path", "") == "/api/v1/notifications/inbox" for route in app.routes):
-        app.include_router(router, prefix="/api/v1")
     return TestClient(app, base_url="https://testserver"), recipient.id
 
 

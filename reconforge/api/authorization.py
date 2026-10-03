@@ -108,6 +108,8 @@ _CRITICAL_ROUTE_CONTRACTS: dict[tuple[str, str], tuple[str, tuple[str, ...]]] = 
         ("finance_core.manage",),
     ),
     ("POST", "/api/v1/evidence/records/{evidence_id}/verify"): ("all", ("evidence.verify",)),
+    ("POST", "/api/v1/notifications/inbox"): ("all", ("notifications.publish",)),
+    ("POST", "/api/v1/notifications/inbox/{notification_id}/read"): ("all", ("notifications.read",)),
     ("POST", "/api/v1/auth/emergency-access/requests"): ("all", ("security.emergency.request",)),
     ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/approve"): (
         "all",

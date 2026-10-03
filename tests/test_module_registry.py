@@ -121,7 +121,9 @@ def _promoted_platform_descriptor(*, maturity: str, readiness: dict[str, object]
 
 
 def _promotion_migrations() -> frozenset[int]:
-    return frozenset({1, 2, 3, 4, 5})
+    # platform.core owns the retained inbox schema slice as well as the
+    # original platform bootstrap migrations.
+    return frozenset({1, 2, 3, 4, 5, 51})
 
 
 def _complete_readiness_evidence(repository_root: Path, *, include_operational: bool = False) -> dict[str, object]:

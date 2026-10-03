@@ -1,5 +1,17 @@
 # Execution State
 
+## Amr sprint platform-core completion (2026-10-03)
+
+AMR-GFO-002 is complete on the sprint branch. SQLite migration 51 and
+PostgreSQL revision 0101 add retained recipient-scoped inbox publication and
+read evidence. The route registry, authorization inventory, backup/restore
+admission, module descriptor, and authenticated Studio route are connected.
+Evidence is limited to the named synthetic local tests: SQLite 16,
+API/registry/authorization 22, PostgreSQL 4 using an independently owned
+temporary database and non-superuser/non-BYPASSRLS application role, Studio
+component/contract 10, and Chromium 1. No outbound transport, automatic
+financial approval, ERP replacement, or deployment claim is made.
+
 ## Amr sprint handoff (2026-10-03)
 
 The user stopped PROD038 at a safe checkpoint and authorized a new Global

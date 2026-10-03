@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 276
-EXPECTED_DIGEST = "7663084fa2bef87363f8c714a4a96a79fc26f5845062d0b0629c117384c7fdb0"
+EXPECTED_ROUTE_COUNT = 280
+EXPECTED_DIGEST = "356cfb78b5e888fccff0715e1a66eb6f66fea841f2ac7905b8a1cbcdbcfe4d7f"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -50,6 +50,10 @@ HANDLER_BOUNDARY_HELPERS = {
     "inventory_valuation.py": frozenset({"_server_call"}),
     "inventory_valuation_reversal.py": frozenset({"_server_call"}),
     "master_data.py": frozenset({"_enforce_server_manage"}),
+    # `_call` dispatches every mutating inbox handler through the reviewed
+    # server identity boundary, while retaining the explicitly local-only
+    # SQLite path for Community mode.
+    "notification_inbox.py": frozenset({"_call"}),
     "payables.py": frozenset({"_server_call"}),
     "receivables.py": frozenset({"_server_call"}),
     "reconciliation.py": frozenset({"_enforce_server_run_scope"}),

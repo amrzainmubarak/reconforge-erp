@@ -23,12 +23,13 @@ tasks:
     priority: P1
     area: platform-core
     title: Persist recipient-scoped operational notification inbox and read evidence
-    status: in_progress
+    status: completed
     depends_on: [AMR-GFO-001]
     exit_evidence: >-
-      Require immutable digest-bound publication, current tenant/workspace/recipient authority,
-      exact replay and conflict, atomic audit/outbox, SQLite/PostgreSQL migration and restore,
-      authorized API, Arabic/English authenticated UI and live browser acceptance.
+      SQLite migration51 and PostgreSQL revision0101 retain immutable digest-bound publication,
+      current tenant/workspace/recipient authority, exact replay/conflict, atomic audit/outbox
+      and restore verification. Focused SQLite16, API/registry/authorization22, live PostgreSQL4,
+      Studio10, and Chromium1 tests pass; typecheck/build, Ruff and focused Mypy pass.
   - id: AMR-GFO-003
     priority: P1
     area: business-finance

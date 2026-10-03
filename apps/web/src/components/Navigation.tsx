@@ -1,6 +1,7 @@
 import {
   Activity,
   Archive,
+  Bell,
   Boxes,
   Check,
   ChevronDown,
@@ -77,6 +78,7 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "rules", label: "ruleStudio", icon: Code2, page: "rules", status: "foundation" },
       { key: "live", label: "liveStudio", icon: RadioTower, page: "live", status: "foundation" },
       { key: "admin-audit", label: "adminAudit", icon: ShieldCheck, page: "adminAudit", status: "foundation" },
+      { key: "notifications", label: "notifications", icon: Bell, page: "notifications", status: "foundation" },
       { key: "settings", label: "settings", icon: Settings, status: "planned" },
       { key: "developer", label: "developer", icon: Code2, href: `${currentStudio}/docs`, status: "foundation" },
     ],
@@ -113,8 +115,8 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         <summary className="workspace-switcher" aria-label={translate("workspaceDetails")}>
           <span className="workspace-avatar">FC</span>
           <span className="workspace-copy">
-            <strong>{translate(activePage === "receivables" ? "receivables" : "local")}</strong>
-            <small>{translate(activePage === "receivables" ? "arLiveSession" : "preview")}</small>
+            <strong>{translate(activePage === "notifications" ? "notifications" : activePage === "receivables" ? "receivables" : "local")}</strong>
+            <small>{translate(activePage === "receivables" || activePage === "notifications" ? "arLiveSession" : "preview")}</small>
           </span>
           <ChevronDown className="workspace-chevron" size={15} aria-hidden="true" />
         </summary>
@@ -180,8 +182,8 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         <div className="local-state">
           <span className="status-dot" aria-hidden="true" />
           <span>
-            <strong>{translate(activePage === "receivables" ? "arLiveSession" : "readOnly")}</strong>
-            <small>{translate(activePage === "receivables" ? "receivables" : "localNote")}</small>
+            <strong>{translate(activePage === "receivables" || activePage === "notifications" ? "arLiveSession" : "readOnly")}</strong>
+            <small>{translate(activePage === "notifications" ? "notifications" : activePage === "receivables" ? "receivables" : "localNote")}</small>
           </span>
         </div>
         <button className="collapse-button" type="button" onClick={onCollapse} aria-label={translate(collapsed ? "expandSidebar" : "collapseSidebar")}>

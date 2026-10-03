@@ -1,5 +1,21 @@
 # ReconForge Execution Evidence Log
 
+- AMR-GFO-002 retained notification inbox (2026-10-03): SQLite migration 51,
+  PostgreSQL Alembic revision 0101, immutable/append-only evidence triggers,
+  backup and restore admission, authorization inventory, and the authenticated
+  Studio route were integrated on the Amr sprint branch. `tests/test_notification_inbox.py`
+  passed 16 tests, `tests/test_api_notification_inbox.py`,
+  `tests/test_module_registry.py`, and `tests/test_api_authorization_inventory.py`
+  passed 22 tests, and `tests/test_postgres_notification_inbox.py` passed 4
+  tests against a temporary synthetic PostgreSQL database using the separate
+  non-superuser/non-BYPASSRLS application role. Studio contract/component tests
+  passed 10 tests; a Chromium route journey passed sign-in, scoped listing,
+  CSRF acknowledgement, and scoped axe validation. `ruff`, focused `mypy`,
+  Studio typecheck, and Studio production build passed. This proves only the
+  named local synthetic behavior; it does not establish outbound delivery,
+  external identity interoperability, HA/DR, compliance, or platform-wide
+  performance.
+
 - Published invoice recovery92719305: INVOICE_RECOVERY_PUBLISHED_ACCEPTANCE_2026-10-03.json
   retains unfiltered4558collected/4178pass/380explicit prerequisites/0failure/
   0error/24warnings,977.84s pytest and3073unchanged tracked files. Global quality

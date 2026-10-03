@@ -1,6 +1,6 @@
 # Retain bounded notification-inbox publications as auditable control-plane evidence
 
-Status: accepted for the inbox implementation slice; storage migration, route registration, backup admission, and Studio navigation are assembled by the integration owner.
+Status: accepted; SQLite migration 51, PostgreSQL revision 0101, route registration, backup admission, and Studio navigation are integrated on the Amr sprint branch.
 Date: 2026-10-03
 Scope: Platform Core notification inbox.
 
@@ -54,17 +54,16 @@ identity existence, canonical digests, UTC ordering, and the exact paired
 audit/Outbox payloads. Disabled users and revoked permissions intentionally do
 not invalidate already retained evidence; they only fail current access.
 
-Integration requirements are explicit. The SQLite schema constant must be
-installed by a new ordered migration after its referenced `workspaces`,
+The SQLite schema constant is installed by ordered migration 51 after its referenced `workspaces`,
 `organizations`, `legal_entities`, `users`, `roles`, `permissions`,
 `role_permissions`, `audit_events`, and `outbox_events` tables exist. The
-PostgreSQL constant must be installed by an Alembic revision after the identity,
+PostgreSQL constant is installed by Alembic revision 0101 after the identity,
 scope-grant, workspace, master-data, audit, and Outbox schemas. The application
-factory must register the router. The local backup exporter and restore verifier
+factory registers the router. The local backup exporter and restore verifier
 must retain these two tables and all five inbox triggers, then call
 `verify_sqlite_inbox_storage` before admitting a restored database. Studio
-navigation is registered separately so the component is reachable without
-changing the shared navigation from this slice.
+navigation is registered so the component is reachable from the shared
+navigation.
 
 Rollback preserves inbox publications, acknowledgements, audit events, and
 Outbox events. A reader without this schema must refuse a backup containing

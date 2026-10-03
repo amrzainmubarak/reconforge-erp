@@ -57,6 +57,7 @@ from reconforge.db.schema import (
     WRITEBACK_RECOVERY_OBSERVATIONS_SCHEMA_SQL,
 )
 from reconforge.infrastructure.finance_policy_schema import SQLITE_FINANCE_POLICY_MIGRATION_SQL
+from reconforge.infrastructure.notification_inbox_schema import SQLITE_NOTIFICATION_INBOX_SQL
 from reconforge.infrastructure.receivables_policy_schema import SQLITE_RECEIVABLES_POLICY_MIGRATION_SQL
 from reconforge.infrastructure.sqlite_finance_posting_schema import SQLITE_FINANCE_POSTING_MIGRATION_SQL
 from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
@@ -162,6 +163,7 @@ MIGRATIONS = [
     Migration(version=48, name="manual_finance_operational_posting", sql=SQLITE_FINANCE_POSTING_MIGRATION_SQL),
     Migration(version=49, name="receivables_retained_monetary_policy", sql=SQLITE_RECEIVABLES_POLICY_MIGRATION_SQL),
     Migration(version=50, name="reviewed_inventory_receipt_posting", sql=SQLITE_INVENTORY_RECEIPT_MIGRATION_SQL),
+    Migration(version=51, name="retained_notification_inbox", sql=SQLITE_NOTIFICATION_INBOX_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """
@@ -187,6 +189,35 @@ def _applied_versions(connection: sqlite3.Connection) -> list[int]:
     return [int(row["version"]) for row in rows]
 
 
+def _atomic_schema_upgrade(
+    connection: sqlite3.Connection,
+    *,
+    schema_sql: str,
+    version: int,
+    name: str,
+    applied_at: str,
+) -> None:
+    """Apply one additive schema slice and its migration record as one SQLite transaction."""
+
+    if not schema_sql.strip() or type(version) is not int or version < 1:
+        raise sqlite3.DatabaseError("Invalid atomic migration definition.")
+    # executescript opens the explicit transaction before any schema statement.
+    # A failed trigger, constraint, or permission insert therefore cannot leave a
+    # replay-hostile partial migration behind.
+    script = (
+        "BEGIN IMMEDIATE;\n"
+        + schema_sql
+        + "\nINSERT INTO schema_migrations (version, name, applied_at) VALUES ("
+        + f"{version}, {name!r}, {applied_at!r});\n"
+        + f"PRAGMA user_version = {version};\nCOMMIT;"
+    )
+    try:
+        connection.executescript(script)
+    except sqlite3.DatabaseError:
+        connection.rollback()
+        raise
+
+
 def run_migrations(db_path: Path | str, *, target_version: int | None = None) -> MigrationStatus:
     """Create or migrate a local database, optionally stopping at a supported version."""
 
@@ -208,6 +239,16 @@ def run_migrations(db_path: Path | str, *, target_version: int | None = None) ->
             if migration.version == 50:
                 atomic_receipt_upgrade(connection, schema_sql=migration.sql, version=migration.version,
                                        name=migration.name, applied_at=_utc_now())
+                applied_now.append(migration.version)
+                continue
+            if migration.version == 51:
+                _atomic_schema_upgrade(
+                    connection,
+                    schema_sql=migration.sql,
+                    version=migration.version,
+                    name=migration.name,
+                    applied_at=_utc_now(),
+                )
                 applied_now.append(migration.version)
                 continue
             connection.executescript(migration.sql)

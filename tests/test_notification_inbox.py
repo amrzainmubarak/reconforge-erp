@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
@@ -9,9 +10,12 @@ from pathlib import Path
 
 import pytest
 
+import reconforge.db.migrations as migration_module
 from reconforge.application.notification_inbox import NotificationInboxService
 from reconforge.auth import LocalAuthService
 from reconforge.db import connect, run_migrations
+from reconforge.db.backup import create_backup, restore_backup
+from reconforge.db.exporter import DBBridgeError
 from reconforge.domain.notification_inbox import (
     InboxConflictError,
     InboxError,
@@ -31,8 +35,6 @@ def inbox(tmp_path: Path):
     path = tmp_path / "inbox.db"
     run_migrations(path)
     connection = connect(path)
-    if not connection.execute("SELECT 1 FROM sqlite_master WHERE name='notification_inbox'").fetchone():
-        connection.executescript(SQLITE_NOTIFICATION_INBOX_SQL)
     for workspace in ("default", "sibling"):
         connection.execute("INSERT INTO workspaces(id,name,local_first_note,created_at) VALUES(?,?,'synthetic','2026-10-03T00:00:00Z')", (workspace, workspace))
     connection.execute("INSERT INTO organizations(id,workspace_id,name,created_at,organization_code) VALUES('ORG-A','default','Synthetic organization','2026-10-03T00:00:00Z','ORG-A')")
@@ -185,6 +187,74 @@ def test_sqlite_restored_inbox_independently_verifies_digest_and_linkage(inbox, 
         restored.commit()
         with pytest.raises(InboxPersistenceError):
             verify_sqlite_inbox_storage(restored)
+
+
+def test_registered_inbox_migration_rolls_back_every_schema_effect_on_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed retained-evidence migration leaves no replay-hostile partial schema."""
+
+    path = tmp_path / "atomic-inbox.db"
+    run_migrations(path, target_version=50)
+    migrations = migration_module.MIGRATIONS
+    broken = migration_module.Migration(
+        version=51,
+        name="retained_notification_inbox",
+        # The duplicate table deliberately fails after the inbox tables,
+        # indexes, triggers, and permission grants would otherwise exist.
+        sql=SQLITE_NOTIFICATION_INBOX_SQL + "\nCREATE TABLE notification_inbox (id TEXT);",
+    )
+    monkeypatch.setattr(migration_module, "MIGRATIONS", (*migrations[:50], broken))
+
+    with pytest.raises(migration_module.DatabaseError):
+        migration_module.run_migrations(path)
+
+    connection = connect(path, require_exists=True)
+    try:
+        assert connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='notification_inbox'"
+        ).fetchone() is None
+        assert connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='notification_inbox_reads'"
+        ).fetchone() is None
+        assert connection.execute("SELECT version FROM schema_migrations WHERE version=51").fetchone() is None
+        assert int(connection.execute("PRAGMA user_version").fetchone()[0]) == 50
+    finally:
+        connection.close()
+
+
+def test_backup_restore_preserves_and_revalidates_retained_inbox_evidence(inbox, tmp_path: Path) -> None:
+    path, connection, publisher, recipient, _ = inbox
+    publication = _publication(recipient)
+    record, _ = _service(connection).publish(publication, actor_id=publisher)
+    _service(connection).acknowledge(publication.scope, actor_id=recipient, notification_id=record.id)
+
+    backup = create_backup(path, tmp_path / "inbox-backup")
+    payload = json.loads(backup.backup_path.read_text(encoding="utf-8"))
+    assert [row["id"] for row in payload["tables"]["notification_inbox"]] == [record.id]
+    assert len(payload["tables"]["notification_inbox_reads"]) == 1
+
+    restored_path = tmp_path / "inbox-restored.db"
+    restore_backup(restored_path, backup.backup_path)
+    with connect(restored_path, require_exists=True) as restored:
+        assert verify_sqlite_inbox_storage(restored) == 1
+        restored_record = _service(restored).page(publication.scope, actor_id=recipient).records[0]
+        assert restored_record.id == record.id
+        assert restored_record.read_at is not None
+
+
+def test_backup_refuses_tampered_retained_inbox_evidence(inbox, tmp_path: Path) -> None:
+    path, connection, publisher, recipient, _ = inbox
+    record, _ = _service(connection).publish(_publication(recipient), actor_id=publisher)
+    connection.execute("DROP TRIGGER notification_inbox_immutable_update")
+    connection.execute("UPDATE notification_inbox SET payload_digest=? WHERE id=?", ("0" * 64, record.id))
+    connection.commit()
+
+    # The CLI boundary intentionally exposes only its safe generic backup
+    # failure while retaining the evidence verifier as the rejection cause.
+    with pytest.raises(DBBridgeError, match="Unable to create local DB backup"):
+        create_backup(path, tmp_path / "tampered-inbox-backup")
 
 
 def test_same_key_concurrent_publishers_have_exactly_one_business_effect(inbox) -> None:

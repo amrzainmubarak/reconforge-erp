@@ -23,6 +23,8 @@ from reconforge.db.exporter import (
 )
 from reconforge.db.migrations import MIGRATIONS, database_status, run_migrations
 from reconforge.domain.models import utc_now_text
+from reconforge.domain.notification_inbox import InboxPersistenceError
+from reconforge.infrastructure.notification_inbox_verification import verify_sqlite_inbox_storage
 from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
     RECEIPT_BACKUP_COLUMNS,
     RECEIPT_RESTORE_ADMISSION_TRIGGERS,
@@ -89,6 +91,8 @@ BACKUP_TABLES = [
     "permissions",
     "user_roles",
     "role_permissions",
+    "notification_inbox",
+    "notification_inbox_reads",
     "accounts",
     "ap_suppliers",
     "ap_purchase_orders",
@@ -246,6 +250,14 @@ BACKUP_SELECT_QUERIES = {
     "permissions": "SELECT * FROM permissions ORDER BY name",
     "user_roles": "SELECT * FROM user_roles ORDER BY user_id, role_id",
     "role_permissions": "SELECT * FROM role_permissions ORDER BY role_id, permission_name",
+    "notification_inbox": (
+        "SELECT * FROM notification_inbox "
+        "ORDER BY tenant_id, workspace_id, recipient_id, created_at, id"
+    ),
+    "notification_inbox_reads": (
+        "SELECT * FROM notification_inbox_reads "
+        "ORDER BY tenant_id, workspace_id, recipient_id, notification_id"
+    ),
     "accounts": "SELECT * FROM accounts ORDER BY account_code, id",
     "ap_suppliers": "SELECT * FROM ap_suppliers ORDER BY workspace_id, supplier_code, id",
     "ap_purchase_orders": "SELECT * FROM ap_purchase_orders ORDER BY workspace_id, po_number, id",
@@ -370,6 +382,8 @@ BACKUP_DELETE_QUERIES = {
     "permissions": "DELETE FROM permissions",
     "user_roles": "DELETE FROM user_roles",
     "role_permissions": "DELETE FROM role_permissions",
+    "notification_inbox": "DELETE FROM notification_inbox",
+    "notification_inbox_reads": "DELETE FROM notification_inbox_reads",
     "accounts": "DELETE FROM accounts",
     "ap_suppliers": "DELETE FROM ap_suppliers",
     "ap_purchase_orders": "DELETE FROM ap_purchase_orders",
@@ -739,6 +753,14 @@ BACKUP_INSERT_COLUMNS = {
     "permissions": ("name", "description"),
     "user_roles": ("user_id", "role_id"),
     "role_permissions": ("role_id", "permission_name"),
+    "notification_inbox": (
+        "id", "tenant_id", "workspace_id", "organization_id", "legal_entity_id",
+        "recipient_id", "publisher_id", "topic", "resource_type", "resource_id",
+        "idempotency_key", "payload_digest", "created_at",
+    ),
+    "notification_inbox_reads": (
+        "tenant_id", "workspace_id", "notification_id", "recipient_id", "read_at",
+    ),
     "accounts": (
         "id",
         "workspace_id",
@@ -1908,6 +1930,16 @@ BACKUP_INSERT_QUERIES = {
     "permissions": "INSERT INTO permissions (name, description) VALUES (?, ?)",
     "user_roles": "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
     "role_permissions": "INSERT INTO role_permissions (role_id, permission_name) VALUES (?, ?)",
+    "notification_inbox": (
+        "INSERT INTO notification_inbox "
+        "(id,tenant_id,workspace_id,organization_id,legal_entity_id,recipient_id,publisher_id,topic,"
+        "resource_type,resource_id,idempotency_key,payload_digest,created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    ),
+    "notification_inbox_reads": (
+        "INSERT INTO notification_inbox_reads "
+        "(tenant_id,workspace_id,notification_id,recipient_id,read_at) VALUES (?,?,?,?,?)"
+    ),
     "accounts": """
         INSERT INTO accounts (
             id, workspace_id, account_code, account_name, created_at, chart_id,
@@ -2670,9 +2702,31 @@ def _verify_posting_backup(connection: sqlite3.Connection) -> None:
         raise DBBridgeError("Backup operational posting integrity verification failed.") from exc
 
 
+def _verify_notification_inbox_backup(
+    connection: sqlite3.Connection,
+    *,
+    required: bool,
+) -> None:
+    """Verify retained inbox evidence only when the version owns its tables."""
+
+    tables = ("notification_inbox", "notification_inbox_reads")
+    present = tuple(_table_exists(connection, table) for table in tables)
+    if not any(present):
+        if required:
+            raise DBBridgeError("Backup notification inbox tables are unavailable.")
+        return
+    if not all(present):
+        raise DBBridgeError("Backup notification inbox schema is incomplete.")
+    try:
+        verify_sqlite_inbox_storage(connection)
+    except (InboxPersistenceError, TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup notification inbox integrity verification failed.") from exc
+
+
 def _backup_payload(connection: sqlite3.Connection, *, created_at: str, schema_version: int) -> dict[str, Any]:
     _verify_posting_backup(connection)
     _verify_receivables_policy_backup(connection)
+    _verify_notification_inbox_backup(connection, required=schema_version >= 51)
     return {
         "backup_format_version": BACKUP_FORMAT_VERSION,
         "created_at": created_at,
@@ -2703,6 +2757,7 @@ def create_backup(
     try:
         _verify_posting_backup(connection)
         _verify_receivables_policy_backup(connection)
+        _verify_notification_inbox_backup(connection, required=schema_version >= 51)
         resolve_output_dir(resolved_output_dir)
         ensure_outbox_schema(connection)
         append_audit_event(
@@ -3303,6 +3358,10 @@ def restore_backup(
             tables = backup["tables"]
             if not isinstance(tables, dict):
                 raise DBBridgeError("Backup table payload is invalid.")
+            if backup_schema_version >= 51 and any(
+                table not in tables for table in ("notification_inbox", "notification_inbox_reads")
+            ):
+                raise DBBridgeError("Backup omits retained notification inbox tables.")
             for table in BACKUP_TABLES:
                 rows = tables.get(table, [])
                 if table in {"finance_posting_effects", "finance_posting_commands", *RECEIPT_TABLES}:
@@ -3633,6 +3692,7 @@ def restore_backup(
                 raise DBBridgeError("Backup restore contains invalid table relationships.")
             _verify_posting_backup(connection)
             _verify_receivables_policy_backup(connection)
+            _verify_notification_inbox_backup(connection, required=True)
             from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 
             policies = FinancePolicyStore(connection)

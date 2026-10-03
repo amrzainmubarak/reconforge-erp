@@ -1,5 +1,34 @@
 ﻿# Execution State
 
+## Active financial-policy and open-workload slice (2026-10-03)
+
+The goal remains active. Foundation changes are reviewable in
+[Draft PR 109](https://github.com/amrzainmubarak/reconforge-erp/pull/109), stacked
+against the preexisting `codex/p0-postgres-clean-boot` branch. They are not merged
+into main. Current engineering work is on `codex/financial-policy-and-open-workloads`.
+
+- AR customer/currency/credit invariants are committed: 89 focused SQLite/live
+  PostgreSQL tests passed, followed by four caller-transaction ownership checks.
+- Explicit strict one-to-one constraints are committed and opt-in; 69 focused
+  tests and 138 broader regressions pass. Default legacy matching digest is
+  unchanged. Hosted rule/worker adoption is still pending.
+- An actual licensed IBM AMLSim 45-row sample now runs through an offline
+  adapter and independent fault oracle: 42 matched pairs, three unmatched rows
+  on each side, and equal decisions under row permutation. This is in-process
+  synthetic evidence; larger data, worker execution and customer ROI remain open.
+- Runtime capability admission is committed: 73 live PostgreSQL tests pass,
+  zero skipped, after 27 reproduced unsafe-admission failures. See
+  [runtime evidence](RUNTIME_GRANTS_2026-10-03.json) and ADR 0800.
+- Monetary-policy capture (SQLite 47 / PostgreSQL 0094) and per-currency aging
+  are being verified. They are outside the accepted foundation checkpoint below.
+- Remote foundation CI exposed portable evidence-path validation and unavailable
+  historical MinIO registry pulls. The path fix is pushed and passes 35 Windows
+  tests plus a Linux direct reader probe. A pinned, source-built MinIO fixture is
+  under evaluation for CI only; full remote acceptance is not yet asserted.
+- Next dependencies remain explicit scoped transaction composition, immutable
+  operational posting, integrated trade cycles and connected financial writes.
+  There is no available company pilot or external-auditor acceptance evidence.
+
 ## Verified foundation checkpoint (2026-10-03)
 
 An isolated checkout at `8c0951273c6eb6b0e395f12ffe5626821c2f9814` passed

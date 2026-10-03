@@ -1,5 +1,18 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-003 — Evidence-backed open-source adoption and financial invariants (2026-10-03)
+
+With no company pilot available, use immutable official sources and synthetic
+workloads, retain exact licenses and provenance, and keep business ROI and
+auditor acceptance unmeasured. The adopted AMLSim sample is processed offline
+with an independent fault oracle; upstream generator code is not executed.
+Keep strict matching constraints opt-in to preserve the legacy default digest.
+AR history freezes customer currency and serializes exposure changes. Runtime
+database admission evaluates effective object capabilities, including inherited
+and PUBLIC privileges, while retaining trusted installed integrity triggers.
+ADRs 0794-0796 and 0800 record these implemented decisions. ADR 0792 governs the
+ongoing monetary-policy migration; ADR 0799 records portable evidence references.
+
 ## D-PROD-002 — Close reproduced foundation defects before posting (2026-10-03)
 
 ADRs 0783-0791 record clean-boot metrics, unfiltered CI selection, targeted

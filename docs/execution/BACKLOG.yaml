@@ -61,10 +61,10 @@ tasks:
     priority: P0
     area: receivables
     title: Protect AR currency and customer-state invariants
-    status: in_progress
+    status: completed
     depends_on: [PROD-001]
     exit_evidence: >-
-      Currency cannot relabel existing documents; inactive customer approval is rejected; exposure remains currency-consistent across backends.
+      Both-backend live gate: 89 passed, zero skipped; currency is frozen after financial history. Inactive approval and override bypass are rejected; concurrent credit approval and audit/outbox rollback verified. Four follow-up tests preserve caller transactions during SQLite exposure reads.
   - id: PROD-008
     priority: P1
     area: workflow
@@ -125,7 +125,7 @@ tasks:
     priority: P0
     area: currency-governance
     title: Freeze historical monetary interpretation
-    status: planned
+    status: in_progress
     depends_on: [PROD-001]
     exit_evidence: >-
       Currency precision/rounding bound to persisted effects; changing registry cannot reinterpret validated balance; creation/read/replay and concurrent update invariants.
@@ -165,7 +165,7 @@ tasks:
     priority: P0
     area: receivables-reporting
     title: Prevent mixed-currency aging totals
-    status: planned
+    status: in_progress
     depends_on: [PROD-007]
     exit_evidence: >-
       USD/JPY/EGP minor units never produce an unlabeled aggregate; versioned currency-grouped totals or explicit legacy refusal; historical inconsistent currency data fails closed.
@@ -173,10 +173,10 @@ tasks:
     priority: P0
     area: database-privileges
     title: Verify least-privilege runtime grants against RLS-bypassing operations
-    status: planned
+    status: completed
     depends_on: [PROD-006]
     exit_evidence: >-
-      Deployment grants exclude TRUNCATE, schema CREATE and arbitrary definer execution; tenant data destruction/read bypass attempts fail under real runtime role; migration administration remains separate.
+      73 live PostgreSQL tests pass with zero skips; 27 failures reproduced before fix. Checkout rejects effective TRUNCATE/TRIGGER/REFERENCES, database/schema CREATE and callable definer execution through direct/PUBLIC/inherited/SET/ADMIN routes. Pool drift and recovery verified; installed integrity triggers and separate administration preserved.
   - id: PROD-022
     priority: P1
     area: open-source-workloads
@@ -184,7 +184,23 @@ tasks:
     status: in_progress
     depends_on: [PROD-001]
     exit_evidence: >-
-      Pinned source/license provenance, local synthetic input mapping, exact currency/time validation, separate discrepancy oracle and measured scale progression. Source research complete; generator/import execution remains pending. No customer ROI inference.
+      Pinned source/license inventory and actual 45-row AMLSim offline adapter/oracle pass: 42 matched pairs, three unmatched each side after four seeded faults. Source/rule/decision digests and permutation verified. Larger datasets, PostgreSQL workers and measured scale progression remain pending. No customer ROI inference.
+  - id: PROD-023
+    priority: P0
+    area: matching-constraints
+    title: Add explicit strict amount date and key constraints before assignment
+    status: completed
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      Opt-in strict-one-to-one-v1 pure engine enforces hard constraints and bounded explanations; 69 focused tests and 138 broader regressions pass with unchanged legacy digest. Hosted rule/worker adoption remains separate; default scored semantics preserved.
+  - id: PROD-024
+    priority: P0
+    area: transaction-scope
+    title: Preserve workspace and entity scope across composed financial transactions
+    status: planned
+    depends_on: [PROD-006, PROD-015]
+    exit_evidence: >-
+      Explicit shared unit of work preserves full RLS scope and atomic stock/subledger/GL/audit/outbox effects; SQLite internal commits cannot publish a partial cycle; negative sibling workspace/entity API and nested repository tests pass.
   - id: E-1120
     priority: P0
     area: financial-exactness

@@ -1,5 +1,31 @@
 ﻿# ReconForge Execution Evidence Log
 
+## Financial integrity and open-source workload increments (2026-10-03)
+
+- AR currency/credit: 89 passed, zero skipped on SQLite and live PostgreSQL;
+  four additional caller-transaction tests preserve pending SQLite writes.
+- Strict matching: 69 focused constraint tests plus 138 broader tests pass;
+  exact amount/date/key constraints run before assignment, bounds reject unsafe
+  decimal exponent/precision input and legacy default digest remains unchanged.
+- AMLSim adoption: original 45-row sample and Apache-2.0 license retained with
+  source commit and hashes. Actual offline run yields 42 pairs and three unmatched
+  rows per side after four seeded faults. Oracle, permutation, CLI provenance and
+  fixture tests pass (26 tests). [Executed report](OPEN_SOURCE_AMLSIM_2026-10-03.json)
+  records 0.134146s wall time and Python allocation peak; it is not process RSS or
+  large-scale/hosted/AML efficacy evidence.
+- Runtime capabilities: [report](RUNTIME_GRANTS_2026-10-03.json) records 73 passed,
+  zero skipped in 47.28s (54.789s command wall). Before the fix 27 of the first 28
+  new cases failed. Live probes establish cross-tenant TRUNCATE and callable
+  definer read bypass; rollback retains both original synthetic rows. Admission
+  now rejects effective unsafe grants and pool drift, accepts inaccessible
+  memberships, and preserves installed integrity-trigger operation. Ruff, Mypy,
+  Bandit and diff checks pass for the slice.
+- Foundation CI path portability: 35 focused tests pass on Windows and all 16
+  anchored-path rejection cases plus valid input pass under Linux/Python 3.12.14.
+  Commit `1b7a2285` is pushed to Draft PR 109. The direct Linux probe is not pytest;
+  the cached image has no pytest. Remote CI and source-built S3 fixture work remain
+  separate from these local results.
+
 ## Isolated final foundation acceptance (2026-10-03)
 
 Source `8c0951273c6eb6b0e395f12ffe5626821c2f9814`:3412 passed,167 skipped,

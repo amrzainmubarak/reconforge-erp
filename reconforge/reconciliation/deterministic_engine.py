@@ -9,7 +9,7 @@ from bisect import bisect_left, bisect_right
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_HALF_EVEN, ROUND_HALF_UP, Context, Decimal, InvalidOperation, localcontext
 from re import compile as regex_compile
 from re import error as regex_error
 from re import findall, sub
@@ -52,6 +52,76 @@ _SOURCE_LOCATION_UNAVAILABLE_BASIS = "source-location-unavailable-v1"
 MATCHING_CANDIDATE_POLICY = "indexed-candidate-budget-v1"
 MAX_CANDIDATES_PER_LEFT_RECORD = 10_000
 MAX_TOTAL_CANDIDATE_EVALUATIONS = 1_000_000
+LEGACY_CONSTRAINT_POLICY = "legacy-scored-v1"
+STRICT_ONE_TO_ONE_CONSTRAINT_POLICY = "strict-one-to-one-v1"
+MAX_CONSTRAINT_REJECTION_EXAMPLES = 3
+# Strict-only resource contract: input scalar text/coefficients are capped before
+# parsing; derived arithmetic precision and Decimal exponent expansion are capped
+# before normalization, range indexing, or assignment. Legacy replay is unchanged.
+MAX_STRICT_FINANCIAL_INPUT_CHARS = 512
+MAX_STRICT_DECIMAL_PRECISION = 4096
+_CONSTRAINT_REJECTION_EXPLANATIONS = {
+    "INVALID_RECORD": "A source record is marked invalid.",
+    "MISSING_CURRENCY": "Both source records must supply an explicit currency.",
+    "AMOUNT_TOLERANCE_EXCEEDED": "The exact amount difference exceeds the configured tolerance.",
+    "DATE_UNAVAILABLE": "Both source records must supply a valid date.",
+    "DATE_WINDOW_EXCEEDED": "The date difference exceeds the configured window.",
+    "EXACT_FIELD_MISSING": "A configured exact field is missing or empty.",
+    "EXACT_FIELD_MISMATCH": "Configured exact fields differ after normalization.",
+    "CONFIDENCE_BELOW_THRESHOLD": "The eligible candidate scores below the minimum confidence of 0.65.",
+}
+
+
+def _strict_context_precision(
+    left_records: Sequence[dict[str, Any]],
+    right_records: Sequence[dict[str, Any]],
+    *,
+    amount_field: str,
+    amount_tolerance: object,
+    input_policy: FinancialInputPolicy,
+) -> int:
+    """Size an isolated exact arithmetic context from input magnitude and scale."""
+
+    highest_adjusted, lowest_exponent = 0, -8
+
+    def observe(value: object) -> None:
+        nonlocal highest_adjusted, lowest_exponent
+        if isinstance(value, Decimal):
+            if value.is_finite() and abs(value.adjusted()) > MAX_STRICT_DECIMAL_PRECISION:
+                raise PlatformError("Strict matching Decimal magnitude exceeds the precision limit.")
+            decimal_tuple = value.as_tuple()
+            if len(decimal_tuple.digits) > MAX_STRICT_FINANCIAL_INPUT_CHARS:
+                raise PlatformError("Strict matching financial input exceeds the character limit.")
+            if value.is_finite() and abs(int(decimal_tuple.exponent)) > MAX_STRICT_DECIMAL_PRECISION:
+                raise PlatformError("Strict matching Decimal exponent exceeds the precision limit.")
+        elif isinstance(value, int):
+            if not -10**MAX_STRICT_FINANCIAL_INPUT_CHARS < value < 10**MAX_STRICT_FINANCIAL_INPUT_CHARS:
+                raise PlatformError("Strict matching financial input exceeds the character limit.")
+        elif value is not None and not isinstance(value, (str, float)):
+            raise PlatformError("Strict matching financial inputs must be scalar text or numeric values.")
+        text = str(value)
+        if len(text) > MAX_STRICT_FINANCIAL_INPUT_CHARS:
+            raise PlatformError("Strict matching financial input exceeds the character limit.")
+        # Parenthesized negatives use unary minus in the compatibility parser;
+        # that parse itself must not inherit a caller's reduced precision.
+        with localcontext(Context(prec=max(28, len(text) + 2))):
+            parsed = _parse_amount(value, input_policy=input_policy)
+        if parsed is not None:
+            highest_adjusted = max(highest_adjusted, parsed.adjusted())
+            lowest_exponent = min(lowest_exponent, int(parsed.as_tuple().exponent))
+            if highest_adjusted - lowest_exponent + 16 > MAX_STRICT_DECIMAL_PRECISION:
+                raise PlatformError("Strict matching derived arithmetic precision exceeds the precision limit.")
+
+    observe(amount_tolerance)
+    for records in (left_records, right_records):
+        for record in records:
+            observe(record.get(amount_field))
+            # Decimal-valued identity fields are normalized while fingerprinting.
+            for value in record.values():
+                if isinstance(value, Decimal):
+                    observe(value)
+    # Subtraction/range carry and the scoring cost scale also fit exactly.
+    return max(28, highest_adjusted - lowest_exponent + 16)
 
 
 def _exception_identity_payload(value: object) -> str:
@@ -442,10 +512,60 @@ class DeterministicMatchingEngine:
         reference_normalization_rules: Mapping[str, object] | ReferenceNormalizationRules | None = None,
         financial_input_policy: FinancialInputPolicy = STRICT_FINANCIAL_INPUT_POLICY,
         record_identity_policy: str = LEGACY_RECORD_IDENTITY_POLICY,
+        constraint_policy: str = LEGACY_CONSTRAINT_POLICY,
         _source_locations_trusted: bool = False,
     ) -> DeterministicMatchOutput:
         """Match canonical records without opening or mutating a persistence transaction."""
 
+        if constraint_policy not in (LEGACY_CONSTRAINT_POLICY, STRICT_ONE_TO_ONE_CONSTRAINT_POLICY):
+            raise PlatformError("Unsupported matching constraint policy.")
+        strict = constraint_policy == STRICT_ONE_TO_ONE_CONSTRAINT_POLICY
+        if strict:
+            if allow_many_to_one or allow_one_to_many or allow_many_to_many:
+                raise PlatformError("Strict one-to-one constraints do not support grouped matching flags.")
+            if isinstance(date_window_days, bool) or not isinstance(date_window_days, int) or date_window_days < 0:
+                raise PlatformError("Strict date window must be a non-negative integer number of days.")
+        options: dict[str, Any] = {
+            "left_records": left_records, "right_records": right_records,
+            "left_id_field": left_id_field, "right_id_field": right_id_field,
+            "amount_field": amount_field, "date_field": date_field, "reference_field": reference_field,
+            "exact_fields": exact_fields, "amount_tolerance": amount_tolerance, "date_window_days": date_window_days,
+            "allow_many_to_one": allow_many_to_one, "allow_one_to_many": allow_one_to_many,
+            "allow_many_to_many": allow_many_to_many, "reference_normalization_rules": reference_normalization_rules,
+            "financial_input_policy": financial_input_policy, "record_identity_policy": record_identity_policy,
+            "constraint_policy": constraint_policy, "_source_locations_trusted": _source_locations_trusted,
+        }
+        if not strict:
+            return self._match_records(**options)
+        precision = _strict_context_precision(
+            left_records, right_records, amount_field=amount_field, amount_tolerance=amount_tolerance,
+            input_policy=_matching_input_policy(financial_input_policy),
+        )
+        with localcontext(Context(prec=precision)):
+            return self._match_records(**options)
+
+    def _match_records(
+        self,
+        *,
+        left_records: list[dict[str, Any]],
+        right_records: list[dict[str, Any]],
+        left_id_field: str,
+        right_id_field: str,
+        amount_field: str,
+        date_field: str,
+        reference_field: str,
+        exact_fields: str,
+        amount_tolerance: object,
+        date_window_days: int,
+        allow_many_to_one: bool,
+        allow_one_to_many: bool,
+        allow_many_to_many: bool,
+        reference_normalization_rules: Mapping[str, object] | ReferenceNormalizationRules | None,
+        financial_input_policy: FinancialInputPolicy,
+        record_identity_policy: str,
+        constraint_policy: str,
+        _source_locations_trusted: bool,
+    ) -> DeterministicMatchOutput:
         financial_input_policy = _matching_input_policy(financial_input_policy)
         record_identity_policy = _matching_record_identity_policy(record_identity_policy)
         exact_field_list = [field.strip() for field in exact_fields.split(",") if field.strip()]
@@ -500,6 +620,7 @@ class DeterministicMatchingEngine:
             source_locations_trusted=_source_locations_trusted,
             record_identity_policy=record_identity_policy,
         )
+        constraint_rejections: dict[int, dict[str, Any]] = {}
         candidates, candidate_budget_failures = self._build_candidates(
             ordered_left,
             left_precision_map,
@@ -514,6 +635,8 @@ class DeterministicMatchingEngine:
             amount_tolerance=tolerance,
             date_window_days=date_window_days,
             reference_normalization_rules=normalization_rules,
+            strict_constraints=constraint_policy == STRICT_ONE_TO_ONE_CONSTRAINT_POLICY,
+            constraint_rejections=constraint_rejections,
         )
         candidates_by_left_index: dict[int, list[_MatchCandidate]] = {}
         for candidate in candidates:
@@ -666,6 +789,8 @@ class DeterministicMatchingEngine:
                 "candidate_count": len(all_candidates),
                 "left_record": left_record_lineage[left_index],
             }
+            if constraint_policy == STRICT_ONE_TO_ONE_CONSTRAINT_POLICY:
+                payload.update(constraint_rejections.get(left_index, {}))
             if selected_match is None:
                 payload["rejection_reasons"] = ["No indexed candidate met the configured rules."]
                 return payload
@@ -891,6 +1016,22 @@ class DeterministicMatchingEngine:
                         },
                     }
                 )
+        if constraint_policy == STRICT_ONE_TO_ONE_CONSTRAINT_POLICY:
+            for result in results:
+                lineage = result["lineage"]
+                lineage["constraint_policy"] = constraint_policy
+                lineage["constraints"] = {
+                    "amount_tolerance": _decimal_text(tolerance),
+                    "date_window_days": date_window_days,
+                    "exact_fields": exact_field_list,
+                    "currency": "explicit-equal-currency",
+                }
+                if "left_id" in result:
+                    lineage.setdefault("constraint_evaluated_candidate_count", 0)
+                    lineage.setdefault("constraint_rejected_candidate_count", 0)
+                    lineage.setdefault("constraint_rejection_reason_counts", {})
+                    lineage.setdefault("constraint_rejections", [])
+                    lineage.setdefault("constraint_rejections_truncated", False)
         return DeterministicMatchOutput(
             results=tuple(results),
             exceptions=tuple(exceptions),
@@ -1116,10 +1257,30 @@ class DeterministicMatchingEngine:
         amount_tolerance: Decimal,
         date_window_days: int,
         reference_normalization_rules: ReferenceNormalizationRules,
+        strict_constraints: bool = False,
+        constraint_rejections: dict[int, dict[str, Any]] | None = None,
     ) -> tuple[list[_MatchCandidate], dict[int, dict[str, int | str]]]:
         candidates: list[_MatchCandidate] = []
         budget_failures: dict[int, dict[str, int | str]] = {}
         evaluated = 0
+
+        def reject(details: dict[str, Any], right_id: str, reasons: list[str], difference: Decimal, days: int | None) -> None:
+            details["constraint_rejected_candidate_count"] += 1
+            counts = details["constraint_rejection_reason_counts"]
+            for reason in reasons:
+                counts[reason] = counts.get(reason, 0) + 1
+            examples = details["constraint_rejections"]
+            if len(examples) < MAX_CONSTRAINT_REJECTION_EXAMPLES:
+                examples.append({
+                    "right_id": right_id,
+                    "reason_codes": reasons,
+                    "explanation": " ".join(_CONSTRAINT_REJECTION_EXPLANATIONS[reason] for reason in reasons),
+                    "amount_difference": _decimal_text(difference),
+                    "date_difference_days": days,
+                })
+            else:
+                details["constraint_rejections_truncated"] = True
+
         for left_index, left_id, left, left_key, _, left_amount in ordered_left:
             if left_amount is None:
                 continue
@@ -1161,6 +1322,16 @@ class DeterministicMatchingEngine:
                 }
                 continue
             evaluated += observed
+            rejection_details: dict[str, Any] = {
+                "constraint_evaluated_candidate_count": observed,
+                "constraint_rejected_candidate_count": 0,
+                "constraint_rejection_reason_counts": {},
+                "constraint_rejections": [],
+                "constraint_rejections_truncated": False,
+            }
+            if strict_constraints and constraint_rejections is not None:
+                constraint_rejections[left_index] = rejection_details
+
             for (
                 candidate_right_index,
                 right_id,
@@ -1171,6 +1342,30 @@ class DeterministicMatchingEngine:
             ) in indexed_candidates:
                 if right_currency and left_currency and right_currency != left_currency:
                     continue
+                if strict_constraints:
+                    difference = (left_amount - right_amount).copy_abs()
+                    days = date_diff_days(left.get(date_field), right.get(date_field))
+                    reasons: list[str] = []
+                    if not bool(left.get("valid", True)) or not bool(right.get("valid", True)):
+                        reasons.append("INVALID_RECORD")
+                    if not left_currency or not right_currency:
+                        reasons.append("MISSING_CURRENCY")
+                    if difference > amount_tolerance:
+                        reasons.append("AMOUNT_TOLERANCE_EXCEEDED")
+                    if days is None:
+                        reasons.append("DATE_UNAVAILABLE")
+                    elif days > date_window_days:
+                        reasons.append("DATE_WINDOW_EXCEEDED")
+                    # Compare each normalized field, not a delimiter-joined key.
+                    left_exact = tuple(normalize_text(left.get(field)).lower() for field in exact_fields)
+                    right_exact = tuple(normalize_text(right.get(field)).lower() for field in exact_fields)
+                    if exact_fields and (not all(left_exact) or not all(right_exact)):
+                        reasons.append("EXACT_FIELD_MISSING")
+                    elif left_exact != right_exact:
+                        reasons.append("EXACT_FIELD_MISMATCH")
+                    if reasons:
+                        reject(rejection_details, right_id, reasons, difference, days)
+                        continue
                 _ = right_precision
                 right_reference_original = normalize_text(right.get(reference_field))
                 right_reference_normalized = _normalize_reference(
@@ -1191,6 +1386,8 @@ class DeterministicMatchingEngine:
                     reference_normalization_rules=reference_normalization_rules,
                 )
                 if confidence < Decimal("0.65"):
+                    if strict_constraints:
+                        reject(rejection_details, right_id, ["CONFIDENCE_BELOW_THRESHOLD"], amount_difference, day_difference)
                     continue
                 right_key = self._record_key(right, fallback=right_id)
                 candidates.append(

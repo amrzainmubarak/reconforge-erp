@@ -1,0 +1,29 @@
+id: strict-one-to-one-constraints
+name: Explicit strict deterministic matching constraints
+version: 1.0.0
+maturity: experimental
+owner: reconciliation
+dependencies: [deterministic-matching-engine]
+incompatible_versions: [grouped-matching-flags]
+data_classification: inherited-from-caller
+retention_policy: caller-retains-versioned-inputs-rules-and-decisions
+permissions: []
+default_roles: []
+migrations: []
+domain_invariants:
+  - eligible-candidates-meet-currency-amount-date-and-key-constraints
+  - source-quality-failures-cannot-consume-eligible-matches
+  - private-exact-decimal-context
+  - deterministic-bounded-explanations
+  - unchanged-default-scored-policy
+domain_events: []
+api_routes: []
+cli_commands: []
+ui_routes: []
+import_schemas: [DeterministicMatchingEngine.match_records]
+export_schemas: [DeterministicMatchOutput-with-strict-lineage-v1]
+synthetic_fixtures: [tests/fixtures/amlsim/tx.csv]
+threat_model: [bounded-candidates, reject-unknown-policy, no-database-or-network]
+benchmarks: [amlsim-single-transfer-projection-v1]
+rollback_plan: remove-opt-in-policy-preserving-legacy-default-and-stored-decisions
+test_matrix: [boundary, permutation, legacy-digest, low-precision, candidate-limits, invalid-source]

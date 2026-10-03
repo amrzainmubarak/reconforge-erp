@@ -8,6 +8,13 @@ from contextlib import contextmanager
 from typing import Any
 from uuid import uuid4
 
+from reconforge.domain.finance_balances import (
+    MAX_BALANCE_EFFECTS,
+    balance_window,
+    build_posted_balances,
+    business_date,
+    collect_balance_effects,
+)
 from reconforge.domain.finance_policy import FinancePolicyError
 from reconforge.domain.finance_posting import (
     PROVENANCE_FIELDS,
@@ -31,6 +38,7 @@ from reconforge.infrastructure.postgres_repository_scope import (
     ensure_repository_tenant_scope,
 )
 from reconforge.platform.common import platform_id
+from reconforge.platform.inventory_values import code
 
 
 def records(cursor: Any) -> list[dict[str, Any]]:
@@ -527,6 +535,50 @@ class PostgresFinancePostingRepository:
             }
             self._receipt(new_entry, command_id, "prepare_reversal", actor, digest, result)
             return result
+
+    def posted_balances_as_of(
+        self, *, period_id: str, as_of_date: str, organization_code: str,
+        entity_code: str, workspace: str = "default", actor: PostingActor,
+    ) -> dict[str, Any]:
+        self._read(actor)
+        period_id = text(period_id, "period_id")
+        cutoff = business_date(as_of_date)
+        organization_code, entity_code = code(organization_code, "Organization code"), code(entity_code, "Entity code")
+        with self._transaction():
+            workspace_id = self.finance._required_workspace_id(workspace)
+            scopes = records(self.connection.execute(
+                """SELECT o.id AS organization_id,le.id AS legal_entity_id FROM reconforge.organizations o
+                JOIN reconforge.legal_entities le ON le.tenant_id=o.tenant_id AND le.organization_id=o.id
+                WHERE o.tenant_id=%s AND o.application_workspace_id=%s AND o.organization_code=%s AND le.entity_code=%s""",
+                (self.tenant_id, workspace_id, organization_code, entity_code),
+            ))
+            periods = records(self.connection.execute(
+                "SELECT start_date,end_date FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s AND application_workspace_id=%s FOR SHARE",
+                (self.tenant_id, period_id, workspace_id),
+            ))
+            if not scopes or not periods:
+                raise FinancePostingError("posting_scope_denied", "The selected entity and period must exist in the authorized workspace.")
+            scope, period = scopes[0], periods[0]
+            start, end, cutoff = balance_window(str(period["start_date"]), str(period["end_date"]), cutoff)
+            rows = records(self.connection.execute(
+                """SELECT p.id,e.posting_date,fp.start_date,fp.end_date FROM reconforge.finance_posting_effects p
+                JOIN reconforge.finance_entries e ON e.tenant_id=p.tenant_id AND e.id=p.entry_id
+                LEFT JOIN reconforge.fiscal_periods fp ON fp.tenant_id=e.tenant_id AND fp.id=e.period_id
+                 AND fp.application_workspace_id=p.workspace_id
+                WHERE p.tenant_id=%s AND p.workspace_id=%s AND p.organization_id=%s AND p.legal_entity_id=%s AND e.posting_date<=%s
+                ORDER BY p.id LIMIT %s""",
+                (self.tenant_id, workspace_id, scope["organization_id"], scope["legal_entity_id"], cutoff, MAX_BALANCE_EFFECTS + 1),
+            ))
+            if len(rows) > MAX_BALANCE_EFFECTS:
+                raise FinancePostingError("posting_balance_limit", "The bounded balance report exceeds its effect limit.")
+            for row in rows:
+                balance_window(str(row["start_date"]), str(row["end_date"]), str(row["posting_date"]))
+            return build_posted_balances(
+                workspace_id=workspace_id, organization_code=organization_code, entity_code=entity_code,
+                organization_id=scope["organization_id"], legal_entity_id=scope["legal_entity_id"], period_id=period_id,
+                period_start=start, period_end=end, as_of_date=cutoff,
+                effects=collect_balance_effects(self._get_effect(row["id"]) for row in rows),
+            )
 
     def posted_trial_balance(
         self,

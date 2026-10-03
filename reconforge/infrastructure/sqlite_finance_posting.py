@@ -9,6 +9,13 @@ from typing import Any
 from uuid import uuid4
 
 from reconforge.audit import append_audit_event
+from reconforge.domain.finance_balances import (
+    MAX_BALANCE_EFFECTS,
+    balance_window,
+    build_posted_balances,
+    business_date,
+    collect_balance_effects,
+)
 from reconforge.domain.finance_policy import FinancePolicyError
 from reconforge.domain.finance_posting import (
     PROVENANCE_FIELDS,
@@ -26,6 +33,7 @@ from reconforge.domain.models import utc_now_text
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.io.finance_posting import decode_posting_receipt
 from reconforge.platform.common import append_outbox_event, platform_id
+from reconforge.platform.inventory_values import code
 
 
 def posting_entry(connection: sqlite3.Connection, entry_id: str) -> dict[str, Any]:
@@ -620,6 +628,47 @@ class SQLiteFinancePostingRepository:
             }
             self._receipt(new_entry, command_id, "prepare_reversal", actor, digest, result)
             return result
+
+    def posted_balances_as_of(
+        self, *, period_id: str, as_of_date: str, organization_code: str,
+        entity_code: str, workspace: str = "default", actor: PostingActor,
+    ) -> dict[str, Any]:
+        self._read(actor)
+        period_id = text(period_id, "period_id")
+        cutoff = business_date(as_of_date)
+        organization_code, entity_code = code(organization_code, "Organization code"), code(entity_code, "Entity code")
+        with self._transaction():
+            workspace_id = self.finance._workspace_id(workspace)
+            scope = self.connection.execute(
+                """SELECT o.id AS organization_id,le.id AS legal_entity_id FROM organizations o
+                JOIN legal_entities le ON le.organization_id=o.id
+                WHERE o.workspace_id=? AND o.organization_code=? AND le.entity_code=?""",
+                (workspace_id, organization_code, entity_code),
+            ).fetchone()
+            period = self.connection.execute(
+                "SELECT start_date,end_date FROM periods WHERE id=? AND workspace_id=?", (period_id, workspace_id),
+            ).fetchone()
+            if scope is None or period is None or workspace_id is None:
+                raise FinancePostingError("posting_scope_denied", "The selected entity and period must exist in the selected workspace.")
+            start, end, cutoff = balance_window(period["start_date"], period["end_date"], cutoff)
+            rows = self.connection.execute(
+                """SELECT p.id,e.posting_date,fp.start_date,fp.end_date FROM finance_posting_effects p
+                JOIN ledger_entries e ON e.id=p.entry_id
+                LEFT JOIN periods fp ON fp.id=e.period_id AND fp.workspace_id=p.workspace_id
+                WHERE p.workspace_id=? AND p.organization_id=? AND p.legal_entity_id=? AND e.posting_date<=?
+                ORDER BY p.id LIMIT ?""",
+                (workspace_id, scope["organization_id"], scope["legal_entity_id"], cutoff, MAX_BALANCE_EFFECTS + 1),
+            ).fetchall()
+            if len(rows) > MAX_BALANCE_EFFECTS:
+                raise FinancePostingError("posting_balance_limit", "The bounded balance report exceeds its effect limit.")
+            for row in rows:
+                balance_window(row["start_date"], row["end_date"], row["posting_date"])
+            return build_posted_balances(
+                workspace_id=workspace_id, organization_code=organization_code, entity_code=entity_code,
+                organization_id=scope["organization_id"], legal_entity_id=scope["legal_entity_id"], period_id=period_id,
+                period_start=start, period_end=end, as_of_date=cutoff,
+                effects=collect_balance_effects(self._get_effect(row["id"]) for row in rows),
+            )
 
     def posted_trial_balance(
         self,

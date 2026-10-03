@@ -366,7 +366,7 @@ _MODULES = (
         capability_status="foundation",
         summary=(
             "Governed charts, account hierarchy, dimensions, journals, balanced entries, trial-balance controls, "
-            "explicit reviewed Manual posting and full reversals with selected-period net activity, "
+            "explicit reviewed Manual posting and full reversals with period activity and business-date opening/closing, "
             "deterministic multi-entity translation artifacts, non-posting effective-ownership worksheets, and a "
             "governed local consolidation control-journal lifecycle."
         ),
@@ -408,6 +408,7 @@ _MODULES = (
             "finance-core-snapshot.v1",
             "ledger-control-trial-balance.v1",
             "finance-posting-api-v1",
+            "finance-posted-balances-v1",
         ),
         data_classification=(
             "consolidation-financial-control-data",
@@ -418,7 +419,7 @@ _MODULES = (
         activation_note=(
             "Migrations 7-8 define the ledger; 47-48 retain money policy and independently reviewed Manual postings. "
             "Password-bound local commands or scoped PostgreSQL routes require explicit posting. Balance reports "
-            "include selected-period net activity only. Optional migrations 25-26 retain balanced consolidation "
+            "include period net activity and bounded business-date opening/closing. Migrations 25-26 retain balanced consolidation "
             "control effects; translation/worksheet artifacts remain non-posting and do not mutate source ERP books."
         ),
         test_evidence=(
@@ -438,6 +439,9 @@ _MODULES = (
             "tests/test_postgres_finance_posting_concurrency.py",
             "tests/test_postgres_finance_posting_api.py",
             "tests/test_postgres_finance_posting_restore.py",
+            "tests/test_finance_balances.py",
+            "tests/test_sqlite_finance_balances.py",
+            "tests/test_postgres_finance_balances.py",
             "tests/test_sqlite_consolidation_close.py",
             "tests/test_postgres_consolidation_ppa.py",
             "tests/test_postgres_consolidation_ppa_runtime.py",

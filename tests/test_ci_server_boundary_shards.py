@@ -94,7 +94,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 34  # Original 33 live commands plus the two-module AR API command.
+    assert len(commands) == 35  # Original 33 plus AR API and source-verified recovery.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -110,6 +110,8 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert "-k" not in shlex.split(groups["parity"][0])
     ar_api = "uv run --no-sync pytest tests/test_receivables_money_api_contract.py tests/test_receivables_policy_api.py -q"
     assert ar_api in groups["receivables"]
+    recovery = "uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q"
+    assert recovery in groups["receivables"]
     assert "verify_redis_live.py" in "\n".join(groups["native"])
 
 
@@ -124,13 +126,15 @@ def test_native_services_and_unconditional_report_retention_survive_partition() 
     assert 'test -s "$native_smoke_dump"' in live["run"]
     assert 'pg_restore --list "$native_smoke_dump"' in live["run"]
     uploads = [step for step in job["steps"] if step["name"].startswith("Upload ")]
-    assert len(uploads) == 7
+    assert len(uploads) == 8
     assert all(step["if"] == "always()" for step in uploads)
     names = [step["with"]["name"] for step in uploads]
     assert len(names) == len(set(names))
+    assert len({step["uses"] for step in uploads}) == 1
     # Each report has exactly one producing shard; other shards have no such file.
     # Existing always-upload handling still retains partial reports on failure.
     assert all(step["with"]["if-no-files-found"] == "ignore" for step in uploads)
+    assert live["env"]["RECONFORGE_AR_INVOICE_REPLAY_NATIVE_REPORT"] == "${{ runner.temp }}/reconforge-ar-invoice-recovery-native.json"
 
 
 def test_exact_required_check_name_only_accepts_matrix_success() -> None:

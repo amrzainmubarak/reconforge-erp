@@ -1,5 +1,16 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-017 — User-requested amr work labels (2026-10-03)
+
+The explicit user instruction overrides the default work-branch prefix.
+Current work uses amr/. Five unmerged merge messages are rewritten with mapped
+parents while preserving268 source trees, identities and original timestamps.
+Seventeen local/seven remote branches and six Draft PR replacements are verified;
+original review/run subjects remain historical and recoverable through a complete
+verified Git bundle. Main, tags and previously released history remain unchanged.
+No existing CI conclusion is reassigned to a new commit ID. Future commits retain
+the configured Amr Zain Mubarak identity and the requested work labels.
+
 ## D-PROD-016 — Observable bounded live CI (2026-10-03)
 
 ADR0822 preserves current verification commands and required gate naming across

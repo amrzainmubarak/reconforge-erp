@@ -2,6 +2,21 @@
 
 ## Current publication checkpoint (2026-10-03)
 
+PROD039 implementation is active on amr/verified-ar-invoice-recovery, based on
+published PR1204629a64b (tree-identical to retained PR114e63859d7).
+User-requested work labels are migrated:17local/7remote branches,5merge messages,
+33mapped commit IDs with equal trees/identities/timestamps. Six replacement
+Draft PRs115-120 preserve the original109-114 review/run links. Main is unchanged.
+AMR_WORK_LABEL_MIGRATION_2026-10-03.json records the mapping and verified bundle.
+ADR0823 records exact identity/source verification,
+historical Draft acknowledgement and conservative ambiguous-legacy GET fallback.
+The immutable e81b4481-test local gate failed4114pass/366prerequisites/1old policy
+projection expectation; hosted3.12 failed the same assertion. Test-only e63859d7
+repairs that expectation with27focused/138overlapping contracts and private-field
+denials. Its fresh full gate runs in a separate clean detached checkout; new
+PRIMARY recovery edits are outside that acceptance. Retained before-fix evidence
+is AR_INVOICE_REPLAY_FINDINGS_2026-10-03.json; no repair is yet accepted.
+
 AR API b9153400 exposes verified retained policy and exact integer/text amounts;
 corrected actual SQLite/PostgreSQL HTTP11/0skip proves positive Outbox counts.
 React31220e06 uses recorded precision/BigInt and major-unit inputs. Full web202
@@ -19,7 +34,8 @@ the stale0098 proof contract. Original immutable8054 whole result remains FAILED
 4041pass/361prerequisites/1failure/0error. Updated local78-test proof gate passes.
 Hosted PR1128d76647c is successful; PR1138ba6772d timed out at30minutes; PR1148054
 failed its stale target/empty-digest secret finding. Exact reports remain separate.
-New full-regression and hosted acceptance on the publication head are pending.
+New full-regression and hosted acceptance on the publication head are pending;
+original exact-head outcomes are never reassigned to renamed commits.
 
 Next PROD039 repairs confirmed AR invoice request/source replay identity using
 current authority and verified historical acknowledgements. A separate reviewed

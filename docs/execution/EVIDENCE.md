@@ -1,5 +1,14 @@
 # ReconForge Execution Evidence Log
 
+- Requested work labels: AMR_WORK_LABEL_MIGRATION_2026-10-03.json maps17local and
+  7remote branches to amr,5merge messages and33 affected commit IDs. Independent
+  raw-object reconstruction verifies268 commits/235 unchanged IDs, equal trees,
+  identities, dates and ordered mapped parents. A verified complete Git bundle
+  retains originals. Drafts115-120 replace preserved closed109-114; main/tags
+  are unchanged. Fresh all-ref Gitleaks1064commits reports0findings; no scanner
+  exclusion or financial code was changed for the rename. Old run conclusions
+  retain original subjects; new hosted acceptance remains separate.
+
 - AR whole e81b and projection repair: RECEIVABLES_PROJECTION_REPAIR_2026-10-03.json
   retains immutable4481collected/4114pass/366explicit prerequisites/1old public
   policy expectation failure, stable3056-file manifest and passed global quality.

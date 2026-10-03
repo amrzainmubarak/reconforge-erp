@@ -477,6 +477,7 @@ jobs:
 
   object-storage:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -498,20 +499,29 @@ jobs:
       - name: Install locked server dependencies
         run: uv sync --locked --extra dev --extra server --no-editable --python 3.12
 
-      - name: Start digest-pinned MinIO
+      - name: Build archived MinIO source fixture for synthetic CI
+        run: |
+          set -euo pipefail
+          uv run --no-sync python .github/scripts/build_minio_ci_fixture.py \
+            --output "${RUNNER_TEMP}/reconforge-minio-build-provenance.json" \
+            --iidfile "${RUNNER_TEMP}/reconforge-minio-ci.iid"
+          echo "MINIO_IMAGE_CONFIG_DIGEST=$(cat "${RUNNER_TEMP}/reconforge-minio-ci.iid")" >> "$GITHUB_ENV"
+
+      - name: Start source-verified MinIO fixture by config digest
         env:
-          MINIO_IMAGE: minio/minio@sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
           MINIO_ROOT_USER: reconforge_ci_access
         run: |
           set -euo pipefail
           MINIO_ROOT_PASSWORD="$(printf '%s' 'reconforge-ci-object-store' | sha256sum | cut -c1-32)"
           export MINIO_ROOT_PASSWORD
           docker run --detach --name reconforge-ci-minio \
-            --publish 19000:9000 \
-            --publish 19001:9001 \
+            --publish 127.0.0.1:19000:9000 \
+            --read-only --cap-drop ALL --security-opt no-new-privileges \
+            --tmpfs /data:rw,nosuid,nodev,size=128m,uid=65532,gid=65532,mode=0700 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=32m,uid=65532,gid=65532,mode=0700 \
             --env "MINIO_ROOT_USER=${MINIO_ROOT_USER}" \
             --env "MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}" \
-            "${MINIO_IMAGE}" server /data --console-address ':9001'
+            "${MINIO_IMAGE_CONFIG_DIGEST}" server /data
           for attempt in $(seq 1 60); do
             if curl --fail --silent http://127.0.0.1:19000/minio/health/ready >/dev/null; then
               exit 0
@@ -529,7 +539,8 @@ jobs:
           RECONFORGE_TEST_S3_ENDPOINT: http://127.0.0.1:19000
           RECONFORGE_TEST_S3_BUCKET: reconforge-ci-live
           RECONFORGE_TEST_S3_LOCK_BUCKET: reconforge-ci-lock
-          RECONFORGE_S3_IMAGE_DIGEST: sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883
+          RECONFORGE_S3_IMAGE_DIGEST: ${{ env.MINIO_IMAGE_CONFIG_DIGEST }}
+          RECONFORGE_S3_IMAGE_DIGEST_KIND: oci-config
           RECONFORGE_S3_LIVE_REPORT: ${{ runner.temp }}/reconforge-s3-live-report.json
         run: |
           set -euo pipefail
@@ -543,7 +554,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: reconforge-s3-live-report
-          path: ${{ runner.temp }}/reconforge-s3-live-report.json
+          path: |
+            ${{ runner.temp }}/reconforge-s3-live-report.json
+            ${{ runner.temp }}/reconforge-minio-build-provenance.json
           if-no-files-found: ignore
 
       - name: Stop MinIO

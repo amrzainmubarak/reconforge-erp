@@ -69,13 +69,36 @@ def test_live_report_rejects_credential_fields() -> None:
         module.verify_report(report)
 
 
+@pytest.mark.parametrize("kind", ["oci-manifest", "oci-config"])
+def test_live_report_records_the_kind_of_runtime_image_identity(kind: str) -> None:
+    module = _module()
+    report = _report(module)
+    report["image_digest_kind"] = kind
+    report.pop("report_digest")
+    report["report_digest"] = module._canonical_digest(report)
+    jsonschema.Draft202012Validator(json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))).validate(report)
+    module.verify_report(report)
+
+
+def test_live_report_rejects_unidentified_image_digest_kind() -> None:
+    module = _module()
+    report = _report(module)
+    report["image_digest_kind"] = "tag"
+    with pytest.raises(ValueError, match="digest kind"):
+        module.verify_report(report)
+
+
 def test_ci_has_digest_pinned_live_object_storage_job() -> None:
     workflow = yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))
     job = workflow["jobs"]["object-storage"]
     runs = "\n".join(str(step.get("run", "")) for step in job["steps"])
     environments = "\n".join(str(step.get("env", "")) for step in job["steps"])
     uses = "\n".join(str(step.get("uses", "")) for step in job["steps"])
-    assert "minio/minio@sha256:13582eff79c6605a2d315bdd0e70164142ea7e98fc8411e9e10d089502a6d883" in environments
+    assert "build_minio_ci_fixture.py" in runs
+    assert "MINIO_IMAGE_CONFIG_DIGEST" in runs
+    assert any(step.get("env", {}).get("RECONFORGE_S3_IMAGE_DIGEST_KIND") == "oci-config" for step in job["steps"])
+    assert '"${MINIO_IMAGE_CONFIG_DIGEST}" server /data' in runs
+    assert "127.0.0.1:19000:9000" in runs
     assert "verify_s3_object_storage_live.py" in runs
     assert "tests/test_object_storage_foundation.py -k 'live_s3_'" in runs
     assert "MINIO_ROOT_PASSWORD: reconforge_ci_secret_2026" not in environments

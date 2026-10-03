@@ -1182,3 +1182,9 @@ include docs/execution/FINANCE_POLICY_2026-10-03.json
 include docs/operations/finance-policy-upgrade.md
 include tests/test_finance_currency_policy.py
 include tests/test_postgres_finance_currency_policy.py
+include .github/fixtures/minio-source/Dockerfile
+include .github/fixtures/minio-source/fixture.v1.json
+include .github/fixtures/minio-source/README.md
+include .github/scripts/build_minio_ci_fixture.py
+include tests/test_minio_ci_fixture.py
+include docs/adr/0802-source-pinned-disposable-object-storage-fixture.md

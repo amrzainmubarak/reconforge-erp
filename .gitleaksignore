@@ -54,3 +54,24 @@ docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json:generic-api-key:65
 ca82cbffd50734965f1c67ea1c94445df46885d5:docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135
 # Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_server_identity.py.
 docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: apps/web/src/components/AdminAccessMutations.tsx.
+d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/RECEIVABLES_CASH_2026-10-03.json:generic-api-key:13
+docs/execution/RECEIVABLES_CASH_2026-10-03.json:generic-api-key:13
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: tests/test_finance_posting_api_contract.py.
+d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:28
+docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:28
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: tests/test_postgres_finance_posting_api.py.
+d4e6baf82ea6dd4e7f5b6217362d54c011ae1d35:docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:33
+docs/execution/FINANCE_POSTING_2026-10-03.json:generic-api-key:33
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: alembic/versions/0036_postgres_scim_auth.py.
+f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:354
+docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:354
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: alembic/versions/0039_postgres_emergency_access.py.
+f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:357
+docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:357
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: alembic/versions/0040_postgres_webauthn_mfa.py.
+f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:358
+docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:358
+# Reviewed exact Git-blob SHA256 in immutable synthetic evidence: alembic/versions/0051_access_policy_lifecycle.py.
+f615f8a8073237613d419abedf09eb0eda823564:docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:369
+docs/execution/POSTGRES_RECONCILIATION_SEAL_2026-10-03.json:generic-api-key:369

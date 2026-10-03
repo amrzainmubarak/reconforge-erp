@@ -27,6 +27,7 @@ from reconforge.infrastructure.postgres_receivables import (
     POSTGRES_RECEIVABLES_SCHEMA_SQL,
     PostgresReceivablesRepository,
     _quantity,
+    install_postgres_receivables_schema,
 )
 from reconforge.platform.common import PlatformError
 from tests.postgres_test_hygiene import (
@@ -134,13 +135,13 @@ def test_live_postgres_receivables_lifecycle_credit_allocation_aging_and_rls() -
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
-            admin.execute(POSTGRES_RECEIVABLES_SCHEMA_SQL)
+            install_postgres_receivables_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
             tables = (
                 "tenants,organizations,currencies,legal_entities,domain_workspaces,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,"
                 "ar_customers,ar_invoices,ar_invoice_lines,ar_receipts,"
-                "ar_receipt_allocations,ar_idempotency_keys"
+                "ar_receipt_allocations,ar_idempotency_keys,currency_registry_bindings,currency_registry_snapshots"
             )
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}")
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)", (tenant_a, tenant_a, tenant_b, tenant_b))

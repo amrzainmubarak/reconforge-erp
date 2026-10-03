@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2, KeyRound, RefreshCw, ShieldCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { AdminApiError, beginBrowserAdminSession, endBrowserAdminSession, loadAdminAccessPermissions, loadAdminAccessRoles, loadAdminAuditPage, loadAdminIdentitySessions, loadAdminIdentityUsers, loadAdminIntegrations, loadAdminRetentionPolicies, loadAdminSecurityCenter, revokeAdminIdentitySession, setAdminIdentityUserDisabled, stepUpBrowserAdminSession, verifyAdminAudit } from "../data";
 import type { MessageKey } from "../i18n";
@@ -90,11 +90,22 @@ function AdminAuditView({ translate, locale }: { translate: (key: MessageKey) =>
   const [error, setError] = useState<MessageKey | null>(null);
   const [busy, setBusy] = useState(false);
   const reads = useRef<AbortController | null>(null);
-  const current = () => Boolean(reads.current && !reads.current.signal.aborted && auth.isCurrent(auth.revision));
+  const mounted = useRef(false);
+  // A committed view may receive a command before its passive read effect runs.
+  // Its security authority depends on view lifetime and revision, not read setup.
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; reads.current?.abort(); };
+  }, []);
+  const current = () => mounted.current && auth.isCurrent(auth.revision);
+  const readController = () => {
+    if (!reads.current || reads.current.signal.aborted) reads.current = new AbortController();
+    return reads.current;
+  };
   const fetcher: typeof fetch = (input, options) => {
     if (!current()) return Promise.reject(new DOMException("Session changed.", "AbortError"));
     const safe = !options?.method || ["GET", "HEAD"].includes(options.method);
-    return fetch(input, { ...options, ...(safe ? { signal: reads.current!.signal } : {}) });
+    return fetch(input, { ...options, ...(safe ? { signal: readController().signal } : {}) });
   };
   const handleError = (caught: unknown) => {
     if (current() && !auth.recover(caught, auth.revision)) setError(errorKey(caught));
@@ -117,8 +128,7 @@ function AdminAuditView({ translate, locale }: { translate: (key: MessageKey) =>
     }
   };
   useEffect(() => {
-    const controller = new AbortController();
-    reads.current = controller;
+    const controller = readController();
     if (session && stepUpExpiresAt) void refresh(session).catch(handleError);
     return () => controller.abort();
   // A security revision remounts this view; locale changes must not restart reads.

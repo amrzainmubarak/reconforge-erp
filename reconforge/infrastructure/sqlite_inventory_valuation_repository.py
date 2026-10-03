@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+from reconforge.infrastructure.sqlite_inventory_unit_of_work import SQLiteInventoryUnitOfWork
 
 
 class InventoryValuationRepository(Protocol):
@@ -112,9 +113,14 @@ class SQLiteInventoryValuationRepository:
     """SQLite implementation with transaction ownership at the aggregate boundary."""
 
     connection: sqlite3.Connection
+    unit_of_work: SQLiteInventoryUnitOfWork | None = None
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
+        if self.unit_of_work is not None:
+            with self.unit_of_work.operation(self.connection):
+                yield
+            return
         self.connection.execute("BEGIN IMMEDIATE")
         try:
             yield

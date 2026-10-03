@@ -1,5 +1,59 @@
 # Execution State
 
+## Current publication checkpoint (2026-10-03)
+
+PROD039 bounded local acceptance is complete on amr/verified-ar-invoice-recovery, based on
+published PR1204629a64b (tree-identical to retained PR114e63859d7).
+User-requested work labels are migrated:17local/7remote branches,5merge messages,
+33mapped commit IDs with equal trees/identities/timestamps. Six replacement
+Draft PRs115-120 preserve the original109-114 review/run links. Main is unchanged.
+AMR_WORK_LABEL_MIGRATION_2026-10-03.json records the mapping and verified bundle.
+ADR0823 records exact identity/source verification,
+historical Draft acknowledgement and conservative ambiguous-legacy GET fallback.
+The immutable e81b4481-test local gate failed4114pass/366prerequisites/1old policy
+projection expectation; hosted3.12 failed the same assertion. Test-only e63859d7
+repairs that expectation with27focused/138overlapping contracts and private-field
+denials. Its fresh full gate now passes4115/366explicit prerequisites/0fail/0error
+with3,057stable tracked files and global quality/build. New PRIMARY recovery
+edits are outside that acceptance. Retained before-fix evidence
+is AR_INVOICE_REPLAY_FINDINGS_2026-10-03.json. The repair passes331AR/API/cash/codec
+tests without skips plus a separate native restore test. Nine owned/1,208Python
+sources remain unchanged; independent review finds no blocker and root confirms
+four owned databases absent. RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json records
+the frozen runtime, original failures and conservative legacy compatibility.
+
+AR API b9153400 exposes verified retained policy and exact integer/text amounts;
+corrected actual SQLite/PostgreSQL HTTP11/0skip proves positive Outbox counts.
+React31220e06 uses recorded precision/BigInt and major-unit inputs. Full web202
+passes; a fresh tracked-fixture HTTPS0099 run passes2 journeys in32.0s with
+unchanged sources and independent named database cleanup. JPY0/KWD3, large
+8999999999999999123minor, unresolved legacy raw units, EN/AR accessibility,
+390px and keyboard evidence remain bounded AR proof. ADR0821 and API/UI reports
+retain earlier196/1failure, deterministic AdminAudit repair and measurement fixes.
+Surface inventory now distinguishes synthetic previews and authenticated AR.
+
+CI a8a6dd36 preserves39 original commands in nine bounded live shards and a
+failing server-boundaries aggregate;109 local contracts and actual Bash dispatch
+pass. ed5fc707 reruns current0099 native history/restore on16.14/17.10 and closes
+the stale0098 proof contract. Original immutable8054 whole result remains FAILED:
+4041pass/361prerequisites/1failure/0error. Updated local78-test proof gate passes.
+Hosted PR1128d76647c is successful; PR1138ba6772d timed out at30minutes; PR1148054
+failed its stale target/empty-digest secret finding. Exact reports remain separate.
+New invoice-recovery whole/hosted acceptance remains pending. Original e638
+hostedPython3.11/3.12 pass4117/364prerequisites each; finance-posting shard fails
+three stale0098 expectations after its fixture upgrades to0099. The test-only
+repair now passes all12actual PostgreSQL concurrency cases without skips, with
+677stable runtime/migration/fixture hashes and15owned red/green databases removed.
+The exact pre-downgrade revision and provenance columns are both preserved;
+this failure is retained separately from local whole success. Original exact-head
+outcomes are never reassigned to renamed commits.
+
+Next PROD038 implements a reviewed receipt bundle before complete purchase/sales/
+GL cycles. Its concrete source/owner/migration/restore design is reviewed; no
+generated Inventory effect has been implemented or accepted. No customer
+pilot,5M-transaction workload, measured labor savings or auditor acceptance exists.
+The goal remains active; no main merge or production deployment has occurred.
+
 Current-bootstrap repaircd67fc67 passes96 PostgreSQL/compatibility tests without
 skips plus global Ruff/Mypy/Bandit. Historical0078 SQL remains unchanged;
 repeat installation preserves catalog constraints and forced RLS. Matching
@@ -38,11 +92,29 @@ digests. Independent policy/identity/resource findings are repaired; earlier
 failed/source-drifting proofs remain separate. Business-date recorded history
 does not reconstruct historical knowledge-time or statutory fiscal close.
 
-PROD033 backend policy capture is now in progress after committed exact
-arithmetic; SQLite49/PostgreSQL0099 are reserved for verified new AR policy and
-explicitly unverified historical reads. PROD036 starts the Inventory ownership
-prerequisite: actual early commit/rollback and surviving valuation effects were
-reproduced before an explicit scoped unit-of-work repair. Complete purchase and
+The exact-arithmetic/AP-recovery/as-of slice is reviewable in
+[Draft PR113](https://github.com/amrzainmubarak/reconforge-erp/pull/113), stacked
+on PR112 with its actual latest ancestry. Root commitsdf071e48/76d2a8b4/866d943a
+separate the three runtime changes;1942b7af records acceptance. PRIMARY now uses
+codex/receivables-policy-and-inventory-composition for subsequent work. Neither
+PR is merged or deployed. The managed c56 whole regression passes with309
+prerequisite skips; its independent global quality/build gates pass. Observed
+c56 hosted Python3.11/3.12/security/web/storage/Docker/HA-DR checks succeed, while
+server-boundaries failed two cases now repaired and verified locally under
+ADR0819. The observed PR113 Docker checksum failure is retained under ADR0820;
+its updated official pins pass the full local build. Updated hosted PR1128d76647c succeeds; PR1138ba6772d times out at30minutes.
+FINANCIAL_HOSTED_CHECKPOINTS_112_113_2026-10-03.json retains both exact subjects.
+
+PROD033 backend is committed at662aad3f under ADR0815:216 tests pass without
+skips, actual PostgreSQL0099 dump/restore retains eleven table digests, and
+captured policy remains stable after registry changes. All-null history stays
+explicitly unverified; API and React exposure now has separate ADR0821 acceptance. PROD036 is
+committed at75bdbe63 under ADR0818:120 passes/three live prerequisites plus an
+overlapping21-test independent review verify explicit SQLite ownership and
+rollback of caught constructor failures. Test EOF normalization is recorded and
+39 publication/inventory tests pass without skips. Root revision/inventory
+checks pass25 with one live prerequisite; global Ruff/Mypy/Bandit pass on the
+backend checkpoint. Complete purchase and
 sales GL cycles, real customer outcomes and auditor acceptance remain open.
 
 The goal remains active. Foundation changes are reviewable in

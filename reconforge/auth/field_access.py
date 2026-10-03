@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
@@ -1129,7 +1130,7 @@ RECEIVABLES_CUSTOMER_FIELDS = frozenset(
         # customer responses; repository rows are never serialized wholesale.
         "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "customer_code", "name",
         "currency_code", "tax_identifier", "payment_terms_days", "credit_limit_minor", "credit_hold", "status",
-        "created_at", "updated_at", "row_version",
+        "created_at", "updated_at", "row_version", "monetary_policy", "credit_limit_minor_text",
     }
 )
 RECEIVABLES_INVOICE_FIELDS = frozenset(
@@ -1140,23 +1141,25 @@ RECEIVABLES_INVOICE_FIELDS = frozenset(
         "invoice_date", "due_date", "currency_code", "subtotal_minor", "tax_minor", "total_minor", "status",
         "created_by", "approved_by", "approved_at", "credit_override_reason", "cancelled_by", "cancelled_at",
         "cancel_reason", "created_at", "updated_at", "row_version", "lines", "allocated_minor", "outstanding_minor",
+        "monetary_policy", "subtotal_minor_text", "tax_minor_text", "total_minor_text", "allocated_minor_text", "outstanding_minor_text",
     }
 )
 RECEIVABLES_INVOICE_LINE_FIELDS = frozenset(
-    {"tenant_id", "id", "invoice_id", "line_number", "description", "quantity", "quantity_text", "unit_price_minor", "tax_minor", "line_total_minor", "created_at"}
+    {"tenant_id", "id", "invoice_id", "line_number", "description", "quantity", "quantity_text", "unit_price_minor", "tax_minor", "line_total_minor", "created_at", "unit_price_minor_text", "tax_minor_text", "line_total_minor_text"}
 )
 RECEIVABLES_RECEIPT_FIELDS = frozenset(
     {
         "tenant_id", "id", "workspace_id", "organization_id", "legal_entity_id", "customer_id", "receipt_number",
         "receipt_date", "currency_code", "amount_minor", "status", "created_by", "posted_by", "posted_at",
         "created_at", "updated_at", "row_version", "allocations", "allocated_minor", "unallocated_minor",
+        "monetary_policy", "amount_minor_text", "allocated_minor_text", "unallocated_minor_text",
     }
 )
 RECEIVABLES_ALLOCATION_FIELDS = frozenset(
-    {"tenant_id", "id", "workspace_id", "receipt_id", "invoice_id", "amount_minor", "created_at"}
+    {"tenant_id", "id", "workspace_id", "receipt_id", "invoice_id", "amount_minor", "amount_minor_text", "created_at"}
 )
 RECEIVABLES_CREDIT_EXPOSURE_FIELDS = frozenset(
-    {"customer_id", "customer_code", "currency_code", "credit_limit_minor", "exposure_minor", "available_credit_minor", "credit_hold", "status"}
+    {"customer_id", "customer_code", "currency_code", "credit_limit_minor", "exposure_minor", "available_credit_minor", "credit_hold", "status", "credit_limit_minor_text", "exposure_minor_text", "available_credit_minor_text"}
 )
 RECEIVABLES_AGING_FIELDS = frozenset(
     {"as_of_date", "currency_code", "items", "bucket_totals_minor", "total_outstanding_minor"}
@@ -3269,14 +3272,69 @@ def project_payables_supplier_invoice(values: Mapping[str, object]) -> FieldProj
     return project_fields(record, allowed_fields=PAYABLES_SUPPLIER_INVOICE_FIELDS)
 
 
+RECEIVABLES_MONETARY_POLICY_FIELDS = frozenset({
+    "schema_version", "status", "currency_code", "precision", "rounding_policy",
+    "registry_version", "registry_digest", "policy_digest", "source", "source_url", "published_at",
+})
+
+
+def _receivables_record(
+    values: Mapping[str, object], minor_fields: tuple[str, ...], *, policy: bool = False,
+) -> dict[str, object]:
+    """Project retained authority; exact text is derived, never trusted from input."""
+    record = dict(values)
+    for field in minor_fields:
+        record.pop(field + "_text", None)
+        if field in record:
+            amount = record[field]
+            if type(amount) is not int:
+                raise TypeError("receivables minor units must be exact integers")
+            record[field + "_text"] = str(amount)
+    if policy and "monetary_policy" in record:
+        raw = record["monetary_policy"]
+        if not isinstance(raw, Mapping) or not raw.keys() >= RECEIVABLES_MONETARY_POLICY_FIELDS:
+            raise TypeError("receivables monetary policy must be a complete mapping")
+        public = project_fields(raw, allowed_fields=RECEIVABLES_MONETARY_POLICY_FIELDS).visible
+        currency = public["currency_code"]
+        if (type(public["schema_version"]) is not int or public["schema_version"] != 1
+                or not isinstance(currency, str) or len(currency) != 3
+                or currency != record.get("currency_code")):
+            raise TypeError("receivables monetary policy identity is invalid")
+        interpretation = RECEIVABLES_MONETARY_POLICY_FIELDS - {"schema_version", "status", "currency_code"}
+        if public["status"] == "unverified":
+            if any(public[key] is not None for key in interpretation):
+                raise TypeError("unverified receivables policy cannot assert an interpretation")
+        elif public["status"] == "captured":
+            precision = public["precision"]
+            if (not re.fullmatch(r"[A-Z]{3}", currency) or type(precision) is not int
+                    or not 0 <= precision <= 8 or public["rounding_policy"] != "ROUND_HALF_UP"):
+                raise TypeError("captured receivables policy precision is invalid")
+            version = public["registry_version"]
+            if not isinstance(version, str) or not 1 <= len(version) <= 128:
+                raise TypeError("captured receivables registry version is invalid")
+            for key in ("registry_digest", "policy_digest"):
+                digest = public[key]
+                if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+                    raise TypeError("captured receivables policy digest is invalid")
+            for key in ("source", "source_url", "published_at"):
+                provenance = public[key]
+                if not isinstance(provenance, str) or len(provenance) > 4096:
+                    raise TypeError("captured receivables policy provenance is invalid")
+        else:
+            raise TypeError("receivables monetary policy status is invalid")
+        record["monetary_policy"] = public
+    return record
+
+
 def project_receivables_customer(values: Mapping[str, object]) -> FieldProjection:
-    return project_fields(values, allowed_fields=RECEIVABLES_CUSTOMER_FIELDS)
+    record = _receivables_record(values, ("credit_limit_minor",), policy=True)
+    return project_fields(record, allowed_fields=RECEIVABLES_CUSTOMER_FIELDS)
 
 
 def project_receivables_invoice(values: Mapping[str, object]) -> FieldProjection:
     """Return a closed recursive projection for receivable-invoice responses."""
 
-    record = dict(values)
+    record = _receivables_record(values, ("subtotal_minor", "tax_minor", "total_minor", "allocated_minor", "outstanding_minor"), policy=True)
     lines = record.get("lines")
     if lines is not None:
         if not isinstance(lines, list):
@@ -3285,7 +3343,8 @@ def project_receivables_invoice(values: Mapping[str, object]) -> FieldProjection
         for line in lines:
             if not isinstance(line, Mapping):
                 raise TypeError("receivables invoice line record must be a mapping")
-            projected_lines.append(project_fields(line, allowed_fields=RECEIVABLES_INVOICE_LINE_FIELDS).visible)
+            exact = _receivables_record(line, ("unit_price_minor", "line_total_minor", "tax_minor"))
+            projected_lines.append(project_fields(exact, allowed_fields=RECEIVABLES_INVOICE_LINE_FIELDS).visible)
         record["lines"] = projected_lines
     return project_fields(record, allowed_fields=RECEIVABLES_INVOICE_FIELDS)
 
@@ -3293,7 +3352,7 @@ def project_receivables_invoice(values: Mapping[str, object]) -> FieldProjection
 def project_receivables_receipt(values: Mapping[str, object]) -> FieldProjection:
     """Return a closed recursive projection for receivables receipt responses."""
 
-    record = dict(values)
+    record = _receivables_record(values, ("amount_minor", "allocated_minor", "unallocated_minor"), policy=True)
     allocations = record.get("allocations")
     if allocations is not None:
         if not isinstance(allocations, list):
@@ -3302,13 +3361,15 @@ def project_receivables_receipt(values: Mapping[str, object]) -> FieldProjection
         for allocation in allocations:
             if not isinstance(allocation, Mapping):
                 raise TypeError("receivables receipt allocation record must be a mapping")
-            projected_allocations.append(project_fields(allocation, allowed_fields=RECEIVABLES_ALLOCATION_FIELDS).visible)
+            exact = _receivables_record(allocation, ("amount_minor",))
+            projected_allocations.append(project_fields(exact, allowed_fields=RECEIVABLES_ALLOCATION_FIELDS).visible)
         record["allocations"] = projected_allocations
     return project_fields(record, allowed_fields=RECEIVABLES_RECEIPT_FIELDS)
 
 
 def project_receivables_credit_exposure(values: Mapping[str, object]) -> FieldProjection:
-    return project_fields(values, allowed_fields=RECEIVABLES_CREDIT_EXPOSURE_FIELDS)
+    record = _receivables_record(values, ("credit_limit_minor", "exposure_minor", "available_credit_minor"))
+    return project_fields(record, allowed_fields=RECEIVABLES_CREDIT_EXPOSURE_FIELDS)
 
 
 def project_receivables_aging(values: Mapping[str, object]) -> FieldProjection:

@@ -523,6 +523,7 @@ _MODULES = (
         test_evidence=(
             "apps/web/src/App.test.tsx",
             "tests/test_inventory_core.py",
+            "tests/test_sqlite_inventory_composition.py",
             "tests/test_inventory_planning.py",
             "tests/test_inventory_valuation.py",
             "tests/test_inventory_valuation_reversal.py",
@@ -847,14 +848,18 @@ _MODULES = (
     ),
     ModuleDescriptor(
         module_id="studio.modern",
-        name="Modern Studio synthetic preview",
+        name="Modern Studio preview and scoped AR workflow",
         version=__version__,
         maturity="experimental",
         capability_status="foundation",
-        summary="Read-only responsive dashboard, exception queue, evidence metadata, and inventory-control views for generated synthetic contracts.",
+        summary=(
+            "Responsive synthetic dashboard, exception and inventory-control previews, plus authenticated "
+            "AR invoice and cash workflows with retained currency policy and exact monetary display."
+        ),
+        network_requirement="loopback-optional",
         default_enabled=False,
         dependencies=("finance.controls", "inventory.core"),
-        interfaces=("artifacts", "modern-studio"),
+        interfaces=("api", "artifacts", "modern-studio"),
         import_contracts=(
             "studio-evidence.v1",
             "studio-exceptions.v1",
@@ -862,13 +867,18 @@ _MODULES = (
             "studio-overview.v1",
         ),
         export_contracts=("verified-ui-screenshots.v1",),
-        data_classification=("synthetic-only",),
-        retention_note="Static synthetic contracts remain in the local web build or operator-selected local path.",
-        activation_note="Requires an explicit Node.js build and generated synthetic demo bundle; it is read-only and not API-authenticated.",
+        data_classification=("financial-sensitive", "synthetic-preview-data"),
+        retention_note="Synthetic contracts remain local; authenticated AR records remain in the operator-selected backend.",
+        activation_note=(
+            "Requires an explicit Node.js build. Synthetic previews remain read-only; AR writes require an "
+            "authorized local or PostgreSQL API session, current scope and cash step-up. No automatic GL posting."
+        ),
         test_evidence=(
             "apps/web/e2e/screenshots.spec.ts",
             "apps/web/src/App.test.tsx",
             "tests/test_studio_demo_bridge.py",
+            "apps/web/src/receivables-money.test.ts",
+            "apps/web/e2e/receivables-policy-live.spec.ts",
         ),
     ),
 )

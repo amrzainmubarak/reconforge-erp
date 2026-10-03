@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from collections.abc import Callable
 from decimal import Decimal
 from typing import Annotated, TypeVar
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
 from reconforge.api.dependencies import (
     enforce_server_scoped_permission,
@@ -56,13 +57,31 @@ ReceivablesApprove = Annotated[LocalUser, Depends(require_permission("receivable
 T = TypeVar("T")
 
 
+def _exact_minor_input(value: object) -> int:
+    """Reject lossy JSON coercion before Pydantic or financial arithmetic.
+
+    Retain integer-string clients, including surrounding whitespace and sign.
+    Decimal and exponent spellings cannot establish an exact integer input.
+    """
+    if type(value) is int:
+        return value
+    if isinstance(value, str) and len(value) <= 128:
+        text = value.strip()
+        if re.fullmatch(r"[+-]?[0-9]+", text):
+            return int(text)
+    raise ValueError("Money requires an exact integer or bounded integer string in minor units.")
+
+
+ExactMinor = Annotated[int, BeforeValidator(_exact_minor_input)]
+
+
 class CustomerRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     customer_code: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=200)
     currency_code: str = Field(min_length=3, max_length=3)
-    credit_limit_minor: int = Field(ge=0)
+    credit_limit_minor: ExactMinor = Field(ge=0)
     credit_hold: bool = False
     payment_terms_days: int = Field(default=0, ge=0, le=3_650)
     workspace: str = Field(default="default", min_length=1, max_length=160)
@@ -77,9 +96,9 @@ class InvoiceLineRequest(BaseModel):
 
     description: str = Field(default="", max_length=500)
     quantity: str = Field(min_length=1, max_length=64)
-    unit_price_minor: int = Field(ge=0)
-    line_total_minor: int = Field(ge=0)
-    tax_minor: int = Field(default=0, ge=0)
+    unit_price_minor: ExactMinor = Field(ge=0)
+    line_total_minor: ExactMinor = Field(ge=0)
+    tax_minor: ExactMinor = Field(default=0, ge=0)
 
 
 class InvoiceRequest(BaseModel):
@@ -89,7 +108,7 @@ class InvoiceRequest(BaseModel):
     customer_code: str = Field(min_length=1, max_length=64)
     invoice_date: str = Field(min_length=10, max_length=10)
     currency_code: str = Field(min_length=3, max_length=3)
-    tax_minor: int = Field(default=0, ge=0)
+    tax_minor: ExactMinor = Field(default=0, ge=0)
     lines: list[InvoiceLineRequest] = Field(min_length=1, max_length=1_000)
     due_date: str = Field(default="", max_length=10)
     workspace: str = Field(default="default", min_length=1, max_length=160)
@@ -112,7 +131,7 @@ class ReceiptAllocationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     invoice_id: str = Field(min_length=1, max_length=160)
-    amount_minor: int = Field(gt=0)
+    amount_minor: ExactMinor = Field(gt=0)
 
 
 class AllocateReceiptRequest(ReceiptAllocationRequest):
@@ -126,7 +145,7 @@ class ReceiptRequest(BaseModel):
     customer_code: str = Field(min_length=1, max_length=64)
     receipt_date: str = Field(min_length=10, max_length=10)
     currency_code: str = Field(min_length=3, max_length=3)
-    amount_minor: int = Field(gt=0)
+    amount_minor: ExactMinor = Field(gt=0)
     allocations: list[ReceiptAllocationRequest] = Field(default_factory=list, max_length=1_000)
     workspace: str = Field(default="default", min_length=1, max_length=160)
     organization_code: str = Field(default="", max_length=64)

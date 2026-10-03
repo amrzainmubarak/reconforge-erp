@@ -57,16 +57,20 @@ confirm approval. The UI derives actions from current `/auth/me` permissions;
 the server remains authoritative for authorization, segregation of duties,
 version, credit and currency checks. No credit override is available here.
 
-Money inputs are explicitly **integer minor units**, with their currency code.
-There is no implied two-decimal formatting. Arithmetic uses text and `BigInt`,
-HALF_UP line rounding, and a checked conversion only at the legacy JSON integer
-boundary. Each received integer and transmitted amount must be within
-`0..9007199254740991`; subtotal and total are checked too. Quantities contain at
-most 12 digits in total, keeping the coefficient/price product below 28 digits
-within the existing AR adapter's precision. Larger values require a future
-exact textual API contract; unsafe responses fail closed. For example, quantity
-`1.25`, unit price `1001`, and tax `125` produce subtotal `1251` and total `1376`
-minor units, without binary floating-point multiplication.
+Money inputs use **major units under the retained currency policy**. JPY uses
+zero decimal places; KWD uses three. Arabic digits and decimal separators are
+accepted. Excess fractional precision is rejected without rounding the input.
+Arithmetic uses text and `BigInt`, with HALF_UP line rounding. New writes cross
+a checked JSON integer boundary: each amount, subtotal and total must be within
+`0..9007199254740991`. The API also exposes canonical integer-text companions
+for exact reads of larger stored amounts; the browser never derives their money
+display from a lossy JavaScript number. An inconsistent companion fails closed.
+Quantities in this form contain at most 12 digits in total. Under a verified
+two-decimal USD policy, quantity `1.25`, unit price `10.01` and tax `1.25` produce
+subtotal `12.51` and total `13.76`, without binary floating-point multiplication.
+Historical records without verified policy display explicit raw minor units
+and cannot start a new financial action. Credit exposure also displays raw
+minor units when the aggregate has no single verified interpretation.
 
 Customer and invoice lists have explicit 25-record pagination. A tenant,
 identity or workspace switch discards private records, forms and pending UI
@@ -81,8 +85,18 @@ New customer creation is deliberately unavailable in this page: the current
 `POST /api/v1/receivables/customers` contract is an upsert without an expected
 version. An existence check in React cannot make it create-only. Customer setup
 remains an explicit administrative API/CLI operation until an atomic create-only
-contract exists. Receipt entry/allocation, grouped aging, inventory effects and
-GL posting are outside this first UI slice.
+contract exists. The authenticated cash workspace supports receipt entry and
+allocation to approved invoices under matching retained policies. Recording and
+allocation require current permissions, step-up assurance and explicit human
+confirmation; allocation also uses the server-returned version. Unknown receipt
+creation outcomes preserve the original request and key for explicit recovery.
+Grouped aging, inventory effects and GL posting remain outside these UI flows.
+
+The retained-fixture [browser runbook](../../docs/runbooks/receivables-policy-browser.md)
+reproduces the HTTPS/PostgreSQL journeys for USD recovery, JPY/KWD, large exact
+reads, historical unverified units, English/Arabic accessibility, narrow screens
+and keyboard disclosure. The fixture uses isolated synthetic data and removes
+its owned database after verification.
 
 Existing backend next operations, performed explicitly with the appropriate
 authenticated scope, are:

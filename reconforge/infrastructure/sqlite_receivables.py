@@ -21,15 +21,31 @@ from reconforge.application.receivables import (
 )
 from reconforge.auth.rbac import same_actor
 from reconforge.db.connection import DatabaseError
+from reconforge.domain.finance_policy import POLICY_COLUMNS, FinanceCurrencyPolicy
 from reconforge.domain.models import utc_now_text
 from reconforge.domain.quantities import quantity_decimal_text, quantity_product_minor
 from reconforge.domain.receivables_aging import AgingCurrencyError, build_aging_report
+from reconforge.domain.receivables_policy import (
+    ReceivablesMonetaryPolicy,
+    ReceivablesPolicyError,
+    require_aggregation_affinity,
+    require_policy_affinity,
+    require_replay_policy,
+    verify_receivables_policy,
+)
 from reconforge.domain.receivables_receipt_replay import (
     ReceiptReplayError,
     receipt_replay_envelope,
     receipt_replay_response,
     receipt_request_digest,
 )
+from reconforge.domain.receivables_replay import (
+    InvoiceReplayError,
+    invoice_creation_request,
+    invoice_replay_envelope,
+    verify_invoice_replay,
+)
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.io.persisted import (
     PersistedJsonError,
     decode_financial_idempotency_response,
@@ -67,6 +83,49 @@ class SQLiteReceivablesRepository:
         if schema is None:
             raise DatabaseError("Accounts Receivable schema is not initialized. Run 'reconforge db migrate' first.")
         self.connection = connection
+
+    def _policy(self, record: dict[str, Any]) -> ReceivablesMonetaryPolicy:
+        context = None
+        if any(record.get(column) is not None for column in POLICY_COLUMNS):
+            _, context = FinancePolicyStore(self.connection).entry(record)
+        try:
+            return verify_receivables_policy(record, snapshot=context)
+        except ReceivablesPolicyError as exc:
+            raise PlatformError(str(exc)) from exc
+
+    def _with_policy(self, record: dict[str, Any]) -> dict[str, Any]:
+        record["monetary_policy"] = self._policy(record).public_metadata()
+        return record
+
+    def _verify_replay_policy(self, response: dict[str, Any], authoritative: dict[str, Any]) -> None:
+        try:
+            require_replay_policy(response, self._policy(authoritative))
+        except ReceivablesPolicyError as exc:
+            raise PlatformError(str(exc)) from exc
+
+    def _capture_policy(
+        self, workspace_id: str, currency: str, actor: str, *parents: dict[str, Any],
+    ) -> FinanceCurrencyPolicy:
+        parent_policies = tuple(self._policy(parent) for parent in parents)
+        try:
+            for parent_policy in parent_policies:
+                parent_policy.require_captured()
+        except ReceivablesPolicyError as exc:
+            raise PlatformError(str(exc)) from exc
+        master = self.connection.execute("SELECT minor_units FROM currencies WHERE code=?", (currency,)).fetchone()
+        precision = None if master is None else master["minor_units"]
+        if precision is not None and type(precision) is not int:
+            raise PlatformError("ar_monetary_policy_invalid: retained currency master precision must be an exact integer.")
+        policy, context = FinancePolicyStore(self.connection).capture(
+            workspace_id=workspace_id, currency_code=currency,
+            minor_units=precision,
+            actor_label=actor, allow_missing_master=True,
+        )
+        try:
+            selected = verify_receivables_policy({"currency_code": currency, **policy.metadata()}, snapshot=context)
+            return require_policy_affinity(selected, *parent_policies)
+        except ReceivablesPolicyError as exc:
+            raise PlatformError(str(exc)) from exc
 
     def upsert_customer(
         self,
@@ -106,7 +165,7 @@ class SQLiteReceivablesRepository:
             customer_id = platform_id("ARCUS", workspace_id, code)
             now = utc_now_text()
             existing = self.connection.execute(
-                "SELECT currency_code FROM ar_customers WHERE id = ?", (customer_id,),
+                "SELECT * FROM ar_customers WHERE id = ?", (customer_id,),
             ).fetchone()
             if existing is not None and str(existing["currency_code"]) != currency:
                 history = self.connection.execute(
@@ -116,13 +175,21 @@ class SQLiteReceivablesRepository:
                 ).fetchone()
                 if history is not None:
                     raise PlatformError("Customer currency cannot change after financial history exists.")
+            if existing is not None:
+                try:
+                    self._policy(dict(existing)).require_captured()
+                except ReceivablesPolicyError as exc:
+                    raise PlatformError(str(exc)) from exc
+            parents = () if existing is None or existing["currency_code"] != currency else (dict(existing),)
+            policy = self._capture_policy(workspace_id, currency, actor_label, *parents)
             self.connection.execute(
                 """
                 INSERT INTO ar_customers (
                     id, workspace_id, organization_id, legal_entity_id, customer_code, name,
                     currency_code, tax_identifier, payment_terms_days, credit_limit_minor,
-                    credit_hold, status, created_at, updated_at, row_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    credit_hold, status, created_at, updated_at, row_version,
+                    currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1,?,?,?,?)
                 ON CONFLICT(workspace_id, customer_code)
                 DO UPDATE SET
                     organization_id = excluded.organization_id,
@@ -134,6 +201,10 @@ class SQLiteReceivablesRepository:
                     credit_limit_minor = excluded.credit_limit_minor,
                     credit_hold = excluded.credit_hold,
                     status = excluded.status,
+                    currency_precision = excluded.currency_precision,
+                    currency_rounding_policy = excluded.currency_rounding_policy,
+                    currency_registry_version = excluded.currency_registry_version,
+                    currency_registry_digest = excluded.currency_registry_digest,
                     updated_at = excluded.updated_at,
                     row_version = ar_customers.row_version + 1
                 """,
@@ -152,6 +223,7 @@ class SQLiteReceivablesRepository:
                     customer_status,
                     now,
                     now,
+                    *policy.values(),
                 ),
             )
             result = self.get_customer(customer_id)
@@ -201,12 +273,8 @@ class SQLiteReceivablesRepository:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             workspace_id = ensure_workspace(self.connection, workspace)
-            if idempotency_key:
-                previous = self._idempotent("invoice", workspace_id, idempotency_key)
-                if previous is not None:
-                    return previous
             number = normalize_key(invoice_number, default="")
-            customer = self._customer_by_code(workspace_id, customer_code)
+            customer = self._customer_by_code(workspace_id, customer_code, require_active=False)
             currency = _currency(currency_code)
             invoice_day = _date(invoice_date, field="invoice date")
             tax = _minor(tax_minor, field="invoice tax")
@@ -214,15 +282,8 @@ class SQLiteReceivablesRepository:
                 raise PlatformError("Invoice number and at least one line are required.")
             if str(customer["currency_code"]) != currency:
                 raise PlatformError("Customer invoice currency must match the customer currency.")
-            due_day = (
-                _date(due_date, field="due date")
-                if normalize_text(due_date)
-                else invoice_day
-                + timedelta(
-                    days=int(customer["payment_terms_days"]),
-                )
-            )
-            if due_day < invoice_day:
+            explicit_due = _date(due_date, field="due date") if normalize_text(due_date) else None
+            if explicit_due is not None and explicit_due < invoice_day:
                 raise PlatformError("Due date cannot be before invoice date.")
             organization_id, legal_entity_id = self._scope_ids(
                 workspace_id,
@@ -235,14 +296,32 @@ class SQLiteReceivablesRepository:
                 raise PlatformError("Invoice tax must equal the sum of invoice-line tax amounts.")
             total = subtotal + tax
             invoice_id = platform_id("ARINV", workspace_id, customer["id"], number)
+            request = invoice_creation_request({
+                "id": invoice_id, "workspace_id": workspace_id, "organization_id": organization_id,
+                "legal_entity_id": legal_entity_id, "customer_id": customer["id"], "invoice_number": number,
+                "invoice_date": invoice_day.isoformat(), "due_date": explicit_due.isoformat() if explicit_due else None,
+                "currency_code": currency, "subtotal_minor": subtotal, "tax_minor": tax, "total_minor": total,
+                "lines": [vars(line) for line in normalized_lines],
+            })
+            previous = self._idempotent("invoice", workspace_id, idempotency_key)
+            if previous is not None:
+                authoritative = self.get_invoice(invoice_id)
+                response = verify_invoice_replay(previous, request, authoritative)
+                self._verify_replay_policy(response, authoritative)
+                return response
+            if str(customer["status"]) != "Active":
+                raise PlatformError("Customer is not Active.")
+            due_day = explicit_due or invoice_day + timedelta(days=int(customer["payment_terms_days"]))
             now = utc_now_text()
+            policy = self._capture_policy(workspace_id, currency, actor_label, customer)
             self.connection.execute(
                 """
                 INSERT INTO ar_invoices (
                     id, workspace_id, organization_id, legal_entity_id, customer_id, invoice_number,
                     invoice_date, due_date, currency_code, subtotal_minor, tax_minor, total_minor,
-                    status, created_by, created_at, updated_at, row_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, 1)
+                    status, created_by, created_at, updated_at, row_version,
+                    currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, 1,?,?,?,?)
                 """,
                 (
                     invoice_id,
@@ -260,6 +339,7 @@ class SQLiteReceivablesRepository:
                     actor_label,
                     now,
                     now,
+                    *policy.values(),
                 ),
             )
             for line_number, line in enumerate(normalized_lines, start=1):
@@ -283,7 +363,7 @@ class SQLiteReceivablesRepository:
                     ),
                 )
             result = self.get_invoice(invoice_id)
-            self._save_idempotency("invoice", workspace_id, idempotency_key, result)
+            self._save_idempotency("invoice", workspace_id, idempotency_key, invoice_replay_envelope(request, result))
             _finalize_event(
                 self.connection,
                 event_id=platform_id("OBX", "ar_invoice", invoice_id, "created"),
@@ -298,6 +378,9 @@ class SQLiteReceivablesRepository:
                 metadata={"invoice_number": number, "customer_id": str(customer["id"]), "total_minor": total},
             )
             return result
+        except InvoiceReplayError as exc:
+            self.connection.rollback()
+            raise PlatformError(str(exc)) from exc
         except PlatformError:
             self.connection.rollback()
             raise
@@ -351,6 +434,7 @@ class SQLiteReceivablesRepository:
             if str(invoice["currency_code"]) != str(customer["currency_code"]):
                 raise PlatformError("Customer invoice currency must match the customer currency.")
             self._assert_customer_currency(customer)
+            self._capture_policy(str(invoice["workspace_id"]), str(invoice["currency_code"]), actor_label, customer, invoice)
             exposure = self._customer_exposure(str(customer["id"]), exclude_invoice_id=invoice_id)
             hold = bool(customer["credit_hold"])
             limit_breach = exposure + int(invoice["total_minor"]) > int(customer["credit_limit_minor"])
@@ -459,16 +543,19 @@ class SQLiteReceivablesRepository:
                 authoritative = self.get_receipt(str(response.get("id", "")))
                 if any(authoritative[field] != response.get(field) for field in ("workspace_id", "organization_id", "legal_entity_id", "customer_id")):
                     raise PlatformError("Receipt replay scope no longer matches the authoritative receipt.")
+                self._verify_replay_policy(response, authoritative)
                 return response
             receipt_id = platform_id("ARREC", workspace_id, number)
             now = utc_now_text()
+            policy = self._capture_policy(workspace_id, currency, actor_label, customer)
             self.connection.execute(
                 """
                 INSERT INTO ar_receipts (
                     id, workspace_id, organization_id, legal_entity_id, customer_id, receipt_number,
                     receipt_date, currency_code, amount_minor, status, created_by, posted_by, posted_at,
-                    created_at, updated_at, row_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Posted', ?, ?, ?, ?, ?, 1)
+                    created_at, updated_at, row_version,
+                    currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Posted', ?, ?, ?, ?, ?, 1,?,?,?,?)
                 """,
                 (
                     receipt_id,
@@ -485,6 +572,7 @@ class SQLiteReceivablesRepository:
                     now,
                     now,
                     now,
+                    *policy.values(),
                 ),
             )
             for allocation in normalized_allocations:
@@ -544,7 +632,9 @@ class SQLiteReceivablesRepository:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             receipt = self.get_receipt(receipt_id)
-            self._assert_customer_currency(self.get_customer(str(receipt["customer_id"])))
+            customer = self.get_customer(str(receipt["customer_id"]))
+            self._assert_customer_currency(customer)
+            self._capture_policy(str(receipt["workspace_id"]), str(receipt["currency_code"]), actor_label, customer, receipt)
             if str(receipt["status"]) != "Posted":
                 raise PlatformError("Only posted receipts can be allocated.")
             if int(receipt["row_version"]) != expected_version:
@@ -595,13 +685,13 @@ class SQLiteReceivablesRepository:
         row = self.connection.execute("SELECT * FROM ar_customers WHERE id = ?", (customer_id,)).fetchone()
         if row is None:
             raise PlatformError("Customer not found.")
-        return dict(row)
+        return self._with_policy(dict(row))
 
     def get_invoice(self, invoice_id: str) -> dict[str, Any]:
         row = self.connection.execute("SELECT * FROM ar_invoices WHERE id = ?", (invoice_id,)).fetchone()
         if row is None:
             raise PlatformError("Customer invoice not found.")
-        result = dict(row)
+        result = self._with_policy(dict(row))
         result["lines"] = rows_to_dicts(
             self.connection.execute(
                 "SELECT * FROM ar_invoice_lines WHERE invoice_id = ? ORDER BY line_number, id",
@@ -616,7 +706,7 @@ class SQLiteReceivablesRepository:
         row = self.connection.execute("SELECT * FROM ar_receipts WHERE id = ?", (receipt_id,)).fetchone()
         if row is None:
             raise PlatformError("Customer receipt not found.")
-        result = dict(row)
+        result = self._with_policy(dict(row))
         result["allocations"] = rows_to_dicts(
             self.connection.execute(
                 "SELECT * FROM ar_receipt_allocations WHERE receipt_id = ? ORDER BY invoice_id, id",
@@ -638,12 +728,12 @@ class SQLiteReceivablesRepository:
 
     def list_customers(self, *, workspace: str = "", status: str = "") -> list[dict[str, Any]]:
         workspace_id = ensure_workspace(self.connection, workspace or "default")
-        return rows_to_dicts(
+        return [self._with_policy(row) for row in rows_to_dicts(
             self.connection.execute(
                 "SELECT * FROM ar_customers WHERE workspace_id = ? AND (? = '' OR status = ?) ORDER BY customer_code, id",
                 (workspace_id, status, status),
             ).fetchall(),
-        )
+        )]
 
     def list_invoices(self, *, workspace: str = "default", status: str = "") -> list[dict[str, Any]]:
         workspace_id = ensure_workspace(self.connection, workspace)
@@ -705,10 +795,12 @@ class SQLiteReceivablesRepository:
             (workspace_id,),
         ).fetchall()
         items: list[dict[str, Any]] = []
+        policies = []
         for row in rows:
             outstanding = int(row["total_minor"]) - int(row["allocated_minor"])
             if outstanding <= 0:
                 continue
+            policies.append(self._policy(dict(row)))
             due = _date(str(row["due_date"]), field="stored due date")
             days_overdue = max((as_of - due).days, 0)
             bucket = (
@@ -738,8 +830,9 @@ class SQLiteReceivablesRepository:
                 },
             )
         try:
+            require_aggregation_affinity(policies)
             return build_aging_report(as_of.isoformat(), items, grouped=grouped)
-        except AgingCurrencyError as exc:
+        except (AgingCurrencyError, ReceivablesPolicyError) as exc:
             raise PlatformError(str(exc)) from exc
 
     def _insert_allocation(
@@ -767,13 +860,17 @@ class SQLiteReceivablesRepository:
             "SELECT COALESCE(SUM(amount_minor), 0) AS allocated FROM ar_receipt_allocations WHERE receipt_id = ?",
             (receipt_id,),
         ).fetchone()
-        receipt = self.connection.execute("SELECT amount_minor,organization_id,legal_entity_id FROM ar_receipts WHERE id = ?", (receipt_id,)).fetchone()
+        receipt = self.connection.execute("SELECT * FROM ar_receipts WHERE id = ?", (receipt_id,)).fetchone()
         if receipt is not None and (receipt["organization_id"] != invoice["organization_id"] or receipt["legal_entity_id"] != invoice["legal_entity_id"]):
             raise PlatformError("Receipt and invoice hierarchy must match.")
         if receipt is None or int(existing_receipt["allocated"]) + allocation.amount_minor > int(
             receipt["amount_minor"]
         ):
             raise PlatformError("Receipt allocations cannot exceed the receipt amount.")
+        try:
+            require_policy_affinity(self._policy(dict(receipt)), self._policy(invoice))
+        except ReceivablesPolicyError as exc:
+            raise PlatformError(str(exc)) from exc
         existing_allocation = self.connection.execute(
             "SELECT id, amount_minor FROM ar_receipt_allocations WHERE receipt_id = ? AND invoice_id = ?",
             (receipt_id, allocation.invoice_id),
@@ -847,7 +944,7 @@ class SQLiteReceivablesRepository:
             self.connection.rollback()
             raise PlatformError("Unable to transition customer invoice.") from exc
 
-    def _customer_by_code(self, workspace_id: str, customer_code: str) -> dict[str, Any]:
+    def _customer_by_code(self, workspace_id: str, customer_code: str, *, require_active: bool = True) -> dict[str, Any]:
         code = normalize_key(customer_code, default="")
         row = self.connection.execute(
             "SELECT * FROM ar_customers WHERE workspace_id = ? AND customer_code = ?",
@@ -855,7 +952,7 @@ class SQLiteReceivablesRepository:
         ).fetchone()
         if row is None:
             raise PlatformError("Customer not found in the requested workspace.")
-        if str(row["status"]) != "Active":
+        if require_active and str(row["status"]) != "Active":
             raise PlatformError("Customer is not Active.")
         customer = dict(row)
         self._assert_customer_currency(customer)

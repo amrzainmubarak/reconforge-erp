@@ -83,3 +83,6 @@ docs/execution/OPENSSL_RUNTIME_2026-10-03.json:generic-api-key:30
 docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:19
 852508968462ec9957e46e39bb2aab507960b572:docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:76
 docs/execution/POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json:generic-api-key:76
+# Verified SHA256 of canonical empty JSON array in synthetic native restore evidence.
+662aad3ff0c0f48cb0fcda33f3a178cdec7322d0:docs/execution/RECEIVABLES_POLICY_2026-10-03.json:generic-api-key:29
+docs/execution/RECEIVABLES_POLICY_2026-10-03.json:generic-api-key:29

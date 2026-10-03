@@ -1,0 +1,30 @@
+id: receivables-monetary-policy
+name: Retained AR monetary policy and provenance
+version: 1.0.0
+maturity: experimental
+owner: financial-integrity
+dependencies: [platform.core, platform.master-data, finance.core]
+incompatible_versions: [implicitly-reinterpreted-ar-minor-units]
+data_classification: financial-sensitive
+retention_policy: retain-original-ar-policy-snapshot-and-financial-evidence
+permissions: [receivables.read, receivables.manage, receivables.approve]
+default_roles: [admin, preparer, reviewer]
+migrations: [sqlite-49, 0099_pg_receivables_policy]
+domain_invariants:
+  - captured-policy-verifies-against-own-retained-snapshot
+  - new-financial-effects-require-full-parent-and-current-policy-affinity
+  - historical-all-null-policy-remains-explicitly-unverified
+  - partial-forged-and-corrupt-cached-policy-denied-before-effects
+  - hidden-child-policy-affinity-preserved-by-postgresql-foreign-keys
+domain_events: [receivable_invoice_created, receivable_receipt_posted]
+api_routes: []
+cli_commands: []
+ui_routes: []
+import_schemas: [legacy-all-null-ar-policy]
+export_schemas: [ar-monetary-policy-v1]
+synthetic_fixtures: [tests/test_receivables_policy_capture.py]
+threat_model: [historical-money-reinterpretation, forged-policy-affinity, hidden-child-policy-change, cached-policy-tampering]
+benchmarks: []
+rollback_plan: preserve-verified-backup-downgrade-only-empty-or-all-null-policy
+test_matrix: [tests/test_receivables_monetary_policy.py, tests/test_receivables_policy_schema.py, tests/test_receivables_policy_capture.py, tests/test_receivables_policy_raw_guards.py, tests/test_postgres_receivables_policy_restore.py]
+limitations: [backend-only-at-this-checkpoint, no-legacy-policy-repair, inactive-customer-retry-follow-up, no-generated-gl]

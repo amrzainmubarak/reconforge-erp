@@ -1,0 +1,19 @@
+schema_version: reconforge-amlsim-workload-v1
+upstream_repository: https://github.com/IBM/AMLSim
+upstream_commit: 7338a4bcb1af9bcfea2201ad7daccfe2a4d569ca
+upstream_path: sample/outputs/tx.csv
+upstream_license: Apache-2.0
+input_sha256: d119a5b009a99958a23054ba8b403a6f410cf79d62c60e3104240d927d821ce8
+expected_records: 45
+max_bytes: 10000
+# Explicit synthetic scenario assignments, absent from upstream CSV.
+assigned_currency: USD
+assigned_minor_units: 2
+assigned_epoch: "2000-01-01"
+faults:
+  missing_id: "2"
+  changed_amount_id: "4"
+  duplicate_id: "10"
+  delayed_id: "11"
+  amount_delta_minor: 1
+  delay_days: 1

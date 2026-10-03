@@ -1,0 +1,79 @@
+{
+  "canonical_source_digest": "9a650eb3bba228f6b519c0b00b2d18272a7fa80aabc2467c06ad5798299943f0",
+  "decision_digest": "77afd17193d43dcf4f96e5088181329cbff0ebd997926a533b50d1a57c4eefda",
+  "execution": {
+    "cpu_seconds": 0.140625,
+    "memory_measurement": "tracemalloc Python allocations; not process RSS",
+    "network_calls": 0,
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.13",
+    "python_peak_allocated_bytes": 634540,
+    "source_files": {
+      ".github/scripts/verify_amlsim_reconciliation.py": "2a7b8a16fd11452b724b9d178a1559cf604396515ab34679468d9a0f27ccff79",
+      "reconforge/benchmark/amlsim_reconciliation.py": "2e53e74f1a7b9bfabf4e105da2484372f92cfb5724b3b38d1d9853cc41670285",
+      "reconforge/reconciliation/deterministic_engine.py": "da30b51f0b95d3659a7e4fb1ad2e7e0a684d961e1c519963ff2cfac39d924de2"
+    },
+    "started_at": "2026-10-03T02:53:53.939832+00:00",
+    "wall_seconds": 0.134146
+  },
+  "input_records": 45,
+  "left_records": 45,
+  "limitations": [
+    "synthetic upstream sample",
+    "currency and date epoch assigned by this scenario",
+    "two sides derived from one source",
+    "faults seeded by ReconForge",
+    "in-process matcher only; no PostgreSQL worker or posting",
+    "no customer, AML efficacy, audit acceptance or scale claim"
+  ],
+  "matched_pairs": 42,
+  "oracle_passed": true,
+  "permutation_equal": true,
+  "projection": "amlsim-single-transfer-projection-v1",
+  "report_digest": "fb55b0b642c50aa95972df0d84de49af7d48f2114a554eb72914952f4a075c27",
+  "reproducibility_digest": "2026771a69d2ba7461d129677214abda26630feeb3f2e1222ec922bb908b8008",
+  "result_statuses": {
+    "Matched": 42,
+    "Unmatched": 6
+  },
+  "right_records": 45,
+  "rule_digest": "3aedad1a55f37e24a8bb49c6ea115889858578e0d6aae763519fb76440048d62",
+  "scenario": {
+    "assigned_currency": "USD",
+    "assigned_epoch": "2000-01-01",
+    "assigned_minor_units": 2,
+    "expected_records": 45,
+    "faults": {
+      "amount_delta_minor": 1,
+      "changed_amount_id": "4",
+      "delay_days": 1,
+      "delayed_id": "11",
+      "duplicate_id": "10",
+      "missing_id": "2"
+    },
+    "input_sha256": "d119a5b009a99958a23054ba8b403a6f410cf79d62c60e3104240d927d821ce8",
+    "max_bytes": 10000,
+    "schema_version": "reconforge-amlsim-workload-v1",
+    "upstream_commit": "7338a4bcb1af9bcfea2201ad7daccfe2a4d569ca",
+    "upstream_license": "Apache-2.0",
+    "upstream_path": "sample/outputs/tx.csv",
+    "upstream_repository": "https://github.com/IBM/AMLSim"
+  },
+  "schema_version": "reconforge-amlsim-evidence-v1",
+  "seeded_faults": {
+    "amount_changed": 1,
+    "delayed": 1,
+    "duplicate": 1,
+    "missing": 1
+  },
+  "source": {
+    "commit": "7338a4bcb1af9bcfea2201ad7daccfe2a4d569ca",
+    "license": "Apache-2.0",
+    "path": "sample/outputs/tx.csv",
+    "repository": "https://github.com/IBM/AMLSim",
+    "sha256": "d119a5b009a99958a23054ba8b403a6f410cf79d62c60e3104240d927d821ce8"
+  },
+  "status": "passed",
+  "unmatched_left": 3,
+  "unmatched_right": 3
+}

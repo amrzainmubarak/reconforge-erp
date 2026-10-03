@@ -1,0 +1,33 @@
+id: amlsim-reconciliation-workload
+name: Offline AMLSim reconciliation oracle
+version: 1.0.0
+maturity: experimental
+owner: financial-integrity
+dependencies: [deterministic-matching-engine]
+incompatible_versions: []
+data_classification: public-synthetic
+retention_policy: retain-pinned-source-and-versioned-evidence
+permissions: [local-file-read, explicit-local-report-write]
+default_roles: []
+migrations: []
+domain_invariants:
+  - exact-source-digest-and-closed-csv-schema
+  - explicit-assigned-currency-precision-and-calendar
+  - unique-source-transaction-identity-independent-of-row-order
+  - strict-amount-date-key-constraints-before-assignment
+  - independent-seeded-fault-oracle-and-permutation-replay
+domain_events: []
+api_routes: []
+cli_commands: [python .github/scripts/verify_amlsim_reconciliation.py]
+ui_routes: []
+import_schemas: [docs/validation/amlsim-workload.v1.yaml]
+export_schemas: [reconforge-amlsim-evidence-v1]
+synthetic_fixtures: [tests/fixtures/amlsim/tx.csv]
+threat_model:
+  - offline-only-no-network-or-generator-code-execution
+  - bound-bytes-rows-identifiers-decimal-text-and-calendar
+  - reject-digest-mismatch-aggregate-rows-and-duplicate-source-ids
+  - report-contains-only-public-synthetic-scenario-and-aggregate-results
+benchmarks: [45-source-record-functional-oracle-only]
+rollback_plan: remove-opt-in-runner-and-module-without-database-change
+test_matrix: [closed-input, tamper, exact-decimals, fault-oracle, permutation, offline-cli]

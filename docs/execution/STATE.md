@@ -1,4 +1,20 @@
-﻿# Execution State
+# Execution State
+
+Current-bootstrap repaircd67fc67 passes96 PostgreSQL/compatibility tests without
+skips plus global Ruff/Mypy/Bandit. Historical0078 SQL remains unchanged;
+repeat installation preserves catalog constraints and forced RLS. Matching
+synthetic cleanup restores0097 guards. ADR0819 and retained evidence preserve
+original failures and the separate legacy global close-uniqueness gap.
+
+OpenSSL pins68bfea5b match two official signed Alpine indexes and existing base
+keys. A52.180s full local Docker build and six functional commands pass, including
+constrained offline doctor and OpenSSL3.5.9. ADR0820 and OPENSSL_RUNTIME evidence
+retain the exact image digest and original unexplained hosted checksum failures.
+
+Clean immutablec56 whole regression passes3,831/309 prerequisite skips/0fail with
+unchanged2,988-file manifests and global quality/build success. See retained
+POSTING_CASH_REGRESSION_C56 evidence. Skipped service cases are not successes.
+Subsequent hosted acceptance belongs to the new subject and remains pending.
 
 PR112 source-checksum review on `43bafc9d` verifies all seven new Gitleaks
 findings against the exact source Git blobs. Fourteen exact history/current-tree
@@ -8,16 +24,8 @@ allowlist. Gitleaks 8.30.1 now reports zero findings in both local scans;
 remained unchanged during verification. See
 [retained checksum review](POSTING_CASH_SOURCE_DIGEST_FINDINGS_2026-10-03.json).
 This is a separate local checkpoint: the historical d4 full regression remains
-failed. A fresh immutable c56 whole-repository run now passes3,831 tests with
-309 recorded prerequisite skips and24 warnings. All2,988 tracked source hashes
-and HEAD remain unchanged; global Ruff/Mypy/Bandit/build/diff checks also pass.
-See [c56 regression evidence](POSTING_CASH_REGRESSION_C56_2026-10-03.json).
-Hosted c56 server-boundaries nevertheless fails two live cases: matching
-synthetic cleanup omits the0097 child guards, and repeated consolidation-close
-installation misses truncated constraint names. Both failures reproduced on a
-fresh migrated PostgreSQL16.14 database; the current-bootstrap repair is under
-verification. PR113 Docker build also fails an upstream APK checksum comparison;
-the pinned verification remains enforced while the artifact is investigated.
+failed; the subsequent clean c56 whole gate is retained above. Hosted acceptance
+remains separate and pending on the new subject.
 
 ## Active financial-policy and open-workload slice (2026-10-03)
 
@@ -38,8 +46,10 @@ codex/receivables-policy-and-inventory-composition for subsequent work. Neither
 PR is merged or deployed. The managed c56 whole regression passes with309
 prerequisite skips; its independent global quality/build gates pass. Observed
 c56 hosted Python3.11/3.12/security/web/storage/Docker/HA-DR checks succeed, while
-server-boundaries fails the two reproduced cases above. New PR113 whole/hosted
-acceptance is separate; its Docker build currently fails a checksum comparison.
+server-boundaries failed two cases now repaired and verified locally under
+ADR0819. The observed PR113 Docker checksum failure is retained under ADR0820;
+its updated official pins pass the full local build. New hosted acceptance on
+PR112 8d76647c and PR113 8ba6772d remains a separate gate.
 
 PROD033 backend policy capture is now in progress after committed exact
 arithmetic; SQLite49/PostgreSQL0099 are reserved for verified new AR policy and

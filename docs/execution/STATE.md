@@ -1,5 +1,15 @@
 ﻿# Execution State
 
+PR112 source-checksum review on `43bafc9d` verifies all seven new Gitleaks
+findings against the exact source Git blobs. Fourteen exact history/current-tree
+fingerprints preserve the existing exclusions without a broad path or rule
+allowlist. Gitleaks 8.30.1 now reports zero findings in both local scans;
+35 supply-chain policy tests pass with no skips. The checked sources and HEAD
+remained unchanged during verification. See
+[retained checksum review](POSTING_CASH_SOURCE_DIGEST_FINDINGS_2026-10-03.json).
+This is a separate local checkpoint: the historical d4 full regression remains
+failed, and fresh immutable whole-repository and hosted acceptance are pending.
+
 ## Active financial-policy and open-workload slice (2026-10-03)
 
 The goal remains active. Foundation changes are reviewable in

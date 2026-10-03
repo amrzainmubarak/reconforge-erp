@@ -9,6 +9,56 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-GFO-001
+    priority: P0
+    area: sprint-handoff
+    title: Preserve the previous implementation and establish isolated sprint ownership
+    status: completed
+    depends_on: []
+    exit_evidence: >-
+      Checkpoint25a7adab preserves all prior tracked and untracked progress with Amr author.
+      Mainb61ea56b unchanged; three managed worktrees and exclusive owners created.
+      ADR0828 sets bounded architecture, dependency order and exact-source acceptance.
+  - id: AMR-GFO-002
+    priority: P1
+    area: platform-core
+    title: Persist recipient-scoped operational notification inbox and read evidence
+    status: in_progress
+    depends_on: [AMR-GFO-001]
+    exit_evidence: >-
+      Require immutable digest-bound publication, current tenant/workspace/recipient authority,
+      exact replay and conflict, atomic audit/outbox, SQLite/PostgreSQL migration and restore,
+      authorized API, Arabic/English authenticated UI and live browser acceptance.
+  - id: AMR-GFO-003
+    priority: P1
+    area: business-finance
+    title: Govern operational budget envelopes and conserved commitments
+    status: in_progress
+    depends_on: [AMR-GFO-001]
+    exit_evidence: >-
+      Require retained exact currency policy, canonical entity/period, independent approval,
+      conserved reserve/release/consume ledger, oversubscription races and command recovery,
+      atomic audit/outbox, SQLite/PostgreSQL API, real UI, migration and restore acceptance.
+  - id: AMR-GFO-004
+    priority: P0
+    area: enterprise-quality
+    title: Fence outbox generations and recover crashed final-attempt claims
+    status: in_progress
+    depends_on: [AMR-GFO-001]
+    exit_evidence: >-
+      Require immutable delivery evidence and monotonic lease snapshots, same-worker stale
+      acknowledgement refusal, bounded terminal recovery, populated upgrade, restore,
+      live SQLite/PostgreSQL races, worker regressions and measured synthetic workload.
+  - id: AMR-GFO-005
+    priority: P0
+    area: integration-acceptance
+    title: Integrate and verify exact sprint source without changing main
+    status: in_progress
+    depends_on: [AMR-GFO-002, AMR-GFO-003, AMR-GFO-004]
+    exit_evidence: >-
+      Require fresh locked Python3.12 whole regression, real nonowner PostgreSQL and
+      migration/restore tests, global security/build gates, full web checks and real HTTPS
+      browser journeys. Preserve failures/skips and hashes; publish Draft review with rollback.
   - id: PROD-001
     priority: P0
     area: baseline
@@ -309,10 +359,10 @@ tasks:
     priority: P1
     area: generated-inventory-posting
     title: Post one independently reviewed receipt and unconsumed reversal atomically
-    status: in_progress
+    status: deferred
     depends_on: [PROD-009, PROD-015, PROD-035, PROD-036]
     exit_evidence: >-
-      Implementation active after reviewed closed contract on amr/reviewed-inventory-receipt-posting based92719305; ADR0824 proposed, SQLite50/PG0100 reserved. Immutable prepared plans, independent current human review, IRP1-reserved all artifact IDs/numbers and exact completed-source guards. Required acceptance: both engines10units/value12000, FIFO origin, Generated DrInventory/CrGRNI effect and complete atomic command/audit/outbox. Full unused inverse uses Delivery/Remove; conservative scoped legacy-history refusal explicit. Physical races/late faults/populated migration/native restore and no generic correction bypass; no whole trade-cycle claim. No runtime result yet accepted.
+      Paused by user at checkpoint25a7adab; prior implementation after reviewed closed contract on amr/reviewed-inventory-receipt-posting based92719305; ADR0824 proposed, SQLite50/PG0100 reserved. Immutable prepared plans, independent current human review, IRP1-reserved all artifact IDs/numbers and exact completed-source guards. Required acceptance: both engines10units/value12000, FIFO origin, Generated DrInventory/CrGRNI effect and complete atomic command/audit/outbox. Full unused inverse uses Delivery/Remove; conservative scoped legacy-history refusal explicit. Physical races/late faults/populated migration/native restore and no generic correction bypass; no whole trade-cycle claim. No runtime result yet accepted.
   - id: PROD-039
     priority: P0
     area: receivables-command-recovery

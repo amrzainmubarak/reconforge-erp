@@ -47,11 +47,19 @@ def test_drill_runner_and_retained_report_bind_the_same_runtime_contract() -> No
 
     report = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
     runner = _load_runner()
-    assert ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini"))).get_current_head() == runner.TARGET_REVISION
+    scripts = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
+    current_head = scripts.get_current_head()
+    assert current_head is not None
 
     assert report["runtime"]["image"] == runner.IMAGE_REFERENCE
     assert report["runtime"]["source_revision"] == runner.SOURCE_REVISION
     assert report["runtime"]["target_revision"] == runner.TARGET_REVISION
+    # The retained report proves the named historical head. Follow-on
+    # migrations must retain that revision in the current ancestry rather
+    # than rewriting the immutable observation to claim a later head.
+    assert runner.TARGET_REVISION in {
+        revision.revision for revision in scripts.iterate_revisions(current_head, "base")
+    }
     assert report["subject"]["migration_commit"] == runner._migration_commit()
     assert report["subject"]["migration_source_sha256"] == runner._source_digest(runner.MIGRATION_PATH)
     assert report["subject"]["runner_source_sha256"] == runner._source_digest(RUNNER_PATH)

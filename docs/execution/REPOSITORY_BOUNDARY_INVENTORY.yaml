@@ -190,6 +190,10 @@ application_services:
     service: InventoryCoreApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_inventory_core.SQLiteInventoryCoreRepository
+  - file: inventory_receipt_posting.py
+    service: InventoryReceiptPostingApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_inventory_receipt_posting.SQLiteInventoryReceiptPostingRepository
   - file: payables.py
     service: PayablesApplicationService
     status: backend_neutral
@@ -219,4 +223,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 46
+  backend_neutral_application: 47

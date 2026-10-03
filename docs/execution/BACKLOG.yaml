@@ -277,10 +277,10 @@ tasks:
     priority: P0
     area: payables-recovery
     title: Reproduce and close analogous PostgreSQL AP JSONB command replay
-    status: in_progress
+    status: completed
     depends_on: [PROD-002, PROD-031]
     exit_evidence: >-
-      AR JSONB recovery exposed an analogous AP decoder path. Reproduce actual PO/goods-receipt/invoice and narrowed-scope retries, retain failures, bind authoritative source/request under current scope, then verify exact recovery, conflicts, sibling denial and atomic audit/outbox. AP payment is absent; AR evidence does not certify AP recovery.
+      ADR0816 accepted: final145pass/0skip actual nonowner PostgreSQL with source equality/cleanup, concurrency/password-bound HTTP, exact PO/receipt/invoice current-state recovery, altered/cross-scope denial and no repeat business evidence. Inactive-parent recovery preserves fresh-write prerequisites; nullable branch SQL is typed. PAYABLES_COMMAND_RECOVERY_2026-10-03.json retains original JSONB failures/138-pass source and independent review. Legacy receipt original hierarchy remains unverifiable; AP payment/GL absent.
   - id: PROD-035
     priority: P0
     area: exact-quantity-and-fifo

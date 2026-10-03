@@ -1,5 +1,13 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-011 — Authoritative AP creation recovery (2026-10-03)
+
+ADR0816 accepts closed source/request-bound PostgreSQL PO/receipt/invoice
+recovery, current RLS authority, lock-serialized retries and no duplicate
+financial evidence. Inactive parents remain readable for exact recovery while
+new purchases retain active prerequisites. Legacy raw receipt hierarchy is
+explicitly unverifiable historically; no payment or GL capability is inferred.
+
 ## D-PROD-010 — Context-independent quantities and FIFO (2026-10-03)
 
 ADR0814 accepts exact coefficient/scale conversion, integer HALF_UP AR products

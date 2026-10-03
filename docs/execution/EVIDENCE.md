@@ -10,6 +10,13 @@ not establish a successful remote rerun or replace the pending clean full gate.
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- AP command recovery: [frozen evidence](PAYABLES_COMMAND_RECOVERY_2026-10-03.json)
+  binds145pass/0skip, current authoritative PO/receipt/invoice state, actual
+  concurrent lock waits and password-bound HTTP, inactive-parent recovery,
+  fresh-write denial, unchanged11 dependency hashes and owned cleanup.
+  Original JSONB failures and earlier138-pass source remain separate. ADR0816
+  keeps legacy receipt historical hierarchy and missing AP payment explicit.
+
 - Exact trade arithmetic: [frozen evidence](EXACT_TRADE_PRIMITIVES_2026-10-03.json)
   binds227pass/0skip, actual nonowner PostgreSQL16.14/0098 and SQLite, unchanged
   runtime sources, owned cleanup and quality gates. Hostile Decimal contexts,

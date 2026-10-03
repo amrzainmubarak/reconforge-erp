@@ -8,7 +8,16 @@ allowlist. Gitleaks 8.30.1 now reports zero findings in both local scans;
 remained unchanged during verification. See
 [retained checksum review](POSTING_CASH_SOURCE_DIGEST_FINDINGS_2026-10-03.json).
 This is a separate local checkpoint: the historical d4 full regression remains
-failed, and fresh immutable whole-repository and hosted acceptance are pending.
+failed. A fresh immutable c56 whole-repository run now passes3,831 tests with
+309 recorded prerequisite skips and24 warnings. All2,988 tracked source hashes
+and HEAD remain unchanged; global Ruff/Mypy/Bandit/build/diff checks also pass.
+See [c56 regression evidence](POSTING_CASH_REGRESSION_C56_2026-10-03.json).
+Hosted c56 server-boundaries nevertheless fails two live cases: matching
+synthetic cleanup omits the0097 child guards, and repeated consolidation-close
+installation misses truncated constraint names. Both failures reproduced on a
+fresh migrated PostgreSQL16.14 database; the current-bootstrap repair is under
+verification. PR113 Docker build also fails an upstream APK checksum comparison;
+the pinned verification remains enforced while the artifact is investigated.
 
 ## Active financial-policy and open-workload slice (2026-10-03)
 
@@ -26,10 +35,11 @@ The exact-arithmetic/AP-recovery/as-of slice is reviewable in
 on PR112 with its actual latest ancestry. Root commitsdf071e48/76d2a8b4/866d943a
 separate the three runtime changes;1942b7af records acceptance. PRIMARY now uses
 codex/receivables-policy-and-inventory-composition for subsequent work. Neither
-PR is merged or deployed. The managed c56 whole regression remains in progress;
-its independent global quality/build gates have passed. Observed c56 hosted
-Python3.11/3.12/security/web/storage/Docker/HA-DR checks succeed; the last server
-boundary check is still pending. New PR113 whole/hosted acceptance is separate.
+PR is merged or deployed. The managed c56 whole regression passes with309
+prerequisite skips; its independent global quality/build gates pass. Observed
+c56 hosted Python3.11/3.12/security/web/storage/Docker/HA-DR checks succeed, while
+server-boundaries fails the two reproduced cases above. New PR113 whole/hosted
+acceptance is separate; its Docker build currently fails a checksum comparison.
 
 PROD033 backend policy capture is now in progress after committed exact
 arithmetic; SQLite49/PostgreSQL0099 are reserved for verified new AR policy and

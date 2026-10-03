@@ -6,7 +6,16 @@ before/after artifact hashes at `43bafc9d`. Local Gitleaks 8.30.1 full-history
 and current-tree scans report zero findings in 10.891s and 3.282s; 35 policy tests
 pass with no skips in 14.938s process time. Checked sources and HEAD are stable.
 The prior d4 full-regression failure report is unchanged. These local checks do
-not establish a successful remote rerun or replace the pending clean full gate.
+not establish a successful remote server-boundary run.
+
+The subsequent [c56 immutable regression](POSTING_CASH_REGRESSION_C56_2026-10-03.json)
+binds3,831pass/309skip/0fail/0error and24warnings to exactc56f805c and unchanged
+2,988-file manifests. JUnit1539.518s/harness1545.734s and global quality/build
+artifacts are retained. Skips comprise300 PostgreSQL prerequisites,3Redis,
+2S3/ObjectLock,3Windows symlink and1 opt-in network case. This closes the fresh
+local whole gate only. Hosted server-boundaries later fails two reproduced
+cases (missing0097 synthetic cleanup guards and truncated close constraints).
+The failed d4 artifact remains unchanged; overlapping selections are not summed.
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 

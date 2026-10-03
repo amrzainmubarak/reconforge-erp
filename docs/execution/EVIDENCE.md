@@ -1,5 +1,14 @@
 # ReconForge Execution Evidence Log
 
+- AR whole e81b and projection repair: RECEIVABLES_PROJECTION_REPAIR_2026-10-03.json
+  retains immutable4481collected/4114pass/366explicit prerequisites/1old public
+  policy expectation failure, stable3056-file manifest and passed global quality.
+  Hosted3.12 independently failed the same assertion; nine server shards did
+  not execute and the required aggregate rejected their skipped outcome.
+  A test-only repair proves the intended eleven public fields and exclusion of
+  private storage metadata: retained1red,27green and overlapping138 contracts
+  with no skips. New whole and hosted acceptance remain separate pending gates.
+
 - Publication source-digest review: RECEIVABLES_API_SOURCE_DIGEST_REVIEW_2026-10-03.json
   verifies five literals against four exact Git source blobs and one retained
   test-evidence artifact; ten exact fingerprints preserve scanner configuration.

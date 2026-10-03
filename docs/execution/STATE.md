@@ -48,14 +48,25 @@ reviewable in [Draft PR111](https://github.com/amrzainmubarak/reconforge-erp/pul
   operational posting, integrated trade cycles and connected financial writes.
   There is no available company pilot or external-auditor acceptance evidence.
 
+Finance hierarchy migration0095 is now verified on its frozen sources:478 live
+general passes, two native-client prerequisite skips, two additional API contract
+passes, independent concurrent-write denials and a populated native Finance
+restore on PostgreSQL16.14. Separate migration-chain restore passes16.14/17.10.
+ADR0805 and POSTGRES_FINANCE_SCOPE_2026-10-03.json retain the exact boundary.
+Authenticated HTTP review separately reproduces five narrowed master-data
+mutation gaps (PROD029); complete end-to-end isolation remains open. Durable
+AMLSim execution also exposed post-execution input insertion that can invalidate
+a stored manifest; its sealing repair is required before accepting PROD028.
+
 ### Financial regression and browser checkpoint
 
 The next slice repairs a reproduced SQLite AP partial commit: exception writes
 with `autocommit=False` now keep evidence in the caller transaction and leave
 rollback to that owner.54 focused tests pass; after-fix fault injection leaves
 zero partial AP effects. ADR0806 records the exact boundary. Other SQLite
-aggregate transaction composition, Finance hierarchy RLS and durable strict-rule
-forwarding remain active work, separate from the isolated70dac5cf regression.
+aggregate transaction composition and durable strict-rule/input sealing remain
+active work, separate from the isolated70dac5cf regression. The bounded Finance
+hierarchy RLS gate is now verified separately as described above.
 
 Isolated source `f48781e695533df577ca671b9f5a1b8f9a18f7aa` completed:3602 passed,
 240 capability skips, four failures,24 warnings in936.79s. Failures identify an

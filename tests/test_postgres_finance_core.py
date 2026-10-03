@@ -134,7 +134,7 @@ class _ListConnection:
         if "current_setting('app.tenant_id'" in query:
             return _Result(one=(None, None, None, None, None))
         if "FROM reconforge.domain_workspaces" in query:
-            return _Result(one={"id": "workspace-a"})
+            return _Result(many=[{"id": "workspace-a"}])
         if "FROM reconforge.finance_charts" in query:
             return _Result(
                 many=[
@@ -300,16 +300,16 @@ def test_live_postgres_finance_core_lifecycle_exactness_and_rls() -> None:
                     (tenant,),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active) VALUES (%s,%s,'ORG','Organization','KWD',TRUE)",
-                    (tenant, f"org-{tenant}"),
+                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active,application_workspace_id) VALUES (%s,%s,'ORG','Organization','KWD',TRUE,%s)",
+                    (tenant, f"org-{tenant}", f"workspace-{tenant}"),
                 )
                 connection.execute(
                     "INSERT INTO reconforge.legal_entities(tenant_id,id,organization_id,entity_code,name,currency_code) VALUES (%s,%s,%s,'ENTITY','Entity','KWD')",
                     (tenant, f"entity-{tenant}", f"org-{tenant}"),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number) VALUES (%s,'period-1','2026-07','2026-07-01','2026-07-31',2026,7)",
-                    (tenant,),
+                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) VALUES (%s,'period-1','2026-07','2026-07-01','2026-07-31',2026,7,%s)",
+                    (tenant, f"workspace-{tenant}"),
                 )
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
             repository = PostgresFinanceCoreRepository(connection, tenant_a)

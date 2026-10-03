@@ -245,17 +245,20 @@ class PostgresFinanceCoreRepository:
 
     def _workspace_id(self, workspace: str, *, required: bool = True) -> str | None:
         workspace_value = _text(workspace, "Workspace name")
-        row = self.connection.execute(
+        rows = self.connection.execute(
             """SELECT id FROM reconforge.domain_workspaces
                WHERE tenant_id=%s AND (id=%s OR name=%s)
-               ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1""",
+               ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END,id LIMIT 2""",
             (self.tenant_id, workspace_value, workspace_value, workspace_value),
-        ).fetchone()
-        if row is None:
+        ).fetchall()
+        if not rows:
             if required:
                 raise PostgresFinanceCoreError("Finance Core workspace was not found for this tenant.")
             return None
-        return str(row["id"] if isinstance(row, Mapping) else row[0])
+        identifier = str(rows[0]["id"] if isinstance(rows[0], Mapping) else rows[0][0])
+        if len(rows) > 1 and identifier != workspace_value:
+            raise PostgresFinanceCoreError("Finance Core workspace name is ambiguous; use its explicit ID.")
+        return identifier
 
     def _required_workspace_id(self, workspace: str) -> str:
         workspace_id = self._workspace_id(workspace)
@@ -299,8 +302,8 @@ class PostgresFinanceCoreRepository:
             if (
                 normalized_org
                 and self.connection.execute(
-                    "SELECT 1 FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s AND active=TRUE",
-                    (self.tenant_id, normalized_org),
+                    "SELECT 1 FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s AND active=TRUE",
+                    (self.tenant_id, workspace_id, normalized_org),
                 ).fetchone()
                 is None
             ):
@@ -557,8 +560,8 @@ class PostgresFinanceCoreRepository:
             if (
                 org_code
                 and self.connection.execute(
-                    "SELECT 1 FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s",
-                    (self.tenant_id, org_code),
+                    "SELECT 1 FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s",
+                    (self.tenant_id, workspace_id, org_code),
                 ).fetchone()
                 is None
             ):
@@ -748,8 +751,8 @@ class PostgresFinanceCoreRepository:
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
             organization = self.connection.execute(
-                "SELECT active FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s",
-                (self.tenant_id, org_code),
+                "SELECT active FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s",
+                (self.tenant_id, workspace_id, org_code),
             ).fetchone()
             if organization is None or not bool(
                 organization["active"] if isinstance(organization, Mapping) else organization[0]
@@ -904,8 +907,8 @@ class PostgresFinanceCoreRepository:
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
             organization = self.connection.execute(
-                "SELECT id,active FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s",
-                (self.tenant_id, org_code),
+                "SELECT id,active FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s",
+                (self.tenant_id, workspace_id, org_code),
             ).fetchone()
             if organization is None or not bool(
                 organization["active"] if isinstance(organization, Mapping) else organization[1]
@@ -1254,8 +1257,8 @@ class PostgresFinanceCoreRepository:
             if period is None:
                 raise PlatformError("Fiscal-period reference was not found.")
             organization = self.connection.execute(
-                "SELECT id FROM reconforge.organizations WHERE tenant_id=%s AND organization_code=%s",
-                (self.tenant_id, org_code),
+                "SELECT id FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s",
+                (self.tenant_id, workspace_id, org_code),
             ).fetchone()
             if organization is None:
                 raise PlatformError("Organization reference was not found.")
@@ -1446,7 +1449,7 @@ class PostgresFinanceCoreRepository:
                 JOIN reconforge.fiscal_periods periods ON periods.tenant_id=entries.tenant_id AND periods.id=entries.period_id
                 WHERE entries.tenant_id=%s AND entries.id=%s"""
         if lock:
-            query += " FOR UPDATE"  # nosec B608 -- fixed allowlisted clause, never user controlled
+            query += " FOR UPDATE OF entries"  # Lock the entry being mutated, not its reference metadata.
         row = self.connection.execute(
             query,
             (self.tenant_id, entry_id),
@@ -1549,7 +1552,7 @@ class PostgresFinanceCoreRepository:
                JOIN reconforge.finance_journals journals ON journals.tenant_id=entries.tenant_id AND journals.id=entries.journal_id
                JOIN reconforge.finance_charts charts ON charts.tenant_id=journals.tenant_id AND charts.id=journals.chart_id
                JOIN reconforge.organizations organizations ON organizations.tenant_id=entries.tenant_id
-                AND organizations.organization_code=entries.organization_code
+                AND organizations.application_workspace_id=entries.workspace_id AND organizations.organization_code=entries.organization_code
                JOIN reconforge.legal_entities entities ON entities.tenant_id=entries.tenant_id
                 AND entities.organization_id=organizations.id AND entities.entity_code=entries.entity_code
                JOIN reconforge.currencies currencies ON currencies.tenant_id=entries.tenant_id AND currencies.code=entries.currency_code
@@ -1734,15 +1737,19 @@ END $reconforge$;
 
 
 def install_postgres_finance_core_schema(connection: Any) -> None:
-    """Install additive, tenant-scoped Finance Core tables."""
+    """Install current Finance tables with canonical scope prerequisites and guards."""
 
     connection.execute(POSTGRES_FINANCE_CORE_SCHEMA_SQL)
     from reconforge.infrastructure.finance_policy_schema import POSTGRES_FINANCE_POLICY_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_finance_scope import install_postgres_finance_scope_schema
     from reconforge.infrastructure.postgres_master_data_application import (
         POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL,
         POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL,
+        POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL,
     )
 
+    connection.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
     connection.execute(POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL)
     connection.execute(POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL)
     connection.execute(POSTGRES_FINANCE_POLICY_SCHEMA_SQL)
+    install_postgres_finance_scope_schema(connection)

@@ -913,17 +913,17 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             )
             master_data = PostgresMasterDataRepository(connection)
             master_data.upsert_currency(tenant_id=tenant_a, code="USD", name="US Dollar")
+            connection.execute(
+                "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,application_workspace_id) "
+                "VALUES(%s,%s,'ORG-A','API Organization','USD','workspace-a')",
+                (tenant_a, organization_id),
+            )
             master_data.upsert_organization(
                 tenant_id=tenant_a,
                 organization_id=organization_id,
                 organization_code="ORG-A",
                 name="API Organization",
                 base_currency="USD",
-            )
-            connection.execute(
-                "UPDATE reconforge.organizations SET application_workspace_id='workspace-a' "
-                "WHERE tenant_id=%s AND id=%s",
-                (tenant_a, organization_id),
             )
             ledger = PostgresLedgerRepository(connection)
             ledger.upsert_account(

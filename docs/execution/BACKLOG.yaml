@@ -205,10 +205,10 @@ tasks:
     priority: P0
     area: finance-hierarchy-isolation
     title: Enforce code-based Finance organization and entity isolation
-    status: in_progress
+    status: completed
     depends_on: [PROD-024]
     exit_evidence: >-
-      Reproduce and close same-workspace Finance hierarchy access where tables use organization_code/entity_code instead of scope identifier columns; migration and scoped read/write relationship tests must prove denial without redefining code semantics.
+      Frozen0095 restrictive policies resolve canonical workspace/org/entity IDs and guard parent affinities;478 live passes/2explicit native-client skips,2API contract passes, independent actual lock races and populated nativeFinance PG16.14 restore pass. Separate16.14/17.10 migration-chain restore passes. ADR0805/report retain exact scope; legacy attribution not guessed and parent-account historical FK remains NOT VALID. General master-data mutation authority is separate PROD029.
   - id: PROD-026
     priority: P1
     area: studio-receivables
@@ -233,6 +233,14 @@ tasks:
     depends_on: [PROD-022, PROD-023]
     exit_evidence: >-
       Validate and forward explicit constraint_policy without changing historical omission semantics; actual registered durable worker processes pinned45-row AMLSim input and persists decisions matching the independent oracle, source/rule/input/output digests and retry/isolation contracts. Unknown policies fail without decision effects; lifecycle failure evidence is retained.
+  - id: PROD-029
+    priority: P0
+    area: master-data-authority
+    title: Constrain shared master mutations under selected organization and entity scope
+    status: in_progress
+    depends_on: [PROD-025]
+    exit_evidence: >-
+      Five authenticated HTTP red cases alter broader organization/currency/fiscal-period state under narrowed selection; central authorization and SQL mutation guards must deny these while preserving canonical FOR SHARE reference locks and existing authorized administrator paths. Retain historical policy evidence compatibility; do not claim new permission-to-resource-level grants.
   - id: E-1120
     priority: P0
     area: financial-exactness

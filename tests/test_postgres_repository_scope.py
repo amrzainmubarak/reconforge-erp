@@ -194,7 +194,8 @@ def test_live_nested_success_failure_retry_and_sibling_write_preserve_scope(
     scoped_financial_database: Any,
 ) -> None:
     factory, boundary = scoped_financial_database
-    with boundary.transaction("scope_a", organization_id="org_one", workspace_id="ws_one", legal_entity_id="entity_one") as connection:
+    # Organization-wide reference metadata requires organization-wide authority.
+    with boundary.transaction("scope_a", organization_id="org_one", workspace_id="ws_one") as connection:
         pid = connection.execute("SELECT pg_backend_pid()").fetchone()[0]
         before = _scope(connection)
         finance = PostgresFinanceCoreRepository(connection, "scope_a")
@@ -231,7 +232,7 @@ def test_live_outer_rollback_removes_nested_business_audit_and_outbox_effects(sc
         ).fetchone())
     with (
         pytest.raises(RuntimeError, match="synthetic outer failure"),
-        boundary.transaction("scope_a", organization_id="org_one", workspace_id="ws_one", legal_entity_id="entity_one") as connection,
+        boundary.transaction("scope_a", organization_id="org_one", workspace_id="ws_one") as connection,
     ):
         PostgresFinanceCoreRepository(connection, "scope_a").upsert_chart(
             chart_code="ROLLBACK", name="Must roll back", workspace="One", organization_code="ONE",

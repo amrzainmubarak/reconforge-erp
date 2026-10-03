@@ -1206,3 +1206,10 @@ include docs/adr/0806-sqlite-exception-transaction-ownership.md
 include docs/execution/SQLITE_EXCEPTION_ATOMICITY_2026-10-03.json
 include tests/test_sqlite_exception_transaction_ownership.py
 include docs/execution/FINANCIAL_VERIFICATION_2026-10-03.json
+include docs/adr/0805-finance-canonical-hierarchy-isolation.md
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0095_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0095_2026-10-03.json
+include tests/test_postgres_finance_scope.py
+include tests/test_postgres_finance_scope_restore.py
+include docs/operations/finance-scope-upgrade.md
+include docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json

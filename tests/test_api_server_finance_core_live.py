@@ -81,6 +81,10 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
                 )
                 master = PostgresMasterDataRepository(connection)
                 master.upsert_currency(tenant_id=tenant, code="USD", name="US Dollar", minor_units=2)
+                connection.execute(
+                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,application_workspace_id) VALUES(%s,%s,'ORG-A','API Organization','USD',%s)",
+                    (tenant, f"org-{tenant}", workspace),
+                )
                 master.upsert_organization(
                     tenant_id=tenant,
                     organization_id=f"org-{tenant}",
@@ -100,6 +104,10 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
                     entity_code="ENTITY-A",
                     name="API Entity",
                     currency_code="USD",
+                )
+                connection.execute(
+                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) VALUES(%s,'period-api','2026-07','2026-07-01','2026-07-31',2026,7,%s)",
+                    (tenant, workspace),
                 )
                 master.upsert_period(
                     tenant_id=tenant,
@@ -137,6 +145,11 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             )
         assert spoofed_organization.value.code == "organization_scope_denied"
 
+        with pytest.raises(APIError) as narrow_metadata:
+            routes.upsert_chart(request, routes.ChartRequest(chart_code="DENIED", name="Entity cannot edit organization metadata"), maker, None)
+        assert narrow_metadata.value.code == "finance_core_request_invalid"
+        scope = RequestExecutionScope(tenant_a, workspace_a, f"org-{tenant_a}")
+
         chart = routes.upsert_chart(
             request,
             routes.ChartRequest(chart_code="DEFAULT", name="Default"),
@@ -172,6 +185,7 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             maker,
             None,
         )
+        scope = RequestExecutionScope(tenant_a, workspace_a, f"org-{tenant_a}", f"entity-{tenant_a}")
         with pytest.raises(APIError) as spoofed_entity:
             routes.create_entry(
                 request,

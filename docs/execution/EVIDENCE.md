@@ -2,6 +2,16 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Finance hierarchy0095: [frozen report](POSTGRES_FINANCE_SCOPE_2026-10-03.json)
+  retains478 actual PostgreSQL passes with two native-client skips, two separate
+  API contract passes, exact source hashes and independent race/affinity probes.
+  Native populated Finance backup/restore via PostgreSQL16.14 tools passes in
+  10.761s with equal data/policies and valid scope denials plus a permitted write.
+  Native migration-chain drill16.368s and16/17matrix29.912s preserve source hashes
+  and confirm cleanup;35 runner/report tests pass. The initial broad failure
+  had467passes/6canonical-fixture failures/1skip and is retained. PROD029 records
+  a separate authenticated master-data boundary with five red HTTP cases.
+
 - Foundation hosted follow-up at a6776c69:17 passed checks, one conditional
   image-security skip and one scoped-export fixture teardown failure. All
   migration/receiver/recovery matrices completed. The test failed deleting its

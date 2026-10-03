@@ -1,5 +1,16 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-005 — Canonical Finance authority and verified recovery (2026-10-03)
+
+ADR0805 binds natural Finance codes to canonical workspace/organization/entity
+identities, composes restrictive policies with existing RLS and freezes identity
+relabeling. Shared reference reads remain possible, but narrower actors cannot
+mutate broader Finance metadata. Parent locks and existence-only installed
+triggers protect concurrent references; historical unresolved attribution is
+not guessed. Native populated restore repeats permitted and denied operations.
+The separately reproduced canonical master-data administration gap stays open
+under PROD029, and existing control entries are not relabeled as a complete GL.
+
 ## D-PROD-004 — Actual receivables browser writes with exact bounded amounts (2026-10-03)
 
 ADR0801 adds an existing-customer invoice draft/submit/independent-approve

@@ -36,16 +36,16 @@ def _seed(connection: Any, tenant: str) -> None:
         (tenant, tenant),
     )
     connection.execute(
-        "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency) "
-        "VALUES (%s,'org','ORG','Synthetic','EGP')", (tenant,),
+        "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,application_workspace_id) "
+        "VALUES (%s,'org','ORG','Synthetic','EGP','workspace')", (tenant,),
     )
     masters.upsert_legal_entity(
         tenant_id=tenant, organization_id="org", entity_id="entity", entity_code="ENTITY",
         name="Synthetic entity", currency_code="EGP",
     )
     connection.execute(
-        "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number) "
-        "VALUES (%s,'period','2026-07','2026-07-01','2026-07-31',2026,7)", (tenant,),
+        "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) "
+        "VALUES (%s,'period','2026-07','2026-07-01','2026-07-31',2026,7,'workspace')", (tenant,),
     )
     masters.bind_currency_registry(tenant_id=tenant, workspace="Finance")
     finance = PostgresFinanceCoreRepository(connection, tenant)
@@ -138,7 +138,7 @@ def test_live_currency_policy_preserves_money_scope_replay_and_populated_downgra
         with pytest.raises(DBAPIError, match="finance policy downgrade refused"):
             command.downgrade(_config(), "0093_pg_metrics")
         with psycopg.connect(isolated_postgres_migration_dsn, autocommit=True) as admin:
-            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0094_pg_finance_policy"
+            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0095_pg_finance_scope"
             assert admin.execute("SELECT count(*) FROM reconforge.finance_entries").fetchone()[0] == 2
     finally:
         CurrencyRegistry.reset_to_bundled()

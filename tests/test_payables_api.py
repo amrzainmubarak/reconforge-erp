@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -85,7 +86,15 @@ def test_payables_api_enforces_roles_and_runs_three_way_match(tmp_path: Path) ->
     invoice_id = invoice.json()["id"]
     submit_invoice = client.post(f"/api/v1/payables/invoices/{invoice_id}/submit", headers=prep_headers, json={"expected_version": 1})
     match = client.post(f"/api/v1/payables/invoices/{invoice_id}/match", headers=review_headers)
+    second_payload = json.loads(invoice.request.content)
+    second_payload["invoice_number"] = "INV-API-SECOND"
+    second = client.post("/api/v1/payables/invoices", headers=prep_headers, json=second_payload)
+    assert second.status_code == 200, second.text
+    second_id = second.json()["id"]
+    assert client.post(f"/api/v1/payables/invoices/{second_id}/submit", headers=prep_headers, json={"expected_version": 1}).status_code == 200
+    assert client.post(f"/api/v1/payables/invoices/{second_id}/match", headers=review_headers).json()["status"] == "Passed"
     approve = client.post(f"/api/v1/payables/invoices/{invoice_id}/approve", headers=review_headers, json={"expected_version": 3})
+    duplicate = client.post(f"/api/v1/payables/invoices/{second_id}/approve", headers=review_headers, json={"expected_version": 3})
     denied = client.post(f"/api/v1/payables/purchase-orders/{order_id}/approve", headers=prep_headers, json={"expected_version": 2})
 
     assert supplier.status_code == 200
@@ -97,6 +106,14 @@ def test_payables_api_enforces_roles_and_runs_three_way_match(tmp_path: Path) ->
     assert submit_invoice.json()["status"] == "Submitted"
     assert match.json()["status"] == "Passed"
     assert approve.json()["status"] == "Approved"
+    assert duplicate.status_code == 400
+    assert "quantity" in duplicate.text
+    connection = connect(tmp_path / "payables-api.db", require_exists=True)
+    try:
+        assert connection.execute("SELECT status FROM ap_supplier_invoices WHERE id=?", (second_id,)).fetchone()[0] == "Matched"
+        assert connection.execute("SELECT COUNT(*) FROM outbox_events WHERE event_type='ap.supplier_invoice.approved'").fetchone()[0] == 1
+    finally:
+        connection.close()
     assert denied.status_code == 403
     assert "Traceback" not in denied.text
 

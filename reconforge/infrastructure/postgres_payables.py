@@ -6,7 +6,7 @@ import re
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date, datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Any
 
 from reconforge.application.payables import (
@@ -16,6 +16,13 @@ from reconforge.application.payables import (
 )
 from reconforge.auth.rbac import same_actor
 from reconforge.domain.models import utc_now_text
+from reconforge.domain.payables_quantities import (
+    exact_product,
+    exact_sum,
+    quantity_capacity,
+    quantity_text,
+    rounded_minor,
+)
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.io.persisted import (
@@ -107,9 +114,7 @@ def _quantity(value: object, label: str) -> tuple[Decimal, str]:
     exponent = quantity.as_tuple().exponent
     if not isinstance(exponent, int):
         raise PlatformError(f"{label} must be an exact decimal quantity.")
-    normalized = quantity.normalize()
-    text = "0" if normalized == 0 else format(normalized, "f")
-    return quantity, text
+    return quantity, quantity_text(quantity)
 
 
 def _stored_quantity(value: object, label: str, *, allow_zero: bool = False) -> Decimal:
@@ -176,12 +181,11 @@ def _normalize_invoice_lines(
 
 
 def _decimal_text(value: Decimal) -> str:
-    normalized = value.normalize()
-    return "0" if normalized == 0 else format(normalized, "f")
+    return quantity_text(value)
 
 
 def _rounded_minor(value: Decimal) -> int:
-    return int(value.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return rounded_minor(value)
 
 
 POSTGRES_PAYABLES_SCHEMA_SQL = r"""
@@ -584,7 +588,12 @@ class PostgresPayablesRepository:
             (self.tenant_id, f"{operation}:{workspace_id}", normalized, document.text),
         )
 
-    def _purchase_order(self, purchase_order_id: str) -> dict[str, Any]:
+    def _purchase_order(self, purchase_order_id: str, *, lock: bool = False) -> dict[str, Any]:
+        if lock:
+            self.connection.execute(
+                "SELECT id FROM reconforge.ap_purchase_orders WHERE tenant_id=%s AND id=%s FOR NO KEY UPDATE",
+                (self.tenant_id, _text(purchase_order_id, "Purchase order id", maximum=128)),
+            ).fetchone()
         row = self.connection.execute(
             """SELECT id,workspace_id,organization_id,legal_entity_id,branch_id,supplier_id,
                       po_number,order_date,expected_date,currency_code,status,created_by,
@@ -615,16 +624,54 @@ class PostgresPayablesRepository:
                ORDER BY r.receipt_date, r.id, l.id""",
             (self.tenant_id, purchase_order_line_id),
         ).fetchall()
-        return sum(
-            (
-                _stored_quantity(
-                    row["quantity"] if isinstance(row, Mapping) else row[0],
-                    f"received quantity {purchase_order_line_id}",
-                )
-                for row in rows
-            ),
-            Decimal("0"),
+        return exact_sum(
+            _stored_quantity(
+                row["quantity"] if isinstance(row, Mapping) else row[0],
+                f"received quantity {purchase_order_line_id}",
+            )
+            for row in rows
         )
+
+    def _quantity_capacity(
+        self, invoice_id: str, quantities: dict[str, Decimal], po_lines: dict[str, Any]
+    ) -> tuple[Decimal, tuple[str, ...]]:
+        available = {}
+        for line_id in sorted(quantities):
+            rows = self.connection.execute(
+                """SELECT lines.invoiced_quantity_text FROM reconforge.ap_supplier_invoice_lines lines
+                   JOIN reconforge.ap_supplier_invoices invoices
+                     ON invoices.tenant_id=lines.tenant_id AND invoices.id=lines.supplier_invoice_id
+                   WHERE lines.tenant_id=%s AND lines.purchase_order_line_id=%s AND invoices.id<>%s
+                     AND invoices.status IN ('Approved','Paid') ORDER BY invoices.id,lines.id""",
+                (self.tenant_id, line_id, invoice_id),
+            ).fetchall()
+            consumed = exact_sum(
+                _stored_quantity(
+                    row["invoiced_quantity_text"] if isinstance(row, Mapping) else row[0],
+                    f"approved quantity {line_id}",
+                ) for row in rows
+            )
+            available[line_id] = (
+                _stored_quantity(po_lines[line_id]["ordered_quantity"], f"ordered quantity {line_id}"),
+                self._received_quantity(line_id),
+                consumed,
+            )
+        return quantity_capacity(quantities, available)
+
+    def _check_approval_quantity(self, invoice: dict[str, Any], order: dict[str, Any]) -> None:
+        po_lines = {str(line["id"]): line for line in order["lines"]}
+        quantities: dict[str, Decimal] = {}
+        for line in invoice["lines"]:
+            line_id = str(line["purchase_order_line_id"] or "")
+            if line_id not in po_lines:
+                raise PlatformError("Invoice quantity references an unknown purchase-order line.")
+            quantities[line_id] = exact_sum((
+                quantities.get(line_id, Decimal(0)),
+                _stored_quantity(line["invoiced_quantity"], f"invoiced quantity {line_id}"),
+            ))
+        _variance, exceeded = self._quantity_capacity(str(invoice["id"]), quantities, po_lines)
+        if exceeded:
+            raise PlatformError("Supplier invoice quantity exceeds available received or ordered quantity.")
 
     def _receipt(self, receipt_id: str) -> dict[str, Any]:
         row = self.connection.execute(
@@ -982,7 +1029,7 @@ class PostgresPayablesRepository:
             previous = self._idempotent("goods_receipt", workspace_id, idempotency_key)
             if previous is not None:
                 return previous
-            order = self._purchase_order(purchase_order_id)
+            order = self._purchase_order(purchase_order_id, lock=True)
             if order["workspace_id"] != workspace_id or order["status"] != "Approved":
                 raise PlatformError("Goods receipts require an Approved purchase order in the same workspace.")
             line_rows = {str(line["id"]): line for line in order["lines"]}
@@ -991,7 +1038,7 @@ class PostgresPayablesRepository:
                     raise PlatformError(f"Unknown purchase-order line: {line_id}.")
             for line_id, (quantity, _quantity_text) in normalized_quantities.items():
                 ordered = _stored_quantity(line_rows[line_id]["ordered_quantity"], f"ordered quantity {line_id}")
-                if self._received_quantity(line_id) + quantity > ordered:
+                if exact_sum((self._received_quantity(line_id), quantity)) > ordered:
                     raise PlatformError(f"Receipt exceeds ordered quantity for line {line_id}.")
             receipt_id = platform_id("APGR", workspace_id, number)
             row = self.connection.execute(
@@ -1200,9 +1247,12 @@ class PostgresPayablesRepository:
         with self._transaction():
             invoice = self._supplier_invoice(invoice_id)
             po_id = str(invoice["purchase_order_id"] or "")
-            po = self._purchase_order(po_id) if po_id else None
+            po = self._purchase_order(po_id, lock=True) if po_id else None
+            invoice = self._supplier_invoice(invoice_id)
+            if invoice["status"] not in {"Submitted", "Matched", "Exception"}:
+                raise PlatformError("Only a submitted supplier invoice can be matched.")
             po_lines = {str(line["id"]): line for line in po["lines"]} if po is not None else {}
-            quantity_variance = Decimal("0")
+            quantities: dict[str, Decimal] = {}
             price_variance = Decimal("0")
             total_variance = Decimal("0")
             reasons: list[str] = []
@@ -1214,20 +1264,19 @@ class PostgresPayablesRepository:
                 if po_line is None:
                     reasons.append(f"AP-3WM-UNKNOWN-LINE:{line_id}")
                     continue
-                received = self._received_quantity(line_id)
                 invoiced = _stored_quantity(line["invoiced_quantity"], f"invoiced quantity {line_id}")
-                quantity_variance += invoiced - received
-                unit_price_delta = Decimal(int(line["unit_price_minor"])) - Decimal(int(po_line["unit_price_minor"]))
-                price_variance += unit_price_delta * invoiced
-                expected_total = _rounded_minor(Decimal(int(po_line["unit_price_minor"])) * invoiced)
-                total_variance += Decimal(int(line["line_total_minor"])) - expected_total
-                if invoiced > received:
-                    reasons.append(f"AP-3WM-QUANTITY:{line_id}")
+                quantities[line_id] = exact_sum((quantities.get(line_id, Decimal(0)), invoiced))
+                unit_price_delta = Decimal(int(line["unit_price_minor"]) - int(po_line["unit_price_minor"]))
+                price_variance = exact_sum((price_variance, exact_product(unit_price_delta, invoiced)))
+                expected_total = _rounded_minor(exact_product(Decimal(int(po_line["unit_price_minor"])), invoiced))
+                total_variance = exact_sum((total_variance, Decimal(int(line["line_total_minor"]) - expected_total)))
                 if unit_price_delta != 0:
                     reasons.append(f"AP-3WM-PRICE:{line_id}")
+            quantity_variance, exceeded = self._quantity_capacity(invoice_id, quantities, po_lines)
+            reasons.extend(f"AP-3WM-QUANTITY:{line_id}" for line_id in exceeded)
             status = (
                 "Passed"
-                if not reasons and quantity_variance == 0 and price_variance == 0 and total_variance == 0
+                if not reasons and price_variance == 0 and total_variance == 0
                 else "Exception"
             )
             reason = ";".join(sorted(set(reasons)))
@@ -1332,10 +1381,13 @@ class PostgresPayablesRepository:
             raise PlatformError("Expected version must be a positive integer.")
         with self._transaction():
             invoice = self._supplier_invoice(invoice_id)
+            order = self._purchase_order(str(invoice["purchase_order_id"] or ""), lock=True)
+            invoice = self._supplier_invoice(invoice_id)
             if invoice["status"] != "Matched":
                 raise PlatformError("Only a supplier invoice with a passed three-way match can be approved.")
             if same_actor(invoice.get("created_by"), actor_label):
                 raise PlatformError("Separation of duties conflict: invoice creator cannot approve the same invoice.")
+            self._check_approval_quantity(invoice, order)
             row = self.connection.execute(
                 """UPDATE reconforge.ap_supplier_invoices
                    SET status='Approved',approved_by=%s,approved_at=now(),updated_at=now(),row_version=row_version+1

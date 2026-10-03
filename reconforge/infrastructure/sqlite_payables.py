@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Sequence
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Any
 
 from reconforge.application.payables import (
@@ -22,6 +22,13 @@ from reconforge.application.payables import (
 from reconforge.auth.rbac import same_actor
 from reconforge.db.connection import DatabaseError
 from reconforge.domain.models import utc_now_text
+from reconforge.domain.payables_quantities import (
+    exact_product,
+    exact_sum,
+    quantity_capacity,
+    quantity_text,
+    rounded_minor,
+)
 from reconforge.io.persisted import (
     PersistedJsonError,
     decode_financial_idempotency_response,
@@ -394,7 +401,7 @@ class SQLitePayablesRepository:
             for line_id, quantity in normalized_quantities.items():
                 row = line_rows[line_id]
                 already_received = self._received_quantity(line_id)
-                if already_received + Decimal(quantity) > _stored_quantity(
+                if exact_sum((already_received, Decimal(quantity))) > _stored_quantity(
                     row["ordered_quantity"], field=f"ordered quantity {line_id}"
                 ):
                     raise PlatformError(f"Receipt exceeds ordered quantity for line {line_id}.")
@@ -593,14 +600,27 @@ class SQLitePayablesRepository:
         return self.get_supplier_invoice(invoice_id)
 
     def run_three_way_match(self, invoice_id: str, *, actor_label: str = "local-cli") -> ThreeWayMatchResult:
+        require_permission(self.connection, actor_label=actor_label, permission="payables.match")
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            return self._match_supplier_invoice(invoice_id, actor_label=actor_label)
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise PlatformError("Unable to complete supplier invoice matching.") from exc
+        except Exception:
+            self.connection.rollback()
+            raise
+
+    def _match_supplier_invoice(self, invoice_id: str, *, actor_label: str) -> ThreeWayMatchResult:
         """Compare invoice quantity/price to the linked PO and posted receipts."""
 
-        require_permission(self.connection, actor_label=actor_label, permission="payables.match")
         invoice = self.get_supplier_invoice(invoice_id)
+        if invoice["status"] not in {"Submitted", "Matched", "Exception"}:
+            raise PlatformError("Only a submitted supplier invoice can be matched.")
         po_id = str(invoice["purchase_order_id"] or "")
         po = self.get_purchase_order(po_id) if po_id else None
         po_lines = {str(row["id"]): row for row in po["lines"]} if po is not None else {}
-        quantity_variance = Decimal("0")
+        quantities: dict[str, Decimal] = {}
         price_variance = Decimal("0")
         total_variance = Decimal("0")
         reasons: list[str] = []
@@ -612,20 +632,19 @@ class SQLitePayablesRepository:
             if po_line is None:
                 reasons.append(f"AP-3WM-UNKNOWN-LINE:{line_id}")
                 continue
-            received = self._received_quantity(line_id)
             invoiced = _stored_quantity(line["invoiced_quantity"], field=f"invoiced quantity {line_id}")
-            quantity_variance += invoiced - received
-            unit_price_delta = Decimal(int(line["unit_price_minor"])) - Decimal(int(po_line["unit_price_minor"]))
-            price_variance += unit_price_delta * invoiced
-            expected_total = _rounded_minor(Decimal(int(po_line["unit_price_minor"])) * invoiced)
-            total_variance += Decimal(int(line["line_total_minor"])) - expected_total
-            if invoiced > received:
-                reasons.append(f"AP-3WM-QUANTITY:{line_id}")
+            quantities[line_id] = exact_sum((quantities.get(line_id, Decimal(0)), invoiced))
+            unit_price_delta = Decimal(int(line["unit_price_minor"]) - int(po_line["unit_price_minor"]))
+            price_variance = exact_sum((price_variance, exact_product(unit_price_delta, invoiced)))
+            expected_total = _rounded_minor(exact_product(Decimal(int(po_line["unit_price_minor"])), invoiced))
+            total_variance = exact_sum((total_variance, Decimal(int(line["line_total_minor"]) - expected_total)))
             if unit_price_delta != 0:
                 reasons.append(f"AP-3WM-PRICE:{line_id}")
+        quantity_variance, exceeded = self._quantity_capacity(invoice_id, quantities, po_lines)
+        reasons.extend(f"AP-3WM-QUANTITY:{line_id}" for line_id in exceeded)
         status = (
             "Passed"
-            if not reasons and quantity_variance == 0 and price_variance == 0 and total_variance == 0
+            if not reasons and price_variance == 0 and total_variance == 0
             else "Exception"
         )
         reason = ";".join(sorted(set(reasons)))
@@ -730,14 +749,28 @@ class SQLitePayablesRepository:
         expected_version: int,
         actor_label: str = "local-cli",
     ) -> dict[str, Any]:
-        """Approve only a passed/matched invoice, enforcing optimistic concurrency."""
-
         require_permission(self.connection, actor_label=actor_label, permission="payables.approve")
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            return self._approve_supplier_invoice(invoice_id, expected_version=expected_version, actor_label=actor_label)
+        except sqlite3.DatabaseError as exc:
+            self.connection.rollback()
+            raise PlatformError("Unable to approve supplier invoice.") from exc
+        except Exception:
+            self.connection.rollback()
+            raise
+
+    def _approve_supplier_invoice(
+        self, invoice_id: str, *, expected_version: int, actor_label: str
+    ) -> dict[str, Any]:
+        """Recheck cumulative consumption while holding the SQLite writer lock."""
+
         invoice = self.get_supplier_invoice(invoice_id)
         if str(invoice["status"]) != "Matched":
             raise PlatformError("Only a supplier invoice with a passed three-way match can be approved.")
         if same_actor(invoice.get("created_by"), actor_label):
             raise PlatformError("Separation of duties conflict: invoice creator cannot approve the same invoice.")
+        self._check_approval_quantity(invoice)
         now = utc_now_text()
         try:
             cursor = self.connection.execute(
@@ -959,13 +992,48 @@ class SQLitePayablesRepository:
             """,
             (purchase_order_line_id,),
         ).fetchall()
-        return sum(
-            (
-                _stored_quantity(row["received_quantity"], field=f"received quantity {purchase_order_line_id}")
-                for row in rows
-            ),
-            Decimal("0"),
+        return exact_sum(
+            _stored_quantity(row["received_quantity"], field=f"received quantity {purchase_order_line_id}")
+            for row in rows
         )
+
+    def _quantity_capacity(
+        self, invoice_id: str, quantities: dict[str, Decimal], po_lines: dict[str, Any]
+    ) -> tuple[Decimal, tuple[str, ...]]:
+        available = {}
+        for line_id in sorted(quantities):
+            rows = self.connection.execute(
+                """SELECT lines.invoiced_quantity FROM ap_supplier_invoice_lines lines
+                   JOIN ap_supplier_invoices invoices ON invoices.id=lines.supplier_invoice_id
+                   WHERE lines.purchase_order_line_id=? AND invoices.id<>?
+                     AND invoices.status IN ('Approved','Paid') ORDER BY invoices.id,lines.id""",
+                (line_id, invoice_id),
+            ).fetchall()
+            consumed = exact_sum(
+                _stored_quantity(row["invoiced_quantity"], field=f"approved quantity {line_id}") for row in rows
+            )
+            available[line_id] = (
+                _stored_quantity(po_lines[line_id]["ordered_quantity"], field=f"ordered quantity {line_id}"),
+                self._received_quantity(line_id),
+                consumed,
+            )
+        return quantity_capacity(quantities, available)
+
+    def _check_approval_quantity(self, invoice: dict[str, Any]) -> None:
+        order = self.get_purchase_order(str(invoice["purchase_order_id"] or ""))
+        po_lines = {str(line["id"]): line for line in order["lines"]}
+        quantities: dict[str, Decimal] = {}
+        for line in invoice["lines"]:
+            line_id = str(line["purchase_order_line_id"] or "")
+            if line_id not in po_lines:
+                raise PlatformError("Invoice quantity references an unknown purchase-order line.")
+            quantities[line_id] = exact_sum((
+                quantities.get(line_id, Decimal(0)),
+                _stored_quantity(line["invoiced_quantity"], field=f"invoiced quantity {line_id}"),
+            ))
+        _variance, exceeded = self._quantity_capacity(str(invoice["id"]), quantities, po_lines)
+        if exceeded:
+            raise PlatformError("Supplier invoice quantity exceeds available received or ordered quantity.")
 
     def _workspace_name(self, workspace_id: str) -> str:
         row = self.connection.execute("SELECT name FROM workspaces WHERE id = ?", (workspace_id,)).fetchone()
@@ -1098,14 +1166,11 @@ def _stored_quantity(value: object, *, field: str, allow_zero: bool = False) -> 
 
 
 def _decimal_text(value: Decimal) -> str:
-    normalized = value.normalize()
-    if normalized == 0:
-        return "0"
-    return format(normalized, "f")
+    return quantity_text(value)
 
 
 def _rounded_minor(value: Decimal) -> int:
-    return int(value.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return rounded_minor(value)
 
 
 def _normalize_po_lines(lines: Sequence[PurchaseOrderLineInput]) -> list[PurchaseOrderLineInput]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from pathlib import Path
@@ -25,13 +26,14 @@ from reconforge.infrastructure.postgres_journals import POSTGRES_JOURNAL_SCHEMA_
 from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_payables import POSTGRES_PAYABLES_SCHEMA_SQL
+from tests.postgres_test_hygiene import PAYABLES_TENANT_CLEANUP_PLAN, cleanup_postgres_test_tenants_as_admin
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
 def test_live_server_payables_http_lifecycle_is_scoped_exact_and_human_governed(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
-    psycopg = pytest.importorskip("psycopg")
+    pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
     app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
@@ -226,6 +228,13 @@ def test_live_server_payables_http_lifecycle_is_scoped_exact_and_human_governed(
             matched = client.post(f"/api/v1/payables/invoices/{invoice_id}/match", headers=matcher_headers)
             assert matched.status_code == 200, matched.text
             assert matched.json()["status"] == "Passed"
+            second_payload = json.loads(invoice.request.content)
+            second_payload["invoice_number"] = "INV-HTTP-SECOND"
+            second = client.post("/api/v1/payables/invoices", headers=maker_headers, json=second_payload)
+            assert second.status_code == 200, second.text
+            second_id = second.json()["id"]
+            assert client.post(f"/api/v1/payables/invoices/{second_id}/submit", headers=maker_headers, json={"expected_version": 1}).status_code == 200
+            assert client.post(f"/api/v1/payables/invoices/{second_id}/match", headers=matcher_headers).json()["status"] == "Passed"
             approved_invoice = client.post(
                 f"/api/v1/payables/invoices/{invoice_id}/approve",
                 headers=checker_headers,
@@ -233,6 +242,12 @@ def test_live_server_payables_http_lifecycle_is_scoped_exact_and_human_governed(
             )
             assert approved_invoice.status_code == 200, approved_invoice.text
             assert approved_invoice.json()["approved_by"] == checker.id
+            duplicate = client.post(
+                f"/api/v1/payables/invoices/{second_id}/approve", headers=checker_headers, json={"expected_version": 3},
+            )
+            assert duplicate.status_code == 400, duplicate.text
+            assert duplicate.json()["error"]["code"] == "payables_request_invalid"
+            assert "quantity" in duplicate.text
 
             suppliers = client.get("/api/v1/payables/suppliers", headers=checker_headers, params={"workspace": "spoofed-workspace"})
             invoices = client.get("/api/v1/payables/invoices", headers=checker_headers, params={"workspace": "spoofed-workspace"})
@@ -243,14 +258,13 @@ def test_live_server_payables_http_lifecycle_is_scoped_exact_and_human_governed(
             assert suppliers.status_code == 200, suppliers.text
             assert suppliers.json()["pagination"]["total"] == 1
             assert invoices.status_code == 200, invoices.text
-            assert invoices.json()["pagination"]["total"] == 1
+            assert invoices.json()["pagination"]["total"] == 2
             assert denied_workspace.status_code == 403
             assert denied_workspace.json()["error"]["code"] == "workspace_scope_denied"
     finally:
         try:
-            with admin.transaction():
-                admin.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant_id,))
-        except psycopg.Error:
-            pass
+            cleanup_postgres_test_tenants_as_admin(
+                admin, tenant_ids=(tenant_id,), plan=PAYABLES_TENANT_CLEANUP_PLAN,
+            )
         finally:
             admin.close()

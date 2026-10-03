@@ -1,4 +1,17 @@
-﻿# ReconForge Execution Evidence Log
+# ReconForge Execution Evidence Log
+
+- Current bootstrap: POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json binds clean
+  cd67fc67,96pass/0skip, unchanged historical0078, current constraints/policies,
+  forced RLS/FK denials and restored0097 synthetic cleanup guards. Global
+  Ruff/Mypy/Bandit pass; original failures remain preserved.
+- OpenSSL runtime: OPENSSL_RUNTIME_2026-10-03.json binds68bfea5b, two signed
+  official indexes/four verified APKs/existing base keys, offline installation,
+ 52.180s full image build and six successful commands. Tested image digest and
+  original unknown-checksum/ldd failures are retained; hosted acceptance is separate.
+- C56 regression: POSTING_CASH_REGRESSION_C56_2026-10-03.json binds3,831pass/
+ 309prerequisites/0fail/0error,24warnings, JUnit1539.518s/harness1545.734s and
+  unchanged2,988-source manifests plus global quality/build. The failed d4 artifact
+  remains unchanged; overlapping selections are not summed.
 
 PR112's [source-checksum review](POSTING_CASH_SOURCE_DIGEST_FINDINGS_2026-10-03.json)
 binds seven exact Git-blob SHA-256 matches, fourteen narrow fingerprints and
@@ -6,7 +19,8 @@ before/after artifact hashes at `43bafc9d`. Local Gitleaks 8.30.1 full-history
 and current-tree scans report zero findings in 10.891s and 3.282s; 35 policy tests
 pass with no skips in 14.938s process time. Checked sources and HEAD are stable.
 The prior d4 full-regression failure report is unchanged. These local checks do
-not establish a successful remote rerun or replace the pending clean full gate.
+not establish subsequent hosted acceptance. The fresh clean c56 whole gate is
+separately retained above.
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 

@@ -1,0 +1,150 @@
+{
+  "schema_version": "postgres-current-bootstrap-evidence-v1",
+  "status": "passed-bounded-local-live-gate",
+  "source_commit": "cd67fc67e8563a258e1e1d592e193840c1bc92e5",
+  "counts": {
+    "tests": 96,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "junit_seconds": 120.64,
+  "runtime": {
+    "label": "frozen-final",
+    "before": {
+      "head": "cd67fc67e8563a258e1e1d592e193840c1bc92e5",
+      "tracked_tree_clean": true,
+      "source_hashes": {
+        "reconforge/infrastructure/postgres_consolidation_close_scope.py": "24aad1bbbd62f0789c5ef0d86c2abe6aeb903c0d723899bf100a262c099e7761",
+        "tests/test_api_server_identity.py": "71d95ae8e609fc2e8332a7461505abb4f44e8f83af65e012c6a6c8dcb4a27539",
+        "tests/test_postgres_matching_application.py": "6c43e75e2253fa0823ff5321cd67b4d7a96c4b4b0a470117ffdd7d1428e3d9f2",
+        "alembic/versions/0078_postgres_consolidation_close_scope.py": "7da4bccaa5d3bd39b03142f6e4a30ee10c7406d9b85c34af3b875d50126fa136",
+        "tests/test_postgres_close_scope_bootstrap.py": "3d1505fbe82ca34319fa3d81b86b7059a3803443b9033eb760e83b1a62d079b2",
+        ".github/workflows/ci.yml": "fa0575b4d725d9bb31384041ac425b8074681d83e9b6fc3613aafb4ac201a42c"
+      }
+    },
+    "database": "rf_bootstrap_60394cce4bf9",
+    "commands": [
+      {
+        "name": "migration",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "alembic",
+          "-c",
+          "alembic.ini",
+          "upgrade",
+          "head"
+        ],
+        "exit_code": 0,
+        "duration_seconds": 10.32,
+        "log": "bootstrap-frozen-final-migration.log",
+        "sha256": "57e7efc59e7aeb97f019c40d5434924ffe4ceca4555e5d8e1ff8f623a12123df"
+      },
+      {
+        "name": "pytest",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "pytest",
+          "tests/test_postgres_matching_application.py",
+          "tests/test_api_server_identity.py",
+          "tests/test_postgres_close_scope_bootstrap.py",
+          "tests/test_postgres_consolidation_close.py",
+          "tests/test_postgres_reconciliation_input_seal.py",
+          "tests/test_alembic_postgres.py",
+          "tests/test_supply_chain_policy.py",
+          "-ra",
+          "--tb=short",
+          "-o",
+          "addopts=",
+          "--junitxml",
+          "F:\\reconforge-erp\\output\\verification-2026-10-03\\ci-triage\\bootstrap-frozen-final.xml"
+        ],
+        "exit_code": 0,
+        "duration_seconds": 124.775,
+        "log": "bootstrap-frozen-final-pytest.log",
+        "sha256": "2a5194d5ae6f3253e9580365b143a841cb0dc7cee0cc4b74956f5b22a8d92bc2"
+      }
+    ],
+    "database_removed": true,
+    "after": {
+      "head": "cd67fc67e8563a258e1e1d592e193840c1bc92e5",
+      "tracked_tree_clean": true,
+      "source_hashes": {
+        "reconforge/infrastructure/postgres_consolidation_close_scope.py": "24aad1bbbd62f0789c5ef0d86c2abe6aeb903c0d723899bf100a262c099e7761",
+        "tests/test_api_server_identity.py": "71d95ae8e609fc2e8332a7461505abb4f44e8f83af65e012c6a6c8dcb4a27539",
+        "tests/test_postgres_matching_application.py": "6c43e75e2253fa0823ff5321cd67b4d7a96c4b4b0a470117ffdd7d1428e3d9f2",
+        "alembic/versions/0078_postgres_consolidation_close_scope.py": "7da4bccaa5d3bd39b03142f6e4a30ee10c7406d9b85c34af3b875d50126fa136",
+        "tests/test_postgres_close_scope_bootstrap.py": "3d1505fbe82ca34319fa3d81b86b7059a3803443b9033eb760e83b1a62d079b2",
+        ".github/workflows/ci.yml": "fa0575b4d725d9bb31384041ac425b8074681d83e9b6fc3613aafb4ac201a42c"
+      }
+    },
+    "sources_unchanged": true
+  },
+  "quality": [
+    {
+      "name": "ruff",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "source_commit": "cd67fc67e8563a258e1e1d592e193840c1bc92e5",
+      "exit_code": 0,
+      "duration_seconds": 0.37,
+      "log": "bootstrap-cd67-ruff.log",
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "source_commit": "cd67fc67e8563a258e1e1d592e193840c1bc92e5",
+      "exit_code": 0,
+      "duration_seconds": 7.193,
+      "log": "bootstrap-cd67-mypy.log",
+      "sha256": "f0fdfa8c1281acf8e2d3281f5f560fa53db703eb9da2075ad6c3ec0d67139c4d"
+    },
+    {
+      "name": "bandit",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "source_commit": "cd67fc67e8563a258e1e1d592e193840c1bc92e5",
+      "exit_code": 0,
+      "duration_seconds": 34.26,
+      "log": "bootstrap-cd67-bandit.log",
+      "sha256": "f388f7e286034b2c19684a9edf5478de1ab9e79606bfbbb71d1053f4adc67b99"
+    }
+  ],
+  "artifacts": {
+    "bootstrap-before.json": "d0ae012a03aa50d02422987b89819245b3b0219cbd9bf2000dc1211f3d184986",
+    "bootstrap-before-v2.json": "bf0339b9e087b9d62e5cd9c6b5fed870b1f65f6701a6d8a4ae18003eac2d3f3c",
+    "bootstrap-before-v2.xml": "7f7d0b98b2a776364db38b0149c9672ad5afc1b697cc79f2e7f30a7b65d0c73a",
+    "bootstrap-candidate-v1.json": "7935c1a64537898e04037be12cc3f865b908b9168e87453fc21ee31b37aafe93",
+    "bootstrap-candidate-v2.json": "2338ac83fde06604bafaff5e1128ca5dd427becbd8e290c3d576c5fb8af28bb7",
+    "bootstrap-candidate-v3.json": "957873f42e3c938b5dc15133844d55784943a44a1f119019da16f8d5a9463ffe",
+    "bootstrap-frozen-final.json": "724a7f21a63acc107a5600265a85a6a24edb755c54f974eead48104307cf75e4",
+    "bootstrap-frozen-final.xml": "cb7b804750fa3394b9bab82101f84aad45427345199934723c030ed670efef1b",
+    "bootstrap-cd67-quality.json": "4d7f9be5c06607f1600756a1214c65c3ae4eec38bdff0b013a891330b5917ce4"
+  },
+  "limits": [
+    "historical0078 SQL unchanged",
+    "current-only installer repair",
+    "legacy global close uniques retained",
+    "trusted schema owner remains trusted",
+    "hosted acceptance pending"
+  ]
+}

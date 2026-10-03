@@ -146,5 +146,19 @@
     "legacy global close uniques retained",
     "trusted schema owner remains trusted",
     "hosted acceptance pending"
-  ]
+  ],
+  "independent_review": {
+    "status": "accepted",
+    "actual_passed": 3,
+    "skipped": 0,
+    "duration_seconds": 14.95,
+    "migration_seconds": 11.128,
+    "owned_database_removed": true,
+    "runtime_hashes_match": true,
+    "guard_states_restored_on_success_and_injected_abort": true,
+    "head_before_after": "852508968462ec9957e46e39bb2aab507960b572",
+    "tracked_tree_clean": false,
+    "nonruntime_changes": "root metadata/Gitleaks changes only",
+    "artifact_sha256": "4d759446e18223ee9b892d4ba7131237ededf3d3e6de0dcd0c04fc00ecd0d048"
+  }
 }

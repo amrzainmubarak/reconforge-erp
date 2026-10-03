@@ -1,5 +1,12 @@
 # ReconForge Execution Evidence Log
 
+- Current downgrade test: POSTING_DOWNGRADE_TEST_REPAIR_2026-10-03.json retains
+ actual3red/9deselected and12green/0skip restricted-role PostgreSQL16.14 cases,
+ 677stable runtime/migration/fixture hashes and15owned database removals. Only
+ the assertion now reads its actual pre-downgrade revision; refusal and partial
+ provenance column checks remain unchanged. Original e638 hosted8success-shard/
+ 1failed-Finance result and failing aggregate remain separate retained evidence.
+
 - Whole e638: AR_POLICY_REGRESSION_E638_2026-10-03.json binds4481collected,
  4115pass/366explicit service/platform prerequisites/0fail/0error/24warnings,
  3,057unchanged tracked files and passed global quality/build. Its renamed tree

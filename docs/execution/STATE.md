@@ -41,8 +41,10 @@ Hosted PR1128d76647c is successful; PR1138ba6772d timed out at30minutes; PR11480
 failed its stale target/empty-digest secret finding. Exact reports remain separate.
 New invoice-recovery whole/hosted acceptance remains pending. Original e638
 hostedPython3.11/3.12 pass4117/364prerequisites each; finance-posting shard fails
-three stale0098 expectations after its fixture upgrades to0099. Current test-only
-repair must preserve the exact pre-downgrade revision and provenance columns;
+three stale0098 expectations after its fixture upgrades to0099. The test-only
+repair now passes all12actual PostgreSQL concurrency cases without skips, with
+677stable runtime/migration/fixture hashes and15owned red/green databases removed.
+The exact pre-downgrade revision and provenance columns are both preserved;
 this failure is retained separately from local whole success. Original exact-head
 outcomes are never reassigned to renamed commits.
 

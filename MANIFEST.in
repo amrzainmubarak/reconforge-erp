@@ -1153,3 +1153,4 @@ include docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-03.js
 include docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-10-03.json
 include docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-03.json
 include docs/execution/FOUNDATION_VERIFICATION_2026-10-03.json
+include docs/adr/0799-portable-evidence-reference-validation.md

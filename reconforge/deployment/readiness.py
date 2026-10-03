@@ -7,7 +7,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import cast
 
 from reconforge.io.structured import StructuredDocumentError, read_yaml_document
@@ -81,10 +81,21 @@ def _mapping(value: object, label: str) -> Mapping[str, object]:
     return cast(Mapping[str, object], value)
 
 
+def _is_relative_evidence_reference(value: object) -> bool:
+    """Reject anchored POSIX and Windows paths regardless of the reader's host."""
+
+    return (
+        isinstance(value, str)
+        and bool(value)
+        and not PurePosixPath(value).anchor
+        and not PureWindowsPath(value).anchor
+    )
+
+
 def _relative_evidence_path(value: object, *, root: Path) -> None:
-    if not isinstance(value, str) or not value or Path(value).is_absolute():
+    if not _is_relative_evidence_reference(value):
         raise DeploymentReadinessError("evidence paths must be relative")
-    candidate = (root / value).resolve()
+    candidate = (root / cast(str, value)).resolve()
     try:
         candidate.relative_to(root.resolve())
     except ValueError as exc:
@@ -108,8 +119,9 @@ def _verify_evidence_digests(
             raise DeploymentReadinessError("evidence digest fields do not match the closed contract")
         path = digest["path"]
         sha256 = digest["sha256"]
-        if not isinstance(path, str) or not path or Path(path).is_absolute():
+        if not _is_relative_evidence_reference(path):
             raise DeploymentReadinessError("evidence digest paths must be relative")
+        path = cast(str, path)
         if (
             not isinstance(sha256, str)
             or len(sha256) != 64

@@ -775,7 +775,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL,
     )
     from reconforge.infrastructure.postgres_consolidation_close_scope import (
-        POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL,
+        install_postgres_consolidation_close_scope_schema,
     )
     from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
         POSTGRES_CONSOLIDATION_DEFERRED_TAX_SCHEMA_SQL,
@@ -864,7 +864,7 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             # a fresh database; do not depend on earlier tests installing them.
             admin.execute(POSTGRES_CONSOLIDATION_PPA_SCOPE_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_IMPAIRMENT_DEFERRED_TAX_SCOPE_SCHEMA_SQL)
-            admin.execute(POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL)
+            install_postgres_consolidation_close_scope_schema(admin)
             admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
             admin.execute(POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL)
             admin.execute(

@@ -201,13 +201,32 @@ END $reconforge$;
 """
 
 
-def install_postgres_consolidation_close_scope_schema(connection: Any) -> None:
-    """Install hierarchy attribution and RLS for all close records."""
+# Revision 0078 imports the historical constant above. Preserve those exact
+# migration bytes; a current installation must compare pg_constraint's `name`
+# identifiers after PostgreSQL applies its identifier-length limit. Otherwise
+# repeated installation attempts to recreate the already truncated constraint.
+POSTGRES_CONSOLIDATION_CLOSE_SCOPE_CURRENT_SCHEMA_SQL = (
+    POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL.replace(
+        "conname = close_table_name || '_organization_scope_fkey'",
+        "conname = (close_table_name || '_organization_scope_fkey')::name",
+    ).replace(
+        "conname = close_table_name || '_legal_entity_scope_fkey'",
+        "conname = (close_table_name || '_legal_entity_scope_fkey')::name",
+    ).replace(
+        "conname='consolidation_close_ownership_change_links_hierarchy_entity_unique'",
+        "conname='consolidation_close_ownership_change_links_hierarchy_entity_unique'::name",
+    )
+)
 
-    connection.execute(POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL)
+
+def install_postgres_consolidation_close_scope_schema(connection: Any) -> None:
+    """Install the current hierarchy schema without changing revision 0078."""
+
+    connection.execute(POSTGRES_CONSOLIDATION_CLOSE_SCOPE_CURRENT_SCHEMA_SQL)
 
 
 __all__ = [
     "POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL",
+    "POSTGRES_CONSOLIDATION_CLOSE_SCOPE_CURRENT_SCHEMA_SQL",
     "install_postgres_consolidation_close_scope_schema",
 ]

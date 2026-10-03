@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import pytest
 
 from reconforge.application.scheduler import ScheduleProcessResult
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.deployment import WorkerPermissionManifest
+from reconforge.infrastructure.postgres import _RUNTIME_ROLE_SAFETY_SQL
 from reconforge.workers import postgres_scheduler as worker_module
 from reconforge.workers.postgres_scheduler import (
     PostgresSchedulerWorker,
@@ -22,6 +24,13 @@ class _Connection:
 
     def close(self) -> None:
         self.closed = True
+
+    def execute(self, sql: str) -> SimpleNamespace:
+        assert sql == _RUNTIME_ROLE_SAFETY_SQL
+        return SimpleNamespace(fetchone=lambda: (True,))
+
+    def rollback(self) -> None:
+        return None
 
 
 class _Factory:

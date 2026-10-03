@@ -17,6 +17,7 @@ import pytest
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.deployment import WorkerPermissionManifest
 from reconforge.infrastructure.postgres import (
+    _RUNTIME_ROLE_SAFETY_SQL,
     PostgresConnectionFactory,
     PostgresSettings,
     PostgresTenantBoundary,
@@ -100,8 +101,13 @@ class _ReconciliationConnection:
     def close(self) -> None:
         return None
 
+    def rollback(self) -> None:
+        return None
+
     def execute(self, sql: str, params: tuple[Any, ...] | None = None) -> _Cursor:
         self.executed.append((sql, params))
+        if sql == _RUNTIME_ROLE_SAFETY_SQL:
+            return _Cursor(row=(True,))
         normalized = " ".join(sql.split()).lower()
         if normalized.startswith("select pg_advisory_xact_lock") or normalized.startswith("select event_hash"):
             return _Cursor()

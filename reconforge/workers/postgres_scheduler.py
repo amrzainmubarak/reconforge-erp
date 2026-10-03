@@ -11,7 +11,7 @@ from typing import Any
 from reconforge.application.scheduler import ScheduleProcessResult, SchedulerApplicationService
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.deployment.worker_permissions import WorkerPermissionManifest
-from reconforge.infrastructure.postgres import validate_tenant_id
+from reconforge.infrastructure.postgres import PostgresRuntimeConnectionFactory, validate_tenant_id
 from reconforge.infrastructure.postgres_scheduler import PostgresScheduleRepository
 from reconforge.workers.policy import WorkerPolicyContextSupplier, require_service_worker_policy
 
@@ -126,7 +126,7 @@ class PostgresSchedulerWorker:
         settings: PostgresSchedulerWorkerSettings,
         clock: Callable[[], datetime] = _utc_now,
     ) -> None:
-        self.connection_factory = connection_factory
+        self.connection_factory = PostgresRuntimeConnectionFactory(connection_factory)
         self.tenant_supplier = tenant_supplier
         self.settings = settings
         self.clock = clock

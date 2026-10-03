@@ -7,6 +7,7 @@ from threading import Event
 from typing import Any
 
 from reconforge.infrastructure.postgres import (
+    PostgresRuntimeConnectionFactory,
     PostgresTenantBoundary,
     validate_legal_entity_id,
     validate_organization_id,
@@ -34,7 +35,7 @@ class PostgresOutboxWorker:
         publisher: Callable[[PostgresOutboxEvent], None] | Any,
         settings: OutboxWorkerSettings,
     ) -> None:
-        self.connection_factory = connection_factory
+        self.connection_factory = PostgresRuntimeConnectionFactory(connection_factory)
         self.tenant_supplier = tenant_supplier
         self.publisher = publisher
         self.settings = settings

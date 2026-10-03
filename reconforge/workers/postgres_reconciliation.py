@@ -14,7 +14,7 @@ from typing import Any, Protocol, cast
 from reconforge.application.matching import LEGACY_RECORD_IDENTITY_POLICY
 from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.deployment.worker_permissions import WorkerPermissionManifest
-from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres import PostgresRuntimeConnectionFactory, PostgresTenantBoundary
 from reconforge.infrastructure.postgres_reconciliation import (
     PostgresReconciliationBusyError,
     PostgresReconciliationRepository,
@@ -778,7 +778,7 @@ class PostgresReconciliationWorker:
         matcher: ReconciliationMatcher,
         settings: PostgresReconciliationWorkerSettings,
     ) -> None:
-        self.connection_factory = connection_factory
+        self.connection_factory = PostgresRuntimeConnectionFactory(connection_factory)
         self.tenant_supplier = tenant_supplier
         self.matcher = matcher
         self.settings = settings

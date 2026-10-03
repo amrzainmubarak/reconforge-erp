@@ -8,7 +8,8 @@ tenant scope when the ``server`` extra is installed.
 The application role used with the schema in this module must not own the
 tables and must not be a PostgreSQL superuser or a role with ``BYPASSRLS``.
 Those operational requirements are part of the security boundary and are
-documented in the PostgreSQL ADR.
+enforced on every application/worker lease by the runtime factories. Generic
+factories remain available for administrative migrations and backup operations.
 """
 
 from __future__ import annotations
@@ -33,6 +34,10 @@ class PostgresConfigurationError(ValueError):
 
 class PostgresUnavailableError(RuntimeError):
     """Raised when the optional PostgreSQL driver is not installed."""
+
+
+class PostgresRuntimeRoleError(PostgresConfigurationError):
+    """The runtime connection could not establish a safe database role."""
 
 
 class PostgresConnectionPoolClosedError(RuntimeError):
@@ -343,6 +348,136 @@ class PostgresPooledConnectionFactory(PostgresConnectionFactory):
         return self._pool.snapshot
 
 
+# PostgreSQL 16+ SET membership and USAGE inheritance are different capabilities.
+# A SET-reachable identity can inherit ownership from another role. ADMIN on a
+# membership allows granting SET back to oneself, including ADMIN available
+# through an inherited role, so those edges are reachable too.
+# Catalogs/functions are qualified against a modified search_path.
+_RUNTIME_ROLE_SAFETY_SQL = """
+WITH RECURSIVE reachable_identities(oid) AS (
+    SELECT oid
+    FROM pg_catalog.pg_roles
+    WHERE rolname IN (SESSION_USER, CURRENT_USER)
+    UNION
+    SELECT membership.roleid
+    FROM reachable_identities identity
+    JOIN pg_catalog.pg_auth_members membership
+      ON (membership.member = identity.oid AND membership.set_option)
+      OR (membership.admin_option
+          AND pg_catalog.pg_has_role(identity.oid, membership.member, 'USAGE'))
+), runtime_identities AS MATERIALIZED (
+    SELECT role.* FROM pg_catalog.pg_roles role
+    JOIN reachable_identities identity ON identity.oid = role.oid
+), protected_owners AS MATERIALIZED (
+    SELECT datdba AS owner FROM pg_catalog.pg_database WHERE datname = pg_catalog.current_database()
+    UNION
+    SELECT nspowner FROM pg_catalog.pg_namespace
+    WHERE nspname !~ '^pg_' AND nspname <> 'information_schema'
+    UNION
+    SELECT c.relowner FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+    UNION
+    SELECT p.proowner FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+)
+SELECT CURRENT_USER = SESSION_USER
+   AND pg_catalog.current_setting('row_security') = 'on'
+   AND COALESCE(pg_catalog.current_setting('app.tenant_id', true), '') = ''
+   AND COALESCE(pg_catalog.current_setting('app.organization_id', true), '') = ''
+   AND COALESCE(pg_catalog.current_setting('app.workspace_id', true), '') = ''
+   AND COALESCE(pg_catalog.current_setting('app.legal_entity_id', true), '') = ''
+   AND COALESCE(pg_catalog.current_setting('app.entity_id', true), '') = ''
+   AND NOT EXISTS (
+       SELECT 1 FROM runtime_identities
+       WHERE rolsuper OR rolbypassrls OR rolcreaterole OR rolcreatedb OR rolreplication
+   )
+   AND NOT EXISTS (
+       SELECT 1 FROM runtime_identities identity
+       JOIN protected_owners owned
+         ON pg_catalog.pg_has_role(identity.oid, owned.owner, 'USAGE')
+   )
+   AND NOT EXISTS (
+       SELECT 1 FROM runtime_identities identity
+       JOIN pg_catalog.pg_roles privileged
+         ON privileged.rolname IN (
+             'pg_read_server_files', 'pg_write_server_files', 'pg_execute_server_program'
+         )
+       WHERE pg_catalog.pg_has_role(identity.oid, privileged.oid, 'USAGE')
+   )
+   AS runtime_role_safe
+"""
+
+
+def _validate_runtime_connection(connection: Any) -> Any:
+    """Validate one fresh lease and discard it on rejection or catalog failure.
+
+    One catalog query and rollback precede application transactions on every
+    checkout; there is no cached safety result. This detects deployment role
+    mistakes and privilege drift between leases. Database administrators and
+    application code remain trusted: a shared role can set tenant GUCs, and an
+    administrator can change privileges after this check.
+    """
+
+    try:
+        row = connection.execute(_RUNTIME_ROLE_SAFETY_SQL).fetchone()
+        connection.rollback()
+        if row is None or row[0] is not True:
+            raise PostgresRuntimeRoleError("PostgreSQL runtime role safety check failed.")
+    except Exception:
+        try:
+            if isinstance(connection, _PooledPostgresConnection):
+                connection.discard()
+            else:
+                connection.close()
+        except Exception:
+            raise PostgresRuntimeRoleError("PostgreSQL runtime role safety check failed.") from None
+        raise PostgresRuntimeRoleError("PostgreSQL runtime role safety check failed.") from None
+    return connection
+
+
+class PostgresRuntimePooledConnectionFactory(PostgresPooledConnectionFactory):
+    """Application pool enforcing runtime role safety on every lease."""
+
+    def connect(self) -> Any:
+        try:
+            connection = super().connect()
+        except Exception:
+            raise PostgresRuntimeRoleError("PostgreSQL runtime connection unavailable.") from None
+        return _validate_runtime_connection(connection)
+
+
+class PostgresRuntimeConnectionFactory:
+    """Enforce runtime safety for workers supplied with any connection factory.
+
+    Generic factories remain available for administrative migrations and backup
+    operations. Wrapping an already guarded application pool does not duplicate
+    the query; that pool still validates each checkout itself.
+    """
+
+    def __init__(self, connection_factory: ConnectionFactory) -> None:
+        self.connection_factory = connection_factory
+
+    def connect(self) -> Any:
+        try:
+            connection = self.connection_factory.connect()
+        except PostgresRuntimeRoleError:
+            raise
+        except Exception:
+            raise PostgresRuntimeRoleError("PostgreSQL runtime connection unavailable.") from None
+        if isinstance(
+            self.connection_factory, (PostgresRuntimeConnectionFactory, PostgresRuntimePooledConnectionFactory)
+        ):
+            return connection
+        return _validate_runtime_connection(connection)
+
+    def close(self) -> None:
+        closer = getattr(self.connection_factory, "close", None)
+        if callable(closer):
+            closer()
+
+
 class _PooledPostgresConnection:
     """Minimal proxy whose close returns its underlying connection to a pool."""
 
@@ -359,6 +494,19 @@ class _PooledPostgresConnection:
             return
         self._released = True
         self._pool._release(self._connection)
+
+    def discard(self) -> None:
+        """Physically close a rejected lease instead of returning it to idle."""
+
+        if self._released:
+            return
+        self._released = True
+        try:
+            self._connection.close()
+        finally:
+            with self._pool._condition:
+                self._pool._total -= 1
+                self._pool._condition.notify()
 
 
 class _HybridPostgresRow:

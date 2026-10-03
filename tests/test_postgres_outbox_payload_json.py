@@ -125,6 +125,18 @@ class _CorruptWorkerConnection(_CorruptOutboxConnection):
     def close(self) -> None:
         return None
 
+    def rollback(self) -> None:
+        return None
+
+    def execute(self, sql: str, params: tuple[object, ...] = ()) -> Any:
+        from types import SimpleNamespace
+
+        from reconforge.infrastructure.postgres import _RUNTIME_ROLE_SAFETY_SQL
+
+        if sql == _RUNTIME_ROLE_SAFETY_SQL:
+            return SimpleNamespace(fetchone=lambda: (True,))
+        return super().execute(sql, params)
+
 
 class _CorruptWorkerFactory:
     def __init__(self, connection: _CorruptWorkerConnection) -> None:

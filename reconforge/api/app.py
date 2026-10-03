@@ -94,7 +94,7 @@ from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import resolve_db_path
 from reconforge.db.tenancy import TenantDatabaseRouter
 from reconforge.infrastructure.postgres import (
-    PostgresPooledConnectionFactory,
+    PostgresRuntimePooledConnectionFactory,
     PostgresSettings,
 )
 from reconforge.infrastructure.redis import (
@@ -130,11 +130,14 @@ class SPAStaticFiles(StaticFiles):
     """Serve one built SPA without turning missing asset paths into HTML."""
 
     async def get_response(self, path: str, scope: Scope) -> Response:
+        resource_path = path.replace("\\", "/").lstrip("/")
+        if resource_path.split("/", 1)[0] in {"api", "scim"}:
+            raise StarletteHTTPException(status_code=404)
         try:
             return await super().get_response(path, scope)
         except StarletteHTTPException as exc:
             method = str(scope.get("method", "")).upper()
-            leaf = path.rsplit("/", 1)[-1]
+            leaf = resource_path.rsplit("/", 1)[-1]
             if exc.status_code != 404 or method not in {"GET", "HEAD"} or "." in leaf:
                 raise
             return await super().get_response("index.html", scope)
@@ -185,7 +188,7 @@ def create_api_app(
     app.state.tenant_db_router = TenantDatabaseRouter.from_root(tenant_db_root) if tenant_db_root is not None else None
     app.state.postgres_identity_factory = None
     if postgres_dsn is not None:
-        app.state.postgres_identity_factory = PostgresPooledConnectionFactory(
+        app.state.postgres_identity_factory = PostgresRuntimePooledConnectionFactory(
             PostgresSettings(dsn=postgres_dsn, require_tls=postgres_require_tls),
             max_size=postgres_pool_size,
             acquire_timeout_seconds=postgres_pool_acquire_timeout_seconds,
@@ -301,7 +304,7 @@ def create_api_app(
         principal: ServerPrincipal | None = None
         if (
             server_identity_enabled(request)
-            and not request.url.path.startswith("/scim/v2")
+            and request.url.path.startswith("/api/")
             and request.url.path
             not in {
                 "/api/v1/health",
@@ -323,9 +326,17 @@ def create_api_app(
                 presented_credential = request.cookies[BROWSER_SESSION_COOKIE]
                 transport = "browser_cookie"
             if presented_credential:
-                authenticated = await run_in_threadpool(
-                    authenticate_server_request, request, presented_credential
-                )
+                try:
+                    authenticated = await run_in_threadpool(
+                        authenticate_server_request, request, presented_credential
+                    )
+                except APIError as exc:
+                    # Middleware runs outside the router's exception handlers.
+                    # Keep authentication denials actionable and sanitized while
+                    # allowing the outer security-header middleware to run.
+                    denial_response = await api_error_handler(request, exc)
+                    denial_response.headers["x-request-id"] = request.state.request_id
+                    return denial_response
                 if authenticated is not None:
                     principal = server_principal_from_authentication(authenticated)
                     request.state.server_principal = principal
@@ -370,8 +381,6 @@ def create_api_app(
     app.include_router(audit.router, prefix="/api/v1")
     app.include_router(audit_administration.router, prefix="/api/v1")
     app.include_router(workflow.router, prefix="/api/v1")
-    if resolved_web_root is not None:
-        app.mount("/", SPAStaticFiles(directory=resolved_web_root, html=True), name="studio-web")
     app.include_router(accounts.router, prefix="/api/v1")
     app.include_router(close.router, prefix="/api/v1")
     app.include_router(consolidation_close.router, prefix="/api/v1")
@@ -402,6 +411,9 @@ def create_api_app(
     app.include_router(inventory_valuation.router, prefix="/api/v1")
     app.include_router(inventory_valuation_reversal.router, prefix="/api/v1")
     app.include_router(scim.router)
+    if resolved_web_root is not None:
+        # The catch-all SPA must follow every API router in dispatch order.
+        app.mount("/", SPAStaticFiles(directory=resolved_web_root, html=True), name="studio-web")
     authorization_routers = (
         health.router,
         auth.router,

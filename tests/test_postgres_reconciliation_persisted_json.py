@@ -299,7 +299,14 @@ class _CorruptClaimConnection:
     def close(self) -> None:
         return None
 
-    def execute(self, sql: str, _: tuple[object, ...]) -> _Row:
+    def rollback(self) -> None:
+        return None
+
+    def execute(self, sql: str, _: tuple[object, ...] | None = None) -> _Row:
+        from reconforge.infrastructure.postgres import _RUNTIME_ROLE_SAFETY_SQL
+
+        if sql == _RUNTIME_ROLE_SAFETY_SQL:
+            return _Row((True,))
         self.executed.append(" ".join(sql.split()).lower())
         return _Row({"rule_json": "[]"})
 

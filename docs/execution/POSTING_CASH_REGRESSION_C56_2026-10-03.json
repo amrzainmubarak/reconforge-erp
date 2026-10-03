@@ -1,0 +1,154 @@
+{
+  "schema_version": "posting-cash-immutable-verification-v1",
+  "source_commit": "c56f805c6a89466459e7abee18c1e01b03208e81",
+  "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp\\reconforge\\__init__.py",
+  "python_version": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+  "status": "passed",
+  "counts": {
+    "tests": 4140,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 309,
+    "passed": 3831
+  },
+  "warnings": 24,
+  "pytest_duration_seconds": 1539.518,
+  "harness_duration_seconds": 1545.734,
+  "tracked_file_count": 2988,
+  "source_manifest_sha256": "6c4912929dfee0fde7d7087c8f561305fbef67b258cabbddd252c570480558d3",
+  "head_unchanged": true,
+  "tracked_sources_unchanged": true,
+  "tracked_tree_clean": true,
+  "command": [
+    "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "-ra",
+    "--tb=short",
+    "-o",
+    "addopts=",
+    "--junitxml",
+    "C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp\\output\\verification-2026-10-03\\posting-cash-c56-pytest.xml"
+  ],
+  "environment_overrides_cleared": [],
+  "skip_reasons": {
+    "PROD-002 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 14,
+    "PROD-007 requires migrated live PostgreSQL app-role profile; review 2026-10-03": 34,
+    "PROD031 live cash contract requires isolated PostgreSQL creation credentials; review 2026-10-10": 1,
+    "Windows symlink creation requires an external privilege": 1,
+    "live public network evidence is opt-in and may drift": 1,
+    "requires a disposable PostgreSQL administration service": 136,
+    "requires a live PostgreSQL application role": 2,
+    "requires a live PostgreSQL migration service": 1,
+    "requires a live PostgreSQL service": 21,
+    "requires a live Redis service": 3,
+    "requires a live S3-compatible service": 1,
+    "requires a live object-lock-enabled S3-compatible bucket": 1,
+    "requires disposable PostgreSQL source and maintenance services": 1,
+    "requires live PostgreSQL": 78,
+    "requires live PostgreSQL service": 12,
+    "symbolic links are not available in this environment": 1,
+    "symbolic-link creation is unavailable": 1
+  },
+  "quality": [
+    {
+      "name": "ruff",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.487,
+      "head_unchanged": true,
+      "tracked_sources_unchanged": true,
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 22.123,
+      "head_unchanged": true,
+      "tracked_sources_unchanged": true,
+      "log_sha256": "f0fdfa8c1281acf8e2d3281f5f560fa53db703eb9da2075ad6c3ec0d67139c4d"
+    },
+    {
+      "name": "bandit",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 46.745,
+      "head_unchanged": true,
+      "tracked_sources_unchanged": true,
+      "log_sha256": "f388f7e286034b2c19684a9edf5478de1ab9e79606bfbbb71d1053f4adc67b99"
+    },
+    {
+      "name": "build",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp\\output\\verification-2026-10-03\\posting-cash-c56-dist"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 57.744,
+      "head_unchanged": true,
+      "tracked_sources_unchanged": true,
+      "log_sha256": "0c617306665fa1ee3cbf18e41132457b37f8d5d18726d72e43659ca9ef5130aa"
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.117,
+      "head_unchanged": true,
+      "tracked_sources_unchanged": true,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "artifact_sha256": {
+    "posting-cash-c56-pytest.log": "a2515ca8e7aa79e9a072ac95a2f22c48c2777aa6cf817e300732bc2aaf684434",
+    "posting-cash-c56-pytest.xml": "9622cef209571bf0554e3942ff5c463e0b08355443a52008d1213a6a25da865f",
+    "posting-cash-c56-regression.json": "c06a0a26262556951bf3f3e920d3d592f193b6ca8ac4fea50dccf113f49b627e",
+    "posting-cash-c56-quality.json": "a20f630e2809a5d4e81835ebdb3d6b8f33259e05636ab6f8070a1b161c305625",
+    "posting-cash-c56-regression-source-manifest.json": "6c4912929dfee0fde7d7087c8f561305fbef67b258cabbddd252c570480558d3",
+    "posting-cash-c56-quality-source-manifest.json": "6c4912929dfee0fde7d7087c8f561305fbef67b258cabbddd252c570480558d3"
+  },
+  "build_artifacts": [
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp\\output\\verification-2026-10-03\\posting-cash-c56-dist\\reconforge_erp-0.7.1-py3-none-any.whl",
+      "sha256": "9b0c2fe566a96043af5e6d53fd26509bdd1c666ed6fca2e77124db8c4e8964d3",
+      "bytes": 1884222
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\foundation-verification\\reconforge-erp\\output\\verification-2026-10-03\\posting-cash-c56-dist\\reconforge_erp-0.7.1.tar.gz",
+      "sha256": "13e6cc9204f4f83c31340ec71dd6e124f3ab7fb5f480db1100bf6171ddcfe10d",
+      "bytes": 3106258
+    }
+  ],
+  "boundaries": [
+    "309 prerequisite/optional-profile skips are not successful runtime checks.",
+    "This evidence applies to exact c56f805c managed PR112 source, not later primary development.",
+    "Historical failed d4 evidence is unchanged."
+  ]
+}

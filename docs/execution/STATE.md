@@ -121,10 +121,18 @@ Cash remains an AR subledger operation; GL/inventory integration is separate.
 These sources are committed atd4e6baf8 and reviewable in
 [Draft PR112](https://github.com/amrzainmubarak/reconforge-erp/pull/112),
 stacked above DraftPR111 on codex/reviewed-posting-and-cash. Final frozen
-quality/package/interface gates pass. A separate clean managed checkout at
-exactlyd4e6baf8 now runs the whole-repository regression and quality/build gates
-with locked Python3.12.13; this remains pending until its exit and source
-identity are recorded. Subsequent work does not modify that checkpoint.
+quality/package/interface gates pass. The separate clean managed checkout at
+exactlyd4e6baf8 completed with3829 passes,309 capability skips and2 failures in
+1787.40s under locked Python3.12.13. The failures are missing PostgreSQL posting
+JSON-parser inventory and missing Finance posting test evidence in the threat
+model index. Ruff/Mypy/Bandit/build pass with unchanged head and a clean tracked
+tree. POSTING_CASH_REGRESSION_D4_2026-10-03.json permanently retains the failed
+checkpoint. Both inventory repairs pass51 focused tests; a fresh immutable
+whole-repository run remains required. Subsequent work does not modifyd4.
+Hosted PR112 also reproduced both inventory failures; its Python3.11 matrix
+was cancelled and dependent server boundaries skipped. Seven new full-history
+Gitleaks findings are under exact fingerprint/source review; hosted acceptance
+is not claimed. The earlier foundation acceptance remains a separate source.
 The goal remains active. Source inspection for PROD010/011 confirms that AP
 receipts, Inventory movements, AR invoices and GL effects are not yet connected,
 and AP payment is not an implemented aggregate. A reproducible Decimal-context

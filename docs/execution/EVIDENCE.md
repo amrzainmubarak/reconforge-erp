@@ -3,10 +3,15 @@
 ## Financial integrity and open-source workload increments (2026-10-03)
 
 - [Draft PR112](https://github.com/amrzainmubarak/reconforge-erp/pull/112)
-  retains posting/cash runtime checkpointd4e6baf8. A clean managed checkout
-  runs unfiltered whole-repository pytest and quality/build under Python3.12.13;
-  acceptance is pending, with commands/import path/head and output hashes being
-  recorded separately. The earlier whole-snapshot counts do not certifyd4.
+  retains posting/cash runtime checkpointd4e6baf8. Its clean managed checkout
+  completed3829 passes/309 skips/2 inventory failures under Python3.12.13;
+  [retained failed regression](POSTING_CASH_REGRESSION_D4_2026-10-03.json) binds
+  commands/import/head, unchanged tracked sources and log/JUnit hashes.
+  Ruff/Mypy/Bandit/build pass. The exact JSON-reader and threat-model inventory
+  repairs pass51 focused tests; full acceptance requires a fresh immutable run.
+  Hosted PR112 independently reproduced both failures; its cancelled/skipped
+  dependent jobs are not accepted. Seven new full-history secret findings are
+  under exact source/fingerprint review. Earlier acceptance does not certifyd4.
 
 - Reviewed operational posting: [retained acceptance](FINANCE_POSTING_2026-10-03.json)
   binds SQLite101/0skip, the final affected PG7/0skip, actual HTTP and local

@@ -51,11 +51,16 @@ ADR0819. The observed PR113 Docker checksum failure is retained under ADR0820;
 its updated official pins pass the full local build. New hosted acceptance on
 PR112 8d76647c and PR113 8ba6772d remains a separate gate.
 
-PROD033 backend policy capture is now in progress after committed exact
-arithmetic; SQLite49/PostgreSQL0099 are reserved for verified new AR policy and
-explicitly unverified historical reads. PROD036 starts the Inventory ownership
-prerequisite: actual early commit/rollback and surviving valuation effects were
-reproduced before an explicit scoped unit-of-work repair. Complete purchase and
+PROD033 backend is committed at662aad3f under ADR0815:216 tests pass without
+skips, actual PostgreSQL0099 dump/restore retains eleven table digests, and
+captured policy remains stable after registry changes. All-null history stays
+explicitly unverified; API and React exposure is still in progress. PROD036 is
+committed at75bdbe63 under ADR0818:120 passes/three live prerequisites plus an
+overlapping21-test independent review verify explicit SQLite ownership and
+rollback of caught constructor failures. Test EOF normalization is recorded and
+39 publication/inventory tests pass without skips. Root revision/inventory
+checks pass25 with one live prerequisite; global Ruff/Mypy/Bandit pass on the
+backend checkpoint. Complete purchase and
 sales GL cycles, real customer outcomes and auditor acceptance remain open.
 
 The goal remains active. Foundation changes are reviewable in

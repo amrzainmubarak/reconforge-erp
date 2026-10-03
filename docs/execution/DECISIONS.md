@@ -1,5 +1,20 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-014 — Explicit SQLite inventory owner (2026-10-03)
+
+ADR0818 accepts owner-bound adapters and caller-preserving denial of unbound
+pending writes. Only the owner finalizes; failed operations and constructor
+rejections require full rollback. Existing clean independent commands remain
+compatible. No operational GL effect is inferred from the resulting Draft.
+
+## D-PROD-013 — Retained AR interpretation (2026-10-03)
+
+ADR0815 accepts SQLite49/PostgreSQL0099 policy capture and historical reads from
+their own verified snapshots. All-null legacy data remains unverified and new
+financial effects fail closed. Hidden-child affinity, exact cached projection,
+currency-master precision and populated native restore are tested. API and
+browser provenance/major-unit display require their own acceptance.
+
 ## D-PROD-012 — Recorded-posting business-date balances (2026-10-03)
 
 ADR0817 accepts bounded exact opening/activity/closing over retained immutable

@@ -272,7 +272,7 @@ tasks:
     status: in_progress
     depends_on: [PROD-007, PROD-031]
     exit_evidence: >-
-      Retain versioned precision/rounding provenance on invoices and receipts before converting historical minor units to major-unit UI amounts. Test zero/three-decimal currencies, registry changes, legacy unknown-policy data, mixed-currency totals and browser exactness; never infer a historical policy from today's currency code.
+      Backend662aad3f accepted under ADR0815:216pass/0skip SQLite49/actualPostgreSQL0099, eighteen owned hashes stable, actual populated16.14 restore eleven equal digests/cleanup and nonowner raw denials. JPY0/KWD3, registry changes, legacy unknown data, hidden-child concurrency, malformed master and tampered replay verified in RECEIVABLES_POLICY_2026-10-03.json. API closed policy/text companions and React exact major-unit display remain in progress; never infer historical policy from today's currency code.
   - id: PROD-034
     priority: P0
     area: payables-recovery
@@ -293,10 +293,18 @@ tasks:
     priority: P0
     area: inventory-transaction-composition
     title: Bind SQLite inventory mutations to an explicit owning unit of work
-    status: in_progress
+    status: completed
     depends_on: [PROD-009, PROD-035]
     exit_evidence: >-
-      Actual red probes show unrelated caller rows committed by master upsert, erased by nested movement failure, and valuation/layer/generatedDraft/audit/outbox surviving a later owner failure. Explicit scoped owner/participants must prevent child finalization, preserve standalone compatibility, mark caught failures rollback-only and verify commit/rollback/late evidence faults plus existing count/planning/reversal/API paths. ADR0818 reserved; no generated operational GL claim.
+      ADR0818 accepts explicit SQLite owner composition:120pass/3 live PostgreSQL prerequisites and21 overlapping independent passes/0skip, six owned hashes unchanged. Bound children never finalize, caught failures including constructor rejection poison the owner, independent observers see no partial effects, commit/audit/outbox faults roll back. Original premature commit/data-loss, cold-import and constructor red probes retained in SQLITE_INVENTORY_COMPOSITION_2026-10-03.json. Finance result remains Draft; generated operational GL and PostgreSQL bundle composition remain separate.
+  - id: PROD-037
+    priority: P1
+    area: postgres-consolidation-hierarchy
+    title: Version the retained legacy global close unique-constraint repair
+    status: planned
+    depends_on: [PROD-002]
+    exit_evidence: >-
+      Actual bootstrap probe on0098 rejects equal group/period names in different attributed entities because PostgreSQL's automatically generated legacy unique name differs from explicit truncation. Preserve historical0078; use a separately versioned catalog/column-bound migration with current-state checks, same-scope duplicate denial, sibling RLS, populated restore and safe downgrade refusal. Current-bootstrap ADR0819 deliberately leaves this constraint unchanged.
   - id: E-1120
     priority: P0
     area: financial-exactness

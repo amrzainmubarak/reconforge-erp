@@ -183,6 +183,8 @@ def test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated(tm
     try:
         with admin.transaction():
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT ON reconforge.domain_audit_events TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT, UPDATE ON reconforge.domain_audit_ledger_state TO {app_user}")
             admin.execute(
                 f"GRANT SELECT ON reconforge.tenants,reconforge.domain_workspaces,reconforge.domain_periods,"
                 f"reconforge.organizations,reconforge.legal_entities,reconforge.branches,"
@@ -318,12 +320,20 @@ def test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated(tm
                 headers={**headers, "X-ReconForge-Tenant": tenant_b},
             )
             assert foreign_tenant.status_code == 401, foreign_tenant.text
+        # Server authorization now persists append-only policy provenance.
+        # Prove it exists before exercising the narrowly scoped test teardown.
+        with admin.transaction():
+            assert admin.execute(
+                "SELECT COUNT(*) FROM reconforge.domain_audit_events WHERE tenant_id = %s", (tenant_a,)
+            ).fetchone()[0] > 0
     finally:
         try:
             with admin.transaction():
                 admin.execute("ALTER TABLE reconforge.principal_scope_grants DISABLE TRIGGER principal_scope_grants_guard")
                 admin.execute("ALTER TABLE reconforge.service_account_events DISABLE TRIGGER trg_service_account_events_append_only")
+                admin.execute("ALTER TABLE reconforge.domain_audit_events DISABLE TRIGGER domain_audit_events_immutable")
                 for table in (
+                    "domain_audit_events",
                     "principal_scope_grants",
                     "service_account_credentials",
                     "service_account_permissions",
@@ -340,5 +350,17 @@ def test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated(tm
                 admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
                 admin.execute("ALTER TABLE reconforge.principal_scope_grants ENABLE TRIGGER principal_scope_grants_guard")
                 admin.execute("ALTER TABLE reconforge.service_account_events ENABLE TRIGGER trg_service_account_events_append_only")
+                admin.execute("ALTER TABLE reconforge.domain_audit_events ENABLE TRIGGER domain_audit_events_immutable")
+            with admin.transaction():
+                assert admin.execute(
+                    "SELECT COUNT(*) FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b)
+                ).fetchone()[0] == 0
+                assert admin.execute(
+                    "SELECT COUNT(*) FROM reconforge.domain_audit_events WHERE tenant_id IN (%s,%s)", (tenant_a, tenant_b)
+                ).fetchone()[0] == 0
+                assert admin.execute(
+                    "SELECT tgenabled FROM pg_trigger WHERE tgrelid = 'reconforge.domain_audit_events'::regclass "
+                    "AND tgname = 'domain_audit_events_immutable'"
+                ).fetchone()[0] == "O"
         finally:
             admin.close()

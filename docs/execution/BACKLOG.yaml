@@ -78,7 +78,7 @@ tasks:
     area: finance-core
     title: Implement immutable operational posting kernel
     status: planned
-    depends_on: [PROD-002, PROD-007, PROD-015]
+    depends_on: [PROD-002, PROD-007, PROD-015, PROD-024, PROD-025]
     exit_evidence: >-
       Balanced exact journal lines, immutable posting/reversals, locked periods, unique source effect, TB/drill-down, migration/restore and concurrency proof.
   - id: PROD-010
@@ -205,7 +205,7 @@ tasks:
     priority: P0
     area: finance-hierarchy-isolation
     title: Enforce code-based Finance organization and entity isolation
-    status: planned
+    status: in_progress
     depends_on: [PROD-024]
     exit_evidence: >-
       Reproduce and close same-workspace Finance hierarchy access where tables use organization_code/entity_code instead of scope identifier columns; migration and scoped read/write relationship tests must prove denial without redefining code semantics.
@@ -217,6 +217,22 @@ tasks:
     depends_on: [PROD-005, PROD-007, PROD-019]
     exit_evidence: >-
       Actual HTTPS/PostgreSQL browser persists exact1376minor Draft1/Submitted2/Approved3 with distinct humans, valid3audit/3outbox events and sibling tenant0invoices. CSRF, selfapproval, tenant, workspace and version denials; EN/AR responsive keyboard and accessibility checks. Bounded existing-customer single-line invoices only; no receipt, stock or GL posting claim. ADR0801 and RECEIVABLES_UI_2026-10-03.json retain source-bound evidence.
+  - id: PROD-027
+    priority: P0
+    area: purchase-atomicity
+    title: Keep SQLite AP exception evidence inside the caller transaction
+    status: in_progress
+    depends_on: [PROD-002]
+    exit_evidence: >-
+      Injected final AP audit/outbox failures must roll back invoice transition, match row, exception, audit and outbox together. The exception adapter with autocommit=false must neither commit nor roll back the caller; standalone behavior remains supported. This closes the concrete partial-commit bug, not every SQLite adapter composition path.
+  - id: PROD-028
+    priority: P1
+    area: reconciliation-worker
+    title: Carry strict matching policy through the actual PostgreSQL worker
+    status: in_progress
+    depends_on: [PROD-022, PROD-023]
+    exit_evidence: >-
+      Validate and forward explicit constraint_policy without changing historical omission semantics; actual registered durable worker processes pinned45-row AMLSim input and persists decisions matching the independent oracle, source/rule/input/output digests and retry/isolation contracts. Unknown policies fail without decision effects; lifecycle failure evidence is retained.
   - id: E-1120
     priority: P0
     area: financial-exactness

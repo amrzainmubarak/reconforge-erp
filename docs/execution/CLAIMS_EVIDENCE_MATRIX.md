@@ -2,6 +2,19 @@
 
 ## PROD-001 current audit (2026-10-03)
 
+### Verified increments after the initial audit
+
+| Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |
+| --- | --- | --- | --- | --- | --- |
+| Receivables browser writes | `apps/web/src/components/ReceivablesWorkspace.tsx`, `receivables-data.ts` | Exact amount, session invalidation, retry/version and component tests; EN/AR keyboard checks | `RECEIVABLES_UI_2026-10-03.json`, separate PostgreSQL HTTPS invoice1376minor Draft1/Submitted2/Approved3 and persisted audit/outbox | Bounded implemented journey | Existing-customer single-line invoice draft, submission and independent human approval; no receipt, inventory or GL claim |
+| Nested PostgreSQL scope preservation | `infrastructure/postgres_repository_scope.py` and eight adapters |14 live focused passes;462 broad passes plus one explicit prerequisite skip | Original successful nested calls cleared child scope; corrected replay preserves five GUCs and denies sibling writes/tenant switching | Implemented composition guard | Preserves caller scope in the tested adapters; same-workspace Finance natural-key policies and arbitrary-SQL threat boundaries remain separate |
+| Immutable monetary interpretation | `domain/finance_policy.py`, policy store/schema, SQLite47/PG0094 | Finance/valuation/reversal/FIFO and restore contracts | `FINANCE_POLICY_2026-10-03.json`, actual448 PG passes plus one explicit prerequisite skip; separate native PG16/17 restore | Implemented bounded policy | Captures and verifies new Finance/valuation currency policy; legacy records without evidence remain unverified |
+| Open-source workload adoption | `benchmark/amlsim_reconciliation.py`, pinned profile/data/license | Fault oracle, malformed-input and permutation tests | `OPEN_SOURCE_AMLSIM_2026-10-03.json`:45 upstream sample rows,42 matched pairs, three unmatched each side | Synthetic in-process acceptance | Runs a pinned IBM AMLSim sample with declared reconciliation faults; no5M transactions, AML efficacy, customer hours or auditor acceptance claim |
+
+The isolated financial regression atf48781e6 had four failures. Its reviewed
+repairs pass66 focused tests; the new full70dac5cf gate remains in progress.
+These bounded increments do not supersede outstanding production acceptance gates.
+
 The current audit maps all six requested production outcomes to code, tests, runtime, maturity and allowed wording. Complete GL/trade cycles, universal hard isolation and customer outcomes remain unproven. React administration already has real writes; financial views remain synthetic.
 
 [Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)

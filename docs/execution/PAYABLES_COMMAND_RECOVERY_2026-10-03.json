@@ -1,0 +1,173 @@
+{
+  "schema_version": "payables-command-recovery-evidence-v1",
+  "status": "passed",
+  "synthetic_only": true,
+  "observed_at": "2026-10-03",
+  "adr": "0816",
+  "scope": "PostgreSQL purchase-order, goods-receipt and supplier-invoice creation recovery",
+  "command": [
+    "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "tests/test_payables_replay.py",
+    "tests/test_postgres_payables_replay.py",
+    "tests/test_postgres_payables.py",
+    "tests/test_application_payables.py",
+    "tests/test_payables.py",
+    "tests/test_payables_api.py",
+    "tests/test_api_server_payables.py",
+    "tests/test_payables_approval_integrity.py",
+    "tests/test_payables_quantity_invariants.py",
+    "tests/test_financial_idempotency_json.py",
+    "tests/test_postgres_repository_scope.py",
+    "-q",
+    "--junitxml=output\\verification-2026-10-03\\prod034-inactive-final\\results.xml"
+  ],
+  "pytest": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "145",
+    "time": "298.048",
+    "timestamp": "2026-10-03T13:12:42.548696+03:00",
+    "hostname": "DESKTOP-FDO3RD5"
+  },
+  "harness_duration_seconds": 314.516,
+  "quality": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "reconforge/domain/payables_replay.py",
+        "reconforge/infrastructure/postgres_payables.py",
+        "tests/test_payables_replay.py",
+        "tests/test_postgres_payables_replay.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.281,
+      "output": "All checks passed!\n"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge/domain/payables_replay.py",
+        "reconforge/infrastructure/postgres_payables.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.547,
+      "output": "Success: no issues found in 2 source files\n"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "reconforge/domain/payables_replay.py",
+        "reconforge/infrastructure/postgres_payables.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.203,
+      "output": ""
+    }
+  ],
+  "source_unchanged": true,
+  "database_removed": true,
+  "runtime_and_test_sources": [
+    {
+      "path": "reconforge/api/routes/payables.py",
+      "sha256": "7b6afc526032d4302ea1e45be767236eeeb798796a9a4db6f3744e3b53c8f863"
+    },
+    {
+      "path": "reconforge/api/server_payables.py",
+      "sha256": "f87444d846eef50c5018f3cb7c0cea4ac720569067e3d7d28ccb68027ed15991"
+    },
+    {
+      "path": "reconforge/application/payables.py",
+      "sha256": "f7611d9bd0a715eacc5a7544d8793fbc0e5e4641ca307db97e43efe123138939"
+    },
+    {
+      "path": "reconforge/domain/payables_quantities.py",
+      "sha256": "6b363d110929b1ea768e5726722bad2716ff9c5afb175c501a6ad1dc250b82dc"
+    },
+    {
+      "path": "reconforge/domain/payables_replay.py",
+      "sha256": "a4f92022a70b74c2eb2433e958e2c3bbc8cac5a5e1549e69939325e4db6d2f30"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres.py",
+      "sha256": "6390f50ea8a10ca3add06860029b1573f6a50bc19ad43adf6d9faccf059123fc"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_payables.py",
+      "sha256": "ed962a8c390fec22568007470b132794e2fb643f452a0f5620ea5537c5603fb7"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_repository_scope.py",
+      "sha256": "35532c99102edae8afdbabb22750f662a79631c0a7fc7cd10a313d67132960bc"
+    },
+    {
+      "path": "reconforge/io/persisted.py",
+      "sha256": "20a359446ff9c2893ba5c7f3574eceba006131934ecd0dbf84b4b5292ffbf480"
+    },
+    {
+      "path": "tests/test_payables_replay.py",
+      "sha256": "556a5d22c67484e2b76ecde921cfaa5211fb71bd44ffc98fb2216b13ed1a7e9f"
+    },
+    {
+      "path": "tests/test_postgres_payables_replay.py",
+      "sha256": "384027a34eea7c9ec5f8245bdd71ee341eec7b581674ef101a7b495bece21b34"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "output/verification-2026-10-03/PROD034-FROZEN.json",
+      "sha256": "ec347ecfbed027e1411d8b5b2b682dd9789b370d6e2412f1374cf9093ff48e24"
+    },
+    {
+      "path": "output/verification-2026-10-03/PROD034-REPLAY-CONTRACT.md",
+      "sha256": "279aa94da528ef43f5fcb47624d95efcb621d21d481e4d31c63af41c9909da17"
+    },
+    {
+      "path": "output/verification-2026-10-03/PROD034-PEER-REVIEW.md",
+      "sha256": "ac8258835d8b806f10a88224c95507821f6f9c1517af0beacc445ee7b6516089"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod034-final/report.json",
+      "sha256": "a6e0e549d8927d3b953be0a28970725b89e2483f644f20e828492b6d789d9a12"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod034-final/results.xml",
+      "sha256": "fd0ad906726ce54921ef6b099028547718632d5e75661fd293e22576ce7ad40c"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod034-inactive-red.log",
+      "sha256": "8f123d1015a93e81fbac9ee78f6bd751adbaa755e212f545af67063451488156"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod034-inactive-final/report.json",
+      "sha256": "9241c2e2ea9b298d3e4e04af35b7f21be4e29a34c66c802a7e5d37734730174e"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod034-inactive-final/results.xml",
+      "sha256": "ffeda20e003215dec27877575596528fa66167010fa530b12035f97f3a97c8ad"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod034-peer-cleanup.json",
+      "sha256": "fbc0f720b758d0a448905250090a3ebafa34762bf5e470800b2dec59f40f8a8c"
+    }
+  ],
+  "limits": [
+    "legacy raw receipt lacks original hierarchy provenance",
+    "current authorized GET/replay use current parent scope",
+    "database owner remains trusted",
+    "AP payment is absent",
+    "no inventory/GL composition"
+  ],
+  "report_digest": "89c52a8c65acef9e8d57b9a68c6a265979894a312c90fa0694ca1a183c9ae53c"
+}

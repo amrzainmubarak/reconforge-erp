@@ -162,6 +162,15 @@ EXACT_TRADE_PRIMITIVES_2026-10-03.json retains original/superseded evidence.
 This closes the arithmetic prerequisite only; trade posting and AR policy remain
 separate implementation work.
 
+PROD034 is accepted under ADR0816 after independent inactive-parent review:
+145pass/0skip, unchanged11 dependency hashes, actual concurrent/nonowner/HTTP
+execution, owned cleanup and quality gates. New command envelopes bind the
+request and authoritative source; recovery returns current workflow state with
+no duplicate business evidence. Inactive-parent recovery and fresh-write denial
+are separately verified. PAYABLES_COMMAND_RECOVERY_2026-10-03.json keeps the
+earlier138-pass source and failed probes distinct. Legacy receipt historical
+hierarchy remains unknown; supplier payment and trade GL are not implemented.
+
 ### Financial regression and browser checkpoint
 
 The next slice repairs a reproduced SQLite AP partial commit: exception writes

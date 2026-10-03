@@ -1,0 +1,30 @@
+id: payables-command-recovery
+name: Authoritative PostgreSQL AP creation recovery
+version: 1.0.0
+maturity: experimental
+owner: financial-integrity
+dependencies: [platform.core, platform.master-data]
+incompatible_versions: [unverified-cached-response-replay]
+data_classification: financial-sensitive
+retention_policy: retain-creation-envelope-authoritative-aggregate-audit-and-outbox
+permissions: [payables.manage, payables.read]
+default_roles: [admin]
+migrations: []
+domain_invariants:
+  - current-tenant-workspace-hierarchy-authority-precedes-cached-response
+  - exact-request-and-source-creation-fields-verified-before-current-state-recovery
+  - changed-command-content-fails-closed
+  - recovery-produces-no-repeat-financial-audit-or-outbox-effect
+  - inactive-parent-recovery-does-not-authorize-new-purchase
+domain_events: []
+api_routes: []
+cli_commands: []
+ui_routes: []
+import_schemas: [payables.command.request-response-v1, verified-legacy-payables-response]
+export_schemas: [authoritative-current-payables-aggregate]
+synthetic_fixtures: [tests/test_payables_replay.py, tests/test_postgres_payables_replay.py]
+threat_model: [borrowed-cache-response, sibling-scope-replay, changed-source-request, lost-response-repeated-business-effect]
+benchmarks: []
+rollback_plan: retain-envelope-reader-and-authoritative-source-checks-before-reverting-new-writes
+test_matrix: [tests/test_payables_replay.py, tests/test_postgres_payables_replay.py, tests/test_financial_idempotency_json.py]
+limitations: [legacy-raw-receipt-has-no-original-hierarchy-provenance, no-supplier-payment-aggregate, no-inventory-or-gl-composition]

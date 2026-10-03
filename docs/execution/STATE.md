@@ -2,6 +2,16 @@
 
 ## Current publication checkpoint (2026-10-03)
 
+PROD038 implementation is active on amr/reviewed-inventory-receipt-posting from
+published PR12192719305. PostgreSQL/common-contract and SQLite/atomic-migration/
+backup work have separate owners. ADR0824 is proposed; versions50/0100 reserved.
+Immutable preparation and a conservative unused-inverse predicate are selected.
+Every artifact ID/number uses a closed reserved IRP1 namespace; migration rejects
+preexisting collisions and raw/public writes require exact reviewed ownership.
+The updated contract was independently reviewed; no receipt effect is accepted
+yet. Fresh AR9271whole/hosted acceptance continues in its unchanged detached
+checkout, outside the new Inventory source tree.
+
 PROD039 bounded local acceptance is complete on amr/verified-ar-invoice-recovery, based on
 published PR1204629a64b (tree-identical to retained PR114e63859d7).
 User-requested work labels are migrated:17local/7remote branches,5merge messages,
@@ -48,7 +58,7 @@ The exact pre-downgrade revision and provenance columns are both preserved;
 this failure is retained separately from local whole success. Original exact-head
 outcomes are never reassigned to renamed commits.
 
-Next PROD038 implements a reviewed receipt bundle before complete purchase/sales/
+Active PROD038 implements a reviewed receipt bundle before complete purchase/sales/
 GL cycles. Its concrete source/owner/migration/restore design is reviewed; no
 generated Inventory effect has been implemented or accepted. No customer
 pilot,5M-transaction workload, measured labor savings or auditor acceptance exists.

@@ -309,10 +309,10 @@ tasks:
     priority: P1
     area: generated-inventory-posting
     title: Post one independently reviewed receipt and unconsumed reversal atomically
-    status: planned
+    status: in_progress
     depends_on: [PROD-009, PROD-015, PROD-035, PROD-036]
     exit_evidence: >-
-      Both engines atomically record10units/value12000, retained FIFO origin, generated sealed DrInventory/CrGRNI effect and exact command/audit/outbox evidence. Stable human maker/checker, full unconsumed compensating reversal, no bypass through generic GL or legacy source correction, actual races/faults/native restore and downgrade refusal. No whole trade-cycle claim.
+      Implementation active after reviewed closed contract on amr/reviewed-inventory-receipt-posting based92719305; ADR0824 proposed, SQLite50/PG0100 reserved. Immutable prepared plans, independent current human review, IRP1-reserved all artifact IDs/numbers and exact completed-source guards. Required acceptance: both engines10units/value12000, FIFO origin, Generated DrInventory/CrGRNI effect and complete atomic command/audit/outbox. Full unused inverse uses Delivery/Remove; conservative scoped legacy-history refusal explicit. Physical races/late faults/populated migration/native restore and no generic correction bypass; no whole trade-cycle claim. No runtime result yet accepted.
   - id: PROD-039
     priority: P0
     area: receivables-command-recovery

@@ -21,9 +21,15 @@ into main. Current engineering work is on `codex/financial-policy-and-open-workl
   [runtime evidence](RUNTIME_GRANTS_2026-10-03.json) and ADR 0800.
 - Per-currency aging is committed: 163 tests passed with one authorization-
   inventory count failure, then seven reviewed inventory tests closed that gap.
-  Mixed balances now use an explicit grouped endpoint. Monetary-policy capture
-  (SQLite 47 / PostgreSQL 0094) is still being verified. Both increments are
-  outside the accepted foundation checkpoint below.
+  Mixed balances now use an explicit grouped endpoint.
+- Monetary-policy capture is committed at `187f592d` (SQLite 47 / PostgreSQL
+  0094), including valuation, generated GL, reversals, FIFO policy checks and
+  legacy restore compatibility. The actual PostgreSQL selection passes 448
+  tests with one native-client prerequisite skip; focused local checks pass 79
+  with two live-environment skips subsequently covered by PostgreSQL execution.
+  Separate native-container migration/restore through 0094 passes on PostgreSQL
+  16.14 and 17.10. These are outside the foundation full-regression checkpoint;
+  a new isolated whole-repository run is required.
 - Remote foundation CI exposed portable evidence-path validation and unavailable
   historical MinIO registry pulls. The path fix is pushed and passes 35 Windows
   tests plus a Linux direct reader probe. A pinned, source-built MinIO fixture is

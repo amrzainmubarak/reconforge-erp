@@ -2,6 +2,23 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Monetary-policy retention: [source/hash report](FINANCE_POLICY_2026-10-03.json)
+  binds 25 implemented files. Actual workflow-derived PostgreSQL selection:
+  449 selected, 448 passed, zero failed, one native-client prerequisite skip;
+  pytest 105.954s, harness 114.636s, disposable database and Redis cleaned.
+  Local consumers: 79 passed, two live-environment skips in 43.196s; those live
+  cases execute in the PostgreSQL selection. Ruff, Mypy (15 files), Bandit pass.
+  Legacy raw units are retained, exact operations reject unverified policies,
+  and backup restore reinstates required-insert guards before publishing.
+- Actual head-0094 native restore:
+  [PostgreSQL 17 drill](POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0094_2026-10-03.json)
+  passes in 15.433s;
+  [PostgreSQL 16/17 matrix](POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0094_2026-10-03.json)
+  passes in 28.024s. All migration/runner source hashes stayed unchanged during
+  both observations. The earlier 0093 reports remain byte-for-byte retained.
+  The five current writeback report/schema/CI contract suites pass 48 tests in
+  2.43s. This proves the native container restore path, not availability of native
+  PostgreSQL client binaries on the Windows host.
 - Currency-grouped AR aging: [retained report](RECEIVABLES_AGING_2026-10-03.json)
   preserves eight red failures, then 163 passing tests and one changed route-count
   assertion in 115.99s. The separately reviewed inventory closure passes seven

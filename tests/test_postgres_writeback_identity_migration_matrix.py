@@ -10,7 +10,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_identity_migration_matrix.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-03.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0094_2026-10-03.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py"
 OBSERVATION_RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration.py"
 POLICY_PATH = ROOT / "docs/security/supply-chain-policy.v1.json"
@@ -25,7 +25,7 @@ def _report() -> dict[str, object]:
     return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
 
 
-@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03"])
+@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03", "0094_2026-10-03"])
 def test_retained_postgres_writeback_identity_matrix_is_closed_digest_bound_and_parity_checked(report_date: str) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     report = json.loads((ROOT / f"docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_{report_date}.json").read_text(encoding="utf-8"))
@@ -70,6 +70,7 @@ def test_matrix_subject_supply_chain_and_package_contracts_bind_current_sources(
         "include .github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-08-22.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-03.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0094_2026-10-03.json",
         "include docs/schemas/postgres_writeback_identity_migration_matrix.schema.json",
         "include tests/test_postgres_writeback_identity_migration_matrix.py",
         "include docs/adr/0541-prove-writeback-migration-supported-version-matrix.md",

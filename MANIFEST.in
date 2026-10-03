@@ -1173,3 +1173,12 @@ include docs/adr/0799-portable-evidence-reference-validation.md
 include docs/adr/0800-runtime-postgres-capability-admission.md
 include docs/security/postgres-runtime-grants.md
 include docs/execution/RUNTIME_GRANTS_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0094_2026-10-03.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0094_2026-10-03.json
+include docs/adr/0797-currency-separated-receivables-aging.md
+include tests/test_receivables_aging_integrity.py
+include docs/execution/RECEIVABLES_AGING_2026-10-03.json
+include docs/execution/FINANCE_POLICY_2026-10-03.json
+include docs/operations/finance-policy-upgrade.md
+include tests/test_finance_currency_policy.py
+include tests/test_postgres_finance_currency_policy.py

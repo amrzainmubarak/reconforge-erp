@@ -125,10 +125,10 @@ tasks:
     priority: P0
     area: currency-governance
     title: Freeze historical monetary interpretation
-    status: in_progress
+    status: completed
     depends_on: [PROD-001]
     exit_evidence: >-
-      Currency precision/rounding bound to persisted effects; changing registry cannot reinterpret validated balance; creation/read/replay and concurrent update invariants.
+      Finance/valuation policy captured and immutable on SQLite47/PostgreSQL0094; generated GL, reversals and FIFO verify original provenance. Actual PostgreSQL gate448passed/1native-client skip; local79passed/2live-env skips; native Docker PG16/17 migration/restore through0094 passed separately. Legacy policy stays unverified; exact operations fail closed; populated downgrade refuses evidence loss.
   - id: PROD-016
     priority: P0
     area: inventory-integrity

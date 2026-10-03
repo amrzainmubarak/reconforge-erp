@@ -1165,3 +1165,6 @@ include docs/adr/0802-source-pinned-disposable-object-storage-fixture.md
 include docs/adr/0804-owned-postgres-container-cleanup.md
 include docs/adr/0809-typed-queue-authority-denials.md
 include docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json
+include tests/postgres_audit_fixture.py
+include docs/adr/0812-isolate-policy-audit-fixture-cleanup.md
+include docs/execution/REMAINING_CI_FIXTURES_2026-10-03.json

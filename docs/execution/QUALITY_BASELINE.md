@@ -1,5 +1,11 @@
 # Quality Baseline
 
+## PROD-001 current audit (2026-10-03)
+
+Fresh locked Python 3.12 regression: 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). Live PostgreSQL selection: 70 passed, zero skipped. Web: 77 component tests; 16 standard E2E passes and five capability skips, plus one separately passed HTTPS scenario. Passing existing tests did not prevent the newly reproduced financial defects.
+
+[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 ## E-1120 - Strict Receivables quantity inputs (2026-08-29)
 
 SQLite Receivables invoice quantities now share the strict exact parser with

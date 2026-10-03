@@ -1,5 +1,11 @@
 # Repository Inventory
 
+## PROD-001 current audit (2026-10-03)
+
+Current tracked inventory: 540 runtime Python files, 474 Python test files, 92 PostgreSQL revisions, 46 SQLite migrations, 121 JSON schemas, 781 ADRs, seven CI workflows and 24 control packs. Historical counts below retain their original dates.
+
+[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 Measured on 2026-07-26 against the dirty worktree documented in `STATE.md`.
 
 ## Quantitative inventory

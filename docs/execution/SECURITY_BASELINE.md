@@ -1,5 +1,11 @@
 # Security Baseline
 
+## PROD-001 current audit (2026-10-03)
+
+The clean migrated PostgreSQL fixture has 167/167 tables with enabled/forced RLS and a non-superuser, non-BYPASSRLS runtime role. Runtime rejection of unsafe roles is still missing. Fresh Python/npm audits failed; old clean audit statements are historical. Current official references: ASVS 5.0.0; SSDF 1.1 Final (1.2 Draft); SLSA 1.2 Approved.
+
+[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 ## E-1120 Strict Receivables quantity inputs (2026-08-29)
 
 - SQLite Receivables rejects binary floating-point, scientific-notation,

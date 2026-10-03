@@ -1,5 +1,11 @@
 # Dependency Risk
 
+## PROD-001 current audit (2026-10-03)
+
+Fresh all-extra Python audit reports 11 entries (7 distinct advisory IDs) in urllib3 2.7.0 and virtualenv 21.7.0. npm reports two moderate and one high development dependency packages (Vitest/mocker and undici); production-only npm audit has zero findings. Remediation and upstream review are PROD-004; these findings are not accepted exceptions.
+
+[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 Measured through 2026-08-28. Vulnerability scan success is not the same as reproducible resolution or low operational risk.
 
 | Area | Evidence | Risk | Priority / control |

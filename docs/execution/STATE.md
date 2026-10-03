@@ -1,6 +1,22 @@
 ﻿# Execution State
 
-Updated: 2026-08-30
+Updated: 2026-10-03
+
+## PROD-001 — Current production-objective baseline (2026-10-03)
+
+- Previous goal turn classified as progress: fresh environment/runtime measurements,
+  financial defect reproductions and actual CI selection evidence changed the next actions.
+- Baseline source: `1551e8ae69a2982961a315c40be1c4ac2b8c8bc5`;
+  current branch: `codex/production-foundation-audit`. Unrelated untracked work preserved.
+- 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). PostgreSQL focused baseline: 70 passed, zero skipped.
+- Python/npm security audits failed. Existing tests also missed reproduced
+  monetary/quantity/AP/AR defects and a clean-boot metrics migration gap.
+- [Audit](PRODUCTION_AUDIT_2026-10-03.md), [snapshot](BASELINE_2026-10-03.json),
+  [roadmap](PRODUCTION_ROADMAP_2026-10-03.md); PROD-002 through PROD-018 remain open.
+- Next: transactional AP exactness, live CI selection, targeted dependency fixes,
+  shared Studio session, then clean-boot metrics and remaining financial/role gates.
+- The complete PostgreSQL/GL/trade-cycle/financial-UI/customer-outcome objective
+  remains active and unverified. No customer data, production change or release.
 
 ## E-1120 - Strict Receivables quantity inputs (2026-08-29)
 

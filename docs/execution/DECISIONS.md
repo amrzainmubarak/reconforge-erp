@@ -1,5 +1,16 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-001 — Correct invariants before production breadth (2026-10-03)
+
+Use the existing modular monolith and preserve local Community operation. The new
+objective is tracked as PROD tasks without declaring historical Phase 4 complete.
+Actual invariant and deployment failures lead the next slices; existing green
+tests are insufficient acceptance evidence. Operational posting will be a
+versioned domain with explicit reversal and source identity, not an implicit
+reinterpretation of the control ledger. Record real company/reviewer outcomes
+only with authorization and measured evidence. The roadmap defines dependency
+gates and rollback requirements; this decision authorizes no production mutation.
+
 > This document records all decisions made during the ReconForge transformation execution.
 > Each decision follows the format: ID, Date, Context, Decision, Rationale, Reversibility.
 

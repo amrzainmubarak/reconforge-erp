@@ -1,5 +1,11 @@
 # Documentation Drift
 
+## PROD-001 current audit (2026-10-03)
+
+Current drift: README/Studio understate existing administration writes and list 19 rather than 24 pack directories; AP/AR docs exclude implemented PostgreSQL adapters; parity inventory source head is 0089 instead of 0092; old zero-advisory snapshots are not current. Corrections must preserve historical evidence dates.
+
+[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 Measured 2026-07-24. Items are ordered by impact on user decisions and release truth.
 
 | ID | Surface | Observed drift | Required correction | Status |

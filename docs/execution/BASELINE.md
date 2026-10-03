@@ -1,5 +1,11 @@
 # ReconForge Baseline Audit
 
+## PROD-001 current audit (2026-10-03)
+
+Fresh locked Python 3.12 baseline: 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). Static, build, CLI, Docker and web checks passed; Python/npm dependency audits failed. See the current audit for command durations and explicit skips.
+
+[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 > Historical command snapshot. Its external-gate closure failure was superseded
 > by the owner/team release policy in E-251/D236; recorded command outcomes
 > remain historical evidence rather than current release state.

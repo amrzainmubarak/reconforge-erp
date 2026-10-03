@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-08-30"
+updated_at: "2026-10-03"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -9,6 +9,150 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: PROD-001
+    priority: P0
+    area: baseline
+    title: Record reproducible production-objective audit
+    status: completed
+    depends_on: []
+    exit_evidence: >-
+      3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37); focused live PostgreSQL 70/70; command hashes and security failures retained in BASELINE_2026-10-03.json.
+  - id: PROD-002
+    priority: P0
+    area: financial-correctness
+    title: Serialize cumulative AP approval with exact quantities
+    status: planned
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      Duplicate invoices and repeated PO lines cannot exceed received/ordered quantities; exact context-independent quantities; SQLite/PostgreSQL concurrent approvals and rollback verified.
+  - id: PROD-003
+    priority: P0
+    area: postgres-ci
+    title: Restore unfiltered live PostgreSQL parity gate
+    status: planned
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      Real collection includes every intended parity boundary; four scale selections remain separate; migration/RLS nodes cannot be silently deselected.
+  - id: PROD-004
+    priority: P0
+    area: supply-chain
+    title: Remediate October dependency disclosures
+    status: planned
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      Reviewed targeted Python/npm locks, clean all-extra audits, compatibility tests and builds; preserve pre-fix findings.
+  - id: PROD-005
+    priority: P0
+    area: studio-session
+    title: Share live tenant session and restore reauthentication
+    status: planned
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      Real browser login to tenant metrics succeeds; sibling tenant denied; stale responses hidden; expiry and step-up recover without stored credentials.
+  - id: PROD-006
+    priority: P0
+    area: tenant-isolation
+    title: Reject unsafe PostgreSQL runtime roles
+    status: planned
+    depends_on: [PROD-003]
+    exit_evidence: >-
+      Runtime SUPERUSER/BYPASSRLS/unsafe ownership fail closed on checkout/readiness; migration administrators stay separate; reuse and revocation tested.
+  - id: PROD-007
+    priority: P0
+    area: receivables
+    title: Protect AR currency and customer-state invariants
+    status: planned
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      Currency cannot relabel existing documents; inactive customer approval is rejected; exposure remains currency-consistent across backends.
+  - id: PROD-008
+    priority: P1
+    area: workflow
+    title: Complete scoped PostgreSQL exception review API
+    status: planned
+    depends_on: [PROD-005, PROD-006]
+    exit_evidence: >-
+      Authenticated tenant/workspace/entity list/get/assign/transition with independent review, atomic audit and sibling-scope denial; no SQLite fallback.
+  - id: PROD-009
+    priority: P1
+    area: finance-core
+    title: Implement immutable operational posting kernel
+    status: planned
+    depends_on: [PROD-002, PROD-007, PROD-015]
+    exit_evidence: >-
+      Balanced exact journal lines, immutable posting/reversals, locked periods, unique source effect, TB/drill-down, migration/restore and concurrency proof.
+  - id: PROD-010
+    priority: P1
+    area: purchase-cycle
+    title: Integrate purchase stock AP payment and GL
+    status: planned
+    depends_on: [PROD-009, PROD-016]
+    exit_evidence: >-
+      One real cycle records inventory/GRNI/AP/cash effects atomically; partial receipts/payments, returns, retry, period and reconciliation tests.
+  - id: PROD-011
+    priority: P1
+    area: sales-cycle
+    title: Integrate sales stock AR cash and GL
+    status: planned
+    depends_on: [PROD-009]
+    exit_evidence: >-
+      One real cycle records stock/COGS/AR/revenue/cash effects atomically; partial shipment/payment, credit, returns, retries and reconciliation tests.
+  - id: PROD-012
+    priority: P1
+    area: studio-finance
+    title: Deliver connected financial write journeys
+    status: planned
+    depends_on: [PROD-008, PROD-010, PROD-011]
+    exit_evidence: >-
+      Server-backed drafts/review/approval and evidence, exact amounts, conflict recovery and permissions; Arabic/English real PostgreSQL browser E2E.
+  - id: PROD-013
+    priority: P1
+    area: operations
+    title: Verify deployment recovery and measured workloads
+    status: planned
+    depends_on: [PROD-006, PROD-008, PROD-009, PROD-017]
+    exit_evidence: >-
+      Pinned production profile, native backup/restore and upgrade, recovery, metrics, 10K/100K/1M then bounded 5M synthetic workload with correctness oracle and resource evidence.
+  - id: PROD-014
+    priority: P1
+    area: customer-validation
+    title: Measure controlled company pilot outcomes
+    status: planned
+    depends_on: [PROD-012, PROD-013]
+    exit_evidence: >-
+      Authorized company/data and independent reviewer; actual volumes, comparable staff hours, confirmed discrepancies and exact evidence acceptance; no fabricated or unapproved public case study.
+  - id: PROD-015
+    priority: P0
+    area: currency-governance
+    title: Freeze historical monetary interpretation
+    status: planned
+    depends_on: [PROD-001]
+    exit_evidence: >-
+      Currency precision/rounding bound to persisted effects; changing registry cannot reinterpret validated balance; creation/read/replay and concurrent update invariants.
+  - id: PROD-016
+    priority: P0
+    area: inventory-integrity
+    title: Serialize cumulative PostgreSQL goods receipts
+    status: planned
+    depends_on: [PROD-002]
+    exit_evidence: >-
+      Two independent receipts cannot exceed PO quantity; deterministic parent lock, exact sums and rollback evidence.
+  - id: PROD-017
+    priority: P0
+    area: postgres-bootstrap
+    title: Migrate metrics schema on clean PostgreSQL boot
+    status: planned
+    depends_on: [PROD-003]
+    exit_evidence: >-
+      Empty database upgraded only with Alembic supports real metrics compute/read; seeded public definitions and forced-RLS snapshots; populated rollback preserves data or refuses safely.
+  - id: PROD-018
+    priority: P1
+    area: studio-money
+    title: Preserve exact financial metric display
+    status: planned
+    depends_on: [PROD-005]
+    exit_evidence: >-
+      Large integer and long decimal value_text render without Number conversion or silent six-place rounding; locale/RTL and exact text tests.
   - id: E-1120
     priority: P0
     area: financial-exactness

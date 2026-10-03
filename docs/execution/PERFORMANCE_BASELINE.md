@@ -1,5 +1,11 @@
 # Performance Baseline
 
+## PROD-001 current audit (2026-10-03)
+
+No new capacity result is claimed. Current baseline timings ran alongside other audit work. Historical 1M-record matching and 1M-job-effect reports remain synthetic workload evidence; neither proves 5M customer transactions or 30 production reconciliations. The roadmap defines the required measured workload.
+
+[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 ## E-831 write-back recovery matrix timing (2026-08-22)
 
 The exact two-version matrix, including migrations, two spawned crash/recovery

@@ -1133,3 +1133,6 @@ include docs/adr/0780-strict-payables-quantity-inputs.md
 include docs/adr/0781-strict-payables-persisted-quantity-decoding.md
 include docs/adr/0782-strict-receivables-quantity-inputs.md
 include docs/execution/CONTAINER_SECURITY_PY312_CANDIDATE_2026-08-28.md
+include docs/execution/BASELINE_2026-10-03.json
+include docs/execution/PRODUCTION_AUDIT_2026-10-03.md
+include docs/execution/PRODUCTION_ROADMAP_2026-10-03.md

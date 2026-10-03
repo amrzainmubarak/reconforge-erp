@@ -1,5 +1,11 @@
 # Gap Matrix
 
+## PROD-001 current audit (2026-10-03)
+
+Reproduced gaps include mutable historical currency precision, cumulative AP over-approval, quantity truncation, AR status/currency drift, unsafe runtime-role acceptance, CI deselection, missing metrics migration, dependency disclosures and disconnected live UI scope. See PROD tasks and current audit.
+
+[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 ## Highest current risks
 
 | Rank | Area | Baseline evidence and current status | Target / exit condition | Severity |

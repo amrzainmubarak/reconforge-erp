@@ -1,5 +1,18 @@
 ﻿# ReconForge Execution Evidence Log
 
+## PROD-001 — Fresh measured audit (2026-10-03)
+
+- Source `1551e8ae69a2982961a315c40be1c4ac2b8c8bc5`; fresh locked Python 3.12.13.
+- Full regression: 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37); command wall time 822.764 s.
+- PostgreSQL foundation/migration/Finance Core/AP/AR/API: 70 passed, zero skipped.
+- Financial reproducer on Python 3.12 exits 0 and retains the failing invariants
+  under `output/baseline-2026-10-03/finance-audit/`; a successful reproducer exit
+  means bugs reproduced, not product correctness.
+- Exact commands, timings, log hashes and boundaries are retained in
+  [BASELINE_2026-10-03.json](BASELINE_2026-10-03.json). Security audits failed.
+- [Current audit](PRODUCTION_AUDIT_2026-10-03.md) and
+  [roadmap](PRODUCTION_ROADMAP_2026-10-03.md) define the incomplete production gates.
+
 This file records commands and observed results. It does not convert a dirty worktree into release evidence.
 
 ## E-1120: Strict Receivables quantity inputs (2026-08-29)

@@ -1,5 +1,11 @@
 ﻿# Claims Evidence Matrix
 
+## PROD-001 current audit (2026-10-03)
+
+The current audit maps all six requested production outcomes to code, tests, runtime, maturity and allowed wording. Complete GL/trade cycles, universal hard isolation and customer outcomes remain unproven. React administration already has real writes; financial views remain synthetic.
+
+[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 This matrix governs public wording for the evidence-bounded Phase 0 implementation and non-publishing v0.7.1 candidate. A file, tag, or green check is not sufficient evidence unless the exact subject and corresponding gate are identified and verified.
 
 | Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |

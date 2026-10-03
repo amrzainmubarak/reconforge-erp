@@ -165,10 +165,10 @@ tasks:
     priority: P0
     area: receivables-reporting
     title: Prevent mixed-currency aging totals
-    status: in_progress
+    status: completed
     depends_on: [PROD-007]
     exit_evidence: >-
-      USD/JPY/EGP minor units never produce an unlabeled aggregate; versioned currency-grouped totals or explicit legacy refusal; historical inconsistent currency data fails closed.
+      Both-backend/API/CLI gate: 163 passed with one inventory-count failure, closed by seven reviewed inventory tests. Version1 grouped endpoint returns EGP3400/JPY700/USD1200 separately; legacy mixed totals fail closed, empty/single values stay labeled, scope filtering precedes aggregation.
   - id: PROD-021
     priority: P0
     area: database-privileges

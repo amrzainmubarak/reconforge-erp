@@ -2,6 +2,12 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Currency-grouped AR aging: [retained report](RECEIVABLES_AGING_2026-10-03.json)
+  preserves eight red failures, then 163 passing tests and one changed route-count
+  assertion in 115.99s. The separately reviewed inventory closure passes seven
+  tests in 2.89s; removing only the new GET route reproduces the former digest.
+  Exact currency groups, current-open-item date semantics, SQL snapshot reads,
+  scope recomputation and closed projections are covered on both backends/API.
 - AR currency/credit: 89 passed, zero skipped on SQLite and live PostgreSQL;
   four additional caller-transaction tests preserve pending SQLite writes.
 - Strict matching: 69 focused constraint tests plus 138 broader tests pass;

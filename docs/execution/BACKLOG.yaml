@@ -101,7 +101,7 @@ tasks:
     priority: P1
     area: studio-finance
     title: Deliver connected financial write journeys
-    status: planned
+    status: in_progress
     depends_on: [PROD-008, PROD-010, PROD-011]
     exit_evidence: >-
       Server-backed drafts/review/approval and evidence, exact amounts, conflict recovery and permissions; Arabic/English real PostgreSQL browser E2E.
@@ -197,10 +197,26 @@ tasks:
     priority: P0
     area: transaction-scope
     title: Preserve workspace and entity scope across composed financial transactions
-    status: planned
+    status: in_progress
     depends_on: [PROD-006, PROD-015]
     exit_evidence: >-
       Explicit shared unit of work preserves full RLS scope and atomic stock/subledger/GL/audit/outbox effects; SQLite internal commits cannot publish a partial cycle; negative sibling workspace/entity API and nested repository tests pass.
+  - id: PROD-025
+    priority: P0
+    area: finance-hierarchy-isolation
+    title: Enforce code-based Finance organization and entity isolation
+    status: planned
+    depends_on: [PROD-024]
+    exit_evidence: >-
+      Reproduce and close same-workspace Finance hierarchy access where tables use organization_code/entity_code instead of scope identifier columns; migration and scoped read/write relationship tests must prove denial without redefining code semantics.
+  - id: PROD-026
+    priority: P1
+    area: studio-receivables
+    title: Deliver actual scoped AR draft submission and independent approval
+    status: completed
+    depends_on: [PROD-005, PROD-007, PROD-019]
+    exit_evidence: >-
+      Actual HTTPS/PostgreSQL browser persists exact1376minor Draft1/Submitted2/Approved3 with distinct humans, valid3audit/3outbox events and sibling tenant0invoices. CSRF, selfapproval, tenant, workspace and version denials; EN/AR responsive keyboard and accessibility checks. Bounded existing-customer single-line invoices only; no receipt, stock or GL posting claim. ADR0801 and RECEIVABLES_UI_2026-10-03.json retain source-bound evidence.
   - id: E-1120
     priority: P0
     area: financial-exactness

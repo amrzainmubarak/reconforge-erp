@@ -41,6 +41,23 @@ into main. Current engineering work is on `codex/financial-policy-and-open-workl
   operational posting, integrated trade cycles and connected financial writes.
   There is no available company pilot or external-auditor acceptance evidence.
 
+### Financial regression and browser checkpoint
+
+Isolated source `f48781e695533df577ca671b9f5a1b8f9a18f7aa` completed:3602 passed,
+240 capability skips, four failures,24 warnings in936.79s. Failures identify an
+outdated SQLite schema assertion, a corruption fixture blocked by the immutable
+snapshot trigger and two missing parser inventory entries. The failed run is
+retained; full acceptance awaits repair and a fresh isolated run. Ruff, Mypy,
+Bandit and packaging passed on that exact source.
+
+The AR React journey now has actual HTTPS/PostgreSQL evidence:1376 minor units
+persisted through draft, submission and independent approval, with valid audit
+and outbox events and negative authorization/CSRF/version checks. Arabic/English
+mobile and keyboard behavior were exercised in Playwright. See ADR0801 and
+`RECEIVABLES_UI_2026-10-03.json`; receipts and integrated posting remain open.
+Financial work is reviewable in [Draft PR110](https://github.com/amrzainmubarak/reconforge-erp/pull/110),
+stacked on PR109, with no merge or deployment to main.
+
 ## Verified foundation checkpoint (2026-10-03)
 
 An isolated checkout at `8c0951273c6eb6b0e395f12ffe5626821c2f9814` passed

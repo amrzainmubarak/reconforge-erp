@@ -1,0 +1,132 @@
+{
+  "synthetic_only": true,
+  "database": "reconforge_ar_ui_20261003",
+  "sibling_tenant_invoice_count": 0,
+  "invoices": [
+    {
+      "tenant": "ar-ui-a",
+      "id": "ARINV-750cc6c335c223d8",
+      "number": "UI-1790999179198",
+      "status": "Approved",
+      "total_minor": 1376,
+      "version": 3,
+      "creator": "ar-ui-maker",
+      "approver": "ar-ui-checker",
+      "quantity": "1.25",
+      "unit_price_minor": 1001,
+      "line_total_minor": 1251,
+      "tax_minor": 125,
+      "audit_actions": [
+        "ar_invoice_created",
+        "ar_invoice_submitted",
+        "ar_invoice_approved"
+      ],
+      "outbox_events": [
+        "ar_invoice_approved",
+        "ar_invoice_created",
+        "ar_invoice_submitted"
+      ],
+      "audit_chain_valid": true
+    },
+    {
+      "tenant": "ar-ui-a",
+      "id": "ARINV-692628ee63c51938",
+      "number": "UI-1790999478077",
+      "status": "Approved",
+      "total_minor": 1376,
+      "version": 3,
+      "creator": "ar-ui-maker",
+      "approver": "ar-ui-checker",
+      "quantity": "1.25",
+      "unit_price_minor": 1001,
+      "line_total_minor": 1251,
+      "tax_minor": 125,
+      "audit_actions": [
+        "ar_invoice_created",
+        "ar_invoice_submitted",
+        "ar_invoice_approved"
+      ],
+      "outbox_events": [
+        "ar_invoice_approved",
+        "ar_invoice_created",
+        "ar_invoice_submitted"
+      ],
+      "audit_chain_valid": true
+    },
+    {
+      "tenant": "ar-ui-a",
+      "id": "ARINV-2d2b1f147005733e",
+      "number": "UI-1790999579298",
+      "status": "Approved",
+      "total_minor": 1376,
+      "version": 3,
+      "creator": "ar-ui-maker",
+      "approver": "ar-ui-checker",
+      "quantity": "1.25",
+      "unit_price_minor": 1001,
+      "line_total_minor": 1251,
+      "tax_minor": 125,
+      "audit_actions": [
+        "ar_invoice_created",
+        "ar_invoice_submitted",
+        "ar_invoice_approved"
+      ],
+      "outbox_events": [
+        "ar_invoice_approved",
+        "ar_invoice_created",
+        "ar_invoice_submitted"
+      ],
+      "audit_chain_valid": true
+    },
+    {
+      "tenant": "ar-ui-a",
+      "id": "ARINV-f709c9ffe61e6b27",
+      "number": "UI-1790999749649",
+      "status": "Approved",
+      "total_minor": 1376,
+      "version": 3,
+      "creator": "ar-ui-maker",
+      "approver": "ar-ui-checker",
+      "quantity": "1.25",
+      "unit_price_minor": 1001,
+      "line_total_minor": 1251,
+      "tax_minor": 125,
+      "audit_actions": [
+        "ar_invoice_created",
+        "ar_invoice_submitted",
+        "ar_invoice_approved"
+      ],
+      "outbox_events": [
+        "ar_invoice_approved",
+        "ar_invoice_created",
+        "ar_invoice_submitted"
+      ],
+      "audit_chain_valid": true
+    },
+    {
+      "tenant": "ar-ui-a",
+      "id": "ARINV-732d12b594984470",
+      "number": "UI-1791000210464",
+      "status": "Approved",
+      "total_minor": 1376,
+      "version": 3,
+      "creator": "ar-ui-maker",
+      "approver": "ar-ui-checker",
+      "quantity": "1.25",
+      "unit_price_minor": 1001,
+      "line_total_minor": 1251,
+      "tax_minor": 125,
+      "audit_actions": [
+        "ar_invoice_created",
+        "ar_invoice_submitted",
+        "ar_invoice_approved"
+      ],
+      "outbox_events": [
+        "ar_invoice_approved",
+        "ar_invoice_created",
+        "ar_invoice_submitted"
+      ],
+      "audit_chain_valid": true
+    }
+  ]
+}

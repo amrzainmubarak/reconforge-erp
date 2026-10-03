@@ -1,5 +1,15 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-004 — Actual receivables browser writes with exact bounded amounts (2026-10-03)
+
+ADR0801 adds an existing-customer invoice draft/submit/independent-approve
+journey over the current authenticated API. Minor units stay exact and explicit;
+scope/session changes invalidate private UI state. Unknown draft outcomes retain
+their original idempotency key, while transitions require a fresh server read.
+Customer upsert, receipts and stock/GL posting remain separate contracts. Actual
+HTTPS PostgreSQL persistence, negative security cases and EN/AR keyboard evidence
+are retained without inferring a complete ERP or customer outcome.
+
 ## D-PROD-003 — Evidence-backed open-source adoption and financial invariants (2026-10-03)
 
 With no company pilot available, use immutable official sources and synthetic

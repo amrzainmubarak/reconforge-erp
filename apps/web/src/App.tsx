@@ -8,7 +8,7 @@ import { loadStudioOverview } from "./data";
 import { translate, type MessageKey } from "./i18n";
 import { usePreferences } from "./preferences";
 import type { StudioOverviewWithProvenance, StudioPage, ThemePreference } from "./types";
-import { BrowserSessionProvider } from "./browserSession";
+import { BrowserSessionProvider, useBrowserSession } from "./browserSession";
 
 const themes: ThemePreference[] = ["system", "light", "dark"];
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
@@ -24,6 +24,7 @@ const MappingStudio = lazy(() => import("./components/MappingStudio").then((modu
 const RuleStudio = lazy(() => import("./components/RuleStudio").then((module) => ({ default: module.RuleStudio })));
 const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) => ({ default: module.LiveStudio })));
 const AdminAudit = lazy(() => import("./components/AdminAudit").then((module) => ({ default: module.AdminAudit })));
+const ReceivablesWorkspace = lazy(() => import("./components/ReceivablesWorkspace").then((module) => ({ default: module.ReceivablesWorkspace })));
 
 function pageFromPath(pathname: string): StudioPage {
   const normalized = pathname.replace(/\/+$/, "");
@@ -39,6 +40,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/rules")) return "rules";
   if (normalized.endsWith("/live")) return "live";
   if (normalized.endsWith("/admin-audit")) return "adminAudit";
+  if (normalized.endsWith("/receivables")) return "receivables";
   return "dashboard";
 }
 
@@ -60,6 +62,7 @@ export default function App() {
 }
 
 function StudioApp() {
+  const auth = useBrowserSession();
   const preferences = usePreferences();
   const t = useCallback((key: MessageKey) => translate(preferences.locale, key), [preferences.locale]);
   const [data, setData] = useState<StudioOverviewWithProvenance | null>(null);
@@ -159,6 +162,7 @@ function StudioApp() {
           onMobileMenu={() => setMobileMenuOpen(true)}
           noticeCount={data?.notices.length ?? 0}
           activePage={activePage}
+          liveIdentity={activePage === "receivables" ? auth.username || t("arSignedOut") : undefined}
         />
 
         {openPanel === "accessibility" ? (
@@ -172,9 +176,9 @@ function StudioApp() {
             onTheme={preferences.setTheme}
           />
         ) : null}
-        {openPanel === "notifications" && data ? <NoticesPanel notices={data.notices} translate={t} locale={preferences.locale} /> : null}
-        {openPanel === "quick" ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
-        {openPanel === "profile" ? <ProfilePanel translate={t} /> : null}
+        {openPanel === "notifications" && data && activePage !== "receivables" ? <NoticesPanel notices={data.notices} translate={t} locale={preferences.locale} /> : null}
+        {openPanel === "quick" && activePage !== "receivables" ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
+        {openPanel === "profile" && activePage !== "receivables" ? <ProfilePanel translate={t} /> : null}
 
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}
@@ -218,6 +222,9 @@ function StudioApp() {
         ) : null}
         {activePage === "adminAudit" ? (
           <Suspense fallback={<LoadingView translate={t} />}><AdminAudit locale={preferences.locale} translate={t} /></Suspense>
+        ) : null}
+        {activePage === "receivables" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><ReceivablesWorkspace locale={preferences.locale} /></Suspense>
         ) : null}
       </div>
 

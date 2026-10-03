@@ -50,6 +50,7 @@ export const navigationGroups: NavigationGroup[] = [
   {
     label: "finance",
     items: [
+      { key: "receivables", label: "receivables", icon: FileChartColumn, page: "receivables" },
       { key: "reconciliation", label: "reconciliation", icon: Activity, href: `${currentStudio}/reconciliation`, status: "foundation" },
       { key: "exceptions", label: "exceptions", icon: ShieldCheck, page: "exceptions", status: "foundation" },
       { key: "evidence", label: "evidence", icon: Archive, page: "evidence", status: "foundation" },
@@ -112,8 +113,8 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         <summary className="workspace-switcher" aria-label={translate("workspaceDetails")}>
           <span className="workspace-avatar">FC</span>
           <span className="workspace-copy">
-            <strong>{translate("local")}</strong>
-            <small>{translate("preview")}</small>
+            <strong>{translate(activePage === "receivables" ? "receivables" : "local")}</strong>
+            <small>{translate(activePage === "receivables" ? "arLiveSession" : "preview")}</small>
           </span>
           <ChevronDown className="workspace-chevron" size={15} aria-hidden="true" />
         </summary>
@@ -179,8 +180,8 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         <div className="local-state">
           <span className="status-dot" aria-hidden="true" />
           <span>
-            <strong>{translate("readOnly")}</strong>
-            <small>{translate("localNote")}</small>
+            <strong>{translate(activePage === "receivables" ? "arLiveSession" : "readOnly")}</strong>
+            <small>{translate(activePage === "receivables" ? "receivables" : "localNote")}</small>
           </span>
         </div>
         <button className="collapse-button" type="button" onClick={onCollapse} aria-label={translate(collapsed ? "expandSidebar" : "collapseSidebar")}>

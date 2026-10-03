@@ -2,6 +2,9 @@ import type { Locale } from "./types";
 
 export const messages = {
   en: {
+    receivables: "Receivables",
+    arSignedOut: "Signed out",
+    arLiveSession: "Live session",
     product: "ReconForge Studio",
     preview: "Synthetic preview",
     dataProvenance: "Data provenance",
@@ -585,6 +588,9 @@ export const messages = {
     adminError: "Administration data is unavailable. No synthetic fallback was used.",
   },
   ar: {
+    receivables: "الذمم المدينة",
+    arSignedOut: "لم تسجّل الدخول",
+    arLiveSession: "جلسة مباشرة",
     product: "استوديو ريكون فورج",
     preview: "معاينة ببيانات اصطناعية",
     dataProvenance: "مصدر البيانات",

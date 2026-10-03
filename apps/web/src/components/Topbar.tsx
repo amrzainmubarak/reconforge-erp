@@ -32,6 +32,7 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   rules: "ruleStudio",
   live: "liveStudio",
   adminAudit: "adminAudit",
+  receivables: "receivables",
 };
 
 interface TopbarProps {
@@ -46,6 +47,7 @@ interface TopbarProps {
   onMobileMenu: () => void;
   noticeCount: number;
   activePage: StudioPage;
+  liveIdentity?: string;
 }
 
 export function Topbar({
@@ -60,6 +62,7 @@ export function Topbar({
   onMobileMenu,
   noticeCount,
   activePage,
+  liveIdentity,
 }: TopbarProps) {
   return (
     <header className="topbar">
@@ -98,7 +101,7 @@ export function Topbar({
             <SlidersHorizontal size={18} />
           </button>
         </div>
-        <div className="panel-anchor topbar-optional">
+        {liveIdentity === undefined ? <div className="panel-anchor topbar-optional">
           <button
             className="icon-button notification-button"
             type="button"
@@ -109,8 +112,8 @@ export function Topbar({
             <Bell size={18} />
             {noticeCount ? <span className="notification-count">{noticeCount}</span> : null}
           </button>
-        </div>
-        <div className="panel-anchor topbar-optional">
+        </div> : null}
+        {liveIdentity === undefined ? <div className="panel-anchor topbar-optional">
           <button
             className="quick-button"
             type="button"
@@ -120,8 +123,8 @@ export function Topbar({
             <Plus size={17} />
             <span>{translate("quickCreate")}</span>
           </button>
-        </div>
-        <div className="panel-anchor">
+        </div> : null}
+        {liveIdentity === undefined ? <div className="panel-anchor">
           <button
             className="profile-button"
             type="button"
@@ -136,7 +139,7 @@ export function Topbar({
             </span>
             <ChevronDown size={14} className="topbar-optional" aria-hidden="true" />
           </button>
-        </div>
+        </div> : <span className="profile-copy"><strong>{liveIdentity}</strong><small>{translate("arLiveSession")}</small></span>}
       </div>
     </header>
   );

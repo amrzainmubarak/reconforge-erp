@@ -1191,3 +1191,6 @@ include docs/adr/0802-source-pinned-disposable-object-storage-fixture.md
 include docs/execution/MINIO_CI_SOURCE_BUILD_2026-10-03.json
 include docs/execution/S3_SOURCE_FIXTURE_LIVE_2026-10-03.json
 include docs/execution/MINIO_CI_REMOTE_VERIFICATION_2026-10-03.json
+include docs/adr/0801-receivables-browser-write-journey.md
+include docs/execution/RECEIVABLES_UI_2026-10-03.json
+include docs/execution/RECEIVABLES_UI_PERSISTENCE_2026-10-03.json

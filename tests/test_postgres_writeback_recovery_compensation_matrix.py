@@ -14,7 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_recovery_compensation_matrix.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-08-22.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-03.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py"
 WRITEBACK_PATH = ROOT / "reconforge/connectors/writeback.py"
 POSTGRES_PATH = ROOT / "reconforge/infrastructure/postgres_writeback.py"

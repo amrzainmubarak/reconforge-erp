@@ -14,7 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_receiver_failover_matrix.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-22.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-03.json"
 CURRENT_REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-23.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_receiver_failover_matrix.py"
 RECEIVER_PATH = ROOT / "reconforge/connectors/writeback_receiver.py"

@@ -67,7 +67,7 @@
           "const": "0088_pg_currency_snapshot"
         },
         "target_revision": {
-          "const": "0090_pg_writeback_observations"
+          "enum": ["0090_pg_writeback_observations", "0093_pg_metrics"]
         }
       }
     },

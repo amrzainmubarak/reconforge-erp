@@ -10,7 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_identity_migration_drill.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-03.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration.py"
 
 
@@ -23,9 +23,10 @@ def _load_runner() -> ModuleType:
     return module
 
 
-def test_retained_writeback_identity_migration_drill_is_closed_and_digest_bound() -> None:
+@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03"])
+def test_retained_writeback_identity_migration_drill_is_closed_and_digest_bound(report_date: str) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    report = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
+    report = json.loads((ROOT / f"docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_{report_date}.json").read_text(encoding="utf-8"))
 
     jsonschema.Draft202012Validator.check_schema(schema)
     jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(report)
@@ -39,8 +40,12 @@ def test_retained_writeback_identity_migration_drill_is_closed_and_digest_bound(
 
 
 def test_drill_runner_and_retained_report_bind_the_same_runtime_contract() -> None:
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
     report = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
     runner = _load_runner()
+    assert ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini"))).get_current_head() == runner.TARGET_REVISION
 
     assert report["runtime"]["image"] == runner.IMAGE_REFERENCE
     assert report["runtime"]["source_revision"] == runner.SOURCE_REVISION
@@ -55,6 +60,7 @@ def test_drill_runner_and_retained_report_bind_the_same_runtime_contract() -> No
         "include .github/scripts/verify_postgres_writeback_identity_migration.py",
         "include docs/adr/0540-prove-writeback-migration-refusal-and-independent-restore.md",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-08-22.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-03.json",
         "include docs/schemas/postgres_writeback_identity_migration_drill.schema.json",
         "include tests/test_postgres_writeback_identity_migration_drill.py",
     } <= manifest

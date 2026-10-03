@@ -1,9 +1,11 @@
 # Accounts Receivable and Credit-Control Foundation
 
-Migration 20 adds a bounded local Accounts Receivable workflow for customer
+SQLite migration 20 adds a bounded Accounts Receivable workflow for customer
 master data, exact minor-unit sales invoices, approval-time credit controls,
 posted receipts with allocations, credit exposure, and deterministic aging.
-It is a finance-controls foundation, not a complete AR subledger.
+PostgreSQL persistence is provided by migration `0022_postgres_receivables` and
+the scoped server adapter. It is a finance-controls foundation, not a complete
+AR subledger.
 
 ## Supported lifecycle
 
@@ -13,11 +15,29 @@ Customer Active
     -> PartiallyPaid -> Paid
 ```
 
-An invoice cannot be approved when the customer is inactive, on credit hold, or
-the invoice would exceed the configured credit limit unless the approver has the
-`receivables.credit_override` permission and supplies a reason. A known
-authenticated user cannot approve an invoice they created. Invoice and receipt
-mutations use optimistic row versions where a second allocation is added.
+Invoice approval requires an Active customer and the same currency as the
+customer's financial history. These conditions cannot be bypassed with a credit
+override. A credit hold or credit-limit breach can be overridden by an authorized
+approver with `receivables.credit_override` and a recorded reason. The invoice
+creator cannot approve the same invoice, including trusted local calls and
+actor labels differing only by case or outer whitespace. Invoice and receipt
+mutations retain optimistic row versions where a second allocation is added.
+
+Customer currency can change only before the first invoice or receipt exists.
+Any financial history freezes it, including Draft or Cancelled invoices, paid
+invoices and unallocated receipts. Same-currency profile, status, hold and credit
+limit updates remain available. Lowering a credit limit does not undo existing
+approvals; it applies to subsequent approval decisions. Legacy currency
+mismatches cause invoice/receipt creation, allocation, approval and credit-exposure
+reads to fail closed and require an explicit data reconciliation; this change does not
+silently convert or repair old records.
+
+SQLite acquires its writer lock before reading the mutable customer profile and
+credit exposure. PostgreSQL serializes profile updates, invoice creation,
+receipt posting/allocation, approval and exposure reads through the customer
+row with `FOR NO KEY UPDATE`. This includes concurrent first customer upserts.
+Two approvals for one customer cannot both consume the same available credit.
+Audit or outbox failure rolls back the corresponding business effect.
 
 ## Financial representation
 
@@ -43,6 +63,11 @@ deterministically.
 days overdue, `Current`, `1-30`, `31-60`, `61-90`, and `90+` bucket totals, plus
 the total outstanding value. `credit-exposure` reports limit, exposure,
 available credit, hold, and customer status.
+
+Workspace aging currently aggregates its bucket totals without currency grouping.
+Use single-currency workspaces for those totals; mixed-currency aging is tracked
+separately as PROD-020. Customer credit exposure validates its currency and is
+not an FX conversion or a group-wide consolidated credit calculation.
 
 ## API and CLI
 
@@ -77,8 +102,7 @@ This release does not implement:
   dispute management;
 - sales orders, shipment/inventory integration, payment-gateway settlement, or
   source-ERP writeback;
-- PostgreSQL AR persistence, hosted tenant shared-schema deployment, or
-  distributed AR workers.
+- distributed AR workers or independently validated production deployment.
 
 Those capabilities require separate migrations, posting and period invariants,
 tax controls, integration contracts, and independent security/SoD coverage.

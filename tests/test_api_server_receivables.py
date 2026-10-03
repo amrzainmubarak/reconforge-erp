@@ -24,13 +24,14 @@ from reconforge.infrastructure.postgres_domain import install_postgres_domain_sc
 from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_receivables import POSTGRES_RECEIVABLES_SCHEMA_SQL
+from tests.postgres_test_hygiene import RECEIVABLES_TENANT_CLEANUP_PLAN, cleanup_postgres_test_tenants_as_admin
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
 def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_governed(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
-    psycopg = pytest.importorskip("psycopg")
+    pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
     app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
@@ -68,6 +69,10 @@ def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_govern
             )
             connection.execute(
                 "INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES (%s,'USD','US Dollar',2)",
+                (tenant_id,),
+            )
+            connection.execute(
+                "INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES (%s,'EUR','Euro',2)",
                 (tenant_id,),
             )
 
@@ -167,6 +172,16 @@ def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_govern
             )
             assert submitted.status_code == 200, submitted.text
 
+            profile = {"customer_code": "CUS-HTTP", "name": "HTTP Customer", "currency_code": "USD", "credit_limit_minor": 10_000}
+            changed_currency = client.post("/api/v1/receivables/customers", headers=maker_headers, json={**profile, "currency_code": "EUR"})
+            assert changed_currency.status_code == 400, changed_currency.text
+            suspended = client.post("/api/v1/receivables/customers", headers=maker_headers, json={**profile, "status": "Suspended"})
+            assert suspended.status_code == 200, suspended.text
+            blocked = client.post(f"/api/v1/receivables/invoices/{invoice_id}/approve", headers=checker_headers, json={"expected_version": 2})
+            assert blocked.status_code == 400, blocked.text
+            restored = client.post("/api/v1/receivables/customers", headers=maker_headers, json=profile)
+            assert restored.status_code == 200, restored.text
+
             approved = client.post(
                 f"/api/v1/receivables/invoices/{invoice_id}/approve",
                 headers=checker_headers,
@@ -223,11 +238,6 @@ def test_live_server_receivables_http_lifecycle_is_scoped_exact_and_human_govern
             assert denied_workspace.json()["error"]["code"] == "workspace_scope_denied"
     finally:
         try:
-            with admin.transaction():
-                admin.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant_id,))
-        except psycopg.Error:
-            # Domain audit events are append-only; the disposable database is
-            # removed by the live test runner after this contract completes.
-            pass
+            cleanup_postgres_test_tenants_as_admin(admin, tenant_ids=(tenant_id,), plan=RECEIVABLES_TENANT_CLEANUP_PLAN)
         finally:
             admin.close()

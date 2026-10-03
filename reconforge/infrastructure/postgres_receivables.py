@@ -472,7 +472,13 @@ class PostgresReceivablesRepository:
             actor_label=actor_label, object_type=object_type, object_id=object_id, action=action, metadata=metadata
         )
 
-    def _customer(self, customer_id: str) -> dict[str, Any]:
+    def _customer(self, customer_id: str, *, lock: bool = False) -> dict[str, Any]:
+        if lock:
+            # Serialize credit decisions without conflicting with FK key-share locks.
+            self.connection.execute(
+                "SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s FOR NO KEY UPDATE",
+                (self.tenant_id, customer_id),
+            ).fetchone()
         row = self.connection.execute(
             "SELECT id,workspace_id,organization_id,legal_entity_id,customer_code,name,currency_code,tax_identifier,payment_terms_days,credit_limit_minor,credit_hold,status,created_at,updated_at,row_version FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s",
             (self.tenant_id, customer_id),
@@ -481,17 +487,27 @@ class PostgresReceivablesRepository:
             raise PlatformError("Customer not found.")
         return _row(row, self._CUSTOMER)
 
-    def _customer_by_code(self, workspace_id: str, customer_code: str) -> dict[str, Any]:
+    def _customer_by_code(self, workspace_id: str, customer_code: str, *, lock: bool = False) -> dict[str, Any]:
         row = self.connection.execute(
             "SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND workspace_id=%s AND customer_code=%s",
             (self.tenant_id, workspace_id, _code(customer_code, "Customer code")),
         ).fetchone()
         if row is None:
             raise PlatformError("Customer not found in the requested workspace.")
-        result = self._customer(str(row["id"] if isinstance(row, Mapping) else row[0]))
+        result = self._customer(str(row["id"] if isinstance(row, Mapping) else row[0]), lock=lock)
         if result["status"] != "Active":
             raise PlatformError("Customer is not Active.")
+        self._assert_customer_currency(result)
         return result
+
+    def _assert_customer_currency(self, customer: dict[str, Any]) -> None:
+        mismatch = self.connection.execute(
+            "SELECT 1 FROM reconforge.ar_invoices WHERE tenant_id=%s AND customer_id=%s AND currency_code<>%s "
+            "UNION ALL SELECT 1 FROM reconforge.ar_receipts WHERE tenant_id=%s AND customer_id=%s AND currency_code<>%s LIMIT 1",
+            (self.tenant_id, customer["id"], customer["currency_code"], self.tenant_id, customer["id"], customer["currency_code"]),
+        ).fetchone()
+        if mismatch is not None:
+            raise PlatformError("Customer financial history contains a currency mismatch; reconciliation is required.")
 
     def _invoice_allocated(self, invoice_id: str) -> int:
         row = self.connection.execute(
@@ -587,24 +603,32 @@ class PostgresReceivablesRepository:
             workspace_id = self._required_workspace_id(workspace)
             organization_id, entity_id = self._scope_ids(workspace_id, organization_code, entity_code)
             customer_id = platform_id("ARCUS", workspace_id, code)
-            self.connection.execute(
-                """INSERT INTO reconforge.ar_customers(tenant_id,id,workspace_id,organization_id,legal_entity_id,customer_code,name,currency_code,tax_identifier,payment_terms_days,credit_limit_minor,credit_hold,status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT(tenant_id,workspace_id,customer_code) DO UPDATE SET organization_id=excluded.organization_id,legal_entity_id=excluded.legal_entity_id,name=excluded.name,currency_code=excluded.currency_code,tax_identifier=excluded.tax_identifier,payment_terms_days=excluded.payment_terms_days,credit_limit_minor=excluded.credit_limit_minor,credit_hold=excluded.credit_hold,status=excluded.status,updated_at=now(),row_version=ar_customers.row_version+1""",
-                (
-                    self.tenant_id,
-                    customer_id,
-                    workspace_id,
-                    organization_id,
-                    entity_id,
-                    code,
-                    _text(name, "Customer name"),
-                    currency,
-                    _text(tax_identifier, "Tax identifier", maximum=100, required=False),
-                    _integer(payment_terms_days, "Payment terms"),
-                    _minor(credit_limit_minor, "Credit limit"),
-                    bool(credit_hold),
-                    customer_status,
-                ),
+            fields = (
+                organization_id, entity_id, _text(name, "Customer name"), currency,
+                _text(tax_identifier, "Tax identifier", maximum=100, required=False),
+                _integer(payment_terms_days, "Payment terms"), _minor(credit_limit_minor, "Credit limit"),
+                bool(credit_hold), customer_status,
             )
+            inserted = self.connection.execute(
+                # Either business-key or deterministic primary-key conflict may
+                # be observed when two connections insert the first customer.
+                """INSERT INTO reconforge.ar_customers(tenant_id,id,workspace_id,customer_code,organization_id,legal_entity_id,name,currency_code,tax_identifier,payment_terms_days,credit_limit_minor,credit_hold,status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING RETURNING id""",
+                (self.tenant_id, customer_id, workspace_id, code, *fields),
+            ).fetchone()
+            existing = self._customer(customer_id, lock=True)
+            if inserted is None:
+                if existing["currency_code"] != currency:
+                    history = self.connection.execute(
+                        "SELECT 1 FROM reconforge.ar_invoices WHERE tenant_id=%s AND customer_id=%s "
+                        "UNION ALL SELECT 1 FROM reconforge.ar_receipts WHERE tenant_id=%s AND customer_id=%s LIMIT 1",
+                        (self.tenant_id, customer_id, self.tenant_id, customer_id),
+                    ).fetchone()
+                    if history is not None:
+                        raise PlatformError("Customer currency cannot change after financial history exists.")
+                self.connection.execute(
+                    """UPDATE reconforge.ar_customers SET organization_id=%s,legal_entity_id=%s,name=%s,currency_code=%s,tax_identifier=%s,payment_terms_days=%s,credit_limit_minor=%s,credit_hold=%s,status=%s,updated_at=now(),row_version=row_version+1 WHERE tenant_id=%s AND id=%s""",
+                    (*fields, self.tenant_id, customer_id),
+                )
             result = self._customer(customer_id)
             self._event(
                 actor_label=actor_label,
@@ -646,7 +670,7 @@ class PostgresReceivablesRepository:
             previous = self._idempotent("invoice", workspace_id, idempotency_key)
             if previous is not None:
                 return previous
-            customer = self._customer_by_code(workspace_id, customer_code)
+            customer = self._customer_by_code(workspace_id, customer_code, lock=True)
             if customer["currency_code"] != currency:
                 raise PlatformError("Customer invoice currency must match the customer currency.")
             due = (
@@ -745,11 +769,12 @@ class PostgresReceivablesRepository:
                 raise PlatformError("Only a submitted receivable invoice can be approved.")
             if same_actor(invoice.get("created_by"), actor_label):
                 raise PlatformError("Separation of duties conflict: invoice creator cannot approve the same invoice.")
-            self.connection.execute(
-                "SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s FOR UPDATE",
-                (self.tenant_id, invoice["customer_id"]),
-            )
-            customer = self._customer(str(invoice["customer_id"]))
+            customer = self._customer(str(invoice["customer_id"]), lock=True)
+            if customer["status"] != "Active":
+                raise PlatformError("Customer is not Active.")
+            if invoice["currency_code"] != customer["currency_code"]:
+                raise PlatformError("Customer invoice currency must match the customer currency.")
+            self._assert_customer_currency(customer)
             exposure = self._exposure(str(customer["id"]), invoice_id)
             override = _text(credit_override_reason, "Credit override reason", maximum=500, required=False)
             if (
@@ -775,6 +800,13 @@ class PostgresReceivablesRepository:
             return result
 
     def _allocate(self, receipt: dict[str, Any], invoice_id: str, amount: int) -> None:
+        candidate = self._invoice(invoice_id)
+        if (
+            candidate["workspace_id"] != receipt["workspace_id"]
+            or candidate["customer_id"] != receipt["customer_id"]
+            or candidate["currency_code"] != receipt["currency_code"]
+        ):
+            raise PlatformError("Receipt allocation scope, customer, and currency must match the invoice.")
         self.connection.execute(
             "SELECT id FROM reconforge.ar_receipts WHERE tenant_id=%s AND id=%s FOR UPDATE",
             (self.tenant_id, receipt["id"]),
@@ -842,7 +874,7 @@ class PostgresReceivablesRepository:
             previous = self._idempotent("receipt", workspace_id, idempotency_key)
             if previous is not None:
                 return previous
-            customer = self._customer_by_code(workspace_id, customer_code)
+            customer = self._customer_by_code(workspace_id, customer_code, lock=True)
             if customer["currency_code"] != currency:
                 raise PlatformError("Customer receipt currency must match the customer currency.")
             organization_id, entity_id = self._scope_ids(workspace_id, organization_code, entity_code)
@@ -891,6 +923,9 @@ class PostgresReceivablesRepository:
     ) -> dict[str, Any]:
         amount = _minor(amount_minor, "Allocation amount", positive=True)
         with self._transaction():
+            receipt = self._receipt(receipt_id)
+            customer = self._customer(str(receipt["customer_id"]), lock=True)
+            self._assert_customer_currency(customer)
             receipt = self._receipt(receipt_id)
             if receipt["status"] != "Posted" or int(receipt["row_version"]) != expected_version:
                 raise PlatformError("Receipt changed concurrently or is not Posted.")
@@ -949,7 +984,7 @@ class PostgresReceivablesRepository:
     def credit_exposure(self, customer_code: str, *, workspace: str = "default") -> dict[str, Any]:
         with self._transaction():
             workspace_id = self._required_workspace_id(workspace)
-            customer = self._customer_by_code(workspace_id, customer_code)
+            customer = self._customer_by_code(workspace_id, customer_code, lock=True)
             exposure = self._exposure(str(customer["id"]))
             limit = int(customer["credit_limit_minor"])
             return {

@@ -79,23 +79,35 @@ class SQLiteReceivablesRepository:
         """Create or update a customer credit profile."""
 
         require_permission(self.connection, actor_label=actor_label, permission="receivables.manage")
-        workspace_id = ensure_workspace(self.connection, workspace)
-        code = normalize_key(customer_code, default="")
-        customer_name = normalize_text(name)
-        currency = _currency(currency_code)
-        limit = _minor(credit_limit_minor, field="credit limit")
-        terms = _nonnegative_int(payment_terms_days, field="payment terms")
-        customer_status = _allowed(status, CUSTOMER_STATUSES, "customer status")
-        if not code or not customer_name:
-            raise PlatformError("Customer code and name are required.")
-        organization_id, legal_entity_id = self._scope_ids(
-            workspace_id,
-            organization_code=organization_code,
-            entity_code=entity_code,
-        )
-        customer_id = platform_id("ARCUS", workspace_id, code)
-        now = utc_now_text()
         try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            workspace_id = ensure_workspace(self.connection, workspace)
+            code = normalize_key(customer_code, default="")
+            customer_name = normalize_text(name)
+            currency = _currency(currency_code)
+            limit = _minor(credit_limit_minor, field="credit limit")
+            terms = _nonnegative_int(payment_terms_days, field="payment terms")
+            customer_status = _allowed(status, CUSTOMER_STATUSES, "customer status")
+            if not code or not customer_name:
+                raise PlatformError("Customer code and name are required.")
+            organization_id, legal_entity_id = self._scope_ids(
+                workspace_id,
+                organization_code=organization_code,
+                entity_code=entity_code,
+            )
+            customer_id = platform_id("ARCUS", workspace_id, code)
+            now = utc_now_text()
+            existing = self.connection.execute(
+                "SELECT currency_code FROM ar_customers WHERE id = ?", (customer_id,),
+            ).fetchone()
+            if existing is not None and str(existing["currency_code"]) != currency:
+                history = self.connection.execute(
+                    "SELECT 1 FROM ar_invoices WHERE customer_id = ? "
+                    "UNION ALL SELECT 1 FROM ar_receipts WHERE customer_id = ? LIMIT 1",
+                    (customer_id, customer_id),
+                ).fetchone()
+                if history is not None:
+                    raise PlatformError("Customer currency cannot change after financial history exists.")
             self.connection.execute(
                 """
                 INSERT INTO ar_customers (
@@ -155,6 +167,9 @@ class SQLiteReceivablesRepository:
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to save customer.") from exc
+        finally:
+            if self.connection.in_transaction:
+                self.connection.rollback()
 
     def create_invoice(
         self,
@@ -175,43 +190,44 @@ class SQLiteReceivablesRepository:
         """Create a Draft sales invoice using exact minor-unit arithmetic."""
 
         require_permission(self.connection, actor_label=actor_label, permission="receivables.manage")
-        workspace_id = ensure_workspace(self.connection, workspace)
-        if idempotency_key:
-            previous = self._idempotent("invoice", workspace_id, idempotency_key)
-            if previous is not None:
-                return previous
-        number = normalize_key(invoice_number, default="")
-        customer = self._customer_by_code(workspace_id, customer_code)
-        currency = _currency(currency_code)
-        invoice_day = _date(invoice_date, field="invoice date")
-        tax = _minor(tax_minor, field="invoice tax")
-        if not number or not lines:
-            raise PlatformError("Invoice number and at least one line are required.")
-        if str(customer["currency_code"]) != currency:
-            raise PlatformError("Customer invoice currency must match the customer currency.")
-        due_day = (
-            _date(due_date, field="due date")
-            if normalize_text(due_date)
-            else invoice_day
-            + timedelta(
-                days=int(customer["payment_terms_days"]),
-            )
-        )
-        if due_day < invoice_day:
-            raise PlatformError("Due date cannot be before invoice date.")
-        organization_id, legal_entity_id = self._scope_ids(
-            workspace_id,
-            organization_code=organization_code,
-            entity_code=entity_code,
-        )
-        normalized_lines = _normalize_lines(lines)
-        subtotal = sum(line.line_total_minor for line in normalized_lines)
-        if sum(line.tax_minor for line in normalized_lines) != tax:
-            raise PlatformError("Invoice tax must equal the sum of invoice-line tax amounts.")
-        total = subtotal + tax
-        invoice_id = platform_id("ARINV", workspace_id, customer["id"], number)
-        now = utc_now_text()
         try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            workspace_id = ensure_workspace(self.connection, workspace)
+            if idempotency_key:
+                previous = self._idempotent("invoice", workspace_id, idempotency_key)
+                if previous is not None:
+                    return previous
+            number = normalize_key(invoice_number, default="")
+            customer = self._customer_by_code(workspace_id, customer_code)
+            currency = _currency(currency_code)
+            invoice_day = _date(invoice_date, field="invoice date")
+            tax = _minor(tax_minor, field="invoice tax")
+            if not number or not lines:
+                raise PlatformError("Invoice number and at least one line are required.")
+            if str(customer["currency_code"]) != currency:
+                raise PlatformError("Customer invoice currency must match the customer currency.")
+            due_day = (
+                _date(due_date, field="due date")
+                if normalize_text(due_date)
+                else invoice_day
+                + timedelta(
+                    days=int(customer["payment_terms_days"]),
+                )
+            )
+            if due_day < invoice_day:
+                raise PlatformError("Due date cannot be before invoice date.")
+            organization_id, legal_entity_id = self._scope_ids(
+                workspace_id,
+                organization_code=organization_code,
+                entity_code=entity_code,
+            )
+            normalized_lines = _normalize_lines(lines)
+            subtotal = sum(line.line_total_minor for line in normalized_lines)
+            if sum(line.tax_minor for line in normalized_lines) != tax:
+                raise PlatformError("Invoice tax must equal the sum of invoice-line tax amounts.")
+            total = subtotal + tax
+            invoice_id = platform_id("ARINV", workspace_id, customer["id"], number)
+            now = utc_now_text()
             self.connection.execute(
                 """
                 INSERT INTO ar_invoices (
@@ -283,6 +299,9 @@ class SQLiteReceivablesRepository:
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to create customer invoice.") from exc
+        finally:
+            if self.connection.in_transaction:
+                self.connection.rollback()
 
     def submit_invoice(
         self, invoice_id: str, *, expected_version: int, actor_label: str = "local-cli"
@@ -311,23 +330,29 @@ class SQLiteReceivablesRepository:
         """Approve a submitted invoice after customer status, hold, and limit checks."""
 
         require_permission(self.connection, actor_label=actor_label, permission="receivables.approve")
-        invoice = self.get_invoice(invoice_id)
-        if str(invoice["status"]) != "Submitted":
-            raise PlatformError("Only a submitted receivable invoice can be approved.")
-        if same_actor(invoice.get("created_by"), actor_label):
-            raise PlatformError("Separation of duties conflict: invoice creator cannot approve the same invoice.")
-        customer = self.get_customer(str(invoice["customer_id"]))
-        exposure = self._customer_exposure(str(customer["id"]), exclude_invoice_id=invoice_id)
-        hold = bool(customer["credit_hold"])
-        limit_breach = exposure + int(invoice["total_minor"]) > int(customer["credit_limit_minor"])
-        override_reason = normalize_text(credit_override_reason)
-        if hold or limit_breach:
-            if not override_reason:
-                reason = "customer is on credit hold" if hold else "customer credit limit would be exceeded"
-                raise PlatformError(f"Credit control blocked invoice approval: {reason}.")
-            require_permission(self.connection, actor_label=actor_label, permission="receivables.credit_override")
-        now = utc_now_text()
         try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            invoice = self.get_invoice(invoice_id)
+            if str(invoice["status"]) != "Submitted":
+                raise PlatformError("Only a submitted receivable invoice can be approved.")
+            if same_actor(invoice.get("created_by"), actor_label):
+                raise PlatformError("Separation of duties conflict: invoice creator cannot approve the same invoice.")
+            customer = self.get_customer(str(invoice["customer_id"]))
+            if str(customer["status"]) != "Active":
+                raise PlatformError("Customer is not Active.")
+            if str(invoice["currency_code"]) != str(customer["currency_code"]):
+                raise PlatformError("Customer invoice currency must match the customer currency.")
+            self._assert_customer_currency(customer)
+            exposure = self._customer_exposure(str(customer["id"]), exclude_invoice_id=invoice_id)
+            hold = bool(customer["credit_hold"])
+            limit_breach = exposure + int(invoice["total_minor"]) > int(customer["credit_limit_minor"])
+            override_reason = normalize_text(credit_override_reason)
+            if hold or limit_breach:
+                if not override_reason:
+                    reason = "customer is on credit hold" if hold else "customer credit limit would be exceeded"
+                    raise PlatformError(f"Credit control blocked invoice approval: {reason}.")
+                require_permission(self.connection, actor_label=actor_label, permission="receivables.credit_override")
+            now = utc_now_text()
             cursor = self.connection.execute(
                 """
                 UPDATE ar_invoices
@@ -371,6 +396,9 @@ class SQLiteReceivablesRepository:
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to approve customer invoice.") from exc
+        finally:
+            if self.connection.in_transaction:
+                self.connection.rollback()
 
     def post_receipt(
         self,
@@ -390,31 +418,32 @@ class SQLiteReceivablesRepository:
         """Post a receipt and atomically allocate it to approved invoices."""
 
         require_permission(self.connection, actor_label=actor_label, permission="receivables.manage")
-        workspace_id = ensure_workspace(self.connection, workspace)
-        if idempotency_key:
-            previous = self._idempotent("receipt", workspace_id, idempotency_key)
-            if previous is not None:
-                return previous
-        number = normalize_key(receipt_number, default="")
-        customer = self._customer_by_code(workspace_id, customer_code)
-        currency = _currency(currency_code)
-        amount = _positive_minor(amount_minor, field="receipt amount")
-        receipt_day = _date(receipt_date, field="receipt date")
-        if not number:
-            raise PlatformError("Receipt number is required.")
-        if str(customer["currency_code"]) != currency:
-            raise PlatformError("Receipt currency must match the customer currency.")
-        organization_id, legal_entity_id = self._scope_ids(
-            workspace_id,
-            organization_code=organization_code,
-            entity_code=entity_code,
-        )
-        normalized_allocations = _normalize_allocations(allocations)
-        if sum(item.amount_minor for item in normalized_allocations) > amount:
-            raise PlatformError("Receipt allocations cannot exceed the receipt amount.")
-        receipt_id = platform_id("ARREC", workspace_id, number)
-        now = utc_now_text()
         try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            workspace_id = ensure_workspace(self.connection, workspace)
+            if idempotency_key:
+                previous = self._idempotent("receipt", workspace_id, idempotency_key)
+                if previous is not None:
+                    return previous
+            number = normalize_key(receipt_number, default="")
+            customer = self._customer_by_code(workspace_id, customer_code)
+            currency = _currency(currency_code)
+            amount = _positive_minor(amount_minor, field="receipt amount")
+            receipt_day = _date(receipt_date, field="receipt date")
+            if not number:
+                raise PlatformError("Receipt number is required.")
+            if str(customer["currency_code"]) != currency:
+                raise PlatformError("Receipt currency must match the customer currency.")
+            organization_id, legal_entity_id = self._scope_ids(
+                workspace_id,
+                organization_code=organization_code,
+                entity_code=entity_code,
+            )
+            normalized_allocations = _normalize_allocations(allocations)
+            if sum(item.amount_minor for item in normalized_allocations) > amount:
+                raise PlatformError("Receipt allocations cannot exceed the receipt amount.")
+            receipt_id = platform_id("ARREC", workspace_id, number)
+            now = utc_now_text()
             self.connection.execute(
                 """
                 INSERT INTO ar_receipts (
@@ -478,6 +507,9 @@ class SQLiteReceivablesRepository:
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to post customer receipt.") from exc
+        finally:
+            if self.connection.in_transaction:
+                self.connection.rollback()
 
     def allocate_receipt(
         self,
@@ -491,14 +523,16 @@ class SQLiteReceivablesRepository:
         """Allocate additional unapplied receipt value with optimistic concurrency."""
 
         require_permission(self.connection, actor_label=actor_label, permission="receivables.manage")
-        receipt = self.get_receipt(receipt_id)
-        if str(receipt["status"]) != "Posted":
-            raise PlatformError("Only posted receipts can be allocated.")
-        if int(receipt["row_version"]) != expected_version:
-            raise PlatformError("Receipt changed concurrently.")
-        allocation = ReceiptAllocationInput(invoice_id=invoice_id, amount_minor=amount_minor)
-        now = utc_now_text()
         try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            receipt = self.get_receipt(receipt_id)
+            self._assert_customer_currency(self.get_customer(str(receipt["customer_id"])))
+            if str(receipt["status"]) != "Posted":
+                raise PlatformError("Only posted receipts can be allocated.")
+            if int(receipt["row_version"]) != expected_version:
+                raise PlatformError("Receipt changed concurrently.")
+            allocation = ReceiptAllocationInput(invoice_id=invoice_id, amount_minor=amount_minor)
+            now = utc_now_text()
             self._insert_allocation(
                 workspace_id=str(receipt["workspace_id"]),
                 receipt_id=receipt_id,
@@ -535,6 +569,9 @@ class SQLiteReceivablesRepository:
         except sqlite3.DatabaseError as exc:
             self.connection.rollback()
             raise PlatformError("Unable to allocate customer receipt.") from exc
+        finally:
+            if self.connection.in_transaction:
+                self.connection.rollback()
 
     def get_customer(self, customer_id: str) -> dict[str, Any]:
         row = self.connection.execute("SELECT * FROM ar_customers WHERE id = ?", (customer_id,)).fetchone()
@@ -594,20 +631,25 @@ class SQLiteReceivablesRepository:
         return [self.get_invoice(str(row["id"])) for row in rows]
 
     def credit_exposure(self, customer_code: str, *, workspace: str = "default") -> dict[str, Any]:
-        workspace_id = ensure_workspace(self.connection, workspace)
-        customer = self._customer_by_code(workspace_id, customer_code)
-        exposure = self._customer_exposure(str(customer["id"]))
-        limit = int(customer["credit_limit_minor"])
-        return {
-            "customer_id": str(customer["id"]),
-            "customer_code": str(customer["customer_code"]),
-            "currency_code": str(customer["currency_code"]),
-            "credit_limit_minor": limit,
-            "exposure_minor": exposure,
-            "available_credit_minor": limit - exposure,
-            "credit_hold": bool(customer["credit_hold"]),
-            "status": str(customer["status"]),
-        }
+        try:
+            self.connection.execute("BEGIN IMMEDIATE")
+            workspace_id = ensure_workspace(self.connection, workspace)
+            customer = self._customer_by_code(workspace_id, customer_code)
+            exposure = self._customer_exposure(str(customer["id"]))
+            limit = int(customer["credit_limit_minor"])
+            return {
+                "customer_id": str(customer["id"]),
+                "customer_code": str(customer["customer_code"]),
+                "currency_code": str(customer["currency_code"]),
+                "credit_limit_minor": limit,
+                "exposure_minor": exposure,
+                "available_credit_minor": limit - exposure,
+                "credit_hold": bool(customer["credit_hold"]),
+                "status": str(customer["status"]),
+            }
+        finally:
+            if self.connection.in_transaction:
+                self.connection.rollback()
 
     def aging_report(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
         """Return deterministic open-item aging and bucket totals."""
@@ -779,7 +821,20 @@ class SQLiteReceivablesRepository:
             raise PlatformError("Customer not found in the requested workspace.")
         if str(row["status"]) != "Active":
             raise PlatformError("Customer is not Active.")
-        return dict(row)
+        customer = dict(row)
+        self._assert_customer_currency(customer)
+        return customer
+
+    def _assert_customer_currency(self, customer: dict[str, Any]) -> None:
+        """Fail closed on legacy history that no longer matches its customer."""
+
+        mismatch = self.connection.execute(
+            "SELECT 1 FROM ar_invoices WHERE customer_id = ? AND currency_code <> ? "
+            "UNION ALL SELECT 1 FROM ar_receipts WHERE customer_id = ? AND currency_code <> ? LIMIT 1",
+            (customer["id"], customer["currency_code"], customer["id"], customer["currency_code"]),
+        ).fetchone()
+        if mismatch is not None:
+            raise PlatformError("Customer financial history contains a currency mismatch; reconciliation is required.")
 
     def _scope_ids(
         self, workspace_id: str, *, organization_code: str = "", entity_code: str = ""

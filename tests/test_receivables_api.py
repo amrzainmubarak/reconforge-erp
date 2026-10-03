@@ -85,6 +85,33 @@ def test_receivables_api_enforces_roles_and_exposes_credit_and_aging(tmp_path: P
     assert "Traceback" not in denied.text
 
 
+def test_customer_currency_and_inactive_approval_are_rejected_without_overriding_history(tmp_path: Path) -> None:
+    with _setup(tmp_path) as client:
+        prep = {"Authorization": f"Bearer {_token(client, 'prep')}"}
+        controller = {"Authorization": f"Bearer {_token(client, 'admin')}"}
+        profile = {"customer_code": "CUS", "name": "Synthetic Customer", "currency_code": "USD", "credit_limit_minor": 1000}
+        assert client.post("/api/v1/receivables/customers", headers=prep, json=profile).status_code == 200
+        created = client.post("/api/v1/receivables/invoices", headers=prep, json={
+            "invoice_number": "INV", "customer_code": "CUS", "invoice_date": "2026-07-01", "currency_code": "USD",
+            "lines": [{"description": "Synthetic", "quantity": "1", "unit_price_minor": 600, "line_total_minor": 600}],
+        })
+        assert created.status_code == 200
+        invoice_id = created.json()["id"]
+        rejected = client.post("/api/v1/receivables/customers", headers=prep, json={**profile, "currency_code": "EUR"})
+        assert rejected.status_code == 400
+        assert client.post(f"/api/v1/receivables/invoices/{invoice_id}/submit", headers=prep, json={"expected_version": 1}).status_code == 200
+        assert client.post("/api/v1/receivables/customers", headers=prep, json={**profile, "status": "Suspended"}).status_code == 200
+        blocked = client.post(f"/api/v1/receivables/invoices/{invoice_id}/approve", headers=controller,
+                              json={"expected_version": 2, "credit_override_reason": "Synthetic credit exception"})
+        assert blocked.status_code == 400
+        assert "Active" in blocked.text
+        assert client.post("/api/v1/receivables/customers", headers=prep, json=profile).status_code == 200
+        approved = client.post(f"/api/v1/receivables/invoices/{invoice_id}/approve", headers=controller, json={"expected_version": 2})
+        assert approved.status_code == 200
+        assert approved.json()["currency_code"] == "USD"
+        assert approved.json()["row_version"] == 3
+
+
 def test_receivables_api_drops_future_storage_fields(tmp_path: Path) -> None:
     db_path = tmp_path / "receivables-projection.db"
     run_migrations(db_path)

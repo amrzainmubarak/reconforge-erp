@@ -1,5 +1,14 @@
 # ReconForge Execution Evidence Log
 
+- Publication source-digest review: RECEIVABLES_API_SOURCE_DIGEST_REVIEW_2026-10-03.json
+  verifies five literals against four exact Git source blobs and one retained
+  test-evidence artifact; ten exact fingerprints preserve scanner configuration.
+  Final full-history1028commits and immutable exported3056-file tree report
+  zero findings;35 supply-chain policy tests pass without skips. Earlier five
+  findings and the review-artifact naming false positives remain retained in
+  ignored publication scan logs. These are secret scans, not vulnerability or
+  production-security certification.
+
 - AR API/UI: RECEIVABLES_POLICY_API_2026-10-03.json retains corrected11pass/0skip,
   positive Outbox measurements and120local/one prerequisite; UI report retains
   full202pass and fresh HTTPS0099 two-journey32.0s proof, exact JPY/KWD/huge/legacy,

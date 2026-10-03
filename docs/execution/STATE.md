@@ -6,7 +6,8 @@ The goal remains active. Foundation changes are reviewable in
 [Draft PR 109](https://github.com/amrzainmubarak/reconforge-erp/pull/109), stacked
 against the preexisting `codex/p0-postgres-clean-boot` branch. They are not merged
 into main. The financial checkpoint is in Draft PR110; the next integrity work
-is on `codex/scoped-finance-and-atomic-jobs`, stacked on that checkpoint.
+is on `codex/scoped-finance-and-atomic-jobs`, stacked on that checkpoint and
+reviewable in [Draft PR111](https://github.com/amrzainmubarak/reconforge-erp/pull/111).
 
 - AR customer/currency/credit invariants are committed: 89 focused SQLite/live
   PostgreSQL tests passed, followed by four caller-transaction ownership checks.
@@ -38,7 +39,11 @@ is on `codex/scoped-finance-and-atomic-jobs`, stacked on that checkpoint.
   all five S3/Object Lock invariants verified. This is CI-only fixture evidence.
   The failed foundation server-boundaries job was traced to immediate Docker
   removal verification. ADR0804 and freshly executed restore reports fix it;
-  pushed foundation a6776c69 awaits its independent remote checks.
+  Foundation a6776c69 passed17 remote checks, with one conditional skip and a
+  scoped-export test teardown failure after its HTTP assertions passed. The
+  fixture now explicitly grants policy-audit writes and cleans only its own
+  immutable audit rows in an administrative transaction. A fresh database passes
+  all three tests with cleanup verified; pushed889bef54 awaits remote execution.
 - Next dependencies remain explicit scoped transaction composition, immutable
   operational posting, integrated trade cycles and connected financial writes.
   There is no available company pilot or external-auditor acceptance evidence.

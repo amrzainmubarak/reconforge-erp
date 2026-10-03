@@ -2,6 +2,15 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Foundation hosted follow-up at a6776c69:17 passed checks, one conditional
+  image-security skip and one scoped-export fixture teardown failure. All
+  migration/receiver/recovery matrices completed. The test failed deleting its
+  own tenant while immutable policy-audit rows remained. The fixture repair
+  at889bef54 also supplies explicit audit grants for fresh databases; all three
+  scoped-export tests pass on a separately migrated0093 database in9.20s, no
+  skips, and cleanup confirms no owned rows and the audit trigger enabled.
+  New remote acceptance remains pending; neither failed run is relabeled green.
+
 - Verified financial checkpoint: isolated clean70dac5cf passes3632 tests,
   with243 explicit capability skips,24 warnings and no failures in877.33s.
   Ruff, Mypy, Bandit, wheel/sdist and whitespace checks pass. The

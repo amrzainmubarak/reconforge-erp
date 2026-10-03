@@ -19,6 +19,18 @@ test("renders loading then live exact metric and lineage", async () => {
   expect(screen.getByText("approved matches")).toBeInTheDocument();
 });
 
+test.each([
+  { locale: "en" as const, valueText: "9007199254740993.123456789012345678900", expected: "9,007,199,254,740,993.123456789012345678900" },
+  { locale: "ar" as const, valueText: "9007199254740993.123456789012345678900", expected: "٩٬٠٠٧٬١٩٩٬٢٥٤٬٧٤٠٬٩٩٣٫١٢٣٤٥٦٧٨٩٠١٢٣٤٥٦٧٨٩٠٠" },
+  { locale: "en" as const, valueText: "-0.0000000000000000000100", expected: "-0.0000000000000000000100" },
+  { locale: "ar" as const, valueText: "-0.0000000000000000000100", expected: "\u061c-٠٫٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠٠١٠٠" },
+])("renders exact value_text in $locale without using the approximate value field: $valueText", async ({ locale, valueText, expected }) => {
+  vi.stubGlobal("fetch", vi.fn(async () => response(200, { metrics: [{ ...metric, value: 0, value_text: valueText }] })));
+  render(<BrowserSessionProvider><LiveStudio locale={locale} translate={(key) => translate(locale, key)} /></BrowserSessionProvider>);
+  const label = await screen.findByText("Match rate");
+  expect(label.closest("tr")?.querySelectorAll("td")[1]?.textContent).toBe(expected);
+});
+
 test("renders an explicit empty authorized state", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => response(200, { metrics: [] })));
   render(<BrowserSessionProvider><LiveStudio locale="en" translate={(key) => translate("en", key)} /></BrowserSessionProvider>);

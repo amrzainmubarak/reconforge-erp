@@ -26,3 +26,11 @@ db48dad77c29debf8b09bc44d41f0f0f702fc479:docs/execution/STATE.md:generic-api-key
 90b0cfba2702372dcc8e10ef618b44be40eee5ba:docs/execution/POSTGRES_WRITEBACK_OBSERVATION_MATRIX_2026-08-22.json:generic-api-key:170
 c88b8c03666e1f61ac34a58ebe7591e07b878561:.github/scripts/verify_postgres_writeback_observation_matrix.py:generic-api-key:106
 c88b8c03666e1f61ac34a58ebe7591e07b878561:.github/scripts/verify_postgres_writeback_observation_matrix.py:generic-api-key:117
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_operations.py.
+b5075883e0c702f0a80df0d08ad6ed48655b2a3c:docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json:generic-api-key:65
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_operations.py.
+docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json:generic-api-key:65
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_server_identity.py.
+ca82cbffd50734965f1c67ea1c94445df46885d5:docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135
+# Reviewed source-file SHA256 in immutable synthetic verification evidence: tests/test_api_server_identity.py.
+docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135

@@ -21,6 +21,16 @@ digests. Independent policy/identity/resource findings are repaired; earlier
 failed/source-drifting proofs remain separate. Business-date recorded history
 does not reconstruct historical knowledge-time or statutory fiscal close.
 
+The exact-arithmetic/AP-recovery/as-of slice is reviewable in
+[Draft PR113](https://github.com/amrzainmubarak/reconforge-erp/pull/113), stacked
+on PR112 with its actual latest ancestry. Root commitsdf071e48/76d2a8b4/866d943a
+separate the three runtime changes;1942b7af records acceptance. PRIMARY now uses
+codex/receivables-policy-and-inventory-composition for subsequent work. Neither
+PR is merged or deployed. The managed c56 whole regression remains in progress;
+its independent global quality/build gates have passed. Observed c56 hosted
+Python3.11/3.12/security/web/storage/Docker/HA-DR checks succeed; the last server
+boundary check is still pending. New PR113 whole/hosted acceptance is separate.
+
 PROD033 backend policy capture is now in progress after committed exact
 arithmetic; SQLite49/PostgreSQL0099 are reserved for verified new AR policy and
 explicitly unverified historical reads. PROD036 starts the Inventory ownership

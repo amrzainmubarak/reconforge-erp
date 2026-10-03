@@ -278,22 +278,24 @@ risks:
     review_cadence_days: 90
     next_review: "2026-10-23"
   - id: R-010
-    title: React Studio is read-only
+    title: React operational workflows remain partial
     category: user_experience
     owner: studio-experience
-    trigger: Users infer that the experimental React surface can complete governed mutations or replace the current local Studio.
+    trigger: Users infer complete stock, AP, payment and GL workflows from the bounded authenticated AR surface.
     likelihood: possible
     impact: low
     inherent_risk: low
     status: monitoring
     mitigations:
-      - Product and architecture documentation label the React client read-only and experimental.
-      - Unit and E2E tests cover the disclosed read-only paths.
+      - Product and architecture metadata distinguish synthetic previews from bounded authenticated AR invoice and cash writes.
+      - Unit, actual PostgreSQL HTTPS and bilingual accessibility tests cover the disclosed AR paths.
     evidence:
       - apps/web
       - tests/test_studio_platform_pages.py
+      - docs/execution/RECEIVABLES_POLICY_UI_2026-10-03.json
+      - apps/web/e2e/receivables-policy-live.spec.ts
     residual_risk: low
-    residual_rationale: Mutation workflows and full accessibility coverage are not implemented.
+    residual_rationale: Other domain write journeys, full trade and GL integration, and universal accessibility coverage remain incomplete.
     next_actions:
       - Add authenticated API-backed write screens only with authorization and E2E evidence.
       - Complete critical-path accessibility coverage before maturity changes.

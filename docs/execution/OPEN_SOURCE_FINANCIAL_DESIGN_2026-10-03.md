@@ -11,7 +11,7 @@ and third-party binaries were not imported in this research increment.
 | [TigerBeetle two-phase transfers](https://docs.tigerbeetle.com/coding/two-phase-transfers/) | Reservation and resolution are separate immutable events; one pending transfer cannot resolve repeatedly. | Future internal supplier-payment lifecycle should distinguish preparation/reservation, reviewed effect and external settlement observation. | AP payment aggregate is absent; the pending-transfer contract is a design input only. |
 | [ERPNext perpetual inventory](https://docs.frappe.io/erpnext/perpetual-inventory) | Receipt increases inventory against goods-received-not-billed; delivery moves inventory cost to cost of goods sold; invoicing clears the appropriate commercial liability/receivable. | Specify first reviewed InventoryReceipt bundle and subsequent AP recognition/delivery/AR/cash bundles with exact independent journal answers. | PROD010/011 specification exists; the current valuation bridge produces Finance Drafts and is not an integrated operational cycle. |
 | [ERPNext GL documentation](https://docs.frappe.io/erpnext/general-ledger) | Ledger detail traces financial effects to the source business voucher; subledger reports answer different outstanding-item questions. | Keep canonical source links and account drill-down; compare exact AR/AP/Inventory outstanding totals with operational effects after integration. | PROD032 provides verified effect/entry/period/date/line drill-down; trade source links remain future work. |
-| [PostgreSQL16 row-security documentation](https://www.postgresql.org/docs/16/ddl-rowsecurity.html) | Referential integrity checks operate independently of row visibility; backups must not silently filter necessary rows. | Enforce captured AR customer/document monetary affinity with database constraints, alongside current RLS and native restored-scope checks. | PROD033 composite-affinity constraints are under implementation and independent raw-write testing. Existing posting native restores are separately verified. |
+| [PostgreSQL16 row-security documentation](https://www.postgresql.org/docs/16/ddl-rowsecurity.html) | Referential integrity checks operate independently of row visibility; backups must not silently filter necessary rows. | Enforce captured AR customer/document monetary affinity with database constraints, alongside current RLS and native restored-scope checks. | PROD033 backend composite affinity/raw-write controls pass216tests; populated0099 restore and separate11-test actual API/React acceptance are retained. No universal-isolation claim. |
 
 The architecture remains a modular monolith with Community SQLite and hosted
 PostgreSQL adapters. These references inform invariants and test questions;
@@ -32,8 +32,9 @@ state is inventory6/value7200, cash96000, AR/AP/GRNI0 and profit3200.
 These are arithmetic acceptance targets, not observed implementation outputs.
 Real effect atomicity, current human approval, scope/policy affinity, exactly
 one business effect under retry, and reversal without orphaned stock/GL are
-release prerequisites. PROD036 currently closes a reproduced SQLite ownership
-gap before that bundle is implemented.
+release prerequisites. PROD036 closes the reproduced SQLite ownership gap under ADR0818.
+PROD038 retains the independently reviewed receipt/reversal design; implementation
+and its operational effects remain future acceptance.
 
 The already pinned IBM AMLSim45-row workload remains a separately licensed,
 executed reconciliation input with an independent fault oracle. It does not

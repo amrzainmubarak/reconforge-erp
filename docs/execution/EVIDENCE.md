@@ -1,5 +1,26 @@
 # ReconForge Execution Evidence Log
 
+- AR API/UI: RECEIVABLES_POLICY_API_2026-10-03.json retains corrected11pass/0skip,
+  positive Outbox measurements and120local/one prerequisite; UI report retains
+  full202pass and fresh HTTPS0099 two-journey32.0s proof, exact JPY/KWD/huge/legacy,
+  stable sources and external named cleanup. ADR0821; runtimeb9153400/31220e06.
+  Original196/1full web and faulty earlier Outbox predicate remain disclosed.
+- CI partition: SERVER_BOUNDARY_SHARDING_2026-10-03.json binds nine30min shards,
+  original39commands/new API command, fail-closed aggregate,109 local contracts
+  and actual Bash dispatch. Host timings remain pending; runtimea8a6dd36.
+- Current0099 proof: POSTGRES_0099_GATE_REPAIR_2026-10-03.json retains actual
+  PG16.14/17.10 history/native restore, two schema updates,78pass/0skip, reviewed
+  empty-table-digest fingerprints and0findings in history/exported repository.
+- Failed8054 whole gate: RECEIVABLES_INVENTORY_REGRESSION_8054_2026-10-03.json
+  records4403collected/4041pass/361explicit prerequisites/1stale-proof failure,
+  stable3033-file manifest and passed global quality/build. Never relabel passed.
+- Hosted subjects: FINANCIAL_HOSTED_CHECKPOINTS_112_113_2026-10-03.json records
+  successful1128d76647c and1138ba6772d cancellation with official30min annotation.
+  Conditional exact-image SBOM/vulnerability/license gate is skipped, not passed.
+- Surface metadata: RECEIVABLES_SURFACE_INVENTORY_2026-10-03.json retains the
+  initial missing threat-index interface failure and repaired registry/index
+  gate. No financial command or stored amount changed in the metadata repair.
+
 - AR retained policy: RECEIVABLES_POLICY_2026-10-03.json binds216pass/0skip,
   unchanged18 owned sources/tests, actual0099 nonowner checks and1,180,617-byte
   native16.14 restore with eleven equal digests and cleanup. Runtime662aad3f

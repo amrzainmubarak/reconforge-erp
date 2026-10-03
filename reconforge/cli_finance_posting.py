@@ -10,6 +10,7 @@ from typing import Annotated, Any
 import typer
 
 from reconforge.api.finance_posting_contract import (
+    project_posted_balances,
     project_posted_trial_balance,
     project_posting_effect,
     project_posting_preview,
@@ -155,4 +156,19 @@ def trial_balance(
     """Report selected-period net activity and gross turnover with effect drill-down."""
     _run(db_path, username, lambda connection, actor: {"trial_balance": project_posted_trial_balance(_service(connection).posted_trial_balance(
         period_id=period_id, organization_code=organization_code, entity_code=entity_code, workspace=workspace, actor=actor,
+    ))})
+
+
+@posting_app.command("balances-as-of")
+def balances_as_of(
+    period_id: Annotated[str, typer.Option("--period-id")],
+    as_of_date: Annotated[str, typer.Option("--as-of-date")],
+    organization_code: Annotated[str, typer.Option("--organization")],
+    entity_code: Annotated[str, typer.Option("--entity")],
+    username: Username, db_path: Database,
+    workspace: Annotated[str, typer.Option("--workspace")] = "default",
+) -> None:
+    """Read verified opening, movements and closing through an inclusive business date."""
+    _run(db_path, username, lambda connection, actor: {"balances": project_posted_balances(_service(connection).posted_balances_as_of(
+        period_id=period_id, as_of_date=as_of_date, organization_code=organization_code, entity_code=entity_code, workspace=workspace, actor=actor,
     ))})

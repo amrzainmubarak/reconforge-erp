@@ -10,6 +10,7 @@ from typing import Any
 from reconforge.application.inventory_core import InventoryCoreSummary
 from reconforge.audit import AuditLedgerError
 from reconforge.domain.models import utc_now_text
+from reconforge.infrastructure.sqlite_inventory_unit_of_work import SQLiteInventoryUnitOfWork, inventory_operation
 from reconforge.platform.common import (
     PlatformError,
     commit_audited,
@@ -67,10 +68,24 @@ MAX_MOVEMENT_LINES = 1_000
 class SQLiteInventoryCoreRepository:
     """Manage exact local inventory-control state without source-ERP writeback."""
 
-    def __init__(self, connection: sqlite3.Connection) -> None:
-        ensure_platform_schema(connection)
+    def __init__(
+        self, connection: sqlite3.Connection, *, unit_of_work: SQLiteInventoryUnitOfWork | None = None
+    ) -> None:
         self.connection = connection
-        self._ensure_schema()
+        self.unit_of_work = unit_of_work
+        if unit_of_work is not None:
+            with unit_of_work.operation(connection):
+                ensure_platform_schema(connection)
+                self._ensure_schema()
+        else:
+            ensure_platform_schema(connection)
+            self._ensure_schema()
+
+    def _rollback_mutation(self) -> None:
+        if self.unit_of_work is not None:
+            self.unit_of_work.rollback_only = True
+        else:
+            self.connection.rollback()
 
     def _ensure_schema(self) -> None:
         expected = {
@@ -92,6 +107,7 @@ class SQLiteInventoryCoreRepository:
         if not expected <= existing:
             raise PlatformError("Inventory-core schema is not initialized. Run 'reconforge db migrate' first.")
 
+    @inventory_operation(write=True)
     def upsert_uom(
         self,
         *,
@@ -155,6 +171,7 @@ class SQLiteInventoryCoreRepository:
             record = self._uom(workspace_id, code)
             commit_audited(
                 self.connection,
+                autocommit=self.unit_of_work is None,
                 actor_label=actor_label,
                 object_type="unit_of_measure",
                 object_id=str(record["id"]),
@@ -164,12 +181,13 @@ class SQLiteInventoryCoreRepository:
                 outbox_payload={"uom_code": code, "decimal_places": decimal_places, "active": active},
             )
         except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
-            self.connection.rollback()
+            self._rollback_mutation()
             if isinstance(exc, PlatformError):
                 raise
             raise PlatformError("Unable to save the local unit of measure.") from exc
         return record
 
+    @inventory_operation()
     def list_uoms(
         self,
         *,
@@ -192,6 +210,7 @@ class SQLiteInventoryCoreRepository:
             raise PlatformError("Unable to list local units of measure.") from exc
         return [_public_record(row) for row in rows]
 
+    @inventory_operation(write=True)
     def upsert_item(
         self,
         *,
@@ -295,6 +314,7 @@ class SQLiteInventoryCoreRepository:
             record = self._item(workspace_id, code)
             commit_audited(
                 self.connection,
+                autocommit=self.unit_of_work is None,
                 actor_label=actor_label,
                 object_type="inventory_item",
                 object_id=str(record["id"]),
@@ -316,12 +336,13 @@ class SQLiteInventoryCoreRepository:
                 },
             )
         except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
-            self.connection.rollback()
+            self._rollback_mutation()
             if isinstance(exc, PlatformError):
                 raise
             raise PlatformError("Unable to save the local inventory item.") from exc
         return record
 
+    @inventory_operation()
     def list_items(
         self,
         *,
@@ -360,6 +381,7 @@ class SQLiteInventoryCoreRepository:
             raise PlatformError("Unable to list local inventory items.") from exc
         return [_public_record(row) for row in rows]
 
+    @inventory_operation(write=True)
     def upsert_warehouse(
         self,
         *,
@@ -439,6 +461,7 @@ class SQLiteInventoryCoreRepository:
             record = self._warehouse(workspace_id, str(organization["id"]), code)
             commit_audited(
                 self.connection,
+                autocommit=self.unit_of_work is None,
                 actor_label=actor_label,
                 object_type="warehouse",
                 object_id=str(record["id"]),
@@ -458,12 +481,13 @@ class SQLiteInventoryCoreRepository:
                 },
             )
         except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
-            self.connection.rollback()
+            self._rollback_mutation()
             if isinstance(exc, PlatformError):
                 raise
             raise PlatformError("Unable to save the local warehouse.") from exc
         return record
 
+    @inventory_operation()
     def list_warehouses(
         self,
         *,
@@ -497,6 +521,7 @@ class SQLiteInventoryCoreRepository:
             raise PlatformError("Unable to list local warehouses.") from exc
         return [_public_record(row) for row in rows]
 
+    @inventory_operation(write=True)
     def upsert_location(
         self,
         *,
@@ -590,6 +615,7 @@ class SQLiteInventoryCoreRepository:
             record = self._location(str(warehouse["id"]), code)
             commit_audited(
                 self.connection,
+                autocommit=self.unit_of_work is None,
                 actor_label=actor_label,
                 object_type="inventory_location",
                 object_id=str(record["id"]),
@@ -609,12 +635,13 @@ class SQLiteInventoryCoreRepository:
                 },
             )
         except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
-            self.connection.rollback()
+            self._rollback_mutation()
             if isinstance(exc, PlatformError):
                 raise
             raise PlatformError("Unable to save the local inventory location.") from exc
         return record
 
+    @inventory_operation()
     def list_locations(
         self,
         *,
@@ -654,6 +681,7 @@ class SQLiteInventoryCoreRepository:
             raise PlatformError("Unable to list local inventory locations.") from exc
         return [_public_record(row) for row in rows]
 
+    @inventory_operation(write=True)
     def upsert_lot(
         self,
         *,
@@ -718,6 +746,7 @@ class SQLiteInventoryCoreRepository:
             record = self._lot(str(item["id"]), str(organization["id"]), lot_code)
             commit_audited(
                 self.connection,
+                autocommit=self.unit_of_work is None,
                 actor_label=actor_label,
                 object_type="inventory_lot",
                 object_id=str(record["id"]),
@@ -737,12 +766,13 @@ class SQLiteInventoryCoreRepository:
                 },
             )
         except (PlatformError, sqlite3.DatabaseError, AuditLedgerError) as exc:
-            self.connection.rollback()
+            self._rollback_mutation()
             if isinstance(exc, PlatformError):
                 raise
             raise PlatformError("Unable to save the local lot or serial reference.") from exc
         return record
 
+    @inventory_operation()
     def list_lots(
         self,
         *,
@@ -780,6 +810,7 @@ class SQLiteInventoryCoreRepository:
             raise PlatformError("Unable to list local lots and serials.") from exc
         return [_public_record(row) for row in rows]
 
+    @inventory_operation(write=True)
     def create_movement(
         self,
         *,
@@ -880,7 +911,8 @@ class SQLiteInventoryCoreRepository:
         original_creator = str(existing["created_by"]) if existing is not None else creator
         original_created_at = str(existing["created_at"]) if existing is not None else now
         try:
-            self.connection.execute("BEGIN IMMEDIATE")
+            if self.unit_of_work is None:
+                self.connection.execute("BEGIN IMMEDIATE")
             if existing is not None:
                 self.connection.execute("DELETE FROM inventory_movement_lines WHERE movement_id = ?", (movement_id,))
             self.connection.execute(
@@ -951,6 +983,7 @@ class SQLiteInventoryCoreRepository:
             self._validate_movement_integrity(dict(stored), check_stock=False)
             commit_audited(
                 self.connection,
+                autocommit=self.unit_of_work is None,
                 actor_label=actor_label,
                 object_type="inventory_movement",
                 object_id=movement_id,
@@ -960,13 +993,14 @@ class SQLiteInventoryCoreRepository:
                 outbox_payload={"movement_number": number, "movement_type": selected_type, "line_count": len(prepared)},
             )
         except (PlatformError, AuditLedgerError):
-            self.connection.rollback()
+            self._rollback_mutation()
             raise
         except sqlite3.DatabaseError as exc:
-            self.connection.rollback()
+            self._rollback_mutation()
             raise PlatformError("Unable to save the local inventory movement.") from exc
         return self.get_movement(movement_id, actor_label=actor_label)
 
+    @inventory_operation(write=True)
     def post_movement(
         self,
         movement_id: str,
@@ -981,7 +1015,8 @@ class SQLiteInventoryCoreRepository:
         poster = _clean_text(actor_label or "local-cli", "Actor label")
         now = utc_now_text()
         try:
-            self.connection.execute("BEGIN IMMEDIATE")
+            if self.unit_of_work is None:
+                self.connection.execute("BEGIN IMMEDIATE")
             movement = self._movement(movement_id)
             if movement["status"] != "Draft":
                 raise PlatformError("Only Draft inventory movements can be posted.")
@@ -1000,6 +1035,7 @@ class SQLiteInventoryCoreRepository:
                 raise PlatformError("Inventory movement changed concurrently; reload and retry.")
             commit_audited(
                 self.connection,
+                autocommit=self.unit_of_work is None,
                 actor_label=actor_label,
                 object_type="inventory_movement",
                 object_id=movement_id,
@@ -1009,13 +1045,14 @@ class SQLiteInventoryCoreRepository:
                 outbox_payload={"movement_number": movement["movement_number"], "reason": post_reason},
             )
         except (PlatformError, AuditLedgerError):
-            self.connection.rollback()
+            self._rollback_mutation()
             raise
         except sqlite3.DatabaseError as exc:
-            self.connection.rollback()
+            self._rollback_mutation()
             raise PlatformError("Unable to post the local inventory movement.") from exc
         return self.get_movement(movement_id, actor_label=actor_label)
 
+    @inventory_operation(write=True)
     def void_movement(
         self,
         movement_id: str,
@@ -1030,7 +1067,8 @@ class SQLiteInventoryCoreRepository:
         actor = _clean_text(actor_label or "local-cli", "Actor label")
         now = utc_now_text()
         try:
-            self.connection.execute("BEGIN IMMEDIATE")
+            if self.unit_of_work is None:
+                self.connection.execute("BEGIN IMMEDIATE")
             movement = self._movement(movement_id)
             if movement["status"] != "Posted":
                 raise PlatformError("Only Posted inventory movements can be voided.")
@@ -1085,6 +1123,7 @@ class SQLiteInventoryCoreRepository:
                 raise PlatformError("Inventory movement changed concurrently; reload and retry.")
             commit_audited(
                 self.connection,
+                autocommit=self.unit_of_work is None,
                 actor_label=actor_label,
                 object_type="inventory_movement",
                 object_id=movement_id,
@@ -1094,13 +1133,14 @@ class SQLiteInventoryCoreRepository:
                 outbox_payload={"movement_number": movement["movement_number"], "reason": void_reason},
             )
         except (PlatformError, AuditLedgerError):
-            self.connection.rollback()
+            self._rollback_mutation()
             raise
         except sqlite3.DatabaseError as exc:
-            self.connection.rollback()
+            self._rollback_mutation()
             raise PlatformError("Unable to void the local inventory movement.") from exc
         return self.get_movement(movement_id, actor_label=actor_label)
 
+    @inventory_operation()
     def get_movement(self, movement_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
         require_permission(self.connection, actor_label=actor_label, permission=INVENTORY_READ_PERMISSION)
         movement = self._movement(movement_id)
@@ -1143,6 +1183,7 @@ class SQLiteInventoryCoreRepository:
         result["lines"] = lines
         return result
 
+    @inventory_operation()
     def list_movements(
         self,
         *,
@@ -1194,6 +1235,7 @@ class SQLiteInventoryCoreRepository:
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to list local inventory movements.") from exc
 
+    @inventory_operation()
     def on_hand(
         self,
         *,
@@ -1294,6 +1336,7 @@ class SQLiteInventoryCoreRepository:
             "balances": records,
         }
 
+    @inventory_operation()
     def control_exceptions(
         self,
         *,
@@ -1406,6 +1449,7 @@ class SQLiteInventoryCoreRepository:
             "exceptions": exceptions,
         }
 
+    @inventory_operation()
     def summary(self, *, workspace: str = "default", actor_label: str = "local-cli") -> InventoryCoreSummary:
         require_permission(self.connection, actor_label=actor_label, permission=INVENTORY_READ_PERMISSION)
         workspace_name = _clean_text(workspace, "Workspace name")
@@ -1445,6 +1489,7 @@ class SQLiteInventoryCoreRepository:
             int(row["voided"]),
         )
 
+    @inventory_operation()
     def snapshot(self, *, workspace: str = "default", actor_label: str = "local-cli") -> dict[str, object]:
         """Return a bounded, path-free local inventory-core contract."""
 

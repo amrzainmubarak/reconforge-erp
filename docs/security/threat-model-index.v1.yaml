@@ -76,7 +76,7 @@ actors:
     trust: authenticated-limited
     capabilities:
       - Render local or synthetic UI artifacts and follow links or actions exposed by the selected Studio surface.
-    boundary: The modern Studio is synthetic/read-only; the current Studio and API require their own actor and output controls.
+    boundary: Synthetic previews remain read-only; authenticated AR workflows require current session, scope, exact money and output controls.
 
 threat_catalog:
   - id: TM-T-001
@@ -296,7 +296,7 @@ modules:
         residual_risk_ids: [R-004]
         limitations:
           - Remaining explicit legacy financial readers outside this module retain a versioned compatibility boundary.
-          - Legacy entries without verified policy or authenticated review provenance cannot be operationally posted; no historical policy, actor, or seal is inferred. Posted reporting covers selected-period net activity only.
+          - Legacy entries without verified policy or authenticated review provenance cannot be operationally posted; no historical policy, actor, or seal is inferred. Posted reporting covers period activity and bounded recorded-postings business-date opening/closing; historical knowledge-time is not reconstructed.
       - threat_id: TM-T-003
         status: partial
         attack_surface: Finance manage/read/validate/post/reverse permissions, authenticated preparer-only Draft replacement, independent review and explicit posting, current permission checks before command replay, human step-up, CLI/API actor derivation, and consolidation approval/post/reversal/lock/reopen separation.
@@ -332,7 +332,7 @@ modules:
         limitations:
           - Artifact scope and checksum verification do not prove disclosure approval, WORM retention, production key custody, or recipient authorization.
           - Restore guards verify retained financial consistency and source/evidence affinity; the privileged database owner and restore operator remain trusted dependencies, not independently authenticated sources.
-    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_consolidation_ownership_changes.py, tests/test_consolidation_acquisition.py, tests/test_consolidation_ppa.py, tests/test_consolidation_impairment.py, tests/test_postgres_consolidation_ppa.py, tests/test_postgres_consolidation_ppa_runtime.py, tests/test_api_consolidation_ppa.py, tests/test_consolidation_statement.py, tests/test_finance_core.py, tests/test_finance_posting_domain.py, tests/test_finance_posting_api_contract.py, tests/test_finance_posting_cli.py, tests/test_sqlite_finance_posting.py, tests/test_postgres_finance_posting.py, tests/test_postgres_finance_posting_concurrency.py, tests/test_postgres_finance_posting_api.py, tests/test_postgres_finance_posting_restore.py, tests/test_sqlite_consolidation_close.py]
+    module_test_evidence: [tests/test_consolidation_lifecycle.py, tests/test_consolidation_translation.py, tests/test_consolidation_ownership_changes.py, tests/test_consolidation_acquisition.py, tests/test_consolidation_ppa.py, tests/test_consolidation_impairment.py, tests/test_postgres_consolidation_ppa.py, tests/test_postgres_consolidation_ppa_runtime.py, tests/test_api_consolidation_ppa.py, tests/test_consolidation_statement.py, tests/test_finance_core.py, tests/test_finance_posting_domain.py, tests/test_finance_posting_api_contract.py, tests/test_finance_posting_cli.py, tests/test_sqlite_finance_posting.py, tests/test_postgres_finance_posting.py, tests/test_postgres_finance_posting_concurrency.py, tests/test_postgres_finance_posting_api.py, tests/test_postgres_finance_posting_restore.py, tests/test_finance_balances.py, tests/test_sqlite_finance_balances.py, tests/test_postgres_finance_balances.py, tests/test_sqlite_consolidation_close.py]
     assumptions:
       - Currency registry selection and source master data are reviewed before financial control use.
       - Operators approve source trial balances, group mappings, rate buckets, rate sources, and the CTA account before using a translation result.
@@ -342,7 +342,7 @@ modules:
       - New entries retain exact currency policy and stable review provenance; legacy NULL fields remain unverified, and current master-data changes must not reinterpret stored minor units.
     out_of_scope:
       - Full statutory acquisition-accounting judgment beyond the bounded PPA and impairment evidence artifacts, tax/deferred-tax effects, goodwill impairment methodology, bargain-purchase statutory treatment, equity-method or joint-arrangement accounting, historical FX recycling, NCI ownership changes, statutory accounting/statements, payment execution, source-ERP posting, legal books, production hosted-service assurance, and independent financial assurance. PostgreSQL PPA persistence remains bounded evidence storage.
-      - Automatic trade/subledger posting, complete Sales-to-Cash and Purchase-to-Payment GL cycles, cumulative opening/as-of balances, and unrestricted generated-source posting are outside this manual posting contract.
+      - Automatic trade/subledger posting, complete Sales-to-Cash and Purchase-to-Payment GL cycles, historical knowledge-time/fiscal-close balances, and unrestricted generated-source posting are outside this manual posting contract.
 
   - module_id: inventory.core
     registry_maturity: experimental
@@ -383,7 +383,7 @@ modules:
         status: partial
         attack_surface: Movement/count/valuation/reversal lifecycle commits, immutable effects, audit/outbox, and Finance Draft linkage.
         controls: [SEC-C-005, SEC-C-006]
-        test_evidence: [tests/test_inventory_valuation.py, tests/test_inventory_valuation_reversal.py, tests/test_atomic_legacy_services.py]
+        test_evidence: [tests/test_inventory_valuation.py, tests/test_inventory_valuation_reversal.py, tests/test_atomic_legacy_services.py, tests/test_sqlite_inventory_composition.py]
         residual_risk_ids: [R-003]
         limitations:
           - Finance Draft creation does not validate or post the draft and cannot update a source ERP.
@@ -395,7 +395,7 @@ modules:
         residual_risk_ids: [R-014]
         limitations:
           - Real inventory disclosure authorization, encryption, and recipient controls are not supplied by the synthetic UI bridge.
-    module_test_evidence: [apps/web/src/App.test.tsx, tests/test_inventory_core.py, tests/test_inventory_planning.py, tests/test_inventory_valuation.py, tests/test_inventory_valuation_reversal.py, tests/test_studio_demo_bridge.py]
+    module_test_evidence: [apps/web/src/App.test.tsx, tests/test_inventory_core.py, tests/test_sqlite_inventory_composition.py, tests/test_inventory_planning.py, tests/test_inventory_valuation.py, tests/test_inventory_valuation_reversal.py, tests/test_exact_trade_primitives.py, tests/test_postgres_exact_trade_primitives.py, tests/test_studio_demo_bridge.py]
     assumptions:
       - Item, location, quantity, cost, lot/serial, and opening-state inputs are authorized and reconciled by the operator.
       - Posted and Approved labels refer only to the local ReconForge control lifecycle.
@@ -1022,9 +1022,9 @@ modules:
     capability_status: foundation
     threat_model_status: evidence-bounded
     owner: evidence-security
-    interfaces: [artifacts, modern-studio]
-    module_data_classifications: [synthetic-only]
-    architecture_boundaries: [TB-006, TB-007]
+    interfaces: [api, artifacts, modern-studio]
+    module_data_classifications: [financial-sensitive, synthetic-preview-data]
+    architecture_boundaries: [TB-002, TB-003, TB-004, TB-006, TB-007]
     assets:
       - id: synthetic-studio-contracts
         description: Marked synthetic overview, exception, evidence, inventory, retail-settlement, and screenshot artifacts.
@@ -1034,8 +1034,28 @@ modules:
         description: React/Vite source, dependencies, static build output, browser rendering, and E2E screenshots.
         data_class: DC-002
         objectives: [integrity, availability]
-    actors: [ACT-001, ACT-003, ACT-005, ACT-006, ACT-008]
+      - id: authenticated-ar-money-and-workflow
+        description: Scoped invoice and cash data, captured monetary interpretation, exact amounts and authorized user actions.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-003, ACT-004, ACT-005, ACT-006, ACT-008]
     threat_cases:
+      - threat_id: TM-T-002
+        status: partial
+        attack_surface: Boolean/float coercion, unsafe JSON numbers, precision drift, unverified legacy history and cash policy mismatch.
+        controls: [SEC-C-002, SEC-C-006]
+        test_evidence: [tests/test_receivables_money_api_contract.py, tests/test_receivables_policy_api.py, apps/web/src/receivables-money.test.ts, apps/web/e2e/receivables-policy-live.spec.ts]
+        residual_risk_ids: [R-004]
+        limitations:
+          - Bounded AR interpretation only; no FX conversion, generated GL, historical policy repair or complete trade cycle.
+      - threat_id: TM-T-003
+        status: partial
+        attack_surface: Session changes, stale views, browser mutations, CSRF, cash step-up and selected workspace/entity authority.
+        controls: [SEC-C-003, SEC-C-004, SEC-C-005]
+        test_evidence: [tests/test_receivables_policy_api.py, apps/web/src/components/AdminAudit.test.tsx, apps/web/src/components/ReceivablesWorkspace.test.tsx, apps/web/src/components/ReceivablesCash.test.tsx, apps/web/e2e/receivables-cash-live.spec.ts]
+        residual_risk_ids: [R-001, R-007, R-010]
+        limitations:
+          - Current tested paths only; invoice replay identity, universal isolation, external identity and deployed effectiveness remain separate.
       - threat_id: TM-T-008
         status: partial
         attack_surface: Synthetic marker validation, modified JSON contracts, scalar rendering, links, labels, and screenshot interpretation.
@@ -1060,9 +1080,9 @@ modules:
         residual_risk_ids: [R-009]
         limitations:
           - Passing a lock-file build does not prove signed frontend provenance or secure public hosting.
-    module_test_evidence: [apps/web/e2e/screenshots.spec.ts, apps/web/src/App.test.tsx, tests/test_studio_demo_bridge.py]
+    module_test_evidence: [apps/web/e2e/screenshots.spec.ts, apps/web/src/App.test.tsx, tests/test_studio_demo_bridge.py, apps/web/src/receivables-money.test.ts, apps/web/e2e/receivables-policy-live.spec.ts]
     assumptions:
-      - Inputs are produced from the explicitly marked synthetic demo flow and reviewed before external sharing.
-      - The module remains read-only and is not treated as the authenticated current Studio or a production frontend.
+      - Preview inputs remain explicitly synthetic and require review before external sharing.
+      - AR workflows use the selected authorized backend; browser metadata cannot replace server money or identity authority.
     out_of_scope:
-      - Real financial data, write actions, API authentication, public hosting hardening, and production user workflows.
+      - Other modules' complete write workflows, generated trade/GL, public hosting hardening and production maturity.

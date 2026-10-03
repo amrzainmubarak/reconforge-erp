@@ -217,10 +217,24 @@ jobs:
   server-boundaries:
     runs-on: ubuntu-latest
     needs: [test, web]
-    # The live matrix normally completes in under 20 minutes.  A bounded job
-    # lifetime prevents a hung database/pytest process from consuming a runner
-    # indefinitely while preserving enough headroom for the declared matrix.
+    name: server-boundaries (${{ matrix.shard }})
+    # Independent services per shard bound cumulative live verification time.
+    # Keep every shard observable after a sibling fails; the aggregate fails closed.
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard:
+          - writeback
+          - native
+          - parity
+          - durable-scale
+          - matching-runtime
+          - industry-close
+          - receivables
+          - finance-posting
+          - inventory-payables
     services:
       postgres:
         image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
@@ -295,6 +309,7 @@ jobs:
           uv run --no-sync alembic -c alembic.ini upgrade head
 
       - name: Run PostgreSQL write-back migration version matrix
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_WRITEBACK_MATRIX_REPORT: ${{ runner.temp }}/reconforge-writeback-migration-matrix.json
         run: |
@@ -309,6 +324,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run write-back receiver idempotency drill
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_WRITEBACK_RECEIVER_REPORT: ${{ runner.temp }}/reconforge-writeback-receiver-idempotency.json
         run: |
@@ -323,6 +339,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run PostgreSQL write-back receiver idempotency matrix
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_POSTGRES_RECEIVER_REPORT: ${{ runner.temp }}/reconforge-postgres-writeback-receiver-idempotency.json
         run: |
@@ -337,6 +354,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run PostgreSQL write-back receiver failover matrix
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_RECEIVER_FAILOVER_REPORT: ${{ runner.temp }}/reconforge-writeback-receiver-failover.json
         run: |
@@ -351,6 +369,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Run PostgreSQL write-back recovery compensation matrix
+        if: matrix.shard == 'writeback'
         env:
           RECONFORGE_WRITEBACK_RECOVERY_COMPENSATION_REPORT: ${{ runner.temp }}/reconforge-writeback-recovery-compensation.json
         run: |
@@ -365,6 +384,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Verify pinned AMLSim through the durable PostgreSQL worker
+        if: matrix.shard == 'native'
         env:
           RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
@@ -382,12 +402,14 @@ jobs:
 
       - name: Run live server-boundary tests
         env:
+          RECONFORGE_SERVER_BOUNDARY_SHARD: ${{ matrix.shard }}
           RECONFORGE_POSTGRES_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_APP_USER: reconforge_app
           RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE: reconforge_ci_source
           RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE: reconforge_ci_admin
+          RECONFORGE_AR_INVOICE_REPLAY_NATIVE_REPORT: ${{ runner.temp }}/reconforge-ar-invoice-recovery-native.json
           RECONFORGE_TEST_REDIS_URL: redis://localhost:6379/0
           RECONFORGE_REDIS_IMAGE_DIGEST: sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
           RECONFORGE_REDIS_LIVE_REPORT: ${{ runner.temp }}/reconforge-redis-live-report.json
@@ -409,44 +431,67 @@ jobs:
             'password=postgres' > "$PGSERVICEFILE"
           chmod 600 "$PGSERVICEFILE"
           mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(item['test'] for item in document['boundaries'] if item.get('test') and item['test'] != 'tests/test_postgres_durable_jobs.py'), sep='\\n')")
-          native_smoke_dump="${RUNNER_TEMP}/reconforge-native-backup-smoke.dump"
-          rm -f "$native_smoke_dump"
-          pg_dump --format=custom --no-owner --no-privileges --file "$native_smoke_dump" --dbname service=reconforge_ci_source
-          test -s "$native_smoke_dump"
-          pg_restore --list "$native_smoke_dump" >/dev/null
-          rm -f "$native_smoke_dump"
-          uv run --no-sync pytest tests/test_postgres_backup.py -k 'test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup' -q
-          uv run --no-sync pytest tests/test_application_metrics.py -k 'test_live_postgres_metrics_and_sqlite_parity' -q
-          uv run --no-sync pytest tests/test_scoped_exports.py -k 'test_live_scoped_export_excludes_sibling_workspace_and_entity' -q
-          uv run --no-sync pytest tests/test_api_server_scoped_exports.py -k 'test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated' -q
-          uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_metrics_migration.py tests/test_postgres_finance_currency_policy.py tests/test_postgres_repository_scope.py tests/test_postgres_finance_scope.py tests/test_postgres_finance_scope_restore.py tests/test_postgres_master_data_authority.py tests/test_postgres_runtime_role.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_reconciliation_input_seal.py tests/test_postgres_reconciliation_seal_restore.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q
-          uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile' -q
-          uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile or test_live_postgres_grouped_matching_10k_domain_diverse_profile' -q
-          uv run --no-sync pytest tests/test_postgres_grouped_matching_runtime.py -k 'test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped' -q
-          uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect' -q
-          uv run --no-sync pytest tests/test_postgres_close_scope_bootstrap.py -q
-          uv run --no-sync pytest tests/test_api_operations.py -q
-          uv run --no-sync pytest tests/test_api_metrics.py -q
-          uv run --no-sync pytest tests/test_postgres_manufacturing_cost_control.py -q
-          uv run --no-sync pytest tests/test_api_server_manufacturing_cost_control.py -q
-          uv run --no-sync pytest tests/test_postgres_retail_settlement.py -q
-          uv run --no-sync pytest tests/test_api_server_retail_settlement.py -q
-          uv run --no-sync pytest tests/test_postgres_professional_invoice_payment.py -q
-          uv run --no-sync pytest tests/test_api_server_professional_invoice_payment.py -q
-          uv run --no-sync pytest tests/test_postgres_consolidation_close.py -k 'test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable' -q
-          uv run --no-sync pytest tests/test_postgres_federation.py -k 'test_live_postgres_federation_replay_link_session_and_rls' -q
-          uv run --no-sync pytest tests/test_api_server_consolidation_close.py -q
-          uv run --no-sync pytest tests/test_api_server_reconciliation_live.py -q
-          uv run --no-sync pytest tests/test_api_server_inventory_core.py -q
-          uv run --no-sync pytest tests/test_api_server_receivables.py -q
-          uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
-          uv run --no-sync pytest tests/test_api_server_payables.py -q
-          uv run --no-sync pytest tests/test_api_server_local_boundaries.py -q
-          uv run --no-sync pytest tests/test_api_server_inventory_planning.py -q
-          uv run --no-sync pytest tests/test_api_server_inventory_valuation.py -q
-          uv run --no-sync pytest tests/test_postgres_bank_statement.py -q
-          uv run --no-sync pytest tests/test_api_server_bank_statement.py -q
-          uv run --no-sync python .github/scripts/verify_redis_live.py --output "${RECONFORGE_REDIS_LIVE_REPORT}"
+          case "$RECONFORGE_SERVER_BOUNDARY_SHARD" in
+            writeback) ;; # Dedicated evidence runners above own this shard.
+            native)
+              native_smoke_dump="${RUNNER_TEMP}/reconforge-native-backup-smoke.dump"
+              rm -f "$native_smoke_dump"
+              pg_dump --format=custom --no-owner --no-privileges --file "$native_smoke_dump" --dbname service=reconforge_ci_source
+              test -s "$native_smoke_dump"
+              pg_restore --list "$native_smoke_dump" >/dev/null
+              rm -f "$native_smoke_dump"
+              uv run --no-sync pytest tests/test_postgres_backup.py -k 'test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup' -q
+              uv run --no-sync pytest tests/test_application_metrics.py -k 'test_live_postgres_metrics_and_sqlite_parity' -q
+              uv run --no-sync pytest tests/test_scoped_exports.py -k 'test_live_scoped_export_excludes_sibling_workspace_and_entity' -q
+              uv run --no-sync pytest tests/test_api_server_scoped_exports.py -k 'test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated' -q
+              uv run --no-sync python .github/scripts/verify_redis_live.py --output "${RECONFORGE_REDIS_LIVE_REPORT}"
+              ;;
+            parity)
+              uv run --no-sync pytest "${parity_tests[@]}" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_metrics_migration.py tests/test_postgres_finance_currency_policy.py tests/test_postgres_repository_scope.py tests/test_postgres_finance_scope.py tests/test_postgres_finance_scope_restore.py tests/test_postgres_master_data_authority.py tests/test_postgres_runtime_role.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_reconciliation_input_seal.py tests/test_postgres_reconciliation_seal_restore.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q
+              ;;
+            durable-scale)
+              uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile' -q
+              ;;
+            matching-runtime)
+              uv run --no-sync pytest tests/test_postgres_grouped_matching_scale.py -k 'test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile or test_live_postgres_grouped_matching_10k_domain_diverse_profile' -q
+              uv run --no-sync pytest tests/test_postgres_grouped_matching_runtime.py -k 'test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped' -q
+              uv run --no-sync pytest tests/test_postgres_durable_jobs.py -k 'test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect' -q
+              ;;
+            industry-close)
+              uv run --no-sync pytest tests/test_postgres_close_scope_bootstrap.py -q
+              uv run --no-sync pytest tests/test_api_operations.py -q
+              uv run --no-sync pytest tests/test_api_metrics.py -q
+              uv run --no-sync pytest tests/test_postgres_manufacturing_cost_control.py -q
+              uv run --no-sync pytest tests/test_api_server_manufacturing_cost_control.py -q
+              uv run --no-sync pytest tests/test_postgres_retail_settlement.py -q
+              uv run --no-sync pytest tests/test_api_server_retail_settlement.py -q
+              uv run --no-sync pytest tests/test_postgres_professional_invoice_payment.py -q
+              uv run --no-sync pytest tests/test_api_server_professional_invoice_payment.py -q
+              uv run --no-sync pytest tests/test_postgres_consolidation_close.py -k 'test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable' -q
+              uv run --no-sync pytest tests/test_postgres_federation.py -k 'test_live_postgres_federation_replay_link_session_and_rls' -q
+              uv run --no-sync pytest tests/test_api_server_consolidation_close.py -q
+              uv run --no-sync pytest tests/test_api_server_reconciliation_live.py -q
+              uv run --no-sync pytest tests/test_postgres_bank_statement.py -q
+              uv run --no-sync pytest tests/test_api_server_bank_statement.py -q
+              ;;
+            receivables)
+              uv run --no-sync pytest tests/test_api_server_receivables.py -q
+              uv run --no-sync pytest tests/test_receivables_monetary_policy.py tests/test_receivables_policy_schema.py tests/test_receivables_policy_capture.py tests/test_receivables_policy_raw_guards.py tests/test_postgres_receivables_policy_restore.py -q
+              uv run --no-sync pytest tests/test_receivables_money_api_contract.py tests/test_receivables_policy_api.py -q
+              uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q
+              ;;
+            finance-posting)
+              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
+              ;;
+            inventory-payables)
+              uv run --no-sync pytest tests/test_api_server_inventory_core.py -q
+              uv run --no-sync pytest tests/test_api_server_payables.py tests/test_postgres_payables_replay.py tests/test_postgres_exact_trade_primitives.py -q
+              uv run --no-sync pytest tests/test_api_server_local_boundaries.py -q
+              uv run --no-sync pytest tests/test_api_server_inventory_planning.py -q
+              uv run --no-sync pytest tests/test_api_server_inventory_valuation.py -q
+              ;;
+            *) echo "Unknown server-boundary shard" >&2; exit 2 ;;
+          esac
 
       - name: Upload live Redis report
         if: always()
@@ -455,6 +500,29 @@ jobs:
           name: reconforge-redis-live-report
           path: ${{ runner.temp }}/reconforge-redis-live-report.json
           if-no-files-found: ignore
+
+      - name: Upload AR invoice recovery native report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-ar-invoice-recovery-native
+          path: ${{ runner.temp }}/reconforge-ar-invoice-recovery-native.json
+          if-no-files-found: ignore
+
+  server-boundaries-gate:
+    name: server-boundaries
+    runs-on: ubuntu-latest
+    needs: [server-boundaries]
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Require every server-boundary shard to succeed
+        env:
+          SHARDS_RESULT: ${{ needs.server-boundaries.result }}
+        run: |
+          set -euo pipefail
+          printf 'Server-boundary matrix result: %s\n' "$SHARDS_RESULT"
+          test "$SHARDS_RESULT" = success
 
   postgres-ha-dr:
     runs-on: ubuntu-latest

@@ -1,5 +1,92 @@
 # ReconForge Execution Evidence Log
 
+- Current downgrade test: POSTING_DOWNGRADE_TEST_REPAIR_2026-10-03.json retains
+ actual3red/9deselected and12green/0skip restricted-role PostgreSQL16.14 cases,
+ 677stable runtime/migration/fixture hashes and15owned database removals. Only
+ the assertion now reads its actual pre-downgrade revision; refusal and partial
+ provenance column checks remain unchanged. Original e638 hosted8success-shard/
+ 1failed-Finance result and failing aggregate remain separate retained evidence.
+
+- Whole e638: AR_POLICY_REGRESSION_E638_2026-10-03.json binds4481collected,
+ 4115pass/366explicit service/platform prerequisites/0fail/0error/24warnings,
+ 3,057unchanged tracked files and passed global quality/build. Its renamed tree
+ equivalent4629a64b is a content map, not a reassigned hosted result. Hosted
+ finance-posting retains three stale fixed0098 assertions after0099 bootstrap;
+ original failed shard and local whole success remain separate. New recovery
+ runtime7f8b9173 needs its own whole/hosted acceptance.
+- Invoice CI: INVOICE_RECOVERY_CI_2026-10-03.json retains39contract/supply-chain
+ tests without skips and actual nine-shard/unknown Bash dispatch. All40prior
+ verification commands remain, with one five-module source/HTTP/native recovery
+ command added in receivables. Native evidence upload uses the existing pinned
+ action. No hosted duration or result is inferred from captured shell commands.
+
+- Verified invoice recovery: RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json binds
+ 331pass/0skip real SQLite/PostgreSQL16.14 AR/API/cash/codec and separate native
+ 1pass/1,188,108-byte dump/restore with equal financial history. Nine owned and
+ 1,208participating Python hashes remain unchanged; root confirms four owned
+ databases absent. Independent source review accepts request/source/ordered-line/
+ numeric-text/policy/originalDraft1 identity and current authority, physical races
+ and late-failure rollback. Original red/93pass-3fixture/numeric inconsistency
+ results remain retained. ADR0823 documents ambiguous legacy GET fallback,
+ active canonical hierarchy, READ COMMITTED and no public AR export/receipt change.
+
+- Requested work labels: AMR_WORK_LABEL_MIGRATION_2026-10-03.json maps17local and
+  7remote branches to amr,5merge messages and33 affected commit IDs. Independent
+  raw-object reconstruction verifies268 commits/235 unchanged IDs, equal trees,
+  identities, dates and ordered mapped parents. A verified complete Git bundle
+  retains originals. Drafts115-120 replace preserved closed109-114; main/tags
+  are unchanged. Fresh all-ref Gitleaks1064commits reports0findings; no scanner
+  exclusion or financial code was changed for the rename. Old run conclusions
+  retain original subjects; new hosted acceptance remains separate.
+
+- AR whole e81b and projection repair: RECEIVABLES_PROJECTION_REPAIR_2026-10-03.json
+  retains immutable4481collected/4114pass/366explicit prerequisites/1old public
+  policy expectation failure, stable3056-file manifest and passed global quality.
+  Hosted3.12 independently failed the same assertion; nine server shards did
+  not execute and the required aggregate rejected their skipped outcome.
+  A test-only repair proves the intended eleven public fields and exclusion of
+  private storage metadata: retained1red,27green and overlapping138 contracts
+  with no skips. New whole and hosted acceptance remain separate pending gates.
+
+- Publication source-digest review: RECEIVABLES_API_SOURCE_DIGEST_REVIEW_2026-10-03.json
+  verifies five literals against four exact Git source blobs and one retained
+  test-evidence artifact; ten exact fingerprints preserve scanner configuration.
+  Final full-history1028commits and immutable exported3056-file tree report
+  zero findings;35 supply-chain policy tests pass without skips. Earlier five
+  findings and the review-artifact naming false positives remain retained in
+  ignored publication scan logs. These are secret scans, not vulnerability or
+  production-security certification.
+
+- AR API/UI: RECEIVABLES_POLICY_API_2026-10-03.json retains corrected11pass/0skip,
+  positive Outbox measurements and120local/one prerequisite; UI report retains
+  full202pass and fresh HTTPS0099 two-journey32.0s proof, exact JPY/KWD/huge/legacy,
+  stable sources and external named cleanup. ADR0821; runtimeb9153400/31220e06.
+  Original196/1full web and faulty earlier Outbox predicate remain disclosed.
+- CI partition: SERVER_BOUNDARY_SHARDING_2026-10-03.json binds nine30min shards,
+  original39commands/new API command, fail-closed aggregate,109 local contracts
+  and actual Bash dispatch. Host timings remain pending; runtimea8a6dd36.
+- Current0099 proof: POSTGRES_0099_GATE_REPAIR_2026-10-03.json retains actual
+  PG16.14/17.10 history/native restore, two schema updates,78pass/0skip, reviewed
+  empty-table-digest fingerprints and0findings in history/exported repository.
+- Failed8054 whole gate: RECEIVABLES_INVENTORY_REGRESSION_8054_2026-10-03.json
+  records4403collected/4041pass/361explicit prerequisites/1stale-proof failure,
+  stable3033-file manifest and passed global quality/build. Never relabel passed.
+- Hosted subjects: FINANCIAL_HOSTED_CHECKPOINTS_112_113_2026-10-03.json records
+  successful1128d76647c and1138ba6772d cancellation with official30min annotation.
+  Conditional exact-image SBOM/vulnerability/license gate is skipped, not passed.
+- Surface metadata: RECEIVABLES_SURFACE_INVENTORY_2026-10-03.json retains the
+  initial missing threat-index interface failure and repaired registry/index
+  gate. No financial command or stored amount changed in the metadata repair.
+
+- AR retained policy: RECEIVABLES_POLICY_2026-10-03.json binds216pass/0skip,
+  unchanged18 owned sources/tests, actual0099 nonowner checks and1,180,617-byte
+  native16.14 restore with eleven equal digests and cleanup. Runtime662aad3f
+  exposes backend metadata only; API/React interpretation remains a separate gate.
+- Inventory ownership: SQLITE_INVENTORY_COMPOSITION_2026-10-03.json binds120
+  passes/three PostgreSQL prerequisites plus overlapping21 independent passes,
+  six stable owned hashes and the repaired constructor counterexample. Runtime
+  75bdbe63 records a semantically identical test EOF normalization, followed by
+  39 passing publication/inventory checks. Finance result remains Draft.
 - Current bootstrap: POSTGRES_CURRENT_BOOTSTRAP_2026-10-03.json binds clean
   cd67fc67,96pass/0skip, unchanged historical0078, current constraints/policies,
   forced RLS/FK denials and restored0097 synthetic cleanup guards. Global
@@ -23,6 +110,28 @@ not establish subsequent hosted acceptance. The fresh clean c56 whole gate is
 separately retained above.
 
 ## Financial integrity and open-source workload increments (2026-10-03)
+
+- Posted opening/closing: [immutable acceptance](POSTED_BALANCES_2026-10-03.json)
+  binds clean866d943a,127local/4actualPG-HTTP passes without skips, global quality/
+  build and35.505s native16.14 restore wrapper with source stability/owned cleanup.
+  SQLite/PG financial vectors and large API integers are independently asserted;
+  SQLite multi-period backup and PG selected-period restored as-of digests agree.
+  Original review findings and source-drifting runs remain retained. ADR0817
+  bounds this to recorded-posting business dates, not historical knowledge-time.
+
+- AP command recovery: [frozen evidence](PAYABLES_COMMAND_RECOVERY_2026-10-03.json)
+  binds145pass/0skip, current authoritative PO/receipt/invoice state, actual
+  concurrent lock waits and password-bound HTTP, inactive-parent recovery,
+  fresh-write denial, unchanged11 dependency hashes and owned cleanup.
+  Original JSONB failures and earlier138-pass source remain separate. ADR0816
+  keeps legacy receipt historical hierarchy and missing AP payment explicit.
+
+- Exact trade arithmetic: [frozen evidence](EXACT_TRADE_PRIMITIVES_2026-10-03.json)
+  binds227pass/0skip, actual nonowner PostgreSQL16.14/0098 and SQLite, unchanged
+  runtime sources, owned cleanup and quality gates. Hostile Decimal contexts,
+  preserved ingress, expansion limits and independent FIFO conservation pass.
+  Original red probes and earlier narrower-grammar gates remain separate.
+  ADR0814 accepts this prerequisite; generated operational GL remains open.
 
 - [Draft PR112](https://github.com/amrzainmubarak/reconforge-erp/pull/112)
   retains posting/cash runtime checkpointd4e6baf8. Its clean managed checkout

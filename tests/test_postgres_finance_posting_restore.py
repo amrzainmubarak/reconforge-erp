@@ -86,6 +86,11 @@ def verify_native_posting_restore(db: dict[str, Any], native: NativeTool) -> dic
             period_id="period", organization_code="ORG_A", entity_code="A1", workspace="shared", actor=CHECKER
         )
         assert balance["balance_totals"] == {"debit_minor": 0, "credit_minor": 0, "balanced": True}
+        as_of_args = dict(period_id="period", organization_code="ORG_A", entity_code="A1", workspace="shared", actor=CHECKER)
+        as_of_early = posting.posted_balances_as_of(as_of_date="2026-07-28", **as_of_args)
+        as_of_final = posting.posted_balances_as_of(as_of_date="2026-07-31", **as_of_args)
+        assert as_of_early["totals"]["closing"]["balance_totals"]["debit_minor"] == 10000
+        assert as_of_final["totals"]["closing"]["balance_totals"]["debit_minor"] == 0
     params = psycopg.conninfo.conninfo_to_dict(db["admin"])
     restored_name = "reconforge_posting_restore_" + uuid4().hex[:20]
     with psycopg.connect(db["admin"], autocommit=True) as admin:
@@ -147,6 +152,8 @@ def verify_native_posting_restore(db: dict[str, Any], native: NativeTool) -> dic
                 )
                 == balance
             )
+            assert posting.posted_balances_as_of(as_of_date="2026-07-28", **as_of_args) == as_of_early
+            assert posting.posted_balances_as_of(as_of_date="2026-07-31", **as_of_args) == as_of_final
             for statement in (
                 "UPDATE reconforge.finance_entries SET description='changed' WHERE id=%s",
                 "DELETE FROM reconforge.finance_entry_lines WHERE entry_id=%s",
@@ -272,6 +279,9 @@ def verify_native_posting_restore(db: dict[str, Any], native: NativeTool) -> dic
         "immutability": True,
         "balance_scope": "selected-period-net-activity",
         "selected_period_net_balance_zero": True,
+        "business_date_as_of_reports_preserved": True,
+        "as_of_early_report_digest": as_of_early["report_digest"],
+        "as_of_final_report_digest": as_of_final["report_digest"],
         "absent_effect_receipt_denied": True,
         "cross_source_receipt_replay_denied": True,
         "review_and_reversal_provenance_retained": True,

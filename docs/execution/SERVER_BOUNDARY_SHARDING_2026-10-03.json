@@ -1,0 +1,1262 @@
+{
+  "schema_version": 1,
+  "status": "local_contract_and_dispatch_passed_hosted_pending",
+  "acceptance": {
+    "schema_version": 1,
+    "status": "local_contracts_passed_hosted_shards_pending",
+    "source_hashes": {
+      ".github/workflows/ci.yml": "f722466a9442f6c98d2239d2d821e73d29cf97fa455018a2290cddbe4722c129",
+      "tests/test_ci_server_boundary_shards.py": "f9f636a476bf0566cd8ef5410687bd16ab89dba81bbc8d9d177c330837540573"
+    },
+    "protected_ui_file_count": 17,
+    "protected_ui_changed": [],
+    "focused": {
+      "passed": 109,
+      "failed": 0,
+      "skipped": 0,
+      "elapsed_seconds": 42.7630993,
+      "exit_code": 0,
+      "command": "CI contract selection (12 modules)"
+    },
+    "final_new_contracts": {
+      "name": "pytest",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "tests": "4",
+      "time": "0.559",
+      "timestamp": "2026-10-03T15:38:13.434444+03:00",
+      "hostname": "DESKTOP-FDO3RD5"
+    },
+    "verification": "All39previous verification commands preserved once, exact inventory filters and module duplicates retained; one new command adds2AR API modules; actual shell routing and aggregate truth table passed.",
+    "limitations": [
+      "GitHub-hosted shard runtime/duration remains pending; no claim all finish under30minutes yet.",
+      "No full live database suite executed as part of this CI-only refactor.",
+      "The general parity command remains whole and unfiltered; if it independently exhausts30minutes, further splitting must retain its collection coverage."
+    ],
+    "active_processes": [],
+    "artifacts": {
+      "before-inventory.json": "501f3e5030ffb15345e22d75f4d65cda3dc56099b497488e3734002614e5946c",
+      "ci-before.yml": "8575281a35d7554fd0e198098d401d2464abea466d60a18e980ad290f9ac2e63",
+      "diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "dispatch.log": "7033c9b514cb6b92614c08d20a8f6a249e4c5010a14b1fca3760e4fa10d7bbc5",
+      "focused-contracts-command.json": "c680868699aba98433b781b9e70df3311cc55d3a8820ddc02ec5c40aa07bb545",
+      "focused-contracts.log": "d19194751e65aea848203716928087da4ababe4de483ee9b0f3e9b5e0e27cc15",
+      "inventory-and-dispatch.json": "457d2caae6949e6bc8e55008cd49ede79062690191fd71b9a320a277ff3a1cc4",
+      "ruff.log": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0",
+      "shard-contracts-final.log": "9d5a2646cfea101970d3c6e3eb8c2650770734a095b2562b4c25cf9f554c913c",
+      "shard-contracts-final.xml": "a69522520e7c5d7ff07a0e3a08f48a89afd6b77ae7f71e698b59325dd2e25dd4",
+      "verify_partition.py": "b7ea9a6dc9a2effa7c42f1e795b08017c8e2ee3fa0bd7261ec265a0c816fcc53"
+    }
+  },
+  "inventory": {
+    "schema_version": 1,
+    "status": "passed",
+    "old_workflow_sha256": "8575281a35d7554fd0e198098d401d2464abea466d60a18e980ad290f9ac2e63",
+    "new_workflow_sha256": "f722466a9442f6c98d2239d2d821e73d29cf97fa455018a2290cddbe4722c129",
+    "old_verification_command_count": 39,
+    "new_verification_command_count": 40,
+    "removed_commands": [],
+    "added_commands": [
+      [
+        "Run live server-boundary tests",
+        "uv run --no-sync pytest tests/test_receivables_money_api_contract.py tests/test_receivables_policy_api.py -q"
+      ]
+    ],
+    "original_commands_preserved_exactly_once": true,
+    "old_module_occurrences": {
+      "tests/test_postgres_backup.py": 2,
+      "tests/test_application_metrics.py": 2,
+      "tests/test_scoped_exports.py": 1,
+      "tests/test_api_server_scoped_exports.py": 1,
+      "tests/test_postgres_consolidation_close.py": 2,
+      "tests/test_postgres_consolidation_ownership.py": 1,
+      "tests/test_postgres_consolidation_ppa_runtime.py": 1,
+      "tests/test_postgres_consolidation_ownership_change.py": 1,
+      "tests/test_postgres_consolidation_deferred_tax_runtime.py": 1,
+      "tests/test_postgres_consolidation_impairment_runtime.py": 1,
+      "tests/test_postgres_intercompany_elimination_runtime.py": 1,
+      "tests/test_postgres_idempotency.py": 1,
+      "tests/test_postgres_workspace_period_uow.py": 1,
+      "tests/test_postgres_operations.py": 1,
+      "tests/test_postgres_writeback.py": 2,
+      "tests/test_postgres_outbox.py": 1,
+      "tests/test_postgres_scheduler.py": 1,
+      "tests/test_postgres_notifications.py": 1,
+      "tests/test_postgres_security_center.py": 1,
+      "tests/test_postgres_identity_administration.py": 1,
+      "tests/test_postgres_access_administration.py": 1,
+      "tests/test_postgres_policy_analysis_runtime.py": 2,
+      "tests/test_postgres_security_governance.py": 1,
+      "tests/test_audit_browsing.py": 1,
+      "tests/test_postgres_controls.py": 1,
+      "tests/test_postgres_intercompany.py": 1,
+      "tests/test_postgres_journals.py": 1,
+      "tests/test_postgres_accounts.py": 1,
+      "tests/test_postgres_approvals.py": 1,
+      "tests/test_postgres_close_application.py": 1,
+      "tests/test_postgres_evidence_application.py": 1,
+      "tests/test_postgres_exceptions.py": 1,
+      "tests/test_postgres_finance_core.py": 1,
+      "tests/test_postgres_finance_posting.py": 2,
+      "tests/test_postgres_master_data_application.py": 1,
+      "tests/test_postgres_inventory_core.py": 1,
+      "tests/test_postgres_payables.py": 1,
+      "tests/test_postgres_receivables.py": 1,
+      "tests/test_postgres_matching_application.py": 1,
+      "tests/test_postgres_inventory_valuation.py": 1,
+      "tests/test_postgres_inventory_valuation_reversal.py": 1,
+      "tests/test_postgres_inventory_planning.py": 1,
+      "tests/test_postgres_delegations_runtime.py": 1,
+      "tests/test_alembic_postgres.py": 1,
+      "tests/test_postgres_metrics_migration.py": 1,
+      "tests/test_postgres_finance_currency_policy.py": 1,
+      "tests/test_postgres_repository_scope.py": 1,
+      "tests/test_postgres_finance_scope.py": 1,
+      "tests/test_postgres_finance_scope_restore.py": 1,
+      "tests/test_postgres_master_data_authority.py": 1,
+      "tests/test_postgres_runtime_role.py": 1,
+      "tests/test_postgres_foundation.py": 1,
+      "tests/test_postgres_master_data.py": 1,
+      "tests/test_postgres_ledger.py": 1,
+      "tests/test_postgres_identity.py": 1,
+      "tests/test_postgres_evidence.py": 1,
+      "tests/test_postgres_reconciliation.py": 1,
+      "tests/test_postgres_reconciliation_input_seal.py": 1,
+      "tests/test_postgres_reconciliation_seal_restore.py": 1,
+      "tests/test_postgres_database_reference.py": 1,
+      "tests/test_api_server_identity.py": 1,
+      "tests/test_redis_foundation.py": 1,
+      "tests/test_postgres_durable_jobs.py": 2,
+      "tests/test_postgres_grouped_matching_scale.py": 1,
+      "tests/test_postgres_grouped_matching_runtime.py": 1,
+      "tests/test_postgres_close_scope_bootstrap.py": 1,
+      "tests/test_api_operations.py": 1,
+      "tests/test_api_metrics.py": 1,
+      "tests/test_postgres_manufacturing_cost_control.py": 1,
+      "tests/test_api_server_manufacturing_cost_control.py": 1,
+      "tests/test_postgres_retail_settlement.py": 1,
+      "tests/test_api_server_retail_settlement.py": 1,
+      "tests/test_postgres_professional_invoice_payment.py": 1,
+      "tests/test_api_server_professional_invoice_payment.py": 1,
+      "tests/test_postgres_federation.py": 1,
+      "tests/test_api_server_consolidation_close.py": 1,
+      "tests/test_api_server_reconciliation_live.py": 1,
+      "tests/test_api_server_inventory_core.py": 1,
+      "tests/test_api_server_receivables.py": 1,
+      "tests/test_receivables_monetary_policy.py": 1,
+      "tests/test_receivables_policy_schema.py": 1,
+      "tests/test_receivables_policy_capture.py": 1,
+      "tests/test_receivables_policy_raw_guards.py": 1,
+      "tests/test_postgres_receivables_policy_restore.py": 1,
+      "tests/test_postgres_finance_posting_concurrency.py": 1,
+      "tests/test_postgres_finance_posting_api.py": 1,
+      "tests/test_postgres_finance_posting_restore.py": 1,
+      "tests/test_postgres_finance_balances.py": 1,
+      "tests/test_receivables_cash_contract.py": 1,
+      "tests/test_receivables_cash_policy.py": 1,
+      "tests/test_api_server_payables.py": 1,
+      "tests/test_postgres_payables_replay.py": 1,
+      "tests/test_postgres_exact_trade_primitives.py": 1,
+      "tests/test_api_server_local_boundaries.py": 1,
+      "tests/test_api_server_inventory_planning.py": 1,
+      "tests/test_api_server_inventory_valuation.py": 1,
+      "tests/test_postgres_bank_statement.py": 1,
+      "tests/test_api_server_bank_statement.py": 1
+    },
+    "new_module_occurrences": {
+      "tests/test_postgres_backup.py": 2,
+      "tests/test_application_metrics.py": 2,
+      "tests/test_scoped_exports.py": 1,
+      "tests/test_api_server_scoped_exports.py": 1,
+      "tests/test_postgres_consolidation_close.py": 2,
+      "tests/test_postgres_consolidation_ownership.py": 1,
+      "tests/test_postgres_consolidation_ppa_runtime.py": 1,
+      "tests/test_postgres_consolidation_ownership_change.py": 1,
+      "tests/test_postgres_consolidation_deferred_tax_runtime.py": 1,
+      "tests/test_postgres_consolidation_impairment_runtime.py": 1,
+      "tests/test_postgres_intercompany_elimination_runtime.py": 1,
+      "tests/test_postgres_idempotency.py": 1,
+      "tests/test_postgres_workspace_period_uow.py": 1,
+      "tests/test_postgres_operations.py": 1,
+      "tests/test_postgres_writeback.py": 2,
+      "tests/test_postgres_outbox.py": 1,
+      "tests/test_postgres_scheduler.py": 1,
+      "tests/test_postgres_notifications.py": 1,
+      "tests/test_postgres_security_center.py": 1,
+      "tests/test_postgres_identity_administration.py": 1,
+      "tests/test_postgres_access_administration.py": 1,
+      "tests/test_postgres_policy_analysis_runtime.py": 2,
+      "tests/test_postgres_security_governance.py": 1,
+      "tests/test_audit_browsing.py": 1,
+      "tests/test_postgres_controls.py": 1,
+      "tests/test_postgres_intercompany.py": 1,
+      "tests/test_postgres_journals.py": 1,
+      "tests/test_postgres_accounts.py": 1,
+      "tests/test_postgres_approvals.py": 1,
+      "tests/test_postgres_close_application.py": 1,
+      "tests/test_postgres_evidence_application.py": 1,
+      "tests/test_postgres_exceptions.py": 1,
+      "tests/test_postgres_finance_core.py": 1,
+      "tests/test_postgres_finance_posting.py": 2,
+      "tests/test_postgres_master_data_application.py": 1,
+      "tests/test_postgres_inventory_core.py": 1,
+      "tests/test_postgres_payables.py": 1,
+      "tests/test_postgres_receivables.py": 1,
+      "tests/test_postgres_matching_application.py": 1,
+      "tests/test_postgres_inventory_valuation.py": 1,
+      "tests/test_postgres_inventory_valuation_reversal.py": 1,
+      "tests/test_postgres_inventory_planning.py": 1,
+      "tests/test_postgres_delegations_runtime.py": 1,
+      "tests/test_alembic_postgres.py": 1,
+      "tests/test_postgres_metrics_migration.py": 1,
+      "tests/test_postgres_finance_currency_policy.py": 1,
+      "tests/test_postgres_repository_scope.py": 1,
+      "tests/test_postgres_finance_scope.py": 1,
+      "tests/test_postgres_finance_scope_restore.py": 1,
+      "tests/test_postgres_master_data_authority.py": 1,
+      "tests/test_postgres_runtime_role.py": 1,
+      "tests/test_postgres_foundation.py": 1,
+      "tests/test_postgres_master_data.py": 1,
+      "tests/test_postgres_ledger.py": 1,
+      "tests/test_postgres_identity.py": 1,
+      "tests/test_postgres_evidence.py": 1,
+      "tests/test_postgres_reconciliation.py": 1,
+      "tests/test_postgres_reconciliation_input_seal.py": 1,
+      "tests/test_postgres_reconciliation_seal_restore.py": 1,
+      "tests/test_postgres_database_reference.py": 1,
+      "tests/test_api_server_identity.py": 1,
+      "tests/test_redis_foundation.py": 1,
+      "tests/test_postgres_durable_jobs.py": 2,
+      "tests/test_postgres_grouped_matching_scale.py": 1,
+      "tests/test_postgres_grouped_matching_runtime.py": 1,
+      "tests/test_postgres_close_scope_bootstrap.py": 1,
+      "tests/test_api_operations.py": 1,
+      "tests/test_api_metrics.py": 1,
+      "tests/test_postgres_manufacturing_cost_control.py": 1,
+      "tests/test_api_server_manufacturing_cost_control.py": 1,
+      "tests/test_postgres_retail_settlement.py": 1,
+      "tests/test_api_server_retail_settlement.py": 1,
+      "tests/test_postgres_professional_invoice_payment.py": 1,
+      "tests/test_api_server_professional_invoice_payment.py": 1,
+      "tests/test_postgres_federation.py": 1,
+      "tests/test_api_server_consolidation_close.py": 1,
+      "tests/test_api_server_reconciliation_live.py": 1,
+      "tests/test_postgres_bank_statement.py": 1,
+      "tests/test_api_server_bank_statement.py": 1,
+      "tests/test_api_server_receivables.py": 1,
+      "tests/test_receivables_monetary_policy.py": 1,
+      "tests/test_receivables_policy_schema.py": 1,
+      "tests/test_receivables_policy_capture.py": 1,
+      "tests/test_receivables_policy_raw_guards.py": 1,
+      "tests/test_postgres_receivables_policy_restore.py": 1,
+      "tests/test_receivables_money_api_contract.py": 1,
+      "tests/test_receivables_policy_api.py": 1,
+      "tests/test_postgres_finance_posting_concurrency.py": 1,
+      "tests/test_postgres_finance_posting_api.py": 1,
+      "tests/test_postgres_finance_posting_restore.py": 1,
+      "tests/test_postgres_finance_balances.py": 1,
+      "tests/test_receivables_cash_contract.py": 1,
+      "tests/test_receivables_cash_policy.py": 1,
+      "tests/test_api_server_inventory_core.py": 1,
+      "tests/test_api_server_payables.py": 1,
+      "tests/test_postgres_payables_replay.py": 1,
+      "tests/test_postgres_exact_trade_primitives.py": 1,
+      "tests/test_api_server_local_boundaries.py": 1,
+      "tests/test_api_server_inventory_planning.py": 1,
+      "tests/test_api_server_inventory_valuation.py": 1
+    },
+    "preexisting_duplicate_module_occurrences": {
+      "tests/test_postgres_backup.py": 2,
+      "tests/test_application_metrics.py": 2,
+      "tests/test_postgres_consolidation_close.py": 2,
+      "tests/test_postgres_writeback.py": 2,
+      "tests/test_postgres_policy_analysis_runtime.py": 2,
+      "tests/test_postgres_finance_posting.py": 2,
+      "tests/test_postgres_durable_jobs.py": 2
+    },
+    "old_pytest_selections": [
+      {
+        "modules": [
+          "tests/test_postgres_backup.py"
+        ],
+        "filter": "test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup"
+      },
+      {
+        "modules": [
+          "tests/test_application_metrics.py"
+        ],
+        "filter": "test_live_postgres_metrics_and_sqlite_parity"
+      },
+      {
+        "modules": [
+          "tests/test_scoped_exports.py"
+        ],
+        "filter": "test_live_scoped_export_excludes_sibling_workspace_and_entity"
+      },
+      {
+        "modules": [
+          "tests/test_api_server_scoped_exports.py"
+        ],
+        "filter": "test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_consolidation_close.py",
+          "tests/test_postgres_consolidation_ownership.py",
+          "tests/test_postgres_consolidation_ppa_runtime.py",
+          "tests/test_postgres_consolidation_ownership_change.py",
+          "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+          "tests/test_postgres_consolidation_impairment_runtime.py",
+          "tests/test_postgres_intercompany_elimination_runtime.py",
+          "tests/test_postgres_backup.py",
+          "tests/test_postgres_idempotency.py",
+          "tests/test_postgres_workspace_period_uow.py",
+          "tests/test_postgres_operations.py",
+          "tests/test_postgres_writeback.py",
+          "tests/test_application_metrics.py",
+          "tests/test_postgres_outbox.py",
+          "tests/test_postgres_scheduler.py",
+          "tests/test_postgres_notifications.py",
+          "tests/test_postgres_security_center.py",
+          "tests/test_postgres_identity_administration.py",
+          "tests/test_postgres_access_administration.py",
+          "tests/test_postgres_policy_analysis_runtime.py",
+          "tests/test_postgres_security_governance.py",
+          "tests/test_audit_browsing.py",
+          "tests/test_postgres_controls.py",
+          "tests/test_postgres_intercompany.py",
+          "tests/test_postgres_journals.py",
+          "tests/test_postgres_accounts.py",
+          "tests/test_postgres_approvals.py",
+          "tests/test_postgres_close_application.py",
+          "tests/test_postgres_evidence_application.py",
+          "tests/test_postgres_exceptions.py",
+          "tests/test_postgres_finance_core.py",
+          "tests/test_postgres_finance_posting.py",
+          "tests/test_postgres_master_data_application.py",
+          "tests/test_postgres_inventory_core.py",
+          "tests/test_postgres_payables.py",
+          "tests/test_postgres_receivables.py",
+          "tests/test_postgres_matching_application.py",
+          "tests/test_postgres_inventory_valuation.py",
+          "tests/test_postgres_inventory_valuation_reversal.py",
+          "tests/test_postgres_inventory_planning.py",
+          "tests/test_postgres_delegations_runtime.py",
+          "tests/test_postgres_policy_analysis_runtime.py",
+          "tests/test_alembic_postgres.py",
+          "tests/test_postgres_metrics_migration.py",
+          "tests/test_postgres_finance_currency_policy.py",
+          "tests/test_postgres_repository_scope.py",
+          "tests/test_postgres_finance_scope.py",
+          "tests/test_postgres_finance_scope_restore.py",
+          "tests/test_postgres_master_data_authority.py",
+          "tests/test_postgres_runtime_role.py",
+          "tests/test_postgres_foundation.py",
+          "tests/test_postgres_master_data.py",
+          "tests/test_postgres_ledger.py",
+          "tests/test_postgres_identity.py",
+          "tests/test_postgres_evidence.py",
+          "tests/test_postgres_reconciliation.py",
+          "tests/test_postgres_reconciliation_input_seal.py",
+          "tests/test_postgres_reconciliation_seal_restore.py",
+          "tests/test_postgres_writeback.py",
+          "tests/test_postgres_database_reference.py",
+          "tests/test_api_server_identity.py",
+          "tests/test_redis_foundation.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_durable_jobs.py"
+        ],
+        "filter": "test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_grouped_matching_scale.py"
+        ],
+        "filter": "test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile or test_live_postgres_grouped_matching_10k_domain_diverse_profile"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_grouped_matching_runtime.py"
+        ],
+        "filter": "test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_durable_jobs.py"
+        ],
+        "filter": "test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_close_scope_bootstrap.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_operations.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_metrics.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_manufacturing_cost_control.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_manufacturing_cost_control.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_retail_settlement.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_retail_settlement.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_professional_invoice_payment.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_professional_invoice_payment.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_consolidation_close.py"
+        ],
+        "filter": "test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_federation.py"
+        ],
+        "filter": "test_live_postgres_federation_replay_link_session_and_rls"
+      },
+      {
+        "modules": [
+          "tests/test_api_server_consolidation_close.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_reconciliation_live.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_inventory_core.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_receivables.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_receivables_monetary_policy.py",
+          "tests/test_receivables_policy_schema.py",
+          "tests/test_receivables_policy_capture.py",
+          "tests/test_receivables_policy_raw_guards.py",
+          "tests/test_postgres_receivables_policy_restore.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_finance_posting.py",
+          "tests/test_postgres_finance_posting_concurrency.py",
+          "tests/test_postgres_finance_posting_api.py",
+          "tests/test_postgres_finance_posting_restore.py",
+          "tests/test_postgres_finance_balances.py",
+          "tests/test_receivables_cash_contract.py",
+          "tests/test_receivables_cash_policy.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_payables.py",
+          "tests/test_postgres_payables_replay.py",
+          "tests/test_postgres_exact_trade_primitives.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_local_boundaries.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_inventory_planning.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_inventory_valuation.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_bank_statement.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_bank_statement.py"
+        ],
+        "filter": null
+      }
+    ],
+    "new_pytest_selections": [
+      {
+        "modules": [
+          "tests/test_postgres_backup.py"
+        ],
+        "filter": "test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup"
+      },
+      {
+        "modules": [
+          "tests/test_application_metrics.py"
+        ],
+        "filter": "test_live_postgres_metrics_and_sqlite_parity"
+      },
+      {
+        "modules": [
+          "tests/test_scoped_exports.py"
+        ],
+        "filter": "test_live_scoped_export_excludes_sibling_workspace_and_entity"
+      },
+      {
+        "modules": [
+          "tests/test_api_server_scoped_exports.py"
+        ],
+        "filter": "test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_consolidation_close.py",
+          "tests/test_postgres_consolidation_ownership.py",
+          "tests/test_postgres_consolidation_ppa_runtime.py",
+          "tests/test_postgres_consolidation_ownership_change.py",
+          "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+          "tests/test_postgres_consolidation_impairment_runtime.py",
+          "tests/test_postgres_intercompany_elimination_runtime.py",
+          "tests/test_postgres_backup.py",
+          "tests/test_postgres_idempotency.py",
+          "tests/test_postgres_workspace_period_uow.py",
+          "tests/test_postgres_operations.py",
+          "tests/test_postgres_writeback.py",
+          "tests/test_application_metrics.py",
+          "tests/test_postgres_outbox.py",
+          "tests/test_postgres_scheduler.py",
+          "tests/test_postgres_notifications.py",
+          "tests/test_postgres_security_center.py",
+          "tests/test_postgres_identity_administration.py",
+          "tests/test_postgres_access_administration.py",
+          "tests/test_postgres_policy_analysis_runtime.py",
+          "tests/test_postgres_security_governance.py",
+          "tests/test_audit_browsing.py",
+          "tests/test_postgres_controls.py",
+          "tests/test_postgres_intercompany.py",
+          "tests/test_postgres_journals.py",
+          "tests/test_postgres_accounts.py",
+          "tests/test_postgres_approvals.py",
+          "tests/test_postgres_close_application.py",
+          "tests/test_postgres_evidence_application.py",
+          "tests/test_postgres_exceptions.py",
+          "tests/test_postgres_finance_core.py",
+          "tests/test_postgres_finance_posting.py",
+          "tests/test_postgres_master_data_application.py",
+          "tests/test_postgres_inventory_core.py",
+          "tests/test_postgres_payables.py",
+          "tests/test_postgres_receivables.py",
+          "tests/test_postgres_matching_application.py",
+          "tests/test_postgres_inventory_valuation.py",
+          "tests/test_postgres_inventory_valuation_reversal.py",
+          "tests/test_postgres_inventory_planning.py",
+          "tests/test_postgres_delegations_runtime.py",
+          "tests/test_postgres_policy_analysis_runtime.py",
+          "tests/test_alembic_postgres.py",
+          "tests/test_postgres_metrics_migration.py",
+          "tests/test_postgres_finance_currency_policy.py",
+          "tests/test_postgres_repository_scope.py",
+          "tests/test_postgres_finance_scope.py",
+          "tests/test_postgres_finance_scope_restore.py",
+          "tests/test_postgres_master_data_authority.py",
+          "tests/test_postgres_runtime_role.py",
+          "tests/test_postgres_foundation.py",
+          "tests/test_postgres_master_data.py",
+          "tests/test_postgres_ledger.py",
+          "tests/test_postgres_identity.py",
+          "tests/test_postgres_evidence.py",
+          "tests/test_postgres_reconciliation.py",
+          "tests/test_postgres_reconciliation_input_seal.py",
+          "tests/test_postgres_reconciliation_seal_restore.py",
+          "tests/test_postgres_writeback.py",
+          "tests/test_postgres_database_reference.py",
+          "tests/test_api_server_identity.py",
+          "tests/test_redis_foundation.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_durable_jobs.py"
+        ],
+        "filter": "test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_grouped_matching_scale.py"
+        ],
+        "filter": "test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile or test_live_postgres_grouped_matching_10k_domain_diverse_profile"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_grouped_matching_runtime.py"
+        ],
+        "filter": "test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_durable_jobs.py"
+        ],
+        "filter": "test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_close_scope_bootstrap.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_operations.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_metrics.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_manufacturing_cost_control.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_manufacturing_cost_control.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_retail_settlement.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_retail_settlement.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_professional_invoice_payment.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_professional_invoice_payment.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_consolidation_close.py"
+        ],
+        "filter": "test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable"
+      },
+      {
+        "modules": [
+          "tests/test_postgres_federation.py"
+        ],
+        "filter": "test_live_postgres_federation_replay_link_session_and_rls"
+      },
+      {
+        "modules": [
+          "tests/test_api_server_consolidation_close.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_reconciliation_live.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_bank_statement.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_bank_statement.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_receivables.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_receivables_monetary_policy.py",
+          "tests/test_receivables_policy_schema.py",
+          "tests/test_receivables_policy_capture.py",
+          "tests/test_receivables_policy_raw_guards.py",
+          "tests/test_postgres_receivables_policy_restore.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_receivables_money_api_contract.py",
+          "tests/test_receivables_policy_api.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_postgres_finance_posting.py",
+          "tests/test_postgres_finance_posting_concurrency.py",
+          "tests/test_postgres_finance_posting_api.py",
+          "tests/test_postgres_finance_posting_restore.py",
+          "tests/test_postgres_finance_balances.py",
+          "tests/test_receivables_cash_contract.py",
+          "tests/test_receivables_cash_policy.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_inventory_core.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_payables.py",
+          "tests/test_postgres_payables_replay.py",
+          "tests/test_postgres_exact_trade_primitives.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_local_boundaries.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_inventory_planning.py"
+        ],
+        "filter": null
+      },
+      {
+        "modules": [
+          "tests/test_api_server_inventory_valuation.py"
+        ],
+        "filter": null
+      }
+    ],
+    "services_unchanged": true,
+    "live_environment_preserved": true,
+    "other_jobs_unchanged": [
+      "test",
+      "web",
+      "engine-parity",
+      "docker-parity",
+      "postgres-ha-dr",
+      "object-storage"
+    ],
+    "shell_dispatch": [
+      {
+        "shard": "writeback",
+        "exit_code": 0,
+        "captured_commands": []
+      },
+      {
+        "shard": "native",
+        "exit_code": 0,
+        "captured_commands": [
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_backup.py",
+            "-k",
+            "test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_application_metrics.py",
+            "-k",
+            "test_live_postgres_metrics_and_sqlite_parity",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_scoped_exports.py",
+            "-k",
+            "test_live_scoped_export_excludes_sibling_workspace_and_entity",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_scoped_exports.py",
+            "-k",
+            "test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "python",
+            ".github/scripts/verify_redis_live.py",
+            "--output",
+            "synthetic-redis-report.json"
+          ]
+        ]
+      },
+      {
+        "shard": "parity",
+        "exit_code": 0,
+        "captured_commands": [
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_consolidation_close.py",
+            "tests/test_postgres_consolidation_ownership.py",
+            "tests/test_postgres_consolidation_ppa_runtime.py",
+            "tests/test_postgres_consolidation_ownership_change.py",
+            "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+            "tests/test_postgres_consolidation_impairment_runtime.py",
+            "tests/test_postgres_intercompany_elimination_runtime.py",
+            "tests/test_postgres_backup.py",
+            "tests/test_postgres_idempotency.py",
+            "tests/test_postgres_workspace_period_uow.py",
+            "tests/test_postgres_operations.py",
+            "tests/test_postgres_writeback.py",
+            "tests/test_application_metrics.py",
+            "tests/test_postgres_outbox.py",
+            "tests/test_postgres_scheduler.py",
+            "tests/test_postgres_notifications.py",
+            "tests/test_postgres_security_center.py",
+            "tests/test_postgres_identity_administration.py",
+            "tests/test_postgres_access_administration.py",
+            "tests/test_postgres_policy_analysis_runtime.py",
+            "tests/test_postgres_security_governance.py",
+            "tests/test_audit_browsing.py",
+            "tests/test_postgres_controls.py",
+            "tests/test_postgres_intercompany.py",
+            "tests/test_postgres_journals.py",
+            "tests/test_postgres_accounts.py",
+            "tests/test_postgres_approvals.py",
+            "tests/test_postgres_close_application.py",
+            "tests/test_postgres_evidence_application.py",
+            "tests/test_postgres_exceptions.py",
+            "tests/test_postgres_finance_core.py",
+            "tests/test_postgres_finance_posting.py",
+            "tests/test_postgres_master_data_application.py",
+            "tests/test_postgres_inventory_core.py",
+            "tests/test_postgres_payables.py",
+            "tests/test_postgres_receivables.py",
+            "tests/test_postgres_matching_application.py",
+            "tests/test_postgres_inventory_valuation.py",
+            "tests/test_postgres_inventory_valuation_reversal.py",
+            "tests/test_postgres_inventory_planning.py",
+            "tests/test_postgres_delegations_runtime.py",
+            "tests/test_postgres_policy_analysis_runtime.py",
+            "tests/test_alembic_postgres.py",
+            "tests/test_postgres_metrics_migration.py",
+            "tests/test_postgres_finance_currency_policy.py",
+            "tests/test_postgres_repository_scope.py",
+            "tests/test_postgres_finance_scope.py",
+            "tests/test_postgres_finance_scope_restore.py",
+            "tests/test_postgres_master_data_authority.py",
+            "tests/test_postgres_runtime_role.py",
+            "tests/test_postgres_foundation.py",
+            "tests/test_postgres_master_data.py",
+            "tests/test_postgres_ledger.py",
+            "tests/test_postgres_identity.py",
+            "tests/test_postgres_evidence.py",
+            "tests/test_postgres_reconciliation.py",
+            "tests/test_postgres_reconciliation_input_seal.py",
+            "tests/test_postgres_reconciliation_seal_restore.py",
+            "tests/test_postgres_writeback.py",
+            "tests/test_postgres_database_reference.py",
+            "tests/test_api_server_identity.py",
+            "tests/test_redis_foundation.py",
+            "-q"
+          ]
+        ]
+      },
+      {
+        "shard": "durable-scale",
+        "exit_code": 0,
+        "captured_commands": [
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_durable_jobs.py",
+            "-k",
+            "test_live_postgres_durable_job_10k_multi_worker_scale_profile or test_live_postgres_durable_job_100k_multi_worker_scale_profile or test_live_postgres_durable_job_backpressure_profile or test_live_postgres_durable_job_soak_profile",
+            "-q"
+          ]
+        ]
+      },
+      {
+        "shard": "matching-runtime",
+        "exit_code": 0,
+        "captured_commands": [
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_grouped_matching_scale.py",
+            "-k",
+            "test_live_postgres_grouped_matching_500_partition_scale_profile or test_live_postgres_grouped_matching_10k_partition_scale_profile or test_live_postgres_grouped_matching_10k_domain_diverse_profile",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_grouped_matching_runtime.py",
+            "-k",
+            "test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_durable_jobs.py",
+            "-k",
+            "test_live_postgres_job_application_contract_and_rls or test_live_postgres_round_robin_scheduler_is_lane_scoped_and_deterministic or test_live_postgres_persistent_scheduler_coordinates_spawned_processes or test_live_postgres_worker_crash_after_checkpoint_resumes_without_duplicate_effect or test_live_postgres_worker_database_fault_after_checkpoint_resumes_without_duplicate_effect",
+            "-q"
+          ]
+        ]
+      },
+      {
+        "shard": "industry-close",
+        "exit_code": 0,
+        "captured_commands": [
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_close_scope_bootstrap.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_operations.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_metrics.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_manufacturing_cost_control.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_manufacturing_cost_control.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_retail_settlement.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_retail_settlement.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_professional_invoice_payment.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_professional_invoice_payment.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_consolidation_close.py",
+            "-k",
+            "test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_federation.py",
+            "-k",
+            "test_live_postgres_federation_replay_link_session_and_rls",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_consolidation_close.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_reconciliation_live.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_bank_statement.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_bank_statement.py",
+            "-q"
+          ]
+        ]
+      },
+      {
+        "shard": "receivables",
+        "exit_code": 0,
+        "captured_commands": [
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_receivables.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_receivables_monetary_policy.py",
+            "tests/test_receivables_policy_schema.py",
+            "tests/test_receivables_policy_capture.py",
+            "tests/test_receivables_policy_raw_guards.py",
+            "tests/test_postgres_receivables_policy_restore.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_receivables_money_api_contract.py",
+            "tests/test_receivables_policy_api.py",
+            "-q"
+          ]
+        ]
+      },
+      {
+        "shard": "finance-posting",
+        "exit_code": 0,
+        "captured_commands": [
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_postgres_finance_posting.py",
+            "tests/test_postgres_finance_posting_concurrency.py",
+            "tests/test_postgres_finance_posting_api.py",
+            "tests/test_postgres_finance_posting_restore.py",
+            "tests/test_postgres_finance_balances.py",
+            "tests/test_receivables_cash_contract.py",
+            "tests/test_receivables_cash_policy.py",
+            "-q"
+          ]
+        ]
+      },
+      {
+        "shard": "inventory-payables",
+        "exit_code": 0,
+        "captured_commands": [
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_inventory_core.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_payables.py",
+            "tests/test_postgres_payables_replay.py",
+            "tests/test_postgres_exact_trade_primitives.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_local_boundaries.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_inventory_planning.py",
+            "-q"
+          ],
+          [
+            "run",
+            "--no-sync",
+            "pytest",
+            "tests/test_api_server_inventory_valuation.py",
+            "-q"
+          ]
+        ]
+      },
+      {
+        "shard": "unknown-shard",
+        "exit_code": 2,
+        "captured_commands": []
+      }
+    ],
+    "aggregate_results": [
+      {
+        "matrix_result": "success",
+        "exit_code": 0
+      },
+      {
+        "matrix_result": "failure",
+        "exit_code": 1
+      },
+      {
+        "matrix_result": "cancelled",
+        "exit_code": 1
+      },
+      {
+        "matrix_result": "skipped",
+        "exit_code": 1
+      },
+      {
+        "matrix_result": "",
+        "exit_code": 1
+      }
+    ],
+    "temporary_probe_cleanup": true,
+    "limitation": "Local shell captures dispatch only. It does not replace actual hosted shard execution or establish hosted duration."
+  },
+  "raw_artifacts": {
+    "output\\verification-2026-10-03\\server-boundary-sharding\\ACCEPTANCE.json": "d14280cb3571536b57ea76e3214e4713be281035f02c0ac813ebf8faa62ce13f",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\before-inventory.json": "501f3e5030ffb15345e22d75f4d65cda3dc56099b497488e3734002614e5946c",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\ci-before.yml": "8575281a35d7554fd0e198098d401d2464abea466d60a18e980ad290f9ac2e63",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\dispatch.log": "7033c9b514cb6b92614c08d20a8f6a249e4c5010a14b1fca3760e4fa10d7bbc5",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\focused-contracts-command.json": "c680868699aba98433b781b9e70df3311cc55d3a8820ddc02ec5c40aa07bb545",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\focused-contracts.log": "d19194751e65aea848203716928087da4ababe4de483ee9b0f3e9b5e0e27cc15",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\HANDOFF.md": "1d00c9102f10af04f4f09684a94ef93e396fb7e3c19dcc1a0a7088f0d7e65aaf",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\inventory-and-dispatch.json": "457d2caae6949e6bc8e55008cd49ede79062690191fd71b9a320a277ff3a1cc4",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\ruff.log": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\shard-contracts-final.log": "9d5a2646cfea101970d3c6e3eb8c2650770734a095b2562b4c25cf9f554c913c",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\shard-contracts-final.xml": "a69522520e7c5d7ff07a0e3a08f48a89afd6b77ae7f71e698b59325dd2e25dd4",
+    "output\\verification-2026-10-03\\server-boundary-sharding\\verify_partition.py": "b7ea9a6dc9a2effa7c42f1e795b08017c8e2ee3fa0bd7261ec265a0c816fcc53"
+  }
+}

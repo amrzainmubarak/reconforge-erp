@@ -1,5 +1,82 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-018 — Independently verified invoice acknowledgement (2026-10-03)
+
+ADR0823 accepts exact request/source verification under current authority with
+original Draft1 acknowledgement and independent current GET. New receipts retain
+explicit-versus-omitted date intent; ambiguous raw legacy receipts require GET.
+No current terms, registry or cached ID substitutes for original evidence.
+Actual331/0skip and separate native restore plus source/cleanup review are bounded
+local acceptance; whole/hosted publication gates remain independent. Public AR
+export, receipt replay and generated GL are outside this repair.
+
+## D-PROD-017 — User-requested amr work labels (2026-10-03)
+
+The explicit user instruction overrides the default work-branch prefix.
+Current work uses amr/. Five unmerged merge messages are rewritten with mapped
+parents while preserving268 source trees, identities and original timestamps.
+Seventeen local/seven remote branches and six Draft PR replacements are verified;
+original review/run subjects remain historical and recoverable through a complete
+verified Git bundle. Main, tags and previously released history remain unchanged.
+No existing CI conclusion is reassigned to a new commit ID. Future commits retain
+the configured Amr Zain Mubarak identity and the requested work labels.
+
+## D-PROD-016 — Observable bounded live CI (2026-10-03)
+
+ADR0822 preserves current verification commands and required gate naming across
+nine independent bounded shards. Every non-success outcome fails aggregation.
+Current0099 native proof retains historical reports; exact empty-digest scanner
+fingerprints do not broaden exclusions. Local contracts do not substitute for
+hosted execution or erase the failed8054/timeout113 subjects.
+
+## D-PROD-015 — Exact public AR money and active view authority (2026-10-03)
+
+ADR0821 exposes only closed retained policy and derived exact integer text.
+Browser major-unit writes use that recorded precision and a safe JSON integer
+ceiling; legacy unknown interpretation stays raw/read-only. Layout view lifetime
+and current security revision govern commands independently of read setup.
+Confirmed invoice request/cache source identity is a separate PROD039 repair;
+historical Draft acknowledgements and authorized workspace recovery must survive.
+
+## D-PROD-014 — Explicit SQLite inventory owner (2026-10-03)
+
+ADR0818 accepts owner-bound adapters and caller-preserving denial of unbound
+pending writes. Only the owner finalizes; failed operations and constructor
+rejections require full rollback. Existing clean independent commands remain
+compatible. No operational GL effect is inferred from the resulting Draft.
+
+## D-PROD-013 — Retained AR interpretation (2026-10-03)
+
+ADR0815 accepts SQLite49/PostgreSQL0099 policy capture and historical reads from
+their own verified snapshots. All-null legacy data remains unverified and new
+financial effects fail closed. Hidden-child affinity, exact cached projection,
+currency-master precision and populated native restore are tested. API and
+browser provenance/major-unit display require their own acceptance.
+
+## D-PROD-012 — Recorded-posting business-date balances (2026-10-03)
+
+ADR0817 accepts bounded exact opening/activity/closing over retained immutable
+effects, equal currency policies and verified source/evidence affinity. Clean
+866d943a passes127local/4actualPG-HTTP without skips, native restore and global
+quality/build. Later backdated effects can change a later business-date view;
+knowledge-time reconstruction, opening imports and statutory close are separate.
+
+## D-PROD-011 — Authoritative AP creation recovery (2026-10-03)
+
+ADR0816 accepts closed source/request-bound PostgreSQL PO/receipt/invoice
+recovery, current RLS authority, lock-serialized retries and no duplicate
+financial evidence. Inactive parents remain readable for exact recovery while
+new purchases retain active prerequisites. Legacy raw receipt hierarchy is
+explicitly unverifiable historically; no payment or GL capability is inferred.
+
+## D-PROD-010 — Context-independent quantities and FIFO (2026-10-03)
+
+ADR0814 accepts exact coefficient/scale conversion, integer HALF_UP AR products
+and integer HALF_EVEN FIFO allocations. Existing lexical boundaries stay owned
+by their adapters. Strict PG text/coercion denials and a1M-character expansion
+ceiling are explicit; historical data is not reinterpreted. The227-test bounded
+gate is independent of complete trade posting and retained AR money policy.
+
 ## D-PROD-009 — Reviewed Manual operational effects (2026-10-03)
 
 ADR0811 accepts SQLite48/PG0098, exact reviewed content, stable preparer-only

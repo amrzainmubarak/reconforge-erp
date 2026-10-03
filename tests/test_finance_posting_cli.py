@@ -67,6 +67,11 @@ def test_real_cli_draft_review_post_replay_and_full_reversal(posting_cli) -> Non
     assert invoke(path, "post", *post_args, username="maker").exit_code == 1
     assert invoke(path, "post", *post_args, username="reader").exit_code == 1
     posted = successful(invoke(path, "post", *post_args))["posting"]
+    as_of = successful(invoke(path, "balances-as-of", "--period-id", str(period["id"]), "--as-of-date", "2026-07-05", "--organization", "SYN", "--entity", "EG01", username="reader"))["balances"]
+    assert as_of["totals"]["opening"]["effect_count"] == 0
+    assert as_of["totals"]["closing"]["balance_totals"]["debit_minor"] == "100000"
+    invalid = invoke(path, "balances-as-of", "--period-id", str(period["id"]), "--as-of-date", "2026-08-01", "--organization", "SYN", "--entity", "EG01", username="reader")
+    assert invalid.exit_code == 1 and "posting_date_invalid" in invalid.output
     assert successful(invoke(path, "post", *post_args))["posting"] == posted
     assert successful(invoke(path, "effect", "--effect-id", posted["id"]))["posting"] == posted
     changed = invoke(path, "post", *post_args[:-1], "Changed retry reason")

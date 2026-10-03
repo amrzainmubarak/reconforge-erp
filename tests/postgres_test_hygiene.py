@@ -94,6 +94,8 @@ RECEIVABLES_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(
         TenantScopedTable("ar_customers"),
         TenantScopedTable("ar_idempotency_keys"),
         TenantScopedTable("domain_audit_ledger_state"),
+        TenantScopedTable("currency_registry_bindings"),
+        TenantScopedTable("currency_registry_snapshots"),
         TenantScopedTable("domain_workspaces"),
         TenantScopedTable("currencies"),
         _TENANTS,
@@ -101,6 +103,9 @@ RECEIVABLES_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(
     immutable_triggers=(
         _DOMAIN_AUDIT_TRIGGER,
         ImmutableTrigger("ar_invoice_lines", "ar_invoice_line_update_blocked"),
+        ImmutableTrigger("ar_invoice_lines", "ar_line_policy_guard"),
+        ImmutableTrigger("ar_receipt_allocations", "ar_allocation_policy_affinity"),
+        ImmutableTrigger("currency_registry_snapshots", "currency_snapshot_immutable"),
     ),
 )
 

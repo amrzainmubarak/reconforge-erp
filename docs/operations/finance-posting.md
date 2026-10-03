@@ -80,6 +80,27 @@ positive turnover remain. Earlier periods/opening balances are not included.
 Each contributing amount has effect, entry and line drill-down. Mixed retained
 monetary policies are rejected rather than silently combined.
 
+The additive business-date report is available separately:
+
+```text
+reconforge finance-core posting balances-as-of --db local.db --username checker --period-id PERIOD_ID --organization SYN --entity EG01 --as-of-date 2026-07-15
+```
+
+Its contract finance-posted-balances-v1 reports opening before the selected
+period, activity through the inclusive cutoff, and cumulative closing. Read
+balance_scope=recorded-postings-business-date-as-of and retain report_digest.
+The server GET /api/v1/finance-core/posted-balances-as-of uses the same selected
+scope and exposes exact monetary strings plus canonical report_json. Every
+contribution retains its effect, source entry, period, business date and line.
+Compatible retained money policy is required across all contributing periods.
+
+This reads currently recorded immutable postings: a later backdated posting can
+change a newly produced report for the same cutoff. It does not reconstruct
+what was known at an earlier timestamp or import an opening balance. Limits are
+1000 effects,10000 lines and2MiB combined snapshots/final canonical report;
+excess evidence is rejected before the remaining effects are loaded. Retain
+verified report artifacts when comparing runs. See ADR0817 for the boundary.
+
 ## Server and recovery
 
 The PostgreSQL profile exposes preview, explicit post, effect GET, reversal

@@ -560,12 +560,16 @@ def commit_audited(
     outbox_aggregate_id: str | None = None,
     outbox_payload: dict[str, Any] | None = None,
     outbox_event_id: str | None = None,
+    autocommit: bool = True,
 ) -> None:
     """Append audit evidence and commit one mutation atomically.
 
     Callers must perform all business writes before invoking this helper and must not
     commit those writes earlier. Any audit or database failure rolls back the caller's
     pending transaction so a business change cannot survive without its evidence.
+    With ``autocommit=False``, an active caller transaction is required. The helper
+    only appends evidence; its explicit owner must roll back on any failure and
+    must not commit partial business writes after catching an evidence failure.
     """
 
     if emit_outbox:
@@ -576,6 +580,8 @@ def commit_audited(
         if not outbox_aggregate_id:
             outbox_aggregate_id = object_id
     own_transaction = not connection.in_transaction
+    if not autocommit and own_transaction:
+        raise PlatformError("Appending audit evidence requires an active caller transaction.")
     if metadata is None:
         metadata = {}
 
@@ -609,9 +615,11 @@ def commit_audited(
                 aggregate_id=safe_aggregate_id,
                 payload=payload,
             )
-        connection.commit()
+        if autocommit:
+            connection.commit()
     except (AuditLedgerError, PlatformError, sqlite3.DatabaseError) as exc:
-        connection.rollback()
+        if autocommit:
+            connection.rollback()
         raise PlatformError("Unable to commit mutation with audit evidence.") from exc
 
 

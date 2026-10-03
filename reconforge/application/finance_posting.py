@@ -8,6 +8,11 @@ from reconforge.domain.finance_posting import PostingActor
 
 
 class FinancePostingRepositoryProtocol(Protocol):
+    def posted_balances_as_of(
+        self, *, period_id: str, as_of_date: str, organization_code: str,
+        entity_code: str, workspace: str = "default", actor: PostingActor,
+    ) -> dict[str, Any]: ...
+
     def preview(self, entry_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
     def post(
         self, entry_id: str, *, command_id: str, expected_validation_digest: str, reason: str, actor: PostingActor
@@ -40,6 +45,15 @@ class FinancePostingApplicationService:
 
     def __init__(self, repository: FinancePostingRepositoryProtocol) -> None:
         self.repository = repository
+
+    def posted_balances_as_of(
+        self, *, period_id: str, as_of_date: str, organization_code: str,
+        entity_code: str, workspace: str = "default", actor: PostingActor,
+    ) -> dict[str, Any]:
+        return self.repository.posted_balances_as_of(
+            period_id=period_id, as_of_date=as_of_date, organization_code=organization_code,
+            entity_code=entity_code, workspace=workspace, actor=actor,
+        )
 
     def preview(self, entry_id: str, *, actor: PostingActor) -> dict[str, Any]:
         return self.repository.preview(entry_id, actor=actor)

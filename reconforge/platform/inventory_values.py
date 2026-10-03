@@ -6,9 +6,10 @@ import re
 import sqlite3
 from collections.abc import Mapping
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
 
+from reconforge.domain.quantities import parse_quantity, scaled_integer_text
 from reconforge.platform.common import PlatformError
 
 DEFAULT_LIST_LIMIT = 500
@@ -17,8 +18,6 @@ MAX_QUANTITY_SCALED = 9_000_000_000_000_000_000
 MAX_AMOUNT_MINOR = 9_000_000_000_000_000_000
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
 _NUMBER_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._/-]{0,63}$")
-_QUANTITY_PATTERN = re.compile(r"^(0|[0-9]+)(\.[0-9]+)?$")
-_AMOUNT_PATTERN = re.compile(r"^(0|[0-9]+)(\.[0-9]+)?$")
 
 
 def clean_text(value: object, label: str, *, maximum: int = 160, required: bool = True) -> str:
@@ -87,50 +86,43 @@ def quantity_to_scaled(
     *,
     allow_zero: bool = False,
 ) -> int:
-    if isinstance(value, bool | float):
-        raise PlatformError(f"{label} must be supplied as an exact decimal string or integer.")
-    raw = str(value).strip() if value is not None else ""
-    if len(raw) > 64 or not _QUANTITY_PATTERN.fullmatch(raw):
-        requirement = "non-negative" if allow_zero else "positive"
-        raise PlatformError(f"{label} must be a valid {requirement} decimal quantity.")
+    if type(decimal_places) is not int or not 0 <= decimal_places <= 6:
+        raise PlatformError(f"{label} unit precision must be between 0 and 6.")
     try:
-        quantity = Decimal(raw)
-    except InvalidOperation as exc:
+        quantity = parse_quantity(str(value) if type(value) is Decimal else value, max_length=64, allow_zero=allow_zero)
+    except ValueError as exc:
         requirement = "non-negative" if allow_zero else "positive"
-        raise PlatformError(f"{label} must be a valid {requirement} decimal quantity.") from exc
-    scaled = quantity * (Decimal(10) ** decimal_places)
-    if quantity < 0 or (quantity == 0 and not allow_zero):
-        comparator = "zero or greater" if allow_zero else "greater than zero"
-        raise PlatformError(f"{label} must be {comparator}.")
-    if scaled != scaled.to_integral_value():
-        raise PlatformError(f"{label} exceeds the unit's {decimal_places}-decimal precision.")
-    result = int(scaled)
+        raise PlatformError(
+            f"{label} must be a valid {requirement} decimal quantity; supply an exact decimal string or integer."
+        ) from exc
+    try:
+        result = quantity.scaled(decimal_places)
+    except ValueError as exc:
+        raise PlatformError(f"{label} exceeds the unit's {decimal_places}-decimal precision.") from exc
     if result > MAX_QUANTITY_SCALED:
         raise PlatformError(f"{label} exceeds the supported local quantity range.")
     return result
 
 
 def scaled_to_text(value: int, decimal_places: int) -> str:
-    quantity = Decimal(value).scaleb(-decimal_places)
-    return f"{quantity:.{decimal_places}f}"
+    return scaled_integer_text(value, decimal_places)
 
 
 def amount_to_minor(value: object, minor_units: int, label: str = "Amount") -> int:
     """Parse a non-negative exact amount into currency minor units."""
 
-    if isinstance(value, bool | float):
-        raise PlatformError(f"{label} must be supplied as an exact decimal string or integer.")
-    raw = str(value).strip() if value is not None else ""
-    if len(raw) > 64 or not _AMOUNT_PATTERN.fullmatch(raw):
-        raise PlatformError(f"{label} must be a valid non-negative decimal amount.")
+    if type(minor_units) is not int or not 0 <= minor_units <= 8:
+        raise PlatformError(f"{label} currency precision must be between 0 and 8.")
     try:
-        amount = Decimal(raw)
-    except InvalidOperation as exc:
-        raise PlatformError(f"{label} must be a valid non-negative decimal amount.") from exc
-    scaled = amount * (Decimal(10) ** minor_units)
-    if scaled != scaled.to_integral_value():
-        raise PlatformError(f"{label} exceeds the currency's {minor_units}-decimal precision.")
-    result = int(scaled)
+        amount = parse_quantity(str(value) if type(value) is Decimal else value, max_length=64, allow_zero=True)
+    except ValueError as exc:
+        raise PlatformError(
+            f"{label} must be a valid non-negative decimal amount; supply an exact decimal string or integer."
+        ) from exc
+    try:
+        result = amount.scaled(minor_units)
+    except ValueError as exc:
+        raise PlatformError(f"{label} exceeds the currency's {minor_units}-decimal precision.") from exc
     if result > MAX_AMOUNT_MINOR:
         raise PlatformError(f"{label} exceeds the supported local amount range.")
     return result
@@ -139,8 +131,7 @@ def amount_to_minor(value: object, minor_units: int, label: str = "Amount") -> i
 def minor_to_text(value: int, minor_units: int) -> str:
     """Format stored minor units without binary floating-point conversion."""
 
-    amount = Decimal(value).scaleb(-minor_units)
-    return f"{amount:.{minor_units}f}"
+    return scaled_integer_text(value, minor_units)
 
 
 def public_record(row: sqlite3.Row | Mapping[str, object]) -> dict[str, Any]:

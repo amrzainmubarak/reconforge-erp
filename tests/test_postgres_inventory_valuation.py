@@ -153,7 +153,7 @@ def test_fifo_allocation_uses_half_even_and_preserves_full_layer_residual() -> N
 
 def test_fifo_approval_serializes_layers_and_creates_balanced_finance_draft() -> None:
     source = (ROOT / "reconforge/infrastructure/postgres_inventory_valuation.py").read_text(encoding="utf-8")
-    assert "ROUND_HALF_EVEN" in source
+    assert "allocate_fifo_value(remaining_value, remaining_quantity, consumed_quantity)" in source
     assert "pg_advisory_xact_lock" in source
     assert "ORDER BY l.created_at,l.id FOR UPDATE OF l" in source
     assert "finance_entries" in source

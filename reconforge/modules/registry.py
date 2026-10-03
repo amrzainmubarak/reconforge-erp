@@ -522,6 +522,8 @@ _MODULES = (
             "tests/test_inventory_planning.py",
             "tests/test_inventory_valuation.py",
             "tests/test_inventory_valuation_reversal.py",
+            "tests/test_exact_trade_primitives.py",
+            "tests/test_postgres_exact_trade_primitives.py",
             "tests/test_studio_demo_bridge.py",
         ),
     ),

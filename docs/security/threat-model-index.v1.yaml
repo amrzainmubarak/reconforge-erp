@@ -395,7 +395,7 @@ modules:
         residual_risk_ids: [R-014]
         limitations:
           - Real inventory disclosure authorization, encryption, and recipient controls are not supplied by the synthetic UI bridge.
-    module_test_evidence: [apps/web/src/App.test.tsx, tests/test_inventory_core.py, tests/test_inventory_planning.py, tests/test_inventory_valuation.py, tests/test_inventory_valuation_reversal.py, tests/test_studio_demo_bridge.py]
+    module_test_evidence: [apps/web/src/App.test.tsx, tests/test_inventory_core.py, tests/test_inventory_planning.py, tests/test_inventory_valuation.py, tests/test_inventory_valuation_reversal.py, tests/test_exact_trade_primitives.py, tests/test_postgres_exact_trade_primitives.py, tests/test_studio_demo_bridge.py]
     assumptions:
       - Item, location, quantity, cost, lot/serial, and opening-state inputs are authorized and reconciled by the operator.
       - Posted and Approved labels refer only to the local ReconForge control lifecycle.

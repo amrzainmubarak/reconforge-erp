@@ -143,6 +143,15 @@ PROD034/035 are now in progress on a subsequent slice: actual PO/receipt/invoice
 recovery and context-independent quantity/FIFO primitives. AP payment remains
 absent and cannot be used as a purported replay fixture.
 
+PROD035 is now accepted under ADR0814:227 tests pass with no skips on frozen
+SQLite/PostgreSQL16.14 sources through0098, plus Ruff/Mypy/Bandit and owned
+database cleanup. Quantity/FIFO results no longer depend on Decimal context;
+ordinary standalone grammar and5000-digit local quantities remain readable.
+Explicit PG new-input refusals and fixed expansion limits are documented.
+EXACT_TRADE_PRIMITIVES_2026-10-03.json retains original/superseded evidence.
+This closes the arithmetic prerequisite only; trade posting and AR policy remain
+separate implementation work.
+
 ### Financial regression and browser checkpoint
 
 The next slice repairs a reproduced SQLite AP partial commit: exception writes

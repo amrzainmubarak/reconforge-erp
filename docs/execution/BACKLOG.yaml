@@ -285,10 +285,10 @@ tasks:
     priority: P0
     area: exact-quantity-and-fifo
     title: Remove ambient Decimal context from AR quantities and FIFO allocation
-    status: in_progress
+    status: completed
     depends_on: [PROD-001]
     exit_evidence: >-
-      Both-backend reproduced helpers convert quantity12345 to12000 and allocate67 rather than66 from value199/quantity3/issue1 at precision2. Shared strict canonical quantity and rational/integer allocation must preserve precision, exact residue, invalid-input denial and unchanged ordinary contracts under hostile Decimal contexts before PROD010/011 generated posting.
+      ADR0814 accepted:227pass/0skip actual SQLite/PostgreSQL16.14 through0098, frozen runtime hashes and owned cleanup. Integer/rational arithmetic preserves quantity12345 and FIFO66 under hostile contexts; two-layer cost3.00 fully conserved. Existing standalone grammars/5000-digit local quantities preserved; new PG scientific-text/float refusals and pre-expansion1M-character ceiling explicit. Original red and superseded gates retained in EXACT_TRADE_PRIMITIVES_2026-10-03.json. Generated trade/GL remains separate.
   - id: E-1120
     priority: P0
     area: financial-exactness

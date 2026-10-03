@@ -2,6 +2,13 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Exact trade arithmetic: [frozen evidence](EXACT_TRADE_PRIMITIVES_2026-10-03.json)
+  binds227pass/0skip, actual nonowner PostgreSQL16.14/0098 and SQLite, unchanged
+  runtime sources, owned cleanup and quality gates. Hostile Decimal contexts,
+  preserved ingress, expansion limits and independent FIFO conservation pass.
+  Original red probes and earlier narrower-grammar gates remain separate.
+  ADR0814 accepts this prerequisite; generated operational GL remains open.
+
 - [Draft PR112](https://github.com/amrzainmubarak/reconforge-erp/pull/112)
   retains posting/cash runtime checkpointd4e6baf8. Its clean managed checkout
   completed3829 passes/309 skips/2 inventory failures under Python3.12.13;

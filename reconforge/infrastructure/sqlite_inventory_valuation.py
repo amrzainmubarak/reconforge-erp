@@ -6,13 +6,13 @@ import sqlite3
 import uuid
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from decimal import ROUND_HALF_EVEN, Decimal
 from hashlib import sha256
 from typing import Any
 
 from reconforge.application.inventory_valuation import InventoryValuationSummary
 from reconforge.auth.rbac import same_actor
 from reconforge.domain.finance_policy import POLICY_COLUMNS, FinanceCurrencyPolicy, FinancePolicyError
+from reconforge.domain.inventory_costing import allocate_fifo_value
 from reconforge.domain.models import utc_now_text
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.sqlite_inventory_valuation_repository import (
@@ -820,16 +820,10 @@ class SQLiteInventoryValuationRepositoryAdapter:
 
     @staticmethod
     def _allocate_layer_value(*, remaining_value: int, remaining_quantity: int, consumed_quantity: int) -> int:
-        if consumed_quantity == remaining_quantity:
-            return remaining_value
-        exact = (Decimal(remaining_value) * Decimal(consumed_quantity)) / Decimal(remaining_quantity)
-        allocated = int(exact.to_integral_value(rounding=ROUND_HALF_EVEN))
-        if allocated <= 0 or allocated >= remaining_value:
-            raise PlatformError(
-                "A partial FIFO issue cannot be represented exactly enough in currency minor units; "
-                "consume the layer fully or use a more granular receipt quantity."
-            )
-        return allocated
+        try:
+            return allocate_fifo_value(remaining_value, remaining_quantity, consumed_quantity)
+        except ValueError as exc:
+            raise PlatformError(str(exc)) from exc
 
     def _insert_finance_draft(
         self,

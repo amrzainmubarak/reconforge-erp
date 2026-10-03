@@ -39,6 +39,12 @@ from reconforge.domain.receivables_receipt_replay import (
     receipt_replay_response,
     receipt_request_digest,
 )
+from reconforge.domain.receivables_replay import (
+    InvoiceReplayError,
+    invoice_creation_request,
+    invoice_replay_envelope,
+    verify_invoice_replay,
+)
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.io.persisted import (
     PersistedJsonError,
@@ -267,14 +273,8 @@ class SQLiteReceivablesRepository:
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             workspace_id = ensure_workspace(self.connection, workspace)
-            if idempotency_key:
-                previous = self._idempotent("invoice", workspace_id, idempotency_key)
-                if previous is not None:
-                    authoritative = self.get_invoice(str(previous.get("id", "")))
-                    self._verify_replay_policy(previous, authoritative)
-                    return previous
             number = normalize_key(invoice_number, default="")
-            customer = self._customer_by_code(workspace_id, customer_code)
+            customer = self._customer_by_code(workspace_id, customer_code, require_active=False)
             currency = _currency(currency_code)
             invoice_day = _date(invoice_date, field="invoice date")
             tax = _minor(tax_minor, field="invoice tax")
@@ -282,15 +282,8 @@ class SQLiteReceivablesRepository:
                 raise PlatformError("Invoice number and at least one line are required.")
             if str(customer["currency_code"]) != currency:
                 raise PlatformError("Customer invoice currency must match the customer currency.")
-            due_day = (
-                _date(due_date, field="due date")
-                if normalize_text(due_date)
-                else invoice_day
-                + timedelta(
-                    days=int(customer["payment_terms_days"]),
-                )
-            )
-            if due_day < invoice_day:
+            explicit_due = _date(due_date, field="due date") if normalize_text(due_date) else None
+            if explicit_due is not None and explicit_due < invoice_day:
                 raise PlatformError("Due date cannot be before invoice date.")
             organization_id, legal_entity_id = self._scope_ids(
                 workspace_id,
@@ -303,6 +296,22 @@ class SQLiteReceivablesRepository:
                 raise PlatformError("Invoice tax must equal the sum of invoice-line tax amounts.")
             total = subtotal + tax
             invoice_id = platform_id("ARINV", workspace_id, customer["id"], number)
+            request = invoice_creation_request({
+                "id": invoice_id, "workspace_id": workspace_id, "organization_id": organization_id,
+                "legal_entity_id": legal_entity_id, "customer_id": customer["id"], "invoice_number": number,
+                "invoice_date": invoice_day.isoformat(), "due_date": explicit_due.isoformat() if explicit_due else None,
+                "currency_code": currency, "subtotal_minor": subtotal, "tax_minor": tax, "total_minor": total,
+                "lines": [vars(line) for line in normalized_lines],
+            })
+            previous = self._idempotent("invoice", workspace_id, idempotency_key)
+            if previous is not None:
+                authoritative = self.get_invoice(invoice_id)
+                response = verify_invoice_replay(previous, request, authoritative)
+                self._verify_replay_policy(response, authoritative)
+                return response
+            if str(customer["status"]) != "Active":
+                raise PlatformError("Customer is not Active.")
+            due_day = explicit_due or invoice_day + timedelta(days=int(customer["payment_terms_days"]))
             now = utc_now_text()
             policy = self._capture_policy(workspace_id, currency, actor_label, customer)
             self.connection.execute(
@@ -354,7 +363,7 @@ class SQLiteReceivablesRepository:
                     ),
                 )
             result = self.get_invoice(invoice_id)
-            self._save_idempotency("invoice", workspace_id, idempotency_key, result)
+            self._save_idempotency("invoice", workspace_id, idempotency_key, invoice_replay_envelope(request, result))
             _finalize_event(
                 self.connection,
                 event_id=platform_id("OBX", "ar_invoice", invoice_id, "created"),
@@ -369,6 +378,9 @@ class SQLiteReceivablesRepository:
                 metadata={"invoice_number": number, "customer_id": str(customer["id"]), "total_minor": total},
             )
             return result
+        except InvoiceReplayError as exc:
+            self.connection.rollback()
+            raise PlatformError(str(exc)) from exc
         except PlatformError:
             self.connection.rollback()
             raise
@@ -932,7 +944,7 @@ class SQLiteReceivablesRepository:
             self.connection.rollback()
             raise PlatformError("Unable to transition customer invoice.") from exc
 
-    def _customer_by_code(self, workspace_id: str, customer_code: str) -> dict[str, Any]:
+    def _customer_by_code(self, workspace_id: str, customer_code: str, *, require_active: bool = True) -> dict[str, Any]:
         code = normalize_key(customer_code, default="")
         row = self.connection.execute(
             "SELECT * FROM ar_customers WHERE workspace_id = ? AND customer_code = ?",
@@ -940,7 +952,7 @@ class SQLiteReceivablesRepository:
         ).fetchone()
         if row is None:
             raise PlatformError("Customer not found in the requested workspace.")
-        if str(row["status"]) != "Active":
+        if require_active and str(row["status"]) != "Active":
             raise PlatformError("Customer is not Active.")
         customer = dict(row)
         self._assert_customer_currency(customer)

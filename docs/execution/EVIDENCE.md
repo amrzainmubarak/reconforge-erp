@@ -1,5 +1,44 @@
 # ReconForge Execution Evidence Log
 
+- Current downgrade test: POSTING_DOWNGRADE_TEST_REPAIR_2026-10-03.json retains
+ actual3red/9deselected and12green/0skip restricted-role PostgreSQL16.14 cases,
+ 677stable runtime/migration/fixture hashes and15owned database removals. Only
+ the assertion now reads its actual pre-downgrade revision; refusal and partial
+ provenance column checks remain unchanged. Original e638 hosted8success-shard/
+ 1failed-Finance result and failing aggregate remain separate retained evidence.
+
+- Whole e638: AR_POLICY_REGRESSION_E638_2026-10-03.json binds4481collected,
+ 4115pass/366explicit service/platform prerequisites/0fail/0error/24warnings,
+ 3,057unchanged tracked files and passed global quality/build. Its renamed tree
+ equivalent4629a64b is a content map, not a reassigned hosted result. Hosted
+ finance-posting retains three stale fixed0098 assertions after0099 bootstrap;
+ original failed shard and local whole success remain separate. New recovery
+ runtime7f8b9173 needs its own whole/hosted acceptance.
+- Invoice CI: INVOICE_RECOVERY_CI_2026-10-03.json retains39contract/supply-chain
+ tests without skips and actual nine-shard/unknown Bash dispatch. All40prior
+ verification commands remain, with one five-module source/HTTP/native recovery
+ command added in receivables. Native evidence upload uses the existing pinned
+ action. No hosted duration or result is inferred from captured shell commands.
+
+- Verified invoice recovery: RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json binds
+ 331pass/0skip real SQLite/PostgreSQL16.14 AR/API/cash/codec and separate native
+ 1pass/1,188,108-byte dump/restore with equal financial history. Nine owned and
+ 1,208participating Python hashes remain unchanged; root confirms four owned
+ databases absent. Independent source review accepts request/source/ordered-line/
+ numeric-text/policy/originalDraft1 identity and current authority, physical races
+ and late-failure rollback. Original red/93pass-3fixture/numeric inconsistency
+ results remain retained. ADR0823 documents ambiguous legacy GET fallback,
+ active canonical hierarchy, READ COMMITTED and no public AR export/receipt change.
+
+- Requested work labels: AMR_WORK_LABEL_MIGRATION_2026-10-03.json maps17local and
+  7remote branches to amr,5merge messages and33 affected commit IDs. Independent
+  raw-object reconstruction verifies268 commits/235 unchanged IDs, equal trees,
+  identities, dates and ordered mapped parents. A verified complete Git bundle
+  retains originals. Drafts115-120 replace preserved closed109-114; main/tags
+  are unchanged. Fresh all-ref Gitleaks1064commits reports0findings; no scanner
+  exclusion or financial code was changed for the rename. Old run conclusions
+  retain original subjects; new hosted acceptance remains separate.
+
 - AR whole e81b and projection repair: RECEIVABLES_PROJECTION_REPAIR_2026-10-03.json
   retains immutable4481collected/4114pass/366explicit prerequisites/1old public
   policy expectation failure, stable3056-file manifest and passed global quality.

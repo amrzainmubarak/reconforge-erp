@@ -409,6 +409,7 @@ jobs:
           RECONFORGE_TEST_POSTGRES_APP_USER: reconforge_app
           RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE: reconforge_ci_source
           RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE: reconforge_ci_admin
+          RECONFORGE_AR_INVOICE_REPLAY_NATIVE_REPORT: ${{ runner.temp }}/reconforge-ar-invoice-recovery-native.json
           RECONFORGE_TEST_REDIS_URL: redis://localhost:6379/0
           RECONFORGE_REDIS_IMAGE_DIGEST: sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
           RECONFORGE_REDIS_LIVE_REPORT: ${{ runner.temp }}/reconforge-redis-live-report.json
@@ -477,6 +478,7 @@ jobs:
               uv run --no-sync pytest tests/test_api_server_receivables.py -q
               uv run --no-sync pytest tests/test_receivables_monetary_policy.py tests/test_receivables_policy_schema.py tests/test_receivables_policy_capture.py tests/test_receivables_policy_raw_guards.py tests/test_postgres_receivables_policy_restore.py -q
               uv run --no-sync pytest tests/test_receivables_money_api_contract.py tests/test_receivables_policy_api.py -q
+              uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q
               ;;
             finance-posting)
               uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
@@ -497,6 +499,14 @@ jobs:
         with:
           name: reconforge-redis-live-report
           path: ${{ runner.temp }}/reconforge-redis-live-report.json
+          if-no-files-found: ignore
+
+      - name: Upload AR invoice recovery native report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: reconforge-ar-invoice-recovery-native
+          path: ${{ runner.temp }}/reconforge-ar-invoice-recovery-native.json
           if-no-files-found: ignore
 
   server-boundaries-gate:

@@ -48,7 +48,7 @@ It is deliberately positioned as a **finance-controls platform**, not a replacem
 
 ## Product tour
 
-The views below are rendered by the real React Studio from versioned, synthetic ReconForge contracts. Financial showcase pages are read-only and experimental. The modern Studio also includes authenticated administration writes and tenant-bound live metrics; complete financial write workflows remain under development. See the [current production audit and acceptance gates](docs/execution/PRODUCTION_AUDIT_2026-10-03.md).
+The views below are rendered by the real React Studio from versioned, synthetic ReconForge contracts. Financial showcase pages are read-only and experimental. Separate authenticated pages support administration and a bounded AR workflow: invoice creation, submission, independent approval, receipt recording and allocation. AR money uses the retained currency policy, with exact textual reads and English/Arabic review. Complete purchase/sales/inventory/GL workflows remain under development. See the [AR browser evidence](docs/execution/RECEIVABLES_POLICY_UI_2026-10-03.json) and [current production audit and acceptance gates](docs/execution/PRODUCTION_AUDIT_2026-10-03.md).
 
 ![ReconForge executive control dashboard](docs/assets/screenshots/dashboard.png)
 
@@ -247,8 +247,8 @@ The current version is **v0.7.1**, classified as alpha/foundation-stage software
 | --- | --- |
 | Implemented | Export validation and mapping, stock-to-GL and workshop reconciliation, deterministic control packs, risk/exceptions, local review state, reports/evidence, CLI, synthetic demos, and server-rendered Studio |
 | Foundation-stage | SQLite-backed finance/inventory/AP/AR services, local users and RBAC, workflows, audit events, API routes, backup/import/export, module registry, and governed master data |
-| Experimental | Read-only React Studio, inventory planning, FIFO valuation and exact reversal, Finance Core Draft bridge, and optional DuckDB analytical execution |
-| Planned | Broader reconciliation templates, write-enabled modern Studio, remaining PostgreSQL/Redis/S3 server-profile integration, tenant propagation across all services, resumable large-data jobs, richer observability, and separately tested live connectors |
+| Experimental | React synthetic showcase and authenticated AR invoice/receipt workflows, inventory planning, FIFO valuation and exact reversal, Finance Core Draft bridge, and optional DuckDB analytical execution |
+| Planned | Broader reconciliation templates and governed React write workflows, remaining PostgreSQL/Redis/S3 server-profile integration, tenant propagation across all services, resumable large-data jobs, richer observability, and separately tested live connectors |
 | Outside released scope | Complete ERP transaction processing, automatic source-system posting, hosted multi-tenant service, and formal audit/compliance assurance |
 
 Implementation status is tracked in the [engineering audit](docs/engineering-audit.md), [repository audit](docs/analysis/repository-audit.md), [risk register](docs/risk-register.md), and [roadmap](docs/roadmap.md). Feature labels and screenshots are not evidence of production readiness; executable tests and release gates remain authoritative.

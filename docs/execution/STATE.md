@@ -44,7 +44,16 @@ reviewable in [Draft PR111](https://github.com/amrzainmubarak/reconforge-erp/pul
   scoped-export test teardown failure after its HTTP assertions passed. The
   fixture now explicitly grants policy-audit writes and cleans only its own
   immutable audit rows in an administrative transaction. A fresh database passes
-  all three tests with cleanup verified; pushed889bef54 awaits remote execution.
+  all three tests with cleanup verified. Subsequent remote execution atb5075883
+  exposed nine additional general-server fixture failures. The exact40-test
+  selection passes40/0skipped on33b3fb5e after explicit canonical attribution
+  and transaction-bound cleanup of only test-owned audit rows. The original
+  failures and an intermediate import error remain retained under ADR0812.
+  Full-history secret scanning passes after seven exact source-checksum false
+  positives were verified against Git blobs; no broad rule/path exclusions.
+  Hosted33b3fb5e Python3.11, web, object-storage, Docker, CodeQL and security
+  checks have passed; Python3.12 and the remaining server job were still running
+  at the recorded observation. Conditional release-image scanning was skipped.
 - Next dependencies remain explicit scoped transaction composition, immutable
   operational posting, integrated trade cycles and connected financial writes.
   There is no available company pilot or external-auditor acceptance evidence.
@@ -81,6 +90,24 @@ ab8e134b with no production change. All quality gates pass onab8e134b;60 focused
 restore/health checks pass with one live-service prerequisite skip. Exact sources
 and the earlier lint failure are retained in SCOPED_FINANCE_VERIFICATION_2026-10-03.json.
 Later0097 and posting development are outside that full regression snapshot.
+
+PROD009 is now in progress: typed operational posting/review contracts are
+materialized, with SQLite48 and PostgreSQL0098 adapters under implementation.
+New effects require stable authenticated preparer/reviewer identities, an exact
+reviewed digest, explicit human posting authority and recent reauthentication.
+Existing Validated control entries are not adopted into operational balances.
+Acceptance still requires actual both-backend atomicity, database immutability,
+period races, restore, authenticated API/CLI and posted-only balance evidence.
+
+PROD031 is in progress for actual receipt/allocation writes in the React AR
+workspace. A PostgreSQL0097 probe retained receipt creation200, missing receipt
+GET404 and cached retries503: PostgreSQL JSONB replay decoding is broken before
+the hypothesized narrowed-scope cache exposure can be established. No leakage
+is claimed from that run. The slice adds authoritative scoped read-back, safe
+same-command recovery and human/step-up control specifically for cash actions;
+service draft/import capabilities and historical policy evidence remain valid.
+Actual browser persistence and negative security/recovery checks are required
+before completion. ADR0813 is reserved for this contract.
 
 ### Financial regression and browser checkpoint
 

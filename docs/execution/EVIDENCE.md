@@ -2,6 +2,15 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Remaining foundation server fixtures: [retained evidence](REMAINING_CI_FIXTURES_2026-10-03.json)
+  binds the31pass/9fail before run, intermediate import failure and40pass/0skip
+  repaired selection on33b3fb5e. Test-only owned audit cleanup stays transactional;
+  inventory fixtures use their canonical workspace. The original Alpine checksum
+  failure remains alongside verified official packages and a successful same-head
+  Docker parity rerun. Exact source-checksum secret findings are independently
+  classified in SOURCE_DIGEST_FINDINGS_2026-10-03.json; full-history scanning passed
+  with the precise union of seven verified fingerprints. ADR0812 applies.
+
 - Database reconciliation sealing0097: [retained evidence](POSTGRES_RECONCILIATION_SEAL_2026-10-03.json)
   binds9 passing live tests,257 compatibility passes/two opt-in skips, actual
   populated native restore12.962403s and the actual45-row worker17.176481s.
@@ -22,15 +31,16 @@
 - [Isolated ca82 regression](SCOPED_FINANCE_REGRESSION_CA82_2026-10-03.json)
   remains failed:3647pass/259skip/1fail,788.16s. The sole stale migration-count
   assertion now verifies the exact successor count and latest revision;
-  focused health/policy tests pass. A new isolated full run is required.
+  focused health/policy tests and the separately bound836 full run pass.
 
 - Actual PostgreSQL AMLSim worker: [retained projection](POSTGRES_AMLSIM_WORKER_2026-10-03.json)
   verifies original0094/0096 runtime artifacts and source hashes. Both persist42
   pairs/48decisions with3unmatched per side, equal permutation lineage and
   preserved legacy behavior. Exact replay, expired claim recovery, actual lock
   races, unsupported-isolation refusal and sibling denial pass;257 focused tests
-  pass with two explicit live-DB skips. A raw SQL INSERT gap remains reproduced
-  and assigned to PROD030; repository sealing is not advertised as a DB guard.
+  pass with two explicit live-DB skips. The reproduced raw SQL gap was subsequently
+  closed by the separately verified0097 database guard under PROD030; the original
+  worker report remains unchanged and does not inherit later acceptance.
 
 - Finance hierarchy0095: [frozen report](POSTGRES_FINANCE_SCOPE_2026-10-03.json)
   retains478 actual PostgreSQL passes with two native-client skips, two separate

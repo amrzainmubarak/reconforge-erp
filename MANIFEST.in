@@ -1234,3 +1234,8 @@ include tests/test_postgres_reconciliation_input_seal.py
 include tests/test_postgres_reconciliation_seal_restore.py
 include docs/execution/SOURCE_DIGEST_FINDINGS_2026-10-03.json
 include docs/execution/SCOPED_FINANCE_VERIFICATION_2026-10-03.json
+include docs/adr/0809-typed-queue-authority-denials.md
+include docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json
+include tests/postgres_audit_fixture.py
+include docs/adr/0812-isolate-policy-audit-fixture-cleanup.md
+include docs/execution/REMAINING_CI_FIXTURES_2026-10-03.json

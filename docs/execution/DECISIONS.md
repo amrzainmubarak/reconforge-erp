@@ -1,5 +1,15 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-PROD-006 — Shared master-data mutation authority (2026-10-03)
+
+ADR0808 accepts central policy v2 and PostgreSQL0096 mutation guards for the
+five demonstrated broader-resource mutation paths. Historical v1 evidence
+remains verifiable; FOR SHARE reference locking remains available. The196-test
+gate and native populated restore establish this bounded contract. Workspace-
+only shared currency administration and full permission/resource binding are
+explicit remaining boundaries. The earlier ca82 full-run failure is retained
+separately; focused health-count repair does not convert it to a passing run.
+
 ## D-PROD-005 — Canonical Finance authority and verified recovery (2026-10-03)
 
 ADR0805 binds natural Finance codes to canonical workspace/organization/entity

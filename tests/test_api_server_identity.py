@@ -716,12 +716,12 @@ def test_server_profile_uses_postgres_identity_for_api_auth_and_principal_permis
         for item in ledger_scoped_permissions
     )
     assert master_scoped_permissions == [
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a", "object_type": "master_data.currency", "action": "mutate"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a", "object_type": "master_data.organization", "action": "mutate"},
         {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
         {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
-        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a", "object_type": "master_data.fiscal_period", "action": "mutate"},
+        {"permission": "master_data.manage", "tenant_id": "tenant-a", "workspace_id": "workspace-a", "object_type": "master_data.fiscal_period", "action": "mutate"},
     ]
     assert cash.status_code == 200
     assert revenue.status_code == 200
@@ -774,11 +774,17 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_LINK_SCHEMA_SQL,
         POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL,
     )
+    from reconforge.infrastructure.postgres_consolidation_close_scope import (
+        POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL,
+    )
     from reconforge.infrastructure.postgres_consolidation_deferred_tax import (
         POSTGRES_CONSOLIDATION_DEFERRED_TAX_SCHEMA_SQL,
     )
     from reconforge.infrastructure.postgres_consolidation_impairment import (
         POSTGRES_CONSOLIDATION_IMPAIRMENT_SCHEMA_SQL,
+    )
+    from reconforge.infrastructure.postgres_consolidation_impairment_deferred_tax_scope import (
+        POSTGRES_CONSOLIDATION_IMPAIRMENT_DEFERRED_TAX_SCOPE_SCHEMA_SQL,
     )
     from reconforge.infrastructure.postgres_consolidation_ownership import (
         POSTGRES_CONSOLIDATION_OWNERSHIP_SCHEMA_SQL,
@@ -787,6 +793,9 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_SCHEMA_SQL,
     )
     from reconforge.infrastructure.postgres_consolidation_ppa import POSTGRES_CONSOLIDATION_PPA_SCHEMA_SQL
+    from reconforge.infrastructure.postgres_consolidation_ppa_scope import (
+        POSTGRES_CONSOLIDATION_PPA_SCOPE_SCHEMA_SQL,
+    )
     from reconforge.infrastructure.postgres_domain import POSTGRES_DOMAIN_SCHEMA_SQL
     from reconforge.infrastructure.postgres_emergency_access import POSTGRES_EMERGENCY_ACCESS_SCHEMA_SQL
     from reconforge.infrastructure.postgres_intercompany_elimination import (
@@ -851,6 +860,11 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
             admin.execute(POSTGRES_CONSOLIDATION_PPA_LINK_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_SCHEMA_SQL)
             admin.execute(POSTGRES_CONSOLIDATION_OWNERSHIP_CHANGE_LINK_SCHEMA_SQL)
+            # Current adapters require the additive hierarchy columns even on
+            # a fresh database; do not depend on earlier tests installing them.
+            admin.execute(POSTGRES_CONSOLIDATION_PPA_SCOPE_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_IMPAIRMENT_DEFERRED_TAX_SCOPE_SCHEMA_SQL)
+            admin.execute(POSTGRES_CONSOLIDATION_CLOSE_SCOPE_SCHEMA_SQL)
             admin.execute(POSTGRES_WRITEBACK_SCHEMA_SQL)
             admin.execute(POSTGRES_PRIVILEGED_SESSION_SCHEMA_SQL)
             admin.execute(
@@ -1477,9 +1491,13 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
                 ],
             },
         )
+        master_admin_headers = {
+            **{key: value for key, value in headers.items() if key != "X-ReconForge-Organization"},
+            "Authorization": f"Bearer {token}",
+        }
         master_currency = client.post(
             "/api/v1/master-data/currencies",
-            headers={**headers, "Authorization": f"Bearer {token}"},
+            headers=master_admin_headers,
             json={"code": "USD", "name": "US Dollar", "minor_units": 2},
         )
         master_organization = client.post(
@@ -1513,12 +1531,12 @@ def test_live_server_api_uses_postgres_identity_and_tenant_scope(tmp_path: Path)
         )
         master_period = client.post(
             "/api/v1/master-data/periods",
-            headers={**headers, "Authorization": f"Bearer {token}"},
+            headers=master_admin_headers,
             json={"name": "2026-07", "start_date": "2026-07-01", "end_date": "2026-07-31"},
         )
         master_period_status = client.post(
             f"/api/v1/master-data/periods/{master_period.json()['period']['id']}/status",
-            headers={**headers, "Authorization": f"Bearer {token}"},
+            headers=master_admin_headers,
             json={"status": "Soft Closed"},
         )
         server_trial_balance = client.get(

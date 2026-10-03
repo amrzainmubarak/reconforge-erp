@@ -20,7 +20,8 @@ if TYPE_CHECKING:
     from reconforge.platform.common import ServerPrincipal
 
 _POLICY_LOGGER = logging.getLogger("reconforge.authorization")
-POLICY_VERSION = "central-policy-v1"
+POLICY_VERSION = "central-policy-v2"
+_READABLE_POLICY_VERSIONS = frozenset({"central-policy-v1", POLICY_VERSION})
 POLICY_DECISION_EVIDENCE_SCHEMA_VERSION = 1
 PrincipalType = Literal["user", "service_account"]
 HUMAN_ONLY_PERMISSIONS = frozenset(
@@ -436,7 +437,7 @@ def verify_policy_decision_evidence(payload: object) -> dict[str, object]:
         or payload.get("schema_version") != POLICY_DECISION_EVIDENCE_SCHEMA_VERSION
     ):
         raise ValueError("Policy decision evidence schema version is unsupported.")
-    if payload.get("policy_version") != POLICY_VERSION:
+    if not isinstance(payload.get("policy_version"), str) or payload["policy_version"] not in _READABLE_POLICY_VERSIONS:
         raise ValueError("Policy decision evidence policy version is unsupported.")
     if not isinstance(payload.get("allowed"), bool):
         raise ValueError("Policy decision evidence allowed value is invalid.")
@@ -687,6 +688,24 @@ class CentralPolicyEngine:
                     allowed=False,
                     reason=f"Deny: {scope_name} scope is not authorized.",
                     reason_code=f"{scope_name}_scope_denied",
+                )
+
+        # A broader grant does not widen the authority selected for this mutation.
+        # Workspace-only currency administration retains the existing tenant-wide
+        # master_data.manage contract; permission-to-resource binding is separate.
+        if required_permission == "master_data.manage" and canonical_policy_value(ctx.action) == "mutate":
+            resource = canonical_policy_value(ctx.object_type)
+            entity_is_too_narrow = ctx.entity_id is not None and resource in {
+                "master_data.organization", "master_data.currency", "master_data.fiscal_period",
+            }
+            organization_is_too_narrow = ctx.organization_id is not None and resource in {
+                "master_data.currency", "master_data.fiscal_period",
+            }
+            if entity_is_too_narrow or organization_is_too_narrow:
+                return PolicyDecision(
+                    False,
+                    "Deny: the selected authority cannot mutate shared master data.",
+                    "master_data_authority_denied",
                 )
 
         if ctx.minimum_amount is not None or ctx.maximum_amount is not None:

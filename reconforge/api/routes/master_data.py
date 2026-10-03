@@ -175,11 +175,23 @@ def _server_workspace(workspace: str) -> None:
         )
 
 
-def _enforce_server_manage(request: Request, *, workspace: str = "default") -> None:
+def _enforce_server_manage(
+    request: Request, *, workspace: str = "default", shared_resource: str | None = None,
+) -> None:
     """Re-evaluate master-data mutation authority against the live request scope."""
 
     _server_workspace(workspace)
     scope = request_execution_scope(request)
+    if shared_resource is not None:
+        enforce_server_scoped_permission(
+            request,
+            permission="master_data.manage",
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            object_type=f"master_data.{shared_resource}",
+            action="mutate",
+        )
+        return
     enforce_server_scoped_permission(
         request,
         permission="master_data.manage",
@@ -448,7 +460,7 @@ def upsert_currency(
     """Create or update one local currency reference."""
 
     if server_master_data_enabled(request):
-        _enforce_server_manage(request)
+        _enforce_server_manage(request, shared_resource="currency")
         record = execute_postgres_master_data(
             request,
             lambda repository, tenant: repository.upsert_currency(
@@ -519,7 +531,7 @@ def upsert_organization(
     """Create or update one local organization reference."""
 
     if server_master_data_enabled(request):
-        _enforce_server_manage(request, workspace=payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace, shared_resource="organization")
 
         def operation(repository: PostgresMasterDataRepository, tenant: str) -> dict[str, object]:
             base_currency = payload.base_currency.strip().upper() or None
@@ -801,7 +813,7 @@ def upsert_period(
     """Create or update one non-overlapping local fiscal period."""
 
     if server_master_data_enabled(request):
-        _enforce_server_manage(request, workspace=payload.workspace)
+        _enforce_server_manage(request, workspace=payload.workspace, shared_resource="fiscal_period")
         record = execute_postgres_master_data(
             request,
             lambda repository, tenant: repository.upsert_period(
@@ -844,7 +856,7 @@ def set_period_status(
     """Transition fiscal-period metadata; this does not post or lock ERP transactions."""
 
     if server_master_data_enabled(request):
-        _enforce_server_manage(request)
+        _enforce_server_manage(request, shared_resource="fiscal_period")
         record = execute_postgres_master_data(
             request,
             lambda repository, tenant: repository.set_period_status(

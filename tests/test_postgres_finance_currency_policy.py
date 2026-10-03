@@ -135,10 +135,12 @@ def test_live_currency_policy_preserves_money_scope_replay_and_populated_downgra
         with boundary.transaction("policy_b") as connection:
             assert connection.execute("SELECT count(*) FROM reconforge.finance_entries").fetchone()[0] == 0
             assert connection.execute("SELECT count(*) FROM reconforge.currency_registry_snapshots WHERE tenant_id='policy_a'").fetchone()[0] == 0
+        with psycopg.connect(isolated_postgres_migration_dsn, autocommit=True) as admin:
+            before_refused_downgrade = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
         with pytest.raises(DBAPIError, match="finance policy downgrade refused"):
             command.downgrade(_config(), "0093_pg_metrics")
         with psycopg.connect(isolated_postgres_migration_dsn, autocommit=True) as admin:
-            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0095_pg_finance_scope"
+            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == before_refused_downgrade
             assert admin.execute("SELECT count(*) FROM reconforge.finance_entries").fetchone()[0] == 2
     finally:
         CurrencyRegistry.reset_to_bundled()

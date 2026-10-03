@@ -1743,13 +1743,9 @@ def install_postgres_finance_core_schema(connection: Any) -> None:
     from reconforge.infrastructure.finance_policy_schema import POSTGRES_FINANCE_POLICY_SCHEMA_SQL
     from reconforge.infrastructure.postgres_finance_scope import install_postgres_finance_scope_schema
     from reconforge.infrastructure.postgres_master_data_application import (
-        POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL,
-        POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL,
-        POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL,
+        install_postgres_master_data_application_schema,
     )
 
-    connection.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
-    connection.execute(POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL)
-    connection.execute(POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL)
+    install_postgres_master_data_application_schema(connection)
     connection.execute(POSTGRES_FINANCE_POLICY_SCHEMA_SQL)
     install_postgres_finance_scope_schema(connection)

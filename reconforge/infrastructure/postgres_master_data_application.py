@@ -909,6 +909,9 @@ END $reconforge$;
 
 
 def install_postgres_master_data_application_schema(connection: Any) -> None:
+    from reconforge.infrastructure.postgres_master_data_authority import install_postgres_master_data_authority_schema
+
     connection.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
     connection.execute(POSTGRES_CURRENCY_REGISTRY_SNAPSHOT_SCHEMA_SQL)
     connection.execute(POSTGRES_CURRENCY_REGISTRY_BINDING_SCHEMA_SQL)
+    install_postgres_master_data_authority_schema(connection)

@@ -494,7 +494,7 @@ def test_policy_audit_record_is_versioned_and_redacts_actor_and_permissions(
         )
     record = caplog.records[-1]
     evidence = record.authorization
-    assert evidence["policy_version"] == "central-policy-v1"
+    assert evidence["policy_version"] == "central-policy-v2"
     assert evidence["allowed"] is True
     assert evidence["reason_code"] == "policy_allowed"
     assert evidence["principal_type"] == "service_account"

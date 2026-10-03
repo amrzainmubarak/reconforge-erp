@@ -1,0 +1,825 @@
+{
+  "before_http": {
+    "authentication_overridden": false,
+    "cases": [
+      {
+        "case": "ungranted_sibling_denied",
+        "expected_status": 403,
+        "matches_proposed_contract": true,
+        "method": "POST",
+        "path": "/api/v1/master-data/organizations",
+        "payload": {
+          "active": false,
+          "base_currency": "EGP",
+          "name": "Sibling denied",
+          "organization_code": "ORG_HTTP"
+        },
+        "persisted_state": {
+          "currency_active": true,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Open"
+        },
+        "response": {
+          "error": {
+            "code": "entity_scope_denied",
+            "message": "Legal-entity scope is not authorized.",
+            "request_id": "ecf5aeb360654b86b6afc9cd38f3b615"
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Legal-Entity": "entity-http-a2",
+          "X-ReconForge-Organization": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 403
+      },
+      {
+        "case": "missing_manage_permission_denied",
+        "expected_status": 403,
+        "matches_proposed_contract": true,
+        "method": "POST",
+        "path": "/api/v1/master-data/currencies",
+        "payload": {
+          "active": false,
+          "code": "EGP",
+          "minor_units": 2,
+          "name": "Denied reader"
+        },
+        "persisted_state": {
+          "currency_active": true,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Open"
+        },
+        "response": {
+          "error": {
+            "code": "permission_denied",
+            "message": "Permission denied.",
+            "request_id": "9156aa14b4ce4a54aed5ea03e4102819"
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Legal-Entity": "entity-http-a1",
+          "X-ReconForge-Organization": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 403
+      },
+      {
+        "case": "entity_scope_organization_mutation",
+        "expected_status": 403,
+        "matches_proposed_contract": false,
+        "method": "POST",
+        "path": "/api/v1/master-data/organizations",
+        "payload": {
+          "active": false,
+          "base_currency": "EGP",
+          "name": "Entity-scoped synthetic write",
+          "organization_code": "ORG_HTTP"
+        },
+        "persisted_state": {
+          "currency_active": true,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": false,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Open"
+        },
+        "response": {
+          "organization": {
+            "active": false,
+            "base_currency": "EGP",
+            "created_at": "2026-10-03T05:22:10.792433Z",
+            "id": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "name": "Entity-scoped synthetic write",
+            "organization_code": "ORG_HTTP",
+            "source_backend": "postgresql-master-data",
+            "tenant_id": "finance_scope",
+            "updated_at": "2026-10-03T05:22:12.606525Z",
+            "workspace": null,
+            "workspace_id": null
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Legal-Entity": "entity-http-a1",
+          "X-ReconForge-Organization": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 200
+      },
+      {
+        "case": "entity_scope_currency_mutation",
+        "expected_status": 403,
+        "matches_proposed_contract": false,
+        "method": "POST",
+        "path": "/api/v1/master-data/currencies",
+        "payload": {
+          "active": false,
+          "code": "EGP",
+          "minor_units": 2,
+          "name": "Entity-scoped synthetic write"
+        },
+        "persisted_state": {
+          "currency_active": false,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Open"
+        },
+        "response": {
+          "currency": {
+            "active": false,
+            "code": "EGP",
+            "created_at": "2026-10-03T05:22:09.681684Z",
+            "minor_units": 2,
+            "name": "Entity-scoped synthetic write",
+            "source_backend": "postgresql-master-data",
+            "tenant_id": "finance_scope",
+            "updated_at": "2026-10-03T05:22:12.776892Z"
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Legal-Entity": "entity-http-a1",
+          "X-ReconForge-Organization": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 200
+      },
+      {
+        "case": "org_scope_currency_mutation",
+        "expected_status": 403,
+        "matches_proposed_contract": false,
+        "method": "POST",
+        "path": "/api/v1/master-data/currencies",
+        "payload": {
+          "active": false,
+          "code": "EGP",
+          "minor_units": 2,
+          "name": "Organization-scoped synthetic write"
+        },
+        "persisted_state": {
+          "currency_active": false,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Open"
+        },
+        "response": {
+          "currency": {
+            "active": false,
+            "code": "EGP",
+            "created_at": "2026-10-03T05:22:09.681684Z",
+            "minor_units": 2,
+            "name": "Organization-scoped synthetic write",
+            "source_backend": "postgresql-master-data",
+            "tenant_id": "finance_scope",
+            "updated_at": "2026-10-03T05:22:12.955393Z"
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Organization": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 200
+      },
+      {
+        "case": "entity_scope_shared_period_mutation",
+        "expected_status": 403,
+        "matches_proposed_contract": false,
+        "method": "POST",
+        "path": "/api/v1/master-data/periods/period/status",
+        "payload": {
+          "reason": "Synthetic selected entity affects shared period",
+          "status": "Soft Closed"
+        },
+        "persisted_state": {
+          "currency_active": true,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Soft Closed"
+        },
+        "response": {
+          "period": {
+            "created_at": "2026-10-03T05:22:09.702503Z",
+            "end_date": "2026-07-31",
+            "fiscal_year": 2026,
+            "id": "period",
+            "name": "period",
+            "period_number": 7,
+            "source_backend": "postgresql-master-data",
+            "start_date": "2026-07-01",
+            "status": "Soft Closed",
+            "status_reason": "Synthetic selected entity affects shared period",
+            "tenant_id": "finance_scope",
+            "updated_at": "2026-10-03T05:22:13.142275Z",
+            "workspace": null,
+            "workspace_id": null
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Legal-Entity": "entity-http-a1",
+          "X-ReconForge-Organization": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 200
+      },
+      {
+        "case": "org_scope_shared_period_mutation",
+        "expected_status": 403,
+        "matches_proposed_contract": false,
+        "method": "POST",
+        "path": "/api/v1/master-data/periods/period/status",
+        "payload": {
+          "reason": "Synthetic selected organization affects shared period",
+          "status": "Soft Closed"
+        },
+        "persisted_state": {
+          "currency_active": true,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Soft Closed"
+        },
+        "response": {
+          "period": {
+            "created_at": "2026-10-03T05:22:09.702503Z",
+            "end_date": "2026-07-31",
+            "fiscal_year": 2026,
+            "id": "period",
+            "name": "period",
+            "period_number": 7,
+            "source_backend": "postgresql-master-data",
+            "start_date": "2026-07-01",
+            "status": "Soft Closed",
+            "status_reason": "Synthetic selected organization affects shared period",
+            "tenant_id": "finance_scope",
+            "updated_at": "2026-10-03T05:22:13.310638Z",
+            "workspace": null,
+            "workspace_id": null
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Organization": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 200
+      },
+      {
+        "case": "explicit_org_scope_control",
+        "expected_status": 200,
+        "matches_proposed_contract": true,
+        "method": "POST",
+        "path": "/api/v1/master-data/organizations",
+        "payload": {
+          "active": true,
+          "base_currency": "EGP",
+          "name": "Explicit organization scope",
+          "organization_code": "ORG_HTTP"
+        },
+        "persisted_state": {
+          "currency_active": true,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Open"
+        },
+        "response": {
+          "organization": {
+            "active": true,
+            "base_currency": "EGP",
+            "created_at": "2026-10-03T05:22:10.792433Z",
+            "id": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "name": "Explicit organization scope",
+            "organization_code": "ORG_HTTP",
+            "source_backend": "postgresql-master-data",
+            "tenant_id": "finance_scope",
+            "updated_at": "2026-10-03T05:22:13.486810Z",
+            "workspace": null,
+            "workspace_id": null
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Organization": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 200
+      },
+      {
+        "case": "legacy_workspace_scope_currency_control",
+        "expected_status": 200,
+        "matches_proposed_contract": true,
+        "method": "POST",
+        "path": "/api/v1/master-data/currencies",
+        "payload": {
+          "active": true,
+          "code": "EGP",
+          "minor_units": 2,
+          "name": "Workspace-only compatibility"
+        },
+        "persisted_state": {
+          "currency_active": true,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Open"
+        },
+        "response": {
+          "currency": {
+            "active": true,
+            "code": "EGP",
+            "created_at": "2026-10-03T05:22:09.681684Z",
+            "minor_units": 2,
+            "name": "Workspace-only compatibility",
+            "source_backend": "postgresql-master-data",
+            "tenant_id": "finance_scope",
+            "updated_at": "2026-10-03T05:22:13.637973Z"
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 200
+      },
+      {
+        "case": "explicit_workspace_period_control",
+        "expected_status": 200,
+        "matches_proposed_contract": true,
+        "method": "POST",
+        "path": "/api/v1/master-data/periods/period/status",
+        "payload": {
+          "reason": "Explicit workspace authority",
+          "status": "Soft Closed"
+        },
+        "persisted_state": {
+          "currency_active": true,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Soft Closed"
+        },
+        "response": {
+          "period": {
+            "created_at": "2026-10-03T05:22:09.702503Z",
+            "end_date": "2026-07-31",
+            "fiscal_year": 2026,
+            "id": "period",
+            "name": "period",
+            "period_number": 7,
+            "source_backend": "postgresql-master-data",
+            "start_date": "2026-07-01",
+            "status": "Soft Closed",
+            "status_reason": "Explicit workspace authority",
+            "tenant_id": "finance_scope",
+            "updated_at": "2026-10-03T05:22:13.809141Z",
+            "workspace": null,
+            "workspace_id": null
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Tenant": "finance_scope",
+          "X-ReconForge-Workspace": "shared"
+        },
+        "status": 200
+      },
+      {
+        "case": "current_tenant_only_currency_contract",
+        "expected_status": 400,
+        "matches_proposed_contract": true,
+        "method": "POST",
+        "path": "/api/v1/master-data/currencies",
+        "payload": {
+          "active": true,
+          "code": "EGP",
+          "minor_units": 2,
+          "name": "Tenant-only request"
+        },
+        "persisted_state": {
+          "currency_active": true,
+          "currency_referencing_organizations": [
+            "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "org_a",
+            "org_b",
+            "org_legacy"
+          ],
+          "organization_active": true,
+          "same_org_sibling_entities": [
+            "entity-http-a1",
+            "entity-http-a2"
+          ],
+          "shared_fiscal_period_status": "Open"
+        },
+        "response": {
+          "error": {
+            "code": "workspace_scope_required",
+            "message": "X-ReconForge-Workspace is required for server business operations.",
+            "request_id": "6ec06dd16e354894a51dc8fa5baef29b"
+          }
+        },
+        "scope_headers": {
+          "X-ReconForge-Tenant": "finance_scope"
+        },
+        "status": 400
+      }
+    ],
+    "elapsed_seconds": 8.453,
+    "grant_snapshot": [
+      {
+        "grants": [
+          {
+            "granted_at": "2026-10-03 05:22:10.792433+00:00",
+            "granted_by": "narrow-manager",
+            "id": "narrow-manager-legal_entity",
+            "principal_id": "narrow-manager",
+            "principal_type": "user",
+            "scope_id": "entity-http-a1",
+            "scope_type": "legal_entity"
+          },
+          {
+            "granted_at": "2026-10-03 05:22:10.792433+00:00",
+            "granted_by": "narrow-manager",
+            "id": "narrow-manager-organization",
+            "principal_id": "narrow-manager",
+            "principal_type": "user",
+            "scope_id": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "scope_type": "organization"
+          },
+          {
+            "granted_at": "2026-10-03 05:22:10.792433+00:00",
+            "granted_by": "narrow-manager",
+            "id": "narrow-manager-workspace",
+            "principal_id": "narrow-manager",
+            "principal_type": "user",
+            "scope_id": "shared",
+            "scope_type": "workspace"
+          }
+        ],
+        "user": "narrow-manager"
+      },
+      {
+        "grants": [
+          {
+            "granted_at": "2026-10-03 05:22:10.792433+00:00",
+            "granted_by": "narrow-reader",
+            "id": "narrow-reader-legal_entity",
+            "principal_id": "narrow-reader",
+            "principal_type": "user",
+            "scope_id": "entity-http-a1",
+            "scope_type": "legal_entity"
+          },
+          {
+            "granted_at": "2026-10-03 05:22:10.792433+00:00",
+            "granted_by": "narrow-reader",
+            "id": "narrow-reader-organization",
+            "principal_id": "narrow-reader",
+            "principal_type": "user",
+            "scope_id": "org-27473e20eea8137e115acff56d561dcc96dcb2c030202473",
+            "scope_type": "organization"
+          },
+          {
+            "granted_at": "2026-10-03 05:22:10.792433+00:00",
+            "granted_by": "narrow-reader",
+            "id": "narrow-reader-workspace",
+            "principal_id": "narrow-reader",
+            "principal_type": "user",
+            "scope_id": "shared",
+            "scope_type": "workspace"
+          }
+        ],
+        "user": "narrow-reader"
+      }
+    ],
+    "http_transport": "FastAPI TestClient ASGI HTTP with real PostgreSQL password/session authentication",
+    "owned_database_removed": true,
+    "runtime_role": [
+      "reconforge_app",
+      false,
+      false
+    ],
+    "source_sha256": {
+      "reconforge/api/dependencies.py": "c7d92399b2bba3c5418d824afdf9d9b4893becf1a01194907e3b1dc5051a3c69",
+      "reconforge/api/routes/master_data.py": "7bdc0a224af513936dd3f8133eb5d28f73e4c49397cd2e747e9be99edc09560a",
+      "reconforge/api/server_master_data.py": "71e53825fbb77a0a98b188da80559d859a40f1641aec9b70fb4bd190a2006048",
+      "reconforge/infrastructure/postgres_execution_scope.py": "b3abacc5bade8c85f571420444c926be450a094c87917c7eecd09f6b81ee1534",
+      "reconforge/infrastructure/postgres_finance_scope.py": "568c8bde2123c26dc127f355ba122b909f677591bb93cdc6a92431f74b6cd497",
+      "reconforge/infrastructure/postgres_master_data.py": "d11a31293a810617bd6f0e30b9aa235b3344ab25fb9e932323d7ad3fa93e7062"
+    },
+    "synthetic_only": true
+  },
+  "combined_gate": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "-o",
+      "addopts=",
+      "tests/test_postgres_master_data_authority.py",
+      "tests/test_master_data_authority_policy.py",
+      "tests/test_postgres_finance_scope.py",
+      "tests/test_postgres_repository_scope.py",
+      "tests/test_postgres_finance_currency_policy.py",
+      "tests/test_policy_engine.py",
+      "tests/test_policy_cache.py",
+      "tests/test_api_dependencies.py",
+      "tests/test_api_master_data_projection.py",
+      "tests/test_master_data.py",
+      "tests/test_api_server_identity.py",
+      "tests/test_postgres_master_data_application.py",
+      "tests/test_postgres_finance_core.py"
+    ],
+    "elapsed_seconds": 223.75,
+    "exit_code": 0,
+    "owned_database_removed": true,
+    "source_after": {
+      "alembic/versions/0096_postgres_master_data_authority.py": "312177a274d0c5345ee87c6c9d646c5d3318bffc9455ff1e3057fe1b6de0d70b",
+      "reconforge/api/dependencies.py": "c5b4a91466ad41387ac86349e08029180621cc816e2295b93ba95debd3ab2cb3",
+      "reconforge/api/routes/master_data.py": "2b28ff18866cef067e8e9d0dacebe0664159701518c1abb5be88a8c96091bbfc",
+      "reconforge/auth/policy.py": "7affe1d3dfcebb50febcdaa5637ae18e665593c28f3bd52b13e1ce573d121136",
+      "reconforge/infrastructure/postgres_finance_core.py": "7e01825be5f688889af00f99a3c81e04fda6bb30b617a90a6ab794cc557caa65",
+      "reconforge/infrastructure/postgres_master_data_application.py": "38b97809c2babea2284b0c909fff97376c619b371a378f2eba4a51b73483fdef",
+      "reconforge/infrastructure/postgres_master_data_authority.py": "917c49801966d83cf1e1d3fd9bfbae260deaca65d0b6a2c34ebaa63a3f806c8b",
+      "reconforge/infrastructure/postgres_operations.py": "6bcd030e8076cfc99c293e5e9a589befa6527ed8ca0b73b92fa390178c6f52bd"
+    },
+    "source_before": {
+      "alembic/versions/0096_postgres_master_data_authority.py": "312177a274d0c5345ee87c6c9d646c5d3318bffc9455ff1e3057fe1b6de0d70b",
+      "reconforge/api/dependencies.py": "c5b4a91466ad41387ac86349e08029180621cc816e2295b93ba95debd3ab2cb3",
+      "reconforge/api/routes/master_data.py": "2b28ff18866cef067e8e9d0dacebe0664159701518c1abb5be88a8c96091bbfc",
+      "reconforge/auth/policy.py": "7affe1d3dfcebb50febcdaa5637ae18e665593c28f3bd52b13e1ce573d121136",
+      "reconforge/infrastructure/postgres_finance_core.py": "7e01825be5f688889af00f99a3c81e04fda6bb30b617a90a6ab794cc557caa65",
+      "reconforge/infrastructure/postgres_master_data_application.py": "38b97809c2babea2284b0c909fff97376c619b371a378f2eba4a51b73483fdef",
+      "reconforge/infrastructure/postgres_master_data_authority.py": "917c49801966d83cf1e1d3fd9bfbae260deaca65d0b6a2c34ebaa63a3f806c8b",
+      "reconforge/infrastructure/postgres_operations.py": "6bcd030e8076cfc99c293e5e9a589befa6527ed8ca0b73b92fa390178c6f52bd"
+    },
+    "source_unchanged": true,
+    "synthetic_only": true
+  },
+  "combined_log": {
+    "path": "output/verification-2026-10-03/prod029-final-gate.log",
+    "sha256": "b65c255d6135c0f01ecf0cfad03281ac427aadaab2d9cc74cb9e9e3f96468b0e"
+  },
+  "limitations": [
+    "Workspace-only currency administration remains tenant-shared under existing global master_data.manage.",
+    "No permission-to-resource grant binding or protection against an application credential choosing trusted scope GUCs is claimed.",
+    "Community SQLite behavior is unchanged.",
+    "Downgrading0096 removes these mutation guards while retaining business rows.",
+    "Synthetic tests and restore evidence do not establish customer outcome, regulatory approval or complete platform isolation."
+  ],
+  "migration_reports": [
+    {
+      "path": "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0096_2026-10-03.json",
+      "report_digest": "5144266172313eb36d22b1809a64995d3f6afbf0850955636df66be539ff8d44",
+      "sha256": "09aa607779ab4b625d41b6fbe10091ddac3f7dea7bbdeed5a58a5e8b61c575c3"
+    },
+    {
+      "path": "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0096_2026-10-03.json",
+      "report_digest": "0ea498e697e5fe6bd0b7c811babda2861fa460ccc2478f3954d897120542f08e",
+      "sha256": "0878c88e16ff98f45eafd9fd594dcafb2c69a02d0720717a02ffa993b2b8ad4e"
+    }
+  ],
+  "populated_finance_native_restore": {
+    "commands": [
+      {
+        "argv": [
+          "docker",
+          "exec",
+          "reconforge-audit-20261003",
+          "pg_dump",
+          "--username",
+          "postgres",
+          "--format=custom",
+          "--dbname",
+          "reconforge_migration_b9b5b0f834f6462bbce4"
+        ],
+        "exit_code": 0,
+        "stderr": "",
+        "stdout_bytes": 1134520
+      },
+      {
+        "argv": [
+          "docker",
+          "exec",
+          "-i",
+          "reconforge-audit-20261003",
+          "pg_restore",
+          "--username",
+          "postgres",
+          "--exit-on-error",
+          "--no-owner",
+          "--dbname",
+          "reconforge_finance_restore_f132338427424950a92d"
+        ],
+        "exit_code": 0,
+        "stderr": "",
+        "stdout_bytes": 0
+      }
+    ],
+    "container": "reconforge-audit-20261003",
+    "dump_bytes": 1134520,
+    "dump_sha256": "4349680a51579190ba3df7c72ad5e1168d88a1fcc0340ee10fc6c96d7998aa16",
+    "original_artifact": {
+      "path": "output/verification-2026-10-03/finance-native-restore-0096-report.json",
+      "sha256": "a44e2f051d8287684bd4b3fe216e143c4696044f68afafdac9d2424302181f74"
+    },
+    "original_report_digest": "bc53186948c77600f97cef3772c599466384c271952265f090a92d3885737604",
+    "permitted_write_verified": true,
+    "policies_equal": true,
+    "postgresql_version": "16.14",
+    "restored_database_removed": true,
+    "revision": "0096_pg_master_authority",
+    "scoped_denials_verified": true,
+    "source_database_removed": true,
+    "source_manifest_digest": "0cb8be9bdf461af7a7d6852cbefb0d450efc69e0314c2c2cbf50200ab93c525b",
+    "source_unchanged": true,
+    "started_at": "2026-10-03T06:03:57.800405+00:00",
+    "status": "passed",
+    "table_digests": {
+      "currencies": "50082a096e3d01f1c4a24f515ac37a7c451fc01be43c392e3ab22570e488837b",
+      "domain_audit_events": "d869303743ce20b831d1877e227f9b1a65f3d327bceb631b598e3b72fcf8c029",
+      "domain_audit_ledger_state": "773e56f06112be14d20245beb1e3171675b11bf2fe04dc6a45910572067f48b4",
+      "finance_accounts": "c94362bc45dc890cd4d37b8a7c995f656b650e26205012a4908268ae22bf0d68",
+      "finance_charts": "77b3c3f506ee50de17330549779918051fd6654badb56957b9a3479e719e325b",
+      "finance_dimension_values": "cf4fc33bb315bea4a7141e3356d601817a7285d01f5023efd58cbd1e2548216d",
+      "finance_dimensions": "5d1e1810e70527982b98bd933adc2d20b6b0d0254bdb2375090d6d035b3f2ab9",
+      "finance_entries": "13d145aa722c14f84d31e2455a40e66bfe6dd683c745fe4fe56c95321046a7fa",
+      "finance_entry_line_dimensions": "e9fecc3829c28155da42cfcdd40017a4f33373c5a1bccf229a2dc63e8de558f0",
+      "finance_entry_lines": "4fe9675effa8460b15991f489e42f170c1268ddba565eedac6088ab0ae9b8559",
+      "finance_journals": "c94155168f375b3e1b077890aca969434dd7497a0d5bb93600110df172f3ba88",
+      "fiscal_periods": "84c996ebddd7adbdd133794a76cc5bb1227dc3d40a47b2a328bd396bf4ca69c0",
+      "legal_entities": "376ba3e604a6a248fb68cfd00d367fcf607a561b3b94ec57c49ad335f61c13cb",
+      "organizations": "060a379cc3eee1e4b2d9ea5c8668cd21d9fe2d48710372dab1358cdc5b8612fb",
+      "outbox_events": "9ce92f7cdd094904561ab5af8a22997d7562f62292f0e98d5d290f016984d738"
+    },
+    "transport": "docker exec native PostgreSQL clients",
+    "values_equal": true,
+    "wall_seconds": 13.330392
+  },
+  "reference_lock_experiment": {
+    "cases": [
+      {
+        "finance_create_status": "Draft",
+        "for_share_select_count": 1,
+        "metadata_update_rows": 1,
+        "mode": "existing_0095",
+        "plain_select_count": 1
+      },
+      {
+        "finance_create_error": "PostgresFinanceCoreError: PostgreSQL Finance Core operation failed.",
+        "for_share_select_count": 0,
+        "metadata_update_rows": 0,
+        "mode": "restrictive_update_policy",
+        "plain_select_count": 1
+      },
+      {
+        "explicit_org_update_rows": 1,
+        "finance_create_status": "Draft",
+        "for_share_select_count": 1,
+        "metadata_update_error": "InsufficientPrivilege: Synthetic entity context cannot mutate organization-wide metadata\nCONTEXT:  PL/pgSQL function reconforge.synthetic_review_authority() line 3 at RAISE",
+        "mode": "mutation_trigger",
+        "plain_select_count": 1
+      }
+    ],
+    "owned_database_removed": true,
+    "synthetic_only": true,
+    "temporary_ddl_only_in_owned_database": true
+  },
+  "report_digest": "e651ccd603ded300a83ed3908c950fb84b6f9068ee7f8183969f05660de6ec7e",
+  "retained_failures": [
+    {
+      "path": "output/verification-2026-10-03/prod029-pytest-red.log",
+      "sha256": "1a3deacd4eb4eb03b22b3811cadd14b608fb48f38a616bdec8191715b1ccc28c"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod029-policy-red.log",
+      "sha256": "83cc2ce4a08a69c3501beea2a11903679cfaf6bc9195e2dadea6c9df99d020ea"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod029-final-gate-before-fixture.log",
+      "sha256": "38f8d0db29df7ba31b0c3c8d978f75e01deb6e1534ef663a8b751f452610f4fc"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod029-legacy-api-diagnostic.log",
+      "sha256": "ff53e3bd571205d9c2f14f4d1bbb9aafa80e6aad2e68b468309fe47d72edbd93"
+    }
+  ],
+  "schema_version": "reconforge-master-authority-evidence-v1",
+  "source_freeze": {
+    "combined_gate": "196 passed, 71 warnings in 221.35s (0:03:41)",
+    "combined_gate_elapsed_seconds": 223.75,
+    "files": {
+      "alembic/versions/0096_postgres_master_data_authority.py": "312177a274d0c5345ee87c6c9d646c5d3318bffc9455ff1e3057fe1b6de0d70b",
+      "reconforge/api/dependencies.py": "c5b4a91466ad41387ac86349e08029180621cc816e2295b93ba95debd3ab2cb3",
+      "reconforge/api/routes/master_data.py": "2b28ff18866cef067e8e9d0dacebe0664159701518c1abb5be88a8c96091bbfc",
+      "reconforge/auth/policy.py": "7affe1d3dfcebb50febcdaa5637ae18e665593c28f3bd52b13e1ce573d121136",
+      "reconforge/infrastructure/postgres_master_data_application.py": "38b97809c2babea2284b0c909fff97376c619b371a378f2eba4a51b73483fdef",
+      "reconforge/infrastructure/postgres_master_data_authority.py": "917c49801966d83cf1e1d3fd9bfbae260deaca65d0b6a2c34ebaa63a3f806c8b",
+      "tests/test_api_server_identity.py": "2a443c06f03408824487873ef38484a5cbe6b4f42e50aa2fbd20a179e010e5ee",
+      "tests/test_master_data_authority_policy.py": "58c6383a80a075441a9f73e6c5eb5b4648a139eebcf11779f390194a3ab0dcc1",
+      "tests/test_policy_engine.py": "52e00097a03a050eff8f47f87d699486357a66fc92356a997f5971c01e830f2f",
+      "tests/test_postgres_master_data_authority.py": "47973d65e1ecb75788652ce09a1a7c77eef7a062c6d980f0f07d64a77e735b12"
+    },
+    "initial_gate": "140 passed, 21 warnings, 78.22s",
+    "legacy_fixture_repair": "Fresh DB lacked existing PPA/impairment/deferred-tax/close hierarchy columns. Actual UndefinedColumn retained; fixture installs existing additive SQL explicitly. No runtime change.",
+    "no_git_changes_by_agent": true,
+    "root_owned_runtime_hashes": {
+      "reconforge/infrastructure/postgres_finance_core.py": "7e01825be5f688889af00f99a3c81e04fda6bb30b617a90a6ab794cc557caa65",
+      "reconforge/infrastructure/postgres_operations.py": "6bcd030e8076cfc99c293e5e9a589befa6527ed8ca0b73b92fa390178c6f52bd"
+    },
+    "source_unchanged_through_gate": true,
+    "static_checks": "Ruff, mypy(5 source files), Bandit, git diff --check passed",
+    "status": "frozen_verified_ready_for_parent_commit",
+    "synthetic_only": true
+  },
+  "status": "passed-bounded-authority-contract"
+}

@@ -324,6 +324,8 @@ def enforce_server_scoped_permissions(
     amount: Decimal | None = None,
     requested_field_names: frozenset[str] = frozenset(),
     authorized_field_names: frozenset[str] = frozenset(),
+    object_type: str | None = None,
+    action: str | None = None,
 ) -> None:
     """Re-evaluate one of several permissions against the server hierarchy.
 
@@ -407,6 +409,8 @@ def enforce_server_scoped_permissions(
         amount=amount,
         requested_field_names=requested_field_names,
         authorized_field_names=authorized_field_names,
+        object_type=object_type,
+        action=action,
     )
     decision = _evaluate_any_policy(request, context, required_permissions=permissions)
     audit_policy_decision(
@@ -428,6 +432,7 @@ def enforce_server_scoped_permissions(
         "entity_scope_denied",
         "step_up_required",
         "mfa_required",
+        "master_data_authority_denied",
     } else "permission_denied"
     message = {
         "step_up_required": "Recent human reauthentication is required.",
@@ -436,6 +441,7 @@ def enforce_server_scoped_permissions(
         "workspace_scope_denied": "Workspace scope is not authorized.",
         "organization_scope_denied": "Organization scope is not authorized.",
         "entity_scope_denied": "Legal-entity scope is not authorized.",
+        "master_data_authority_denied": "The selected authority cannot mutate shared master data.",
     }.get(code, "Permission denied.")
     raise APIError(status_code=403, code=code, message=message)
 
@@ -451,10 +457,12 @@ def enforce_server_scoped_permission(
     amount: Decimal | None = None,
     requested_field_names: frozenset[str] = frozenset(),
     authorized_field_names: frozenset[str] = frozenset(),
+    object_type: str | None = None,
+    action: str | None = None,
 ) -> None:
     """Re-evaluate one permission against the selected server hierarchy."""
 
-    if requested_field_names or authorized_field_names:
+    if requested_field_names or authorized_field_names or object_type is not None or action is not None:
         enforce_server_scoped_permissions(
             request,
             permissions=frozenset({permission}),
@@ -465,6 +473,8 @@ def enforce_server_scoped_permission(
             amount=amount,
             requested_field_names=requested_field_names,
             authorized_field_names=authorized_field_names,
+            object_type=object_type,
+            action=action,
         )
         return
     enforce_server_scoped_permissions(

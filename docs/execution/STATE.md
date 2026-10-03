@@ -54,12 +54,22 @@ general passes, two native-client prerequisite skips, two additional API contrac
 passes, independent concurrent-write denials and a populated native Finance
 restore on PostgreSQL16.14. Separate migration-chain restore passes16.14/17.10.
 ADR0805 and POSTGRES_FINANCE_SCOPE_2026-10-03.json retain the exact boundary.
-Authenticated HTTP review separately reproduces five narrowed master-data
-mutation gaps (PROD029); complete end-to-end isolation remains open. Durable
+The five narrowed master-data mutation gaps are closed by central policy and
+PostgreSQL0096 mutation guards (PROD029):196 combined tests passed, alongside
+populated Finance restore and native16.14/17.10 migration evidence. ADR0808
+preserves the workspace-only currency administration limitation; complete
+end-to-end isolation remains open. Durable
 AMLSim execution now passes the strict oracle, exact replay and transaction-race
 contracts through0094/0096. ADR0807 accepts the bounded repository/worker path.
-Raw SQL post-completion input insertion remains reproduced separately under
-PROD030 and does not inherit that acceptance.
+Raw SQL post-completion child insertion and child reparenting remain reproduced
+separately under PROD030 and do not inherit that acceptance.
+
+The isolated ca82 whole-repository run is retained as failed:3647 passed,
+259 capability skips, one stale health migration-count assertion and24 warnings
+in788.16s. Ruff/Mypy/Bandit/build passed on that source. The exact pending-count
+test now derives the registered successor count and checks the latest revision;
+a new isolated whole-repository run remains required. See
+SCOPED_FINANCE_REGRESSION_CA82_2026-10-03.json.
 
 ### Financial regression and browser checkpoint
 

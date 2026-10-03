@@ -2,6 +2,17 @@
 
 ## Financial integrity and open-source workload increments (2026-10-03)
 
+- Master-data authority0096: [retained evidence](MASTER_DATA_AUTHORITY_2026-10-03.json)
+  binds the five before-fix HTTP failures and196 passing combined tests with
+  zero skips. Native populated Finance restore took13.330392s on16.14,
+  preserving15 table digests and repeating permitted/denied writes. The0096
+  chain drill and16.14/17.10 matrix took16.873s/32.045s with source stability
+  and owned cleanup. ADR0808 states the remaining authority boundaries.
+- [Isolated ca82 regression](SCOPED_FINANCE_REGRESSION_CA82_2026-10-03.json)
+  remains failed:3647pass/259skip/1fail,788.16s. The sole stale migration-count
+  assertion now verifies the exact successor count and latest revision;
+  focused health/policy tests pass. A new isolated full run is required.
+
 - Actual PostgreSQL AMLSim worker: [retained projection](POSTGRES_AMLSIM_WORKER_2026-10-03.json)
   verifies original0094/0096 runtime artifacts and source hashes. Both persist42
   pairs/48decisions with3unmatched per side, equal permutation lineage and

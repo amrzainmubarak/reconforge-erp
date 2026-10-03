@@ -237,10 +237,10 @@ tasks:
     priority: P0
     area: master-data-authority
     title: Constrain shared master mutations under selected organization and entity scope
-    status: in_progress
+    status: completed
     depends_on: [PROD-025]
     exit_evidence: >-
-      Five authenticated HTTP red cases alter broader organization/currency/fiscal-period state under narrowed selection; central authorization and SQL mutation guards must deny these while preserving canonical FOR SHARE reference locks and existing authorized administrator paths. Retain historical policy evidence compatibility; do not claim new permission-to-resource-level grants.
+      Five authenticated HTTP red cases are closed by central policy v2 and0096 mutation guards;196 combined tests pass with zero skips. Historical v1 evidence verifies unchanged, reference FOR SHARE locks and entity Finance creation remain valid. Populated native Finance restore and16.14/17.10 migration matrix pass with source hashes and cleanup. ADR0808/report preserve workspace-only shared currency administration and exclude permission-to-resource grant claims.
   - id: PROD-030
     priority: P0
     area: reconciliation-evidence-integrity

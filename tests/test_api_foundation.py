@@ -146,7 +146,9 @@ def test_server_health_is_degraded_when_postgresql_migrations_are_pending(tmp_pa
     assert payload["status"] == "degraded"
     assert payload["database"]["reachable"] is True
     assert payload["database"]["schema_version"] == "0089_pg_writeback_identity"
-    assert payload["database"]["pending_migrations"] == 5
+    installed_index = POSTGRES_MIGRATION_REVISIONS.index("0089_pg_writeback_identity")
+    assert payload["database"]["latest_schema_version"] == POSTGRES_MIGRATION_REVISIONS[-1]
+    assert payload["database"]["pending_migrations"] == len(POSTGRES_MIGRATION_REVISIONS[installed_index + 1 :])
 
 
 def test_server_health_is_degraded_when_postgresql_migration_state_is_unavailable(tmp_path: Path) -> None:

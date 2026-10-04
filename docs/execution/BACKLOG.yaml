@@ -77,9 +77,12 @@ tasks:
     status: in_progress
     depends_on: [AMR-GFO-002, AMR-GFO-003, AMR-GFO-004]
     exit_evidence: >-
-      Require fresh locked Python3.12 whole regression, real nonowner PostgreSQL and
-      migration/restore tests, global security/build gates, full web checks and real HTTPS
-      browser journeys. Preserve failures/skips and hashes; publish Draft review with rollback.
+      Current evidence: locked Python3.12 whole regression, owned nonowner PostgreSQL AP
+      acceptance, selected migration/recovery tests, static/security/build gates, and complete
+      local web typecheck/unit/build/Playwright gates pass. Locked Python3.11/3.12 audits report
+      zero known findings for 128 resolved packages. One native source/maintenance recovery test
+      and nine externally configured HTTPS browser journeys remain declared skips; preserve those
+      limits and measured benchmark metadata before any Draft review or release claim.
   - id: PROD-001
     priority: P0
     area: baseline

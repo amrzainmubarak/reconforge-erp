@@ -1,5 +1,23 @@
 # Execution State
 
+## Amr current sprint integration verification (2026-10-04)
+
+`AMR-GFO-005` remains in progress, with the current source accepted through a
+locked Python 3.12 whole-suite run, an independently rerun owned PostgreSQL
+nonowner AP acceptance, recovery-profile tests, static quality/security gates,
+package build, and the real local Studio browser suite. The locked whole suite
+and the host whole suite both exited zero; the selected nonowner PostgreSQL AP
+suite exited zero after temporary-database migration to head; locked Python
+3.11/3.12 dependency audits reported zero findings; and the Studio typecheck,
+212 unit tests, production build, and Playwright suite passed with 17 executed
+tests and 9 explicit live-service skips. A deterministic 10,000-record local
+benchmark completed in 11.7616 seconds with 37.15 MiB peak memory and result
+signature `4f634672cdae0d21e6179b66a7d78fb6c861e4fb0511dd57a478d66d7f021717`
+on the recorded Windows/CPython 3.14.6 host. The native PostgreSQL
+source/maintenance recovery test and externally configured HTTPS browser
+journeys remain explicit environmental prerequisites; this is not a capacity,
+HA/DR, hosted-browser, or production-release claim.
+
 ## Amr evidence-bound AP payment-link slice (2026-10-04)
 
 `PROD-010` is in progress. SQLite migration 54 and PostgreSQL revision 0105
@@ -14,11 +32,14 @@ trusted effect amount before amount-bounded authorization, or the retained
 receipt amount for an exact retry after a full allocation. SQLite backup and
 restore replay link history and reject invalid evidence.
 
-Focused local domain/API/concurrency/backup/migration contracts pass. The
-PostgreSQL migration and adapter contracts pass without a configured live
-administrator plus nonowner application service, so the live nonowner and
-migration-role-admission tests are declared skips in this environment. This is
-not an inventory/GRNI/AP/GL posting cycle, external banking lifecycle,
+Focused local domain/API/concurrency/backup/migration contracts pass. The root
+acceptance reran the AP approval, payment-link, authorization inventory, and
+operations group against owned PostgreSQL administrator and nonowner
+application profiles; it exited zero after each disposable database migrated
+to head and verified the application role is neither `SUPERUSER` nor
+`BYPASSRLS`. This proves the named synthetic scope, locking, exact replay,
+idempotency, audit/outbox, and migration behavior only. It is not an
+inventory/GRNI/AP/GL posting cycle, external banking lifecycle,
 return/reversal, FX, tax, intercompany, capacity, availability, or compliance
 result.
 

@@ -1,5 +1,22 @@
 # ReconForge Execution Evidence Log
 
+- AMR-GFO-005 current sprint integration verification (2026-10-04): the full
+  suite exited zero both on the host and under the locked Python 3.12
+  all-extras resolution. `ruff`, Mypy (609 source files), Bandit, `uv lock
+  --check`, supply-chain policy validation, wheel/sdist build, and locked
+  Python 3.11/3.12 dependency audits passed; each audit reported zero known
+  findings across 128 locked Python packages. The owned PostgreSQL nonowner AP
+  group and the selected backup/encrypted-backup/matrix group exited zero; the
+  latter retains one explicit native source/maintenance-service skip.
+  `npm --prefix apps/web run typecheck`, 24-file/212-test Vitest, production
+  build, and Playwright passed; Playwright reports 17 passed and 9 explicit
+  live-service skips. The deterministic 10,000-record local benchmark recorded
+  11.7616 seconds, 37.15 MiB peak memory, and result signature
+  `4f634672cdae0d21e6179b66a7d78fb6c861e4fb0511dd57a478d66d7f021717` on the
+  recorded Windows/CPython 3.14.6 host. This does not establish native-service
+  recovery, configured HTTPS browser journeys, throughput capacity, HA/DR, or
+  production readiness.
+
 - PROD-010 evidence-bound AP payment link (2026-10-04): SQLite migration 54
   and PostgreSQL revision 0105 retain exact minor-unit partial/full allocations,
   independent Finance preparation/review/posting, invoice actor separation,
@@ -11,9 +28,10 @@
   `tests/test_outbox_fencing_migration.py`,
   `tests/test_sqlite_inventory_receipt_migration.py`, and
   `tests/test_postgres_payables_payment_link.py` pass their local/static
-  contracts. The PostgreSQL live nonowner/row-decoder/concurrency and
-  migration-role-admission fixtures are declared skipped without configured
-  administrator and application DSNs; no live PostgreSQL, external payment,
+  contracts. The root acceptance also ran the approval and payment-link group
+  under owned administrator and nonowner application DSNs after isolated
+  migrations to head; it exited zero and exercised the PostgreSQL
+  row-decoder/concurrency/migration-role-admission paths. No external payment,
   inventory/GRNI, automatic GL, capacity, availability, or compliance result is
   claimed.
 

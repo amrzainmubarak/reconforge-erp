@@ -28,6 +28,7 @@ from reconforge.api.server_payables import (
 )
 from reconforge.auth.field_access import (
     project_payables_payment_link,
+    project_payables_payment_link_reversal,
     project_payables_purchase_order,
     project_payables_receipt,
     project_payables_supplier,
@@ -47,12 +48,13 @@ PageLimit = Annotated[int, Query(ge=1, le=1_000)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
 PayablesRead = Annotated[
     LocalUser,
-    Depends(require_any_permission({"payables.read", "payables.manage", "payables.match", "payables.approve", "payables.settle"})),
+    Depends(require_any_permission({"payables.read", "payables.manage", "payables.match", "payables.approve", "payables.settle", "payables.reverse"})),
 ]
 PayablesManage = Annotated[LocalUser, Depends(require_permission("payables.manage"))]
 PayablesMatch = Annotated[LocalUser, Depends(require_permission("payables.match"))]
 PayablesApprove = Annotated[LocalUser, Depends(require_permission("payables.approve"))]
 PayablesSettle = Annotated[LocalUser, Depends(require_permission("payables.settle"))]
+PayablesReverse = Annotated[LocalUser, Depends(require_permission("payables.reverse"))]
 T = TypeVar("T")
 
 
@@ -109,6 +111,16 @@ class PaymentLinkRequest(BaseModel):
     finance_effect_id: str = Field(min_length=1, max_length=160)
     ap_account_id: str = Field(min_length=1, max_length=160)
     cash_account_id: str = Field(min_length=1, max_length=160)
+    expected_invoice_version: int = Field(ge=1)
+    command_id: str = Field(min_length=1, max_length=160)
+
+
+class PaymentLinkReversalRequest(BaseModel):
+    """The exact posted Finance inverse accepted to unwind one AP allocation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reversal_finance_effect_id: str = Field(min_length=1, max_length=160)
     expected_invoice_version: int = Field(ge=1)
     command_id: str = Field(min_length=1, max_length=160)
 
@@ -228,6 +240,32 @@ def _server_payment_link_amount(
             finance_effect_id=payload.finance_effect_id,
             ap_account_id=payload.ap_account_id,
             cash_account_id=payload.cash_account_id,
+            expected_invoice_version=payload.expected_invoice_version,
+            command_id=payload.command_id,
+            actor_label=actor_id,
+        ),
+        object_refs=(("invoice", invoice_id),),
+    )
+
+
+def _server_payment_link_reversal_amount(
+    request: Request,
+    *,
+    invoice_id: str,
+    payment_link_id: str,
+    payload: PaymentLinkReversalRequest,
+    actor_id: str,
+) -> Decimal:
+    """Read the exact posted reversal amount before scoped ABAC evaluation."""
+
+    return execute_postgres_payables(
+        request,
+        lambda repository, _scope: PostgresPayablesPaymentLinkRepository(
+            repository.connection, repository.tenant_id
+        ).authorization_reversal_amount(
+            invoice_id,
+            payment_link_id=payment_link_id,
+            reversal_finance_effect_id=payload.reversal_finance_effect_id,
             expected_invoice_version=payload.expected_invoice_version,
             command_id=payload.command_id,
             actor_label=actor_id,
@@ -570,6 +608,52 @@ def link_supplier_invoice_payment(
     return project_payables_payment_link(record).visible
 
 
+@router.post("/invoices/{invoice_id}/payment-links/{payment_link_id}/reversal")
+def reverse_supplier_invoice_payment_link(
+    invoice_id: str,
+    payment_link_id: str,
+    request: Request,
+    payload: PaymentLinkReversalRequest,
+    current_user: PayablesReverse,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Append evidence that a posted Finance inverse unwound one AP allocation."""
+
+    if server_payables_enabled(request):
+        amount = _server_payment_link_reversal_amount(
+            request,
+            invoice_id=invoice_id,
+            payment_link_id=payment_link_id,
+            payload=payload,
+            actor_id=current_user.id,
+        )
+        record = _server_call(
+            request,
+            frozenset({"payables.reverse"}),
+            lambda repository, _scope: PostgresPayablesPaymentLinkRepository(
+                repository.connection, repository.tenant_id
+            ).reverse_finance_payment_link(
+                invoice_id,
+                payment_link_id,
+                **payload.model_dump(),
+                actor_label=current_user.id,
+            ),
+            amount=amount,
+            object_refs=(("invoice", invoice_id),),
+        )
+        return project_payables_payment_link_reversal(record).visible
+    try:
+        record = PayablesPaymentLinkService(_local_connection(connection)).reverse_finance_payment_link(
+            invoice_id,
+            payment_link_id,
+            **payload.model_dump(),
+            actor_label=current_user.username,
+        )
+    except (DatabaseError, PlatformError) as exc:
+        raise _error("payables_payment_link_reversal_failed", exc) from exc
+    return project_payables_payment_link_reversal(record).visible
+
+
 @router.get("/invoices/{invoice_id}/payment-links")
 def list_supplier_invoice_payment_links(
     invoice_id: str,
@@ -582,7 +666,7 @@ def list_supplier_invoice_payment_links(
     if server_payables_enabled(request):
         records = _server_call(
             request,
-            frozenset({"payables.read", "payables.manage", "payables.match", "payables.approve", "payables.settle"}),
+            frozenset({"payables.read", "payables.manage", "payables.match", "payables.approve", "payables.settle", "payables.reverse"}),
             lambda repository, _scope: PostgresPayablesPaymentLinkRepository(
                 repository.connection, repository.tenant_id
             ).list_payment_links(invoice_id, actor_label=current_user.id),
@@ -596,3 +680,35 @@ def list_supplier_invoice_payment_links(
         except (DatabaseError, PlatformError) as exc:
             raise _error("payables_payment_link_list_failed", exc) from exc
     return {"payment_links": [project_payables_payment_link(record).visible for record in records]}
+
+
+@router.get("/invoices/{invoice_id}/payment-link-reversals")
+def list_supplier_invoice_payment_link_reversals(
+    invoice_id: str,
+    request: Request,
+    current_user: PayablesRead,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """List closed-projection evidence that retained AP allocations were unwound."""
+
+    if server_payables_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"payables.read", "payables.manage", "payables.match", "payables.approve", "payables.settle", "payables.reverse"}),
+            lambda repository, _scope: PostgresPayablesPaymentLinkRepository(
+                repository.connection, repository.tenant_id
+            ).list_payment_link_reversals(invoice_id, actor_label=current_user.id),
+            object_refs=(("invoice", invoice_id),),
+        )
+    else:
+        try:
+            records = PayablesPaymentLinkService(_local_connection(connection)).list_payment_link_reversals(
+                invoice_id, actor_label=current_user.username
+            )
+        except (DatabaseError, PlatformError) as exc:
+            raise _error("payables_payment_link_reversal_list_failed", exc) from exc
+    return {
+        "payment_link_reversals": [
+            project_payables_payment_link_reversal(record).visible for record in records
+        ]
+    }

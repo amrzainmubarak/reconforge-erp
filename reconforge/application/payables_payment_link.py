@@ -27,6 +27,21 @@ class PayablesPaymentLinkRepositoryProtocol(Protocol):
 
     def list_payment_links(self, invoice_id: str, *, actor_label: str = "local-cli") -> list[dict[str, Any]]: ...
 
+    def reverse_finance_payment_link(
+        self,
+        invoice_id: str,
+        payment_link_id: str,
+        *,
+        reversal_finance_effect_id: str,
+        expected_invoice_version: int,
+        command_id: str,
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]: ...
+
+    def list_payment_link_reversals(
+        self, invoice_id: str, *, actor_label: str = "local-cli"
+    ) -> list[dict[str, Any]]: ...
+
 
 class PayablesPaymentLinkApplicationService:
     """Coordinate AP settlement linkage without owning database transactions."""
@@ -57,6 +72,30 @@ class PayablesPaymentLinkApplicationService:
 
     def list_payment_links(self, invoice_id: str, *, actor_label: str = "local-cli") -> list[dict[str, Any]]:
         return self.repository.list_payment_links(invoice_id, actor_label=actor_label)
+
+    def reverse_finance_payment_link(
+        self,
+        invoice_id: str,
+        payment_link_id: str,
+        *,
+        reversal_finance_effect_id: str,
+        expected_invoice_version: int,
+        command_id: str,
+        actor_label: str = "local-cli",
+    ) -> dict[str, Any]:
+        return self.repository.reverse_finance_payment_link(
+            invoice_id,
+            payment_link_id,
+            reversal_finance_effect_id=reversal_finance_effect_id,
+            expected_invoice_version=expected_invoice_version,
+            command_id=command_id,
+            actor_label=actor_label,
+        )
+
+    def list_payment_link_reversals(
+        self, invoice_id: str, *, actor_label: str = "local-cli"
+    ) -> list[dict[str, Any]]:
+        return self.repository.list_payment_link_reversals(invoice_id, actor_label=actor_label)
 
 
 __all__ = ["PayablesPaymentLinkApplicationService", "PayablesPaymentLinkRepositoryProtocol"]

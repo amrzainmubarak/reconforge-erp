@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 290
-EXPECTED_DIGEST = "1efb923b8f1e6121e083371b33741b743f3c4f9af5114c3eb2d834be52b3920d"
+EXPECTED_ROUTE_COUNT = 292
+EXPECTED_DIGEST = "bcc97c60cff2675e56717c21e28a09ef2c1e547165979c3a4c87f4f5c96d8e64"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -114,7 +114,25 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     )
     assert payment_link_read.mode == "any"
     assert payment_link_read.permissions == (
-        "payables.approve", "payables.manage", "payables.match", "payables.read", "payables.settle",
+        "payables.approve", "payables.manage", "payables.match", "payables.read", "payables.reverse", "payables.settle",
+    )
+    payment_link_reversal_write = next(
+        contract
+        for contract in contracts
+        if contract.method == "POST"
+        and contract.path == "/api/v1/payables/invoices/{invoice_id}/payment-links/{payment_link_id}/reversal"
+    )
+    assert payment_link_reversal_write.mode == "all"
+    assert payment_link_reversal_write.permissions == ("payables.reverse",)
+    payment_link_reversal_read = next(
+        contract
+        for contract in contracts
+        if contract.method == "GET"
+        and contract.path == "/api/v1/payables/invoices/{invoice_id}/payment-link-reversals"
+    )
+    assert payment_link_reversal_read.mode == "any"
+    assert payment_link_reversal_read.permissions == (
+        "payables.approve", "payables.manage", "payables.match", "payables.read", "payables.reverse", "payables.settle",
     )
     validate_authorization_surface(contracts)
 

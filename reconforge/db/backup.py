@@ -39,6 +39,7 @@ from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
     RECEIPT_TABLES,
 )
 from reconforge.infrastructure.sqlite_payables_payment_link import verify_sqlite_payment_link_storage
+from reconforge.io.persisted import PersistedJsonError, decode_financial_idempotency_response
 from reconforge.io.structured import (
     StructuredDocumentError,
     StructuredDocumentPolicy,
@@ -70,6 +71,7 @@ BACKUP_JSON_POLICY = StructuredDocumentPolicy(
 _BACKUP_READ_CHUNK_BYTES = 1024 * 1024
 _OUTBOX_FENCING_SCHEMA_VERSION = 53
 _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION = 54
+_PAYABLES_PAYMENT_LINK_REVERSAL_SCHEMA_VERSION = 55
 _OUTBOX_FENCING_EVENT_COLUMNS = frozenset({"lease_generation", "lease_generation_floor"})
 _OUTBOX_FENCING_EVIDENCE_COLUMNS = frozenset(
     {"evidence_id", "event_id", "lease_generation", "action", "worker_id", "occurred_at", "attempts"}
@@ -199,6 +201,8 @@ BACKUP_TABLES = [
     "finance_posting_commands",
     "ap_payment_links",
     "ap_payment_link_commands",
+    "ap_payment_link_reversals",
+    "ap_payment_link_reversal_commands",
     *RECEIPT_TABLES,
 ]
 
@@ -306,6 +310,12 @@ BACKUP_SELECT_QUERIES = {
     ),
     "ap_payment_link_commands": (
         "SELECT * FROM ap_payment_link_commands ORDER BY workspace_id, command_id"
+    ),
+    "ap_payment_link_reversals": (
+        "SELECT * FROM ap_payment_link_reversals ORDER BY supplier_invoice_id, invoice_version_before, id"
+    ),
+    "ap_payment_link_reversal_commands": (
+        "SELECT * FROM ap_payment_link_reversal_commands ORDER BY workspace_id, command_id"
     ),
     "inventory_receipt_plans": "SELECT * FROM inventory_receipt_plans ORDER BY original_plan_id IS NOT NULL,id",
     "inventory_receipt_reviews": "SELECT * FROM inventory_receipt_reviews ORDER BY id",
@@ -439,6 +449,8 @@ BACKUP_DELETE_QUERIES = {
     "finance_posting_commands": "DELETE FROM finance_posting_commands",
     "ap_payment_links": "DELETE FROM ap_payment_links",
     "ap_payment_link_commands": "DELETE FROM ap_payment_link_commands",
+    "ap_payment_link_reversals": "DELETE FROM ap_payment_link_reversals",
+    "ap_payment_link_reversal_commands": "DELETE FROM ap_payment_link_reversal_commands",
     "inventory_receipt_plans": "DELETE FROM inventory_receipt_plans",
     "inventory_receipt_reviews": "DELETE FROM inventory_receipt_reviews",
     "inventory_receipt_links": "DELETE FROM inventory_receipt_links",
@@ -2622,6 +2634,27 @@ BACKUP_INSERT_QUERIES['ap_payment_link_commands'] = (
     'INSERT INTO ap_payment_link_commands '
     '(workspace_id,command_id,settlement_actor_id,request_digest,result_json,created_at) VALUES (?,?,?,?,?,?)'
 )
+BACKUP_INSERT_COLUMNS['ap_payment_link_reversals'] = (
+    'id', 'workspace_id', 'organization_id', 'legal_entity_id', 'supplier_invoice_id',
+    'payment_link_id', 'reversal_finance_effect_id', 'reversal_finance_entry_id',
+    'amount_minor', 'currency_code', 'reversal_date', 'finance_validation_digest',
+    'finance_posted_actor_id', 'reversal_actor_id', 'invoice_version_before',
+    'audit_event_id', 'outbox_event_id', 'created_at',
+)
+BACKUP_INSERT_QUERIES['ap_payment_link_reversals'] = (
+    'INSERT INTO ap_payment_link_reversals '
+    '(id,workspace_id,organization_id,legal_entity_id,supplier_invoice_id,payment_link_id,'
+    'reversal_finance_effect_id,reversal_finance_entry_id,amount_minor,currency_code,reversal_date,'
+    'finance_validation_digest,finance_posted_actor_id,reversal_actor_id,invoice_version_before,'
+    'audit_event_id,outbox_event_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+)
+BACKUP_INSERT_COLUMNS['ap_payment_link_reversal_commands'] = (
+    'workspace_id', 'command_id', 'reversal_actor_id', 'request_digest', 'result_json', 'created_at',
+)
+BACKUP_INSERT_QUERIES['ap_payment_link_reversal_commands'] = (
+    'INSERT INTO ap_payment_link_reversal_commands '
+    '(workspace_id,command_id,reversal_actor_id,request_digest,result_json,created_at) VALUES (?,?,?,?,?,?)'
+)
 for _receipt_table, _receipt_columns in RECEIPT_BACKUP_COLUMNS.items():
     BACKUP_INSERT_COLUMNS[_receipt_table] = _receipt_columns
     # The names are a closed versioned schema tuple, never backup-provided SQL.
@@ -2977,7 +3010,7 @@ def _verify_payables_payment_link_backup(
 
 
 def _payment_link_restore_initial_versions(tables: dict[str, Any]) -> dict[str, int]:
-    """Stage each linked AP invoice at the first immutable allocation version."""
+    """Stage each AP invoice at the first retained link/reversal history version."""
 
     links = tables.get("ap_payment_links")
     invoices = tables.get("ap_supplier_invoices")
@@ -2988,7 +3021,7 @@ def _payment_link_restore_initial_versions(tables: dict[str, Any]) -> dict[str, 
         if not isinstance(row, dict) or not isinstance(row.get("id"), str):
             raise DBBridgeError("Backup supplier-invoice rows are invalid.")
         invoice_rows[row["id"]] = row
-    grouped: dict[str, list[dict[str, Any]]] = {}
+    grouped: dict[str, list[tuple[str, dict[str, Any]]]] = {}
     for row in links:
         if not isinstance(row, dict):
             raise DBBridgeError("Backup payment-link rows are invalid.")
@@ -3006,9 +3039,33 @@ def _payment_link_restore_initial_versions(tables: dict[str, Any]) -> dict[str, 
             or amount < 1
         ):
             raise DBBridgeError("Backup payment-link allocation history is invalid.")
-        grouped.setdefault(invoice_id, []).append(row)
+        grouped.setdefault(invoice_id, []).append(("link", row))
+    reversals = tables.get("ap_payment_link_reversals", [])
+    if not isinstance(reversals, list):
+        raise DBBridgeError("Backup payment-link reversal rows are invalid.")
+    for row in reversals:
+        if not isinstance(row, dict):
+            raise DBBridgeError("Backup payment-link reversal rows are invalid.")
+        invoice_id = row.get("supplier_invoice_id")
+        version = row.get("invoice_version_before")
+        amount = row.get("amount_minor")
+        link_id = row.get("payment_link_id")
+        if (
+            not isinstance(invoice_id, str)
+            or not invoice_id
+            or not isinstance(link_id, str)
+            or not link_id
+            or isinstance(version, bool)
+            or not isinstance(version, int)
+            or version < 1
+            or isinstance(amount, bool)
+            or not isinstance(amount, int)
+            or amount < 1
+        ):
+            raise DBBridgeError("Backup payment-link reversal history is invalid.")
+        grouped.setdefault(invoice_id, []).append(("reversal", row))
     initial_versions: dict[str, int] = {}
-    for invoice_id, rows in grouped.items():
+    for invoice_id, events in grouped.items():
         invoice = invoice_rows.get(invoice_id)
         if invoice is None:
             raise DBBridgeError("Backup payment link references a missing supplier invoice.")
@@ -3022,19 +3079,150 @@ def _payment_link_restore_initial_versions(tables: dict[str, Any]) -> dict[str, 
             or not isinstance(final_version, int)
         ):
             raise DBBridgeError("Backup supplier-invoice payment state is invalid.")
-        ordered = sorted(rows, key=lambda item: (int(item["invoice_version_before"]), str(item.get("id", ""))))
-        next_version = int(ordered[0]["invoice_version_before"])
+        ordered = sorted(
+            events,
+            key=lambda item: (
+                int(item[1]["invoice_version_before"]), item[0], str(item[1].get("id", ""))
+            ),
+        )
+        next_version = int(ordered[0][1]["invoice_version_before"])
         allocated = 0
-        for row in ordered:
+        active_links: dict[str, int] = {}
+        for event_type, row in ordered:
             if int(row["invoice_version_before"]) != next_version:
-                raise DBBridgeError("Backup payment-link versions are not contiguous.")
-            allocated += int(row["amount_minor"])
+                raise DBBridgeError("Backup payment-link evidence versions are not contiguous.")
+            if event_type == "link":
+                link_id = str(row.get("id", ""))
+                if not link_id or link_id in active_links:
+                    raise DBBridgeError("Backup payment-link allocation identifiers are invalid.")
+                amount = int(row["amount_minor"])
+                active_links[link_id] = amount
+                allocated += amount
+            else:
+                link_id = str(row["payment_link_id"])
+                amount = active_links.pop(link_id, None)
+                if amount is None or amount != int(row["amount_minor"]):
+                    raise DBBridgeError("Backup payment-link reversal does not match an active allocation.")
+                allocated -= amount
             next_version += 1
         expected_status = "Paid" if allocated == total else "Approved"
         if allocated > total or invoice.get("status") != expected_status or final_version != next_version:
             raise DBBridgeError("Backup supplier-invoice payment state differs from allocation history.")
-        initial_versions[invoice_id] = int(ordered[0]["invoice_version_before"])
+        initial_versions[invoice_id] = int(ordered[0][1]["invoice_version_before"])
     return initial_versions
+
+
+def _payment_link_restore_timeline(
+    tables: dict[str, Any],
+    *,
+    includes_reversals: bool,
+) -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
+    """Pair every immutable AP evidence row with its command in version order.
+
+    Restore cannot bulk-insert all links ahead of reversals: each insert advances
+    the supplier invoice through a guarded version transition. Replaying the
+    retained timeline also validates that every command receipt points to one
+    and only one evidence node before any row reaches the temporary database.
+    """
+
+    links = tables.get("ap_payment_links")
+    link_commands = tables.get("ap_payment_link_commands")
+    if not isinstance(links, list) or not isinstance(link_commands, list):
+        raise DBBridgeError("Backup payment-link rows are invalid.")
+    reversals = tables.get("ap_payment_link_reversals", []) if includes_reversals else []
+    reversal_commands = (
+        tables.get("ap_payment_link_reversal_commands", []) if includes_reversals else []
+    )
+    if not isinstance(reversals, list) or not isinstance(reversal_commands, list):
+        raise DBBridgeError("Backup payment-link reversal rows are invalid.")
+
+    def commands_by_evidence(
+        rows: list[object],
+        *,
+        result_field: str,
+        label: str,
+    ) -> dict[str, dict[str, Any]]:
+        mapped: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                raise DBBridgeError(f"Backup {label} command rows are invalid.")
+            try:
+                result = decode_financial_idempotency_response(row.get("result_json")).payload
+            except PersistedJsonError as exc:
+                raise DBBridgeError(f"Backup {label} command receipt is invalid.") from exc
+            evidence_id = result.get(result_field)
+            if not isinstance(evidence_id, str) or not evidence_id or evidence_id in mapped:
+                raise DBBridgeError(f"Backup {label} command receipt mapping is invalid.")
+            mapped[evidence_id] = row
+        return mapped
+
+    link_command_by_id = commands_by_evidence(
+        link_commands,
+        result_field="payment_link_id",
+        label="payment-link",
+    )
+    reversal_command_by_id = commands_by_evidence(
+        reversal_commands,
+        result_field="payment_link_reversal_id",
+        label="payment-link reversal",
+    )
+
+    events: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
+    for link in links:
+        if not isinstance(link, dict):
+            raise DBBridgeError("Backup payment-link rows are invalid.")
+        link_id = link.get("id")
+        if not isinstance(link_id, str) or not link_id or link_id not in link_command_by_id:
+            raise DBBridgeError("Backup payment-link evidence is missing its idempotency command.")
+        events.append(("link", link, link_command_by_id.pop(link_id)))
+    if link_command_by_id:
+        raise DBBridgeError("Backup payment-link command does not identify retained evidence.")
+    for reversal in reversals:
+        if not isinstance(reversal, dict):
+            raise DBBridgeError("Backup payment-link reversal rows are invalid.")
+        reversal_id = reversal.get("id")
+        if (
+            not isinstance(reversal_id, str)
+            or not reversal_id
+            or reversal_id not in reversal_command_by_id
+        ):
+            raise DBBridgeError("Backup payment-link reversal evidence is missing its idempotency command.")
+        events.append(("reversal", reversal, reversal_command_by_id.pop(reversal_id)))
+    if reversal_command_by_id:
+        raise DBBridgeError("Backup payment-link reversal command does not identify retained evidence.")
+
+    try:
+        events.sort(
+            key=lambda item: (
+                str(item[1]["supplier_invoice_id"]),
+                int(item[1]["invoice_version_before"]),
+                0 if item[0] == "link" else 1,
+                str(item[1]["id"]),
+            )
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise DBBridgeError("Backup payment-link timeline is invalid.") from exc
+    return events
+
+
+def _restore_payables_payment_link_timeline(
+    connection: sqlite3.Connection,
+    *,
+    tables: dict[str, Any],
+    includes_reversals: bool,
+) -> None:
+    """Replay link/reversal evidence and receipts in their guarded order."""
+
+    for kind, evidence_row, command_row in _payment_link_restore_timeline(
+        tables,
+        includes_reversals=includes_reversals,
+    ):
+        if kind == "link":
+            _insert_rows(connection, table="ap_payment_links", rows=[evidence_row])
+            _insert_rows(connection, table="ap_payment_link_commands", rows=[command_row])
+        else:
+            _insert_rows(connection, table="ap_payment_link_reversals", rows=[evidence_row])
+            _insert_rows(connection, table="ap_payment_link_reversal_commands", rows=[command_row])
 
 
 def _verify_notification_inbox_backup(
@@ -3755,6 +3943,11 @@ def restore_backup(
                 table not in tables for table in ("ap_payment_links", "ap_payment_link_commands")
             ):
                 raise DBBridgeError("Backup omits retained payables payment-link tables.")
+            if backup_schema_version >= _PAYABLES_PAYMENT_LINK_REVERSAL_SCHEMA_VERSION and any(
+                table not in tables
+                for table in ("ap_payment_link_reversals", "ap_payment_link_reversal_commands")
+            ):
+                raise DBBridgeError("Backup omits retained payables payment-link reversal tables.")
             if restoring_outbox_fencing and any(
                 table not in tables for table in ("outbox_events", "outbox_delivery_evidence")
             ):
@@ -3771,6 +3964,8 @@ def restore_backup(
                     "finance_posting_commands",
                     "ap_payment_links",
                     "ap_payment_link_commands",
+                    "ap_payment_link_reversals",
+                    "ap_payment_link_reversal_commands",
                     *RECEIPT_TABLES,
                 }:
                     restored_tables.append(table)
@@ -4096,8 +4291,13 @@ def restore_backup(
                 _insert_rows(connection, table="finance_posting_effects", rows=effects)
                 _insert_rows(connection, table="finance_posting_commands", rows=tables.get("finance_posting_commands", []))
                 if backup_schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION:
-                    _insert_rows(connection, table="ap_payment_links", rows=tables["ap_payment_links"])
-                    _insert_rows(connection, table="ap_payment_link_commands", rows=tables["ap_payment_link_commands"])
+                    _restore_payables_payment_link_timeline(
+                        connection,
+                        tables=tables,
+                        includes_reversals=(
+                            backup_schema_version >= _PAYABLES_PAYMENT_LINK_REVERSAL_SCHEMA_VERSION
+                        ),
+                    )
                     _verify_payables_payment_link_backup(connection, required=True)
                 if backup_schema_version >= 50:
                     _insert_rows(connection, table="inventory_receipt_commands", rows=tables["inventory_receipt_commands"])

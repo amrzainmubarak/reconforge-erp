@@ -14,6 +14,9 @@ from reconforge.db.migration_53_outbox_fencing import (
     atomic_outbox_fencing_upgrade,
 )
 from reconforge.db.migration_54_payables_payment_link import SQLITE_PAYABLES_PAYMENT_LINK_SQL
+from reconforge.db.migration_55_payables_payment_link_reversal import (
+    SQLITE_PAYABLES_PAYMENT_LINK_REVERSAL_SQL,
+)
 from reconforge.db.schema import (
     ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL,
     API_SESSIONS_SCHEMA_SQL,
@@ -173,6 +176,11 @@ MIGRATIONS = [
     Migration(version=52, name="governed_budget_control", sql=SQLITE_BUDGET_CONTROL_UPGRADE_SQL),
     Migration(version=53, name="outbox_lease_fencing_and_delivery_evidence", sql=SQLITE_OUTBOX_FENCING_UPGRADE_SQL),
     Migration(version=54, name="payables_finance_payment_link", sql=SQLITE_PAYABLES_PAYMENT_LINK_SQL),
+    Migration(
+        version=55,
+        name="payables_finance_payment_link_reversal",
+        sql=SQLITE_PAYABLES_PAYMENT_LINK_REVERSAL_SQL,
+    ),
 ]
 
 _MIGRATION_TABLE_SQL = """

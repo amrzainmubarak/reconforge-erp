@@ -1157,6 +1157,19 @@ PAYABLES_PAYMENT_LINK_FIELDS = frozenset(
         "id", "workspace_id", "organization_id", "legal_entity_id", "created_at",
     }
 )
+PAYABLES_PAYMENT_LINK_REVERSAL_FIELDS = frozenset(
+    {
+        "payment_link_reversal_id", "payment_link_id", "supplier_invoice_id",
+        "original_finance_effect_id", "original_finance_entry_id",
+        "reversal_finance_effect_id", "reversal_finance_entry_id", "amount_minor",
+        "currency_code", "reversal_date", "finance_validation_digest",
+        "finance_posted_actor_id", "reversal_actor_id", "invoice_version_before",
+        "invoice_version_after", "allocated_minor", "outstanding_minor", "invoice_status",
+        "audit_event_id", "outbox_event_id",
+        # The list endpoint returns retained reversal rows, never command receipts.
+        "id", "workspace_id", "organization_id", "legal_entity_id", "created_at",
+    }
+)
 RECEIVABLES_CUSTOMER_FIELDS = frozenset(
     {
         # Deliberate union for local SQLite and tenant-scoped PostgreSQL
@@ -3317,6 +3330,12 @@ def project_payables_payment_link(values: Mapping[str, object]) -> FieldProjecti
     """Return a closed projection for AP settlement evidence."""
 
     return project_fields(values, allowed_fields=PAYABLES_PAYMENT_LINK_FIELDS)
+
+
+def project_payables_payment_link_reversal(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for AP allocation-reversal evidence."""
+
+    return project_fields(values, allowed_fields=PAYABLES_PAYMENT_LINK_REVERSAL_FIELDS)
 
 
 def project_payables_supplier_invoice(values: Mapping[str, object]) -> FieldProjection:

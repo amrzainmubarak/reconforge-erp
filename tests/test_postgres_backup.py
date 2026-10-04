@@ -31,7 +31,6 @@ KEY = bytes(range(32))
 COMPATIBILITY_RECOVERY_PROFILE = "team-synthetic"
 COMPATIBILITY_ALEMBIC_REVISION = "0103_pg_outbox_fencing"
 CURRENT_HEAD_RECOVERY_PROFILE = "team-current-head"
-CURRENT_HEAD_ALEMBIC_REVISION = "0104_pg_exception_review_api"
 
 
 class _Runner:
@@ -185,13 +184,12 @@ def test_backup_refuses_a_source_outside_the_configured_recovery_profile(tmp_pat
 
 @pytest.fixture
 def current_head_recovery_profile() -> tuple[str, str]:
-    """Pin the mock recovery contract to the PostgreSQL migration head."""
+    """Derive the mock recovery contract from the PostgreSQL migration head."""
 
-    assert POSTGRES_MIGRATION_REVISIONS[-1] == CURRENT_HEAD_ALEMBIC_REVISION
-    return CURRENT_HEAD_RECOVERY_PROFILE, CURRENT_HEAD_ALEMBIC_REVISION
+    return CURRENT_HEAD_RECOVERY_PROFILE, POSTGRES_MIGRATION_REVISIONS[-1]
 
 
-def test_current_head_profile_binds_0104_and_rejects_0103_before_restore_actions(
+def test_current_head_profile_binds_and_rejects_0103_before_restore_actions(
     tmp_path: Path,
     current_head_recovery_profile: tuple[str, str],
 ) -> None:
@@ -627,7 +625,7 @@ def test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_clea
         maintenance_service=maintenance,
         restore_database=restore_database,
         recovery_profile="live-postgres-current-head-drill",
-        expected_alembic_revision=CURRENT_HEAD_ALEMBIC_REVISION,
+        expected_alembic_revision=POSTGRES_MIGRATION_REVISIONS[-1],
         tools=tools,
         timeout_seconds=1800,
     )

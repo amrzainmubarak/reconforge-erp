@@ -161,10 +161,10 @@ tasks:
     priority: P1
     area: purchase-cycle
     title: Integrate purchase stock AP payment and GL
-    status: planned
+    status: in_progress
     depends_on: [PROD-009, PROD-016]
     exit_evidence: >-
-      One real cycle records inventory/GRNI/AP/cash effects atomically; partial receipts/payments, returns, retry, period and reconciliation tests.
+      SQLite54/PG0105 now retain a bounded evidence-bound partial/full AP settlement link from an approved invoice to one independently reviewed and posted Manual AP-debit/cash-credit Finance effect, with exact minor units, scope/currency affinity, current-version serialization, command replay, atomic audit/outbox, closed API projection, and SQLite backup/recovery verification. The complete purchase-to-payment result still requires receipt-to-inventory/GRNI/AP/GL posting, returns, payment reversals/voids, bank instruction/status recovery, FX/tax/intercompany policies, period controls, and live PostgreSQL recovery acceptance.
   - id: PROD-011
     priority: P1
     area: sales-cycle

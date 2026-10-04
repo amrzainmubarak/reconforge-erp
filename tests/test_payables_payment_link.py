@@ -198,6 +198,21 @@ def _link(connection, invoice: dict[str, object], effect: dict[str, object], acc
         )
 
 
+def test_payment_link_sqlite_schema_serializes_each_invoice_version(tmp_path: Path) -> None:
+    path = tmp_path / "payment-link-schema.db"
+    run_migrations(path)
+    connection = connect(path, require_exists=True)
+    try:
+        row = connection.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='ap_payment_links'"
+        ).fetchone()
+        assert row is not None
+        assert "UNIQUE(supplier_invoice_id, invoice_version_before)" in str(row[0])
+        assert "CHECK(amount_minor BETWEEN 1 AND 9000000000000000000)" in str(row[0])
+    finally:
+        connection.close()
+
+
 def test_payment_links_consume_exact_reviewed_effects_and_replay_historically(tmp_path: Path) -> None:
     _path, connection, finance, period, invoice, accounts = _fixture(tmp_path)
     try:
@@ -263,6 +278,26 @@ def test_payment_link_enforces_independent_invoice_settlement_and_exact_effect_s
                 (link["workspace_id"], "forged", link["settlement_actor_id"], "0" * 64, "{}", "2026-07-05T00:00:00Z"),
             )
         connection.rollback()
+    finally:
+        connection.close()
+
+
+def test_payment_link_translates_invalid_command_digest_to_controlled_error(tmp_path: Path) -> None:
+    _path, connection, _finance, _period, invoice, accounts = _fixture(tmp_path)
+    try:
+        trusted, principal_context, _ = _with_actor(connection, "settler")
+        with trusted, principal_context, pytest.raises(PlatformError, match="Expected invoice version must be a positive integer"):
+            PayablesPaymentLinkService(connection).link_finance_payment(
+                str(invoice["id"]),
+                finance_effect_id="missing-effect",
+                ap_account_id=accounts["2000"],
+                cash_account_id=accounts["1010"],
+                expected_invoice_version=0,
+                command_id="invalid-version",
+                actor_label="settler",
+            )
+        assert connection.execute("SELECT count(*) FROM ap_payment_links").fetchone()[0] == 0
+        assert connection.execute("SELECT count(*) FROM ap_payment_link_commands").fetchone()[0] == 0
     finally:
         connection.close()
 

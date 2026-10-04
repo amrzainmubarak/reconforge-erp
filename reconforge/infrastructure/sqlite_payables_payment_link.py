@@ -103,14 +103,17 @@ class SQLitePayablesPaymentLinkRepository:
         normalized_ap_account = _required_text(ap_account_id, "accounts payable account id")
         normalized_cash_account = _required_text(cash_account_id, "cash account id")
         normalized_command = _command_id(command_id)
-        digest = payment_link_request_digest(
-            invoice_id=normalized_invoice,
-            finance_effect_id=normalized_effect,
-            ap_account_id=normalized_ap_account,
-            cash_account_id=normalized_cash_account,
-            expected_invoice_version=expected_invoice_version,
-            settlement_actor_id=actor_id,
-        )
+        try:
+            digest = payment_link_request_digest(
+                invoice_id=normalized_invoice,
+                finance_effect_id=normalized_effect,
+                ap_account_id=normalized_ap_account,
+                cash_account_id=normalized_cash_account,
+                expected_invoice_version=expected_invoice_version,
+                settlement_actor_id=actor_id,
+            )
+        except PayablesPaymentLinkError as exc:
+            raise PlatformError(str(exc)) from exc
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             invoice_row = self.connection.execute(
@@ -129,7 +132,7 @@ class SQLitePayablesPaymentLinkRepository:
             if replay is not None:
                 self.connection.commit()
                 return replay
-            if int(invoice["row_version"]) != expected_invoice_version:
+            if _stored_integer(invoice["row_version"], "supplier invoice row version") != expected_invoice_version:
                 raise PlatformError("Supplier invoice changed concurrently; reload before linking payment evidence.")
             effect_row = self.connection.execute(
                 """SELECT effect.*,entry.validator_actor_id
@@ -157,8 +160,10 @@ class SQLitePayablesPaymentLinkRepository:
                 "SELECT COALESCE(SUM(amount_minor),0) FROM ap_payment_links WHERE supplier_invoice_id=?",
                 (normalized_invoice,),
             ).fetchone()[0]
-            allocated_after = int(allocated_before) + evidence.amount_minor
-            invoice_total = int(invoice["total_minor"])
+            allocated_after = _stored_integer(
+                allocated_before, "retained payment-link allocated amount"
+            ) + evidence.amount_minor
+            invoice_total = _stored_integer(invoice["total_minor"], "supplier invoice total")
             if allocated_after > invoice_total:
                 raise PlatformError("Payment allocation exceeds the supplier invoice total.")
             link_id = platform_id("APPAY", workspace_id, normalized_invoice, evidence.finance_effect_id)
@@ -232,7 +237,8 @@ class SQLitePayablesPaymentLinkRepository:
             if (
                 updated is None
                 or str(updated["status"]) != expected_status
-                or int(updated["row_version"]) != expected_invoice_version + 1
+                or _stored_integer(updated["row_version"], "supplier invoice row version")
+                != expected_invoice_version + 1
             ):
                 raise PlatformError("Supplier invoice payment state was not advanced by retained payment evidence.")
             result = self._result(
@@ -355,7 +361,7 @@ class SQLitePayablesPaymentLinkRepository:
         audit_event_id: str,
         outbox_event_id: str,
     ) -> dict[str, Any]:
-        invoice_total = int(invoice["total_minor"])
+        invoice_total = _stored_integer(invoice["total_minor"], "supplier invoice total")
         return {
             "payment_link_id": link_id,
             "supplier_invoice_id": str(invoice["id"]),
@@ -393,9 +399,12 @@ def _result_from_link(connection: sqlite3.Connection, link: Mapping[str, object]
            WHERE supplier_invoice_id=? AND invoice_version_before<=?""",
         (link["supplier_invoice_id"], link["invoice_version_before"]),
     ).fetchone()[0]
-    total = int(invoice["total_minor"])
-    if int(allocated) > total or str(invoice["status"]) not in {"Approved", "Paid"}:
+    total = _stored_integer(invoice["total_minor"], "supplier invoice total")
+    allocated_minor = _stored_integer(allocated, "retained payment-link allocated amount")
+    if allocated_minor > total or str(invoice["status"]) not in {"Approved", "Paid"}:
         raise PlatformError("Retained payment link has an invalid supplier invoice allocation.")
+    amount_minor = _stored_integer(link["amount_minor"], "payment-link amount")
+    version_before = _stored_integer(link["invoice_version_before"], "payment-link invoice version")
     return {
         "payment_link_id": str(link["id"]),
         "supplier_invoice_id": str(link["supplier_invoice_id"]),
@@ -403,17 +412,17 @@ def _result_from_link(connection: sqlite3.Connection, link: Mapping[str, object]
         "finance_entry_id": str(link["finance_entry_id"]),
         "ap_account_id": str(link["ap_account_id"]),
         "cash_account_id": str(link["cash_account_id"]),
-        "amount_minor": int(link["amount_minor"]),
+        "amount_minor": amount_minor,
         "currency_code": str(link["currency_code"]),
         "payment_date": str(link["payment_date"]),
         "finance_validation_digest": str(link["finance_validation_digest"]),
         "finance_posted_actor_id": str(link["finance_posted_actor_id"]),
         "settlement_actor_id": str(link["settlement_actor_id"]),
-        "invoice_version_before": int(link["invoice_version_before"]),
-        "invoice_version_after": int(link["invoice_version_before"]) + 1,
-        "allocated_minor": int(allocated),
-        "outstanding_minor": total - int(allocated),
-        "invoice_status": "Paid" if int(allocated) == total else "Approved",
+        "invoice_version_before": version_before,
+        "invoice_version_after": version_before + 1,
+        "allocated_minor": allocated_minor,
+        "outstanding_minor": total - allocated_minor,
+        "invoice_status": "Paid" if allocated_minor == total else "Approved",
         "audit_event_id": str(link["audit_event_id"]),
         "outbox_event_id": str(link["outbox_event_id"]),
     }
@@ -453,10 +462,12 @@ def verify_sqlite_payment_link_storage(connection: sqlite3.Connection) -> None:
         if invoice_row is None:
             raise PlatformError("Retained payment link references a missing supplier invoice.")
         invoice = dict(invoice_row)
-        expected_version = int(invoice_links[0]["invoice_version_before"])
+        expected_version = _stored_integer(
+            invoice_links[0]["invoice_version_before"], "payment-link invoice version"
+        )
         allocated = 0
         for link in invoice_links:
-            if int(link["invoice_version_before"]) != expected_version:
+            if _stored_integer(link["invoice_version_before"], "payment-link invoice version") != expected_version:
                 raise PlatformError("Retained payment links do not form a contiguous invoice version history.")
             effect_row = connection.execute(
                 """SELECT effect.*,entry.validator_actor_id
@@ -494,11 +505,15 @@ def verify_sqlite_payment_link_storage(connection: sqlite3.Connection) -> None:
             if any(link[key] != value for key, value in expected_fields.items()):
                 raise PlatformError("Retained payment link differs from its immutable financial effect.")
             _verify_link_evidence(connection, link=link, invoice=invoice)
-            allocated += int(link["amount_minor"])
+            allocated += _stored_integer(link["amount_minor"], "payment-link amount")
             expected_version += 1
-        total = int(invoice["total_minor"])
+        total = _stored_integer(invoice["total_minor"], "supplier invoice total")
         expected_status = "Paid" if allocated == total else "Approved"
-        if allocated > total or str(invoice["status"]) != expected_status or int(invoice["row_version"]) != expected_version:
+        if (
+            allocated > total
+            or str(invoice["status"]) != expected_status
+            or _stored_integer(invoice["row_version"], "supplier invoice row version") != expected_version
+        ):
             raise PlatformError("Supplier invoice state differs from its retained payment-link history.")
     command_links: set[str] = set()
     for command_row in connection.execute(
@@ -558,13 +573,15 @@ def _verify_link_evidence(
         payload = decode_financial_idempotency_response(outbox_row["payload_json"]).payload
     except PersistedJsonError as exc:
         raise PlatformError("Retained payment-link audit or outbox evidence is malformed.") from exc
+    amount_minor = _stored_integer(link["amount_minor"], "payment-link amount")
+    version_before = _stored_integer(link["invoice_version_before"], "payment-link invoice version")
     expected_metadata = {
         "supplier_invoice_id": str(invoice["id"]),
         "finance_effect_id": str(link["finance_effect_id"]),
         "finance_entry_id": str(link["finance_entry_id"]),
-        "amount_minor": int(link["amount_minor"]),
+        "amount_minor": amount_minor,
         "currency_code": str(link["currency_code"]),
-        "invoice_version_before": int(link["invoice_version_before"]),
+        "invoice_version_before": version_before,
     }
     expected_payload = {
         "audit_event_id": str(link["audit_event_id"]),
@@ -572,7 +589,7 @@ def _verify_link_evidence(
         "supplier_invoice_id": str(invoice["id"]),
         "finance_effect_id": str(link["finance_effect_id"]),
         "finance_entry_id": str(link["finance_entry_id"]),
-        "amount_minor": int(link["amount_minor"]),
+        "amount_minor": amount_minor,
         "currency_code": str(link["currency_code"]),
     }
     if (
@@ -596,6 +613,14 @@ def _canonical_actor_id(connection: sqlite3.Connection, actor_value: object) -> 
     actor_label = _required_text(actor_value, "retained actor")
     user = user_for_actor(connection, actor_label)
     return user.id if user is not None else actor_label
+
+
+def _stored_integer(value: object, field: str) -> int:
+    """Decode persisted integer columns without accepting floats or booleans."""
+
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise PlatformError(f"{field.capitalize()} must be an integer.")
+    return value
 
 
 def _required_text(value: object, field: str) -> str:

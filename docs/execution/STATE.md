@@ -1,5 +1,27 @@
 # Execution State
 
+## Amr evidence-bound AP payment-link slice (2026-10-04)
+
+`PROD-010` is in progress. SQLite migration 54 and PostgreSQL revision 0105
+add an immutable partial/full payment allocation between an approved supplier
+invoice and an independently reviewed, posted Manual AP/cash Finance effect.
+The persisted link uses exact positive minor units, a source-bound reference,
+scope/currency affinity, maker-checker-posting and invoice-payment separation,
+current-version serialization, idempotent command receipts, atomic audit/outbox
+evidence, and a database-owned invoice transition. The local API has scoped
+create/list endpoints with a closed projection; the server adapter derives the
+trusted effect amount before amount-bounded authorization, or the retained
+receipt amount for an exact retry after a full allocation. SQLite backup and
+restore replay link history and reject invalid evidence.
+
+Focused local domain/API/concurrency/backup/migration contracts pass. The
+PostgreSQL migration and adapter contracts pass without a configured live
+administrator plus nonowner application service, so the live nonowner and
+migration-role-admission tests are declared skips in this environment. This is
+not an inventory/GRNI/AP/GL posting cycle, external banking lifecycle,
+return/reversal, FX, tax, intercompany, capacity, availability, or compliance
+result.
+
 ## Amr sprint PostgreSQL recovery-profile fencing completion (2026-10-04)
 
 AMR-GFO-006 closes a bounded operational-recovery prerequisite on the sprint

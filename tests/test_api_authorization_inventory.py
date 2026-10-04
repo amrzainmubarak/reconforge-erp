@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 288
-EXPECTED_DIGEST = "9e7d35204d95b884bde9a810be2024985a6e78dbe6d99d5c52c304926a868370"
+EXPECTED_ROUTE_COUNT = 290
+EXPECTED_DIGEST = "1efb923b8f1e6121e083371b33741b743f3c4f9af5114c3eb2d834be52b3920d"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -97,6 +97,24 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
     assert grouped_aging.mode == "any"
     assert grouped_aging.permissions == (
         "receivables.approve", "receivables.credit_override", "receivables.manage", "receivables.read",
+    )
+    payment_link_write = next(
+        contract
+        for contract in contracts
+        if contract.method == "POST"
+        and contract.path == "/api/v1/payables/invoices/{invoice_id}/payment-links"
+    )
+    assert payment_link_write.mode == "all"
+    assert payment_link_write.permissions == ("payables.settle",)
+    payment_link_read = next(
+        contract
+        for contract in contracts
+        if contract.method == "GET"
+        and contract.path == "/api/v1/payables/invoices/{invoice_id}/payment-links"
+    )
+    assert payment_link_read.mode == "any"
+    assert payment_link_read.permissions == (
+        "payables.approve", "payables.manage", "payables.match", "payables.read", "payables.settle",
     )
     validate_authorization_surface(contracts)
 

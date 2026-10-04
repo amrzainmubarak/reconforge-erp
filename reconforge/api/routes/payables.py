@@ -228,6 +228,8 @@ def _server_payment_link_amount(
             finance_effect_id=payload.finance_effect_id,
             ap_account_id=payload.ap_account_id,
             cash_account_id=payload.cash_account_id,
+            expected_invoice_version=payload.expected_invoice_version,
+            command_id=payload.command_id,
             actor_label=actor_id,
         ),
         object_refs=(("invoice", invoice_id),),

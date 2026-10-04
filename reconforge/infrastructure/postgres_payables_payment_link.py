@@ -106,7 +106,7 @@ class PostgresPayablesPaymentLinkRepository:
             )
             if replay is not None:
                 return replay
-            if int(invoice["row_version"]) != expected_invoice_version:
+            if _stored_integer(invoice["row_version"], "supplier invoice row version") != expected_invoice_version:
                 raise PlatformError("Supplier invoice changed concurrently; reload before linking payment evidence.")
             effect = self._effect(effect_key)
             evidence = self._validate(
@@ -128,9 +128,11 @@ class PostgresPayablesPaymentLinkRepository:
                    FROM reconforge.ap_payment_links WHERE tenant_id=%s AND supplier_invoice_id=%s""",
                 (self.tenant_id, invoice_key),
             ).fetchone()
-            prior_amount = int(_value(allocated_before, "amount", 0))
+            prior_amount = _stored_integer(
+                _value(allocated_before, "amount", 0), "retained payment-link allocated amount"
+            )
             allocated_after = prior_amount + evidence.amount_minor
-            invoice_total = int(invoice["total_minor"])
+            invoice_total = _stored_integer(invoice["total_minor"], "supplier invoice total")
             if allocated_after > invoice_total:
                 raise PlatformError("Payment allocation exceeds the supplier invoice total.")
             link_id = platform_id("APPAY", workspace_id, invoice_key, evidence.finance_effect_id)
@@ -216,7 +218,8 @@ class PostgresPayablesPaymentLinkRepository:
             if (
                 updated is None
                 or str(_value(updated, "status", 0)) != expected_status
-                or int(_value(updated, "row_version", 1)) != expected_invoice_version + 1
+                or _stored_integer(_value(updated, "row_version", 1), "supplier invoice row version")
+                != expected_invoice_version + 1
             ):
                 raise PlatformError("Supplier invoice payment state was not advanced by retained payment evidence.")
             result = _result(
@@ -260,23 +263,50 @@ class PostgresPayablesPaymentLinkRepository:
         finance_effect_id: str,
         ap_account_id: str,
         cash_account_id: str,
+        expected_invoice_version: int,
+        command_id: str,
         actor_label: str,
     ) -> Decimal:
-        """Return the immutable effect amount used by bounded server policy.
+        """Return a retained or admissible effect amount for bounded server policy.
 
-        This read runs under the same tenant/RLS scope as the mutation and
-        validates the complete AP/cash shape.  The API never accepts a client
-        supplied settlement amount for ABAC evaluation.
+        This read runs under the same tenant/RLS scope as the mutation.  It
+        first recognizes an exact retained command receipt, allowing a lost
+        response for a full allocation to be retried after its invoice has
+        become ``Paid``.  A new command still validates the complete AP/cash
+        shape.  The API never accepts a client supplied settlement amount for
+        ABAC evaluation.
         """
 
         invoice_key = _text(invoice_id, "Supplier invoice id")
         effect_key = _text(finance_effect_id, "Finance effect id")
         ap_account = _text(ap_account_id, "Accounts payable account id")
         cash_account = _text(cash_account_id, "Cash account id")
+        command_key = _text(command_id, "Command id")
         actor_id = _text(actor_label, "Settlement actor id")
+        if len(command_key) > 160:
+            raise PlatformError("Command id must not exceed 160 characters.")
+        try:
+            digest = payment_link_request_digest(
+                invoice_id=invoice_key,
+                finance_effect_id=effect_key,
+                ap_account_id=ap_account,
+                cash_account_id=cash_account,
+                expected_invoice_version=expected_invoice_version,
+                settlement_actor_id=actor_id,
+            )
+        except PayablesPaymentLinkError as exc:
+            raise PlatformError(str(exc)) from exc
         with self._transaction():
             self._assert_current_actor(actor_id)
             invoice = self._invoice(invoice_key)
+            replay = self._replay_if_present(
+                workspace_id=str(invoice["workspace_id"]),
+                command_id=command_key,
+                actor_id=actor_id,
+                request_digest=digest,
+            )
+            if replay is not None:
+                return Decimal(_stored_integer(replay.get("amount_minor"), "retained payment-link amount"))
             effect = self._effect(effect_key)
             evidence = self._validate(
                 invoice=invoice,
@@ -314,13 +344,21 @@ class PostgresPayablesPaymentLinkRepository:
             raise PlatformError("Authenticated settlement actor is unavailable.")
 
     def _invoice(self, invoice_id: str, *, lock: bool = False) -> dict[str, Any]:
-        suffix = " FOR NO KEY UPDATE" if lock else ""
-        row = self.connection.execute(
-            """SELECT id,workspace_id,organization_id,legal_entity_id,currency_code,total_minor,status,
-                      created_by,approved_by,row_version
-               FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s""" + suffix,
-            (self.tenant_id, invoice_id),
-        ).fetchone()
+        if lock:
+            row = self.connection.execute(
+                """SELECT id,workspace_id,organization_id,legal_entity_id,currency_code,total_minor,status,
+                          created_by,approved_by,row_version
+                   FROM reconforge.ap_supplier_invoices
+                   WHERE tenant_id=%s AND id=%s FOR NO KEY UPDATE""",
+                (self.tenant_id, invoice_id),
+            ).fetchone()
+        else:
+            row = self.connection.execute(
+                """SELECT id,workspace_id,organization_id,legal_entity_id,currency_code,total_minor,status,
+                          created_by,approved_by,row_version
+                   FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s""",
+                (self.tenant_id, invoice_id),
+            ).fetchone()
         if row is None:
             raise PlatformError("Supplier invoice not found.")
         return _row(row)
@@ -416,7 +454,7 @@ def _result(
     audit_event_id: str,
     outbox_event_id: str,
 ) -> dict[str, Any]:
-    invoice_total = int(invoice["total_minor"])
+    invoice_total = _stored_integer(invoice["total_minor"], "supplier invoice total")
     return {
         "payment_link_id": link_id,
         "supplier_invoice_id": str(invoice["id"]),
@@ -448,16 +486,18 @@ def _result_from_link(connection: Any, tenant_id: str, link: Mapping[str, object
     ).fetchone()
     if invoice is None:
         raise PlatformError("Retained payment link references a missing supplier invoice.")
-    total = int(_value(invoice, "total_minor", 1))
+    total = _stored_integer(_value(invoice, "total_minor", 1), "supplier invoice total")
     allocated_row = connection.execute(
         """SELECT COALESCE(SUM(amount_minor),0) AS amount
            FROM reconforge.ap_payment_links
            WHERE tenant_id=%s AND supplier_invoice_id=%s AND invoice_version_before<=%s""",
         (tenant_id, link["supplier_invoice_id"], link["invoice_version_before"]),
     ).fetchone()
-    allocated = int(_value(allocated_row, "amount", 0))
+    allocated = _stored_integer(_value(allocated_row, "amount", 0), "retained payment-link allocated amount")
     if allocated > total:
         raise PlatformError("Retained payment link has an invalid supplier invoice allocation.")
+    amount_minor = _stored_integer(link["amount_minor"], "payment-link amount")
+    version_before = _stored_integer(link["invoice_version_before"], "payment-link invoice version")
     return {
         "payment_link_id": str(link["id"]),
         "supplier_invoice_id": str(link["supplier_invoice_id"]),
@@ -465,14 +505,14 @@ def _result_from_link(connection: Any, tenant_id: str, link: Mapping[str, object
         "finance_entry_id": str(link["finance_entry_id"]),
         "ap_account_id": str(link["ap_account_id"]),
         "cash_account_id": str(link["cash_account_id"]),
-        "amount_minor": int(link["amount_minor"]),
+        "amount_minor": amount_minor,
         "currency_code": str(link["currency_code"]),
         "payment_date": str(link["payment_date"]),
         "finance_validation_digest": str(link["finance_validation_digest"]),
         "finance_posted_actor_id": str(link["finance_posted_actor_id"]),
         "settlement_actor_id": str(link["settlement_actor_id"]),
-        "invoice_version_before": int(link["invoice_version_before"]),
-        "invoice_version_after": int(link["invoice_version_before"]) + 1,
+        "invoice_version_before": version_before,
+        "invoice_version_after": version_before + 1,
         "allocated_minor": allocated,
         "outstanding_minor": total - allocated,
         "invoice_status": "Paid" if allocated == total else "Approved",
@@ -488,6 +528,14 @@ def _text(value: object, field: str) -> str:
     if not text or len(text) > 160 or any(ord(character) < 32 or ord(character) == 127 for character in text):
         raise PlatformError(f"{field} is invalid.")
     return text
+
+
+def _stored_integer(value: object, field: str) -> int:
+    """Decode persisted integer columns without accepting floats or booleans."""
+
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise PlatformError(f"{field} must be an integer.")
+    return value
 
 
 def _value(row: Any, key: str, index: int) -> Any:

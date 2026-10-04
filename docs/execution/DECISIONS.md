@@ -15,6 +15,27 @@ bound artifact. Existing `operations.backup.create` and
 This is a local fake-tool contract, not a live-service, RPO/RTO, key-custody,
 HA/DR, or production-recovery assertion.
 
+## D-AMR-GFO-007 — Evidence-bound AP payment allocation (2026-10-04)
+
+ADR0831 accepts an immutable allocation link, not a second posting engine. An
+approved supplier invoice can consume only an independently reviewed and
+posted Manual Finance effect whose retained snapshot is exactly one AP debit and
+one cash credit in the invoice currency, amount, hierarchy, date, and
+`AP-PAYMENT:<invoice-id>` reference. The current invoice version is part of the
+unique evidence, and a database trigger derives the next invoice state inside
+the same transaction. The link, command receipt, audit event, and outbox event
+must agree before commit. Partial exact allocations retain `Approved`; an exact
+cumulative amount alone derives `Paid`.
+
+The server obtains the persisted effect amount before amount-bounded policy
+evaluation, so the client cannot set that policy input; an exact retained
+command replay instead supplies its immutable receipt amount after a full
+allocation has made the invoice `Paid`. PostgreSQL uses a `FOR NO KEY UPDATE`
+invoice lock plus RLS and a nonowner fixture; SQLite uses an immediate
+transaction plus equivalent trigger admission. Both defer external payment,
+automatic receipt/GRNI/inventory/AP/GL effects, reversals, bank status, FX, tax,
+intercompany, full recovery drills, capacity, and availability claims.
+
 ## D-AMR-GFO-004 — Freeze fenced outbox recovery as a bounded reliability primitive (2026-10-04)
 
 ADR0827 is accepted with SQLite migration 53 and PostgreSQL revision 0103.

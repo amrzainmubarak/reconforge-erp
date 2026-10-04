@@ -12,7 +12,7 @@ CREATE TABLE ap_payment_links (
     finance_entry_id TEXT NOT NULL UNIQUE REFERENCES ledger_entries(id) ON DELETE RESTRICT,
     ap_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
     cash_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
-    amount_minor INTEGER NOT NULL CHECK(amount_minor > 0),
+    amount_minor INTEGER NOT NULL CHECK(amount_minor BETWEEN 1 AND 9000000000000000000),
     currency_code TEXT NOT NULL,
     payment_date TEXT NOT NULL,
     finance_validation_digest TEXT NOT NULL

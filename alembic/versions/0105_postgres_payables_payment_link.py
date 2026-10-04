@@ -2,7 +2,6 @@
 
 from alembic import op
 
-
 revision = "0105_pg_payables_payment_link"
 down_revision = "0104_pg_exception_review_api"
 branch_labels = None
@@ -13,6 +12,16 @@ depends_on = None
 # invoice and a Finance posting is financial evidence and must not drift when a
 # later runtime adapter evolves.
 UPGRADE_SQL = r"""
+DO $payment$
+BEGIN
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_roles
+   WHERE rolname=current_user AND (rolsuper OR rolbypassrls)
+ ) THEN
+  RAISE EXCEPTION 'payables payment-link migration requires a role that bypasses forced row security';
+ END IF;
+END $payment$;
+
 CREATE TABLE reconforge.ap_payment_links (
  tenant_id TEXT NOT NULL,id TEXT NOT NULL,workspace_id TEXT NOT NULL,organization_id TEXT NOT NULL,
  legal_entity_id TEXT NOT NULL,supplier_invoice_id TEXT NOT NULL,finance_effect_id TEXT NOT NULL,
@@ -78,6 +87,8 @@ BEGIN
      IS DISTINCT FROM (NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id,NEW.finance_entry_id,
       NEW.currency_code,NEW.finance_validation_digest,NEW.finance_posted_actor_id)
   OR finance_effect.source_kind<>'Manual' OR finance_effect.source_id<>finance_effect.entry_id OR finance_effect.reverses_effect_id IS NOT NULL
+  OR invoice.created_by IS NULL OR btrim(invoice.created_by)=''
+  OR invoice.approved_by IS NULL OR btrim(invoice.approved_by)=''
   OR NEW.settlement_actor_id IN (invoice.created_by,invoice.approved_by)
   OR NEW.finance_posted_actor_id IN (invoice.created_by,invoice.approved_by)
   OR finance_effect.validator_actor_id IS NULL
@@ -142,7 +153,7 @@ BEGIN
      WHERE link.tenant_id=OLD.tenant_id AND link.supplier_invoice_id=OLD.id
        AND link.invoice_version_before=OLD.row_version) INTO current_link;
   IF NOT current_link OR NEW.row_version<>OLD.row_version+1
-     OR NEW.status<>CASE WHEN allocated=OLD.total_minor THEN 'Paid' ELSE 'Approved' END
+     OR NEW.status<>(CASE WHEN allocated=OLD.total_minor THEN 'Paid' ELSE 'Approved' END)
   THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Approved supplier invoice payment state requires its exact immutable payment link.'; END IF;
  END IF;
  RETURN NEW;
@@ -254,6 +265,16 @@ CREATE TRIGGER ap_payment_link_permission_role_seed AFTER INSERT ON reconforge.i
 
 
 DOWNGRADE_SQL = r"""
+DO $payment$
+BEGIN
+ IF NOT EXISTS (
+   SELECT 1 FROM pg_roles
+   WHERE rolname=current_user AND (rolsuper OR rolbypassrls)
+ ) THEN
+  RAISE EXCEPTION 'payables payment-link migration requires a role that bypasses forced row security';
+ END IF;
+END $payment$;
+
 DO $payment$
 BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.ap_payment_links)

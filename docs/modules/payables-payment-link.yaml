@@ -1,0 +1,58 @@
+id: payables-payment-link
+name: Evidence-bound supplier invoice settlement link
+version: 1.0.0
+maturity: experimental
+implementation_status: bounded-ap-finance-settlement-control
+owner: business-finance
+dependencies: [payables, finance-posting, platform.identity, platform.authorization, platform.audit-outbox]
+incompatible_versions: [mutable-ap-payment-allocation, implicit-ap-cash-posting]
+data_classification: financial-sensitive
+retention_policy: retain-immutable-payment-link-command-audit-and-outbox-evidence
+permissions: [payables.read, payables.manage, payables.match, payables.approve, payables.settle]
+default_roles: [admin, controller]
+migrations: [sqlite-54-payables-finance-payment-link, postgresql-0105-pg-payables-payment-link]
+domain_invariants:
+  - every-allocation-binds-one-approved-invoice-to-one-reviewed-posted-manual-finance-effect
+  - invoice-effect-and-accounts-share-workspace-organization-legal-entity-and-currency
+  - allocation-amount-is-a-positive-exact-minor-unit-value-with-no-implicit-conversion
+  - finance-snapshot-has-exactly-one-ap-debit-and-one-cash-credit-of-the-allocation-amount
+  - finance-effect-source-and-external-reference-bind-to-the-supplier-invoice
+  - finance-preparation-review-posting-and-invoice-payment-duties-are-separated-where-evidence-identifies-actors
+  - invoice-version-and-cumulative-allocation-are-serialized-and-never-exceed-invoice-total
+  - invoice-becomes-paid-only-on-exact-cumulative-allocation-and-links-commands-audit-and-outbox-are-immutable
+  - idempotency-key-replay-returns-the-retained-response-and-changed-command-content-is-refused
+domain_events: [ap.payment_linked]
+api_routes:
+  - POST /api/v1/payables/invoices/{invoice_id}/payment-links
+  - GET /api/v1/payables/invoices/{invoice_id}/payment-links
+cli_commands: []
+ui_routes: []
+import_schemas: []
+export_schemas: []
+synthetic_fixtures:
+  - tests/test_payables_payment_link.py
+  - tests/test_postgres_payables_payment_link.py
+threat_model:
+  - stale-or-concurrent-over-allocation-of-one-supplier-invoice
+  - direct-sql-link-or-paid-status-without-a-matching-finance-transition
+  - forged-finance-snapshot-account-currency-date-or-digest
+  - invoice-creator-or-approver-self-settlement-and-finance-maker-checker-poster-collision
+  - idempotency-key-substitution-or-mutated-command-receipt
+  - cross-tenant-workspace-organization-or-legal-entity-payment-link-access
+  - audit-outbox-or-backup-evidence-tampering
+  - client-chosen-amount-bypassing-server-authorization-bounds
+  - non-bypass-migration-role-observing-an-empty-forced-rls-view-before-seeding-or-downgrade
+benchmarks: []
+rollback_plan: retain-payment-evidence-and-restore-a-verified-pre-54-or-pre-0105-backup; populated-postgresql-downgrade-refuses-evidence-loss
+test_matrix:
+  - tests/test_payables_payment_link.py
+  - tests/test_payables_approval_integrity.py
+  - tests/test_db_backup_restore.py
+  - tests/test_postgres_payables_payment_link.py
+  - tests/test_postgres_operations.py
+limitations:
+  - payment-link-requires-an-already-reviewed-and-posted-manual-finance-effect
+  - postgres-live-acceptance-requires-an-explicit-nonowner-application-dsn-and-administrator-dsn
+  - no-automatic-receipt-to-inventory-grni-ap-or-general-ledger-effect-is-created
+  - no-bank-instruction-status-return-reversal-fx-tax-intercompany-or-void-lifecycle-is-provided
+  - no-standalone-ui-or-production-capacity-availability-or-compliance-claim-is-made

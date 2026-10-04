@@ -1,5 +1,22 @@
 # ReconForge Execution Evidence Log
 
+- PROD-010 evidence-bound AP payment link (2026-10-04): SQLite migration 54
+  and PostgreSQL revision 0105 retain exact minor-unit partial/full allocations,
+  independent Finance preparation/review/posting, invoice actor separation,
+  immutable command/audit/outbox evidence, direct-write refusal, concurrent
+  allocation serialization, closed local API responses, server trusted-amount
+  replay after a fully settled invoice, and backup/restore admission.
+  `tests/test_payables_payment_link.py`,
+  `tests/test_payables_approval_integrity.py`,
+  `tests/test_outbox_fencing_migration.py`,
+  `tests/test_sqlite_inventory_receipt_migration.py`, and
+  `tests/test_postgres_payables_payment_link.py` pass their local/static
+  contracts. The PostgreSQL live nonowner/row-decoder/concurrency and
+  migration-role-admission fixtures are declared skipped without configured
+  administrator and application DSNs; no live PostgreSQL, external payment,
+  inventory/GRNI, automatic GL, capacity, availability, or compliance result is
+  claimed.
+
 - AMR-GFO-006 profile-pinned PostgreSQL native recovery (2026-10-04):
   `tests/test_postgres_backup.py`, `tests/test_encrypted_backup.py`,
   `tests/test_backup_restore_matrix.py`, `tests/test_phase_1_exit_audit.py`,

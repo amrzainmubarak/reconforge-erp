@@ -1,5 +1,23 @@
 # Execution State
 
+## Amr sprint enterprise-quality outbox fencing completion (2026-10-04)
+
+AMR-GFO-004 is complete at its bounded reliability foundation on the sprint
+branch. SQLite migration 53 and PostgreSQL revision 0103 retain monotonic lease
+generations, explicit historical `2/2` watermarks, immutable delivery evidence,
+bounded expiry recovery, and downgrade refusal when retained evidence exists.
+SQLite backup/restore preserves the parent-before-child evidence graph, rejects
+checksum-valid incomplete or forged evidence, restores the canonical guard
+bundle only in an unpublished temporary database, and re-verifies after the
+compatibility migration path. Named evidence includes 15 SQLite
+migration/backup cases, 51 SQLite delivery/recovery/continuity/worker cases,
+and the live PostgreSQL migration/recovery suite under a non-superuser,
+non-`BYPASSRLS` role; focused Ruff and Mypy pass. The shared PostgreSQL runtime
+role and server application remain the actor-authorization boundary for a
+structurally valid raw transition. External transport remains bounded
+at-least-once, and broker HA, production capacity, and cross-host recovery are
+not claimed.
+
 ## Amr sprint governed budget-control completion (2026-10-03)
 
 AMR-GFO-003 is complete at its bounded backend/API foundation on the sprint

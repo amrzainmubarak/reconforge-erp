@@ -25,8 +25,13 @@ from reconforge.db.migrations import MIGRATIONS, database_status, run_migrations
 from reconforge.domain.budget_control import BudgetControlError
 from reconforge.domain.models import utc_now_text
 from reconforge.domain.notification_inbox import InboxPersistenceError
+from reconforge.domain.outbox_fencing import OutboxEvidenceIntegrityError, validate_outbox_fencing_storage
 from reconforge.infrastructure.budget_control_verification import verify_sqlite_budget_storage
 from reconforge.infrastructure.notification_inbox_verification import verify_sqlite_inbox_storage
+from reconforge.infrastructure.outbox_fencing_schema import (
+    SQLITE_OUTBOX_FENCING_GUARD_SQL,
+    SQLITE_OUTBOX_FENCING_RESTORE_TRIGGER_NAMES,
+)
 from reconforge.infrastructure.sqlite_budget_control_schema import BUDGET_52_RESTORE_ADMISSION_TRIGGERS
 from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
     RECEIPT_BACKUP_COLUMNS,
@@ -62,6 +67,11 @@ BACKUP_JSON_POLICY = StructuredDocumentPolicy(
     max_yaml_aliases=1,
 )
 _BACKUP_READ_CHUNK_BYTES = 1024 * 1024
+_OUTBOX_FENCING_SCHEMA_VERSION = 53
+_OUTBOX_FENCING_EVENT_COLUMNS = frozenset({"lease_generation", "lease_generation_floor"})
+_OUTBOX_FENCING_EVIDENCE_COLUMNS = frozenset(
+    {"evidence_id", "event_id", "lease_generation", "action", "worker_id", "occurred_at", "attempts"}
+)
 
 BACKUP_TABLES = [
     "workspaces",
@@ -161,6 +171,7 @@ BACKUP_TABLES = [
     "match_rules",
     "match_results",
     "outbox_events",
+    "outbox_delivery_evidence",
     "exceptions_queue",
     "metric_definitions",
     "metric_snapshots",
@@ -335,6 +346,7 @@ BACKUP_SELECT_QUERIES = {
     "match_rules": "SELECT * FROM match_rules ORDER BY job_id, rule_name",
     "match_results": "SELECT * FROM match_results ORDER BY job_id, left_id, right_id, match_type",
     "outbox_events": "SELECT * FROM outbox_events ORDER BY created_at, id",
+    "outbox_delivery_evidence": "SELECT * FROM outbox_delivery_evidence ORDER BY event_id, evidence_id",
     "exceptions_queue": "SELECT * FROM exceptions_queue ORDER BY status, risk_rating, created_at, id",
     "metric_definitions": "SELECT * FROM metric_definitions ORDER BY metric_key",
     "metric_snapshots": "SELECT * FROM metric_snapshots ORDER BY workspace_id, period_name, metric_key",
@@ -464,6 +476,7 @@ BACKUP_DELETE_QUERIES = {
     "match_rules": "DELETE FROM match_rules",
     "match_results": "DELETE FROM match_results",
     "outbox_events": "DELETE FROM outbox_events",
+    "outbox_delivery_evidence": "DELETE FROM outbox_delivery_evidence",
     "exceptions_queue": "DELETE FROM exceptions_queue",
     "metric_definitions": "DELETE FROM metric_definitions",
     "metric_snapshots": "DELETE FROM metric_snapshots",
@@ -1613,6 +1626,17 @@ BACKUP_INSERT_COLUMNS = {
         "locked_at",
         "locked_by",
         "dead_lettered_at",
+        "lease_generation",
+        "lease_generation_floor",
+    ),
+    "outbox_delivery_evidence": (
+        "evidence_id",
+        "event_id",
+        "lease_generation",
+        "action",
+        "worker_id",
+        "occurred_at",
+        "attempts",
     ),
     "exceptions_queue": (
         "id",
@@ -2428,8 +2452,15 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO outbox_events (
             id, event_type, aggregate_type, aggregate_id, payload_json,
             created_at, published_at, attempts, last_error, available_at,
-            locked_at, locked_by, dead_lettered_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            locked_at, locked_by, dead_lettered_at, lease_generation,
+            lease_generation_floor
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "outbox_delivery_evidence": """
+        INSERT INTO outbox_delivery_evidence (
+            evidence_id, event_id, lease_generation, action, worker_id,
+            occurred_at, attempts
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
     """,
     "exceptions_queue": """
         INSERT INTO exceptions_queue (
@@ -2564,6 +2595,93 @@ for _receipt_table, _receipt_columns in RECEIPT_BACKUP_COLUMNS.items():
     BACKUP_INSERT_QUERIES[_receipt_table] = (
         f"INSERT INTO {_receipt_table} ({','.join(_receipt_columns)}) VALUES ({','.join('?' for _ in _receipt_columns)})"  # nosec B608
     )
+
+
+def _require_outbox_fencing_schema(
+    connection: sqlite3.Connection,
+    *,
+    require_guards: bool = False,
+) -> None:
+    required = {
+        "outbox_events": _OUTBOX_FENCING_EVENT_COLUMNS,
+        "outbox_delivery_evidence": _OUTBOX_FENCING_EVIDENCE_COLUMNS,
+    }
+    for table, columns in required.items():
+        if not _table_exists(connection, table):
+            raise DBBridgeError("Outbox fencing backup schema is unavailable.")
+        if not columns <= _table_info_columns(connection, table):
+            raise DBBridgeError("Outbox fencing backup schema omits required columns.")
+    if require_guards:
+        installed = {
+            str(row["name"])
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()
+        }
+        if not set(SQLITE_OUTBOX_FENCING_RESTORE_TRIGGER_NAMES) <= installed:
+            raise DBBridgeError("Outbox fencing backup guard is unavailable.")
+
+
+def _outbox_fencing_delivery_state(event: dict[str, Any]) -> str:
+    published = event["published_at"] is not None
+    locked = event["locked_at"] is not None
+    owner = event["locked_by"] is not None
+    dead = event["dead_lettered_at"] is not None
+    if published:
+        return "invalid" if locked or owner or dead else "published"
+    if dead:
+        return "invalid" if locked or owner else "dead"
+    if locked != owner:
+        return "invalid"
+    return "claimed" if locked else "pending"
+
+
+def _verify_outbox_fencing_storage(
+    connection: sqlite3.Connection,
+    *,
+    require_guards: bool = False,
+) -> None:
+    """Validate retained fenced history in a source or temporary restore database."""
+
+    _require_outbox_fencing_schema(connection, require_guards=require_guards)
+    try:
+        events: list[dict[str, Any]] = []
+        for row in connection.execute(
+            """SELECT id AS event_id, lease_generation, lease_generation_floor,
+            published_at, locked_at, locked_by, dead_lettered_at
+            FROM outbox_events ORDER BY id"""
+        ).fetchall():
+            event = dict(row)
+            event["delivery_state"] = _outbox_fencing_delivery_state(event)
+            events.append(event)
+        evidence = [
+            dict(row)
+            for row in connection.execute(
+                """SELECT event_id, lease_generation, action, worker_id, attempts
+                FROM outbox_delivery_evidence ORDER BY event_id, evidence_id"""
+            ).fetchall()
+        ]
+        validate_outbox_fencing_storage(events=events, evidence=evidence)
+    except (OutboxEvidenceIntegrityError, sqlite3.DatabaseError, KeyError, TypeError) as exc:
+        raise DBBridgeError("Outbox fencing backup evidence verification failed.") from exc
+
+
+def _verify_outbox_fencing_backup(connection: sqlite3.Connection, *, schema_version: int) -> None:
+    if schema_version >= _OUTBOX_FENCING_SCHEMA_VERSION:
+        _verify_outbox_fencing_storage(connection, require_guards=True)
+
+
+def _drop_outbox_fencing_restore_guards(connection: sqlite3.Connection) -> None:
+    """Disable the guard bundle only within an unpublished temporary database."""
+
+    _require_outbox_fencing_schema(connection, require_guards=True)
+    for trigger_name in SQLITE_OUTBOX_FENCING_RESTORE_TRIGGER_NAMES:
+        connection.execute(f"DROP TRIGGER {_quote_identifier(trigger_name, kind='trigger')}")  # nosec B608
+
+
+def _reinstall_outbox_fencing_restore_guards(connection: sqlite3.Connection) -> None:
+    """Reinstall canonical guards after exact evidence verification in the temp database."""
+
+    connection.executescript(SQLITE_OUTBOX_FENCING_GUARD_SQL)
+    _require_outbox_fencing_schema(connection, require_guards=True)
 
 
 @dataclass(frozen=True)
@@ -2767,7 +2885,23 @@ def _validate_backup_document(backup: dict[str, Any]) -> int:
         for row in rows:
             if not isinstance(row, dict) or not all(isinstance(key, str) for key in row):
                 raise DBBridgeError("Backup table row is invalid.")
+    if schema_version >= _OUTBOX_FENCING_SCHEMA_VERSION:
+        _validate_outbox_fencing_backup_document(tables)
     return schema_version
+
+
+def _validate_outbox_fencing_backup_document(tables: dict[str, Any]) -> None:
+    required = {
+        "outbox_events": _OUTBOX_FENCING_EVENT_COLUMNS,
+        "outbox_delivery_evidence": _OUTBOX_FENCING_EVIDENCE_COLUMNS,
+    }
+    for table, columns in required.items():
+        rows = tables.get(table)
+        if not isinstance(rows, list):
+            raise DBBridgeError("Backup omits required outbox fencing tables.")
+        for row in rows:
+            if not isinstance(row, dict) or not columns <= set(row):
+                raise DBBridgeError("Backup omits required outbox fencing columns.")
 
 
 def _verify_receivables_policy_backup(connection: sqlite3.Connection) -> None:
@@ -2837,6 +2971,7 @@ def _backup_payload(connection: sqlite3.Connection, *, created_at: str, schema_v
     _verify_receivables_policy_backup(connection)
     _verify_notification_inbox_backup(connection, required=schema_version >= 51)
     _verify_budget_control_backup(connection, required=schema_version >= 52)
+    _verify_outbox_fencing_backup(connection, schema_version=schema_version)
     return {
         "backup_format_version": BACKUP_FORMAT_VERSION,
         "created_at": created_at,
@@ -2869,6 +3004,7 @@ def create_backup(
         _verify_receivables_policy_backup(connection)
         _verify_notification_inbox_backup(connection, required=schema_version >= 51)
         _verify_budget_control_backup(connection, required=schema_version >= 52)
+        _verify_outbox_fencing_backup(connection, schema_version=schema_version)
         resolve_output_dir(resolved_output_dir)
         ensure_outbox_schema(connection)
         append_audit_event(
@@ -3415,10 +3551,13 @@ def restore_backup(
     reversal_statuses: list[tuple[str, str, object, object, str, str]] = []
     try:
         backup_schema_version = int(backup["schema_version"])
+        restoring_outbox_fencing = backup_schema_version >= _OUTBOX_FENCING_SCHEMA_VERSION
         run_migrations(temp_path, target_version=backup_schema_version)
         connection = connect(temp_path, require_exists=True)
         try:
             ensure_outbox_schema(connection)
+            if restoring_outbox_fencing:
+                _drop_outbox_fencing_restore_guards(connection)
             _clear_restore_tables(connection)
             policy_insert_guards: list[str] = []
             posting_insert_guards: list[str] = []
@@ -3488,6 +3627,10 @@ def restore_backup(
                 table not in tables for table in ("budget_envelopes", "budget_commitment_events", "budget_commands")
             ):
                 raise DBBridgeError("Backup omits retained budget-control tables.")
+            if restoring_outbox_fencing and any(
+                table not in tables for table in ("outbox_events", "outbox_delivery_evidence")
+            ):
+                raise DBBridgeError("Backup omits required outbox fencing tables.")
             for table in BACKUP_TABLES:
                 rows = tables.get(table, [])
                 if table in {"finance_posting_effects", "finance_posting_commands", *RECEIPT_TABLES}:
@@ -3804,6 +3947,9 @@ def restore_backup(
                 if backup_schema_version >= 50:
                     _insert_rows(connection, table="inventory_receipt_commands", rows=tables["inventory_receipt_commands"])
                 _verify_posting_backup(connection)
+            if restoring_outbox_fencing:
+                _verify_outbox_fencing_storage(connection)
+                _reinstall_outbox_fencing_restore_guards(connection)
             for guard_sql in policy_insert_guards + posting_insert_guards + receipt_insert_guards + budget_insert_guards:
                 connection.execute(guard_sql)
             _verify_budget_control_backup(connection, required=backup_schema_version >= 52)
@@ -3817,6 +3963,8 @@ def restore_backup(
             foreign_key_issues = connection.execute("PRAGMA foreign_key_check").fetchall()
             if foreign_key_issues:
                 raise DBBridgeError("Backup restore contains invalid table relationships.")
+            if MIGRATIONS[-1].version >= _OUTBOX_FENCING_SCHEMA_VERSION:
+                _verify_outbox_fencing_storage(connection, require_guards=True)
             _verify_posting_backup(connection)
             _verify_receivables_policy_backup(connection)
             _verify_notification_inbox_backup(connection, required=True)

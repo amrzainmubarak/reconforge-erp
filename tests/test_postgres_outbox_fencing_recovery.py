@@ -16,7 +16,11 @@ from uuid import uuid4
 import pytest
 
 from reconforge.benchmark.outbox_recovery import measure_bounded_recovery
-from reconforge.infrastructure.outbox_fencing_schema import POSTGRES_OUTBOX_FENCING_SCHEMA_SQL
+from reconforge.infrastructure.outbox_fencing_schema import (
+    POSTGRES_OUTBOX_FENCING_SCHEMA_SQL,
+    PostgresOutboxFencingMigrationError,
+    verify_postgres_outbox_fencing_migration_identity,
+)
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -59,16 +63,29 @@ def runtime() -> Iterator[Runtime]:
         server.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database)))
         try:
             os.environ["RECONFORGE_POSTGRES_DSN"] = _database_dsn(admin_dsn, database)
-            command.upgrade(Config(str(Path(__file__).resolve().parents[1] / "alembic.ini")), "0100_pg_inventory_receipt")
+            configuration = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+            command.upgrade(configuration, "0102_pg_budget_control")
             admin = psycopg.connect(_database_dsn(admin_dsn, database), autocommit=True)
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES('legacy_fencing','Synthetic legacy lease')")
             admin.execute("""INSERT INTO reconforge.outbox_events(
                 tenant_id,event_id,event_type,aggregate_type,aggregate_id,payload,status,claimed_at,claimed_by,attempt_count)
                 VALUES('legacy_fencing','legacy','test','test','legacy','{}'::jsonb,'Claimed',
                 clock_timestamp()+interval '1 hour','reused-worker',3)""")
-            admin.execute(POSTGRES_OUTBOX_FENCING_SCHEMA_SQL)
+            admin.execute("""INSERT INTO reconforge.outbox_events(
+                tenant_id,event_id,event_type,aggregate_type,aggregate_id,payload,status,published_at,attempt_count)
+                VALUES('legacy_fencing','legacy-published','test','test','legacy-published','{}'::jsonb,'Published',
+                clock_timestamp(),0)""")
+            command.upgrade(configuration, "0103_pg_outbox_fencing")
             admin.execute(sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(app_role)))
             admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}").format(sql.Identifier(app_role)))
+            admin.execute(
+                sql.SQL("REVOKE INSERT,UPDATE,DELETE ON TABLE reconforge.outbox_delivery_evidence FROM {}").format(
+                    sql.Identifier(app_role)
+                )
+            )
+            admin.execute(
+                sql.SQL("GRANT SELECT ON TABLE reconforge.outbox_delivery_evidence TO {}").format(sql.Identifier(app_role))
+            )
             factory = PostgresConnectionFactory(PostgresSettings(dsn=_database_dsn(app_dsn, database), require_tls=False))
             with factory.connect() as connection:
                 role = connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
@@ -252,11 +269,164 @@ def test_evidence_immutable_and_fencing_install_repeatable(runtime: Runtime, ten
     assert runtime.admin.execute("SELECT lease_generation FROM reconforge.outbox_events WHERE tenant_id=%s", (tenant,)).fetchone()[0] == 1
 
 
+def test_app_role_cannot_watermark_or_bypass_delivery_state(runtime: Runtime, tenant: str) -> None:
+    import psycopg
+
+    with pytest.raises(PostgresOutboxFencingMigrationError), _repository(runtime, tenant) as repository:
+        verify_postgres_outbox_fencing_migration_identity(repository.connection)
+    with pytest.raises(psycopg.Error, match="requires a role that bypasses forced row security"), _repository(
+        runtime, tenant
+    ) as repository:
+        repository.connection.execute(POSTGRES_OUTBOX_FENCING_SCHEMA_SQL)
+    with pytest.raises(psycopg.Error, match="initial generation"), _repository(runtime, tenant) as repository:
+        repository.connection.execute(
+            """INSERT INTO reconforge.outbox_events(
+            tenant_id,event_id,event_type,aggregate_type,aggregate_id,payload,
+            lease_generation,lease_generation_floor)
+            VALUES(%s,'unfenced','test','test','unfenced','{}'::jsonb,0,2)""",
+            (tenant,),
+        )
+    _seed(runtime, tenant)
+    with pytest.raises(psycopg.Error, match="live claimed generation"), _repository(runtime, tenant) as repository:
+        repository.connection.execute(
+            """UPDATE reconforge.outbox_events
+            SET status='Published',published_at=clock_timestamp(),claimed_at=NULL,claimed_by=NULL,last_error=NULL
+            WHERE tenant_id=%s AND event_id='event-0'""",
+            (tenant,),
+        )
+    with _repository(runtime, tenant) as repository:
+        claim = repository.claim_pending(tenant_id=tenant, worker_id="worker")[0]
+        repository.mark_published(
+            tenant_id=tenant,
+            event_id=claim.id,
+            worker_id="worker",
+            lease_generation=claim.lease_generation,
+        )
+
+
+def test_shared_runtime_role_can_form_a_structurally_valid_delivery_transition(runtime: Runtime, tenant: str) -> None:
+    """Direct parent DML remains inside the documented shared-runtime trust boundary."""
+
+    _seed(runtime, tenant)
+    with _repository(runtime, tenant) as repository:
+        repository.connection.execute(
+            """UPDATE reconforge.outbox_events
+            SET status='Claimed',lease_generation=lease_generation+1,attempt_count=attempt_count+1,
+                claimed_at=clock_timestamp()+interval '1 hour',claimed_by='raw-runtime-worker'
+            WHERE tenant_id=%s AND event_id='event-0'""",
+            (tenant,),
+        )
+        repository.connection.execute(
+            """UPDATE reconforge.outbox_events
+            SET status='Published',claimed_at=NULL,claimed_by=NULL,published_at=clock_timestamp(),last_error=NULL
+            WHERE tenant_id=%s AND event_id='event-0'""",
+            (tenant,),
+        )
+        state = repository.connection.execute(
+            "SELECT status,lease_generation FROM reconforge.outbox_events WHERE tenant_id=%s AND event_id='event-0'",
+            (tenant,),
+        ).fetchone()
+        evidence = repository.connection.execute(
+            "SELECT action,worker_id FROM reconforge.outbox_delivery_evidence "
+            "WHERE tenant_id=%s AND event_id='event-0' ORDER BY occurred_at,action",
+            (tenant,),
+        ).fetchall()
+        assert state is not None and tuple(state) == ("Published", 1)
+        assert [tuple(row) for row in evidence] == [
+            ("claimed", "raw-runtime-worker"),
+            ("published", "raw-runtime-worker"),
+        ]
+
+
+def test_evidence_admission_rejects_app_forgery_and_hierarchy_mismatch(runtime: Runtime, tenant: str) -> None:
+    import psycopg
+
+    scope = dict(workspace_id="workspace-a", organization_id="organization-a", legal_entity_id="entity-a")
+    _seed(runtime, tenant, **scope)
+    with _repository(runtime, tenant, **scope) as repository:
+        claim = repository.claim_pending(tenant_id=tenant, worker_id="worker", **scope)[0]
+    with pytest.raises(psycopg.Error, match="permission denied"), _repository(
+        runtime, tenant, **scope
+    ) as repository:
+        repository.connection.execute(
+            """INSERT INTO reconforge.outbox_delivery_evidence(
+            tenant_id,event_id,workspace_id,organization_id,legal_entity_id,
+            lease_generation,action,worker_id,attempts)
+            VALUES(%s,%s,%s,%s,%s,%s,'published','forged',%s)""",
+            (
+                tenant,
+                claim.id,
+                scope["workspace_id"],
+                scope["organization_id"],
+                scope["legal_entity_id"],
+                claim.lease_generation,
+                claim.attempt_count,
+            ),
+        )
+
+    runtime.admin.execute(
+        """CREATE FUNCTION reconforge.inject_mismatched_outbox_evidence() RETURNS trigger
+        LANGUAGE plpgsql SECURITY DEFINER SET search_path = reconforge, pg_catalog AS $$
+        BEGIN
+          INSERT INTO reconforge.outbox_delivery_evidence(
+            tenant_id,event_id,workspace_id,organization_id,legal_entity_id,
+            lease_generation,action,worker_id,attempts)
+          VALUES(NEW.tenant_id,NEW.event_id,'wrong-workspace',NEW.organization_id,NEW.legal_entity_id,
+                 NEW.lease_generation,'failed','forged',NEW.attempt_count);
+          RETURN NEW;
+        END $$;
+        CREATE TRIGGER zz_inject_mismatched_outbox_evidence AFTER UPDATE ON reconforge.outbox_events
+        FOR EACH ROW WHEN (OLD.status='Pending' AND NEW.status='Claimed')
+        EXECUTE FUNCTION reconforge.inject_mismatched_outbox_evidence()"""
+    )
+    second_tenant = "hierarchy_" + uuid4().hex[:10]
+    runtime.admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES(%s,%s)", (second_tenant, second_tenant))
+    _seed(runtime, second_tenant, **scope)
+    try:
+        with pytest.raises(psycopg.Error, match="parent binding"), _repository(runtime, second_tenant, **scope) as repository:
+            repository.claim_pending(tenant_id=second_tenant, worker_id="worker", **scope)
+    finally:
+        runtime.admin.execute("DROP TRIGGER zz_inject_mismatched_outbox_evidence ON reconforge.outbox_events")
+        runtime.admin.execute("DROP FUNCTION reconforge.inject_mismatched_outbox_evidence()")
+
+
+def test_storage_verifier_rejects_retained_post_floor_evidence_gap(runtime: Runtime, tenant: str) -> None:
+    _seed(runtime, tenant)
+    runtime.admin.execute("DROP TRIGGER outbox_delivery_evidence_admission ON reconforge.outbox_delivery_evidence")
+    runtime.admin.execute(
+        """INSERT INTO reconforge.outbox_delivery_evidence(
+        tenant_id,event_id,lease_generation,action,worker_id,attempts)
+        VALUES(%s,'event-0',1,'claimed','forged',0)""",
+        (tenant,),
+    )
+    runtime.admin.execute(POSTGRES_OUTBOX_FENCING_SCHEMA_SQL)
+    with pytest.raises(PostgresOutboxIntegrityError, match="Retained outbox delivery evidence is invalid"), _repository(
+        runtime, tenant
+    ) as repository:
+        repository.list_events(tenant_id=tenant)
+
+
 def test_populated_upgrade_fences_ambiguous_preupgrade_identity(runtime: Runtime) -> None:
     tenant = "legacy_fencing"
     with _repository(runtime, tenant) as repository:
-        legacy = repository.list_events(tenant_id=tenant)[0]
-        assert legacy.lease_generation == 2 and legacy.attempt_count == 3
+        events = {event.id: event for event in repository.list_events(tenant_id=tenant, status="all")}
+        legacy = events["legacy"]
+        assert legacy.lease_generation == legacy.lease_generation_floor == 2 and legacy.attempt_count == 3
+        assert events["legacy-published"].lease_generation == events["legacy-published"].lease_generation_floor == 2
+        with pytest.raises(PostgresOutboxIntegrityError):
+            repository.assert_claim(tenant_id=tenant, event_id="legacy", worker_id="reused-worker", lease_generation=2)
+        with pytest.raises(PostgresOutboxIntegrityError):
+            repository.mark_published(
+                tenant_id=tenant, event_id="legacy", worker_id="reused-worker", lease_generation=2
+            )
+        with pytest.raises(PostgresOutboxIntegrityError):
+            repository.mark_failed(
+                tenant_id=tenant,
+                event_id="legacy",
+                worker_id="reused-worker",
+                error="legacy",
+                lease_generation=2,
+            )
     with pytest.raises(PostgresOutboxIntegrityError), _repository(runtime, tenant) as repository:
         repository.mark_published(tenant_id=tenant, event_id="legacy", worker_id="reused-worker")
     _expire(runtime, tenant)

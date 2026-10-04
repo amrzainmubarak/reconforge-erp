@@ -1,5 +1,24 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-AMR-GFO-004 — Freeze fenced outbox recovery as a bounded reliability primitive (2026-10-04)
+
+ADR0827 is accepted with SQLite migration 53 and PostgreSQL revision 0103.
+Historical rows receive the explicit `2/2` compatibility watermark rather than
+invented claims; fresh rows begin at `0/0`; active claims must advance the
+generation. Delivery evidence is retained as a trigger-admitted append-only
+child of the outbox event, and local backup/restore treats its absence or
+semantic discontinuity as an admission failure. PostgreSQL downgrade refuses
+evidence loss and non-default fencing values. The PostgreSQL application role
+is deployment-scoped: revision 0103 revokes direct evidence writes from
+`PUBLIC`, while a bounded runtime fixture grants evidence `SELECT` and revokes
+direct evidence writes for its non-privileged role. Security-definer trigger
+functions append valid evidence under a closed search path. A shared runtime
+database role remains in the trusted server authority boundary for who is
+allowed to make a structurally valid transition; the database independently
+enforces transition shape and evidence continuity. This does not claim
+exactly-once external delivery, broker availability, cross-host recovery, or a
+production capacity result.
+
 ## D-AMR-GFO-003 — Governed budget control as a bounded financial authorization foundation (2026-10-03)
 
 ADR0826 is accepted with SQLite migration 52 and PostgreSQL revision 0102.

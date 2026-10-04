@@ -1,198 +1,16 @@
-"""Additive outbox lease fencing and immutable delivery evidence."""
+"""Freeze outbox lease fencing and immutable delivery evidence after budget control."""
 
-from __future__ import annotations
+from alembic import op
 
-from collections.abc import Mapping
-from typing import Any
-
-from reconforge.db.migration_53_outbox_fencing import SQLITE_OUTBOX_FENCING_UPGRADE_SQL
-
-
-class PostgresOutboxFencingMigrationError(RuntimeError):
-    """The migration identity cannot safely watermark every tenant row."""
+revision = "0103_pg_outbox_fencing"
+down_revision = "0102_pg_budget_control"
+branch_labels = None
+depends_on = None
 
 
-# Restore tooling may reinstall this set only inside an unpublished temporary
-# SQLite database, after it has loaded parent rows and verified all evidence.
-# It must never remove these triggers from a database workers can reach.
-SQLITE_OUTBOX_FENCING_RESTORE_TRIGGER_NAMES = (
-    "outbox_delivery_evidence_append",
-    "outbox_delivery_evidence_admission",
-    "outbox_fencing_guard",
-    "outbox_fencing_insert_guard",
-    "outbox_delivery_evidence_no_update",
-    "outbox_delivery_evidence_no_delete",
-)
-
-SQLITE_OUTBOX_FENCING_GUARD_SQL = """
-DROP TRIGGER IF EXISTS outbox_delivery_evidence_append;
-DROP TRIGGER IF EXISTS outbox_delivery_evidence_admission;
-DROP TRIGGER IF EXISTS outbox_fencing_guard;
-DROP TRIGGER IF EXISTS outbox_fencing_insert_guard;
-DROP TRIGGER IF EXISTS outbox_delivery_evidence_no_update;
-DROP TRIGGER IF EXISTS outbox_delivery_evidence_no_delete;
-
-CREATE TRIGGER outbox_delivery_evidence_no_update BEFORE UPDATE ON outbox_delivery_evidence
-BEGIN SELECT RAISE(ABORT, 'outbox delivery evidence is immutable'); END;
-CREATE TRIGGER outbox_delivery_evidence_no_delete BEFORE DELETE ON outbox_delivery_evidence
-BEGIN SELECT RAISE(ABORT, 'outbox delivery evidence is immutable'); END;
-
-CREATE TRIGGER outbox_fencing_insert_guard BEFORE INSERT ON outbox_events
-BEGIN
- SELECT CASE WHEN NEW.lease_generation != 0
-   OR NEW.lease_generation_floor != 0
-   OR NEW.attempts != 0
-   OR NEW.locked_at IS NOT NULL
-   OR NEW.locked_by IS NOT NULL
-   OR NEW.published_at IS NOT NULL
-   OR NEW.dead_lettered_at IS NOT NULL
-   OR NEW.last_error IS NOT NULL
- THEN RAISE(ABORT, 'outbox initial generation or delivery state is invalid') END;
-END;
-
-CREATE TRIGGER outbox_fencing_guard BEFORE UPDATE ON outbox_events
-BEGIN
- SELECT CASE WHEN NEW.lease_generation < OLD.lease_generation
-   OR NEW.lease_generation_floor != OLD.lease_generation_floor
-   OR NEW.lease_generation < NEW.lease_generation_floor
-   OR NEW.lease_generation > OLD.lease_generation + 1
- THEN RAISE(ABORT, 'outbox lease generation is invalid') END;
-
- SELECT CASE WHEN NOT (
-   (
-     OLD.published_at IS NULL AND OLD.dead_lettered_at IS NULL
-     AND OLD.locked_at IS NULL AND OLD.locked_by IS NULL
-     AND NEW.published_at IS NULL AND NEW.dead_lettered_at IS NULL
-     AND NEW.locked_at IS NOT NULL AND NEW.locked_by IS NOT NULL
-     AND NEW.lease_generation = OLD.lease_generation + 1
-     AND NEW.lease_generation > NEW.lease_generation_floor
-     AND NEW.attempts = OLD.attempts
-   )
-   OR (
-     OLD.published_at IS NULL AND OLD.dead_lettered_at IS NULL
-     AND OLD.locked_at IS NOT NULL AND OLD.locked_by IS NOT NULL
-     AND NEW.published_at IS NOT NULL AND NEW.dead_lettered_at IS NULL
-     AND NEW.locked_at IS NULL AND NEW.locked_by IS NULL
-     AND NEW.lease_generation = OLD.lease_generation
-     AND OLD.lease_generation > OLD.lease_generation_floor
-     AND OLD.locked_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-     AND NEW.attempts = OLD.attempts AND NEW.last_error IS NULL
-   )
-   OR (
-     OLD.published_at IS NULL AND OLD.dead_lettered_at IS NULL
-     AND OLD.locked_at IS NOT NULL AND OLD.locked_by IS NOT NULL
-     AND NEW.published_at IS NULL AND NEW.locked_at IS NULL AND NEW.locked_by IS NULL
-     AND NEW.lease_generation = OLD.lease_generation
-     AND NEW.attempts = OLD.attempts + 1
-     AND NEW.last_error IS NOT NULL
-     AND (
-       (OLD.locked_at <= strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-        AND NEW.last_error = 'LEASE_EXPIRED')
-       OR (OLD.lease_generation > OLD.lease_generation_floor
-           AND OLD.locked_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-           AND NEW.last_error != 'LEASE_EXPIRED')
-     )
-   )
-   OR (
-     OLD.published_at IS NULL AND OLD.dead_lettered_at IS NOT NULL
-     AND OLD.locked_at IS NULL AND OLD.locked_by IS NULL
-     AND NEW.published_at IS NULL AND NEW.dead_lettered_at IS NULL
-     AND NEW.locked_at IS NULL AND NEW.locked_by IS NULL
-     AND NEW.lease_generation = OLD.lease_generation
-     AND NEW.attempts = 0 AND NEW.last_error IS NULL
-   )
-   OR (
-     OLD.published_at IS NULL AND OLD.dead_lettered_at IS NULL
-     AND OLD.locked_at IS NOT NULL AND OLD.locked_by IS NOT NULL
-     AND NEW.published_at IS NULL AND NEW.dead_lettered_at IS NULL
-     AND NEW.locked_at IS NOT NULL AND NEW.locked_by IS OLD.locked_by
-     AND NEW.locked_at <= OLD.locked_at
-     AND NEW.lease_generation = OLD.lease_generation
-     AND NEW.attempts = OLD.attempts
-     AND NEW.available_at IS OLD.available_at
-     AND NEW.last_error IS OLD.last_error
-   )
- ) THEN RAISE(ABORT, 'outbox delivery transition requires a live claimed generation') END;
-END;
-
-CREATE TRIGGER outbox_delivery_evidence_admission BEFORE INSERT ON outbox_delivery_evidence
-BEGIN
- SELECT CASE WHEN NOT EXISTS (
-   SELECT 1 FROM outbox_events AS event
-   WHERE event.id = NEW.event_id
-     AND event.lease_generation = NEW.lease_generation
-     AND event.attempts = NEW.attempts
-     AND (
-       (NEW.action = 'claimed'
-        AND event.lease_generation > event.lease_generation_floor
-        AND event.locked_at IS NOT NULL AND event.locked_by = NEW.worker_id
-        AND event.published_at IS NULL AND event.dead_lettered_at IS NULL)
-       OR (NEW.action = 'published'
-           AND event.lease_generation > event.lease_generation_floor
-           AND event.published_at IS NOT NULL AND event.locked_at IS NULL
-           AND event.locked_by IS NULL AND event.dead_lettered_at IS NULL)
-       OR (NEW.action = 'failed'
-           AND event.lease_generation > event.lease_generation_floor
-           AND event.published_at IS NULL AND event.locked_at IS NULL
-           AND event.locked_by IS NULL AND event.last_error IS NOT NULL
-           AND event.last_error != 'LEASE_EXPIRED')
-       OR (NEW.action = 'expired'
-           AND event.published_at IS NULL AND event.locked_at IS NULL
-           AND event.locked_by IS NULL AND event.last_error = 'LEASE_EXPIRED')
-       OR (NEW.action = 'requeued'
-           AND event.published_at IS NULL AND event.dead_lettered_at IS NULL
-           AND event.locked_at IS NULL AND event.locked_by IS NULL
-           AND event.attempts = 0 AND event.last_error IS NULL
-           AND (
-             (event.lease_generation = event.lease_generation_floor
-              AND event.lease_generation_floor = 2)
-             OR EXISTS (
-               SELECT 1 FROM outbox_delivery_evidence AS prior
-               WHERE prior.event_id = event.id
-                 AND prior.lease_generation = event.lease_generation
-                 AND prior.action IN ('failed', 'expired')
-             )
-           ))
-     )
- ) THEN RAISE(ABORT, 'outbox delivery evidence admission is invalid') END;
-
- SELECT CASE WHEN NEW.action = 'claimed' AND (
-   SELECT COUNT(*) FROM outbox_delivery_evidence AS prior
-   JOIN outbox_events AS event ON event.id = NEW.event_id
-   WHERE prior.event_id = NEW.event_id
-     AND prior.action = 'claimed'
-     AND prior.lease_generation > event.lease_generation_floor
-     AND prior.lease_generation < NEW.lease_generation
- ) != (
-   SELECT event.lease_generation - event.lease_generation_floor - 1
-   FROM outbox_events AS event WHERE event.id = NEW.event_id
- ) THEN RAISE(ABORT, 'outbox claimed evidence is discontinuous') END;
-END;
-
-CREATE TRIGGER outbox_delivery_evidence_append AFTER UPDATE ON outbox_events
-WHEN NEW.lease_generation != OLD.lease_generation
-  OR NEW.published_at IS NOT OLD.published_at
-  OR NEW.attempts != OLD.attempts
-  OR NEW.dead_lettered_at IS NOT OLD.dead_lettered_at
-BEGIN
- INSERT INTO outbox_delivery_evidence(event_id, lease_generation, action, worker_id, occurred_at, attempts)
- VALUES(NEW.id, NEW.lease_generation,
-   CASE WHEN NEW.lease_generation != OLD.lease_generation THEN 'claimed'
-        WHEN NEW.published_at IS NOT NULL THEN 'published'
-        WHEN OLD.dead_lettered_at IS NOT NULL AND NEW.dead_lettered_at IS NULL THEN 'requeued'
-        WHEN NEW.last_error = 'LEASE_EXPIRED' THEN 'expired' ELSE 'failed' END,
-   COALESCE(NEW.locked_by, OLD.locked_by, 'operator'),
-   strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), NEW.attempts);
-END;
-"""
-
-# Compatibility tests need the exact registered migration content. The frozen
-# SQLite artifact is the source of truth; restore still uses the current guard
-# bundle only inside an unpublished temporary database.
-SQLITE_OUTBOX_FENCING_MIGRATION_SQL = SQLITE_OUTBOX_FENCING_UPGRADE_SQL
-
-
-POSTGRES_OUTBOX_FENCING_SCHEMA_SQL = """
+# This revision owns its complete historical DDL. Future fencing changes must
+# use a later revision; it never imports mutable infrastructure schema text.
+UPGRADE_SQL = r"""
 DO $reconforge$
 BEGIN
  IF NOT EXISTS (
@@ -202,6 +20,8 @@ BEGIN
    RAISE EXCEPTION 'outbox fencing migration requires a role that bypasses forced row security';
  END IF;
 END $reconforge$;
+
+LOCK TABLE reconforge.outbox_events IN ACCESS EXCLUSIVE MODE;
 
 ALTER TABLE reconforge.outbox_events ADD COLUMN IF NOT EXISTS lease_generation BIGINT
     NOT NULL DEFAULT 0 CHECK (lease_generation >= 0);
@@ -404,8 +224,7 @@ CREATE TRIGGER outbox_delivery_evidence_immutable BEFORE UPDATE OR DELETE
  ON reconforge.outbox_delivery_evidence FOR EACH ROW EXECUTE FUNCTION reconforge.outbox_delivery_evidence_guard();
 """
 
-
-POSTGRES_OUTBOX_FENCING_DOWNGRADE_ADMISSION_SQL = """
+DOWNGRADE_SQL = r"""
 DO $reconforge$
 BEGIN
  IF EXISTS (SELECT 1 FROM reconforge.outbox_delivery_evidence) THEN
@@ -418,45 +237,25 @@ BEGIN
    RAISE EXCEPTION 'outbox fencing downgrade refused: non-default generations are retained';
  END IF;
 END $reconforge$;
+
+DROP TRIGGER outbox_delivery_evidence_immutable ON reconforge.outbox_delivery_evidence;
+DROP TRIGGER outbox_delivery_evidence_admission ON reconforge.outbox_delivery_evidence;
+DROP TRIGGER outbox_delivery_evidence_append ON reconforge.outbox_events;
+DROP TRIGGER outbox_fencing_guard ON reconforge.outbox_events;
+DROP FUNCTION reconforge.outbox_delivery_evidence_guard();
+DROP FUNCTION reconforge.outbox_delivery_evidence_admission_guard();
+DROP FUNCTION reconforge.outbox_delivery_evidence_append();
+DROP FUNCTION reconforge.outbox_fencing_guard();
+DROP TABLE reconforge.outbox_delivery_evidence;
+DROP INDEX reconforge.idx_outbox_expired_lease;
+ALTER TABLE reconforge.outbox_events DROP COLUMN lease_generation_floor;
+ALTER TABLE reconforge.outbox_events DROP COLUMN lease_generation;
 """
 
 
-def _migration_row_value(row: Any, key: str, index: int) -> Any:
-    if isinstance(row, Mapping):
-        return row.get(key)
-    return row[index]
+def upgrade() -> None:
+    op.execute(UPGRADE_SQL)
 
 
-def _migration_execute(connection: Any, statement: str) -> Any:
-    execute_driver_sql = getattr(connection, "exec_driver_sql", None)
-    if callable(execute_driver_sql):
-        return execute_driver_sql(statement)
-    return connection.execute(statement)
-
-
-def verify_postgres_outbox_fencing_migration_identity(connection: Any) -> None:
-    """Fail before watermarking when the effective role cannot bypass forced RLS."""
-    row = _migration_execute(
-        connection,
-        "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname=current_user",
-    ).fetchone()
-    if row is None or not (
-        bool(_migration_row_value(row, "rolsuper", 0))
-        or bool(_migration_row_value(row, "rolbypassrls", 1))
-    ):
-        raise PostgresOutboxFencingMigrationError(
-            "Outbox fencing migration requires an effective role that bypasses forced row security."
-        )
-
-
-def verify_postgres_outbox_fencing_upgrade_coverage(connection: Any) -> None:
-    """Require the just-completed upgrade to reserve every pre-existing row at 2/2."""
-    row = _migration_execute(
-        connection,
-        """SELECT COUNT(*) AS unwatermarked FROM reconforge.outbox_events
-        WHERE lease_generation <> 2 OR lease_generation_floor <> 2""",
-    ).fetchone()
-    if row is None or int(_migration_row_value(row, "unwatermarked", 0) or 0) != 0:
-        raise PostgresOutboxFencingMigrationError(
-            "Outbox fencing migration did not watermark every pre-existing event at 2/2."
-        )
+def downgrade() -> None:
+    op.execute(DOWNGRADE_SQL)

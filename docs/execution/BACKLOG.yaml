@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-10-03"
+updated_at: "2026-10-04"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -48,12 +48,15 @@ tasks:
     priority: P0
     area: enterprise-quality
     title: Fence outbox generations and recover crashed final-attempt claims
-    status: in_progress
+    status: completed
     depends_on: [AMR-GFO-001]
     exit_evidence: >-
-      Require immutable delivery evidence and monotonic lease snapshots, same-worker stale
-      acknowledgement refusal, bounded terminal recovery, populated upgrade, restore,
-      live SQLite/PostgreSQL races, worker regressions and measured synthetic workload.
+      SQLite53 and PostgreSQL0103 freeze monotonic lease fencing and immutable delivery
+      evidence with populated upgrades, stale same-worker refusal, bounded terminal recovery,
+      semantic backup/restore admission and downgrade refusal. Focused SQLite migration/backup
+      and delivery/continuity tests, plus live nonowner PostgreSQL migration/recovery tests,
+      Ruff and focused Mypy pass. Shared PostgreSQL runtime-role actor authority, external
+      at-least-once transport, broker HA and production capacity remain separate boundaries.
   - id: AMR-GFO-005
     priority: P0
     area: integration-acceptance

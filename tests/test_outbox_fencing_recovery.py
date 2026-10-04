@@ -13,7 +13,10 @@ from reconforge.application.outbox import OutboxError
 from reconforge.benchmark.outbox_recovery import measure_bounded_recovery
 from reconforge.db import connect, run_migrations
 from reconforge.db.schema import OUTBOX_DELIVERY_MIGRATION_SQL, OUTBOX_SCHEMA_SQL
-from reconforge.infrastructure.outbox_fencing_schema import SQLITE_OUTBOX_FENCING_MIGRATION_SQL
+from reconforge.infrastructure.outbox_fencing_schema import (
+    SQLITE_OUTBOX_FENCING_GUARD_SQL,
+    SQLITE_OUTBOX_FENCING_MIGRATION_SQL,
+)
 from reconforge.infrastructure.sqlite_outbox import OUTBOX_RECOVERY_SELECT_SQL, SQLiteOutboxRepository
 from reconforge.platform.common import append_outbox_event
 from reconforge.platform.outbox import OutboxService
@@ -221,6 +224,66 @@ def test_delivery_evidence_and_generation_are_protected(database: Path) -> None:
             connection.rollback()
 
 
+def test_storage_rejects_unfenced_insert_direct_publish_and_forged_evidence(database: Path) -> None:
+    _seed(database)
+    with connect(database) as connection:
+        with pytest.raises(sqlite3.IntegrityError, match="initial generation"):
+            connection.execute(
+                """INSERT INTO outbox_events(
+                id,event_type,aggregate_type,aggregate_id,payload_json,created_at,available_at,
+                lease_generation,lease_generation_floor)
+                VALUES('unfenced','test','test','unfenced','{}','2026-10-03T00:00:00Z',
+                       '2026-10-03T00:00:00Z',0,2)"""
+            )
+        connection.rollback()
+        with pytest.raises(sqlite3.IntegrityError, match="live claimed generation"):
+            connection.execute(
+                """UPDATE outbox_events SET published_at='2026-10-03T00:00:00Z',
+                locked_at=NULL,locked_by=NULL,last_error=NULL WHERE id='event-0'"""
+            )
+        connection.rollback()
+
+        repository = SQLiteOutboxRepository(connection)
+        claim = repository.claim_pending(worker_id="worker")[0]
+        with pytest.raises(sqlite3.IntegrityError, match="evidence admission"):
+            connection.execute(
+                """INSERT INTO outbox_delivery_evidence(
+                event_id,lease_generation,action,worker_id,occurred_at,attempts)
+                VALUES(?,?,'published','forged','2026-10-03T00:00:00Z',?)""",
+                (claim.id, claim.lease_generation, claim.attempts),
+            )
+        connection.rollback()
+        repository.mark_published(
+            event_id=claim.id,
+            worker_id="worker",
+            lease_generation=claim.lease_generation,
+        )
+
+
+def test_storage_verifier_rejects_retained_post_floor_evidence_gap(database: Path) -> None:
+    _seed(database)
+    with connect(database) as connection:
+        claim = SQLiteOutboxRepository(connection).claim_pending(worker_id="worker")[0]
+        connection.execute("DROP TRIGGER outbox_delivery_evidence_no_delete")
+        connection.execute("DELETE FROM outbox_delivery_evidence WHERE event_id=?", (claim.id,))
+        connection.commit()
+        with pytest.raises(OutboxError, match="Retained outbox delivery evidence is invalid"):
+            SQLiteOutboxRepository(connection)
+
+
+def test_verified_temporary_restore_can_reinstall_fencing_guard_bundle(database: Path) -> None:
+    _seed(database)
+    with connect(database) as connection:
+        connection.executescript(SQLITE_OUTBOX_FENCING_GUARD_SQL)
+        repository = SQLiteOutboxRepository(connection)
+        claim = repository.claim_pending(worker_id="worker")[0]
+        repository.mark_published(
+            event_id=claim.id,
+            worker_id="worker",
+            lease_generation=claim.lease_generation,
+        )
+
+
 @pytest.mark.parametrize("generation", [0, -1, True, 2**63, "1"])
 def test_invalid_generation_is_rejected_before_storage(database: Path, generation: object) -> None:
     with connect(database) as connection, pytest.raises(OutboxError, match="lease_generation"):
@@ -239,13 +302,28 @@ def test_populated_upgrade_fences_ambiguous_preupgrade_worker_identity() -> None
             available_at,locked_at,locked_by,attempts) VALUES('legacy','test','test','item','{}',
             '2000-01-01T00:00:00Z','2000-01-01T00:00:00Z','2099-01-01T00:00:00Z','reused-worker',2)"""
         )
+        connection.execute(
+            """INSERT INTO outbox_events(id,event_type,aggregate_type,aggregate_id,payload_json,created_at,
+            available_at,published_at,attempts) VALUES('legacy-published','test','test','item','{}',
+            '2000-01-01T00:00:00Z','2000-01-01T00:00:00Z','2000-01-01T00:00:00Z',0)"""
+        )
         connection.commit()
         connection.executescript(SQLITE_OUTBOX_FENCING_MIGRATION_SQL)
         repository = SQLiteOutboxRepository(connection)
-        assert repository.list_events()[0].lease_generation == 2
+        events = {event.id: event for event in repository.list_events(status="all")}
+        assert events["legacy"].lease_generation == events["legacy"].lease_generation_floor == 2
+        assert events["legacy-published"].lease_generation == events["legacy-published"].lease_generation_floor == 2
+        with pytest.raises(OutboxError):
+            repository.assert_claim(event_id="legacy", worker_id="reused-worker", lease_generation=2)
+        with pytest.raises(OutboxError):
+            repository.mark_published(event_id="legacy", worker_id="reused-worker", lease_generation=2)
+        with pytest.raises(OutboxError):
+            repository.mark_failed(
+                event_id="legacy", worker_id="reused-worker", error="legacy", lease_generation=2
+            )
         with pytest.raises(OutboxError):
             repository.mark_published(event_id="legacy", worker_id="reused-worker")
-        connection.execute("UPDATE outbox_events SET locked_at='2000-01-01T00:00:00Z'")
+        connection.execute("UPDATE outbox_events SET locked_at='2000-01-01T00:00:00Z' WHERE id='legacy'")
         connection.commit()
         recovered = repository.claim_pending(worker_id="reused-worker")[0]
         assert recovered.lease_generation == 3 and recovered.attempts == 3

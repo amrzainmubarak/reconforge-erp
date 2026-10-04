@@ -183,6 +183,9 @@ def test_sqlite_restored_inbox_independently_verifies_digest_and_linkage(inbox, 
         with pytest.raises(InboxPersistenceError):
             verify_sqlite_inbox_storage(restored)
         restored.execute("UPDATE notification_inbox SET payload_digest=?", (record.payload_digest,))
+        # This test deliberately bypasses the outbox invariant to exercise
+        # independent inbox linkage verification against a corrupted copy.
+        restored.execute("DROP TRIGGER outbox_fencing_guard")
         restored.execute("UPDATE outbox_events SET payload_json='{}' WHERE aggregate_type='notification_inbox'")
         restored.commit()
         with pytest.raises(InboxPersistenceError):

@@ -8,6 +8,10 @@ from typing import Any
 
 from reconforge.application.outbox import OutboxError, OutboxEvent
 from reconforge.domain.models import utc_now_text
+from reconforge.domain.outbox_fencing import (
+    OutboxEvidenceIntegrityError,
+    validate_outbox_fencing_storage,
+)
 
 
 def _utc_after(seconds: int) -> str:
@@ -53,6 +57,7 @@ class SQLiteOutboxRepository:
 
     def __init__(self, connection: sqlite3.Connection) -> None:
         self.connection = connection
+        self._storage_verified = False
         self._ensure_delivery_schema()
 
     def _ensure_delivery_schema(self) -> None:
@@ -68,6 +73,58 @@ class SQLiteOutboxRepository:
         }
         if not required <= columns:
             raise OutboxError("Outbox delivery schema is not initialized. Run 'reconforge db migrate' first.")
+        try:
+            evidence_columns = {
+                str(row["name"])
+                for row in self.connection.execute("PRAGMA table_info(outbox_delivery_evidence)").fetchall()
+            }
+        except sqlite3.DatabaseError as exc:
+            raise OutboxError("Outbox delivery evidence schema is not initialized. Run 'reconforge db migrate' first.") from exc
+        if not {"event_id", "lease_generation", "action", "worker_id", "attempts"} <= evidence_columns:
+            raise OutboxError("Outbox delivery evidence schema is not initialized. Run 'reconforge db migrate' first.")
+        self._verify_retained_evidence()
+
+    def _verify_retained_evidence(self) -> None:
+        """Refuse storage whose post-watermark evidence cannot prove continuity."""
+        if self._storage_verified:
+            return
+        try:
+            events = []
+            for row in self.connection.execute(
+                """SELECT id AS event_id, lease_generation, lease_generation_floor,
+                published_at, locked_at, locked_by, dead_lettered_at
+                FROM outbox_events ORDER BY id"""
+            ).fetchall():
+                event = dict(row)
+                event["delivery_state"] = self._retained_delivery_state(event)
+                events.append(event)
+            evidence = [
+                dict(row)
+                for row in self.connection.execute(
+                    """SELECT event_id, lease_generation, action, worker_id, attempts
+                    FROM outbox_delivery_evidence ORDER BY event_id, evidence_id"""
+                ).fetchall()
+            ]
+            validate_outbox_fencing_storage(events=events, evidence=evidence)
+        except OutboxEvidenceIntegrityError as exc:
+            raise OutboxError("Retained outbox delivery evidence is invalid; restore a verified database.") from exc
+        except sqlite3.DatabaseError as exc:
+            raise OutboxError("Unable to verify retained outbox delivery evidence.") from exc
+        self._storage_verified = True
+
+    @staticmethod
+    def _retained_delivery_state(event: dict[str, Any]) -> str:
+        published = event["published_at"] is not None
+        locked = event["locked_at"] is not None
+        owner = event["locked_by"] is not None
+        dead = event["dead_lettered_at"] is not None
+        if published:
+            return "invalid" if locked or owner or dead else "published"
+        if dead:
+            return "invalid" if locked or owner else "dead"
+        if locked != owner:
+            return "invalid"
+        return "claimed" if locked else "pending"
 
     @staticmethod
     def _worker_id(value: str) -> str:
@@ -133,6 +190,7 @@ class SQLiteOutboxRepository:
         self._bounded_integer(limit, "limit", 1, 1000)
         self._bounded_integer(max_attempts, "max_attempts", 1, 100)
         self._require_idle_connection()
+        self._verify_retained_evidence()
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             count = self._recover_expired(now=utc_now_text(), limit=limit, max_attempts=max_attempts)
@@ -153,6 +211,7 @@ class SQLiteOutboxRepository:
         self._bounded_integer(max_attempts, "max_attempts", 1, 100)
         self._bounded_integer(lease_seconds, "lease_seconds", 1, 86400)
         self._require_idle_connection()
+        self._verify_retained_evidence()
         now = utc_now_text()
         lease_until = _utc_after(lease_seconds)
         claimed: list[OutboxEvent] = []
@@ -202,8 +261,10 @@ class SQLiteOutboxRepository:
     def assert_claim(self, *, event_id: str, worker_id: str, lease_generation: int) -> None:
         worker = self._worker_id(worker_id)
         generation = self._generation(lease_generation)
+        self._verify_retained_evidence()
         row = self.connection.execute(
             """SELECT 1 FROM outbox_events WHERE id=? AND locked_by=? AND lease_generation=?
+            AND lease_generation > lease_generation_floor
             AND locked_at > ? AND published_at IS NULL AND dead_lettered_at IS NULL""",
             (event_id, worker, generation, utc_now_text()),
         ).fetchone()
@@ -214,6 +275,7 @@ class SQLiteOutboxRepository:
         worker = self._worker_id(worker_id)
         generation = self._generation(lease_generation)
         self._require_idle_connection()
+        self._verify_retained_evidence()
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             cursor = self.connection.execute(
@@ -221,7 +283,8 @@ class SQLiteOutboxRepository:
                 UPDATE outbox_events
                 SET published_at = ?, locked_at = NULL, locked_by = NULL, last_error = NULL
                 WHERE id = ? AND published_at IS NULL AND locked_by = ?
-                  AND dead_lettered_at IS NULL AND lease_generation = ? AND locked_at > ?
+                  AND dead_lettered_at IS NULL AND lease_generation = ?
+                  AND lease_generation > lease_generation_floor AND locked_at > ?
                 """,
                 (utc_now_text(), event_id, worker, generation, utc_now_text()),
             )
@@ -244,13 +307,17 @@ class SQLiteOutboxRepository:
         self._bounded_integer(max_attempts, "max_attempts", 1, 100)
         self._bounded_integer(retry_base_seconds, "retry_base_seconds", 0, 86400)
         safe_error = (str(error).strip() or "publisher failure")[:1_000]
+        if safe_error == "LEASE_EXPIRED":
+            safe_error = "publisher failure"
         self._require_idle_connection()
+        self._verify_retained_evidence()
         now = utc_now_text()
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             row = self.connection.execute(
                 """SELECT attempts FROM outbox_events WHERE id = ? AND published_at IS NULL AND locked_by = ?
-                AND dead_lettered_at IS NULL AND lease_generation = ? AND locked_at > ?""",
+                AND dead_lettered_at IS NULL AND lease_generation = ?
+                AND lease_generation > lease_generation_floor AND locked_at > ?""",
                 (event_id, worker, generation, now),
             ).fetchone()
             if row is None:
@@ -266,7 +333,8 @@ class SQLiteOutboxRepository:
                 SET attempts = ?, last_error = ?, available_at = ?,
                     locked_at = NULL, locked_by = ?, dead_lettered_at = ?
                 WHERE id = ? AND published_at IS NULL AND locked_by = ?
-                  AND dead_lettered_at IS NULL AND lease_generation = ? AND locked_at > ?
+                  AND dead_lettered_at IS NULL AND lease_generation = ?
+                  AND lease_generation > lease_generation_floor AND locked_at > ?
                 """,
                 (
                     next_attempt,
@@ -293,6 +361,7 @@ class SQLiteOutboxRepository:
 
     def requeue_dead_letter(self, *, event_id: str) -> None:
         self._require_idle_connection()
+        self._verify_retained_evidence()
         try:
             self.connection.execute("BEGIN IMMEDIATE")
             cursor = self.connection.execute(
@@ -321,6 +390,7 @@ class SQLiteOutboxRepository:
         if query is None:
             raise OutboxError("Outbox status must be pending, published, dead_letter, or all.")
         try:
+            self._verify_retained_evidence()
             rows = self.connection.execute(query, (limit,)).fetchall()
         except sqlite3.DatabaseError as exc:
             raise OutboxError("Unable to list outbox events.") from exc

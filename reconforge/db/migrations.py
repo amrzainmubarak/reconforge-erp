@@ -9,6 +9,10 @@ from pathlib import Path
 
 from reconforge.db.connection import DatabaseError, connect, resolve_db_path
 from reconforge.db.migration_52_budget_control import SQLITE_BUDGET_CONTROL_UPGRADE_SQL
+from reconforge.db.migration_53_outbox_fencing import (
+    SQLITE_OUTBOX_FENCING_UPGRADE_SQL,
+    atomic_outbox_fencing_upgrade,
+)
 from reconforge.db.schema import (
     ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL,
     API_SESSIONS_SCHEMA_SQL,
@@ -166,6 +170,7 @@ MIGRATIONS = [
     Migration(version=50, name="reviewed_inventory_receipt_posting", sql=SQLITE_INVENTORY_RECEIPT_MIGRATION_SQL),
     Migration(version=51, name="retained_notification_inbox", sql=SQLITE_NOTIFICATION_INBOX_SQL),
     Migration(version=52, name="governed_budget_control", sql=SQLITE_BUDGET_CONTROL_UPGRADE_SQL),
+    Migration(version=53, name="outbox_lease_fencing_and_delivery_evidence", sql=SQLITE_OUTBOX_FENCING_UPGRADE_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """
@@ -206,10 +211,12 @@ def _atomic_schema_upgrade(
     # executescript opens the explicit transaction before any schema statement.
     # A failed trigger, constraint, or permission insert therefore cannot leave a
     # replay-hostile partial migration behind.
+    # The migration registry supplies only committed, closed SQL literals; this
+    # helper never receives application or user input. # nosec B608
     script = (
         "BEGIN IMMEDIATE;\n"
-        + schema_sql
-        + "\nINSERT INTO schema_migrations (version, name, applied_at) VALUES ("
+        + schema_sql  # nosec B608
+        + "\nINSERT INTO schema_migrations (version, name, applied_at) VALUES ("  # nosec B608
         + f"{version}, {name!r}, {applied_at!r});\n"
         + f"PRAGMA user_version = {version};\nCOMMIT;"
     )
@@ -245,6 +252,16 @@ def run_migrations(db_path: Path | str, *, target_version: int | None = None) ->
                 continue
             if migration.version in {51, 52}:
                 _atomic_schema_upgrade(
+                    connection,
+                    schema_sql=migration.sql,
+                    version=migration.version,
+                    name=migration.name,
+                    applied_at=_utc_now(),
+                )
+                applied_now.append(migration.version)
+                continue
+            if migration.version == 53:
+                atomic_outbox_fencing_upgrade(
                     connection,
                     schema_sql=migration.sql,
                     version=migration.version,

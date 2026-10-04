@@ -1,5 +1,22 @@
 # ReconForge Execution Evidence Log
 
+- AMR-GFO-004 fenced outbox recovery (2026-10-04): SQLite migration 53 and
+  PostgreSQL Alembic revision 0103 are centrally registered after the retained
+  inbox and budget migrations. `tests/test_outbox_fencing_migration.py` and
+  `tests/test_outbox_fencing_backup.py` passed 15 cases for frozen migration
+  identity, fault rollback, historical watermarking, evidence round-trip,
+  guard reinstatement, checksum-valid tamper rejection, and v52 compatibility.
+  `tests/test_outbox_fencing_recovery.py`,
+  `tests/test_outbox_evidence_continuity.py`, `tests/test_outbox_delivery.py`,
+  and `tests/test_outbox_worker.py` passed 51 delivery/recovery/continuity
+  cases. `tests/test_postgres_outbox_fencing_migration.py` and
+  `tests/test_postgres_outbox_fencing_recovery.py` passed against the configured
+  disposable PostgreSQL instance with a non-superuser/non-`BYPASSRLS`
+  application role. Focused Ruff and Mypy passed. This is bounded synthetic
+  evidence: the shared runtime role/server is still the actor-authority boundary,
+  and no external exactly-once, broker HA, production capacity, or cross-host
+  recovery claim follows.
+
 - AMR-GFO-003 governed budget control (2026-10-03): SQLite migration 52 and
   PostgreSQL Alembic revision 0102 are centrally registered with the real
   authenticated API, authorization-route inventory, module registry, and

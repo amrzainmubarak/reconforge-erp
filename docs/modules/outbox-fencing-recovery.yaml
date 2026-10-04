@@ -9,28 +9,39 @@ data_classification: operational-sensitive
 retention_policy: retain-immutable-delivery-transitions-with-parent-outbox-event
 permissions: [outbox.publish, outbox.replay, audit.read]
 default_roles: [admin]
-migrations: []
+migrations: [sqlite-53-outbox-fencing, postgresql-0103-outbox-fencing]
 domain_invariants:
+  - new-outbox-events-enter-only-as-zero-generation-zero-floor-pending-rows
   - every-current-claim-has-an-exact-monotonic-lease-generation
   - same-worker-label-cannot-acknowledge-or-fail-a-newer-generation
   - historical-pre-fencing-claims-are-explicitly-watermarked-not-invented
+  - compatibility-watermark-is-never-an-active-lease
   - expired-final-attempt-enters-terminal-dead-letter-state
   - state-transition-and-delivery-evidence-commit-or-roll-back-together
+  - delivery-evidence-is-trigger-admitted-and-parent-hierarchy-bound
   - retained-post-floor-claim-generations-are-contiguous-and-unique
+  - retained-terminal-and-replay-evidence-must-explain-parent-state-and-claim-worker
+  - corrupt-retained-evidence-rejects-storage-admission
 domain_events: []
 api_routes: []
 cli_commands: []
 ui_routes: []
 import_schemas: []
-export_schemas: [outbox-delivery-evidence-v1]
+export_schemas: []
 synthetic_fixtures:
   - tests/test_outbox_fencing_recovery.py
+  - tests/test_outbox_fencing_migration.py
+  - tests/test_outbox_fencing_backup.py
   - tests/test_postgres_outbox_fencing_recovery.py
+  - tests/test_postgres_outbox_fencing_migration.py
 threat_model:
   - reused-worker-identity-after-crash
   - stale-acknowledgement-or-failure-after-lease-expiry
   - concurrent-claim-race
   - missing-or-forged-delivery-evidence
+  - unauthorized-generation-or-delivery-state-bypass
+  - direct-evidence-insert-or-hierarchy-mismatch
+  - forged-terminal-action-or-impossible-replay-during-restore
   - sibling-tenant-or-hierarchy-evidence-read
   - external-publisher-delivery-after-local-lease-expiry
 benchmarks:
@@ -39,10 +50,13 @@ rollback_plan: retain-evidence-and-restore-a-verified-pre-activation-backup
 test_matrix:
   - tests/test_outbox_fencing_recovery.py
   - tests/test_outbox_evidence_continuity.py
+  - tests/test_outbox_fencing_migration.py
+  - tests/test_outbox_fencing_backup.py
   - tests/test_postgres_outbox_fencing_recovery.py
+  - tests/test_postgres_outbox_fencing_migration.py
   - tests/test_postgres_outbox.py
   - tests/test_postgres_outbox_consumer.py
 limitations:
-  - activation-is-blocked-until-sqlite-postgresql-and-backup-migrations-land
+  - a-shared-postgresql-runtime-role-and-the-trusted-server-application-remain-the-actor-authority-boundary
   - bounded-at-least-once-delivery-only-without-a-cooperative-external-sink
   - no-broker-provider-ha-or-production-performance-claim

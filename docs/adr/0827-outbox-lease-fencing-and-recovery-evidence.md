@@ -1,8 +1,8 @@
 # ADR 0827: Fence outbox leases and retain recovery evidence
 
-- Status: proposed; activation is blocked on the migration and backup integration
-  listed below.
-- Date: 2026-10-03
+- Status: accepted; SQLite migration 53, PostgreSQL revision 0103, and verified
+  SQLite backup/restore admission are integrated.
+- Date: 2026-10-04
 - Scope: SQLite and PostgreSQL transactional-outbox delivery ownership, crash
   recovery, and retained delivery evidence.
 
@@ -33,6 +33,14 @@ The migration assigns every populated pre-fencing row generation and floor
 has generation `3`.  A newly created row begins at `0/0` and its first claim
 has generation `1`.
 
+The storage guard admits only an initial `0/0` pending row. It rejects a direct
+`0/2` insert, a direct pending-to-published edge, a generation jump, and every
+delivery transition that does not originate from the required claimed
+generation. A `2/2` compatibility watermark is historical evidence, never a
+live lease: acknowledgement, failure, and pre-publication assertion all
+require `lease_generation > lease_generation_floor`. An expired legacy lease
+can only be recovered, after which its next claim is generation `3`.
+
 Claim acknowledgement, failure recording, and the pre-publication
 `assert_claim` check require the exact live `(event_id, worker_id,
 lease_generation)` tuple.  The legacy omitted-generation argument is accepted
@@ -52,76 +60,114 @@ action (`claimed`, `published`, `failed`, `expired`, or `requeued`), worker,
 timestamp, and attempt count.  SQLite blocks UPDATE and DELETE using triggers.
 PostgreSQL uses a semantic primary key
 `(tenant_id, event_id, lease_generation, action)`, forced tenant/hierarchy RLS,
-and a trigger that rejects UPDATE and DELETE.  The PostgreSQL key avoids a
+and immutable-evidence triggers. Admission is a separate `BEFORE INSERT`
+trigger: only the trusted `AFTER UPDATE` transition trigger at the required
+trigger depth may append evidence; it binds tenant, event, hierarchy,
+generation, attempt count, and current state to the parent row. Direct
+application-role INSERT is rejected even if an ACL was granted accidentally.
+SQLite enforces equivalent parent/state/history admission and a semantic
+`(event_id, lease_generation, action)` unique key. The PostgreSQL key avoids a
 new random-ID extension or sequence permission requirement.
 
-`validate_outbox_delivery_evidence` verifies every post-floor claimed
-generation exactly once, rejects gaps and duplicates, and deliberately does
-not enumerate an untrusted generation range.
+`validate_outbox_fencing_storage` is wired into both repositories before they
+accept storage. It verifies every visible retained parent/evidence pair,
+rejects gaps, duplicates, malformed records, and evidence without a visible
+parent, and deliberately does not enumerate an untrusted generation range.
+It also binds each post-floor terminal action to the worker that claimed that
+generation, and checks that terminal/replay actions can explain the retained
+delivery state. A historical `2/2` parent may retain any pre-upgrade delivery
+state without invented evidence; it cannot act as a live claim. The PostgreSQL
+adapter reads the joined parent/evidence set in one statement snapshot so
+concurrent claim commits cannot create a false continuity failure.
 
-## Required integration before activation
+## Activation implementation
 
-This change deliberately contains no migration revision and no backup-router
-change.  It must not be enabled by application code until all of the following
-are committed and tested together.
+SQLite migration 53 is a frozen literal in
+`reconforge.db.migration_53_outbox_fencing`. It runs every DDL statement,
+historical `2/2` watermark, trigger, migration marker, and `PRAGMA user_version`
+write in one `BEGIN IMMEDIATE` transaction. Its static identity test prevents a
+future runtime schema helper from changing historical migration content, and its
+fault-injection test proves rollback at the watermark, guard, and marker stages.
 
-1. Register `SQLITE_OUTBOX_FENCING_MIGRATION_SQL` from
-   `reconforge.infrastructure.outbox_fencing_schema` after the existing SQLite
-   outbox-delivery migration.  The migration must add
-   `lease_generation` and `lease_generation_floor`, create
-   `outbox_delivery_evidence`, its index, the immutable-evidence triggers, and
-   `idx_outbox_expired_lease`.  A populated-upgrade fault test must prove that
-   the entire SQLite migration either commits or leaves the prior schema
-   unchanged.
-2. Add one forward-only Alembic revision after the current PostgreSQL head
-   which executes `POSTGRES_OUTBOX_FENCING_SCHEMA_SQL`.  It must run after the
-   existing outbox application and hierarchy/RLS schema.  It must grant the
-   application role `SELECT, INSERT, UPDATE, DELETE` on
-   `reconforge.outbox_delivery_evidence`, preserve forced RLS, and prove a
-   non-superuser/non-`BYPASSRLS` fresh and populated upgrade.  Its downgrade
-   must refuse to discard non-empty retained delivery evidence; recovery is a
-   verified pre-upgrade restore, not a destructive downgrade.
-3. Extend the SQLite backup/restore contract to include both new
-   `outbox_events` fields and the full `outbox_delivery_evidence` table.
-   Restore parent events before evidence.  A backup from before activation
-   must restore with an explicit `2/2` historical watermark, while a
-   post-activation backup must retain exact evidence and pass
-   `validate_outbox_delivery_evidence`.  The backup format/version and
-   compatibility reader must reject incomplete evidence rather than silently
-   reset generations.
-4. Make fresh schemas include the additive fields, update schema inventory and
-   package manifests, and run SQLite/PostgreSQL upgrade, restore, concurrency,
-   and rollback admission tests before exposing the fenced worker as generally
-   available.
+PostgreSQL revision `0103_pg_outbox_fencing` is likewise a frozen Alembic
+literal following revision 0102. It requires a superuser or `BYPASSRLS` role
+before an `ACCESS EXCLUSIVE` outbox lock, watermarks populated rows, preserves
+forced RLS on evidence, and revokes direct evidence writes from `PUBLIC`. It
+does not name or grant a deployment-specific application role: scoped evidence
+`SELECT` with no direct `INSERT`, `UPDATE`, or `DELETE` remains an explicit
+deployment access-control requirement and is exercised by the non-privileged
+runtime fixture. The transition and admission functions are `SECURITY DEFINER`
+with a closed `reconforge, pg_catalog` search path so the trigger can append
+valid evidence without granting direct write access to that application role.
+The downgrade refuses retained evidence or a non-default generation/floor;
+recovery uses a verified pre-change backup instead of destructive schema
+rollback.
 
-Until those steps land, `SQLiteOutboxRepository` intentionally rejects a
-database that lacks the two fencing columns.  This makes a partially deployed
-binary/schema combination visible rather than silently operating without the
-new ownership invariant.
+The SQLite backup contract includes both fenced event fields and the complete
+`outbox_delivery_evidence` child table in deterministic parent-before-child
+order. A v53 source must contain the required tables, columns, and complete
+guard bundle before backup succeeds. Restore removes that bundle only in the
+unpublished temporary database, loads parent events then evidence, verifies the
+complete retained state, reinstalls canonical guards, performs a foreign-key
+check, then verifies again after migration to the latest local schema. A v52
+backup remains readable: migration 53 assigns `2/2` to retained historical rows
+without inventing evidence.
+
+Both repositories reject a database lacking the fencing columns before operating.
+The module manifest, SQLite and PostgreSQL migration tests, recovery/concurrency
+tests, and backup/restore tests define the bounded acceptance surface.
 
 ## Evidence
 
+On 2026-10-04, the integrated SQLite migration/backup command
+`tests/test_outbox_fencing_migration.py tests/test_outbox_fencing_backup.py`
+passed 15 synthetic cases. It covers frozen migration identity, atomic rollback
+at each registered checkpoint, populated historical watermarks, deterministic
+backup ordering, exact round-trip evidence, post-restore guard reinstatement,
+checksum-valid missing/forged evidence rejection, and v52-to-v53 compatibility.
+The existing SQLite delivery/recovery/continuity/worker command passed 51 cases.
+
+The integrated live PostgreSQL command
+`tests/test_postgres_outbox_fencing_migration.py
+tests/test_postgres_outbox_fencing_recovery.py` passed against the configured
+local disposable PostgreSQL instance and non-superuser/non-`BYPASSRLS`
+application role. It covers the real 0102-to-0103 migration, populated
+watermarking, forced-RLS evidence isolation, rejected direct evidence forgery,
+security-definer trigger append, downgrade refusal, stale worker fencing, and
+valid runtime transition behavior. Focused Ruff and Mypy also passed.
+
+The database protects the fence and evidence structure, but a shared
+PostgreSQL runtime role can still perform a structurally valid raw transition.
+That role and the trusted server application remain the actor-identity and
+authorization authority boundary; database guards do not turn the shared role
+into separate human credentials.
+
 On 2026-10-03, synthetic SQLite tests exercised historical upgrade marking,
-same-label stale acknowledgement and failure refusal, expired unclaimed lease
-refusal, final-attempt terminal recovery, two-connection claim ownership,
-application-service token propagation, first-claim compatibility,
-fresh-worker-connection token propagation,
-exact-update rollback, evidence-trigger rollback, immutability, bounded
-1,000-event recovery, and property-based continuity validation: 31 tests
-passed.
+same-label stale acknowledgement and failure refusal, explicit `2/2` legacy
+lease refusal, expired unclaimed lease refusal, final-attempt terminal
+recovery, two-connection claim ownership, application-service token
+propagation, first-claim compatibility, fresh-worker-connection token
+propagation, exact-update rollback, evidence-trigger rollback, immutable and
+trigger-admitted evidence, direct `0/2` insert and pending-to-published
+rejection, retained-evidence corruption refusal, terminal-state/action/worker
+binding refusal, bounded 1,000-event recovery, and property-based continuity
+validation: 42 tests passed.
 
 On a disposable Docker PostgreSQL 17 Alpine instance with a separate
-non-superuser/non-`BYPASSRLS` application role, 11 live tests passed.  They
-covered the same stale-label and terminal-recovery cases, `SKIP LOCKED` claim
-races, tenant/hierarchy evidence isolation, evidence-write rollback, a
-populated historical upgrade, repeat installation, immutable evidence, and a
-1,000-event recovery profile.  The profile drained ten batches of 100 plus an
-idempotent final call; observed recovery-only wall time was 0.676690 seconds.
-The PostgreSQL plan used `idx_outbox_expired_lease`.  The equivalent SQLite
-profile observed 0.022337 seconds and an indexed search using
-`idx_outbox_expired_lease`.  These are bounded synthetic measurements on the
-named local environment, not throughput, latency, capacity, or service-level
-claims.
+non-superuser/non-`BYPASSRLS` application role, 14 live tests passed. They
+covered the same stale-label and terminal-recovery cases, explicit legacy
+watermark refusal, `SKIP LOCKED` claim races, tenant/hierarchy evidence
+isolation, app-role raw insert/state/evidence forgery rejection,
+parent-hierarchy admission rejection, RLS migration-identity preflight,
+evidence-write rollback, a populated historical upgrade, repeat installation,
+immutable evidence, retained-evidence corruption refusal, and a 1,000-event
+recovery profile. The profile drained ten batches of 100 plus an idempotent
+final call; observed recovery-only wall time was 0.924943 seconds. The
+equivalent SQLite profile observed 0.041081 seconds and an indexed search
+using `idx_outbox_expired_lease`. PostgreSQL selected a sequential scan plus
+sort for this 1,000-row forced-RLS profile; no index-selection claim is made.
+These are bounded synthetic measurements on the named local environment, not
+throughput, latency, capacity, or service-level claims.
 
 ## Transport boundary
 

@@ -206,8 +206,9 @@ test("follows the guided showcase from executive signal to the exception contrac
 
   fireEvent.click(screen.getByRole("button", { name: /Triage exceptions/ }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Exception queue" })).toBeInTheDocument();
-  expect(screen.getByText("Synthetic inventory variance needs evidence.")).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Exception review" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Sign in to review exceptions" })).toBeInTheDocument();
+  expect(screen.queryByText("Synthetic inventory variance needs evidence.")).not.toBeInTheDocument();
   expect(window.location.pathname).toBe("/exceptions");
 });
 
@@ -222,20 +223,17 @@ test("opens the keyboard command palette", async () => {
   expect(within(dialog).getByRole("button", { name: /Exceptions/ })).toBeInTheDocument();
 });
 
-test("navigates to the native exception queue and filters its versioned contract", async () => {
+test("navigates to the governed exception review boundary without a synthetic fallback", async () => {
   render(<App />);
   await controlRoomHeading();
 
   const primaryNavigation = screen.getByRole("navigation", { name: "Primary navigation" });
   fireEvent.click(within(primaryNavigation).getByRole("button", { name: /Exceptions/ }));
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Exception queue" })).toBeInTheDocument();
-  expect(screen.getByText("Synthetic inventory variance needs evidence.")).toBeInTheDocument();
-  expect(window.location.pathname).toBe("/exceptions");
-
-  fireEvent.change(screen.getByRole("textbox", { name: "Filter exceptions" }), { target: { value: "ABCDEF123456" } });
+  expect(await screen.findByRole("heading", { level: 1, name: "Exception review" })).toBeInTheDocument();
+  expect(screen.getByText("Records are limited to the tenant and workspace selected from the authenticated identity. Each action is checked again by the server.")).toBeInTheDocument();
   expect(screen.queryByText("Synthetic inventory variance needs evidence.")).not.toBeInTheDocument();
-  expect(screen.getByText("Synthetic high-value journal requires review.")).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/exceptions");
 });
 
 test("navigates to the native evidence binder without exposing source paths", async () => {

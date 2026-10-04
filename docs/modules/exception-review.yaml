@@ -1,8 +1,8 @@
 id: exception-review
 name: Governed PostgreSQL exception review boundary
-version: 1.0.0
+version: 1.1.0
 maturity: experimental
-implementation_status: postgres-server-review-boundary
+implementation_status: postgres-server-review-boundary-with-studio-route
 owner: financial-integrity
 dependencies: [platform.core, platform.identity, platform.master-data, platform.workflow, platform.audit-outbox]
 incompatible_versions: [unscoped-postgresql-exception-review, mutable-exception-review-history]
@@ -32,13 +32,16 @@ api_routes:
   - POST /api/v1/exceptions/{exception_id}/assign
   - POST /api/v1/exceptions/{exception_id}/status
 cli_commands: []
-ui_routes: []
+ui_routes: [/exceptions]
 import_schemas: []
 export_schemas: []
 synthetic_fixtures:
   - tests/test_exception_review.py
   - tests/test_api_server_exception_review.py
   - tests/test_postgres_exception_review_migration.py
+  - apps/web/src/exception-review-data.test.ts
+  - apps/web/src/components/ExceptionReviewWorkspace.test.tsx
+  - apps/web/e2e/exception-review.spec.ts
 threat_model:
   - sibling-tenant-workspace-organization-or-legal-entity-review-access
   - stale-write-or-concurrent-reviewer-displacement
@@ -55,9 +58,13 @@ test_matrix:
   - tests/test_postgres_exception_review_migration.py
   - tests/test_api_authorization_inventory.py
   - tests/test_postgres_operations.py
+  - apps/web/src/exception-review-data.test.ts
+  - apps/web/src/components/ExceptionReviewWorkspace.test.tsx
+  - apps/web/e2e/exception-review.spec.ts
 limitations:
   - workspace-scope-is-required; organization-and-legal-entity-headers-narrow-access-when-present-so-unattributed-legacy-records-remain-workspace-only
   - only-a-migration-role-that-bypasses-forced-row-security-can-apply-or-revert-0104
   - local-sqlite-exception-queue-compatibility-does-not-claim-the-postgresql-review-contract
   - shared-postgresql-runtime-role-and-trusted-server-application-remain-the-human-actor-authority-boundary
-  - no-automatic-escalation-sla-closure-standalone-ui-or-production-throughput-availability-claim
+  - studio-exceptions-route-requires-the-authenticated-postgresql-server-review-boundary-and-never-falls-back-to-local-sqlite-or-synthetic-queue-data
+  - no-automatic-escalation-sla-closure-or-production-throughput-availability-claim

@@ -12,7 +12,7 @@ from reconforge.api.server_identity import AuthenticatedServerRequest
 from reconforge.auth.models import LocalUser
 
 
-def test_sqlite_only_exceptions_and_workflow_routes_fail_closed_in_server_profile(
+def test_server_exception_review_requires_execution_scope_while_local_workflow_remains_closed(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
     import reconforge.api.app as app_module
@@ -44,10 +44,12 @@ def test_sqlite_only_exceptions_and_workflow_routes_fail_closed_in_server_profil
         "Authorization": "Bearer server-token",
     }
     with TestClient(app) as client:
-        responses = [
+        exception_responses = [
             client.get("/api/v1/exceptions", headers=headers),
             client.post("/api/v1/exceptions/EXC-1/assign", headers=headers, json={"owner": "reviewer"}),
             client.post("/api/v1/exceptions/EXC-1/status", headers=headers, json={"status": "Closed"}),
+        ]
+        workflow_responses = [
             client.get("/api/v1/workflow/transitions", headers=headers, params={"object_type": "reconciliation"}),
             client.post(
                 "/api/v1/workflow/objects",
@@ -58,11 +60,10 @@ def test_sqlite_only_exceptions_and_workflow_routes_fail_closed_in_server_profil
             client.get("/api/v1/workflow/objects/reconciliation/REC-1/history", headers=headers),
         ]
 
-    assert [response.status_code for response in responses] == [501] * len(responses)
-    assert {response.json()["error"]["code"] for response in responses[:3]} == {
-        "exceptions_server_backend_unavailable"
-    }
-    assert {response.json()["error"]["code"] for response in responses[3:]} == {
+    assert [response.status_code for response in exception_responses] == [400] * len(exception_responses)
+    assert {response.json()["error"]["code"] for response in exception_responses} == {"workspace_scope_required"}
+    assert [response.status_code for response in workflow_responses] == [501] * len(workflow_responses)
+    assert {response.json()["error"]["code"] for response in workflow_responses} == {
         "workflow_server_backend_unavailable"
     }
 

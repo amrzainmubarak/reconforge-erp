@@ -1,0 +1,57 @@
+id: exception-review
+name: Governed PostgreSQL exception review boundary
+version: 1.0.0
+maturity: experimental
+implementation_status: postgres-server-review-boundary
+owner: financial-integrity
+dependencies: [platform.core, platform.identity, platform.master-data, platform.workflow, platform.audit-outbox]
+incompatible_versions: [unscoped-postgresql-exception-review, mutable-exception-review-history]
+data_classification: financial-sensitive
+retention_policy: retain-immutable-exception-review-history-audit-and-outbox-evidence
+permissions: [exceptions.read, exceptions.manage]
+default_roles: [admin, controller, reviewer, preparer, auditor-readonly]
+migrations: [postgresql-0104-pg-exception-review-api]
+domain_invariants:
+  - authenticated-tenant-and-workspace-scope-is-required-for-every-server-review-read-or-write
+  - selected-organization-and-legal-entity-scope-can-only-narrow-authorized-principal-grants
+  - server-review-commands-require-a-positive-optimistic-row-version
+  - review-transition-graph-is-open-to-in-review-to-resolved-or-accepted-risk-to-closed
+  - accepted-risk-requires-a-retained-nonblank-reason
+  - exception-creator-cannot-be-assigned-as-reviewer-or-make-a-review-decision
+  - review-history-is-append-only-and-structurally-matches-the-current-record-state
+  - review-transition-audit-and-outbox-evidence-commit-or-roll-back-with-the-record-update
+  - postgresql-rls-binds-records-and-history-to-tenant-workspace-and-selected-hierarchy
+domain_events: [exception_review_assigned, exception_review_transition]
+api_routes:
+  - GET /api/v1/exceptions
+  - GET /api/v1/exceptions/{exception_id}
+  - POST /api/v1/exceptions/{exception_id}/assign
+  - POST /api/v1/exceptions/{exception_id}/status
+cli_commands: []
+ui_routes: []
+import_schemas: []
+export_schemas: []
+synthetic_fixtures:
+  - tests/test_exception_review.py
+  - tests/test_api_server_exception_review.py
+  - tests/test_postgres_exception_review_migration.py
+threat_model:
+  - sibling-tenant-workspace-organization-or-legal-entity-review-access
+  - stale-write-or-concurrent-reviewer-displacement
+  - creator-self-assignment-or-self-review-decision
+  - direct-history-update-delete-or-forged-governed-transition
+  - missing-or-mutated-audit-and-outbox-review-evidence
+  - unsafe-future-column-or-history-field-exposure
+benchmarks: []
+rollback_plan: retain-scoped-review-evidence-and-restore-a-verified-pre-0104-backup; populated downgrade-refuses-evidence-loss
+test_matrix:
+  - tests/test_exception_review.py
+  - tests/test_api_server_exception_review.py
+  - tests/test_postgres_exception_review_migration.py
+  - tests/test_api_authorization_inventory.py
+  - tests/test_postgres_operations.py
+limitations:
+  - workspace-scope-is-required; organization-and-legal-entity-headers-narrow-access-when-present-so-unattributed-legacy-records-remain-workspace-only
+  - local-sqlite-exception-queue-compatibility-does-not-claim-the-postgresql-review-contract
+  - shared-postgresql-runtime-role-and-trusted-server-application-remain-the-human-actor-authority-boundary
+  - no-automatic-escalation-sla-closure-standalone-ui-or-production-throughput-availability-claim

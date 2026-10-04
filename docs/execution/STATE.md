@@ -16,6 +16,22 @@ Mypy, Bandit, and the package build exit zero. This has no database migration,
 HTTP route, UI, live native-service exercise, throughput, RPO/RTO, HA/DR, or
 production-recovery claim.
 
+## Amr scoped PostgreSQL exception-review completion (2026-10-04)
+
+PROD-008 is complete only for the bounded server-review contract. PostgreSQL
+revision 0104 retains optional canonical organization/legal-entity attribution,
+authenticated actor/reason evidence, forced hierarchy RLS, optimistic version
+checks, independent-review refusal, immutable history, and atomic audit/outbox
+events. The server API exposes scoped list/get/assign/transition with a closed
+projection and central permission enforcement; it never falls back to SQLite in
+server mode. A disposable synthetic PostgreSQL HTTP acceptance used a
+non-superuser/non-`BYPASSRLS` application role and proved authenticated scope,
+stale-write refusal, maker self-review denial, immutable history, and audit/
+outbox publication. Local queue compatibility is retained; organization/entity
+scope remains optional to preserve non-attributable legacy records under their
+workspace. No standalone UI, automated escalation, native backup orchestration,
+production capacity, availability, or compliance claim follows.
+
 ## Amr sprint enterprise-quality outbox fencing completion (2026-10-04)
 
 AMR-GFO-004 is complete at its bounded reliability foundation on the sprint

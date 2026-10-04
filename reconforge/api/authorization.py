@@ -104,6 +104,10 @@ _CRITICAL_ROUTE_CONTRACTS: dict[tuple[str, str], tuple[str, tuple[str, ...]]] = 
         "all",
         ("budget_control.manage",),
     ),
+    ("GET", "/api/v1/exceptions"): ("any", ("exceptions.manage", "exceptions.read")),
+    ("GET", "/api/v1/exceptions/{exception_id}"): ("any", ("exceptions.manage", "exceptions.read")),
+    ("POST", "/api/v1/exceptions/{exception_id}/assign"): ("all", ("exceptions.manage",)),
+    ("POST", "/api/v1/exceptions/{exception_id}/status"): ("all", ("exceptions.manage",)),
     ("GET", "/api/v1/finance-core/posted-balances-as-of"): (
         "any", ("finance_core.manage", "finance_core.post", "finance_core.read", "finance_core.validate"),
     ),

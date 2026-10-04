@@ -140,10 +140,15 @@ tasks:
     priority: P1
     area: workflow
     title: Complete scoped PostgreSQL exception review API
-    status: planned
+    status: completed
     depends_on: [PROD-005, PROD-006]
     exit_evidence: >-
-      Authenticated tenant/workspace/entity list/get/assign/transition with independent review, atomic audit and sibling-scope denial; no SQLite fallback.
+      PostgreSQL0104 provides authenticated tenant/workspace list/get/assign/transition,
+      optional authorized organization/legal-entity narrowing, expected-version conflicts,
+      maker-checker refusal, append-only review history, atomic audit/outbox and sibling-scope
+      denial with no SQLite fallback. Named domain/API/migration acceptance includes a full
+      disposable-database HTTP run under a non-superuser/non-BYPASSRLS role; focused Ruff,
+      Mypy and Bandit passed.
   - id: PROD-009
     priority: P1
     area: finance-core

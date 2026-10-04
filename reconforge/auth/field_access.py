@@ -401,6 +401,24 @@ EXCEPTION_FIELDS = frozenset(
         "updated_at",
     }
 )
+EXCEPTION_REVIEW_HISTORY_FIELDS = frozenset(
+    {
+        "id",
+        "exception_id",
+        "action",
+        "from_status",
+        "to_status",
+        "from_owner",
+        "to_owner",
+        "actor_label",
+        "actor_id",
+        "reason",
+        "occurred_at",
+    }
+)
+EXCEPTION_REVIEW_FIELDS = EXCEPTION_FIELDS | frozenset(
+    {"organization_id", "legal_entity_id", "row_version", "history"}
+)
 ACCOUNT_RECONCILIATION_FIELDS = frozenset(
     {
         "tenant_id",
@@ -2668,6 +2686,22 @@ def project_exception(values: Mapping[str, object]) -> FieldProjection:
     """Return a closed projection for unified exception-queue records."""
 
     return project_fields(values, allowed_fields=EXCEPTION_FIELDS)
+
+
+def project_exception_review(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed server-review projection with versioned audit history."""
+
+    record = dict(values)
+    history = record.get("history")
+    if history is not None:
+        if not isinstance(history, list):
+            raise TypeError("exception review history must be a list")
+        record["history"] = [
+            project_fields(item, allowed_fields=EXCEPTION_REVIEW_HISTORY_FIELDS).visible
+            for item in history
+            if isinstance(item, Mapping)
+        ]
+    return project_fields(record, allowed_fields=EXCEPTION_REVIEW_FIELDS)
 
 
 def project_account_reconciliation(values: Mapping[str, object]) -> FieldProjection:

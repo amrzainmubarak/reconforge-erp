@@ -225,6 +225,7 @@ def create_api_app(
     app.state.postgres_professional_invoice_payment_factory = app.state.postgres_identity_factory
     app.state.postgres_manufacturing_cost_control_factory = app.state.postgres_identity_factory
     app.state.postgres_budget_control_factory = app.state.postgres_identity_factory
+    app.state.postgres_exception_review_factory = app.state.postgres_identity_factory
     app.state.federation_providers = dict(federation_providers or {})
     app.state.federation_verifiers = dict(federation_verifiers or {})
     app.state.federation_air_gap_mode = federation_air_gap_mode

@@ -13,6 +13,23 @@
   native-client service recovery, resource profile, RPO/RTO, key custody,
   HA/DR, or production operation.
 
+- PROD-008 scoped PostgreSQL exception review (2026-10-04): PostgreSQL Alembic
+  revision 0104 adds hierarchy-scoped records, immutable actor/reason review
+  history, forced RLS, frozen migration identity, expected-version commands,
+  structural maker-checker guards, and default permission seeding. The named
+  focused gate passed `tests/test_exception_review.py`,
+  `tests/test_api_server_exception_review.py`,
+  `tests/test_postgres_exception_review_migration.py`,
+  `tests/test_api_authorization_inventory.py`,
+  `tests/test_postgres_exceptions.py`, `tests/test_postgres_operations.py`,
+  and legacy exception/API contracts. The live disposable-database HTTP test
+  authenticated synthetic maker/reviewer users through the real server profile
+  under a non-superuser/non-`BYPASSRLS` PostgreSQL application role; it proved
+  scope denial, stale-version conflict, self-review refusal, immutable history,
+  and audit/outbox evidence. Focused Ruff, Mypy, Bandit, and package build
+  passed; these are bounded synthetic results, not a capacity, availability,
+  compliance, or complete workflow claim.
+
 - AMR-GFO-004 fenced outbox recovery (2026-10-04): SQLite migration 53 and
   PostgreSQL Alembic revision 0103 are centrally registered after the retained
   inbox and budget migrations. `tests/test_outbox_fencing_migration.py` and

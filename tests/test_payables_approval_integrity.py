@@ -17,7 +17,12 @@ import pytest
 
 from reconforge.audit import AuditLedgerError
 from reconforge.db import connect, run_migrations
-from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
+from reconforge.infrastructure.postgres import (
+    ConnectionFactory,
+    PostgresConnectionFactory,
+    PostgresRuntimeConnectionFactory,
+    PostgresSettings,
+)
 from reconforge.infrastructure.postgres_payables import PostgresPayablesError, PostgresPayablesRepository
 from reconforge.infrastructure.sqlite_payables import SQLitePayablesRepository
 from reconforge.platform.common import PlatformError
@@ -31,7 +36,7 @@ isolated_postgres_migration_dsn = _isolated_postgres_migration_dsn
 @dataclass
 class PayablesDatabase:
     path: Path | None = None
-    factory: PostgresConnectionFactory | None = None
+    factory: ConnectionFactory | None = None
     tenant: str = ""
     admin: Any = None
 
@@ -108,14 +113,38 @@ def database(request: Any, tmp_path: Path) -> Iterator[PayablesDatabase]:
         raise AssertionError("the isolated PostgreSQL database DSN must identify its database")
     if not isinstance(app_role, str) or not app_role:
         raise AssertionError("the PostgreSQL application DSN must identify its role")
-    factory = PostgresConnectionFactory(
-        PostgresSettings(dsn=psycopg.conninfo.make_conninfo(dsn, dbname=database_name), require_tls=False)
+    factory = PostgresRuntimeConnectionFactory(
+        PostgresConnectionFactory(
+            PostgresSettings(dsn=psycopg.conninfo.make_conninfo(dsn, dbname=database_name), require_tls=False)
+        )
     )
     admin = PostgresConnectionFactory(PostgresSettings(dsn=isolated_dsn, require_tls=False)).connect()
     tenant = "ap_integrity_" + uuid4().hex[:16]
     try:
         with admin.transaction():
             role = psycopg.sql.Identifier(app_role)
+            admin.execute(
+                psycopg.sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(
+                    psycopg.sql.Identifier(database_name),
+                    role,
+                )
+            )
+            connect_grant = admin.execute(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_catalog.pg_database database
+                    CROSS JOIN LATERAL pg_catalog.aclexplode(database.datacl)
+                        AS acl_entry(grantor,grantee,privilege_type,is_grantable)
+                    JOIN pg_catalog.pg_roles granted_role ON granted_role.oid=acl_entry.grantee
+                    WHERE database.datname=pg_catalog.current_database()
+                      AND granted_role.rolname=%s
+                      AND acl_entry.privilege_type='CONNECT'
+                )
+                """,
+                (app_role,),
+            ).fetchone()
+            assert connect_grant is not None and connect_grant[0] is True
             admin.execute(psycopg.sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(role))
             admin.execute(
                 psycopg.sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}").format(
@@ -132,9 +161,16 @@ def database(request: Any, tmp_path: Path) -> Iterator[PayablesDatabase]:
                 "INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES (%s,'USD','US Dollar',2)",
                 (tenant,),
             )
+        with factory.connect() as application_connection:
+            assert tuple(
+                application_connection.execute(
+                    "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user"
+                ).fetchone()
+            ) == (False, False)
         yield PayablesDatabase(factory=factory, tenant=tenant, admin=admin)
     finally:
         cleanup_postgres_test_tenants_as_admin(admin, tenant_ids=(tenant,), plan=PAYABLES_TENANT_CLEANUP_PLAN)
+        factory.close()
         admin.close()
 
 

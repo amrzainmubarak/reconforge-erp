@@ -13077,3 +13077,30 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
   cleanup path, tenant data, or operator database is touched.
 - **Rollback**: Revert `459ce612` and restore the previous test cleanup. This
   is not recommended because it reintroduces silent residue risk.
+
+### D-1035: Fence PostgreSQL restore targets before restoring routines
+
+- **Date**: 2026-10-04
+- **Context**: A portable native restore excludes ACLs deliberately. PostgreSQL
+  assigns default `PUBLIC EXECUTE` to restored functions, while a newly created
+  database normally has `PUBLIC CONNECT`. Reapplying routine ACLs only after
+  `pg_restore` left a window in which a runtime role could reach a predictable
+  restore target.
+- **Decision**: Create the target through a closed `psql` command with
+  `ALLOW_CONNECTIONS false`. In one maintenance-database transaction, enable
+  connections and revoke `PUBLIC CONNECT`; only the protected maintenance
+  principal that created the target retains implicit database access. Restore
+  with `--no-owner --no-privileges`, revoke public execution on restored
+  user-schema `SECURITY DEFINER` routines, then run the recovery-profile gate.
+  Runtime/API/worker principals must be distinct from and cannot own or be
+  granted target access by the maintenance principal.
+- **Verification**: Fake-native command ordering and rollback tests, Ruff,
+  file-level Mypy, and a disposable PostgreSQL 17 test proving that access is
+  denied before the fence, retained by the owner after it, and denied to an
+  ungranted runtime role.
+- **Compatibility**: The adapter retains its configured native-tool contract
+  and encrypted artifact format. Restore results remain isolated verification
+  targets; no production promotion or runtime grant is introduced.
+- **Rollback**: Revert `441f0cf9`, `c58d1006`, and `c3addf52` together only if
+  an equivalent pre-restore access fence and post-restore routine ACL hardening
+  replace them.

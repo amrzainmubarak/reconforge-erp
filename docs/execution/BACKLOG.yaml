@@ -9866,3 +9866,21 @@ tasks:
       and Docker doctor all pass. Hosted CI, multi-host reliability, providers,
       independent security review, certification, and production claims remain
       open and must not be inferred from this local evidence.
+  - id: E-1122
+    priority: P0
+    area: postgres_restore_isolation
+    title: Fence native PostgreSQL restore targets before routine restoration
+    status: completed
+    depends_on: []
+    exit_evidence: >-
+      The portable restore adapter now creates its exact target with
+      ALLOW_CONNECTIONS false, atomically enables it while revoking PUBLIC
+      CONNECT for the maintenance owner, restores without ACLs, re-revokes
+      PUBLIC EXECUTE on user-schema SECURITY DEFINER routines, and verifies
+      the profile only afterward. Focused fake-native failure/rollback tests,
+      Ruff, and file-level Mypy pass. An opt-in disposable PostgreSQL 17 test
+      proves owner/runtime denial before the fence, owner-only access after it,
+      and runtime denial afterward. Native pg_dump/pg_restore binaries are not
+      available on this Windows host, so full native restore, promotion,
+      cross-version recovery, key custody, RPO/RTO, HA/DR, and production
+      recovery claims remain open.

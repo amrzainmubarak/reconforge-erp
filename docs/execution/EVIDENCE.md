@@ -22773,3 +22773,29 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 - **Boundary:** no external service, live customer dataset, GitHub-hosted run,
   provider integration, security assessment, release signature, or production
   deployment was performed or inferred from this evidence.
+
+## E-1122 — PostgreSQL isolated restore target access fence (2026-10-04; D-1035)
+
+- **Scope and commits:** `c3addf52` re-revokes `PUBLIC EXECUTE` from restored
+  user-schema `SECURITY DEFINER` routines before target profile verification.
+  `c58d1006` creates the target with `ALLOW_CONNECTIONS false`, then commits
+  `ALLOW_CONNECTIONS true` and `REVOKE CONNECT ... FROM PUBLIC` together on
+  the maintenance database before `pg_restore`. `441f0cf9` adds the live
+  target-access regression.
+- **Focused contract:** `python -m pytest -q --tb=short -ra
+  tests/test_postgres_backup.py tests/test_postgres_native_tools.py`,
+  `python -m ruff check reconforge/infrastructure/postgres_backup.py
+  tests/test_postgres_backup.py`, and
+  `python -m mypy reconforge/infrastructure/postgres_backup.py` passed. The
+  native-client rehearsal remains an explicit skip when its service variables
+  and client tools are absent.
+- **Live PostgreSQL 17 check:** the opt-in
+  `test_live_postgres_restore_target_access_fence_blocks_runtime_role` passed
+  against a disposable target. The target denied both owner and runtime access
+  while `ALLOW_CONNECTIONS` was false; after the atomic access fence, the
+  maintenance owner connected and the ungranted runtime role was denied. Test
+  credentials were generated at runtime and not retained.
+- **Boundary:** this is one local synthetic access-control proof. It does not
+  prove native encrypted backup/restore execution on this host, promotion of a
+  restored target, key custody, backup duration, cross-version recovery,
+  RPO/RTO, HA/DR, or production recovery readiness.

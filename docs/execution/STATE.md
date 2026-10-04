@@ -11808,3 +11808,21 @@ evidence remain open. GitHub publication remains deferred by owner policy.
   hosted CI execution, live connectors or providers, multi-host HA/DR,
   production security, independent penetration testing, regulatory compliance,
   certification, customer outcomes, or global readiness.
+
+## E-1122 — PostgreSQL isolated restore target access fence (2026-10-04; D-1035)
+
+- `c3addf52` reapplies the no-`PUBLIC EXECUTE` invariant for restored
+  user-schema `SECURITY DEFINER` functions and procedures before profile
+  verification. `c58d1006` creates a restore target with
+  `ALLOW_CONNECTIONS false`, then atomically enables it and revokes
+  `PUBLIC CONNECT` before `pg_restore`. `441f0cf9` adds an opt-in live
+  PostgreSQL assertion for that exact access sequence.
+- The focused native-backup contract, Ruff, and file-level Mypy checks pass.
+  The live PostgreSQL 17 disposable test passed: both owner and runtime roles
+  were denied before the target fence, the maintenance owner connected after
+  it, and an ungranted runtime role remained denied.
+- Boundary: this proves an isolated target-access and post-restore routine-ACL
+  guard only. Native client tools are unavailable on this Windows host, so a
+  full encrypted `pg_dump`/`pg_restore` rehearsal was not counted. It makes no
+  backup duration, RPO/RTO, key-custody, cross-version, HA/DR, promotion, or
+  production-recovery claim.

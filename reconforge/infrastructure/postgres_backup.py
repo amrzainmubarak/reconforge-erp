@@ -42,6 +42,42 @@ _HEADER_POLICY = StructuredDocumentPolicy(
 )
 
 
+# ``pg_dump --no-privileges`` deliberately leaves role grants out of an
+# encrypted portable artifact.  PostgreSQL creates user-schema routines with
+# PUBLIC EXECUTE by default, though, so an isolated ``pg_restore`` can otherwise
+# recreate a SECURITY DEFINER function with a callable default ACL.  The
+# restore owner re-applies this invariant before the target passes its recovery
+# profile gate.  The query is static; catalog-derived identifiers are quoted by
+# PostgreSQL's ``format`` rather than interpolated by the application.
+_REVOKE_PUBLIC_SECURITY_DEFINER_EXECUTE_SQL = """
+DO $reconforge_security_definer$
+DECLARE
+    routine RECORD;
+BEGIN
+    FOR routine IN
+        SELECT namespace.nspname AS schema_name,
+               procedure.proname AS routine_name,
+               procedure.prokind AS routine_kind,
+               pg_catalog.pg_get_function_identity_arguments(procedure.oid) AS identity_arguments
+        FROM pg_catalog.pg_proc AS procedure
+        JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = procedure.pronamespace
+        WHERE procedure.prosecdef
+          AND procedure.prokind IN ('f', 'p')
+          AND namespace.nspname !~ '^pg_'
+          AND namespace.nspname <> 'information_schema'
+    LOOP
+        EXECUTE pg_catalog.format(
+            'REVOKE ALL ON %s %I.%I(%s) FROM PUBLIC',
+            CASE WHEN routine.routine_kind = 'p' THEN 'PROCEDURE' ELSE 'FUNCTION' END,
+            routine.schema_name,
+            routine.routine_name,
+            routine.identity_arguments
+        );
+    END LOOP;
+END $reconforge_security_definer$;
+"""
+
+
 class PostgresBackupError(RuntimeError):
     """Safe operational PostgreSQL backup or restore error."""
 
@@ -489,6 +525,32 @@ class PostgresNativeBackupAdapter:
             action=action,
         )
 
+    def _revoke_public_security_definer_execute(self, *, service: str, database: str) -> None:
+        """Restore the no-public-execute invariant before accepting a target.
+
+        A native artifact intentionally excludes ACLs so it can be restored by
+        a separately provisioned migration administrator.  This leaves a
+        PostgreSQL default ACL hazard for restored ``SECURITY DEFINER``
+        routines.  The target is still isolated at this point, so any failure
+        removes it through the ordinary restore rollback path.
+        """
+
+        verified_service = _service(service, "PostgreSQL recovery service")
+        target_database = _database(database)
+        self._run(
+            (
+                self._psql,
+                "--no-psqlrc",
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--dbname",
+                f"service={verified_service} dbname={target_database}",
+                "--command",
+                _REVOKE_PUBLIC_SECURITY_DEFINER_EXECUTE_SQL,
+            ),
+            action="restore security-definer hardening",
+        )
+
     def _verify_artifact_profile(
         self,
         *,
@@ -690,6 +752,10 @@ class PostgresNativeBackupAdapter:
                         str(dump_path),
                     ),
                     action="restore",
+                )
+                self._revoke_public_security_definer_execute(
+                    service=maintenance,
+                    database=database,
                 )
                 self._verify_recovery_profile(
                     service=maintenance,

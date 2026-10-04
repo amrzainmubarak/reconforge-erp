@@ -39,6 +39,7 @@ class _Runner:
         *,
         fail_restore: bool = False,
         fail_verification: bool = False,
+        fail_security_definer_hardening: bool = False,
         fail_source_profile: bool = False,
         fail_restore_profile: bool = False,
         fail_rollback: bool = False,
@@ -48,6 +49,7 @@ class _Runner:
         self.calls: list[tuple[str, ...]] = []
         self.fail_restore = fail_restore
         self.fail_verification = fail_verification
+        self.fail_security_definer_hardening = fail_security_definer_hardening
         self.fail_source_profile = fail_source_profile
         self.fail_restore_profile = fail_restore_profile
         self.fail_rollback = fail_rollback
@@ -81,7 +83,10 @@ class _Runner:
             return 1
         if executable == "psql":
             database = call[call.index("--dbname") + 1]
-            if self.fail_verification:
+            query = call[-1]
+            if self.fail_security_definer_hardening and "REVOKE ALL ON %s" in query:
+                return 1
+            if self.fail_verification and "SELECT 1 /" in query:
                 return 1
             if database == "service=reconforge_source" and self.fail_source_profile:
                 return 1
@@ -258,8 +263,50 @@ def test_legacy_unbound_artifact_remains_readable_but_must_pass_target_revision_
     outcome = _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
 
     assert outcome.target == "reconforge_restore_drill"
-    assert [Path(call[0]).stem for call in runner.calls] == ["pg_restore", "createdb", "pg_restore", "psql"]
+    assert [Path(call[0]).stem for call in runner.calls] == [
+        "pg_restore",
+        "createdb",
+        "pg_restore",
+        "psql",
+        "psql",
+    ]
     assert f"reconforge_expected_revision={COMPATIBILITY_ALEMBIC_REVISION}" in runner.calls[-1]
+
+
+def test_restore_rehardens_security_definer_routines_before_profile_verification(tmp_path: Path) -> None:
+    artifact = tmp_path / "security-definer.rfpgbackup"
+    _adapter(tmp_path / "create-tools", _Runner()).create_backup(artifact, key=KEY)
+    runner = _Runner()
+
+    _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
+
+    psql_calls = [call for call in runner.calls if Path(call[0]).stem == "psql"]
+    assert len(psql_calls) == 2
+    hardening_query, verification_query = (call[-1] for call in psql_calls)
+    assert "pg_catalog.pg_proc" in hardening_query
+    assert "procedure.prosecdef" in hardening_query
+    assert "procedure.prokind IN ('f', 'p')" in hardening_query
+    assert "REVOKE ALL ON %s %I.%I(%s) FROM PUBLIC" in hardening_query
+    assert "FUNCTION" in hardening_query
+    assert "PROCEDURE" in hardening_query
+    assert "SELECT 1 /" in verification_query
+
+
+def test_failed_security_definer_hardening_rolls_back_isolated_target(tmp_path: Path) -> None:
+    artifact = tmp_path / "security-definer-failure.rfpgbackup"
+    _adapter(tmp_path / "create-tools", _Runner()).create_backup(artifact, key=KEY)
+    runner = _Runner(fail_security_definer_hardening=True)
+
+    with pytest.raises(PostgresBackupError, match="security-definer hardening failed"):
+        _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
+
+    assert [Path(call[0]).stem for call in runner.calls] == [
+        "pg_restore",
+        "createdb",
+        "pg_restore",
+        "psql",
+        "dropdb",
+    ]
 
 
 def test_legacy_settings_remain_compatible_for_unbound_artifacts(tmp_path: Path) -> None:
@@ -444,6 +491,7 @@ def test_failed_post_restore_verification_rolls_back_new_database(tmp_path: Path
         "pg_restore",
         "createdb",
         "pg_restore",
+        "psql",
         "psql",
         "dropdb",
     ]

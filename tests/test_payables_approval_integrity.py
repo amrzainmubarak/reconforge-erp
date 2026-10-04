@@ -23,6 +23,9 @@ from reconforge.infrastructure.sqlite_payables import SQLitePayablesRepository
 from reconforge.platform.common import PlatformError
 from reconforge.platform.payables import PurchaseOrderLineInput, SupplierInvoiceLineInput
 from tests.postgres_test_hygiene import PAYABLES_TENANT_CLEANUP_PLAN, cleanup_postgres_test_tenants_as_admin
+from tests.test_alembic_postgres import isolated_postgres_migration_dsn as _isolated_postgres_migration_dsn
+
+isolated_postgres_migration_dsn = _isolated_postgres_migration_dsn
 
 
 @dataclass
@@ -34,7 +37,12 @@ class PayablesDatabase:
 
     @contextmanager
     def repository(self) -> Iterator[Any]:
-        connection = connect(self.path, require_exists=True) if self.path is not None else self.factory.connect()
+        if self.path is not None:
+            connection = connect(self.path, require_exists=True)
+        else:
+            if self.factory is None:
+                raise RuntimeError("PostgreSQL approval-integrity fixture has no application connection factory.")
+            connection = self.factory.connect()
         try:
             if self.path is not None:
                 yield SQLitePayablesRepository(connection)
@@ -86,14 +94,35 @@ def database(request: Any, tmp_path: Path) -> Iterator[PayablesDatabase]:
         return
     dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_DSN")
     if not dsn:
-        pytest.skip("PROD-002 requires migrated live PostgreSQL app-role profile; review 2026-10-03")
-    factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))
-    admin = PostgresConnectionFactory(PostgresSettings(
-        dsn=os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn), require_tls=False,
-    )).connect()
+        pytest.skip("PROD-002 requires a live PostgreSQL nonowner application profile; review 2026-10-04")
+    import psycopg
+    from alembic.config import Config
+
+    from alembic import command
+
+    isolated_dsn = request.getfixturevalue("isolated_postgres_migration_dsn")
+    command.upgrade(Config(str(Path("alembic.ini").resolve())), "head")
+    database_name = psycopg.conninfo.conninfo_to_dict(isolated_dsn).get("dbname")
+    app_role = psycopg.conninfo.conninfo_to_dict(dsn).get("user")
+    if not isinstance(database_name, str) or not database_name:
+        raise AssertionError("the isolated PostgreSQL database DSN must identify its database")
+    if not isinstance(app_role, str) or not app_role:
+        raise AssertionError("the PostgreSQL application DSN must identify its role")
+    factory = PostgresConnectionFactory(
+        PostgresSettings(dsn=psycopg.conninfo.make_conninfo(dsn, dbname=database_name), require_tls=False)
+    )
+    admin = PostgresConnectionFactory(PostgresSettings(dsn=isolated_dsn, require_tls=False)).connect()
     tenant = "ap_integrity_" + uuid4().hex[:16]
     try:
         with admin.transaction():
+            role = psycopg.sql.Identifier(app_role)
+            admin.execute(psycopg.sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(role))
+            admin.execute(
+                psycopg.sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}").format(
+                    role
+                )
+            )
+            admin.execute(psycopg.sql.SQL("GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA reconforge TO {}").format(role))
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s)", (tenant, tenant))
             admin.execute(
                 "INSERT INTO reconforge.domain_workspaces(tenant_id,id,name) VALUES (%s,%s,'default')",

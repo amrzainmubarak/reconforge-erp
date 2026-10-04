@@ -31,6 +31,7 @@ from reconforge.infrastructure.postgres_payables_payment_link import (
 )
 from reconforge.platform.common import PlatformError, ServerPrincipal, server_principal_context
 from reconforge.platform.payables import PurchaseOrderLineInput, SupplierInvoiceLineInput
+from tests.postgres_test_hygiene import PAYABLES_TENANT_CLEANUP_PLAN
 
 pytest_plugins = ("tests.test_postgres_finance_scope",)
 
@@ -92,6 +93,19 @@ def test_payment_link_postgres_migration_is_frozen_and_scope_guarded() -> None:
 def test_payment_link_adapter_decodes_runtime_hybrid_rows_by_name() -> None:
     source = _HybridPostgresRow(("id", "amount_minor", "currency_code"), ("APPAY-1", 400, "EGP"))
     assert _row(source) == {"id": "APPAY-1", "amount_minor": 400, "currency_code": "EGP"}
+
+
+def test_payment_link_cleanup_plan_removes_immutable_children_before_evidence() -> None:
+    tables = [table.name for table in PAYABLES_TENANT_CLEANUP_PLAN.tables]
+    assert tables.index("ap_payment_link_commands") < tables.index("ap_payment_links")
+    assert tables.index("ap_payment_links") < tables.index("domain_audit_events")
+    assert tables.index("ap_payment_links") < tables.index("outbox_events")
+    immutable = {
+        (trigger.table_name, trigger.trigger_name)
+        for trigger in PAYABLES_TENANT_CLEANUP_PLAN.immutable_triggers
+    }
+    assert ("ap_payment_link_commands", "ap_payment_link_command_guard") in immutable
+    assert ("ap_payment_links", "ap_payment_link_guard") in immutable
 
 
 def test_payment_link_authorization_amount_reuses_retained_full_payment_receipt() -> None:

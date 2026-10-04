@@ -63,6 +63,8 @@ RLS_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(tables=(_TENANTS,))
 
 PAYABLES_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(
     tables=(
+        TenantScopedTable("ap_payment_link_commands"),
+        TenantScopedTable("ap_payment_links"),
         TenantScopedTable("domain_audit_events"),
         TenantScopedTable("outbox_events"),
         TenantScopedTable("control_exceptions"),
@@ -80,7 +82,11 @@ PAYABLES_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(
         TenantScopedTable("currencies"),
         _TENANTS,
     ),
-    immutable_triggers=(_DOMAIN_AUDIT_TRIGGER,),
+    immutable_triggers=(
+        ImmutableTrigger("ap_payment_link_commands", "ap_payment_link_command_guard"),
+        ImmutableTrigger("ap_payment_links", "ap_payment_link_guard"),
+        _DOMAIN_AUDIT_TRIGGER,
+    ),
 )
 
 RECEIVABLES_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(

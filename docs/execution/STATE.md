@@ -1,5 +1,21 @@
 # Execution State
 
+## Amr sprint PostgreSQL recovery-profile fencing completion (2026-10-04)
+
+AMR-GFO-006 closes a bounded operational-recovery prerequisite on the sprint
+branch. A paired named recovery profile and exact Alembic revision now preflight
+the PostgreSQL source before dump creation, bind new encrypted artifacts through
+AES-GCM associated data, refuse a configured mismatch before target validation
+or database creation, and require the exact revision after isolated restore.
+The preflight/restore SQL receives its revision through quoted `psql` variable
+substitution. Existing unbound v1 settings and artifacts stay readable through a
+documented coarse compatibility path; a legacy configuration refuses a bound
+artifact. Fifty focused fake-native-tool, encrypted-backup, matrix, phase-audit,
+and upgrade-orchestrator tests pass with one declared live-service skip; Ruff,
+Mypy, Bandit, and the package build exit zero. This has no database migration,
+HTTP route, UI, live native-service exercise, throughput, RPO/RTO, HA/DR, or
+production-recovery claim.
+
 ## Amr sprint enterprise-quality outbox fencing completion (2026-10-04)
 
 AMR-GFO-004 is complete at its bounded reliability foundation on the sprint

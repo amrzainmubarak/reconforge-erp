@@ -59,6 +59,19 @@ may create and drop only isolated drill databases. Put `pg_dump`, `pg_restore`,
 Application boundary, and drops that exact database. Never point this rehearsal
 at a production maintenance role.
 
+For a named PostgreSQL recovery profile, construct
+`PostgresBackupSettings` with both `recovery_profile` and
+`expected_alembic_revision`. The adapter verifies the source revision before
+dump creation, stores both values in the AES-GCM-authenticated backup header,
+rejects a mismatched bound artifact before creating a restore database, and
+rechecks the exact revision after isolated restore. The revision is passed to
+`psql` through quoted variable substitution. Existing unbound v1 settings and
+artifacts remain supported with their prior relation-existence check; a legacy
+configuration refuses a profile-bound artifact rather than ignoring its
+binding. This is a bounded native-tool recovery guard, not a live-service
+rehearsal, RPO/RTO result, key-custody control, HA/DR guarantee, or production
+recovery claim.
+
 Not supported:
 
 - Cloud backup.

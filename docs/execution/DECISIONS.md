@@ -1,5 +1,20 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-AMR-GFO-006 — Bind native PostgreSQL backup recovery to a configured revision (2026-10-04)
+
+ADR0829 accepts an optional atomic `recovery_profile` plus
+`expected_alembic_revision` pair for the native PostgreSQL backup adapter. A
+named profile checks the source before `pg_dump`, adds both values to the
+existing AES-GCM-authenticated header, rejects a mismatched bound artifact
+before any restore-target command, and rechecks the exact version after the
+isolated restore. The revision is supplied through a quoted `psql` variable,
+not constructed SQL. Legacy v1 settings/artifacts remain readable through the
+historical relation-existence check, while an unbound configuration rejects a
+bound artifact. Existing `operations.backup.create` and
+`operations.restore.execute` authorization remains the operation boundary.
+This is a local fake-tool contract, not a live-service, RPO/RTO, key-custody,
+HA/DR, or production-recovery assertion.
+
 ## D-AMR-GFO-004 — Freeze fenced outbox recovery as a bounded reliability primitive (2026-10-04)
 
 ADR0827 is accepted with SQLite migration 53 and PostgreSQL revision 0103.

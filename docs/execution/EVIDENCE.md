@@ -1,5 +1,18 @@
 # ReconForge Execution Evidence Log
 
+- AMR-GFO-006 profile-pinned PostgreSQL native recovery (2026-10-04):
+  `tests/test_postgres_backup.py`, `tests/test_encrypted_backup.py`,
+  `tests/test_backup_restore_matrix.py`, `tests/test_phase_1_exit_audit.py`,
+  and `tests/test_upgrade_orchestrator.py` report 50 passed with one declared
+  live native-service skip. The synthetic command contract proves source profile
+  rejection before `pg_dump`, authenticated header binding, profile/revision
+  mismatch rejection before `pg_restore` or `createdb`, legacy v1 reader
+  behavior, exact target verification, and target rollback after failure.
+  Ruff, Mypy, Bandit, and `python -m build --no-isolation` exit zero. This is
+  fake-tool and local encryption evidence only; it does not prove an actual
+  native-client service recovery, resource profile, RPO/RTO, key custody,
+  HA/DR, or production operation.
+
 - AMR-GFO-004 fenced outbox recovery (2026-10-04): SQLite migration 53 and
   PostgreSQL Alembic revision 0103 are centrally registered after the retained
   inbox and budget migrations. `tests/test_outbox_fencing_migration.py` and

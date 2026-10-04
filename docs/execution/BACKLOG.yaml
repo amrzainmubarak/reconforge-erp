@@ -57,6 +57,19 @@ tasks:
       and delivery/continuity tests, plus live nonowner PostgreSQL migration/recovery tests,
       Ruff and focused Mypy pass. Shared PostgreSQL runtime-role actor authority, external
       at-least-once transport, broker HA and production capacity remain separate boundaries.
+  - id: AMR-GFO-006
+    priority: P1
+    area: enterprise-quality
+    title: Pin PostgreSQL native backup and restore to an explicit recovery profile
+    status: completed
+    depends_on: [AMR-GFO-001, AMR-GFO-004]
+    exit_evidence: >-
+      A paired profile/revision configuration preflights the source, binds new encrypted
+      artifacts through authenticated header fields, rejects mismatch before target mutation,
+      and verifies the exact restored Alembic revision before the existing isolated-target
+      rollback boundary. Legacy v1 settings/artifacts remain readable under their documented
+      coarse compatibility path. Focused native-backup/encrypted-backup/matrix tests, Ruff,
+      focused Mypy, and focused Bandit pass; the live native-service test remains an explicit skip.
   - id: AMR-GFO-005
     priority: P0
     area: integration-acceptance

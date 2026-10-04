@@ -119,6 +119,7 @@ POSTGRES_MIGRATION_REVISIONS: tuple[str, ...] = (
     "0103_pg_outbox_fencing",
     "0104_pg_exception_review_api",
     "0105_pg_payables_payment_link",
+    "0106_pg_ap_link_reversal",
 )
 
 _MIGRATION_TOKEN_PATTERN = re.compile(r"^[0-9]{4}_[A-Za-z0-9_]+$")

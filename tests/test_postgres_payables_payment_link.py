@@ -36,12 +36,16 @@ from tests.postgres_test_hygiene import PAYABLES_TENANT_CLEANUP_PLAN
 pytest_plugins = ("tests.test_postgres_finance_scope",)
 
 PERMISSIONS = frozenset(
-    {"finance_core.read", "finance_core.manage", "finance_core.validate", "finance_core.post", "payables.settle"}
+    {
+        "finance_core.read", "finance_core.manage", "finance_core.validate", "finance_core.post",
+        "finance_core.reverse", "payables.settle", "payables.reverse",
+    }
 )
 MAKER = PostingActor("payment-maker", "payment-maker", PERMISSIONS, step_up_active=True)
 CHECKER = PostingActor("payment-checker", "payment-checker", PERMISSIONS, step_up_active=True)
 POSTER = PostingActor("payment-poster", "payment-poster", PERMISSIONS, step_up_active=True)
 SETTLER = PostingActor("payment-settler", "payment-settler", PERMISSIONS, step_up_active=True)
+REVERSER = PostingActor("payment-reverser", "payment-reverser", PERMISSIONS, step_up_active=True)
 SCOPE = {"organization_id": "org_a", "workspace_id": "shared", "legal_entity_id": "entity_a1"}
 ROOT = Path(__file__).resolve().parents[1]
 PAYMENT_LINK_PREVIOUS_REVISION = "0104_pg_exception_review_api"
@@ -121,6 +125,11 @@ def test_payment_link_authorization_amount_reuses_retained_full_payment_receipt(
 
         def _assert_current_actor(self, actor_id: str) -> None:
             assert actor_id == SETTLER.user_id
+
+        def _canonical_principal_id(self, value: object, *, field: str) -> str:
+            assert field == "Settlement actor id"
+            assert value == SETTLER.user_id
+            return SETTLER.user_id
 
         def _invoice(self, invoice_id: str, *, lock: bool = False) -> dict[str, object]:
             assert invoice_id == "invoice-paid"
@@ -291,7 +300,7 @@ def test_live_payment_link_migration_rejects_non_bypass_role_before_partial_muta
 
 @pytest.fixture
 def payment_link_database(finance_database: dict[str, Any]) -> dict[str, Any]:
-    """Add 0105 grants and independently identifiable actors after head upgrade."""
+    """Add payment-link grants and independently identifiable actors after head upgrade."""
 
     import psycopg
 
@@ -306,10 +315,11 @@ def payment_link_database(finance_database: dict[str, Any]) -> dict[str, Any]:
         admin.execute(
             psycopg.sql.SQL(
                 "GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.ap_payment_links,"
-                "reconforge.ap_payment_link_commands TO {}"
+                "reconforge.ap_payment_link_commands,reconforge.ap_payment_link_reversals,"
+                "reconforge.ap_payment_link_reversal_commands TO {}"
             ).format(identifier)
         )
-        for actor in (MAKER, CHECKER, POSTER, SETTLER):
+        for actor in (MAKER, CHECKER, POSTER, SETTLER, REVERSER):
             admin.execute(
                 """INSERT INTO reconforge.identity_users
                    (tenant_id,id,username,display_name,password_hash,password_salt,password_iterations,password_algorithm)

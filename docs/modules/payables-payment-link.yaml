@@ -1,6 +1,6 @@
 id: payables-payment-link
 name: Evidence-bound supplier invoice settlement link
-version: 1.0.0
+version: 1.1.0
 maturity: experimental
 implementation_status: bounded-ap-finance-settlement-control
 owner: business-finance
@@ -8,9 +8,9 @@ dependencies: [payables, finance-posting, platform.identity, platform.authorizat
 incompatible_versions: [mutable-ap-payment-allocation, implicit-ap-cash-posting]
 data_classification: financial-sensitive
 retention_policy: retain-immutable-payment-link-command-audit-and-outbox-evidence
-permissions: [payables.read, payables.manage, payables.match, payables.approve, payables.settle]
+permissions: [payables.read, payables.manage, payables.match, payables.approve, payables.settle, payables.reverse]
 default_roles: [admin, controller]
-migrations: [sqlite-54-payables-finance-payment-link, postgresql-0105-pg-payables-payment-link]
+migrations: [sqlite-54-payables-finance-payment-link, sqlite-55-payables-finance-payment-link-reversal, postgresql-0105-pg-payables-payment-link, postgresql-0106-pg-ap-link-reversal]
 domain_invariants:
   - every-allocation-binds-one-approved-invoice-to-one-reviewed-posted-manual-finance-effect
   - invoice-effect-and-accounts-share-workspace-organization-legal-entity-and-currency
@@ -21,10 +21,14 @@ domain_invariants:
   - invoice-version-and-cumulative-allocation-are-serialized-and-never-exceed-invoice-total
   - invoice-becomes-paid-only-on-exact-cumulative-allocation-and-links-commands-audit-and-outbox-are-immutable
   - idempotency-key-replay-returns-the-retained-response-and-changed-command-content-is-refused
-domain_events: [ap.payment_linked]
+  - a-payment-link-remains-immutable-and-can-be-unwound-only-once-by-an-independent-ap-actor-using-the-one-posted-reviewed-full-finance-inverse
+  - reversal-restores-approved-or-paid-status-from-retained-active-allocations-with-an-immutable-command-audit-and-outbox-evidence-node
+domain_events: [ap.payment_linked, ap.payment_link_reversed]
 api_routes:
   - POST /api/v1/payables/invoices/{invoice_id}/payment-links
   - GET /api/v1/payables/invoices/{invoice_id}/payment-links
+  - POST /api/v1/payables/invoices/{invoice_id}/payment-links/{payment_link_id}/reversal
+  - GET /api/v1/payables/invoices/{invoice_id}/payment-link-reversals
 cli_commands: []
 ui_routes: []
 import_schemas: []
@@ -32,6 +36,8 @@ export_schemas: []
 synthetic_fixtures:
   - tests/test_payables_payment_link.py
   - tests/test_postgres_payables_payment_link.py
+  - tests/test_payables_payment_link_reversal.py
+  - tests/test_postgres_payables_payment_link_reversal.py
 threat_model:
   - stale-or-concurrent-over-allocation-of-one-supplier-invoice
   - direct-sql-link-or-paid-status-without-a-matching-finance-transition
@@ -42,6 +48,9 @@ threat_model:
   - audit-outbox-or-backup-evidence-tampering
   - client-chosen-amount-bypassing-server-authorization-bounds
   - non-bypass-migration-role-observing-an-empty-forced-rls-view-before-seeding-or-downgrade
+  - stale-or-replayed-reversal-command-changing-the-original-link-or-its-historical-receipt
+  - reversal-effect-not-being-the-exact-posted-full-finance-inverse-or-reusing-an-existing-reversal
+  - reversal-actor-colliding-with-invoice-maker-approver-settler-or-finance-preparer-reviewer-poster
 benchmarks: []
 rollback_plan: retain-payment-evidence-and-restore-a-verified-pre-54-or-pre-0105-backup; populated-postgresql-downgrade-refuses-evidence-loss
 test_matrix:
@@ -49,10 +58,13 @@ test_matrix:
   - tests/test_payables_approval_integrity.py
   - tests/test_db_backup_restore.py
   - tests/test_postgres_payables_payment_link.py
+  - tests/test_payables_payment_link_reversal.py
+  - tests/test_postgres_payables_payment_link_reversal.py
   - tests/test_postgres_operations.py
 limitations:
   - payment-link-requires-an-already-reviewed-and-posted-manual-finance-effect
   - postgres-live-acceptance-requires-an-explicit-nonowner-application-dsn-and-administrator-dsn
   - no-automatic-receipt-to-inventory-grni-ap-or-general-ledger-effect-is-created
-  - no-bank-instruction-status-return-reversal-fx-tax-intercompany-or-void-lifecycle-is-provided
+  - no-bank-instruction-status-return-fx-tax-intercompany-or-external-payment-void-lifecycle-is-provided
+  - reversal-is-bounded-to-one-fully-evidenced-ap-payment-link-allocation-and-does-not-create-or-post-finance-entries
   - no-standalone-ui-or-production-capacity-availability-or-compliance-claim-is-made

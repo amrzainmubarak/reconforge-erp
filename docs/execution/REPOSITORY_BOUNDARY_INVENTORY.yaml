@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: "2026-10-03"
+updated_at: "2026-10-04"
 claim_boundary: >-
   This inventory measures source coupling. A partial repository does not prove
   backend neutrality, and only a connection-free application service may be
@@ -25,6 +25,7 @@ platform_services:
   - {file: operations.py, service: OperationsService, status: compatibility_adapter}
   - {file: outbox.py, service: OutboxService, status: compatibility_adapter}
   - {file: payables.py, service: PayablesService, status: compatibility_adapter}
+  - {file: payables_payment_link.py, service: PayablesPaymentLinkService, status: compatibility_adapter}
   - {file: receivables.py, service: ReceivablesService, status: compatibility_adapter}
 application_services:
   - file: consolidation.py
@@ -155,6 +156,10 @@ application_services:
     service: ExceptionQueueApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_exceptions.SQLiteExceptionQueueRepository
+  - file: exception_review.py
+    service: ExceptionReviewApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_exceptions.PostgresExceptionQueueRepository
   - file: approvals.py
     service: ApprovalApplicationService
     status: backend_neutral
@@ -209,6 +214,11 @@ application_services:
     service: PayablesApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_payables.SQLitePayablesRepository
+  - file: payables_payment_link.py
+    service: PayablesPaymentLinkApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_payables_payment_link.SQLitePayablesPaymentLinkRepository
+    postgres_adapter: reconforge.infrastructure.postgres_payables_payment_link.PostgresPayablesPaymentLinkRepository
   - file: receivables.py
     service: ReceivablesApplicationService
     status: backend_neutral
@@ -230,8 +240,8 @@ application_services:
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_inventory_planning.SQLiteInventoryPlanningRepositoryAdapter
 summary:
-  platform_total: 20
+  platform_total: 21
   direct_sqlite: 0
   partial_repository: 0
-  compatibility_adapter: 20
-  backend_neutral_application: 49
+  compatibility_adapter: 21
+  backend_neutral_application: 51

@@ -63,6 +63,15 @@ def finance_database(isolated_postgres_migration_dsn: str):
         admin.execute("INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES('finance_scope','EGP','Synthetic',2)")
         for org, workspace in (("a", "shared"), ("b", "shared"), ("legacy", "shared")):
             admin.execute("INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,application_workspace_id) VALUES('finance_scope',%s,%s,%s,'EGP',%s)", (f"org_{org}", f"ORG_{org.upper()}", org, workspace))
+        # Application repositories resolve organization ownership through this
+        # canonical bridge rather than the legacy convenience column above.
+        # Keep ``org_legacy`` absent so the later upgrade assertion still
+        # exercises an unprovable historical ownership record.
+        admin.execute(
+            """INSERT INTO reconforge.master_data_workspace_organizations
+               (tenant_id,workspace_id,organization_id)
+               VALUES ('finance_scope','shared','org_a'),('finance_scope','shared','org_b')"""
+        )
         for entity, org in (("a1", "a"), ("a2", "a"), ("b1", "b"), ("legacy", "legacy")):
             admin.execute("INSERT INTO reconforge.legal_entities(tenant_id,id,organization_id,entity_code,name,currency_code) VALUES('finance_scope',%s,%s,%s,%s,'EGP')", (f"entity_{entity}", f"org_{org}", entity.upper(), entity))
         for period, workspace in (("period", "shared"), ("other_period", "other")):

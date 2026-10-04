@@ -303,6 +303,24 @@ def payment_link_database(finance_database: dict[str, Any]) -> dict[str, Any]:
                    ON CONFLICT (tenant_id,id) DO NOTHING""",
                 (actor.user_id, actor.username, actor.username),
             )
+    # Finance reference maintenance is intentionally permitted at the
+    # organization/workspace boundary, but not from an entity-scoped payment
+    # transaction.  Provision the AP account at that broader boundary so the
+    # settlement tests exercise the same separation as a real deployment.
+    with finance_database["boundary"].transaction(
+        "finance_scope",
+        workspace_id=SCOPE["workspace_id"],
+        organization_id=SCOPE["organization_id"],
+    ) as connection:
+        PostgresFinanceCoreRepository(connection, "finance_scope").upsert_account(
+            account_code="A_AP",
+            name="Accounts payable",
+            workspace="Shared",
+            chart_code="A",
+            account_type="Liability",
+            normal_balance="Credit",
+            actor_label=POSTER.user_id,
+        )
     return finance_database
 
 
@@ -372,14 +390,6 @@ def _payment_effect(
     suffix: str,
 ) -> dict[str, Any]:
     finance = PostgresFinanceCoreRepository(connection, "finance_scope")
-    finance.upsert_account(
-        account_code="A_AP",
-        name="Accounts payable",
-        workspace="Shared",
-        chart_code="A",
-        account_type="Liability",
-        normal_balance="Credit",
-    )
     amount = f"{amount_minor // 100}.{amount_minor % 100:02d}"
     with server_principal_context(_principal(MAKER)):
         entry = finance.create_entry(

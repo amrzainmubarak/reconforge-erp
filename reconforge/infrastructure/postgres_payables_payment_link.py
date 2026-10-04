@@ -124,7 +124,7 @@ class PostgresPayablesPaymentLinkRepository:
             if existing is not None:
                 raise PlatformError("Financial posting effect is already allocated to a supplier invoice.")
             allocated_before = self.connection.execute(
-                """SELECT COALESCE(SUM(amount_minor),0) AS amount
+                """SELECT COALESCE(SUM(amount_minor),0)::bigint AS amount
                    FROM reconforge.ap_payment_links WHERE tenant_id=%s AND supplier_invoice_id=%s""",
                 (self.tenant_id, invoice_key),
             ).fetchone()
@@ -488,7 +488,7 @@ def _result_from_link(connection: Any, tenant_id: str, link: Mapping[str, object
         raise PlatformError("Retained payment link references a missing supplier invoice.")
     total = _stored_integer(_value(invoice, "total_minor", 1), "supplier invoice total")
     allocated_row = connection.execute(
-        """SELECT COALESCE(SUM(amount_minor),0) AS amount
+        """SELECT COALESCE(SUM(amount_minor),0)::bigint AS amount
            FROM reconforge.ap_payment_links
            WHERE tenant_id=%s AND supplier_invoice_id=%s AND invoice_version_before<=%s""",
         (tenant_id, link["supplier_invoice_id"], link["invoice_version_before"]),

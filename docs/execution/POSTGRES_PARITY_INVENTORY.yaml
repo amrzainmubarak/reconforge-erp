@@ -1,10 +1,10 @@
 schema_version: 1
-updated_at: "2026-10-03"
+updated_at: "2026-10-04"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0099_pg_receivables_policy"
+current_source_migration_head: "0105_pg_payables_payment_link"
 production_foundation_review:
   executed_at: "2026-10-03"
   evidence: "PRODUCTION_AUDIT_2026-10-03.md"
@@ -328,21 +328,23 @@ boundaries:
   - {file: close.py, service: CloseManagementApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_close_application.PostgresCloseManagementRepository, test: tests/test_postgres_close_application.py, risk: financial_high}
   - {file: evidence.py, service: EvidenceRegistryApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_evidence_application.PostgresEvidenceRegistryRepository, test: tests/test_postgres_evidence_application.py, risk: integrity_high}
   - {file: exceptions.py, service: ExceptionQueueApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_exceptions.PostgresExceptionQueueRepository, test: tests/test_postgres_exceptions.py, risk: workflow_high}
+  - {file: exception_review.py, service: ExceptionReviewApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_exceptions.PostgresExceptionQueueRepository, test: tests/test_api_server_exception_review.py, risk: workspace_scoped_assignment_and_terminal_transition_workflow_with_immutable_audit_outbox_history}
   - {file: finance_core.py, service: FinanceCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_finance_core.PostgresFinanceCoreRepository, test: tests/test_postgres_finance_core.py, risk: financial_critical}
   - {file: finance_posting.py, service: FinancePostingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_finance_posting.PostgresFinancePostingRepository, test: tests/test_postgres_finance_posting.py, risk: manual_posting_only_no_cumulative_opening_or_trade_integration}
   - {file: master_data.py, service: MasterDataApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_master_data_application.PostgresMasterDataApplicationRepository, test: tests/test_postgres_master_data_application.py, risk: scope_high}
   - {file: inventory_core.py, service: InventoryCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_core.PostgresInventoryCoreRepository, test: tests/test_postgres_inventory_core.py, risk: financial_high}
   - {file: inventory_receipt_posting.py, service: InventoryReceiptPostingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_receipt_posting.PostgresInventoryReceiptPostingRepository, test: tests/test_postgres_inventory_receipt_posting.py, risk: financial_critical}
   - {file: payables.py, service: PayablesApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_payables.PostgresPayablesRepository, test: tests/test_postgres_payables.py, risk: financial_critical}
+  - {file: payables_payment_link.py, service: PayablesPaymentLinkApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_payables_payment_link.PostgresPayablesPaymentLinkRepository, test: tests/test_postgres_payables_payment_link.py, risk: immutable_approved_invoice_to_independently_reviewed_posted_ap_cash_effect_linkage}
   - {file: receivables.py, service: ReceivablesApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_receivables.PostgresReceivablesRepository, test: tests/test_postgres_receivables.py, risk: financial_critical}
   - {file: matching.py, service: MatchingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_matching.PostgresMatchingRepository, test: tests/test_postgres_matching_application.py, risk: integrity_critical}
   - {file: inventory_valuation.py, service: InventoryValuationApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation.PostgresInventoryValuationRepository, test: tests/test_postgres_inventory_valuation.py, risk: financial_critical}
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
-  total: 49
+  total: 51
   live_verified_current: 20
-  live_test_available: 25
+  live_test_available: 27
   absent: 0
   contract_only: 1
   not_applicable: 3

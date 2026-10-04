@@ -1,7 +1,7 @@
 schema_version: 1
 index_id: reconforge-module-threat-model-index
 status: evidence-bounded
-last_reviewed: "2026-10-03"
+last_reviewed: "2026-10-04"
 claim_boundary: >-
   This index links active repository modules to bounded threat evidence. It is
   not a security guarantee, not a compliance assessment or certification, not
@@ -118,7 +118,7 @@ modules:
     capability_status: foundation
     threat_model_status: evidence-bounded
     owner: platform-security
-    interfaces: [api, cli, current-studio, library]
+    interfaces: [api, cli, current-studio, library, modern-studio]
     module_data_classifications: [authentication-metadata, financial-workflow-metadata]
     architecture_boundaries: [TB-002, TB-003, TB-004, TB-007]
     assets:
@@ -172,7 +172,7 @@ modules:
         residual_risk_ids: [R-019]
         limitations:
           - Dependencies are not locked with hashes and no current clean-tree signed provenance is available.
-    module_test_evidence: [tests/test_api_foundation.py, tests/test_db_backup_structured_ingress.py, tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py, tests/test_policy_analysis.py, tests/test_postgres_policy_analysis.py, tests/test_postgres_policy_analysis_runtime.py, tests/test_postgres_policy_scopes.py, tests/test_studio_auth.py, tests/test_upgrade_orchestrator.py]
+    module_test_evidence: [tests/test_api_foundation.py, tests/test_api_notification_inbox.py, tests/test_db_backup_structured_ingress.py, tests/test_db_export_import.py, tests/test_db_import_structured_ingress.py, tests/test_notification_inbox.py, tests/test_policy_analysis.py, tests/test_postgres_notification_inbox.py, tests/test_postgres_policy_analysis.py, tests/test_postgres_policy_analysis_runtime.py, tests/test_postgres_policy_scopes.py, tests/test_studio_auth.py, tests/test_upgrade_orchestrator.py]
     assumptions:
       - The operator protects the local operating-system account, database paths, backups, and process environment.
       - Enabled HTTP services are restricted to reviewed local or self-hosted network boundaries.
@@ -236,6 +236,64 @@ modules:
       - Consumers treat local period and entity state as ReconForge control metadata, not source-system authority.
     out_of_scope:
       - Source-ERP master-data writeback, external reference attestation, and universal enterprise master-data governance.
+
+  - module_id: finance.budget-control
+    registry_maturity: experimental
+    capability_status: foundation
+    threat_model_status: evidence-bounded
+    owner: financial-integrity
+    interfaces: [api, library]
+    module_data_classifications: [financial-sensitive]
+    architecture_boundaries: [TB-002, TB-003, TB-004, TB-006]
+    assets:
+      - id: budget-envelope-and-commitment-ledger
+        description: Scope-bound budget envelopes, versioned appropriations, commitments, releases, and remaining available amounts.
+        data_class: DC-003
+        objectives: [confidentiality, integrity, availability, auditability]
+      - id: budget-command-and-evidence-chain
+        description: Idempotency commands, canonical results, retained audit events, and outbox linkage for budget-control mutations.
+        data_class: DC-005
+        objectives: [integrity, auditability]
+    actors: [ACT-001, ACT-002, ACT-004, ACT-006, ACT-007]
+    threat_cases:
+      - threat_id: TM-T-002
+        status: bounded
+        attack_surface: Exact budget envelope amounts, commitment deltas, scope identity, lifecycle transitions, available-balance calculation, and replay digests.
+        controls: [SEC-C-002, SEC-C-005, SEC-C-006]
+        test_evidence: [tests/test_budget_control.py, tests/test_postgres_budget_control.py, tests/test_api_budget_control.py]
+        residual_risk_ids: [R-004]
+        limitations:
+          - Exact commitments govern the implemented budget-control ledger only and do not establish procurement authority, source completeness, or statutory accounting policy.
+      - threat_id: TM-T-003
+        status: partial
+        attack_surface: Budget read, manage, and approve permissions; actor identity; maker-checker transition separation; and API caller context.
+        controls: [SEC-C-003, SEC-C-004, SEC-C-005]
+        test_evidence: [tests/test_budget_control.py, tests/test_api_budget_control.py, tests/test_postgres_budget_control.py]
+        residual_risk_ids: [R-011]
+        limitations:
+          - Implemented permission checks do not prove federated identity lifecycle, comprehensive amount/period policy, or independent human identity assurance.
+      - threat_id: TM-T-004
+        status: partial
+        attack_surface: SQLite and PostgreSQL tenant, workspace, entity, fiscal-period, and dimension scope for envelopes and command replay.
+        controls: [SEC-C-004, SEC-C-005]
+        test_evidence: [tests/test_budget_control.py, tests/test_postgres_budget_control.py, tests/test_postgres_budget_control_migration.py]
+        residual_risk_ids: [R-001, R-015]
+        limitations:
+          - Tested scope isolation does not establish universal hosted isolation across all modules, privileged database paths, or external stores.
+      - threat_id: TM-T-005
+        status: partial
+        attack_surface: Create, transition, record, audit, outbox, idempotent command replay, rollback, and populated migration recovery.
+        controls: [SEC-C-005, SEC-C-006, SEC-C-007]
+        test_evidence: [tests/test_budget_control.py, tests/test_postgres_budget_control.py, tests/test_postgres_budget_control_migration.py]
+        residual_risk_ids: [R-003]
+        limitations:
+          - Local and disposable-server evidence does not prove distributed delivery, queue durability, cross-host recovery, or operational availability.
+    module_test_evidence: [tests/test_api_budget_control.py, tests/test_budget_control.py, tests/test_postgres_budget_control.py, tests/test_postgres_budget_control_migration.py]
+    assumptions:
+      - Authorized operators supply scope and financial policy values, and reviewers independently assess budget-control outcomes before downstream action.
+      - The module remains a shared non-posting control foundation until a separately governed procurement or expense integration consumes it.
+    out_of_scope:
+      - Purchase-order execution, supplier invoice posting, payment authorization, source-ERP writeback, statutory budgeting, and HA/DR operation.
 
   - module_id: finance.core
     registry_maturity: experimental

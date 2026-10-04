@@ -2885,8 +2885,6 @@ def _validate_backup_document(backup: dict[str, Any]) -> int:
         for row in rows:
             if not isinstance(row, dict) or not all(isinstance(key, str) for key in row):
                 raise DBBridgeError("Backup table row is invalid.")
-    if schema_version >= _OUTBOX_FENCING_SCHEMA_VERSION:
-        _validate_outbox_fencing_backup_document(tables)
     return schema_version
 
 
@@ -3084,6 +3082,11 @@ def _validate_backup(input_path: Path | str) -> tuple[Path, dict[str, Any], dict
         or backup["privacy_warning"] != manifest["privacy_warning"]
     ):
         raise DBBridgeError("Backup manifest does not match the backup document.")
+    # Verify the signed bundle header before version-specific table semantics.
+    # This preserves the closed manifest contract while still refusing a v53+
+    # snapshot that omits the fencing evidence needed for restore verification.
+    if schema_version >= _OUTBOX_FENCING_SCHEMA_VERSION:
+        _validate_outbox_fencing_backup_document(backup["tables"])
     return backup_path, manifest, backup
 
 

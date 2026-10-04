@@ -305,7 +305,7 @@ surfaces:
     next_action: Bind copied artifacts to separately authenticated scan/provenance and disclosure-approval metadata, test real process/host/filesystem durability, and refuse unscanned redistribution where policy requires scanning.
   - id: FI-013
     name: Internal persisted JSON fields
-    module_ids: [platform.core, finance.controls, reconciliation.core]
+    module_ids: [platform.core, finance.budget-control, finance.controls, reconciliation.core]
     trust: internal-persisted
     entrypoints:
       - reconforge/audit/events.py::_metadata_from_json
@@ -314,6 +314,9 @@ surfaces:
       - reconforge/infrastructure/postgres_ledger.py::PostgresLedgerRepository.verify_audit_events
       - reconforge/infrastructure/postgres_outbox.py::_metadata
       - reconforge/infrastructure/redis.py::TenantRedisStore.get_session
+      - reconforge/infrastructure/budget_control_repository.py::BudgetControlRepositoryBase._command
+      - reconforge/infrastructure/budget_control_verification.py::_json
+      - reconforge/infrastructure/notification_inbox_verification.py::verify_sqlite_inbox_storage
       - reconforge/infrastructure/sqlite_matching.py::SQLiteMatchingRepository._matching_rule_document
       - reconforge/infrastructure/sqlite_payables.py::SQLitePayablesRepository._idempotent
       - reconforge/infrastructure/sqlite_receivables.py::SQLiteReceivablesRepository._idempotent
@@ -322,7 +325,7 @@ surfaces:
     policy_coverage: partial
     status: partial
     controls: [SEC-C-002, SEC-C-004, SEC-C-005]
-    test_evidence: [tests/test_audit_metadata_json.py, tests/test_postgres_outbox_payload_json.py, tests/test_postgres_reconciliation_persisted_json.py, tests/test_sqlite_matching_rule_json.py, tests/test_redis_session_json.py, tests/test_db_export_persisted_json.py, tests/test_audit_events.py, tests/test_db_export_import.py, tests/test_postgres_ledger.py, tests/test_postgres_outbox.py, tests/test_postgres_reconciliation.py, tests/test_redis_foundation.py, tests/test_payables.py, tests/test_receivables.py, tests/test_financial_idempotency_json.py]
+    test_evidence: [tests/test_audit_metadata_json.py, tests/test_budget_control.py, tests/test_notification_inbox.py, tests/test_postgres_outbox_payload_json.py, tests/test_postgres_reconciliation_persisted_json.py, tests/test_sqlite_matching_rule_json.py, tests/test_redis_session_json.py, tests/test_db_export_persisted_json.py, tests/test_audit_events.py, tests/test_db_export_import.py, tests/test_postgres_ledger.py, tests/test_postgres_outbox.py, tests/test_postgres_reconciliation.py, tests/test_redis_foundation.py, tests/test_payables.py, tests/test_receivables.py, tests/test_financial_idempotency_json.py]
     residual_risk_ids: [R-018]
     limitations:
       - These are database, cache, or event values rather than filesystem ingress and must not be described as accepted upload paths.
@@ -332,6 +335,8 @@ surfaces:
       - "PostgreSQL reconciliation rule, input-attribute, decision-lineage, and exception-evidence JSONB use four named profiles over postgres-reconciliation-object-v1. Rule/lineage/evidence allow 4194304 UTF-8 bytes; attributes preserve the existing 100000-byte producer ceiling."
       - "All reconciliation JSONB profiles allow 100000 nodes, depth 32, 25000 items/collection, unique keys, and finite object values. Attributes allow 100000 and the other profiles 262144 characters/scalar. Canonical bytes preserve JSONB fingerprints; corrupt rows fail before matcher use or public return instead of becoming sentinel values."
       - "SQLite matching rules use sqlite-matching-rule-json-v1: 4194304 UTF-8 bytes, 100000 nodes, depth 32, 25000 items/collection, 262144 characters/scalar, unique keys, finite object values, and historical spaced sorted ASCII text. New producers reject binary floats; historical finite floats remain readable."
+      - "Budget command replay reads canonical retained command/result text after scope and digest checks; the verification reader bounds text to 65536 bytes and rejects duplicate or non-finite values, while legacy replay text has no shared graph-budget profile."
+      - "Inbox verification parses retained audit and outbox metadata only to compare exact expected linkage. It fails closed on malformed values but has no separate pre-parse graph budget for those historical texts."
       - "Tenant-scoped Redis sessions use redis-session-json-v1: 16384 UTF-8 bytes, 16 nodes, depth 2, four fields, and 256 characters/scalar. The closed schema requires string IDs, a lowercase SHA-256 token digest, and explicit UTC expiry; producer rejection precedes client access and corrupt reads do not mutate Redis."
       - "The public SQLite export has a closed registry of JSON fields: audit metadata and both matching rules reuse their established profiles; legacy summaries use sqlite-legacy-import-summary-json-v1; matching lineage uses sqlite-matching-lineage-json-v1; currency-registry snapshots use currency-registry-snapshot-json-v1 with a bounded 1000000-byte/integer-token object profile. All reject malformed values before destination creation and preserve their declared output shapes."
       - "Legacy-summary and matching-lineage producers use their respective contracts. Export preflights every registered row before creating the destination or writing any file, rejects non-text/corrupt values without sentinels, preserves metadata/summary/rule object outputs, and retains lineage_json as its historical string field."
@@ -943,6 +948,21 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/infrastructure/budget_control_repository.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-013
+    rationale: Reads a previously canonical budget command result only after scope and result-digest validation; retained legacy text has no shared graph-budget profile, so this surface remains partial.
+  - path: reconforge/infrastructure/budget_control_verification.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-013
+    rationale: Reads bounded 64 KiB budget evidence with duplicate-key and non-finite-token refusal before digest, scope, audit, and outbox linkage verification.
+  - path: reconforge/infrastructure/notification_inbox_verification.py
+    parser: json.loads
+    call_count: 2
+    surface_id: FI-013
+    rationale: Reads retained audit and outbox metadata only to compare exact expected inbox evidence; malformed values fail closed during storage verification.
   - path: reconforge/infrastructure/postgres_finance_posting.py
     parser: json.loads
     call_count: 2

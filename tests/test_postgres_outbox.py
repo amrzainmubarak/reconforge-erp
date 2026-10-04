@@ -560,7 +560,7 @@ def test_tenant_bound_postgres_adapter_maps_status_and_safe_errors() -> None:
     events = repository.list_events(status="dead_letter")
     assert events[0].attempts == 1
     assert events[0].dead_lettered_at is None
-    assert connection.executed[-1][1] == ("tenant_a", 100)
+    assert any(params == ("tenant_a", 100) for _sql, params in connection.executed)
 
     with pytest.raises(OutboxError, match="status must be"):
         repository.list_events(status="unknown")

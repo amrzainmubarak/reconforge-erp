@@ -73,6 +73,11 @@ application_services:
     service: BackupRestoreApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter
+  - file: budget_control.py
+    service: BudgetControlService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_budget_control.SQLiteBudgetControlRepository
+    postgres_adapter: reconforge.infrastructure.postgres_budget_control.PostgresBudgetControlRepository
   - file: idempotency.py
     service: IdempotencyApplicationService
     status: backend_neutral
@@ -117,6 +122,11 @@ application_services:
     service: NotificationApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_notifications.PostgresNotificationRepository
+  - file: notification_inbox.py
+    service: NotificationInboxService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_notification_inbox.SQLiteNotificationInboxRepository
+    postgres_adapter: reconforge.infrastructure.postgres_notification_inbox.PostgresNotificationInboxRepository
   - file: security_center.py
     service: SecurityCenterApplicationService
     status: backend_neutral
@@ -194,6 +204,7 @@ application_services:
     service: InventoryReceiptPostingApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_inventory_receipt_posting.SQLiteInventoryReceiptPostingRepository
+    postgres_adapter: reconforge.infrastructure.postgres_inventory_receipt_posting.PostgresInventoryReceiptPostingRepository
   - file: payables.py
     service: PayablesApplicationService
     status: backend_neutral
@@ -223,4 +234,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 20
-  backend_neutral_application: 47
+  backend_neutral_application: 49

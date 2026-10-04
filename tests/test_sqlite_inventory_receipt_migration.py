@@ -90,7 +90,7 @@ def test_populated_upgrade_preserves_historical_posting_and_replay(tmp_path: Pat
             assert repository.get_effect(populated49[1]["id"], actor=_posting_actor(principal)) == populated49[1]
         verify_posting_storage(connection)
         before_reinstall = tuple(connection.iterdump())
-        assert run_migrations(tmp_path / "success.db").current_version == 50
+        assert run_migrations(tmp_path / "success.db", target_version=50).current_version == 50
         assert tuple(connection.iterdump()) == before_reinstall
     finally:
         connection.close()

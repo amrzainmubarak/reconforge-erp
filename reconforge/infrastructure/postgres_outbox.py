@@ -566,10 +566,11 @@ class PostgresOutboxRepository:
         if selected_status not in _LIST_STATUSES:
             raise PostgresOutboxValidationError("status must be pending, claimed, published, dead, or all.")
         selected_limit = self._validate_limit(limit, maximum=10_000)
-        self._verify_retained_evidence(tenant_id=tenant)
         query = _LIST_OUTBOX_EVENT_QUERIES[selected_status]
         cursor = self.connection.execute(query, (tenant, selected_limit))
-        return [self._event(row) for row in cursor.fetchall()]
+        events = [self._event(row) for row in cursor.fetchall()]
+        self._verify_retained_evidence(tenant_id=tenant)
+        return events
 
     def summary(self, *, tenant_id: str) -> dict[str, int | str]:
         """Return tenant-scoped delivery counts."""

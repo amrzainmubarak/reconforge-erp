@@ -300,6 +300,7 @@ boundaries:
   - {file: intercompany_elimination.py, service: IntercompanyEliminationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_intercompany_elimination.PostgresIntercompanyEliminationRepository, test: tests/test_postgres_intercompany_elimination_runtime.py, risk: single_node_nonposting_proposal_only_no_statutory_posting_or_writeback}
   - {file: grouped_matching.py, service: GroupedMatchingApplicationService, status: not_applicable, reason: pure_strategy}
   - {file: backup_restore.py, service: BackupRestoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_backup.PostgresNativeBackupAdapter, test: tests/test_postgres_backup.py, risk: recovery_critical}
+  - {file: budget_control.py, service: BudgetControlService, status: live_test_available, adapter: reconforge.infrastructure.postgres_budget_control.PostgresBudgetControlRepository, test: tests/test_postgres_budget_control.py, risk: financial_commitment_control_only_no_procurement_or_posting_integration}
   - {file: idempotency.py, service: IdempotencyApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_idempotency.PostgresIdempotencyRepository, test: tests/test_postgres_idempotency.py}
   - {file: workspace_periods.py, service: WorkspacePeriodApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_domain.PostgresDomainUnitOfWork, test: tests/test_postgres_workspace_period_uow.py}
   - {file: operations.py, service: OperationsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_operations.PostgresOperationsRepository, test: tests/test_postgres_operations.py}
@@ -312,6 +313,7 @@ boundaries:
   - {file: outbox.py, service: OutboxApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_outbox.TenantBoundPostgresOutboxRepository, test: tests/test_postgres_outbox.py, risk: delivery_critical}
   - {file: scheduler.py, service: SchedulerApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_scheduler.PostgresScheduleRepository, test: tests/test_postgres_scheduler.py, risk: delivery_critical}
   - {file: notifications.py, service: NotificationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_notifications.PostgresNotificationRepository, test: tests/test_postgres_notifications.py, risk: delivery_critical}
+  - {file: notification_inbox.py, service: NotificationInboxService, status: live_test_available, adapter: reconforge.infrastructure.postgres_notification_inbox.PostgresNotificationInboxRepository, test: tests/test_postgres_notification_inbox.py, risk: workflow_high}
   - {file: security_center.py, service: SecurityCenterApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_security_center.PostgresSecurityCenterRepository, test: tests/test_postgres_security_center.py, risk: disclosure_high}
   - {file: identity_administration.py, service: IdentityAdministrationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_identity_administration.PostgresIdentityAdministrationRepository, test: tests/test_postgres_identity_administration.py, risk: identity_critical}
   - {file: access_administration.py, service: AccessAdministrationApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_access_administration.PostgresAccessAdministrationRepository, test: tests/test_postgres_access_administration.py, risk: identity_critical}
@@ -330,6 +332,7 @@ boundaries:
   - {file: finance_posting.py, service: FinancePostingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_finance_posting.PostgresFinancePostingRepository, test: tests/test_postgres_finance_posting.py, risk: manual_posting_only_no_cumulative_opening_or_trade_integration}
   - {file: master_data.py, service: MasterDataApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_master_data_application.PostgresMasterDataApplicationRepository, test: tests/test_postgres_master_data_application.py, risk: scope_high}
   - {file: inventory_core.py, service: InventoryCoreApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_core.PostgresInventoryCoreRepository, test: tests/test_postgres_inventory_core.py, risk: financial_high}
+  - {file: inventory_receipt_posting.py, service: InventoryReceiptPostingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_receipt_posting.PostgresInventoryReceiptPostingRepository, test: tests/test_postgres_inventory_receipt_posting.py, risk: financial_critical}
   - {file: payables.py, service: PayablesApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_payables.PostgresPayablesRepository, test: tests/test_postgres_payables.py, risk: financial_critical}
   - {file: receivables.py, service: ReceivablesApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_receivables.PostgresReceivablesRepository, test: tests/test_postgres_receivables.py, risk: financial_critical}
   - {file: matching.py, service: MatchingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_matching.PostgresMatchingRepository, test: tests/test_postgres_matching_application.py, risk: integrity_critical}
@@ -337,9 +340,9 @@ boundaries:
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
 summary:
-  total: 46
+  total: 49
   live_verified_current: 20
-  live_test_available: 22
+  live_test_available: 25
   absent: 0
   contract_only: 1
   not_applicable: 3

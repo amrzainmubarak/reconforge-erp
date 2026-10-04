@@ -414,10 +414,14 @@ EXCEPTION_REVIEW_HISTORY_FIELDS = frozenset(
         "actor_id",
         "reason",
         "occurred_at",
+        "audit_event_id",
+        "outbox_event_id",
     }
 )
+EXCEPTION_REVIEW_HISTORY_PAGE_FIELDS = frozenset({"limit", "has_more", "next_cursor"})
+EXCEPTION_REVIEW_LIST_PAGE_FIELDS = frozenset({"limit", "returned", "has_more", "next_cursor"})
 EXCEPTION_REVIEW_FIELDS = EXCEPTION_FIELDS | frozenset(
-    {"organization_id", "legal_entity_id", "row_version", "history"}
+    {"organization_id", "legal_entity_id", "row_version", "history", "history_page"}
 )
 ACCOUNT_RECONCILIATION_FIELDS = frozenset(
     {
@@ -2701,7 +2705,21 @@ def project_exception_review(values: Mapping[str, object]) -> FieldProjection:
             for item in history
             if isinstance(item, Mapping)
         ]
+    history_page = record.get("history_page")
+    if history_page is not None:
+        if not isinstance(history_page, Mapping):
+            raise TypeError("exception review history page must be a mapping")
+        record["history_page"] = project_fields(
+            history_page,
+            allowed_fields=EXCEPTION_REVIEW_HISTORY_PAGE_FIELDS,
+        ).visible
     return project_fields(record, allowed_fields=EXCEPTION_REVIEW_FIELDS)
+
+
+def project_exception_review_list_page(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed pagination projection for a server review list."""
+
+    return project_fields(values, allowed_fields=EXCEPTION_REVIEW_LIST_PAGE_FIELDS)
 
 
 def project_account_reconciliation(values: Mapping[str, object]) -> FieldProjection:

@@ -21,12 +21,18 @@ from reconforge.api.server_exception_review import (
     server_exception_review_enabled,
 )
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
-from reconforge.auth.field_access import project_exception, project_exception_review
+from reconforge.auth.field_access import (
+    project_exception,
+    project_exception_review,
+    project_exception_review_list_page,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.domain.exception_review import (
     ExceptionReviewAssignment,
     ExceptionReviewError,
+    ExceptionReviewHistoryPage,
+    ExceptionReviewListPage,
     ExceptionReviewQuery,
     ExceptionReviewTransition,
 )
@@ -118,6 +124,8 @@ def list_exceptions(
     risk: str = "",
     owner: str = "",
     status: str = "",
+    limit: int = 100,
+    cursor: str = "",
 ) -> dict[str, object]:
     """List unified DB-backed exceptions."""
 
@@ -133,13 +141,25 @@ def list_exceptions(
                 owner=owner,
                 status=status,
             )
+            page = ExceptionReviewListPage(limit=limit, cursor=cursor)
         except ExceptionReviewError as exc:
             raise APIError(status_code=400, code="exception_review_invalid", message=str(exc)) from exc
-        records = execute_postgres_exception_review(
+        result = execute_postgres_exception_review(
             request,
-            lambda service, review_scope: service.list(review_scope, query),
+            lambda service, review_scope: service.list_page(review_scope, query, page),
         )
-        return {"exceptions": _project_server_exceptions(records)}
+        records = result.get("records") if isinstance(result, Mapping) else None
+        pagination = result.get("pagination") if isinstance(result, Mapping) else None
+        if not isinstance(records, list) or not isinstance(pagination, Mapping):
+            raise APIError(
+                status_code=503,
+                code="exception_review_unavailable",
+                message="Server exception review is temporarily unavailable.",
+            )
+        return {
+            "exceptions": _project_server_exceptions(records),
+            "pagination": project_exception_review_list_page(pagination).visible,
+        }
     try:
         records = ExceptionQueueService(_local_connection(request, connection)).list(
             period_name=period,
@@ -161,14 +181,20 @@ def get_exception(
     request: Request,
     current_user: ExceptionsRead,
     connection: sqlite3.Connection | None = Depends(get_local_db),
+    history_limit: int = 100,
+    history_cursor: str = "",
 ) -> dict[str, object]:
     """Read one exception and its retained review evidence when server-backed."""
 
     if server_exception_review_enabled(request):
         _server_scope(request, frozenset({"exceptions.read", "exceptions.manage"}))
+        try:
+            history_page = ExceptionReviewHistoryPage(limit=history_limit, cursor=history_cursor)
+        except ExceptionReviewError as exc:
+            raise APIError(status_code=400, code="exception_review_invalid", message=str(exc)) from exc
         record = execute_postgres_exception_review(
             request,
-            lambda service, review_scope: service.get(review_scope, exception_id),
+            lambda service, review_scope: service.get(review_scope, exception_id, history_page),
         )
         return {"exception": _project_server_exception(record)}
     try:

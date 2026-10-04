@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 EXCEPTION_REVIEW_STATUSES = frozenset({"Open", "In Review", "Resolved", "Accepted Risk", "Closed"})
+EXCEPTION_REVIEW_RISK_RATINGS = frozenset({"low", "medium", "high", "critical"})
 EXCEPTION_REVIEW_DECISION_STATUSES = frozenset({"Resolved", "Accepted Risk", "Closed"})
 EXCEPTION_REVIEW_TRANSITIONS: dict[str, frozenset[str]] = {
     "Open": frozenset({"In Review"}),
@@ -38,6 +39,18 @@ class ExceptionReviewSeparationError(ExceptionReviewError):
     """Raised when an actor would review an exception they created."""
 
 
+class ExceptionReviewCreatorIdentityError(ExceptionReviewSeparationError):
+    """Raised when a legacy record cannot prove the immutable creator identity."""
+
+
+class ExceptionReviewReviewerError(ExceptionReviewError):
+    """Raised when a nominated reviewer is not eligible for the governed scope."""
+
+
+class ExceptionReviewAssigneeError(ExceptionReviewConflictError):
+    """Raised when a review decision is not made by the assigned reviewer."""
+
+
 def _required(value: object, field: str, maximum: int = 200) -> str:
     result = str(value or "").strip()
     if not result:
@@ -55,9 +68,11 @@ def _optional(value: object, field: str, maximum: int = 200) -> str | None:
     return _required(value, field, maximum)
 
 
-def _same_identity(left: object, right: object) -> bool:
-    left_value = str(left or "").strip().casefold()
-    right_value = str(right or "").strip().casefold()
+def _same_actor_id(left: object, right: object) -> bool:
+    """Compare immutable identity identifiers without label normalization."""
+
+    left_value = str(left or "").strip()
+    right_value = str(right or "").strip()
     return bool(left_value and right_value and left_value == right_value)
 
 
@@ -70,6 +85,23 @@ def _record_version(record: Mapping[str, object]) -> int:
     if type(value) is not int or value < 1:
         raise ExceptionReviewError("Exception review record has an invalid version.")
     return value
+
+
+def _creator_actor_id(record: Mapping[str, object]) -> str:
+    """Return persisted creator identity or fail closed for legacy labels.
+
+    ``created_by`` is retained for compatibility and presentation only.  It can
+    change independently of an account identity, so a governed assignment or
+    terminal review decision is unavailable until migration or intake persists
+    ``created_by_actor_id``.
+    """
+
+    creator = _record_text(record, "created_by_actor_id")
+    if not creator:
+        raise ExceptionReviewCreatorIdentityError(
+            "Exception creator identity is unavailable; governed review requires an immutable creator identity."
+        )
+    return creator
 
 
 @dataclass(frozen=True)
@@ -116,6 +148,36 @@ class ExceptionReviewQuery:
             if len(value) > maximum:
                 raise ExceptionReviewError(f"{name.replace('_', ' ').capitalize()} must not exceed {maximum} characters.")
             object.__setattr__(self, name, value)
+        if self.risk_rating and self.risk_rating not in EXCEPTION_REVIEW_RISK_RATINGS:
+            raise ExceptionReviewError("Risk rating is invalid for governed review.")
+        if self.status and self.status not in EXCEPTION_REVIEW_STATUSES:
+            raise ExceptionReviewError("Exception status is invalid for governed review.")
+
+
+@dataclass(frozen=True)
+class ExceptionReviewHistoryPage:
+    """A bounded, cursor-based history page for retained review evidence."""
+
+    limit: int = 100
+    cursor: str | None = None
+
+    def __post_init__(self) -> None:
+        if type(self.limit) is not int or not 1 <= self.limit <= 250:
+            raise ExceptionReviewError("History limit must be an integer from 1 through 250.")
+        object.__setattr__(self, "cursor", _optional(self.cursor, "History cursor", 200))
+
+
+@dataclass(frozen=True)
+class ExceptionReviewListPage:
+    """A bounded, cursor-based page for the governed exception list."""
+
+    limit: int = 100
+    cursor: str | None = None
+
+    def __post_init__(self) -> None:
+        if type(self.limit) is not int or not 1 <= self.limit <= 250:
+            raise ExceptionReviewError("List limit must be an integer from 1 through 250.")
+        object.__setattr__(self, "cursor", _optional(self.cursor, "List cursor", 200))
 
 
 @dataclass(frozen=True)
@@ -139,8 +201,10 @@ class ExceptionReviewAssignment:
     def validate_record(self, record: Mapping[str, object]) -> None:
         if _record_version(record) != self.expected_version:
             raise ExceptionReviewConflictError("Exception review was changed by another request.")
-        creator = _record_text(record, "created_by")
-        if _same_identity(self.owner, creator):
+        if _record_text(record, "status") == "Closed":
+            raise ExceptionReviewConflictError("Closed exception cannot be reassigned.")
+        creator = _creator_actor_id(record)
+        if _same_actor_id(self.owner, creator):
             raise ExceptionReviewSeparationError("Exception creator cannot be assigned as its reviewer.")
 
 
@@ -185,20 +249,29 @@ class ExceptionReviewTransition:
             raise ExceptionReviewError("Accepted Risk requires a review reason.")
         if self.status not in EXCEPTION_REVIEW_DECISION_STATUSES:
             return
-        creator = _record_text(record, "created_by")
-        if _same_identity(self.actor_id, creator) or _same_identity(self.actor_label, creator):
+        creator = _creator_actor_id(record)
+        if _same_actor_id(self.actor_id, creator):
             raise ExceptionReviewSeparationError("Exception creator cannot make its review decision.")
+        assigned_reviewer = _record_text(record, "owner")
+        if not _same_actor_id(self.actor_id, assigned_reviewer):
+            raise ExceptionReviewAssigneeError("A terminal review decision requires the assigned reviewer.")
 
 
 __all__ = [
     "EXCEPTION_REVIEW_DECISION_STATUSES",
+    "EXCEPTION_REVIEW_RISK_RATINGS",
     "EXCEPTION_REVIEW_STATUSES",
     "EXCEPTION_REVIEW_TRANSITIONS",
+    "ExceptionReviewAssigneeError",
     "ExceptionReviewAssignment",
     "ExceptionReviewConflictError",
+    "ExceptionReviewCreatorIdentityError",
     "ExceptionReviewError",
+    "ExceptionReviewHistoryPage",
+    "ExceptionReviewListPage",
     "ExceptionReviewNotFoundError",
     "ExceptionReviewQuery",
+    "ExceptionReviewReviewerError",
     "ExceptionReviewScope",
     "ExceptionReviewSeparationError",
     "ExceptionReviewTransition",

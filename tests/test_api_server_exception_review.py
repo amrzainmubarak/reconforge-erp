@@ -18,7 +18,11 @@ from fastapi.testclient import TestClient
 from reconforge.api import create_api_app
 from reconforge.api.server_identity import AuthenticatedServerRequest
 from reconforge.auth.models import LocalUser
-from reconforge.domain.exception_review import ExceptionReviewScope
+from reconforge.domain.exception_review import (
+    ExceptionReviewHistoryPage,
+    ExceptionReviewListPage,
+    ExceptionReviewScope,
+)
 from reconforge.infrastructure.postgres import (
     PostgresConnectionFactory,
     PostgresSettings,
@@ -58,6 +62,7 @@ def _record(*, exception_id: str = "EXQ-1", version: int = 1, status: str = "Ope
         "sla_target_date": None,
         "description": "Synthetic exception",
         "created_by": "maker-user",
+        "created_by_actor_id": "maker-user",
         "last_actor": "maker",
         "created_at": "2026-10-04T00:00:00Z",
         "updated_at": "2026-10-04T00:00:00Z",
@@ -78,6 +83,7 @@ def _record(*, exception_id: str = "EXQ-1", version: int = 1, status: str = "Ope
                 "internal_note": "must not leave the repository boundary",
             }
         ],
+        "history_page": {"limit": 100, "has_more": False, "next_cursor": None},
         "internal_note": "must not leave the repository boundary",
     }
 
@@ -113,12 +119,25 @@ def test_server_exception_review_http_contract_is_scoped_and_closed(
     calls: list[tuple[str, ExceptionReviewScope, object]] = []
 
     class _Service:
-        def list(self, scope: ExceptionReviewScope, query: object) -> list[dict[str, object]]:
-            calls.append(("list", scope, query))
-            return [_record()]
+        def list_page(
+            self,
+            scope: ExceptionReviewScope,
+            query: object,
+            page: ExceptionReviewListPage,
+        ) -> dict[str, object]:
+            calls.append(("list_page", scope, (query, page)))
+            return {
+                "records": [_record()],
+                "pagination": {"limit": page.limit, "returned": 1, "has_more": False, "next_cursor": None},
+            }
 
-        def get(self, scope: ExceptionReviewScope, exception_id: str) -> dict[str, object]:
-            calls.append(("get", scope, exception_id))
+        def get(
+            self,
+            scope: ExceptionReviewScope,
+            exception_id: str,
+            history_page: ExceptionReviewHistoryPage,
+        ) -> dict[str, object]:
+            calls.append(("get", scope, (exception_id, history_page)))
             return _record(exception_id=exception_id)
 
         def assign(self, scope: ExceptionReviewScope, command: object) -> dict[str, object]:
@@ -165,12 +184,31 @@ def test_server_exception_review_http_contract_is_scoped_and_closed(
         listed = client.get("/api/v1/exceptions", headers=headers, params={"status": "Open"})
         assert listed.status_code == 200, listed.text
         assert listed.json()["exceptions"][0]["id"] == "EXQ-1"
+        assert listed.json()["pagination"] == {
+            "limit": 100,
+            "returned": 1,
+            "has_more": False,
+            "next_cursor": None,
+        }
         assert "created_by" not in listed.json()["exceptions"][0]
         assert "internal_note" not in listed.json()["exceptions"][0]
+
+        invalid_filter = client.get("/api/v1/exceptions", headers=headers, params={"risk": "urgent"})
+        assert invalid_filter.status_code == 400
+        assert invalid_filter.json()["error"]["code"] == "exception_review_invalid"
+
+        invalid_page = client.get("/api/v1/exceptions", headers=headers, params={"limit": 251})
+        assert invalid_page.status_code == 400
+        assert invalid_page.json()["error"]["code"] == "exception_review_invalid"
 
         detail = client.get("/api/v1/exceptions/EXQ-1", headers=headers)
         assert detail.status_code == 200, detail.text
         assert detail.json()["exception"]["history"][0]["actor_id"] == ""
+        assert detail.json()["exception"]["history_page"] == {
+            "limit": 100,
+            "has_more": False,
+            "next_cursor": None,
+        }
         assert "internal_note" not in detail.json()["exception"]["history"][0]
 
         missing_version = client.post(
@@ -204,8 +242,10 @@ def test_server_exception_review_http_contract_is_scoped_and_closed(
         assert denied.status_code == 403
         assert denied.json()["error"]["code"] == "workspace_scope_denied"
 
-    assert [name for name, _, _ in calls] == ["list", "get", "assign", "transition"]
+    assert [name for name, _, _ in calls] == ["list_page", "get", "assign", "transition"]
     assert all(call_scope.workspace_id == "workspace-a" for _, call_scope, _ in calls)
+    assert calls[0][2][1] == ExceptionReviewListPage()
+    assert calls[1][2] == ("EXQ-1", ExceptionReviewHistoryPage())
 
 
 def _migrate(dsn: str) -> subprocess.CompletedProcess[str]:
@@ -276,9 +316,15 @@ def _bootstrap_live_review_fixture(
     workspace = "workspace-exception-http"
     organization = "organization-exception-http"
     legal_entity = "entity-exception-http"
+    other_workspace = "workspace-other-exception-http"
+    other_organization = "organization-other-exception-http"
+    other_legal_entity = "entity-other-exception-http"
     maker_id = "maker-exception-http"
     reviewer_id = "reviewer-exception-http"
+    alternate_reviewer_id = "alternate-reviewer-exception-http"
+    unscoped_reviewer_id = "unscoped-reviewer-exception-http"
     exception_id = "exception-http-" + uuid4().hex[:12]
+    rollback_exception_id = "exception-rollback-" + uuid4().hex[:12]
     admin_factory = PostgresConnectionFactory(PostgresSettings(dsn=admin_dsn, require_tls=False))
     app_factory = PostgresConnectionFactory(PostgresSettings(dsn=app_dsn, require_tls=False))
     with admin_factory.connect() as administrator, administrator.transaction():
@@ -299,10 +345,36 @@ def _bootstrap_live_review_fixture(
             (tenant, organization, "Exception HTTP organization", "EXHTTP", workspace),
         )
         administrator.execute(
+            """INSERT INTO reconforge.master_data_workspace_organizations(tenant_id,workspace_id,organization_id)
+               VALUES(%s,%s,%s)""",
+            (tenant, workspace, organization),
+        )
+        administrator.execute(
             """INSERT INTO reconforge.legal_entities
                (tenant_id,id,organization_id,entity_code,name,currency_code)
                VALUES(%s,%s,%s,%s,%s,'USD')""",
             (tenant, legal_entity, organization, "EXHTTP-LE", "Exception HTTP entity"),
+        )
+        administrator.execute(
+            "INSERT INTO reconforge.domain_workspaces(tenant_id,id,name) VALUES(%s,%s,%s)",
+            (tenant, other_workspace, "Other Exception HTTP workspace"),
+        )
+        administrator.execute(
+            """INSERT INTO reconforge.organizations
+               (tenant_id,id,name,organization_code,base_currency,application_workspace_id)
+               VALUES(%s,%s,%s,%s,'USD',%s)""",
+            (tenant, other_organization, "Other Exception HTTP organization", "EXHTTP-OTHER", other_workspace),
+        )
+        administrator.execute(
+            """INSERT INTO reconforge.master_data_workspace_organizations(tenant_id,workspace_id,organization_id)
+               VALUES(%s,%s,%s)""",
+            (tenant, other_workspace, other_organization),
+        )
+        administrator.execute(
+            """INSERT INTO reconforge.legal_entities
+               (tenant_id,id,organization_id,entity_code,name,currency_code)
+               VALUES(%s,%s,%s,%s,%s,'USD')""",
+            (tenant, other_legal_entity, other_organization, "EXHTTP-OTHER-LE", "Other Exception HTTP entity"),
         )
         identity = PostgresIdentityRepository(administrator)
         identity.create_role(tenant_id=tenant, role_name="exception-reviewer")
@@ -327,8 +399,22 @@ def _bootstrap_live_review_fixture(
             password="Synthetic-password-123",
             role_name="exception-reviewer",
         )
+        identity.create_user(
+            tenant_id=tenant,
+            user_id=alternate_reviewer_id,
+            username="alternate-reviewer",
+            password="Synthetic-password-123",
+            role_name="exception-reviewer",
+        )
+        identity.create_user(
+            tenant_id=tenant,
+            user_id=unscoped_reviewer_id,
+            username="unscoped-reviewer",
+            password="Synthetic-password-123",
+            role_name="exception-reviewer",
+        )
         scopes = PostgresScopeAuthorityRepository(administrator)
-        for principal_id in (maker_id, reviewer_id):
+        for principal_id in (maker_id, reviewer_id, alternate_reviewer_id):
             for scope_type, scope_id in (
                 ("workspace", workspace),
                 ("organization", organization),
@@ -343,11 +429,25 @@ def _bootstrap_live_review_fixture(
                     scope_id=scope_id,
                     actor_id="security-admin",
                 )
+        for scope_type, scope_id in (
+            ("workspace", other_workspace),
+            ("organization", other_organization),
+            ("legal_entity", other_legal_entity),
+        ):
+            scopes.grant(
+                tenant_id=tenant,
+                grant_id=f"grant-{unscoped_reviewer_id}-{scope_type}",
+                principal_type="user",
+                principal_id=unscoped_reviewer_id,
+                scope_type=scope_type,
+                scope_id=scope_id,
+                actor_id="security-admin",
+            )
         administrator.execute(
             """INSERT INTO reconforge.exception_queue_records(
                 tenant_id,id,workspace_id,organization_id,legal_entity_id,source_type,source_id,
-                description,created_by,last_actor)
-            VALUES(%s,%s,%s,%s,%s,'control','source-1',%s,%s,%s)""",
+                description,created_by,created_by_actor_id,last_actor)
+            VALUES(%s,%s,%s,%s,%s,'control','source-1',%s,%s,%s,%s)""",
             (
                 tenant,
                 exception_id,
@@ -355,6 +455,24 @@ def _bootstrap_live_review_fixture(
                 organization,
                 legal_entity,
                 "Synthetic HTTP review exception",
+                maker_id,
+                maker_id,
+                "maker",
+            ),
+        )
+        administrator.execute(
+            """INSERT INTO reconforge.exception_queue_records(
+                tenant_id,id,workspace_id,organization_id,legal_entity_id,source_type,source_id,
+                description,created_by,created_by_actor_id,last_actor)
+            VALUES(%s,%s,%s,%s,%s,'control','source-rollback',%s,%s,%s,%s)""",
+            (
+                tenant,
+                rollback_exception_id,
+                workspace,
+                organization,
+                legal_entity,
+                "Synthetic rollback exception",
+                maker_id,
                 maker_id,
                 "maker",
             ),
@@ -371,7 +489,11 @@ def _bootstrap_live_review_fixture(
         "legal_entity": legal_entity,
         "maker_id": maker_id,
         "reviewer_id": reviewer_id,
+        "alternate_reviewer_id": alternate_reviewer_id,
+        "unscoped_reviewer_id": unscoped_reviewer_id,
         "exception_id": exception_id,
+        "rollback_exception_id": rollback_exception_id,
+        "other_organization": other_organization,
     }
 
 
@@ -423,13 +545,32 @@ def test_live_server_exception_review_is_scoped_atomic_and_non_superuser(
     with TestClient(app) as client:
         maker_token = _login(client, tenant, "maker")
         reviewer_token = _login(client, tenant, "reviewer")
+        alternate_token = _login(client, tenant, "alternate-reviewer")
         maker = {**headers, "Authorization": f"Bearer {maker_token}"}
         reviewer = {**headers, "Authorization": f"Bearer {reviewer_token}"}
+        alternate = {**headers, "Authorization": f"Bearer {alternate_token}"}
 
         listed = client.get("/api/v1/exceptions", headers=reviewer)
         assert listed.status_code == 200, listed.text
-        assert [item["id"] for item in listed.json()["exceptions"]] == [ids["exception_id"]]
-        assert listed.json()["exceptions"][0]["row_version"] == 1
+        listed_records = {item["id"]: item for item in listed.json()["exceptions"]}
+        assert set(listed_records) == {ids["exception_id"], ids["rollback_exception_id"]}
+        assert listed_records[ids["exception_id"]]["row_version"] == 1
+
+        missing_reviewer = client.post(
+            f"/api/v1/exceptions/{ids['exception_id']}/assign",
+            headers=maker,
+            json={"owner": "unknown-reviewer", "expected_version": 1},
+        )
+        assert missing_reviewer.status_code == 409
+        assert missing_reviewer.json()["error"]["code"] == "exception_reviewer_ineligible"
+
+        cross_scope_reviewer = client.post(
+            f"/api/v1/exceptions/{ids['exception_id']}/assign",
+            headers=maker,
+            json={"owner": ids["unscoped_reviewer_id"], "expected_version": 1},
+        )
+        assert cross_scope_reviewer.status_code == 409
+        assert cross_scope_reviewer.json()["error"]["code"] == "exception_reviewer_ineligible"
 
         assigned = client.post(
             f"/api/v1/exceptions/{ids['exception_id']}/assign",
@@ -463,6 +604,14 @@ def test_live_server_exception_review_is_scoped_atomic_and_non_superuser(
         assert self_review.status_code == 409
         assert self_review.json()["error"]["code"] == "exception_self_review_refused"
 
+        non_assignee = client.post(
+            f"/api/v1/exceptions/{ids['exception_id']}/status",
+            headers=alternate,
+            json={"status": "Resolved", "expected_version": 3},
+        )
+        assert non_assignee.status_code == 409
+        assert non_assignee.json()["error"]["code"] == "exception_reviewer_assignment_required"
+
         resolved = client.post(
             f"/api/v1/exceptions/{ids['exception_id']}/status",
             headers=reviewer,
@@ -481,7 +630,19 @@ def test_live_server_exception_review_is_scoped_atomic_and_non_superuser(
         assert closed.json()["exception"]["row_version"] == 5
         assert closed.json()["exception"]["status"] == "Closed"
 
-        detail = client.get(f"/api/v1/exceptions/{ids['exception_id']}", headers=reviewer)
+        closed_assignment = client.post(
+            f"/api/v1/exceptions/{ids['exception_id']}/assign",
+            headers=maker,
+            json={"owner": ids["alternate_reviewer_id"], "expected_version": 5},
+        )
+        assert closed_assignment.status_code == 409
+        assert closed_assignment.json()["error"]["code"] == "exception_review_conflict"
+
+        detail = client.get(
+            f"/api/v1/exceptions/{ids['exception_id']}",
+            headers=reviewer,
+            params={"history_limit": 2},
+        )
         assert detail.status_code == 200, detail.text
         body = detail.json()["exception"]
         assert body["organization_id"] == ids["organization"]
@@ -489,13 +650,57 @@ def test_live_server_exception_review_is_scoped_atomic_and_non_superuser(
         assert [event["action"] for event in body["history"]] == [
             "exception_saved",
             "exception_review_assigned",
-            "exception_review_transition",
+        ]
+        assert body["history_page"]["limit"] == 2
+        assert body["history_page"]["has_more"] is True
+        assert body["history_page"]["next_cursor"]
+        assert "created_by" not in body
+
+        next_page = client.get(
+            f"/api/v1/exceptions/{ids['exception_id']}",
+            headers=reviewer,
+            params={"history_limit": 2, "history_cursor": body["history_page"]["next_cursor"]},
+        )
+        assert next_page.status_code == 200, next_page.text
+        next_history = next_page.json()["exception"]["history"]
+        assert [event["action"] for event in next_history] == [
             "exception_review_transition",
             "exception_review_transition",
         ]
-        assert body["history"][-2]["actor_id"] == ids["reviewer_id"]
-        assert body["history"][-2]["reason"] == "Evidence reconciled."
-        assert "created_by" not in body
+        assert next_history[0]["actor_id"] == ids["maker_id"]
+        assert next_history[1]["actor_id"] == ids["reviewer_id"]
+        assert next_history[1]["reason"] == "Evidence reconciled."
+        assert next_history[0]["audit_event_id"]
+        assert next_history[0]["outbox_event_id"]
+
+        with psycopg.connect(admin_dsn, autocommit=True) as administrator:
+            administrator.execute(
+                """CREATE OR REPLACE FUNCTION reconforge.fail_exception_review_evidence_insert()
+                RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN
+                    RAISE EXCEPTION 'synthetic exception review evidence failure';
+                END $$"""
+            )
+            administrator.execute(
+                """CREATE TRIGGER exception_review_evidence_failure_injection
+                BEFORE INSERT ON reconforge.exception_review_evidence
+                FOR EACH ROW EXECUTE FUNCTION reconforge.fail_exception_review_evidence_insert()"""
+            )
+        try:
+            rolled_back = client.post(
+                f"/api/v1/exceptions/{ids['rollback_exception_id']}/assign",
+                headers=maker,
+                json={"owner": ids["reviewer_id"], "expected_version": 1},
+            )
+            assert rolled_back.status_code == 503
+            assert rolled_back.json()["error"]["code"] == "exception_review_unavailable"
+        finally:
+            with psycopg.connect(admin_dsn, autocommit=True) as administrator:
+                administrator.execute(
+                    "DROP TRIGGER IF EXISTS exception_review_evidence_failure_injection "
+                    "ON reconforge.exception_review_evidence"
+                )
+                administrator.execute("DROP FUNCTION IF EXISTS reconforge.fail_exception_review_evidence_insert()")
 
         sibling = client.get(
             "/api/v1/exceptions",
@@ -520,7 +725,13 @@ def test_live_server_exception_review_is_scoped_atomic_and_non_superuser(
             (tenant, ids["exception_id"]),
         )
 
-    with psycopg.connect(admin_dsn) as administrator:
+    with psycopg.connect(admin_dsn, autocommit=True) as administrator:
+        with pytest.raises(psycopg.Error, match="organization must belong to its workspace"):
+            administrator.execute(
+                "UPDATE reconforge.exception_queue_records SET organization_id=%s "
+                "WHERE tenant_id=%s AND id=%s",
+                (ids["other_organization"], tenant, ids["exception_id"]),
+            )
         audit_events = administrator.execute(
             "SELECT action FROM reconforge.domain_audit_events WHERE tenant_id=%s "
             "AND object_type='exception' AND object_id=%s ORDER BY sequence",
@@ -531,6 +742,36 @@ def test_live_server_exception_review_is_scoped_atomic_and_non_superuser(
             "AND aggregate_type='exception' AND aggregate_id=%s ORDER BY created_at,event_id",
             (tenant, ids["exception_id"]),
         ).fetchall()
+        correlations = administrator.execute(
+            """SELECT history.action,audit_event.actor_user_id,evidence.audit_event_id,evidence.outbox_event_id
+            FROM reconforge.exception_review_evidence evidence
+            JOIN reconforge.exception_queue_history history
+              ON history.tenant_id=evidence.tenant_id AND history.id=evidence.history_id
+            JOIN reconforge.domain_audit_events audit_event
+              ON audit_event.tenant_id=evidence.tenant_id AND audit_event.id=evidence.audit_event_id
+            WHERE evidence.tenant_id=%s AND evidence.exception_id=%s ORDER BY history.occurred_at,history.id""",
+            (tenant, ids["exception_id"]),
+        ).fetchall()
+        rollback_record = administrator.execute(
+            "SELECT status,owner,row_version FROM reconforge.exception_queue_records WHERE tenant_id=%s AND id=%s",
+            (tenant, ids["rollback_exception_id"]),
+        ).fetchone()
+        rollback_history_count = administrator.execute(
+            "SELECT count(*) FROM reconforge.exception_queue_history WHERE tenant_id=%s AND exception_id=%s",
+            (tenant, ids["rollback_exception_id"]),
+        ).fetchone()
+        rollback_audit_count = administrator.execute(
+            "SELECT count(*) FROM reconforge.domain_audit_events WHERE tenant_id=%s AND object_id=%s",
+            (tenant, ids["rollback_exception_id"]),
+        ).fetchone()
+        rollback_outbox_count = administrator.execute(
+            "SELECT count(*) FROM reconforge.outbox_events WHERE tenant_id=%s AND aggregate_id=%s",
+            (tenant, ids["rollback_exception_id"]),
+        ).fetchone()
+        rollback_evidence_count = administrator.execute(
+            "SELECT count(*) FROM reconforge.exception_review_evidence WHERE tenant_id=%s AND exception_id=%s",
+            (tenant, ids["rollback_exception_id"]),
+        ).fetchone()
     assert [str(row[0]) for row in audit_events] == [
         "exception_review_assigned",
         "exception_review_transition",
@@ -543,3 +784,15 @@ def test_live_server_exception_review_is_scoped_atomic_and_non_superuser(
         "exception_review_transition",
         "exception_review_transition",
     ]
+    assert [str(row[1]) for row in correlations] == [
+        ids["maker_id"],
+        ids["maker_id"],
+        ids["reviewer_id"],
+        ids["reviewer_id"],
+    ]
+    assert all(str(row[2]) and str(row[3]) for row in correlations)
+    assert rollback_record == ("Open", "", 1)
+    assert rollback_history_count == (0,)
+    assert rollback_audit_count == (0,)
+    assert rollback_outbox_count == (0,)
+    assert rollback_evidence_count == (0,)

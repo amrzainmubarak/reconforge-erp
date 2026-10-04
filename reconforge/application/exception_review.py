@@ -6,6 +6,8 @@ from typing import Any, Protocol
 
 from reconforge.domain.exception_review import (
     ExceptionReviewAssignment,
+    ExceptionReviewHistoryPage,
+    ExceptionReviewListPage,
     ExceptionReviewQuery,
     ExceptionReviewScope,
     ExceptionReviewTransition,
@@ -21,7 +23,19 @@ class ExceptionReviewRepositoryProtocol(Protocol):
         query: ExceptionReviewQuery,
     ) -> list[dict[str, Any]]: ...
 
-    def get_for_review(self, scope: ExceptionReviewScope, exception_id: str) -> dict[str, Any]: ...
+    def list_page_for_review(
+        self,
+        scope: ExceptionReviewScope,
+        query: ExceptionReviewQuery,
+        page: ExceptionReviewListPage,
+    ) -> dict[str, Any]: ...
+
+    def get_for_review(
+        self,
+        scope: ExceptionReviewScope,
+        exception_id: str,
+        history_page: ExceptionReviewHistoryPage,
+    ) -> dict[str, Any]: ...
 
     def assign_for_review(
         self,
@@ -45,8 +59,25 @@ class ExceptionReviewApplicationService:
     def list(self, scope: ExceptionReviewScope, query: ExceptionReviewQuery) -> list[dict[str, Any]]:
         return self.repository.list_for_review(scope, query)
 
-    def get(self, scope: ExceptionReviewScope, exception_id: str) -> dict[str, Any]:
-        return self.repository.get_for_review(scope, exception_id)
+    def list_page(
+        self,
+        scope: ExceptionReviewScope,
+        query: ExceptionReviewQuery,
+        page: ExceptionReviewListPage,
+    ) -> dict[str, Any]:
+        return self.repository.list_page_for_review(scope, query, page)
+
+    def get(
+        self,
+        scope: ExceptionReviewScope,
+        exception_id: str,
+        history_page: ExceptionReviewHistoryPage | None = None,
+    ) -> dict[str, Any]:
+        return self.repository.get_for_review(
+            scope,
+            exception_id,
+            history_page or ExceptionReviewHistoryPage(),
+        )
 
     def assign(self, scope: ExceptionReviewScope, command: ExceptionReviewAssignment) -> dict[str, Any]:
         return self.repository.assign_for_review(scope, command)

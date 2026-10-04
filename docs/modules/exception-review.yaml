@@ -14,12 +14,16 @@ migrations: [postgresql-0104-pg-exception-review-api]
 domain_invariants:
   - authenticated-tenant-and-workspace-scope-is-required-for-every-server-review-read-or-write
   - selected-organization-and-legal-entity-scope-can-only-narrow-authorized-principal-grants
+  - selected-organization-must-be-linked-to-the-record-workspace-through-canonical-master-data
   - server-review-commands-require-a-positive-optimistic-row-version
   - review-transition-graph-is-open-to-in-review-to-resolved-or-accepted-risk-to-closed
   - accepted-risk-requires-a-retained-nonblank-reason
+  - immutable-creator-actor-id-is-derived-only-from-an-exact-existing-user-id-and-legacy-labels-fail-closed
   - exception-creator-cannot-be-assigned-as-reviewer-or-make-a-review-decision
+  - assignment-and-terminal-decisions-require-an-active-scoped-exceptions-manage-reviewer
   - review-history-is-append-only-and-structurally-matches-the-current-record-state
-  - review-transition-audit-and-outbox-evidence-commit-or-roll-back-with-the-record-update
+  - review-transition-history-audit-and-outbox-correlation-commits-or-rolls-back-with-the-record-update
+  - review-list-and-history-responses-use-explicit-bounded-cursor-pagination
   - postgresql-rls-binds-records-and-history-to-tenant-workspace-and-selected-hierarchy
 domain_events: [exception_review_assigned, exception_review_transition]
 api_routes:
@@ -40,7 +44,8 @@ threat_model:
   - stale-write-or-concurrent-reviewer-displacement
   - creator-self-assignment-or-self-review-decision
   - direct-history-update-delete-or-forged-governed-transition
-  - missing-or-mutated-audit-and-outbox-review-evidence
+  - missing-or-mutated-audit-outbox-or-history-correlation-evidence
+  - arbitrary-or-cross-scope-reviewer-assignment-and-non-assignee-terminal-decision
   - unsafe-future-column-or-history-field-exposure
 benchmarks: []
 rollback_plan: retain-scoped-review-evidence-and-restore-a-verified-pre-0104-backup; populated downgrade-refuses-evidence-loss
@@ -52,6 +57,7 @@ test_matrix:
   - tests/test_postgres_operations.py
 limitations:
   - workspace-scope-is-required; organization-and-legal-entity-headers-narrow-access-when-present-so-unattributed-legacy-records-remain-workspace-only
+  - only-a-migration-role-that-bypasses-forced-row-security-can-apply-or-revert-0104
   - local-sqlite-exception-queue-compatibility-does-not-claim-the-postgresql-review-contract
   - shared-postgresql-runtime-role-and-trusted-server-application-remain-the-human-actor-authority-boundary
   - no-automatic-escalation-sla-closure-standalone-ui-or-production-throughput-availability-claim

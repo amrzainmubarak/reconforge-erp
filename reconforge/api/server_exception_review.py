@@ -11,9 +11,12 @@ from reconforge.api.errors import APIError
 from reconforge.api.server_identity import request_execution_scope
 from reconforge.application.exception_review import ExceptionReviewApplicationService
 from reconforge.domain.exception_review import (
+    ExceptionReviewAssigneeError,
     ExceptionReviewConflictError,
+    ExceptionReviewCreatorIdentityError,
     ExceptionReviewError,
     ExceptionReviewNotFoundError,
+    ExceptionReviewReviewerError,
     ExceptionReviewScope,
     ExceptionReviewSeparationError,
 )
@@ -81,8 +84,26 @@ def execute_postgres_exception_review(request: Request, operation: ExceptionRevi
             code="exception_not_found",
             message="Exception review record was not found in the authorized scope.",
         ) from exc
+    except ExceptionReviewCreatorIdentityError as exc:
+        raise APIError(
+            status_code=409,
+            code="exception_creator_identity_required",
+            message=str(exc),
+        ) from exc
+    except ExceptionReviewReviewerError as exc:
+        raise APIError(
+            status_code=409,
+            code="exception_reviewer_ineligible",
+            message=str(exc),
+        ) from exc
     except ExceptionReviewSeparationError as exc:
         raise APIError(status_code=409, code="exception_self_review_refused", message=str(exc)) from exc
+    except ExceptionReviewAssigneeError as exc:
+        raise APIError(
+            status_code=409,
+            code="exception_reviewer_assignment_required",
+            message=str(exc),
+        ) from exc
     except ExceptionReviewConflictError as exc:
         raise APIError(status_code=409, code="exception_review_conflict", message=str(exc)) from exc
     except ExceptionReviewError as exc:

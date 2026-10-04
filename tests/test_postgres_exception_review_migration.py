@@ -25,11 +25,17 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def migrate(dsn: str, action: str, target: str) -> subprocess.CompletedProcess[str]:
+def migrate(
+    dsn: str,
+    action: str,
+    target: str,
+    *,
+    extra_environment: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-m", "alembic", action, target],
         cwd=ROOT,
-        env={**os.environ, "RECONFORGE_POSTGRES_DSN": dsn},
+        env={**os.environ, "RECONFORGE_POSTGRES_DSN": dsn, **(extra_environment or {})},
         capture_output=True,
         text=True,
         timeout=120,
@@ -79,11 +85,26 @@ def _insert_legacy_exception(connection: object) -> None:
         "INSERT INTO reconforge.identity_roles(tenant_id,id,name) VALUES "
         "('exception-existing','role-reviewer-existing','reviewer')"
     )
+    from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
+
+    PostgresIdentityRepository(connection).create_user(  # type: ignore[arg-type]
+        tenant_id="exception-existing",
+        user_id="maker-existing",
+        username="maker-renamed",
+        password="Synthetic-password-123",
+        role_name="reviewer",
+    )
     execute(
         """INSERT INTO reconforge.exception_queue_records(
         tenant_id,id,workspace_id,source_type,source_id,description,created_by,last_actor)
         VALUES ('exception-existing','exception-existing','workspace-existing','control','source-existing',
                 'Retained existing exception','maker-existing','maker-existing')"""
+    )
+    execute(
+        """INSERT INTO reconforge.exception_queue_records(
+        tenant_id,id,workspace_id,source_type,source_id,description,created_by,last_actor)
+        VALUES ('exception-existing','exception-label-only','workspace-existing','control','source-label-only',
+                'Retained label-only exception','maker-renamed','maker-renamed')"""
     )
     execute(
         """INSERT INTO reconforge.exception_queue_history(
@@ -114,14 +135,18 @@ def test_exception_review_migration_is_frozen_and_has_no_runtime_schema_dependen
         assert isinstance(value, ast.Constant)
         assert isinstance(value.value, str)
     assert sha256(module.UPGRADE_SQL.encode("utf-8")).hexdigest() == (
-        "4a2c81e29a1f62a71cdd45bb0cc4e32ab00766387aca3ad6e15a7f63bcfb1e75"
+        "3f357d7b1564b729e631975301cb560ba04108d19576bff8782bad4b6bafbe98"
     )
     assert sha256(module.DOWNGRADE_SQL.encode("utf-8")).hexdigest() == (
-        "c6ed0c054759066fae69cdf1d2ac57d792c5bfe6a15443f1d25a32930f6945a4"
+        "81ac243147769e922fb26e6a2b43cb9844add95b551c42a06015964f8e078325"
     )
     source = MIGRATION.read_text(encoding="utf-8")
     assert "postgres_exceptions" not in source
     assert "op.execute(UPGRADE_SQL)" in source
+    seed_trigger = source.index("CREATE TRIGGER exception_review_permission_tenant_seed")
+    assert seed_trigger < source.index(
+        "INSERT INTO reconforge.identity_permissions", seed_trigger
+    )
 
 
 def test_registered_exception_review_upgrade_retains_legacy_rows_and_refuses_lossy_downgrade(
@@ -131,7 +156,14 @@ def test_registered_exception_review_upgrade_retains_legacy_rows_and_refuses_los
 
     with psycopg.connect(prior_database, autocommit=True) as administrator:
         _insert_legacy_exception(administrator)
-    result = migrate(prior_database, "upgrade", CURRENT)
+    result = migrate(
+        prior_database,
+        "upgrade",
+        CURRENT,
+        extra_environment={
+            "PGOPTIONS": "-c app.organization_id=organization-from-guc -c app.legal_entity_id=entity-from-guc"
+        },
+    )
     assert result.returncode == 0, result.stderr
     with psycopg.connect(prior_database, autocommit=True) as administrator:
         assert _current_revision(administrator) == CURRENT
@@ -144,14 +176,19 @@ def test_registered_exception_review_upgrade_retains_legacy_rows_and_refuses_los
         )
         assert {"actor_id", "reason"}.issubset(columns)
         record = administrator.execute(
-            "SELECT organization_id,legal_entity_id FROM reconforge.exception_queue_records "
-            "WHERE tenant_id='exception-existing'"
+            "SELECT organization_id,legal_entity_id,created_by_actor_id FROM reconforge.exception_queue_records "
+            "WHERE tenant_id='exception-existing' AND id='exception-existing'"
+        ).fetchone()
+        label_only = administrator.execute(
+            "SELECT organization_id,legal_entity_id,created_by_actor_id FROM reconforge.exception_queue_records "
+            "WHERE tenant_id='exception-existing' AND id='exception-label-only'"
         ).fetchone()
         history = administrator.execute(
             "SELECT actor_id,reason FROM reconforge.exception_queue_history "
             "WHERE tenant_id='exception-existing'"
         ).fetchone()
-        assert record == (None, None)
+        assert record == (None, None, "maker-existing")
+        assert label_only == (None, None, None)
         assert history == ("", "")
         permissions = tuple(
             row[0]
@@ -194,22 +231,80 @@ def test_registered_exception_review_upgrade_retains_legacy_rows_and_refuses_los
             "AND tablename='exception_queue_records' AND policyname='tenant_scope'"
         ).fetchone()
         assert policy is not None and "app.legal_entity_id" in str(policy[0])
-        administrator.execute(
-            "UPDATE reconforge.exception_queue_records SET status='In Review',row_version=2 "
-            "WHERE tenant_id='exception-existing' AND id='exception-existing'"
-        )
-        administrator.execute(
-            """INSERT INTO reconforge.exception_queue_history(
-            tenant_id,id,exception_id,action,from_status,to_status,from_owner,to_owner,actor_label,actor_id,reason)
-            VALUES ('exception-existing','history-review','exception-existing','exception_review_transition',
-                    'Open','In Review','','','reviewer-existing','reviewer-existing','')"""
-        )
 
     result = migrate(prior_database, "downgrade", PREVIOUS)
     assert result.returncode != 0
     assert "scoped exception review evidence prevents downgrade" in result.stderr
     with psycopg.connect(prior_database, autocommit=True) as administrator:
         assert _current_revision(administrator) == CURRENT
+
+
+def test_exception_review_migration_role_admission_leaves_no_partial_mutation(prior_database: str) -> None:
+    """Both directions reject a non-bypass role before scoped DDL or data access."""
+
+    import psycopg
+    from psycopg import sql
+
+    role_name = "exception_review_migration_" + uuid4().hex[:12]
+    role_password = "Synthetic-password-123"
+    control_dsn = psycopg.conninfo.make_conninfo(
+        os.environ["RECONFORGE_TEST_POSTGRES_ADMIN_DSN"],
+        dbname="postgres",
+        connect_timeout=5,
+    )
+    parsed_prior_dsn = urlsplit(prior_database)
+    low_dsn = urlunsplit(
+        parsed_prior_dsn._replace(
+            netloc=f"{role_name}:{role_password}@{parsed_prior_dsn.hostname}:{parsed_prior_dsn.port}"
+        )
+    )
+    try:
+        with psycopg.connect(control_dsn, autocommit=True) as control:
+            control.execute(
+                sql.SQL("CREATE ROLE {} LOGIN PASSWORD {} NOSUPERUSER NOBYPASSRLS").format(
+                    sql.Identifier(role_name),
+                    sql.Literal(role_password),
+                )
+            )
+        with psycopg.connect(prior_database, autocommit=True) as administrator:
+            administrator.execute(sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(
+                sql.Identifier(urlsplit(prior_database).path.lstrip("/")), sql.Identifier(role_name)
+            ))
+            administrator.execute(sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(role_name)))
+            administrator.execute(sql.SQL("GRANT SELECT ON alembic_version TO {}").format(sql.Identifier(role_name)))
+
+        rejected_upgrade = migrate(low_dsn, "upgrade", CURRENT)
+        assert rejected_upgrade.returncode != 0
+        assert "requires a role that bypasses forced row security" in (
+            rejected_upgrade.stdout + rejected_upgrade.stderr
+        )
+        with psycopg.connect(prior_database, autocommit=True) as administrator:
+            assert _current_revision(administrator) == PREVIOUS
+            assert administrator.execute(
+                "SELECT to_regclass('reconforge.exception_review_evidence')"
+            ).fetchone() == (None,)
+            assert administrator.execute(
+                "SELECT count(*) FROM information_schema.columns WHERE table_schema='reconforge' "
+                "AND table_name='exception_queue_records' AND column_name='created_by_actor_id'"
+            ).fetchone() == (0,)
+
+        accepted_upgrade = migrate(prior_database, "upgrade", CURRENT)
+        assert accepted_upgrade.returncode == 0, accepted_upgrade.stderr
+        rejected_downgrade = migrate(low_dsn, "downgrade", PREVIOUS)
+        assert rejected_downgrade.returncode != 0
+        assert "requires a role that bypasses forced row security" in (
+            rejected_downgrade.stdout + rejected_downgrade.stderr
+        )
+        with psycopg.connect(prior_database, autocommit=True) as administrator:
+            assert _current_revision(administrator) == CURRENT
+            assert administrator.execute(
+                "SELECT to_regclass('reconforge.exception_review_evidence')"
+            ).fetchone() == ("reconforge.exception_review_evidence",)
+    finally:
+        with psycopg.connect(prior_database, autocommit=True) as administrator:
+            administrator.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(role_name)))
+        with psycopg.connect(control_dsn, autocommit=True) as control:
+            control.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(role_name)))
 
 
 def test_registered_exception_review_empty_upgrade_downgrade_and_reupgrade_are_reversible(

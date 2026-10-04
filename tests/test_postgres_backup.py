@@ -25,8 +25,13 @@ from reconforge.infrastructure.postgres_backup import (
     PostgresNativeTools,
     _encrypt_dump,
 )
+from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REVISIONS
 
 KEY = bytes(range(32))
+COMPATIBILITY_RECOVERY_PROFILE = "team-synthetic"
+COMPATIBILITY_ALEMBIC_REVISION = "0103_pg_outbox_fencing"
+CURRENT_HEAD_RECOVERY_PROFILE = "team-current-head"
+CURRENT_HEAD_ALEMBIC_REVISION = "0104_pg_exception_review_api"
 
 
 class _Runner:
@@ -112,8 +117,8 @@ def _adapter(
     tmp_path: Path,
     runner: _Runner,
     *,
-    recovery_profile: str = "team-synthetic",
-    expected_alembic_revision: str = "0103_pg_outbox_fencing",
+    recovery_profile: str = COMPATIBILITY_RECOVERY_PROFILE,
+    expected_alembic_revision: str = COMPATIBILITY_ALEMBIC_REVISION,
 ) -> PostgresNativeBackupAdapter:
     return PostgresNativeBackupAdapter(
         PostgresBackupSettings(
@@ -148,11 +153,11 @@ def test_postgres_native_backup_is_encrypted_and_uses_service_not_secret(tmp_pat
     assert result.backend == "postgresql"
     assert result.bytes_written == len(raw)
     assert b"confidential-database-content" not in raw
-    assert b'"recovery_profile":"team-synthetic"' in raw
-    assert b'"alembic_revision":"0103_pg_outbox_fencing"' in raw
+    assert f'"recovery_profile":"{COMPATIBILITY_RECOVERY_PROFILE}"'.encode("ascii") in raw
+    assert f'"alembic_revision":"{COMPATIBILITY_ALEMBIC_REVISION}"'.encode("ascii") in raw
     assert Path(runner.calls[0][0]).stem == "psql"
     assert "service=reconforge_source" in runner.calls[0]
-    assert "reconforge_expected_revision=0103_pg_outbox_fencing" in runner.calls[0]
+    assert f"reconforge_expected_revision={COMPATIBILITY_ALEMBIC_REVISION}" in runner.calls[0]
     assert ":'reconforge_expected_revision'" in runner.calls[0][-1]
     dump_call = next(call for call in runner.calls if Path(call[0]).stem == "pg_dump")
     assert dump_call[1:] == (
@@ -178,11 +183,51 @@ def test_backup_refuses_a_source_outside_the_configured_recovery_profile(tmp_pat
     assert [Path(call[0]).stem for call in runner.calls] == ["psql"]
 
 
+@pytest.fixture
+def current_head_recovery_profile() -> tuple[str, str]:
+    """Pin the mock recovery contract to the PostgreSQL migration head."""
+
+    assert POSTGRES_MIGRATION_REVISIONS[-1] == CURRENT_HEAD_ALEMBIC_REVISION
+    return CURRENT_HEAD_RECOVERY_PROFILE, CURRENT_HEAD_ALEMBIC_REVISION
+
+
+def test_current_head_profile_binds_0104_and_rejects_0103_before_restore_actions(
+    tmp_path: Path,
+    current_head_recovery_profile: tuple[str, str],
+) -> None:
+    recovery_profile, expected_alembic_revision = current_head_recovery_profile
+    artifact = tmp_path / "current-head.rfpgbackup"
+    create_runner = _Runner()
+
+    _adapter(
+        tmp_path / "create-tools",
+        create_runner,
+        recovery_profile=recovery_profile,
+        expected_alembic_revision=expected_alembic_revision,
+    ).create_backup(artifact, key=KEY)
+
+    raw = artifact.read_bytes()
+    assert f'"recovery_profile":"{recovery_profile}"'.encode("ascii") in raw
+    assert f'"alembic_revision":"{expected_alembic_revision}"'.encode("ascii") in raw
+    assert f"reconforge_expected_revision={expected_alembic_revision}" in create_runner.calls[0]
+
+    restore_runner = _Runner()
+    with pytest.raises(PostgresBackupError, match="does not match the configured recovery profile"):
+        _adapter(
+            tmp_path / "restore-tools",
+            restore_runner,
+            recovery_profile=recovery_profile,
+            expected_alembic_revision=COMPATIBILITY_ALEMBIC_REVISION,
+        ).restore_backup(artifact, key=KEY)
+
+    assert restore_runner.calls == []
+
+
 @pytest.mark.parametrize(
     ("recovery_profile", "expected_alembic_revision"),
     [
-        ("other-profile", "0103_pg_outbox_fencing"),
-        ("team-synthetic", "0102_pg_budget_control"),
+        ("other-profile", COMPATIBILITY_ALEMBIC_REVISION),
+        (COMPATIBILITY_RECOVERY_PROFILE, "0102_pg_budget_control"),
     ],
 )
 def test_restore_rejects_a_bound_artifact_for_another_recovery_profile_before_target_mutation(
@@ -216,7 +261,7 @@ def test_legacy_unbound_artifact_remains_readable_but_must_pass_target_revision_
 
     assert outcome.target == "reconforge_restore_drill"
     assert [Path(call[0]).stem for call in runner.calls] == ["pg_restore", "createdb", "pg_restore", "psql"]
-    assert "reconforge_expected_revision=0103_pg_outbox_fencing" in runner.calls[-1]
+    assert f"reconforge_expected_revision={COMPATIBILITY_ALEMBIC_REVISION}" in runner.calls[-1]
 
 
 def test_legacy_settings_remain_compatible_for_unbound_artifacts(tmp_path: Path) -> None:
@@ -475,8 +520,8 @@ def test_tool_paths_and_database_names_fail_closed(tmp_path: Path) -> None:
                 source_service="source",
                 maintenance_service="admin",
                 restore_database="restore_db",
-                recovery_profile="team-synthetic",
-                expected_alembic_revision="0103_pg_outbox_fencing",
+                recovery_profile=COMPATIBILITY_RECOVERY_PROFILE,
+                expected_alembic_revision=COMPATIBILITY_ALEMBIC_REVISION,
                 tools=PostgresNativeTools(
                     *(Path(name) for name in ("pg_dump", "pg_restore", "createdb", "dropdb", "psql"))
                 ),
@@ -487,8 +532,8 @@ def test_tool_paths_and_database_names_fail_closed(tmp_path: Path) -> None:
             source_service="source",
             maintenance_service="admin",
             restore_database="postgres;drop",
-            recovery_profile="team-synthetic",
-            expected_alembic_revision="0103_pg_outbox_fencing",
+            recovery_profile=COMPATIBILITY_RECOVERY_PROFILE,
+            expected_alembic_revision=COMPATIBILITY_ALEMBIC_REVISION,
             tools=_tools(tmp_path),
         )
     with pytest.raises(PostgresBackupError, match="Recovery profile"):
@@ -497,7 +542,7 @@ def test_tool_paths_and_database_names_fail_closed(tmp_path: Path) -> None:
             maintenance_service="admin",
             restore_database="restore_db",
             recovery_profile="profile with spaces",
-            expected_alembic_revision="0103_pg_outbox_fencing",
+            expected_alembic_revision=COMPATIBILITY_ALEMBIC_REVISION,
             tools=_tools(tmp_path),
         )
     with pytest.raises(PostgresBackupError, match="Alembic revision"):
@@ -505,7 +550,7 @@ def test_tool_paths_and_database_names_fail_closed(tmp_path: Path) -> None:
             source_service="source",
             maintenance_service="admin",
             restore_database="restore_db",
-            recovery_profile="team-synthetic",
+            recovery_profile=COMPATIBILITY_RECOVERY_PROFILE,
             expected_alembic_revision="0103;drop",
             tools=_tools(tmp_path),
         )
@@ -581,8 +626,8 @@ def test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_clea
         source_service=os.environ["RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE"],
         maintenance_service=maintenance,
         restore_database=restore_database,
-        recovery_profile="live-postgres-drill",
-        expected_alembic_revision="0103_pg_outbox_fencing",
+        recovery_profile="live-postgres-current-head-drill",
+        expected_alembic_revision=CURRENT_HEAD_ALEMBIC_REVISION,
         tools=tools,
         timeout_seconds=1800,
     )

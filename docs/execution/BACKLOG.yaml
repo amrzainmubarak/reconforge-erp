@@ -78,12 +78,14 @@ tasks:
     depends_on: [AMR-GFO-002, AMR-GFO-003, AMR-GFO-004]
     exit_evidence: >-
       Current evidence: a locked Python3.12 whole regression rerun after the scoped exception
-      Studio integration, owned nonowner PostgreSQL AP acceptance, selected migration/recovery
-      tests, static/security/build gates, and local web typecheck/219-unit-test/build plus two
-      focused Chromium review journeys pass. Locked Python3.11/3.12 audits report zero known
-      findings for 128 resolved packages. One native source/maintenance recovery test and nine
-      externally configured HTTPS browser journeys remain declared skips; preserve those limits
-      and measured benchmark metadata before any Draft review or release claim.
+      Studio integration, selected migration/recovery tests, static/security/build gates, and
+      local web typecheck/219-unit-test/build plus two focused Chromium review journeys pass.
+      The later AP reversal slice separately passes local API/recovery contracts and owned
+      PostgreSQL admin/nonowner-app acceptance at 0106. Locked Python3.11/3.12 audits report zero
+      known findings for 128 resolved packages. A full-suite rerun is required after the pending
+      durable-job slice. One native source/maintenance recovery test and nine externally configured
+      HTTPS browser journeys remain declared skips; preserve those limits and measured benchmark
+      metadata before any Draft review or release claim.
   - id: PROD-001
     priority: P0
     area: baseline
@@ -168,7 +170,15 @@ tasks:
     status: in_progress
     depends_on: [PROD-009, PROD-016]
     exit_evidence: >-
-      SQLite54/PG0105 now retain a bounded evidence-bound partial/full AP settlement link from an approved invoice to one independently reviewed and posted Manual AP-debit/cash-credit Finance effect, with exact minor units, scope/currency affinity, current-version serialization, command replay, atomic audit/outbox, closed API projection, and SQLite backup/recovery verification. The complete purchase-to-payment result still requires receipt-to-inventory/GRNI/AP/GL posting, returns, payment reversals/voids, bank instruction/status recovery, FX/tax/intercompany policies, period controls, and live PostgreSQL recovery acceptance.
+      SQLite54/PG0105 retain a bounded partial/full AP settlement link, and SQLite55/PG0106 retain
+      an immutable one-time reversal only through an independently prepared/validated/posted exact
+      Finance inverse. Exact minor units, scope/currency affinity, canonical participant separation,
+      serialized invoice versions, command replay, atomic audit/outbox, closed API projections,
+      SQLite chronological backup/recovery, and disposable PostgreSQL migration/RLS/alias/concurrency
+      acceptance are verified. The complete purchase-to-payment result still requires
+      receipt-to-inventory/GRNI/AP/GL posting, returns, external payment instruction/status/void
+      recovery, FX/tax/intercompany policies, period controls, and native PostgreSQL recovery
+      acceptance.
   - id: PROD-011
     priority: P1
     area: sales-cycle

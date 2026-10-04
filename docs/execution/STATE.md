@@ -2,18 +2,20 @@
 
 ## Amr current sprint integration verification (2026-10-04)
 
-`AMR-GFO-005` remains in progress, with the current source accepted through a
-locked Python 3.12 whole-suite rerun after the scoped exception-review Studio
-integration, an independently rerun owned PostgreSQL nonowner AP acceptance,
-recovery-profile tests, static quality/security gates, package build, and the
-real local Studio browser suite. The locked whole suite and the host whole suite
-both exited zero; the selected nonowner PostgreSQL AP suite exited zero after
-temporary-database migration to head; locked Python 3.11/3.12 dependency audits
-reported zero findings; and the Studio typecheck, 219 unit tests, production
-build, and two focused Chromium exception-review journeys passed. The earlier
-whole-Studio browser gate recorded 17 executed tests and 9 explicit
-live-service skips; it is retained separately because it predates the new route.
-A deterministic 10,000-record local
+`AMR-GFO-005` remains in progress. The source through the scoped exception-review
+Studio integration was accepted through a locked Python 3.12 whole-suite rerun,
+an independently rerun owned PostgreSQL nonowner AP acceptance, recovery-profile
+tests, static quality/security gates, package build, and the real local Studio
+browser suite. The later AP reversal slice has its own focused SQLite/API and
+disposable PostgreSQL acceptance below; a new whole-suite regression is required
+after all currently pending slices are integrated. The locked whole suite and the
+host whole suite both exited zero; the selected nonowner PostgreSQL AP suite
+exited zero after temporary-database migration to head; locked Python 3.11/3.12
+dependency audits reported zero findings; and the Studio typecheck, 219 unit
+tests, production build, and two focused Chromium exception-review journeys
+passed. The earlier whole-Studio browser gate recorded 17 executed tests and 9
+explicit live-service skips; it is retained separately because it predates the
+new route. A deterministic 10,000-record local
 benchmark completed in 11.7616 seconds with 37.15 MiB peak memory and result
 signature `4f634672cdae0d21e6179b66a7d78fb6c861e4fb0511dd57a478d66d7f021717`
 on the recorded Windows/CPython 3.14.6 host. The native PostgreSQL
@@ -59,6 +61,33 @@ idempotency, audit/outbox, and migration behavior only. It is not an
 inventory/GRNI/AP/GL posting cycle, external banking lifecycle,
 return/reversal, FX, tax, intercompany, capacity, availability, or compliance
 result.
+
+## Amr AP payment-link reversal completion (2026-10-04)
+
+`PROD-010` retains a bounded Finance-evidenced reversal of one immutable AP
+payment-link allocation. SQLite migration 55 and PostgreSQL revision 0106 keep
+the original link and permit one independently prepared, validated, posted
+Finance inverse only when its exact minor amount, currency, scope, original
+effect, AP/cash lines, digest, and source evidence agree. Canonical tenant-local
+identity resolution fails closed on unknown or ambiguous `id`/`username` aliases
+for the invoice maker/approver, original settler, original and reversal Finance
+participants, and reversal actor. The reversal, command receipt, audit event,
+outbox event, and invoice version transition co-commit; it never changes the
+original link.
+
+Focused local payment-link/reversal/API/backup/migration contracts passed, as
+did the post-0106 Alembic head check, targeted Ruff and Mypy gates, and an owned
+disposable PostgreSQL admin/application-role acceptance. The PostgreSQL group
+exited zero and exercised non-bypass migration refusal, canonical alias
+collision refusal, posted inverse evidence, historical idempotent replay, and
+single-effect concurrency. The SQLite recovery regression retains the sequence
+`L400 → L600 → reverse L400 → replacement L400`, restores it chronologically,
+and replays the retained reversal response. This supersedes the original
+payment-link slice's former `return/reversal` limitation only for this exact
+evidence-bound allocation reversal. The scope still excludes external payment
+instructions/statuses/voids, automatic receipt-to-inventory/GRNI/AP/GL effects,
+banking, FX, tax, intercompany, PostgreSQL native backup recovery, capacity,
+availability, and compliance claims.
 
 ## Amr sprint PostgreSQL recovery-profile fencing completion (2026-10-04)
 

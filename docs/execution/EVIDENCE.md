@@ -32,6 +32,24 @@
   it does not assert a hosted HTTPS journey, all-browser accessibility
   certification, or local SQLite parity.
 
+- PROD-010 AP payment-link reversal (2026-10-04): root commits `daaa75c9` and
+  `8a4fc625` add SQLite migration 55 and PostgreSQL revision
+  `0106_pg_ap_link_reversal`. One immutable supplier-payment allocation can be
+  unwound only by an independently prepared/validated/posted Finance inverse
+  with exact scope, currency, minor amount, original-effect, AP/cash-line,
+  digest, and canonical participant evidence. The original link is retained;
+  reversal command/audit/outbox evidence and the database-owned invoice version
+  transition are atomic. Local payment-link/reversal/API/backup/migration tests
+  exit zero, with the required chronological `L400 → L600 → reverse L400 →
+  replacement L400 → restore → exact replay` scenario. Targeted Ruff and Mypy
+  pass; Alembic reports `0106_pg_ap_link_reversal` as the sole head. A separate
+  disposable PostgreSQL admin/non-bypass-app-role group exits zero and covers
+  migration-role refusal, canonical alias collision refusal, posted inverse,
+  immutable receipt replay, and concurrent single-effect admission. This is not
+  evidence of external payment/void, automated AP/GL/GRNI/inventory, native
+  PostgreSQL backup recovery, banking, FX, tax, intercompany, capacity,
+  availability, or compliance behavior.
+
 - PROD-010 evidence-bound AP payment link (2026-10-04): SQLite migration 54
   and PostgreSQL revision 0105 retain exact minor-unit partial/full allocations,
   independent Finance preparation/review/posting, invoice actor separation,

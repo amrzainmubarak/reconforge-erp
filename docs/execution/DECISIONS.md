@@ -1,5 +1,26 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-AMR-GFO-009 — Reverse AP allocation through retained Finance inverse evidence (2026-10-04)
+
+An AP payment-link reversal is an immutable compensating evidence node, not a
+mutable settlement or a second posting engine. The original link remains
+unchanged. One link may be unwound once only when an independently
+prepared/validated/posted Finance `Reversal` effect exactly inverts its retained
+Finance effect, scope, currency, minor amount, AP/cash lines, source binding,
+and digest. SQLite migration 55 and PostgreSQL revision 0106 serialize the
+current supplier-invoice version and co-commit reversal command, audit, outbox,
+and derived invoice status. PostgreSQL canonicalizes every relevant historical
+actor through a tenant-local identity `id`/`username` lookup and refuses
+unknown or ambiguous aliases before separation-of-duties comparison.
+
+The server derives the reversal amount from retained Finance evidence before
+amount-bounded authorization. SQLite restore replays an interleaved link and
+reversal timeline with each receipt immediately after its evidence node, so
+historical idempotent responses stay frozen. This decision excludes payment
+instruction/status/void integration, automatic receipt/GRNI/inventory/AP/GL
+posting, banking, FX, tax, intercompany, native PostgreSQL recovery, capacity,
+availability, and compliance claims.
+
 ## D-AMR-GFO-008 — Bind the Studio exception queue to retained server review evidence (2026-10-04)
 
 The `/exceptions` Studio route is accepted as a bounded UI adapter for the

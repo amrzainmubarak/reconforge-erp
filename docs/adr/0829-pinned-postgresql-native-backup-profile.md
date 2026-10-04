@@ -32,9 +32,14 @@ adding a second format or a separate sidecar file.
 3. New profile-bound artifacts add `recovery_profile` and `alembic_revision`
    to the existing encrypted header. These fields remain readable metadata but
    are authenticated as AES-GCM associated data. A configured mismatch stops
-   before `pg_restore --list`, `createdb`, or any target database mutation.
-4. After an isolated restore, the same exact-revision query runs against the
-   new target. Failure invokes the existing exact-target `dropdb` rollback.
+   before `pg_restore --list`, isolated-target creation, or any target
+   database mutation.
+4. Target creation is non-connectable. A maintenance-database transaction
+   removes `PUBLIC CONNECT` while enabling the restore owner's connection path
+   before `pg_restore`; after restore, the adapter re-revokes `PUBLIC EXECUTE`
+   on restored user-schema `SECURITY DEFINER` routines before the same
+   exact-revision query runs. Failure invokes the existing exact-target
+   `dropdb` rollback.
 5. Existing unbound v1 artifacts and settings remain readable. They retain the
    historical relation-existence gate. A named profile may restore an unbound
    artifact only if the exact target-side revision verification passes; an
@@ -52,10 +57,11 @@ adding a second format or a separate sidecar file.
 - The recovery profile is deployment configuration, not a general claim that
   all PostgreSQL backup callers use the stronger path. Existing callers keep
   their compatibility behavior until configured with the pair.
-- The focused fake-native-tool contract covers failure ordering and rollback
-  behavior. It does not establish a live native-client service rehearsal,
-  backup duration, throughput, RPO/RTO, key custody, HA/DR, or production
-  recovery readiness.
+- The focused fake-native-tool contract covers non-connectable target creation,
+  atomic `PUBLIC CONNECT` removal, security-definer hardening, failure
+  ordering, and rollback behavior. It does not establish a live native-client
+  service rehearsal, backup duration, throughput, RPO/RTO, key custody,
+  maintenance-role custody, HA/DR, or production recovery readiness.
 
 ## Rollback
 

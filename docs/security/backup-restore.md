@@ -54,10 +54,20 @@ PostgreSQL native-adapter rehearsal is opt-in and must use disposable service
 definitions. Set `RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE` to the source service
 and `RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE` to a maintenance service that
 may create and drop only isolated drill databases. Put `pg_dump`, `pg_restore`,
-`createdb`, `dropdb`, and `psql` on `PATH`. The test creates a random
-`reconforge_restore_*` database, verifies the encrypted round-trip through the
-Application boundary, and drops that exact database. Never point this rehearsal
-at a production maintenance role.
+`createdb`, `dropdb`, and `psql` on `PATH`. The adapter creates a random
+`reconforge_restore_*` target with connections disabled, then atomically enables
+only its maintenance-owner path while revoking `PUBLIC CONNECT`, before it runs
+`pg_restore`. It re-revokes `PUBLIC EXECUTE` on restored user-schema
+`SECURITY DEFINER` routines before profile verification. The test verifies the
+encrypted round-trip through the Application boundary and drops that exact
+database. Never point this rehearsal at a production maintenance role.
+
+The maintenance service must authenticate a protected migration/restore
+principal. It must be distinct from API and worker runtime roles; those roles
+must have no target ownership, direct `CONNECT` grant, superuser privilege, or
+membership that confers those privileges. The restored target is an isolated
+verification result, not a production promotion path. Provisioning runtime
+access after verification is a separate reviewed operator action.
 
 For a named PostgreSQL recovery profile, construct
 `PostgresBackupSettings` with both `recovery_profile` and

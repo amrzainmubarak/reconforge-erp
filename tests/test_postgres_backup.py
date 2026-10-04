@@ -40,6 +40,7 @@ class _Runner:
         fail_restore: bool = False,
         fail_verification: bool = False,
         fail_security_definer_hardening: bool = False,
+        fail_target_access_fencing: bool = False,
         fail_source_profile: bool = False,
         fail_restore_profile: bool = False,
         fail_rollback: bool = False,
@@ -50,6 +51,7 @@ class _Runner:
         self.fail_restore = fail_restore
         self.fail_verification = fail_verification
         self.fail_security_definer_hardening = fail_security_definer_hardening
+        self.fail_target_access_fencing = fail_target_access_fencing
         self.fail_source_profile = fail_source_profile
         self.fail_restore_profile = fail_restore_profile
         self.fail_rollback = fail_rollback
@@ -84,6 +86,8 @@ class _Runner:
         if executable == "psql":
             database = call[call.index("--dbname") + 1]
             query = call[-1]
+            if self.fail_target_access_fencing and "REVOKE CONNECT ON DATABASE" in query:
+                return 1
             if self.fail_security_definer_hardening and "REVOKE ALL ON %s" in query:
                 return 1
             if self.fail_verification and "SELECT 1 /" in query:
@@ -265,7 +269,8 @@ def test_legacy_unbound_artifact_remains_readable_but_must_pass_target_revision_
     assert outcome.target == "reconforge_restore_drill"
     assert [Path(call[0]).stem for call in runner.calls] == [
         "pg_restore",
-        "createdb",
+        "psql",
+        "psql",
         "pg_restore",
         "psql",
         "psql",
@@ -281,8 +286,17 @@ def test_restore_rehardens_security_definer_routines_before_profile_verification
     _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
 
     psql_calls = [call for call in runner.calls if Path(call[0]).stem == "psql"]
-    assert len(psql_calls) == 2
-    hardening_query, verification_query = (call[-1] for call in psql_calls)
+    assert len(psql_calls) == 4
+    creation_query, access_fence_query, hardening_query, verification_query = (
+        call[-1] for call in psql_calls
+    )
+    assert creation_query == 'CREATE DATABASE "reconforge_restore_drill" WITH ALLOW_CONNECTIONS false;'
+    assert access_fence_query == (
+        "BEGIN;\n"
+        'ALTER DATABASE "reconforge_restore_drill" ALLOW_CONNECTIONS true;\n'
+        'REVOKE CONNECT ON DATABASE "reconforge_restore_drill" FROM PUBLIC;\n'
+        "COMMIT;"
+    )
     assert "pg_catalog.pg_proc" in hardening_query
     assert "procedure.prosecdef" in hardening_query
     assert "procedure.prokind IN ('f', 'p')" in hardening_query
@@ -302,11 +316,30 @@ def test_failed_security_definer_hardening_rolls_back_isolated_target(tmp_path: 
 
     assert [Path(call[0]).stem for call in runner.calls] == [
         "pg_restore",
-        "createdb",
+        "psql",
+        "psql",
         "pg_restore",
         "psql",
         "dropdb",
     ]
+
+
+def test_failed_target_access_fencing_rolls_back_non_connectable_target(tmp_path: Path) -> None:
+    artifact = tmp_path / "target-access-fence.rfpgbackup"
+    _adapter(tmp_path / "create-tools", _Runner()).create_backup(artifact, key=KEY)
+    runner = _Runner(fail_target_access_fencing=True)
+
+    with pytest.raises(PostgresBackupError, match="target access fencing failed"):
+        _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
+
+    assert [Path(call[0]).stem for call in runner.calls] == [
+        "pg_restore",
+        "psql",
+        "psql",
+        "dropdb",
+    ]
+    assert runner.calls[1][-1] == 'CREATE DATABASE "reconforge_restore_drill" WITH ALLOW_CONNECTIONS false;'
+    assert "REVOKE CONNECT ON DATABASE \"reconforge_restore_drill\" FROM PUBLIC" in runner.calls[2][-1]
 
 
 def test_legacy_settings_remain_compatible_for_unbound_artifacts(tmp_path: Path) -> None:
@@ -454,7 +487,7 @@ def test_backup_uses_native_stdout_fallback_after_file_forms_produce_no_dump(tmp
     )
 
 
-def test_restore_creates_new_database_and_rollback_removes_partial_target(tmp_path: Path) -> None:
+def test_restore_fences_target_access_before_restore_and_rolls_back_partial_target(tmp_path: Path) -> None:
     create_runner = _Runner()
     output = tmp_path / "postgres.rfpgbackup"
     _adapter(tmp_path / "create-tools", create_runner).create_backup(output, key=KEY)
@@ -465,8 +498,17 @@ def test_restore_creates_new_database_and_rollback_removes_partial_target(tmp_pa
         adapter.restore_backup(output, key=KEY)
 
     commands = [Path(call[0]).stem for call in restore_runner.calls]
-    assert commands == ["pg_restore", "createdb", "pg_restore", "dropdb"]
-    assert restore_runner.calls[1][1] == "--maintenance-db=service=reconforge_admin"
+    assert commands == ["pg_restore", "psql", "psql", "pg_restore", "dropdb"]
+    assert restore_runner.calls[1][1:] == (
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=1",
+        "--dbname",
+        "service=reconforge_admin",
+        "--command",
+        'CREATE DATABASE "reconforge_restore_drill" WITH ALLOW_CONNECTIONS false;',
+    )
+    assert "REVOKE CONNECT ON DATABASE \"reconforge_restore_drill\" FROM PUBLIC" in restore_runner.calls[2][-1]
     assert restore_runner.calls[-1][-1] == "reconforge_restore_drill"
 
 
@@ -489,7 +531,8 @@ def test_failed_post_restore_verification_rolls_back_new_database(tmp_path: Path
         _adapter(tmp_path / "restore-tools", runner).restore_backup(output, key=KEY)
     assert [Path(call[0]).stem for call in runner.calls] == [
         "pg_restore",
-        "createdb",
+        "psql",
+        "psql",
         "pg_restore",
         "psql",
         "psql",

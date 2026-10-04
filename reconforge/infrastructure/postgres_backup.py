@@ -78,6 +78,48 @@ END $reconforge_security_definer$;
 """
 
 
+def _target_database_identifier(database: str) -> str:
+    """Return a quoted target identifier after the closed restore-name check.
+
+    The restore target is deliberately restricted to lower-case ASCII names by
+    ``_database``. Quoting it here keeps the SQL construction visibly safe and
+    prevents a future relaxation of that validator from becoming a SQL
+    injection boundary.
+    """
+
+    return f'"{_database(database)}"'
+
+
+def _create_isolated_target_sql(database: str) -> str:
+    """Create a target that cannot accept any connection yet.
+
+    ``CREATE DATABASE`` cannot run inside a transaction. Creating it with
+    ``ALLOW_CONNECTIONS false`` avoids a PUBLIC CONNECT window before the
+    maintenance owner can atomically enable only its own access below.
+    """
+
+    return f"CREATE DATABASE {_target_database_identifier(database)} WITH ALLOW_CONNECTIONS false;"
+
+
+def _fence_isolated_target_access_sql(database: str) -> str:
+    """Atomically make the new target reachable only by its owner.
+
+    The role that creates a PostgreSQL database is its owner and retains the
+    implicit database privileges. At one maintenance-database transaction
+    commit, the target becomes connectable while PUBLIC CONNECT is removed.
+    A runtime role therefore never observes a connectable target with its
+    default PUBLIC database privilege.
+    """
+
+    target = _target_database_identifier(database)
+    return (
+        "BEGIN;\n"
+        f"ALTER DATABASE {target} ALLOW_CONNECTIONS true;\n"
+        f"REVOKE CONNECT ON DATABASE {target} FROM PUBLIC;\n"
+        "COMMIT;"
+    )
+
+
 class PostgresBackupError(RuntimeError):
     """Safe operational PostgreSQL backup or restore error."""
 
@@ -551,6 +593,44 @@ class PostgresNativeBackupAdapter:
             action="restore security-definer hardening",
         )
 
+    def _create_isolated_restore_target(self, *, service: str, database: str) -> None:
+        """Create a non-connectable target from the maintenance database."""
+
+        verified_service = _service(service, "Maintenance PostgreSQL service")
+        target_database = _database(database)
+        self._run(
+            (
+                self._psql,
+                "--no-psqlrc",
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--dbname",
+                f"service={verified_service}",
+                "--command",
+                _create_isolated_target_sql(target_database),
+            ),
+            action="restore database creation",
+        )
+
+    def _fence_isolated_restore_target_access(self, *, service: str, database: str) -> None:
+        """Enable only the restore owner's connection path for a new target."""
+
+        verified_service = _service(service, "Maintenance PostgreSQL service")
+        target_database = _database(database)
+        self._run(
+            (
+                self._psql,
+                "--no-psqlrc",
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--dbname",
+                f"service={verified_service}",
+                "--command",
+                _fence_isolated_target_access_sql(target_database),
+            ),
+            action="restore target access fencing",
+        )
+
     def _verify_artifact_profile(
         self,
         *,
@@ -736,11 +816,9 @@ class PostgresNativeBackupAdapter:
                 alembic_revision=alembic_revision,
             )
             self._run((self._pg_restore, "--list", str(dump_path)), action="restore validation")
-            self._run(
-                (self._createdb, f"--maintenance-db=service={maintenance}", database),
-                action="restore database creation",
-            )
+            self._create_isolated_restore_target(service=maintenance, database=database)
             try:
+                self._fence_isolated_restore_target_access(service=maintenance, database=database)
                 self._run(
                     (
                         self._pg_restore,

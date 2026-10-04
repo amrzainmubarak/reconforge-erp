@@ -212,7 +212,12 @@ def test_partial_invoices_and_nonapproved_documents_preserve_available_quantity(
         assert repository.get_supplier_invoice(unused)["status"] == "Matched"
 
 
-def test_paid_invoice_still_consumes_receipt_quantity(database: PayablesDatabase) -> None:
+def test_paid_invoice_still_consumes_receipt_quantity_after_payment_link_upgrade(tmp_path: Path) -> None:
+    """A paid invoice retained from schema 53 still consumes its receipt after upgrade."""
+
+    database = PayablesDatabase(path=tmp_path / "legacy-paid-invoice.db")
+    assert database.path is not None
+    run_migrations(database.path, target_version=53)
     with database.repository() as repository:
         order, line = received_order(repository)
         first = submitted_invoice(repository, order, line, "INV-A", "3")
@@ -221,6 +226,7 @@ def test_paid_invoice_still_consumes_receipt_quantity(database: PayablesDatabase
         repository.run_three_way_match(second)
         repository.approve_supplier_invoice(first, expected_version=3, actor_label="checker")
     database.set_legacy_invoice_state(first, "Paid", 4)
+    run_migrations(database.path)
     with database.repository() as repository, pytest.raises(PlatformError, match="quantity|quantities"):
         repository.approve_supplier_invoice(second, expected_version=3, actor_label="checker")
 

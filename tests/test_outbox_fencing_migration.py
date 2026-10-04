@@ -96,8 +96,8 @@ def test_outbox_fencing_migration_watermarks_history_and_keeps_new_events_at_zer
             payload={"synthetic": True},
         )
         connection.commit()
-    status = run_migrations(path)
-    assert status.current_version == status.latest_version == 53
+    status = run_migrations(path, target_version=53)
+    assert status.current_version == 53
     with connect(path) as connection:
         assert tuple(
             connection.execute(

@@ -27,6 +27,7 @@ from reconforge.api.server_payables import (
     server_payables_enabled,
 )
 from reconforge.auth.field_access import (
+    project_payables_payment_link,
     project_payables_purchase_order,
     project_payables_receipt,
     project_payables_supplier,
@@ -36,19 +37,22 @@ from reconforge.auth.field_access import (
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.postgres_payables import PostgresPayablesRepository
+from reconforge.infrastructure.postgres_payables_payment_link import PostgresPayablesPaymentLinkRepository
 from reconforge.platform.common import PlatformError
 from reconforge.platform.payables import PayablesService, PurchaseOrderLineInput, SupplierInvoiceLineInput
+from reconforge.platform.payables_payment_link import PayablesPaymentLinkService
 
 router = APIRouter(prefix="/payables", tags=["payables"])
 PageLimit = Annotated[int, Query(ge=1, le=1_000)]
 PageOffset = Annotated[int, Query(ge=0, le=10_000_000)]
 PayablesRead = Annotated[
     LocalUser,
-    Depends(require_any_permission({"payables.read", "payables.manage", "payables.match", "payables.approve"})),
+    Depends(require_any_permission({"payables.read", "payables.manage", "payables.match", "payables.approve", "payables.settle"})),
 ]
 PayablesManage = Annotated[LocalUser, Depends(require_permission("payables.manage"))]
 PayablesMatch = Annotated[LocalUser, Depends(require_permission("payables.match"))]
 PayablesApprove = Annotated[LocalUser, Depends(require_permission("payables.approve"))]
+PayablesSettle = Annotated[LocalUser, Depends(require_permission("payables.settle"))]
 T = TypeVar("T")
 
 
@@ -95,6 +99,18 @@ class VersionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     expected_version: int = Field(ge=1)
+
+
+class PaymentLinkRequest(BaseModel):
+    """The immutable reference to one already-posted AP/cash settlement effect."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    finance_effect_id: str = Field(min_length=1, max_length=160)
+    ap_account_id: str = Field(min_length=1, max_length=160)
+    cash_account_id: str = Field(min_length=1, max_length=160)
+    expected_invoice_version: int = Field(ge=1)
+    command_id: str = Field(min_length=1, max_length=160)
 
 
 class ReceiptRequest(BaseModel):
@@ -191,6 +207,30 @@ def _server_call(
         entity_code=entity_code,
         object_refs=object_refs,
         supplier_code=supplier_code,
+    )
+
+
+def _server_payment_link_amount(
+    request: Request,
+    *,
+    invoice_id: str,
+    payload: PaymentLinkRequest,
+    actor_id: str,
+) -> Decimal:
+    """Read the immutable effect shape before bounded settlement authorization."""
+
+    return execute_postgres_payables(
+        request,
+        lambda repository, _scope: PostgresPayablesPaymentLinkRepository(
+            repository.connection, repository.tenant_id
+        ).authorization_amount(
+            invoice_id,
+            finance_effect_id=payload.finance_effect_id,
+            ap_account_id=payload.ap_account_id,
+            cash_account_id=payload.cash_account_id,
+            actor_label=actor_id,
+        ),
+        object_refs=(("invoice", invoice_id),),
     )
 
 
@@ -488,3 +528,69 @@ def approve_supplier_invoice(
     except (DatabaseError, PlatformError) as exc:
         raise _error("payables_invoice_approve_failed", exc) from exc
     return project_payables_supplier_invoice(record).visible
+
+
+@router.post("/invoices/{invoice_id}/payment-links")
+def link_supplier_invoice_payment(
+    invoice_id: str,
+    request: Request,
+    payload: PaymentLinkRequest,
+    current_user: PayablesSettle,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """Link a reviewed manual AP/cash posting to an approved supplier invoice."""
+
+    if server_payables_enabled(request):
+        amount = _server_payment_link_amount(
+            request,
+            invoice_id=invoice_id,
+            payload=payload,
+            actor_id=current_user.id,
+        )
+        record = _server_call(
+            request,
+            frozenset({"payables.settle"}),
+            lambda repository, _scope: PostgresPayablesPaymentLinkRepository(
+                repository.connection, repository.tenant_id
+            ).link_finance_payment(invoice_id, **payload.model_dump(), actor_label=current_user.id),
+            amount=amount,
+            object_refs=(("invoice", invoice_id),),
+        )
+        return project_payables_payment_link(record).visible
+    try:
+        record = PayablesPaymentLinkService(_local_connection(connection)).link_finance_payment(
+            invoice_id,
+            **payload.model_dump(),
+            actor_label=current_user.username,
+        )
+    except (DatabaseError, PlatformError) as exc:
+        raise _error("payables_payment_link_failed", exc) from exc
+    return project_payables_payment_link(record).visible
+
+
+@router.get("/invoices/{invoice_id}/payment-links")
+def list_supplier_invoice_payment_links(
+    invoice_id: str,
+    request: Request,
+    current_user: PayablesRead,
+    connection: sqlite3.Connection | None = Depends(get_local_db),
+) -> dict[str, object]:
+    """List retained settlement evidence without exposing arbitrary effect fields."""
+
+    if server_payables_enabled(request):
+        records = _server_call(
+            request,
+            frozenset({"payables.read", "payables.manage", "payables.match", "payables.approve", "payables.settle"}),
+            lambda repository, _scope: PostgresPayablesPaymentLinkRepository(
+                repository.connection, repository.tenant_id
+            ).list_payment_links(invoice_id, actor_label=current_user.id),
+            object_refs=(("invoice", invoice_id),),
+        )
+    else:
+        try:
+            records = PayablesPaymentLinkService(_local_connection(connection)).list_payment_links(
+                invoice_id, actor_label=current_user.username
+            )
+        except (DatabaseError, PlatformError) as exc:
+            raise _error("payables_payment_link_list_failed", exc) from exc
+    return {"payment_links": [project_payables_payment_link(record).visible for record in records]}

@@ -1146,6 +1146,17 @@ PAYABLES_THREE_WAY_MATCH_FIELDS = frozenset(
         "quantity_variance", "price_variance_minor", "total_variance_minor", "reason", "created_at", "updated_at",
     }
 )
+PAYABLES_PAYMENT_LINK_FIELDS = frozenset(
+    {
+        "payment_link_id", "supplier_invoice_id", "finance_effect_id", "finance_entry_id",
+        "ap_account_id", "cash_account_id", "amount_minor", "currency_code", "payment_date",
+        "finance_validation_digest", "finance_posted_actor_id", "settlement_actor_id",
+        "invoice_version_before", "invoice_version_after", "allocated_minor", "outstanding_minor",
+        "invoice_status", "audit_event_id", "outbox_event_id",
+        # The list endpoint returns retained link rows rather than command receipts.
+        "id", "workspace_id", "organization_id", "legal_entity_id", "created_at",
+    }
+)
 RECEIVABLES_CUSTOMER_FIELDS = frozenset(
     {
         # Deliberate union for local SQLite and tenant-scoped PostgreSQL
@@ -3300,6 +3311,12 @@ def project_payables_three_way_match(values: Mapping[str, object]) -> FieldProje
     """Return a closed projection for a deterministic three-way-match result."""
 
     return project_fields(values, allowed_fields=PAYABLES_THREE_WAY_MATCH_FIELDS)
+
+
+def project_payables_payment_link(values: Mapping[str, object]) -> FieldProjection:
+    """Return a closed projection for AP settlement evidence."""
+
+    return project_fields(values, allowed_fields=PAYABLES_PAYMENT_LINK_FIELDS)
 
 
 def project_payables_supplier_invoice(values: Mapping[str, object]) -> FieldProjection:

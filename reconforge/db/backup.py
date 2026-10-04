@@ -38,6 +38,7 @@ from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
     RECEIPT_RESTORE_ADMISSION_TRIGGERS,
     RECEIPT_TABLES,
 )
+from reconforge.infrastructure.sqlite_payables_payment_link import verify_sqlite_payment_link_storage
 from reconforge.io.structured import (
     StructuredDocumentError,
     StructuredDocumentPolicy,
@@ -68,6 +69,7 @@ BACKUP_JSON_POLICY = StructuredDocumentPolicy(
 )
 _BACKUP_READ_CHUNK_BYTES = 1024 * 1024
 _OUTBOX_FENCING_SCHEMA_VERSION = 53
+_PAYABLES_PAYMENT_LINK_SCHEMA_VERSION = 54
 _OUTBOX_FENCING_EVENT_COLUMNS = frozenset({"lease_generation", "lease_generation_floor"})
 _OUTBOX_FENCING_EVIDENCE_COLUMNS = frozenset(
     {"evidence_id", "event_id", "lease_generation", "action", "worker_id", "occurred_at", "attempts"}
@@ -195,6 +197,8 @@ BACKUP_TABLES = [
     "audit_ledger_state",
     "finance_posting_effects",
     "finance_posting_commands",
+    "ap_payment_links",
+    "ap_payment_link_commands",
     *RECEIPT_TABLES,
 ]
 
@@ -297,6 +301,12 @@ BACKUP_SELECT_QUERIES = {
     "ledger_entries": "SELECT * FROM ledger_entries ORDER BY workspace_id, posting_date, entry_number",
     "finance_posting_effects": "SELECT * FROM finance_posting_effects ORDER BY reverses_effect_id IS NOT NULL, id",
     "finance_posting_commands": "SELECT * FROM finance_posting_commands ORDER BY workspace_id, command_id",
+    "ap_payment_links": (
+        "SELECT * FROM ap_payment_links ORDER BY supplier_invoice_id, invoice_version_before, id"
+    ),
+    "ap_payment_link_commands": (
+        "SELECT * FROM ap_payment_link_commands ORDER BY workspace_id, command_id"
+    ),
     "inventory_receipt_plans": "SELECT * FROM inventory_receipt_plans ORDER BY original_plan_id IS NOT NULL,id",
     "inventory_receipt_reviews": "SELECT * FROM inventory_receipt_reviews ORDER BY id",
     "inventory_receipt_links": "SELECT * FROM inventory_receipt_links ORDER BY original_plan_id IS NOT NULL,id",
@@ -427,6 +437,8 @@ BACKUP_DELETE_QUERIES = {
     "ledger_entries": "DELETE FROM ledger_entries",
     "finance_posting_effects": "DELETE FROM finance_posting_effects",
     "finance_posting_commands": "DELETE FROM finance_posting_commands",
+    "ap_payment_links": "DELETE FROM ap_payment_links",
+    "ap_payment_link_commands": "DELETE FROM ap_payment_link_commands",
     "inventory_receipt_plans": "DELETE FROM inventory_receipt_plans",
     "inventory_receipt_reviews": "DELETE FROM inventory_receipt_reviews",
     "inventory_receipt_links": "DELETE FROM inventory_receipt_links",
@@ -2589,6 +2601,27 @@ BACKUP_INSERT_COLUMNS['finance_posting_effects'] = ('id', 'workspace_id', 'organ
 BACKUP_INSERT_QUERIES['finance_posting_effects'] = 'INSERT INTO finance_posting_effects (id,workspace_id,organization_id,legal_entity_id,entry_id,source_kind,source_id,purpose,reverses_effect_id,validation_digest,validation_contract_version,currency_code,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest,snapshot_json,posted_actor_id,posted_at,reason,audit_event_id,outbox_event_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
 BACKUP_INSERT_COLUMNS['finance_posting_commands'] = ('workspace_id', 'command_id', 'operation', 'actor_id', 'request_digest', 'result_json', 'created_at')
 BACKUP_INSERT_QUERIES['finance_posting_commands'] = 'INSERT INTO finance_posting_commands (workspace_id,command_id,operation,actor_id,request_digest,result_json,created_at) VALUES (?,?,?,?,?,?,?)'
+BACKUP_INSERT_COLUMNS['ap_payment_links'] = (
+    'id', 'workspace_id', 'organization_id', 'legal_entity_id', 'supplier_invoice_id',
+    'finance_effect_id', 'finance_entry_id', 'ap_account_id', 'cash_account_id',
+    'amount_minor', 'currency_code', 'payment_date', 'finance_validation_digest',
+    'finance_posted_actor_id', 'settlement_actor_id', 'invoice_version_before',
+    'audit_event_id', 'outbox_event_id', 'created_at',
+)
+BACKUP_INSERT_QUERIES['ap_payment_links'] = (
+    'INSERT INTO ap_payment_links '
+    '(id,workspace_id,organization_id,legal_entity_id,supplier_invoice_id,finance_effect_id,'
+    'finance_entry_id,ap_account_id,cash_account_id,amount_minor,currency_code,payment_date,'
+    'finance_validation_digest,finance_posted_actor_id,settlement_actor_id,invoice_version_before,'
+    'audit_event_id,outbox_event_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+)
+BACKUP_INSERT_COLUMNS['ap_payment_link_commands'] = (
+    'workspace_id', 'command_id', 'settlement_actor_id', 'request_digest', 'result_json', 'created_at',
+)
+BACKUP_INSERT_QUERIES['ap_payment_link_commands'] = (
+    'INSERT INTO ap_payment_link_commands '
+    '(workspace_id,command_id,settlement_actor_id,request_digest,result_json,created_at) VALUES (?,?,?,?,?,?)'
+)
 for _receipt_table, _receipt_columns in RECEIPT_BACKUP_COLUMNS.items():
     BACKUP_INSERT_COLUMNS[_receipt_table] = _receipt_columns
     # The names are a closed versioned schema tuple, never backup-provided SQL.
@@ -2922,6 +2955,88 @@ def _verify_posting_backup(connection: sqlite3.Connection) -> None:
         raise DBBridgeError("Backup operational posting integrity verification failed.") from exc
 
 
+def _verify_payables_payment_link_backup(
+    connection: sqlite3.Connection,
+    *,
+    required: bool,
+) -> None:
+    """Replay retained AP settlement evidence when this schema owns it."""
+
+    tables = ("ap_payment_links", "ap_payment_link_commands")
+    present = tuple(_table_exists(connection, table) for table in tables)
+    if not any(present):
+        if required:
+            raise DBBridgeError("Backup payables payment-link tables are unavailable.")
+        return
+    if not all(present):
+        raise DBBridgeError("Backup payables payment-link schema is incomplete.")
+    try:
+        verify_sqlite_payment_link_storage(connection)
+    except (PlatformError, TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup payables payment-link integrity verification failed.") from exc
+
+
+def _payment_link_restore_initial_versions(tables: dict[str, Any]) -> dict[str, int]:
+    """Stage each linked AP invoice at the first immutable allocation version."""
+
+    links = tables.get("ap_payment_links")
+    invoices = tables.get("ap_supplier_invoices")
+    if not isinstance(links, list) or not isinstance(invoices, list):
+        raise DBBridgeError("Backup payment-link rows are invalid.")
+    invoice_rows: dict[str, dict[str, Any]] = {}
+    for row in invoices:
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+            raise DBBridgeError("Backup supplier-invoice rows are invalid.")
+        invoice_rows[row["id"]] = row
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in links:
+        if not isinstance(row, dict):
+            raise DBBridgeError("Backup payment-link rows are invalid.")
+        invoice_id = row.get("supplier_invoice_id")
+        version = row.get("invoice_version_before")
+        amount = row.get("amount_minor")
+        if (
+            not isinstance(invoice_id, str)
+            or not invoice_id
+            or isinstance(version, bool)
+            or not isinstance(version, int)
+            or version < 1
+            or isinstance(amount, bool)
+            or not isinstance(amount, int)
+            or amount < 1
+        ):
+            raise DBBridgeError("Backup payment-link allocation history is invalid.")
+        grouped.setdefault(invoice_id, []).append(row)
+    initial_versions: dict[str, int] = {}
+    for invoice_id, rows in grouped.items():
+        invoice = invoice_rows.get(invoice_id)
+        if invoice is None:
+            raise DBBridgeError("Backup payment link references a missing supplier invoice.")
+        total = invoice.get("total_minor")
+        final_version = invoice.get("row_version")
+        if (
+            isinstance(total, bool)
+            or not isinstance(total, int)
+            or total < 1
+            or isinstance(final_version, bool)
+            or not isinstance(final_version, int)
+        ):
+            raise DBBridgeError("Backup supplier-invoice payment state is invalid.")
+        ordered = sorted(rows, key=lambda item: (int(item["invoice_version_before"]), str(item.get("id", ""))))
+        next_version = int(ordered[0]["invoice_version_before"])
+        allocated = 0
+        for row in ordered:
+            if int(row["invoice_version_before"]) != next_version:
+                raise DBBridgeError("Backup payment-link versions are not contiguous.")
+            allocated += int(row["amount_minor"])
+            next_version += 1
+        expected_status = "Paid" if allocated == total else "Approved"
+        if allocated > total or invoice.get("status") != expected_status or final_version != next_version:
+            raise DBBridgeError("Backup supplier-invoice payment state differs from allocation history.")
+        initial_versions[invoice_id] = int(ordered[0]["invoice_version_before"])
+    return initial_versions
+
+
 def _verify_notification_inbox_backup(
     connection: sqlite3.Connection,
     *,
@@ -2966,6 +3081,9 @@ def _verify_budget_control_backup(
 
 def _backup_payload(connection: sqlite3.Connection, *, created_at: str, schema_version: int) -> dict[str, Any]:
     _verify_posting_backup(connection)
+    _verify_payables_payment_link_backup(
+        connection, required=schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION
+    )
     _verify_receivables_policy_backup(connection)
     _verify_notification_inbox_backup(connection, required=schema_version >= 51)
     _verify_budget_control_backup(connection, required=schema_version >= 52)
@@ -2999,6 +3117,9 @@ def create_backup(
     connection = connect(resolved_db_path, require_exists=True)
     try:
         _verify_posting_backup(connection)
+        _verify_payables_payment_link_backup(
+            connection, required=schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION
+        )
         _verify_receivables_policy_backup(connection)
         _verify_notification_inbox_backup(connection, required=schema_version >= 51)
         _verify_budget_control_backup(connection, required=schema_version >= 52)
@@ -3630,18 +3751,45 @@ def restore_backup(
                 table not in tables for table in ("budget_envelopes", "budget_commitment_events", "budget_commands")
             ):
                 raise DBBridgeError("Backup omits retained budget-control tables.")
+            if backup_schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION and any(
+                table not in tables for table in ("ap_payment_links", "ap_payment_link_commands")
+            ):
+                raise DBBridgeError("Backup omits retained payables payment-link tables.")
             if restoring_outbox_fencing and any(
                 table not in tables for table in ("outbox_events", "outbox_delivery_evidence")
             ):
                 raise DBBridgeError("Backup omits required outbox fencing tables.")
+            payment_link_initial_versions = (
+                _payment_link_restore_initial_versions(tables)
+                if backup_schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION
+                else {}
+            )
             for table in BACKUP_TABLES:
                 rows = tables.get(table, [])
-                if table in {"finance_posting_effects", "finance_posting_commands", *RECEIPT_TABLES}:
+                if table in {
+                    "finance_posting_effects",
+                    "finance_posting_commands",
+                    "ap_payment_links",
+                    "ap_payment_link_commands",
+                    *RECEIPT_TABLES,
+                }:
                     restored_tables.append(table)
                     continue
                 if table in CONSOLIDATION_BACKUP_TABLES:
                     restored_tables.append(table)
                     continue
+                if table == "ap_supplier_invoices" and isinstance(rows, list):
+                    staged_rows: list[object] = []
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            raise DBBridgeError("Backup table row is invalid.")
+                        initial_version = payment_link_initial_versions.get(str(row.get("id", "")))
+                        staged_rows.append(
+                            row
+                            if initial_version is None
+                            else {**row, "status": "Approved", "row_version": initial_version}
+                        )
+                    rows = staged_rows
                 if table == "ledger_entries" and isinstance(rows, list):
                     draft_rows: list[object] = []
                     for row in rows:
@@ -3947,6 +4095,10 @@ def restore_backup(
                 effects.sort(key=lambda row: (row.get("reverses_effect_id") is not None, str(row.get("id", ""))))
                 _insert_rows(connection, table="finance_posting_effects", rows=effects)
                 _insert_rows(connection, table="finance_posting_commands", rows=tables.get("finance_posting_commands", []))
+                if backup_schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION:
+                    _insert_rows(connection, table="ap_payment_links", rows=tables["ap_payment_links"])
+                    _insert_rows(connection, table="ap_payment_link_commands", rows=tables["ap_payment_link_commands"])
+                    _verify_payables_payment_link_backup(connection, required=True)
                 if backup_schema_version >= 50:
                     _insert_rows(connection, table="inventory_receipt_commands", rows=tables["inventory_receipt_commands"])
                 _verify_posting_backup(connection)
@@ -3969,6 +4121,7 @@ def restore_backup(
             if MIGRATIONS[-1].version >= _OUTBOX_FENCING_SCHEMA_VERSION:
                 _verify_outbox_fencing_storage(connection, require_guards=True)
             _verify_posting_backup(connection)
+            _verify_payables_payment_link_backup(connection, required=True)
             _verify_receivables_policy_backup(connection)
             _verify_notification_inbox_backup(connection, required=True)
             _verify_budget_control_backup(connection, required=True)

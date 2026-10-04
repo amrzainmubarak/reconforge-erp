@@ -23,7 +23,9 @@ from reconforge.infrastructure.postgres_backup import (
     PostgresBackupSettings,
     PostgresNativeBackupAdapter,
     PostgresNativeTools,
+    _create_isolated_target_sql,
     _encrypt_dump,
+    _fence_isolated_target_access_sql,
 )
 from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REVISIONS
 
@@ -649,6 +651,7 @@ _LIVE_BACKUP_ENV = (
     "RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE",
     "RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE",
 )
+_LIVE_ACCESS_FENCE_ENV = "RECONFORGE_TEST_POSTGRES_ADMIN_DSN"
 
 
 def _live_native_tools() -> PostgresNativeTools | None:
@@ -675,6 +678,81 @@ def _live_native_tools() -> PostgresNativeTools | None:
             return None
         candidates = {name: Path(path) for name, path in resolved.items() if path is not None}
     return PostgresNativeTools(**{name: path.resolve(strict=True) for name, path in candidates.items()})
+
+
+@pytest.mark.skipif(
+    not os.environ.get(_LIVE_ACCESS_FENCE_ENV),
+    reason="requires an owned PostgreSQL administrator DSN",
+)
+def test_live_postgres_restore_target_access_fence_blocks_runtime_role() -> None:
+    """The target is never PUBLIC-connectable before restore ownership takes effect."""
+
+    psycopg = pytest.importorskip("psycopg")
+    from psycopg import sql
+
+    admin_parameters = psycopg.conninfo.conninfo_to_dict(os.environ[_LIVE_ACCESS_FENCE_ENV])
+    if not admin_parameters.get("user") or not admin_parameters.get("host"):
+        pytest.skip("requires a complete owned PostgreSQL administrator DSN")
+    suffix = uuid4().hex[:12]
+    database_name = "reconforge_restore_fence_" + suffix
+    runtime_role = "rf_restore_runtime_" + suffix
+    runtime_password = uuid4().hex + uuid4().hex
+    control_dsn = psycopg.conninfo.make_conninfo(
+        **{**admin_parameters, "dbname": "postgres", "connect_timeout": "5"}
+    )
+    runtime_dsn = psycopg.conninfo.make_conninfo(
+        **{
+            **admin_parameters,
+            "dbname": database_name,
+            "user": runtime_role,
+            "password": runtime_password,
+            "connect_timeout": "5",
+        }
+    )
+    owner_dsn = psycopg.conninfo.make_conninfo(
+        **{**admin_parameters, "dbname": database_name, "connect_timeout": "5"}
+    )
+    created_role = False
+    created_database = False
+    try:
+        with psycopg.connect(control_dsn, autocommit=True) as administrator:
+            capabilities = administrator.execute(
+                """
+                SELECT rolsuper OR (rolcreaterole AND rolcreatedb)
+                FROM pg_catalog.pg_roles
+                WHERE rolname=current_user
+                """
+            ).fetchone()
+            if capabilities != (True,):
+                pytest.skip("requires an owned PostgreSQL administrator with CREATEROLE and CREATEDB")
+            administrator.execute(
+                sql.SQL(
+                    "CREATE ROLE {} LOGIN PASSWORD {} NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS"
+                ).format(sql.Identifier(runtime_role), sql.Literal(runtime_password))
+            )
+            created_role = True
+            administrator.execute(_create_isolated_target_sql(database_name))
+            created_database = True
+
+            with pytest.raises(psycopg.OperationalError):
+                psycopg.connect(runtime_dsn).close()
+            with pytest.raises(psycopg.OperationalError):
+                psycopg.connect(owner_dsn).close()
+
+            administrator.execute(_fence_isolated_target_access_sql(database_name))
+
+        with psycopg.connect(owner_dsn) as owner:
+            assert owner.execute("SELECT current_database()").fetchone() == (database_name,)
+        with pytest.raises(psycopg.OperationalError):
+            psycopg.connect(runtime_dsn).close()
+    finally:
+        with psycopg.connect(control_dsn, autocommit=True) as administrator:
+            if created_database:
+                administrator.execute(
+                    sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(database_name))
+                )
+            if created_role:
+                administrator.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(runtime_role)))
 
 
 def test_live_native_tools_preserve_command_identity_via_pg_config(

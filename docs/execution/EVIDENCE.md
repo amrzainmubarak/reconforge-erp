@@ -8,14 +8,29 @@
   findings across 128 locked Python packages. The owned PostgreSQL nonowner AP
   group and the selected backup/encrypted-backup/matrix group exited zero; the
   latter retains one explicit native source/maintenance-service skip.
-  `npm --prefix apps/web run typecheck`, 24-file/212-test Vitest, production
-  build, and Playwright passed; Playwright reports 17 passed and 9 explicit
-  live-service skips. The deterministic 10,000-record local benchmark recorded
+  The locked Python 3.12 whole suite was rerun after the scoped exception-review
+  Studio integration and exited zero. `npm --prefix apps/web run typecheck`,
+  the 26-file/219-test Vitest suite, production build, and two focused
+  Chromium exception-review journeys pass. The earlier whole-Studio browser
+  gate reports 17 passed and 9 explicit live-service skips and is retained as
+  earlier evidence. The deterministic 10,000-record local benchmark recorded
   11.7616 seconds, 37.15 MiB peak memory, and result signature
   `4f634672cdae0d21e6179b66a7d78fb6c861e4fb0511dd57a478d66d7f021717` on the
   recorded Windows/CPython 3.14.6 host. This does not establish native-service
   recovery, configured HTTPS browser journeys, throughput capacity, HA/DR, or
   production readiness.
+
+- AMR-GFO-007 scoped exception-review Studio (2026-10-04): root commit
+  `38891a02` connects `/exceptions` to the existing authenticated PostgreSQL
+  exception-review API rather than a local or synthetic queue. The application
+  fetches current identity and page data, preserves server scopes, carries the
+  current expected version and CSRF token for assignment/transition commands,
+  and renders retained history plus audit/outbox references through a closed
+  projection. Focused Python review/API/registry tests passed 18 cases, while
+  the web typecheck, 219-test unit suite, production build, and two Chromium
+  journeys passed. The evidence is limited to the server-review UI contract;
+  it does not assert a hosted HTTPS journey, all-browser accessibility
+  certification, or local SQLite parity.
 
 - PROD-010 evidence-bound AP payment link (2026-10-04): SQLite migration 54
   and PostgreSQL revision 0105 retain exact minor-unit partial/full allocations,

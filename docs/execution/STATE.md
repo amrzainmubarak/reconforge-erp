@@ -3,20 +3,37 @@
 ## Amr current sprint integration verification (2026-10-04)
 
 `AMR-GFO-005` remains in progress, with the current source accepted through a
-locked Python 3.12 whole-suite run, an independently rerun owned PostgreSQL
-nonowner AP acceptance, recovery-profile tests, static quality/security gates,
-package build, and the real local Studio browser suite. The locked whole suite
-and the host whole suite both exited zero; the selected nonowner PostgreSQL AP
-suite exited zero after temporary-database migration to head; locked Python
-3.11/3.12 dependency audits reported zero findings; and the Studio typecheck,
-212 unit tests, production build, and Playwright suite passed with 17 executed
-tests and 9 explicit live-service skips. A deterministic 10,000-record local
+locked Python 3.12 whole-suite rerun after the scoped exception-review Studio
+integration, an independently rerun owned PostgreSQL nonowner AP acceptance,
+recovery-profile tests, static quality/security gates, package build, and the
+real local Studio browser suite. The locked whole suite and the host whole suite
+both exited zero; the selected nonowner PostgreSQL AP suite exited zero after
+temporary-database migration to head; locked Python 3.11/3.12 dependency audits
+reported zero findings; and the Studio typecheck, 219 unit tests, production
+build, and two focused Chromium exception-review journeys passed. The earlier
+whole-Studio browser gate recorded 17 executed tests and 9 explicit
+live-service skips; it is retained separately because it predates the new route.
+A deterministic 10,000-record local
 benchmark completed in 11.7616 seconds with 37.15 MiB peak memory and result
 signature `4f634672cdae0d21e6179b66a7d78fb6c861e4fb0511dd57a478d66d7f021717`
 on the recorded Windows/CPython 3.14.6 host. The native PostgreSQL
 source/maintenance recovery test and externally configured HTTPS browser
 journeys remain explicit environmental prerequisites; this is not a capacity,
 HA/DR, hosted-browser, or production-release claim.
+
+## Amr scoped exception-review Studio completion (2026-10-04)
+
+The `/exceptions` Studio route now uses only the authenticated server API for
+the PostgreSQL review contract. It obtains current identity and scope before
+loading, sends CSRF-bearing mutation requests, projects only closed review
+fields, uses the retained expected version for assign/transition commands, and
+shows persisted history/audit/outbox references. It has no local or synthetic
+queue fallback. The route is responsive, keyboard-operable, English/Arabic
+localized, and tested with focused component and Chromium journeys for
+authenticated scope, CSRF, evidence history, RTL, and mobile layout. The
+server-review contract remains a PostgreSQL deployment capability; local
+exception compatibility is not represented by this UI and no hosted HTTPS or
+accessibility certification claim follows.
 
 ## Amr evidence-bound AP payment-link slice (2026-10-04)
 

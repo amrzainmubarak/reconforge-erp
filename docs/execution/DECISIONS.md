@@ -1,5 +1,19 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-AMR-GFO-008 — Bind the Studio exception queue to retained server review evidence (2026-10-04)
+
+The `/exceptions` Studio route is accepted as a bounded UI adapter for the
+existing PostgreSQL exception-review contract. It has no local or fabricated
+fallback: current identity and authorized scope come from the authenticated
+server, mutations carry the current retained expected version plus CSRF token,
+and the display derives from closed API projections including history and
+audit/outbox references. Assignment and transition authority remains in the
+server application and database contract; the UI neither decides eligibility
+nor reconstructs a financial decision. The component has focused English/Arabic,
+keyboard, responsive, and browser evidence. It does not establish local SQLite
+parity, hosted HTTPS execution, broad accessibility certification, automated
+workflow escalation, capacity, or availability.
+
 ## D-AMR-GFO-006 — Bind native PostgreSQL backup recovery to a configured revision (2026-10-04)
 
 ADR0829 accepts an optional atomic `recovery_profile` plus

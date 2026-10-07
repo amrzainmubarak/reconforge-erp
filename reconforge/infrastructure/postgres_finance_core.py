@@ -6,7 +6,6 @@ import re
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date
-from decimal import Decimal
 from typing import Any
 
 from reconforge.application.finance_core import MAX_LIST_LIMIT, FinanceCoreSummary
@@ -21,7 +20,7 @@ from reconforge.infrastructure.postgres_repository_scope import (
 )
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
 from reconforge.platform.common import PlatformError, current_server_principal, platform_id
-from reconforge.utils.money import CurrencyRegistryContext, InvalidAmountError, Money
+from reconforge.utils.money import CurrencyRegistryContext, InvalidAmountError, Money, minor_units_to_decimal
 
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
 ACCOUNT_TYPES = ("Asset", "Liability", "Equity", "Income", "Expense", "Off Balance")
@@ -118,7 +117,7 @@ def _amount_to_minor(
 
 
 def _minor_to_text(value: int, minor_units: int) -> str:
-    amount = Decimal(value).scaleb(-minor_units)
+    amount = minor_units_to_decimal(value, precision=minor_units)
     return f"{amount:.{minor_units}f}"
 
 

@@ -23,8 +23,9 @@ test("captures the real desktop workspace pages and Arabic RTL mode", async ({ p
 
   const primaryNavigation = page.getByRole("navigation", { name: "Primary navigation" });
   await primaryNavigation.getByRole("button", { name: /Exceptions/ }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Exception queue");
-  await expect(page.getByText(/SYN-EXC-/).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Exception review");
+  await expect(page.getByRole("button", { name: "Sign in to review exceptions" })).toBeVisible();
+  await expect(page.getByText(/SYN-EXC-/)).toHaveCount(0);
   await capture(page, "exception-queue.png", true);
 
   await primaryNavigation.getByRole("button", { name: /Evidence binder/ }).click();

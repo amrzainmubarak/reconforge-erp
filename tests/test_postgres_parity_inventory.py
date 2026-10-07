@@ -38,6 +38,9 @@ def test_postgres_parity_status_evidence_and_counts_are_consistent() -> None:
             module_name, class_name = row["adapter"].rsplit(".", 1)
             assert hasattr(importlib.import_module(module_name), class_name)
             assert (ROOT / row["test"]).is_file()
+            additional_tests = row.get("additional_tests", [])
+            assert isinstance(additional_tests, list)
+            assert all(isinstance(path, str) and (ROOT / path).is_file() for path in additional_tests)
         if status == "absent":
             assert row["risk"]
             assert "adapter" not in row

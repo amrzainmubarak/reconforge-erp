@@ -2,6 +2,8 @@
 
 ## Source-bound refresh (2026-10-08)
 
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
 The October 8 source collected 4,886 Python tests: 4,394 passed, 490 skipped, two failed and 25 warnings in 1,575.27s. Web component coverage executes 219 tests in 26 files. The full regression and browser failures are reproduced before repair; capability skips are not accepted as passes.
 
 [October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
@@ -10,7 +12,7 @@ The October 8 source collected 4,886 Python tests: 4,394 passed, 490 skipped, tw
 
 Fresh locked Python 3.12 regression: 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). Live PostgreSQL selection: 70 passed, zero skipped. Web: 77 component tests; 16 standard E2E passes and five capability skips, plus one separately passed HTTPS scenario. Passing existing tests did not prevent the newly reproduced financial defects.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 ## E-1120 - Strict Receivables quantity inputs (2026-08-29)
 

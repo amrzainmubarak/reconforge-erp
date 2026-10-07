@@ -2,6 +2,8 @@
 
 ## Source-bound refresh (2026-10-08)
 
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
 No new capacity benchmark was performed. The 1,575.27s Python baseline and all command durations were measured while other audit work ran concurrently. They are reproducibility observations on this Windows host, not throughput, CPU/memory profiles, capacity, RPO/RTO or production SLO results.
 
 [October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
@@ -10,7 +12,7 @@ No new capacity benchmark was performed. The 1,575.27s Python baseline and all c
 
 No new capacity result is claimed. Current baseline timings ran alongside other audit work. Historical 1M-record matching and 1M-job-effect reports remain synthetic workload evidence; neither proves 5M customer transactions or 30 production reconciliations. The roadmap defines the required measured workload.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 ## E-831 write-back recovery matrix timing (2026-08-22)
 

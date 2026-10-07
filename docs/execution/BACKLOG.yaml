@@ -18,44 +18,46 @@ tasks:
     exit_evidence: >-
       BASELINE_2026-10-08.json records clean source636786e8, full Python4394pass/490skip/2fail,
       available quality/security/build/CLI/Docker/web gates and dedicated PostgreSQL17.10.
-      Completion means the audit was executed and recorded, not that failed gates passed.
+      Completion means the initial audit was executed and recorded; bounded repair acceptance is separate in ACCEPTANCE_2026-10-08.json.
   - id: AUD-20261008-002
     priority: P0
     area: financial-correctness
     title: Preserve exact Money and Finance minor units under caller Decimal precision
-    status: in_progress
+    status: completed
     depends_on: [AUD-20261008-001]
     exit_evidence: >-
-      Require integer-oracle and property regressions, zero/sign/large/0-8 precision,
-      noninteger refusal, retained policy and range compatibility, SQLite saved readback,
-      Finance/consolidation contracts and full post-repair regression; ADR0832.
+      26 integer-oracle/property/persisted SQLite regressions, 134 focused passes,
+      61 focused Python3.11 passes, selected live PostgreSQL lifecycle and full
+      Python4422pass/490skip/0fail; ADR0832 and ACCEPTANCE_2026-10-08.json.
   - id: AUD-20261008-003
     priority: P0
     area: postgres-ci
     title: Collect primary and additional parity test modules as real paths
-    status: in_progress
+    status: completed
     depends_on: [AUD-20261008-001]
     exit_evidence: >-
-      Typed additional_tests must retain AP reversal selection; actual CI-producer collection
-      and path/adapter/count inventory contracts must pass without deselection.
+      Typed additional_tests retains AP reversal; actual CI-producer collection and
+      path/adapter/count inventory contracts pass, including both original full-suite failures.
   - id: AUD-20261008-004
     priority: P0
     area: supply-chain
     title: Resolve source-map-js advisory through one compatible lock-entry update
-    status: in_progress
+    status: completed
     depends_on: [AUD-20261008-001]
     exit_evidence: >-
-      Retain original High finding, compare exact lock entry, then require npm ci,
-      zero-findings npm audit, typecheck, 219 component tests, production build and browser suite.
+      Original High finding retained; only source-map-js lock entry changes to1.2.2.
+      Clean npm ci/audit zero findings, typecheck, 219 component tests, build and
+      19 browser passes/nine explicit prerequisites; ACCEPTANCE_2026-10-08.json.
   - id: AUD-20261008-005
     priority: P0
     area: postgres-acceptance
     title: Exercise retained Finance policy with explicitly granted nonowner fixtures
-    status: in_progress
+    status: completed
     depends_on: [AUD-20261008-001, AUD-20261008-002]
     exit_evidence: >-
-      SELECT/UPDATE bindings for FOR SHARE and SELECT/INSERT snapshots only; fresh migration
-      to0106, restricted-role lifecycle/API/operations/target-fence tests, and owned cleanup.
+      SELECT/UPDATE bindings for FOR SHARE and SELECT/INSERT snapshots only; fresh
+      PostgreSQL17.10 migration to0106, 22 restricted-role lifecycle/scoped-route/operations/
+      target-fence passes and owned cleanup; native source/maintenance restore remains separate.
   - id: AMR-GFO-001
     priority: P0
     area: sprint-handoff
@@ -127,6 +129,8 @@ tasks:
       Current evidence: a locked Python3.12 whole regression rerun after the scoped exception
       Studio integration, selected migration/recovery tests, static/security/build gates, and
       local web typecheck/219-unit-test/build plus two focused Chromium review journeys pass.
+      The October8 clean b8f5a772 regression passes4422 with490 explicit skips;
+      static/build/CLI/Docker and web219 component/19 browser cases pass.
       The later AP reversal slice separately passes local API/recovery contracts and owned
       PostgreSQL admin/nonowner-app acceptance at 0106. Locked Python3.11/3.12 audits report zero
       known findings for 128 resolved packages. A full-suite rerun is required after the pending

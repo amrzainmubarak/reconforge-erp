@@ -2,7 +2,9 @@
 
 ## Source-bound refresh (2026-10-08)
 
-The five current reproduced findings are ambient Decimal rounding in Money/Finance conversion, semicolon-delimited PostgreSQL CI test paths, source-map-js 1.2.1 audit failure, missing Finance policy-store fixture grants, and dated baseline/browser-contract drift. Full native PostgreSQL recovery and configured HTTPS journeys remain separate prerequisites.
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+The five reproduced pre-repair findings were ambient Decimal rounding in Money/Finance conversion, semicolon-delimited PostgreSQL CI test paths, source-map-js 1.2.1 audit failure, missing Finance policy-store fixture grants, and dated baseline/browser-contract drift. Full native PostgreSQL recovery and configured HTTPS journeys remain separate prerequisites.
 
 [October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
 
@@ -10,7 +12,7 @@ The five current reproduced findings are ambient Decimal rounding in Money/Finan
 
 Reproduced gaps include mutable historical currency precision, cumulative AP over-approval, quantity truncation, AR status/currency drift, unsafe runtime-role acceptance, CI deselection, missing metrics migration, dependency disclosures and disconnected live UI scope. See PROD tasks and current audit.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 ## Highest current risks
 

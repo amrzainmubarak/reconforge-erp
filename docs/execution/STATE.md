@@ -3,14 +3,15 @@
 ## October 8 baseline refresh and bounded repair (2026-10-08)
 
 The audit branch is `amr/baseline-refresh-20261008`, based on clean sprint
-source `636786e8`. Baseline findings and command identities are retained in
-`BASELINE_2026-10-08.json` and `BASELINE_REFRESH_2026-10-08.md`. The first
-whole suite records 4,394 passes, 490 skips and two parity-path failures.
-Money conversion, CI selection, explicit Finance fixture grants and the web
-lock/browser contract are the bounded repair scope; post-repair whole
-regression is required before accepting this iteration. `AMR-GFO-005` stays
-in progress, reviewed Inventory receipt work stays paused, and the separate
-cancellation worktree is unmerged. Main remains `b61ea56b`.
+source `636786e8`. Initial failures remain in `BASELINE_2026-10-08.json`.
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+AUD-20261008-001 through -005 are complete for the bounded repair.
+`AMR-GFO-005` stays in progress pending native recovery/configured network
+acceptance and separate cancellation integration. Reviewed Inventory receipt
+work stays paused, cancellation revision0107 is unmerged, and main remains
+`b61ea56b`. The final evidence documentation commit changes no tested runtime.
+The Draft repair review is stacked on the unchanged sprint checkpoint.
 
 ## Amr current sprint integration verification (2026-10-04)
 

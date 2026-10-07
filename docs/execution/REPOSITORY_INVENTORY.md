@@ -2,6 +2,8 @@
 
 ## Source-bound refresh (2026-10-08)
 
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
 The clean October 8 source has 610 runtime Python files, 558 Python test modules, 106 PostgreSQL revisions, SQLite head 55, 121 JSON schemas, 829 ADRs, eight CI workflows and 24 control packs. PostgreSQL head is `0106_pg_ap_link_reversal`; unmerged worktree revision 0107 is outside this checkout.
 
 [October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
@@ -10,7 +12,7 @@ The clean October 8 source has 610 runtime Python files, 558 Python test modules
 
 Current tracked inventory: 540 runtime Python files, 474 Python test files, 92 PostgreSQL revisions, 46 SQLite migrations, 121 JSON schemas, 781 ADRs, seven CI workflows and 24 control packs. Historical counts below retain their original dates.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 Measured on 2026-07-26 against the dirty worktree documented in `STATE.md`.
 

@@ -2,6 +2,8 @@
 
 ## Source-bound refresh (2026-10-08)
 
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
 The Python lock remains unchanged and the isolated Python 3.12 audit reports no findings across 128 resolved packages. Initial npm audit reproduces GHSA-68fv-2mgg-jv7q in source-map-js 1.2.1. Only the compatible 1.2.2 version/resolved URL/SRI entry is refreshed; no broad npm audit fix, ignore or dependency-range change is used.
 
 [October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
@@ -10,7 +12,7 @@ The Python lock remains unchanged and the isolated Python 3.12 audit reports no 
 
 Fresh all-extra Python audit reports 11 entries (7 distinct advisory IDs) in urllib3 2.7.0 and virtualenv 21.7.0. npm reports two moderate and one high development dependency packages (Vitest/mocker and undici); production-only npm audit has zero findings. Remediation and upstream review are PROD-004; these findings are not accepted exceptions.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 Measured through 2026-08-28. Vulnerability scan success is not the same as reproducible resolution or low operational risk.
 

@@ -10,6 +10,10 @@ and SELECT/INSERT for snapshots; retain nonowner/no-BYPASSRLS profiles.
 Refresh only source-map-js1.2.2 and assert authenticated exception review
 in the browser journey. Historical evidence and environmental skips remain
 explicit; no unmerged cancellation or paused receipt acceptance is inferred.
+Final acceptance binds clean b8f5a772 and separately retained earlier diffs;
+stack the Draft PR on source636786e8 rather than including inherited sprint
+commits against main. Final documentation and packaging do not require another
+whole regression when runtime/test hashes remain unchanged.
 
 ## D-AMR-GFO-009 — Reverse AP allocation through retained Finance inverse evidence (2026-10-04)
 

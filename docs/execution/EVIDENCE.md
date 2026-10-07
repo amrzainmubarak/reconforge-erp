@@ -1,5 +1,10 @@
 # ReconForge Execution Evidence Log
 
+- AUD-20261008 acceptance: Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+  Full-run source b8f5a772 is clean; live PostgreSQL17.10 reaches0106 with
+  NOSUPERUSER/NOBYPASSRLS role and owned cleanup. Earlier focused records keep
+  their exact source/diff hashes. No native/network/hosted/release acceptance.
+
 - AUD-20261008 baseline: clean source636786e8; full Python4394pass/490skip/2fail
   in1575.27s; Mypy610; web219 component passes and initial browser18pass/9skip/1fail;
   Python installed/locked audits pass and npm initially reports one High finding.

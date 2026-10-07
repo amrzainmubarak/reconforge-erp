@@ -1266,3 +1266,5 @@ include docs/adr/0832-context-independent-money-minor-units.md
 include docs/execution/BASELINE_2026-10-08.json
 include docs/execution/BASELINE_REFRESH_2026-10-08.md
 include tests/test_money_minor_context.py
+include docs/execution/ACCEPTANCE_2026-10-08.json
+include docs/execution/ACCEPTANCE_2026-10-08.md

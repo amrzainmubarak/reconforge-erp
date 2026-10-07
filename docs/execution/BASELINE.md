@@ -2,6 +2,8 @@
 
 ## Source-bound refresh (2026-10-08)
 
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
 The October 8 refresh records source `636786e8`: 4,394 Python passes, 490 capability skips and two CI-inventory failures before repair; 219 web unit passes, 18 initial browser passes/nine skips/one stale assertion, one npm High finding, and two live Finance fixture failures. Initial failures are retained; post-repair acceptance is recorded separately.
 
 [October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
@@ -10,7 +12,7 @@ The October 8 refresh records source `636786e8`: 4,394 Python passes, 490 capabi
 
 Fresh locked Python 3.12 baseline: 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). Static, build, CLI, Docker and web checks passed; Python/npm dependency audits failed. See the current audit for command durations and explicit skips.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 > Historical command snapshot. Its external-gate closure failure was superseded
 > by the owner/team release policy in E-251/D236; recorded command outcomes

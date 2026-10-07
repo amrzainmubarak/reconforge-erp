@@ -76,3 +76,7 @@ One initial PostgreSQL focused log was overwritten by a scratch rerun before
 archival was enabled. Its command/result/digest remain recorded with
 `log_retained: false`; it is not presented as a retained raw artifact. Later
 failed reproductions and passing PostgreSQL acceptance have separate logs.
+
+## Post-repair acceptance
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).

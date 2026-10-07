@@ -1,6 +1,12 @@
 # Dependency Risk
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+The Python lock remains unchanged and the isolated Python 3.12 audit reports no findings across 128 resolved packages. Initial npm audit reproduces GHSA-68fv-2mgg-jv7q in source-map-js 1.2.1. Only the compatible 1.2.2 version/resolved URL/SRI entry is refreshed; no broad npm audit fix, ignore or dependency-range change is used.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Fresh all-extra Python audit reports 11 entries (7 distinct advisory IDs) in urllib3 2.7.0 and virtualenv 21.7.0. npm reports two moderate and one high development dependency packages (Vitest/mocker and undici); production-only npm audit has zero findings. Remediation and upstream review are PROD-004; these findings are not accepted exceptions.
 

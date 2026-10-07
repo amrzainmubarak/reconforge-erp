@@ -1,6 +1,12 @@
 # ReconForge Baseline Audit
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+The October 8 refresh records source `636786e8`: 4,394 Python passes, 490 capability skips and two CI-inventory failures before repair; 219 web unit passes, 18 initial browser passes/nine skips/one stale assertion, one npm High finding, and two live Finance fixture failures. Initial failures are retained; post-repair acceptance is recorded separately.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Fresh locked Python 3.12 baseline: 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). Static, build, CLI, Docker and web checks passed; Python/npm dependency audits failed. See the current audit for command durations and explicit skips.
 

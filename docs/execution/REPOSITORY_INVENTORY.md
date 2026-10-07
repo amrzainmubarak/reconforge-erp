@@ -1,6 +1,12 @@
 # Repository Inventory
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+The clean October 8 source has 610 runtime Python files, 558 Python test modules, 106 PostgreSQL revisions, SQLite head 55, 121 JSON schemas, 829 ADRs, eight CI workflows and 24 control packs. PostgreSQL head is `0106_pg_ap_link_reversal`; unmerged worktree revision 0107 is outside this checkout.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Current tracked inventory: 540 runtime Python files, 474 Python test files, 92 PostgreSQL revisions, 46 SQLite migrations, 121 JSON schemas, 781 ADRs, seven CI workflows and 24 control packs. Historical counts below retain their original dates.
 

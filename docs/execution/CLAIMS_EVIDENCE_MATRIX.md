@@ -1,6 +1,16 @@
 ﻿# Claims Evidence Matrix
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+This refresh supports local evaluation and bounded synthetic verification only. Failed baseline commands remain failures even where a later repair passes. The latest dated report below supersedes older current-summary wording, not historical evidence.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+| Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |
+| --- | --- | --- | --- | --- | --- |
+| October 8 exact-source baseline | Clean sprint source 636786e8, current locks and version 55/0106 | Full regression 4394 pass/490 skip/2 failures; 219 web unit passes; initial browser 18/9/1 | BASELINE_2026-10-08.json; CLI/Docker pass; dedicated PostgreSQL 17.10 upgrade with restricted role and two fixture-grant failures | Local audit with reproduced gaps | "Records the available local gates and explicit failures on the named source"; no whole-platform acceptance, release, capacity or production claim |
+
+## Historical PROD-001 audit (2026-10-03)
 
 ### Verified increments after the initial audit
 

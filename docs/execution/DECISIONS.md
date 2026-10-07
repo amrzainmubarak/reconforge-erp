@@ -1,5 +1,16 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-AUD-20261008 — Bind current audit and repair evidence separately
+
+Preserve the initial failing source636786e8 snapshot. Apply ADR0832 only to
+exact Money/minor conversion and Finance text interpretation. Keep one
+primary parity test path with an additional_tests list, and prove actual CI
+collection. Grant Finance fixture SELECT/UPDATE for policy binding row locks
+and SELECT/INSERT for snapshots; retain nonowner/no-BYPASSRLS profiles.
+Refresh only source-map-js1.2.2 and assert authenticated exception review
+in the browser journey. Historical evidence and environmental skips remain
+explicit; no unmerged cancellation or paused receipt acceptance is inferred.
+
 ## D-AMR-GFO-009 — Reverse AP allocation through retained Finance inverse evidence (2026-10-04)
 
 An AP payment-link reversal is an immutable compensating evidence node, not a

@@ -1,5 +1,17 @@
 # Execution State
 
+## October 8 baseline refresh and bounded repair (2026-10-08)
+
+The audit branch is `amr/baseline-refresh-20261008`, based on clean sprint
+source `636786e8`. Baseline findings and command identities are retained in
+`BASELINE_2026-10-08.json` and `BASELINE_REFRESH_2026-10-08.md`. The first
+whole suite records 4,394 passes, 490 skips and two parity-path failures.
+Money conversion, CI selection, explicit Finance fixture grants and the web
+lock/browser contract are the bounded repair scope; post-repair whole
+regression is required before accepting this iteration. `AMR-GFO-005` stays
+in progress, reviewed Inventory receipt work stays paused, and the separate
+cancellation worktree is unmerged. Main remains `b61ea56b`.
+
 ## Amr current sprint integration verification (2026-10-04)
 
 `AMR-GFO-005` remains in progress. The source through the scoped exception-review

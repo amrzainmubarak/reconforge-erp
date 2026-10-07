@@ -1,6 +1,12 @@
 # Performance Baseline
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+No new capacity benchmark was performed. The 1,575.27s Python baseline and all command durations were measured while other audit work ran concurrently. They are reproducibility observations on this Windows host, not throughput, CPU/memory profiles, capacity, RPO/RTO or production SLO results.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 No new capacity result is claimed. Current baseline timings ran alongside other audit work. Historical 1M-record matching and 1M-job-effect reports remain synthetic workload evidence; neither proves 5M customer transactions or 30 production reconciliations. The roadmap defines the required measured workload.
 

@@ -1,6 +1,12 @@
 # Documentation Drift
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+The October 3 current summaries are historical snapshots. October 8 records the exact sprint source and preserves current fixture/skipped-gate limits. The `/exceptions` screenshot journey must require authenticated review and must not reinstate synthetic queue data. Current-state architecture distinguishes the read-only showcase from bounded authenticated routes.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Current drift: README/Studio understate existing administration writes and list 19 rather than 24 pack directories; AP/AR docs exclude implemented PostgreSQL adapters; parity inventory source head is 0089 instead of 0092; old zero-advisory snapshots are not current. Corrections must preserve historical evidence dates.
 

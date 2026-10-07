@@ -17,10 +17,15 @@ reconforge/
   platform/        local finance, inventory, bounded payables, close, controls, matching and evidence services
   workflow/        state-machine and transition persistence
   studio/          current local UI bridge and request guards
-apps/web/          read-only experimental React/Vite showcase
+apps/web/          experimental React/Vite showcase and bounded authenticated routes
 control-packs/     declarative YAML rules, mappings, risk models and examples
 tests/             unit, integration, API, security, migration and regression tests
 ```
+
+Authenticated Studio routes include scoped exception review, inbox, administration
+and the bounded AR workflow. These have separate synthetic/component/browser
+evidence; the showcase remains read-only. A route does not establish complete
+ERP workflows or a hosted HTTPS deployment.
 
 ## Strengths verified in code
 

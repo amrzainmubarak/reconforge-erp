@@ -1,6 +1,12 @@
 # Quality Baseline
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+The October 8 source collected 4,886 Python tests: 4,394 passed, 490 skipped, two failed and 25 warnings in 1,575.27s. Web component coverage executes 219 tests in 26 files. The full regression and browser failures are reproduced before repair; capability skips are not accepted as passes.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Fresh locked Python 3.12 regression: 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). Live PostgreSQL selection: 70 passed, zero skipped. Web: 77 component tests; 16 standard E2E passes and five capability skips, plus one separately passed HTTPS scenario. Passing existing tests did not prevent the newly reproduced financial defects.
 

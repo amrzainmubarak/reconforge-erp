@@ -1,6 +1,12 @@
 # Gap Matrix
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+The five current reproduced findings are ambient Decimal rounding in Money/Finance conversion, semicolon-delimited PostgreSQL CI test paths, source-map-js 1.2.1 audit failure, missing Finance policy-store fixture grants, and dated baseline/browser-contract drift. Full native PostgreSQL recovery and configured HTTPS journeys remain separate prerequisites.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Reproduced gaps include mutable historical currency precision, cumulative AP over-approval, quantity truncation, AR status/currency drift, unsafe runtime-role acceptance, CI deselection, missing metrics migration, dependency disclosures and disconnected live UI scope. See PROD tasks and current audit.
 

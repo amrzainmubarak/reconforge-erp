@@ -1,5 +1,5 @@
 ﻿schema_version: 2
-updated_at: "2026-10-04"
+updated_at: "2026-10-08"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
   evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
@@ -9,6 +9,53 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AUD-20261008-001
+    priority: P0
+    area: baseline
+    title: Refresh exact sprint baseline and retain reproduced failures
+    status: completed
+    depends_on: []
+    exit_evidence: >-
+      BASELINE_2026-10-08.json records clean source636786e8, full Python4394pass/490skip/2fail,
+      available quality/security/build/CLI/Docker/web gates and dedicated PostgreSQL17.10.
+      Completion means the audit was executed and recorded, not that failed gates passed.
+  - id: AUD-20261008-002
+    priority: P0
+    area: financial-correctness
+    title: Preserve exact Money and Finance minor units under caller Decimal precision
+    status: in_progress
+    depends_on: [AUD-20261008-001]
+    exit_evidence: >-
+      Require integer-oracle and property regressions, zero/sign/large/0-8 precision,
+      noninteger refusal, retained policy and range compatibility, SQLite saved readback,
+      Finance/consolidation contracts and full post-repair regression; ADR0832.
+  - id: AUD-20261008-003
+    priority: P0
+    area: postgres-ci
+    title: Collect primary and additional parity test modules as real paths
+    status: in_progress
+    depends_on: [AUD-20261008-001]
+    exit_evidence: >-
+      Typed additional_tests must retain AP reversal selection; actual CI-producer collection
+      and path/adapter/count inventory contracts must pass without deselection.
+  - id: AUD-20261008-004
+    priority: P0
+    area: supply-chain
+    title: Resolve source-map-js advisory through one compatible lock-entry update
+    status: in_progress
+    depends_on: [AUD-20261008-001]
+    exit_evidence: >-
+      Retain original High finding, compare exact lock entry, then require npm ci,
+      zero-findings npm audit, typecheck, 219 component tests, production build and browser suite.
+  - id: AUD-20261008-005
+    priority: P0
+    area: postgres-acceptance
+    title: Exercise retained Finance policy with explicitly granted nonowner fixtures
+    status: in_progress
+    depends_on: [AUD-20261008-001, AUD-20261008-002]
+    exit_evidence: >-
+      SELECT/UPDATE bindings for FOR SHARE and SELECT/INSERT snapshots only; fresh migration
+      to0106, restricted-role lifecycle/API/operations/target-fence tests, and owned cleanup.
   - id: AMR-GFO-001
     priority: P0
     area: sprint-handoff

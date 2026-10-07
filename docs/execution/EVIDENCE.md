@@ -1,5 +1,14 @@
 # ReconForge Execution Evidence Log
 
+- AUD-20261008 baseline: clean source636786e8; full Python4394pass/490skip/2fail
+  in1575.27s; Mypy610; web219 component passes and initial browser18pass/9skip/1fail;
+  Python installed/locked audits pass and npm initially reports one High finding.
+  Dedicated PostgreSQL17.10 reaches0106 under a nonowner/no-BYPASSRLS role, with
+  two Finance fixture-grant failures and20 passes. Raw command identities and
+  explicit boundaries are retained in BASELINE_2026-10-08.json. The initial
+  Money regression fails17 of24 cases before repair. Post-repair gates are
+  separate evidence and do not rewrite the baseline result.
+
 - AMR-GFO-005 current sprint integration verification (2026-10-04): the full
   suite exited zero both on the host and under the locked Python 3.12
   all-extras resolution. `ruff`, Mypy (609 source files), Bandit, `uv lock

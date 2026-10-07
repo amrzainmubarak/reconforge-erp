@@ -1,6 +1,12 @@
 # Security Baseline
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+Installed and hash-locked Python 3.12 audits pass; the initial npm audit fails on source-map-js 1.2.1. A dedicated PostgreSQL 17.10 fixture reaches head 0106 with SUPERUSER=false/BYPASSRLS=false; two Finance tests expose missing explicit policy-store privileges. Official references checked October 8 remain ASVS 5.0.0 stable, SSDF 1.1 Final/1.2 Draft and SLSA 1.2 Approved; mappings are not certification.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 The clean migrated PostgreSQL fixture has 167/167 tables with enabled/forced RLS and a non-superuser, non-BYPASSRLS runtime role. Runtime rejection of unsafe roles is still missing. Fresh Python/npm audits failed; old clean audit statements are historical. Current official references: ASVS 5.0.0; SSDF 1.1 Final (1.2 Draft); SLSA 1.2 Approved.
 

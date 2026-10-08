@@ -22,8 +22,8 @@ permissions:
   - finance_core.post
   - finance_core.reverse
 default_roles: [admin]
-migrations: []
-reserved_migrations: [sqlite50, postgresql0100]
+migrations: [sqlite50, postgresql0100, postgresql0108]
+reserved_migrations: []
 domain_invariants:
   - immutable-plan-captures-exact-source-mapping-and-monetary-policy
   - stable-persisted-human-identities-separate-preparer-from-reviewer-and-poster
@@ -35,9 +35,14 @@ domain_invariants:
   - inverse-preserves-original-receipt-and-removes-only-proven-unused-value
   - original-recovery-remains-valid-after-legitimate-later-consumption
 domain_events: [inventory_receipt_prepared, inventory_receipt_reviewed, inventory_receipt_committed, finance_entry_posted]
-api_routes: []
+api_routes:
+  - "/api/v1/inventory-receipt-posting/plans"
+  - "/api/v1/inventory-receipt-posting/plans/{plan_id}"
+  - "/api/v1/inventory-receipt-posting/plans/{plan_id}/review"
+  - "/api/v1/inventory-receipt-posting/plans/{plan_id}/commit"
+  - "/api/v1/inventory-receipt-posting/plans/{plan_id}/reversal"
 cli_commands: []
-ui_routes: []
+ui_routes: [/inventory-receipts]
 import_schemas: []
 export_schemas: []
 synthetic_fixtures: [tests/test_inventory_receipt_posting_domain.py]
@@ -52,10 +57,11 @@ threat_model:
   - incomplete-migration-or-restore-publication
 benchmarks: []
 rollback_plan: preserve-verified-pre-upgrade-backup-and-operational-history-refuse-populated-lossy-downgrade
-test_matrix: [tests/test_inventory_receipt_posting_domain.py]
+test_matrix: [tests/test_inventory_receipt_posting_domain.py, tests/test_inventory_receipt_api_contract.py, tests/test_postgres_inventory_receipt_api.py, apps/web/src/components/InventoryReceiptPosting.test.tsx, apps/web/live/inventory-receipt.spec.ts]
 planned_adapter_test_matrix: [tests/test_sqlite_inventory_receipt_posting.py, tests/test_postgres_inventory_receipt_posting.py, tests/test_sqlite_inventory_composition.py, tests/test_sqlite_finance_posting.py]
 limitations:
-  - backend-acceptance-and-interface-registration-in-progress
+  - integration-registration-and-live-browser-final-gate-owned-by-sprint-lead
+  - server-interface-requires-configured-postgresql-and-source-master-identifiers
   - one-untracked-stock-item-base-uom-internal-location-and-fifo-mapping
   - positive-exact-quantity-and-minor-cost-in-functional-currency
   - full-unused-inverse-only-no-plan-edit

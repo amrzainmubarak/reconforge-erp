@@ -77,6 +77,10 @@ class FinancePolicyStore:
                         (workspace_id,),
                     ).fetchone()
                 else:
+                    self.connection.execute(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(jsonb_build_array(%s::text,'currency_registry_binding',%s::text)::text,0))",
+                        (self.tenant_id, workspace_id),
+                    )
                     row = self.connection.execute(
                         "SELECT registry_version,registry_digest FROM reconforge.currency_registry_bindings "
                         "WHERE tenant_id=%s AND workspace_id=%s FOR SHARE",

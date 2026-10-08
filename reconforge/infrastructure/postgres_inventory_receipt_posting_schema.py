@@ -187,6 +187,7 @@ CREATE OR REPLACE FUNCTION reconforge.irp_admit(j JSONB) RETURNS VOID
 LANGUAGE plpgsql SET search_path=pg_catalog AS $irp$
 DECLARE s JSONB:=j->'scope'; v JSONB:=j->'source'; m JSONB:=j->'mapping'; c JSONB:=j->'currency_policy'; t TEXT:=current_setting('app.tenant_id',true); period RECORD; reference RECORD; chart TEXT;
 BEGIN
+ PERFORM pg_advisory_xact_lock(hashtextextended(jsonb_build_array(t,'currency_registry_binding',s->>'workspace_id')::text,0));
  IF current_setting('transaction_isolation')<>'read committed' THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Receipt mutations require READ COMMITTED.'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended(jsonb_build_array(t,'finance_dimensions',s->>'workspace_id')::text,0));
  SELECT * INTO period FROM reconforge.fiscal_periods WHERE tenant_id=t AND id=v->>'period_id' FOR SHARE;
@@ -201,7 +202,7 @@ BEGIN
  PERFORM 1 FROM reconforge.inventory_items i JOIN reconforge.inventory_units_of_measure u ON u.tenant_id=i.tenant_id AND u.id=i.uom_id
  WHERE i.tenant_id=t AND i.id=v->>'item_id' AND i.uom_id=v->>'uom_id' AND i.workspace_id=s->>'workspace_id'
  AND (i.organization_id IS NULL OR i.organization_id=s->>'organization_id') AND i.active AND u.active
- AND i.item_type='Stock' AND i.tracking_mode='None' AND u.decimal_places=(v->>'quantity_precision')::integer
+ AND i.item_type IN ('Stock','Consumable') AND i.tracking_mode='None' AND u.decimal_places=(v->>'quantity_precision')::integer
  AND i.inventory_account_id=m->>'inventory_account_id' FOR SHARE OF i,u;
  IF NOT FOUND THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Receipt stock master differs from its source.'; END IF;
  PERFORM 1 FROM reconforge.inventory_locations l JOIN reconforge.inventory_warehouses w ON w.tenant_id=l.tenant_id AND w.id=l.warehouse_id

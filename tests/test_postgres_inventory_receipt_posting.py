@@ -78,6 +78,8 @@ def receipt_database() -> Iterator[tuple[str, str]]:
         )
         with psycopg.connect(admin_dsn) as admin:
             install_postgres_inventory_receipt_posting_schema(admin)
+            from reconforge.infrastructure.postgres_receipt_admission import install_postgres_receipt_admission
+            install_postgres_receipt_admission(admin)
             app_user = psycopg.conninfo.conninfo_to_dict(app_dsn)["user"]
             for statement in ("GRANT USAGE ON SCHEMA reconforge TO {}", "GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}", "GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA reconforge TO {}"):
                 admin.execute(sql.SQL(statement).format(sql.Identifier(app_user)))

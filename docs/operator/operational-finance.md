@@ -56,3 +56,20 @@ to a legacy AP runtime role; this dependency does not require INSERT, UPDATE,
 DELETE, table ownership, BYPASSRLS or SECURITY DEFINER execution. Verify that the
 runtime role can read the index and cannot mutate it, and retain its ACL in
 backup/restore. Profiles before migration 0111 have no such table or dependency.
+
+Prepare, review and post Sales- or Procurement-owned source plans from the owning
+operational workspace. The public Financial workspace keeps evidence readable,
+but returns `operational_owner_required` for detached phase commands. The owner
+must commit its business phase and the financial phase in one scoped transaction;
+deferred PostgreSQL reverse closure rejects direct repository or SQL advances
+without that matching owner phase. Standalone unowned accrual plans retain their
+reviewed Financial workflow.
+
+Runtime roles using the public operational-finance routes need `SELECT` on
+`reconforge.sales_revenue_documents` after migration 0110 and on
+`reconforge.procurement_cycles` after migration 0111 for the forced-RLS ownership
+lookup. The reverse integrity hooks use those same finite read dependencies for
+ordinary Finance and AR/AP writes. Preserve SELECT while withholding INSERT,
+UPDATE and DELETE for a legacy role that does not manage the corresponding owner
+module. Profiles before each module migration have no corresponding dependency;
+do not grant absent tables or broaden RLS, ownership or execution privileges.

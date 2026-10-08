@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from decimal import Decimal
-from typing import Any, NoReturn
+from typing import Any, Literal, NoReturn
 from uuid import uuid4
 
 from reconforge.auth.policy import evaluate_principal_access
@@ -348,6 +348,67 @@ class PostgresOperationalFinanceRepository:
             self._actor(actor, "finance_core.read", plan, mutation=False)
             self.connection.execute("SELECT reconforge.ops_close_plan(%s,%s)", (self.tenant_id, plan_id))
             return plan
+
+    def assert_public_phase(
+        self, plan: Mapping[str, Any], operation: Literal["prepare", "review", "post"], *, actor: PostingActor
+    ) -> None:
+        """Public financial commands cannot advance another module's lifecycle.
+
+        Trusted Sales/Procurement adapters retain their existing methods and
+        enclosing transaction. Their reverse SQL closure guards require the
+        owning business phase to commit with the financial phase.
+        """
+        with self._transaction():
+            permission = {
+                "prepare": "finance_core.manage",
+                "review": "finance_core.validate",
+                "post": "finance_core.post",
+            }[operation]
+            self._actor(
+                actor,
+                permission,
+                plan,
+                source=operation == "post",
+            )
+            owned = False
+            parameters = (
+                self.tenant_id,
+                plan["source_id"],
+                plan["workspace_id"],
+                plan["organization_id"],
+                plan["legal_entity_id"],
+            )
+            if plan["source_kind"] in {"ARInvoice", "ARReceipt"}:
+                installed = records(
+                    self.connection.execute("SELECT to_regclass('reconforge.sales_revenue_documents') AS installed")
+                )[0]["installed"]
+                if installed is not None:
+                    owned = records(
+                        self.connection.execute(
+                            """SELECT EXISTS(SELECT 1 FROM reconforge.sales_revenue_documents
+                        WHERE tenant_id=%s AND invoice_id=%s AND workspace_id=%s
+                        AND organization_id=%s AND legal_entity_id=%s) AS owned""",
+                            parameters,
+                        )
+                    )[0]["owned"]
+            elif plan["source_kind"] in {"APInvoice", "APPayment"}:
+                installed = records(
+                    self.connection.execute("SELECT to_regclass('reconforge.procurement_cycles') AS installed")
+                )[0]["installed"]
+                if installed is not None:
+                    owned = records(
+                        self.connection.execute(
+                            """SELECT EXISTS(SELECT 1 FROM reconforge.procurement_cycles
+                        WHERE tenant_id=%s AND invoice_id=%s AND workspace_id=%s
+                        AND organization_id=%s AND legal_entity_id=%s) AS owned""",
+                            parameters,
+                        )
+                    )[0]["owned"]
+            if owned:
+                _fail(
+                    "Complete this approval or posting in the owning Sales or Procurement workspace.",
+                    "operational_owner_required",
+                )
 
     def list(
         self, *, workspace_id: str, organization_id: str, legal_entity_id: str, actor: PostingActor, limit: int = 50

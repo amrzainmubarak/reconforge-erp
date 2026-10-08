@@ -19,9 +19,12 @@ from reconforge.api.server_finance_core import (
 )
 from reconforge.api.server_identity import request_execution_scope
 from reconforge.auth.models import LocalUser
+from reconforge.auth.policy import CentralPolicyEngine, PolicyEvaluationContext
+from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor, canonical_json
 from reconforge.domain.operational_finance import SOURCE_PERMISSIONS, OperationalFinancePreparation, exact_minor_text
 from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
+from reconforge.platform.common import current_server_principal
 
 router = APIRouter(prefix="/operational-finance", tags=["operational-finance"])
 Read = Annotated[LocalUser, Depends(require_permission("finance_core.read"))]
@@ -93,7 +96,14 @@ def project_plan(value: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _authority(request: Request, permission: str, plan: dict[str, Any] | None = None, *, source: bool = False) -> None:
+def _authority(
+    request: Request,
+    permission: str,
+    plan: dict[str, Any] | None = None,
+    *,
+    source: bool = False,
+    audit: bool = True,
+) -> None:
     scope = request_execution_scope(request)
     if not scope.organization_id or not scope.legal_entity_id:
         raise APIError(
@@ -114,6 +124,41 @@ def _authority(request: Request, permission: str, plan: dict[str, Any] | None = 
         raise APIError(
             status_code=403, code="operational_scope_denied", message="Source plan is outside selected authority."
         )
+    if not audit:
+        # Preparation holds the business audit chain lock. Reauthorize the
+        # current principal without a second-connection audit write; denial
+        # still rolls back the complete source, journal and evidence packet.
+        principal = current_server_principal()
+        if principal is None:
+            raise APIError(status_code=401, code="auth_required", message="Authentication required.")
+        context = PolicyEvaluationContext(
+            user_id=principal.user.id,
+            username=principal.user.username,
+            user_permissions=principal.permissions,
+            principal_type=principal.principal_type,
+            step_up_active=principal.step_up_active,
+            step_up_enforced=True,
+            required_step_up_method="webauthn_user_verified"
+            if isinstance(getattr(request.app.state, "webauthn_runtime", None), WebAuthnRuntime)
+            else None,
+            step_up_method=principal.step_up_method,
+            tenant_id=scope.tenant_id,
+            workspace_id=scope.workspace_id,
+            organization_id=scope.organization_id,
+            entity_id=scope.legal_entity_id,
+            amount=amount,
+            authorized_tenant_ids=principal.authorized_tenant_ids or frozenset({scope.tenant_id}),
+            authorized_workspace_ids=principal.authorized_workspace_ids,
+            authorized_organization_ids=principal.authorized_organization_ids,
+            authorized_entity_ids=principal.authorized_legal_entity_ids,
+        )
+        if any(not CentralPolicyEngine().evaluate(context, required_permission=p).allowed for p in permissions):
+            raise APIError(
+                status_code=403,
+                code="operational_scope_denied",
+                message="Source amount or hierarchy is outside current authority.",
+            )
+        return
     enforce_server_scoped_permissions(
         request,
         permissions=permissions,
@@ -154,6 +199,7 @@ def _execute(
                 "operational_review_invalid",
                 "operational_source_changed",
                 "operational_source_state_invalid",
+                "operational_owner_required",
             }:
                 status = 409
             else:
@@ -219,7 +265,8 @@ def prepare(request: Request, payload: PreparationRequest, current_user: Manage)
             command_id=payload.command_id,
             actor=actor,
         )
-        _authority(request, "finance_core.manage", value)
+        _authority(request, "finance_core.manage", value, audit=False)
+        repository.assert_public_phase(value, "prepare", actor=actor)
         return {"plan": project_plan(value)}
 
     return _execute(request, current_user, run)
@@ -234,6 +281,7 @@ def review(request: Request, plan_id: str, payload: PhaseRequest, current_user: 
     ) -> dict[str, Any]:
         value = repository.get(plan_id, actor=actor)
         _authority(request, "finance_core.validate", value)
+        repository.assert_public_phase(value, "review", actor=actor)
         return {"plan": project_plan(repository.review(plan_id, **payload.model_dump(), actor=actor))}
 
     return _execute(request, current_user, run)
@@ -248,6 +296,7 @@ def post(request: Request, plan_id: str, payload: PhaseRequest, current_user: Po
     ) -> dict[str, Any]:
         value = repository.get(plan_id, actor=actor)
         _authority(request, "finance_core.post", value, source=True)
+        repository.assert_public_phase(value, "post", actor=actor)
         if value["source_kind"] in {"ARReceipt", "APPayment"}:
             raise APIError(
                 status_code=409,

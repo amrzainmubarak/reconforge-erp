@@ -28,7 +28,7 @@ function FinanceSession({ locale }: { locale: Locale }) {
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   function fail(caught: unknown) {
     if (!current() || auth.recover(caught, auth.revision)) return;
-    setError(caught instanceof AdminApiError && [403, 404].includes(caught.status) ? "denied" : caught instanceof AdminApiError && caught.status === 409 ? "conflict" : "unavailable");
+    setError(caught instanceof AdminApiError && caught.code === "operational_owner_required" ? "ownerRequired" : caught instanceof AdminApiError && [403, 404].includes(caught.status) ? "denied" : caught instanceof AdminApiError && caught.status === 409 ? "conflict" : "unavailable");
     setPlans(null); setSelected(null); setTrial(null); setReportJson("");
   }
   useEffect(() => {

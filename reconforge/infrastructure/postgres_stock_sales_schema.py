@@ -535,8 +535,8 @@ _stock_close = _original_close.replace(
   IF d IS NULL OR d.workspace_id IS DISTINCT FROM w OR d.collection_parameters->>'receipt_number' IS DISTINCT FROM n
   OR d.status NOT IN('CollectionPrepared','CollectionReviewed','Paid')
   OR retained IS DISTINCT FROM jsonb_build_object('schema_version',1,'owner_kind','StockSales','owner_id',d.id)
-  OR EXISTS(SELECT 1 FROM reconforge.ar_receipts r WHERE r.tenant_id=t AND r.workspace_id=w AND r.receipt_number=n
-    AND(d.status<>'Paid' OR r.id IS DISTINCT FROM d.receipt_id)) THEN
+  OR EXISTS(SELECT 1 FROM reconforge.ar_receipts nr WHERE nr.tenant_id=t AND nr.workspace_id=w AND nr.receipt_number=n
+    AND(d.status<>'Paid' OR nr.id IS DISTINCT FROM d.receipt_id)) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Receipt namespace lacks its exact complete StockSales owner.';
   END IF;
   PERFORM reconforge.stock_sales_close(t,d.id);

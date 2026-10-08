@@ -271,7 +271,8 @@ class PostgresStockSalesRepository:
         self.connection.execute("""UPDATE reconforge.inventory_valuation_documents SET status='Approved',total_value_minor=%s,
             finance_entry_id=%s,approved_by=%s,approved_at=now(),approval_reason=%s,row_version=row_version+1 WHERE tenant_id=%s AND id=%s""",
             (plan["total_cost_minor"], row["cogs_entry_id"], actor.username, reason, self.tenant_id, valuation_id))
-        entry = self.finance.get_entry(row["cogs_entry_id"])
+        entry = self._one("SELECT validation_digest FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s",
+                          (self.tenant_id, row["cogs_entry_id"]))
         effect = self.postings.post(row["cogs_entry_id"], command_id="stock-issue:" + command,
             expected_validation_digest=entry["validation_digest"], reason=reason, actor=actor)
         self.connection.execute("UPDATE reconforge.stock_sales_reservations SET state='Consumed' WHERE tenant_id=%s AND order_id=%s", (self.tenant_id, row["id"]))
@@ -313,6 +314,8 @@ class PostgresStockSalesRepository:
             elif operation == "prepare-issue":
                 changes.update(self._prepare_issue(row, {**dict(parameters), "reason": reason}, actor))
             elif operation == "review-issue":
+                if row["issue_plan"]["preparer_actor_id"] == actor.user_id:
+                    raise FinancePostingError("stock_sales_sod_denied", "Issue preparer cannot review their own COGS.")
                 self._actor(actor, operation, {**row, "total_minor": row["issue_plan"]["total_cost_minor"]})
                 self.finance.validate_entry(row["cogs_entry_id"], reason=reason, actor_label=actor.username)
                 changes["issue_reviewer_id"] = actor.user_id

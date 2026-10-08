@@ -112,7 +112,8 @@ def test_independent_review_and_native_detached_cogs_rollback(stock_runtime: Rec
     import psycopg
     with pytest.raises(psycopg.errors.CheckViolation), runtime.actor("poster") as (connection, _, actor):
         owner = repository(connection, runtime)
-        entry = owner.finance.get_entry(result["cogs_entry_id"])
+        entry = dict(connection.execute("SELECT id,validation_digest FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s",
+                                        (runtime.tenant, result["cogs_entry_id"])).fetchone())
         owner.postings.post(entry["id"], command_id="detached-stock-gl", expected_validation_digest=entry["validation_digest"],
                             reason="Uncoordinated native posting", actor=actor)
     with runtime.actor("maker") as (connection, _, actor):

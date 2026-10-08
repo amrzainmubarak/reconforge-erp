@@ -261,7 +261,10 @@ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Frozen FIFO claim differs from source owner.';
  END IF;
  IF claim IS NOT NULL THEN
-  SELECT * INTO entry FROM reconforge.finance_entries WHERE tenant_id=t AND id=d.cogs_entry_id;
+  SELECT f.*,o.id organization_id,le.id legal_entity_id INTO entry FROM reconforge.finance_entries f
+   JOIN reconforge.organizations o ON o.tenant_id=f.tenant_id AND o.organization_code=f.organization_code AND o.application_workspace_id=f.workspace_id
+   JOIN reconforge.legal_entities le ON le.tenant_id=o.tenant_id AND le.organization_id=o.id AND le.entity_code=f.entity_code
+   WHERE f.tenant_id=t AND f.id=d.cogs_entry_id;
   IF entry IS NULL OR entry.id IS DISTINCT FROM claim.entry_id OR entry.id IS DISTINCT FROM d.issue_plan->>'entry_id'
   OR entry.entry_number IS DISTINCT FROM d.issue_plan->>'entry_number' OR entry.source_type<>'Manual'
   OR entry.external_reference IS DISTINCT FROM d.id OR entry.journal_id IS DISTINCT FROM d.issue_plan->>'journal_id'
@@ -334,7 +337,7 @@ BEGIN
   OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents v WHERE v.tenant_id=t AND v.id=d.valuation_id AND v.movement_id=d.movement_id
    AND v.status='Approved' AND v.finance_entry_id=d.cogs_entry_id AND v.total_value_minor=entry.total_debit_minor
    AND(v.workspace_id,v.organization_id,v.legal_entity_id,v.currency_code)=(d.workspace_id,d.organization_id,d.legal_entity_id,d.currency_code)
-   AND v.policy_id=d.issue_plan->>'policy_id' AND v.period_id=entry.period_id AND v.valuation_date=entry.posting_date
+   AND v.policy_id=d.issue_plan->>'policy_id' AND v.period_id=entry.period_id AND v.valuation_date::text=entry.posting_date::text
    AND reconforge.sales_revenue_policy_matches(t,d.source->'monetary_policy',v.currency_code,v.currency_precision,
     v.currency_rounding_policy,v.currency_registry_version,v.currency_registry_digest))
   OR NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects f WHERE f.tenant_id=t AND f.id=d.cogs_effect_id AND f.entry_id=d.cogs_entry_id
@@ -544,7 +547,7 @@ POSTGRES_STOCK_SALES_SCHEMA_SQL += _stock_admit + "\n" + _stock_close
 DOWNGRADE_STOCK_SALES_SQL = r"""
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.stock_sales_orders)
- OR EXISTS(SELECT 1 FROM reconforge.ar_idempotency_keys WHERE payload->>'owner_kind'='StockSales') THEN
+ OR EXISTS(SELECT 1 FROM reconforge.ar_idempotency_keys WHERE response_json->>'owner_kind'='StockSales') THEN
   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='StockSales history exists; restore the preserved backup instead of removing immutable financial history.';
  END IF;
 END $$;

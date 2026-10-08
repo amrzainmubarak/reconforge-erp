@@ -1,5 +1,9 @@
 # ReconForge Execution Decisions Log
 
+## D-ERP-20261008-CLOSURE: Own every native effect and shared receipt name
+
+Close exact source/GL/native phases in both directions with invoker forced-RLS guards. Refuse detached generic owner commands with finite safe409; preserve unrelated503. Reserve canonical Sales receipt names before capture in the existing tenant/workspace AR namespace; retain minimal opaque ownership, canonical ASCII for new Sales, native Unicode compatibility and deterministic timestamp backfill. Preserve scoped finite legacy SELECT dependencies without owner DML or bypass. Original genuine REDs are retained. Repair only exact installed administrative fixture DELETE hooks and the missing sdist helper; exercise guards during every business phase. Separate actual execution sources from complete unchanged-subject bindings and fresh current package/default-secret gates. [ERP_COMPLETION_ACCEPTANCE_2026-10-08](ERP_COMPLETION_ACCEPTANCE_2026-10-08.md).
+
 ## D-ERP-20261008: Composed source posting and complete bounded cycles
 
 ADR0841 establishes0109/0110/0111 dependencies, agent ownership and one scoped

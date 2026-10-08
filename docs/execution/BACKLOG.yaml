@@ -2,7 +2,7 @@ schema_version: 2
 updated_at: "2026-10-08"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
-  evidence_base_commit: "9bcbeb077db805a1e149ac57bd1e78c182e373b1"
+  evidence_base_commit: "547b653915873ed010e70c0a96ae9aee4b8cc4b6"
   policy_change_commit: "the commit containing this file"
   published: false
 status_values: [planned, in_progress, blocked, deferred, completed]
@@ -13,29 +13,26 @@ tasks:
     priority: P0
     area: operational-finance
     title: Compose reviewed native AR/AP sources and balanced GL effects
-    status: in_progress
+    status: completed
     depends_on: [AMR-GFO-010]
     exit_evidence: >-
-      Pending source/review/posting transaction, direct SQL closure,
-      scope/SoD/idempotency/concurrency and populated recovery gate.
+      Bounded native AR/AP source capture, reviewed balanced GL, current authority, owner/reverse SQL closure, atomic settlement, replay/concurrency and populated restore pass. ERP_COMPLETION_ACCEPTANCE_2026-10-08.json retains actual source identities.
   - id: AMR-ERP-002
     priority: P0
     area: sales-revenue
     title: Complete service quotation order fulfillment invoice and collection
-    status: in_progress
+    status: completed
     depends_on: [AMR-ERP-001]
     exit_evidence: >-
-      Pending exact discounts, independent approvals, AR/revenue and cash/AR
-      effects, immutable lineage and actual API/Studio cycle.
+      Completed-services exact discount quotation -> approval -> order -> fulfillment -> native AR/revenue -> full cash/allocation Paid cycle succeeds in actual HTTPS Studio and configured PostgreSQL. Stock Sales/credits/partials/tax/FX remain outside this completed slice.
   - id: AMR-ERP-003
     priority: P0
     area: procurement-supply
     title: Complete stock PO receiving FIFO matched AP and reviewed payment
-    status: in_progress
+    status: completed
     depends_on: [AMR-ERP-001]
     exit_evidence: >-
-      Pending same-owner receipt/FIFO/GL, 3way invoice clearing/AP,
-      AP/cash settlement and authorized API/Studio cycle.
+      Full single-line untracked functional-currency stock PO -> reviewed receiving/FIFO/GL -> exact 3way AP -> reviewed full payment Paid cycle succeeds in actual HTTPS Studio and configured PostgreSQL. PR/RFQ/returns/partials/tax/FX remain outside this completed slice.
   - id: AMR-ERP-004
     priority: P0
     area: sprint-integration
@@ -43,8 +40,7 @@ tasks:
     status: in_progress
     depends_on: [AMR-ERP-001, AMR-ERP-002, AMR-ERP-003]
     exit_evidence: >-
-      Pending aggregate Python/PostgreSQL/API/React/E2E/security, concurrency,
-      recovery/performance/package/container/CI gates and Draft PR.
+      Bounded local integration gates pass at 547b65391587; hosted verification is tracked independently at Draft PR125 current checks. Global ERP breadth and independent production/release assurance remain unfinished; never infer them from this bounded checkpoint.
   - id: AMR-GFO-007
     priority: P1
     area: platform-core

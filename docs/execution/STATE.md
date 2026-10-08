@@ -2,14 +2,9 @@
 
 ## ERP completion sprint (2026-10-08; ADR0841)
 
-The newly authorized sprint starts at clean `dbad7b03` on
-`amr/global-erp-completion-20261008`; main remains `b61ea56b`. Three independent
-managed worktrees implement Sales, Procurement and operational Finance. The
-lead owns shared registration. Dependencies are additive0109 reviewed source
-posting ->0110 service revenue ->0111 stock procure-to-pay -> unified live
-Studio. Existing AR/AP/FIFO/GL/scope engines remain authoritative. Acceptance is
-pending; prior sprint evidence does not prove these new cycles.
-[Ownership and contracts](../adr/0841-composed-sales-procurement-operational-finance.md).
+Source `547b65391587` accepts the bounded connected service Sales, stock Procurement and shared operational Finance cycles locally. Three isolated managed worktrees are integrated on `amr/global-erp-completion-20261008`; main stays `b61ea56b`. Full Python: 4538 passed/595 explicit prerequisites; configured critical PostgreSQL: 564 passed/zero skips; native recovery profile: 33 passed/zero skips. Actual wire HTTPS Studio, Paid AR/AP, FIFO, balanced GL, lost-ack replay, Arabic/mobile/accessibility and195-table populated restore pass. Packaging/default secrets are fresh after a one-line MANIFEST dependency correction. Earlier failures and exact mixed source/byte identities are preserved. [Acceptance and remaining ERP scope](ERP_COMPLETION_ACCEPTANCE_2026-10-08.md) · [Commands, hashes and sources](ERP_COMPLETION_ACCEPTANCE_2026-10-08.json).
+
+[Draft PR](https://github.com/amrzainmubarak/reconforge-erp/pull/125) is stacked on the accepted platform branch. Final hosted results must be read from its [current-source checks](https://github.com/amrzainmubarak/reconforge-erp/pull/125/checks) and retained Actions artifacts; this documentation checkpoint records local acceptance. The broad global ERP expansion and independent release assurance remain in progress.
 
 ## Global operational capability sprint (2026-10-08; ADR0834)
 

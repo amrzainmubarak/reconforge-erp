@@ -1,5 +1,7 @@
 # ReconForge Execution Evidence Log
 
+- ERP-20261008 bounded local acceptance: full Python4538pass/595 explicit prerequisites; configured critical PG564pass/0skip; recovery profile33pass/0skip. React261 and standard19 E2E pass. Actual HTTPS service Sale9800 and stock purchase12000 finishPaid, FIFO10/value12000, 5GL/4Ops links, exact balanced55600 Dr/Cr turnover and12000 net Dr/Cr; lost-ack retry has one effect. Native195-table/catalog/ACL/RLS restore and3tamper refusals pass. Actual root image631runtime/331copied files/cache0; exact scan0Critical/0High, 9Medium/1Negligible/0exceptions. Fresh package/helper and default allhistory/tree Gitleaks0findings pass. Mixed sources518590/CAF/547 retain complete reviewed proofs and original failed/aborted readers. [Evidence](ERP_COMPLETION_ACCEPTANCE_2026-10-08.json) · [Limits and current hosted checks](ERP_COMPLETION_ACCEPTANCE_2026-10-08.md).
+
 - GFO-20261008 integrated local acceptance: runtime9bcbeb07 full4455pass/
   492explicit prerequisites; live PG groups58/25/8 and repaired migration7 each
   zero skips, restricted role/head0108. Normal-Studio HTTPS budget1 and

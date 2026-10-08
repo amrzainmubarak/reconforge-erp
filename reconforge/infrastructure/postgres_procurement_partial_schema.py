@@ -208,10 +208,10 @@ BEGIN
  SELECT COALESCE(sum(quantity),0) INTO invoiced FROM reconforge.procurement_partial_invoices WHERE tenant_id=t AND order_id=c.id;
  IF invoiced>received THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial invoice reservations exceed posted received quantity.'; END IF;
- SELECT a.id INTO ap_account FROM reconforge.finance_accounts a JOIN reconforge.finance_journals j ON j.tenant_id=a.tenant_id AND j.chart_id=a.chart_id
- WHERE a.tenant_id=t AND a.workspace_id=c.workspace_id AND a.account_code=c.request_json->>'ap_account_code' AND j.workspace_id=c.workspace_id AND j.journal_code=c.request_json->>'journal_code';
- SELECT a.id INTO cash_account FROM reconforge.finance_accounts a JOIN reconforge.finance_journals j ON j.tenant_id=a.tenant_id AND j.chart_id=a.chart_id
- WHERE a.tenant_id=t AND a.workspace_id=c.workspace_id AND a.account_code=c.request_json->>'cash_account_code' AND j.workspace_id=c.workspace_id AND j.journal_code=c.request_json->>'journal_code';
+ SELECT fa.id INTO ap_account FROM reconforge.finance_accounts fa JOIN reconforge.finance_journals j ON j.tenant_id=fa.tenant_id AND j.chart_id=fa.chart_id
+ WHERE fa.tenant_id=t AND fa.workspace_id=c.workspace_id AND fa.account_code=c.request_json->>'ap_account_code' AND j.workspace_id=c.workspace_id AND j.journal_code=c.request_json->>'journal_code';
+ SELECT fa.id INTO cash_account FROM reconforge.finance_accounts fa JOIN reconforge.finance_journals j ON j.tenant_id=fa.tenant_id AND j.chart_id=fa.chart_id
+ WHERE fa.tenant_id=t AND fa.workspace_id=c.workspace_id AND fa.account_code=c.request_json->>'cash_account_code' AND j.workspace_id=c.workspace_id AND j.journal_code=c.request_json->>'journal_code';
  FOR i IN SELECT * FROM reconforge.procurement_partial_invoices WHERE tenant_id=t AND order_id=c.id ORDER BY sequence LOOP
  SELECT * INTO h FROM reconforge.ap_supplier_invoices WHERE tenant_id=t AND id=i.native_invoice_id;
  IF h IS NULL OR h.purchase_order_id<>p.id OR h.supplier_id<>p.supplier_id OR h.total_minor<>i.total_minor OR h.tax_minor<>0 OR h.currency_code<>p.currency_code
@@ -284,9 +284,9 @@ BEGIN
  OR (m.response_json->'order'->>'workspace_id',m.response_json->'order'->>'organization_id',m.response_json->'order'->>'legal_entity_id') IS DISTINCT FROM (c.workspace_id,c.organization_id,c.legal_entity_id)
  OR (m.order_version=1 AND (m.operation<>'create' OR m.request_json IS DISTINCT FROM c.request_json OR m.actor_id<>c.creator_actor_id))
  OR (m.order_version>1 AND (m.request_json->>'expected_version')::bigint IS DISTINCT FROM m.order_version-1)
- OR NOT EXISTS(SELECT 1 FROM reconforge.domain_audit_events a JOIN reconforge.outbox_events o ON o.tenant_id=a.tenant_id WHERE a.tenant_id=t
- AND a.id=m.audit_event_id AND a.object_type='procurement_partial_order' AND a.object_id=c.id AND a.actor_user_id=m.actor_id
- AND a.action='procurement_partial_'||replace(m.operation,'-','_') AND a.metadata_json=jsonb_build_object('row_version',m.order_version,'request_digest',m.request_digest)
+ OR NOT EXISTS(SELECT 1 FROM reconforge.domain_audit_events evt JOIN reconforge.outbox_events o ON o.tenant_id=evt.tenant_id WHERE evt.tenant_id=t
+ AND evt.id=m.audit_event_id AND evt.object_type='procurement_partial_order' AND evt.object_id=c.id AND evt.actor_user_id=m.actor_id
+ AND evt.action='procurement_partial_'||replace(m.operation,'-','_') AND evt.metadata_json=jsonb_build_object('row_version',m.order_version,'request_digest',m.request_digest)
  AND o.event_id=m.outbox_event_id AND o.aggregate_type='procurement_partial_order' AND o.aggregate_id=c.id AND o.event_type='procurement.partial_changed'
  AND (o.workspace_id,o.organization_id,o.legal_entity_id)=(c.workspace_id,c.organization_id,c.legal_entity_id)
  AND o.payload=jsonb_build_object('order_id',c.id,'row_version',m.order_version,'audit_event_id',m.audit_event_id)) THEN

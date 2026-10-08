@@ -1,6 +1,7 @@
 """Real partial quantity reservations, FIFO, AP accrual and raw owner closure."""
 from __future__ import annotations
 
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from typing import Any
@@ -17,12 +18,33 @@ from tests.test_postgres_inventory_receipt_posting import (
     ReceiptRuntime,
     create_receipt_runtime,
     pytestmark,
-    receipt_database,
 )
+from tests.test_postgres_inventory_receipt_posting import receipt_database as base_receipt_database
 from tests.test_postgres_procurement_operations import procurement_phase_digest, request, seed_procurement
 
 __all__ = ["pytestmark", "receipt_database"]
 MAKER, CHECKER, POSTER = "partial-maker", "partial-checker", "partial-poster"
+
+
+@pytest.fixture(scope="module")
+def receipt_database() -> Iterator[tuple[str, str]]:
+    """The actual native fixture can also verify a direct schema-install milestone."""
+    import psycopg
+    from psycopg import sql
+
+    from reconforge.infrastructure.postgres_procurement_partial_schema import install_postgres_procurement_partial
+    delegated = base_receipt_database.__wrapped__()
+    try:
+        database = next(delegated)
+        with psycopg.connect(database[0]) as admin:
+            if admin.execute("SELECT to_regclass('reconforge.procurement_partial_orders')").fetchone()[0] is None:
+                install_postgres_procurement_partial(admin)
+            app_user = psycopg.conninfo.conninfo_to_dict(database[1])["user"]
+            for table in ("procurement_partial_orders", "procurement_partial_receipts", "procurement_partial_invoices", "procurement_partial_commands"):
+                admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(app_user)))
+        yield database
+    finally:
+        delegated.close()
 
 
 def seed_procurement_partial(runtime: ReceiptRuntime) -> ReceiptRuntime:
@@ -43,8 +65,8 @@ def partial_runtime(receipt_database: tuple[str, str]) -> ReceiptRuntime:
     return create_procurement_partial_runtime(receipt_database)
 
 
-def part(quantity: str) -> PartialQuantityPreparation:
-    return PartialQuantityPreparation(quantity=quantity, posting_date="2026-10-03", period_id="period", reason="Synthetic exact partial delivery")
+def part(quantity: str, posting_date: str = "2026-10-03") -> PartialQuantityPreparation:
+    return PartialQuantityPreparation(quantity=quantity, posting_date=posting_date, period_id="period", reason="Synthetic exact partial delivery")
 
 
 def create_partial(runtime: ReceiptRuntime, number: str = "PARTIAL-1") -> dict[str, Any]:
@@ -66,17 +88,17 @@ def action(runtime: ReceiptRuntime, view: dict[str, Any], operation: str, actor_
         return result
 
 
-def prepare_partial_receipt(runtime: ReceiptRuntime, view: dict[str, Any], quantity: str) -> dict[str, Any]:
+def prepare_partial_receipt(runtime: ReceiptRuntime, view: dict[str, Any], quantity: str, posting_date: str = "2026-10-03") -> dict[str, Any]:
     with runtime.actor(MAKER) as (connection, _, actor):
         repository = PostgresProcurementPartialRepository(connection, runtime.tenant)
         args = {"expected_version": view["order"]["row_version"], "command_id": "partial-receipt-" + str(view["order"]["row_version"]), "actor": actor}
-        result = repository.prepare_receipt(view["order"]["id"], part(quantity), **args)
-        assert repository.prepare_receipt(view["order"]["id"], part(quantity), **args) == result
+        result = repository.prepare_receipt(view["order"]["id"], part(quantity, posting_date), **args)
+        assert repository.prepare_receipt(view["order"]["id"], part(quantity, posting_date), **args) == result
         return result
 
 
-def receive_partial(runtime: ReceiptRuntime, view: dict[str, Any], quantity: str) -> dict[str, Any]:
-    view = prepare_partial_receipt(runtime, view, quantity)
+def receive_partial(runtime: ReceiptRuntime, view: dict[str, Any], quantity: str, posting_date: str = "2026-10-03") -> dict[str, Any]:
+    view = prepare_partial_receipt(runtime, view, quantity, posting_date)
     identifier = view["receipts"][-1]["id"]
     return action(runtime, action(runtime, view, "review-receipt", CHECKER, identifier), "receive", POSTER, identifier)
 
@@ -101,7 +123,7 @@ def accrue_partial_invoice(runtime: ReceiptRuntime, view: dict[str, Any], quanti
 def complete_partial_accrual_cycle(runtime: ReceiptRuntime, number: str = "PARTIAL-1") -> dict[str, Any]:
     view = create_partial(runtime, number)
     view = accrue_partial_invoice(runtime, receive_partial(runtime, view, "4"), "3")
-    return accrue_partial_invoice(runtime, receive_partial(runtime, view, "6"), "7")
+    return accrue_partial_invoice(runtime, receive_partial(runtime, view, "6", "2026-10-04"), "7")
 
 
 def test_partial_four_and_six_receipts_three_and_seven_invoices_reconcile_fifo_ap_gl(partial_runtime: ReceiptRuntime) -> None:
@@ -124,6 +146,23 @@ def test_prepared_receipts_reserve_exact_order_capacity(partial_runtime: Receipt
     view = prepare_partial_receipt(partial_runtime, view, "4")
     assert view["totals"]["reserved_receipt_quantity"] == "10"
     assert view["totals"]["received_quantity"] == "0"
+
+
+def test_backdated_second_receipt_is_refused_by_retained_fifo_engine(partial_runtime: ReceiptRuntime) -> None:
+    from reconforge.domain.inventory_receipt_posting import InventoryReceiptPostingError
+
+    runtime = partial_runtime
+    view = receive_partial(runtime, create_partial(runtime), "4", "2026-10-04")
+    view = prepare_partial_receipt(runtime, view, "6", "2026-10-03")
+    identifier = view["receipts"][-1]["id"]
+    view = action(runtime, view, "review-receipt", CHECKER, identifier)
+    with runtime.actor(POSTER) as (connection, _, _):
+        before = procurement_phase_digest(connection, runtime.tenant)
+    with pytest.raises(InventoryReceiptPostingError, match="Backdated receipt"):
+        action(runtime, view, "receive", POSTER, identifier)
+    with runtime.actor(POSTER) as (connection, _, actor):
+        assert procurement_phase_digest(connection, runtime.tenant) == before
+        assert PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor) == view
 
 
 def test_matched_invoices_reserve_posted_receipt_capacity_before_approval(partial_runtime: ReceiptRuntime) -> None:
@@ -187,7 +226,7 @@ def test_generic_participant_cannot_leave_partial_owner_stale(partial_runtime: R
     actor_name = POSTER if phase.endswith("post") else CHECKER if phase.endswith(("review", "approval")) else MAKER
     with runtime.actor(actor_name) as (connection, _, _):
         before = procurement_phase_digest(connection, runtime.tenant)
-    with pytest.raises(psycopg.errors.CheckViolation, match="Partial"), runtime.actor(actor_name) as (connection, receipts, actor):
+    with pytest.raises(psycopg.errors.CheckViolation, match="Partial|partial"), runtime.actor(actor_name) as (connection, receipts, actor):
         payables = PostgresPayablesRepository(connection, runtime.tenant)
         if phase == "receipt-review":
             plan = receipts.get_plan(view["receipts"][0]["receipt_plan_id"], actor=actor)["plan"]

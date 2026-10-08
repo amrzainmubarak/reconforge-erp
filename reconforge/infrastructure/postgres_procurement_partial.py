@@ -315,6 +315,7 @@ class PostgresProcurementPartialRepository:
 
     def _view(self, row: Mapping[str, Any]) -> dict[str, Any]:
         receipts, invoices = self._documents(row["id"], "receipt"), self._documents(row["id"], "invoice")
+        installments_available = self.connection.execute("SELECT to_regclass('reconforge.financial_installment_plans') IS NOT NULL AS installed").fetchone()["installed"]
         order = dict(row)
         order["stage"] = ORDER_STAGES[row["stage"]]
         order["total_minor"] = str(row["total_minor"])
@@ -334,6 +335,23 @@ class PostgresProcurementPartialRepository:
             part.update(native_status=native["status"], native_version=native["row_version"], paid_minor=str(paid),
                         outstanding_minor=str(int(part["total_minor"]) - paid),
                         payment_links=[{**dict(item), "amount_minor": str(item["amount_minor"])} for item in links])
+            part["installment_plans"] = []
+            if installments_available:
+                plans = self.connection.execute("""SELECT p.id,p.payload,p.phase,r.reviewer_actor_id,l.posting_effect_id,l.payment_link_id
+                    FROM reconforge.financial_installment_plans p LEFT JOIN reconforge.financial_installment_reviews r ON r.tenant_id=p.tenant_id AND r.plan_id=p.id
+                    LEFT JOIN reconforge.financial_installment_links l ON l.tenant_id=p.tenant_id AND l.plan_id=p.id
+                    WHERE p.tenant_id=%s AND p.source_id=%s ORDER BY p.created_at,p.id LIMIT 200""", (self.tenant_id, part["native_invoice_id"])).fetchall()
+                for plan in plans:
+                    self.connection.execute("SELECT reconforge.installment_close(%s,%s)", (self.tenant_id, plan["id"]))
+                    payload = plan["payload"]
+                    keys = ("id", "workspace_id", "organization_id", "legal_entity_id", "source_id", "source_kind", "entry_id",
+                            "period_id", "posting_date", "currency_code", "currency_precision", "plan_digest", "validation_digest",
+                            "preparer_actor_id", "invoice_version")
+                    part["installment_plans"].append({**{key: payload[key] for key in keys},
+                        "phase": plan["phase"], "status": ("Prepared", "Reviewed", "Posted")[plan["phase"]],
+                        "reviewer_actor_id": plan["reviewer_actor_id"], "posting_effect_id": plan["posting_effect_id"],
+                        "payment_link_id": plan["payment_link_id"], "amount_minor": str(payload["amount_minor"]),
+                        "allocated_before_minor": str(payload["allocated_before_minor"])})
         totals = {
             "ordered_quantity": order["request"]["quantity"],
             "reserved_receipt_quantity": quantity_text(exact_sum(Decimal(item["quantity_text"]) for item in receipts)),

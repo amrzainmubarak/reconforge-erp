@@ -110,6 +110,16 @@ BEGIN
  OR (c.stage<10 AND c.accrual_effect_id IS NOT NULL) OR (c.stage<11 AND c.payment_plan_id IS NOT NULL)
  OR (c.stage<13 AND (c.payment_effect_id IS NOT NULL OR c.payment_link_id IS NOT NULL)) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement retained engine references must match their exact cycle phase.'; END IF;
+ IF EXISTS(SELECT 1 FROM reconforge.inventory_receipt_plans x WHERE x.tenant_id=c.tenant_id AND x.operation='Receipt'
+ AND (x.workspace_id,x.organization_id,x.legal_entity_id)=(c.workspace_id,c.organization_id,c.legal_entity_id)
+ AND x.source_number='GR-'||c.number AND (c.stage<3 OR x.id IS DISTINCT FROM c.receipt_plan_id)) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement reserved receipt source must be absent before its atomic owner capture.'; END IF;
+ IF EXISTS(SELECT 1 FROM reconforge.ap_goods_receipts x WHERE x.tenant_id=c.tenant_id AND x.purchase_order_id=c.purchase_order_id
+ AND (c.stage<5 OR x.id IS DISTINCT FROM c.goods_receipt_id)) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement native goods receipt must be its exact atomic owner source.'; END IF;
+ IF EXISTS(SELECT 1 FROM reconforge.ap_supplier_invoices x WHERE x.tenant_id=c.tenant_id AND x.purchase_order_id=c.purchase_order_id
+ AND (c.stage<6 OR x.id IS DISTINCT FROM c.invoice_id)) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement native supplier invoice must be its exact atomic owner source.'; END IF;
  SELECT * INTO p FROM reconforge.ap_purchase_orders WHERE tenant_id=c.tenant_id AND id=c.purchase_order_id;
  SELECT * INTO l FROM reconforge.ap_purchase_order_lines WHERE tenant_id=c.tenant_id AND purchase_order_id=p.id;
  qty:=(c.request_json->>'quantity')::numeric;
@@ -231,14 +241,14 @@ CREATE TRIGGER procurement_cycles_guard BEFORE INSERT OR UPDATE OR DELETE ON rec
 UPGRADE_SQL += r"""
 CREATE FUNCTION reconforge.procurement_source_closure() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-DECLARE j JSONB;references_json JSONB[];parent TEXT;owned_plan_id TEXT;source_kind TEXT;source_id TEXT;
+DECLARE j JSONB;references_json JSONB[];parent TEXT;owned_plan_id TEXT;source_kind TEXT;source_id TEXT;native_order_id TEXT;
  receipt reconforge.inventory_receipt_plans%ROWTYPE;c reconforge.procurement_cycles;
 BEGIN
  IF TG_OP='INSERT' THEN references_json:=ARRAY[to_jsonb(NEW)];
  ELSIF TG_OP='DELETE' THEN references_json:=ARRAY[to_jsonb(OLD)];
  ELSE references_json:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)]; END IF;
  FOREACH j IN ARRAY references_json LOOP
- owned_plan_id:=NULL;source_kind:=NULL;source_id:=NULL;receipt:=NULL;
+ owned_plan_id:=NULL;source_kind:=NULL;source_id:=NULL;native_order_id:=NULL;receipt:=NULL;
  parent:=CASE TG_TABLE_NAME
  WHEN 'procurement_cycles' THEN j->>'id'
  WHEN 'ap_purchase_orders' THEN j->>'id'
@@ -249,6 +259,13 @@ BEGIN
  WHEN 'ap_supplier_invoice_lines' THEN j->>'supplier_invoice_id'
  WHEN 'ap_three_way_matches' THEN j->>'supplier_invoice_id'
  WHEN 'ap_payment_links' THEN j->>'supplier_invoice_id' END;
+ IF TG_TABLE_NAME IN ('ap_goods_receipts','ap_supplier_invoices','ap_three_way_matches') THEN
+ native_order_id:=j->>'purchase_order_id';
+ ELSIF TG_TABLE_NAME='ap_goods_receipt_lines' THEN
+ SELECT purchase_order_id INTO native_order_id FROM reconforge.ap_goods_receipts WHERE tenant_id=j->>'tenant_id' AND id=j->>'receipt_id';
+ ELSIF TG_TABLE_NAME IN ('ap_supplier_invoice_lines','ap_payment_links') THEN
+ SELECT purchase_order_id INTO native_order_id FROM reconforge.ap_supplier_invoices WHERE tenant_id=j->>'tenant_id' AND id=j->>'supplier_invoice_id';
+ END IF;
  IF TG_TABLE_NAME IN ('operational_finance_plans','operational_finance_reviews','operational_finance_links','operational_finance_commands') THEN
  owned_plan_id:=CASE WHEN TG_TABLE_NAME='operational_finance_plans' THEN j->>'id' ELSE j->>'plan_id' END;
  SELECT p.source_kind,p.source_id INTO source_kind,source_id FROM reconforge.operational_finance_plans p
@@ -259,7 +276,7 @@ BEGIN
  SELECT * INTO receipt FROM reconforge.inventory_receipt_plans p WHERE p.tenant_id=j->>'tenant_id' AND p.id=owned_plan_id;
  END IF;
  FOR c IN SELECT * FROM reconforge.procurement_cycles WHERE tenant_id=j->>'tenant_id'
- AND (id=parent OR purchase_order_id=parent OR goods_receipt_id=parent OR invoice_id=parent
+ AND (id=parent OR purchase_order_id=parent OR purchase_order_id=native_order_id OR goods_receipt_id=parent OR invoice_id=parent
  OR receipt_plan_id=owned_plan_id OR accrual_plan_id=owned_plan_id OR payment_plan_id=owned_plan_id
  OR receipt_plan_id=receipt.original_plan_id
  OR (receipt.operation='Receipt' AND receipt.source_number='GR-'||number

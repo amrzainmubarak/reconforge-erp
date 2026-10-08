@@ -27,10 +27,10 @@ def run_drill() -> dict[str, Any]:
         database = Path(temporary) / "capacity.db"
         run_migrations(database)
         window = HttpReliabilityWindow(capacity=REQUESTS)
-        client = TestClient(create_api_app(database, reliability_window=window))
-        api_started = perf_counter_ns()
-        statuses = [client.get("/api/v1/health").status_code for _ in range(REQUESTS)]
-        api_wall_ms = (perf_counter_ns() - api_started) // 1_000_000
+        with TestClient(create_api_app(database, reliability_window=window)) as client:
+            api_started = perf_counter_ns()
+            statuses = [client.get("/api/v1/health").status_code for _ in range(REQUESTS)]
+            api_wall_ms = (perf_counter_ns() - api_started) // 1_000_000
         connection = connect(database)
         created_at = "2026-07-30T10:00:00Z"
         rows = [

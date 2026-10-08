@@ -156,3 +156,14 @@ apps/web/src/enterprise-finance-data.ts:generic-api-key:7
 7aefc528eb149373199244eade585cb1b6c6f856:tests/test_notification_inbox.py:generic-api-key:44
 7aefc528eb149373199244eade585cb1b6c6f856:tests/test_postgres_notification_inbox.py:generic-api-key:102
 7aefc528eb149373199244eade585cb1b6c6f856:tests/test_postgres_notification_inbox.py:generic-api-key:190
+
+# Reviewed public operational-finance-api-v1 identifiers in the owner-phase
+# UI fixture and the unchanged route contract (moved from line 80 to line 83).
+# The four exact history copies share the same public literal; these entries
+# add no credential patterns, scanner rules, path exclusions or risk exceptions.
+d85fd0ba17aede6e2f0956236b677ac5b00be8f1:apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+19332849b5b82ff3e85ebab5f28aa86ef819c7d8:apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+a0f4f8f257bb4bca44e0e05d2f1c449c51b5afd6:apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+aea56da19c40e7820accb762046e7feb87b70186:apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+reconforge/api/routes/operational_finance.py:generic-api-key:83

@@ -224,6 +224,39 @@ def test_docker_context_is_deny_by_default() -> None:
         "!reconforge/**",
     } <= set(rules)
     assert not any(rule.startswith("!.git") or "venv" in rule or "output" in rule for rule in rules)
+    assert rules[-3:] == ["**/__pycache__", "**/*.pyc", "**/*.pyo"]
+
+
+@pytest.mark.parametrize("removed_rule", ("**/__pycache__", "**/*.pyc", "**/*.pyo"))
+def test_docker_context_rejects_missing_python_cache_exclusions(tmp_path: Path, removed_rule: str) -> None:
+    root = _copy_policy_project(tmp_path)
+    path = root / ".dockerignore"
+    path.write_text(path.read_text(encoding="utf-8").replace(removed_rule + "\n", ""), encoding="utf-8")
+
+    with pytest.raises(SupplyChainPolicyError, match="Docker build context"):
+        POLICY_MODULE.validate_project(root, date(2026, 7, 26))
+
+
+@pytest.mark.parametrize("late_rule", ("!alembic/**", "!reconforge/**", "!**/*.pyc", "!**/__pycache__/**"))
+def test_docker_context_rejects_python_cache_reinclusion(tmp_path: Path, late_rule: str) -> None:
+    root = _copy_policy_project(tmp_path)
+    path = root / ".dockerignore"
+    path.write_text(path.read_text(encoding="utf-8") + late_rule + "\n", encoding="utf-8")
+
+    with pytest.raises(SupplyChainPolicyError, match="Docker build context"):
+        POLICY_MODULE.validate_project(root, date(2026, 7, 26))
+
+
+def test_docker_context_rejects_cache_exclusions_before_source_allowlist(tmp_path: Path) -> None:
+    root = _copy_policy_project(tmp_path)
+    path = root / ".dockerignore"
+    rules = path.read_text(encoding="utf-8")
+    exclusions = "**/__pycache__\n**/*.pyc\n**/*.pyo\n"
+    assert exclusions in rules
+    path.write_text(rules.replace(exclusions, "").replace("!.dockerignore\n", exclusions + "!.dockerignore\n"), encoding="utf-8")
+
+    with pytest.raises(SupplyChainPolicyError, match="Docker build context"):
+        POLICY_MODULE.validate_project(root, date(2026, 7, 26))
 
 
 def test_disposable_drill_images_execute_by_reviewed_digest() -> None:

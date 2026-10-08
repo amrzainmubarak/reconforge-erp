@@ -65,6 +65,7 @@ _DOCKER_CONTEXT_ALLOWLIST = {
     "!reconforge/",
     "!reconforge/**",
 }
+_DOCKER_CONTEXT_CACHE_EXCLUSIONS = ("**/__pycache__", "**/*.pyc", "**/*.pyo")
 
 
 def _require_keys(value: object, expected: set[str], label: str) -> dict[str, Any]:
@@ -639,8 +640,16 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
         for line in _required_path(root, ".dockerignore").read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     ]
-    if not context_rules or context_rules[0] != "*" or set(context_rules[1:]) != _DOCKER_CONTEXT_ALLOWLIST:
-        raise SupplyChainPolicyError("Docker build context must match the closed deny-by-default allowlist")
+    if (
+        not context_rules
+        or context_rules[0] != "*"
+        or len(context_rules) != 1 + len(_DOCKER_CONTEXT_ALLOWLIST) + len(_DOCKER_CONTEXT_CACHE_EXCLUSIONS)
+        or set(context_rules[1:-3]) != _DOCKER_CONTEXT_ALLOWLIST
+        or tuple(context_rules[-3:]) != _DOCKER_CONTEXT_CACHE_EXCLUSIONS
+    ):
+        raise SupplyChainPolicyError(
+            "Docker build context must match the closed deny-by-default allowlist and final Python cache exclusions"
+        )
 
     service_images = docker_policy["service_images"]
     expected = {

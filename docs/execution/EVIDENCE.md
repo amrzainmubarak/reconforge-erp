@@ -1,5 +1,20 @@
 # ReconForge Execution Evidence Log
 
+- GFO-20261008 integrated local acceptance: runtime9bcbeb07 full4455pass/
+  492explicit prerequisites; live PG groups58/25/8 and repaired migration7 each
+  zero skips, restricted role/head0108. Normal-Studio HTTPS budget1 and
+  receipt/jobs2 pass;243web components plus affected keyboard5 pass. Native
+  populated restore matches186table hashes and complete object/RLS/ACL catalog,
+  verifies original/inverse and rejects direct immutable-link mutation23514.
+  Whole static/security/audits, package and hardened runtime container pass.
+  Current source563ad127 passes CI37733619873 all20jobs and Docker/Security/
+  CodeQL. Four genuine16.14/17.10 Writeback matrices pass with historical policy
+  provenance retained;50affected contracts pass/0skip. Hosted manual exact-image
+  Security37731225415 onaa81176d and independent root image pass0Critical/0High,
+  9Medium/1Negligible,zero exceptions; unchanged financial/Studio runtime. Initial failures
+  remain retained. [Boundaries and exact sources](GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.md)
+  · [Commands/report/log hashes](GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.json).
+
 - AUD-20261008 acceptance: Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
   Full-run source b8f5a772 is clean; live PostgreSQL17.10 reaches0106 with
   NOSUPERUSER/NOBYPASSRLS role and owned cleanup. Earlier focused records keep

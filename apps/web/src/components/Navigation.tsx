@@ -52,6 +52,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: "finance",
     items: [
       { key: "receivables", label: "receivables", icon: FileChartColumn, page: "receivables" },
+      { key: "budget-control", label: "budgetControl", icon: FileChartColumn, page: "budgetControl" },
       { key: "reconciliation", label: "reconciliation", icon: Activity, href: `${currentStudio}/reconciliation`, status: "foundation" },
       { key: "exceptions", label: "exceptions", icon: ShieldCheck, page: "exceptions", status: "foundation" },
       { key: "evidence", label: "evidence", icon: Archive, page: "evidence", status: "foundation" },
@@ -66,6 +67,7 @@ export const navigationGroups: NavigationGroup[] = [
     label: "operations",
     items: [
       { key: "inventory", label: "inventory", icon: Boxes, page: "inventory", status: "foundation" },
+      { key: "inventory-receipts", label: "inventoryReceipt", icon: Boxes, page: "inventoryReceipt" },
       { key: "manufacturing", label: "manufacturingCost", icon: Factory, page: "manufacturingCost", status: "foundation" },
     ],
   },
@@ -79,6 +81,7 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "live", label: "liveStudio", icon: RadioTower, page: "live", status: "foundation" },
       { key: "admin-audit", label: "adminAudit", icon: ShieldCheck, page: "adminAudit", status: "foundation" },
       { key: "notifications", label: "notifications", icon: Bell, page: "notifications", status: "foundation" },
+      { key: "jobs", label: "durableJobs", icon: Activity, page: "durableJobs" },
       { key: "settings", label: "settings", icon: Settings, status: "planned" },
       { key: "developer", label: "developer", icon: Code2, href: `${currentStudio}/docs`, status: "foundation" },
     ],
@@ -96,6 +99,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobileClose, activePage, onNavigate }: SidebarProps) {
+  const liveOperationalPage = ["receivables", "notifications", "budgetControl", "inventoryReceipt", "durableJobs", "exceptions"].includes(activePage);
   return (
     <aside className={`sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "sidebar--mobile-open" : ""}`}>
       <div className="brand-row">
@@ -115,8 +119,8 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         <summary className="workspace-switcher" aria-label={translate("workspaceDetails")}>
           <span className="workspace-avatar">FC</span>
           <span className="workspace-copy">
-            <strong>{translate(activePage === "notifications" ? "notifications" : activePage === "receivables" ? "receivables" : "local")}</strong>
-            <small>{translate(activePage === "receivables" || activePage === "notifications" ? "arLiveSession" : "preview")}</small>
+            <strong>{translate(activePage === "notifications" ? "notifications" : activePage === "receivables" ? "receivables" : activePage === "budgetControl" ? "budgetControl" : activePage === "inventoryReceipt" ? "inventoryReceipt" : activePage === "durableJobs" ? "durableJobs" : "local")}</strong>
+            <small>{translate(liveOperationalPage ? "arLiveSession" : "preview")}</small>
           </span>
           <ChevronDown className="workspace-chevron" size={15} aria-hidden="true" />
         </summary>
@@ -182,8 +186,8 @@ export function Sidebar({ translate, collapsed, mobileOpen, onCollapse, onMobile
         <div className="local-state">
           <span className="status-dot" aria-hidden="true" />
           <span>
-            <strong>{translate(activePage === "receivables" || activePage === "notifications" ? "arLiveSession" : "readOnly")}</strong>
-            <small>{translate(activePage === "notifications" ? "notifications" : activePage === "receivables" ? "receivables" : "localNote")}</small>
+            <strong>{translate(liveOperationalPage ? "arLiveSession" : "readOnly")}</strong>
+            <small>{translate(activePage === "notifications" ? "notifications" : activePage === "receivables" ? "receivables" : activePage === "budgetControl" ? "budgetControl" : activePage === "inventoryReceipt" ? "inventoryReceipt" : activePage === "durableJobs" ? "durableJobs" : "localNote")}</small>
           </span>
         </div>
         <button className="collapse-button" type="button" onClick={onCollapse} aria-label={translate(collapsed ? "expandSidebar" : "collapseSidebar")}>

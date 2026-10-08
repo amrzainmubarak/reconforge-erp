@@ -21,6 +21,7 @@ from reconforge.infrastructure.postgres_security_center import (
     PostgresSecurityCenterError,
     PostgresSecurityCenterRepository,
 )
+from tests.postgres_seed_contract import CURRENT_TENANT_SEEDED_PERMISSIONS
 
 
 class _Cursor:
@@ -192,7 +193,7 @@ def test_live_security_center_http_is_tenant_scoped_redacted_and_human_only(tmp_
             "locked_users": 0,
             "active_users_without_roles": 0,
             "roles": 1,
-            "permissions": 1,
+            "permissions": len(CURRENT_TENANT_SEEDED_PERMISSIONS | {"security.center.read"}),
             "role_permission_bindings": 1,
         }
         assert payload["claim_boundary"] == "operational_snapshot_not_security_assurance"

@@ -14,7 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_receiver_idempotency_matrix.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-10-03.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-10-08.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py"
 RECEIVER_PATH = ROOT / "reconforge/connectors/writeback_receiver.py"
 POSTGRES_RECEIVER_PATH = ROOT / "reconforge/connectors/writeback_receiver_postgres.py"
@@ -31,9 +31,10 @@ def _report() -> dict[str, Any]:
     return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
 
 
-def test_retained_postgres_receiver_matrix_is_closed_digest_bound_and_source_bound() -> None:
+@pytest.mark.parametrize("report_date", ["2026-10-03", "2026-10-08"])
+def test_retained_postgres_receiver_matrix_is_closed_digest_bound_and_source_bound(report_date: str) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    report = _report()
+    report = json.loads((ROOT / f"docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_{report_date}.json").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator.check_schema(schema)
     jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(report)
 
@@ -48,7 +49,19 @@ def test_retained_postgres_receiver_matrix_is_closed_digest_bound_and_source_bou
     assert subject["receiver_source_sha256"] == _source_digest(RECEIVER_PATH)
     assert subject["postgres_receiver_source_sha256"] == _source_digest(POSTGRES_RECEIVER_PATH)
     assert subject["matrix_runner_source_sha256"] == _source_digest(RUNNER_PATH)
-    assert subject["supply_chain_policy_sha256"] == _source_digest(POLICY_PATH)
+    # Historical reports remain bound to their recorded policy subject.
+    if report_date == "2026-10-08":
+        policy_source = POLICY_PATH.read_text(encoding="utf-8")
+    else:
+        policy_source = subprocess.run(
+            ("git", "show", f"{subject['base_commit']}:docs/security/supply-chain-policy.v1.json"),
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    policy_digest = hashlib.sha256(policy_source.replace("\r\n", "\n").encode("utf-8")).hexdigest()
+    assert subject["supply_chain_policy_sha256"] == policy_digest
     sqlite_report = json.loads(SQLITE_REPORT_PATH.read_text(encoding="utf-8"))
     assert subject["sqlite_report_sha256"] == sqlite_report["report_digest"]
     subprocess.run(
@@ -85,6 +98,7 @@ def test_matrix_runtime_images_package_and_secret_boundaries_are_exact() -> None
         "include reconforge/connectors/writeback_receiver_postgres.py",
         "include .github/scripts/verify_postgres_writeback_receiver_idempotency_matrix.py",
         "include docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-08-22.json",
+        "include docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-10-08.json",
         "include docs/schemas/postgres_writeback_receiver_idempotency_matrix.schema.json",
         "include tests/test_connector_writeback_receiver_postgres.py",
         "include tests/test_postgres_writeback_receiver_idempotency_matrix.py",

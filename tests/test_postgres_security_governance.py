@@ -537,7 +537,8 @@ def test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated
             Exception,
             match=(
                 "(?:refusing to discard (?:governed retention policy|connector write-back intent evidence|"
-                "certification evidence bindings)|metrics downgrade refused: snapshots are retained)"
+                "certification evidence bindings)|metrics downgrade refused: snapshots are retained|"
+                "outbox fencing downgrade refused: (?:delivery evidence is retained|non-default generations are retained))"
             ),
         ):
             command.downgrade(Config(str(Path("alembic.ini").resolve())), "0051_access_policy_lifecycle")

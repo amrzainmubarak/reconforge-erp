@@ -14,7 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_recovery_compensation_matrix.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-03.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-08.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py"
 WRITEBACK_PATH = ROOT / "reconforge/connectors/writeback.py"
 POSTGRES_PATH = ROOT / "reconforge/infrastructure/postgres_writeback.py"
@@ -32,9 +32,10 @@ def _report() -> dict[str, Any]:
     return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
 
 
-def test_retained_recovery_compensation_report_is_schema_and_source_bound() -> None:
+@pytest.mark.parametrize("report_date", ["2026-10-03", "2026-10-08"])
+def test_retained_recovery_compensation_report_is_schema_and_source_bound(report_date: str) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    report = _report()
+    report = json.loads((ROOT / f"docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_{report_date}.json").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator.check_schema(schema)
     jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(report)
     payload = dict(report)
@@ -47,7 +48,19 @@ def test_retained_recovery_compensation_report_is_schema_and_source_bound() -> N
     assert subject["postgres_persistence_source_sha256"] == _source_digest(POSTGRES_PATH)
     assert subject["sqlite_persistence_source_sha256"] == _source_digest(SQLITE_PATH)
     assert subject["migration_source_sha256"] == _source_digest(MIGRATION_PATH)
-    assert subject["supply_chain_policy_sha256"] == _source_digest(POLICY_PATH)
+    # Historical reports remain bound to their recorded policy subject.
+    if report_date == "2026-10-08":
+        policy_source = POLICY_PATH.read_text(encoding="utf-8")
+    else:
+        policy_source = subprocess.run(
+            ("git", "show", f"{subject['base_commit']}:docs/security/supply-chain-policy.v1.json"),
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    policy_digest = hashlib.sha256(policy_source.replace("\r\n", "\n").encode("utf-8")).hexdigest()
+    assert subject["supply_chain_policy_sha256"] == policy_digest
     assert subject["matrix_runner_source_sha256"] == _source_digest(RUNNER_PATH)
     subprocess.run(
         ("git", "cat-file", "-e", f"{subject['base_commit']}^{{commit}}"),
@@ -85,6 +98,7 @@ def test_matrix_package_ci_and_secret_boundaries_are_closed() -> None:
     assert {
         "include .github/scripts/verify_postgres_writeback_recovery_compensation_matrix.py",
         "include docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-08-22.json",
+        "include docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-08.json",
         "include docs/schemas/postgres_writeback_recovery_compensation_matrix.schema.json",
         "include tests/test_postgres_writeback_recovery_compensation_matrix.py",
         "include docs/adr/0545-prove-writeback-recovery-compensation-parity.md",

@@ -2,6 +2,9 @@ import type { Locale } from "./types";
 
 export const messages = {
   en: {
+    budgetControl: "Budget control",
+    inventoryReceipt: "Inventory receipts",
+    durableJobs: "Durable jobs",
     receivables: "Receivables",
     arSignedOut: "Signed out",
     arLiveSession: "Live session",
@@ -588,6 +591,9 @@ export const messages = {
     adminError: "Administration data is unavailable. No synthetic fallback was used.",
   },
   ar: {
+    budgetControl: "رقابة الميزانيات",
+    inventoryReceipt: "استلام المخزون",
+    durableJobs: "الوظائف الدائمة",
     receivables: "الذمم المدينة",
     arSignedOut: "لم تسجّل الدخول",
     arLiveSession: "جلسة مباشرة",

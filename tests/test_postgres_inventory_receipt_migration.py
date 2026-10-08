@@ -6,7 +6,9 @@ import os
 import subprocess
 import sys
 from collections.abc import Iterator
+from hashlib import sha256
 from pathlib import Path
+from types import ModuleType
 from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
 
@@ -21,7 +23,8 @@ from tests.test_postgres_inventory_receipt_schema import committed, ordinary
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "alembic/versions/0100_postgres_inventory_receipt_posting.py"
-pytestmark = pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN"), reason="requires owned live PostgreSQL fixture")
+ADMISSION_MIGRATION = ROOT / "alembic/versions/0108_postgres_receipt_admission.py"
+FROZEN_UPGRADE_SHA256 = "d68dd6b0fb29ca8b6d9dd815db822ad20d9ad6ddbabe7a1326b5c527e4d6ec07"
 
 
 def migrate(dsn: str, action: str, target: str) -> subprocess.CompletedProcess[str]:
@@ -31,6 +34,10 @@ def migrate(dsn: str, action: str, target: str) -> subprocess.CompletedProcess[s
 
 @pytest.fixture
 def old_database() -> Iterator[tuple[str, str]]:
+    required = ("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", "RECONFORGE_TEST_POSTGRES_DSN")
+    missing = [name for name in required if not os.environ.get(name)]
+    if missing:
+        pytest.skip("requires owned live PostgreSQL fixture: " + ", ".join(missing))
     import psycopg
     from psycopg import sql
     database = "reconforge_irp_migration_" + uuid4().hex[:12]
@@ -58,14 +65,42 @@ def current_revision(admin) -> str:
     return admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
 
 
-def test_frozen_migration_matches_current_installer_bytes() -> None:
-    spec = importlib.util.spec_from_file_location("receipt_frozen_migration", MIGRATION)
+def migration_module(path: Path) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(path.stem, path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.UPGRADE_SQL == POSTGRES_INVENTORY_RECEIPT_POSTING_SCHEMA_SQL
+    return module
+
+
+def admission_function(statement: str) -> str:
+    header = "CREATE OR REPLACE FUNCTION reconforge.irp_admit(j JSONB) RETURNS VOID\n"
+    terminator = "END $irp$;\n"
+    assert statement.count(header) == 1
+    start = statement.index(header)
+    end = statement.index(terminator, start) + len(terminator)
+    return statement[start:end]
+
+
+def test_frozen_migration_preserves_historical_bytes() -> None:
+    module = migration_module(MIGRATION)
+    assert sha256(module.UPGRADE_SQL.encode("utf-8")).hexdigest() == FROZEN_UPGRADE_SHA256
     assert module.revision == "0100_pg_inventory_receipt"
     assert module.down_revision == "0099_pg_receivables_policy"
+
+
+def test_current_installer_changes_only_forward_migrated_admission() -> None:
+    historical = migration_module(MIGRATION)
+    forward = migration_module(ADMISSION_MIGRATION)
+    assert forward.revision == "0108_pg_receipt_admission"
+    assert forward.down_revision == "0107_pg_job_operations"
+    previous = admission_function(historical.UPGRADE_SQL)
+    current = admission_function(POSTGRES_INVENTORY_RECEIPT_POSTING_SCHEMA_SQL)
+    assert previous != current
+    assert admission_function(forward.PREVIOUS_ADMISSION_SQL) == previous
+    assert admission_function(forward.UPGRADE_SQL) == current
+    # Every byte outside the explicitly replaced function remains frozen.
+    assert historical.UPGRADE_SQL.replace(previous, current, 1) == POSTGRES_INVENTORY_RECEIPT_POSTING_SCHEMA_SQL
 
 
 def test_empty_upgrade_and_downgrade_preserve_original_finance_guard(old_database: tuple[str, str]) -> None:

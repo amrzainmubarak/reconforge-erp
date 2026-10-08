@@ -1,5 +1,32 @@
 # Execution State
 
+## Global operational capability sprint (2026-10-08; ADR0834)
+
+The user authorized three parallel implementation agents and reopened the
+previously deferred reviewed-receipt API/Studio scope. Integration starts from
+clean `6c194e7c` on `amr/global-platform-execution-20261008`; main remains
+`b61ea56b`. Existing engines are reused for live budget management, atomic
+inventory/GL receipt workflows and scoped durable-job control. Shared
+registration and acceptance have a single lead owner. The integrated capabilities
+passed local final gates:4455Python/492explicit prerequisites,243web components,
+zero-skip live PG and normal-Studio HTTPS workflows, and populated native restore.
+Full regression binds runtime9bcbeb07; application runtime/migrations/Studio
+remain byte-identical through563ad127. All20hosted CI jobs passed ond59bc4d0.
+ADR0840 refreshes pinned Python/Alpine and signed zlib without weakening policy;
+manual Security37731225415 passes onaa81176d with0Critical/0High,9Medium and
+1Negligible,zero active exceptions. The independently built root image also
+passes. Four genuine16.14/17.10 native Writeback matrices refresh current
+evidence while preserving October3 history;50affected contracts pass on563ad127.
+Its full CI37733619873 passes all20required jobs; Docker, Security and CodeQL
+also pass563ad127. The final documentation checkpoint changes no tested subject.
+Exact container acceptance stays separate from tested application runtime;
+no production release is approved here.
+Draft [PR124](https://github.com/amrzainmubarak/reconforge-erp/pull/124) is stacked
+on the baseline-refresh branch. [Acceptance, exact bindings and limits](GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.md).
+The receipt pause in historical checkpoints below was explicitly superseded by
+this user's new sprint; the separate cancellation-projection worktree remains
+outside the source. [Ownership and dependencies](GLOBAL_PLATFORM_SPRINT_2026-10-08.md).
+
 ## October8 hosted gate repair (2026-10-08)
 
 Draft [PR123](https://github.com/amrzainmubarak/reconforge-erp/pull/123) is stacked

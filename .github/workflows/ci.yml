@@ -484,6 +484,7 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
               ;;
             inventory-payables)
+              uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py -q
               uv run --no-sync pytest tests/test_api_server_inventory_core.py -q
               uv run --no-sync pytest tests/test_api_server_payables.py tests/test_postgres_payables_replay.py tests/test_postgres_exact_trade_primitives.py -q
               uv run --no-sync pytest tests/test_api_server_local_boundaries.py -q

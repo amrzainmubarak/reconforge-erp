@@ -2,7 +2,7 @@ id: budget-control
 name: Governed operational budget envelopes and immutable commitments
 version: 1.0.0
 maturity: experimental
-implementation_status: registered_backend_foundation
+implementation_status: registered_backend_and_live_studio
 owner: financial-integrity
 dependencies: [platform.core, platform.identity, platform.master-data, finance.currency-policy, platform.audit-outbox]
 incompatible_versions: [mutable-budget-balances, cached-authority-only-budget-replay]
@@ -32,10 +32,10 @@ api_routes:
   - POST /api/v1/budget-control/envelopes/{budget_id}/commitments
   - POST /api/v1/budget-control/envelopes/{budget_id}/commitments/{commitment_id}/events
 cli_commands: []
-ui_routes: []
+ui_routes: [/budget-control]
 import_schemas: []
 export_schemas: []
-synthetic_fixtures: [tests/test_budget_control.py, tests/test_api_budget_control.py, tests/test_postgres_budget_control.py, tests/test_postgres_budget_control_migration.py]
+synthetic_fixtures: [tests/test_budget_control.py, tests/test_api_budget_control.py, tests/test_postgres_budget_control.py, tests/test_postgres_budget_control_migration.py, tests/serve_budget_control_ui.py]
 threat_model:
   - stale-login-or-cached-role-authority-after-revocation
   - cross-tenant-workspace-organization-or-entity-budget-access
@@ -53,10 +53,14 @@ test_matrix:
   - tests/test_api_budget_control.py
   - tests/test_postgres_budget_control.py
   - tests/test_postgres_budget_control_migration.py
+  - apps/web/src/budget-control-data.test.ts
+  - apps/web/src/components/BudgetControlWorkspace.test.tsx
+  - apps/web/e2e/budget-control-live.acceptance.ts
 limitations:
   - no-purchase-order-payable-cash-bank-or-general-ledger-posting-integration
   - no-local-per-scope-grant-table; local-single-file-rbac-is-rechecked-and-the-requested-canonical-scope-is-bound
-  - no-standalone-ui
+  - studio-scope-selection-requires-canonical-organization-entity-and-period-identifiers
+  - browser-command-recovery-is-retained-in-mounted-session-only; closing-the-browser-requires-operator-ledger-review-before-a-new-command
   - no-postgresql-native-backup-restore-orchestration
   - postgresql-user-authority-and-step-up-are-enforced-by-the-trusted-server-application-boundary-not-by-shared-runtime-db-credentials
   - fixed-one-thousand-commitment-event-bound-per-envelope

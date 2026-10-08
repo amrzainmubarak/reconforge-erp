@@ -28,6 +28,10 @@ platform_services:
   - {file: payables_payment_link.py, service: PayablesPaymentLinkService, status: compatibility_adapter}
   - {file: receivables.py, service: ReceivablesService, status: compatibility_adapter}
 application_services:
+  - file: job_operations.py
+    service: JobOperationsService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.sqlite_jobs.SQLiteDurableJobRepository
   - file: consolidation.py
     service: ConsolidationApplicationService
     status: backend_neutral
@@ -244,4 +248,4 @@ summary:
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 21
-  backend_neutral_application: 51
+  backend_neutral_application: 52

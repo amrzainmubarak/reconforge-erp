@@ -1,0 +1,8 @@
+import type { BudgetDetail, BudgetEnvelope, BudgetScope } from "./budget-control-data";
+export const budgetScope: BudgetScope = { workspace_id: "work-a", organization_id: "org-a", legal_entity_id: "entity-a" };
+export const budgetSession = { tenantId: "tenant-a", csrfToken: "synthetic-csrf", expiresAt: "2029-01-01T00:00:00Z" };
+export const budgetIdentity = { id: "maker-a", permissions: ["budget_control.read", "budget_control.manage", "budget_control.approve"], principal_type: "user", step_up_active: true, authorized_scopes: { workspaces: [budgetScope.workspace_id], organizations: [budgetScope.organization_id], legal_entities: [budgetScope.legal_entity_id] } };
+export const budgetRecord: BudgetEnvelope = { ...budgetScope, id: "BUD-A", period_id: "period-a", budget_code: "OPS-A", name: "Synthetic operations", currency_code: "EGP", status: "Approved", created_by: "maker-a", submitted_by: "maker-a", approved_by: "checker-a", reason: "Independent review", created_at: "2026-10-08T01:00:00Z", updated_at: "2026-10-08T01:01:00Z", row_version: 3, limit_minor: "10000", reserved_minor: "0", consumed_minor: "0", available_minor: "10000", monetary_policy: { precision: 2, rounding_policy: "ROUND_HALF_UP", registry_version: "fixture-v1", registry_digest: "1".repeat(64) } };
+export const budgetDetail: BudgetDetail = { ...budgetRecord, events: [], events_has_more: false };
+export const budgetEvidence = { audit_event_id: "AUD-A", outbox_event_id: "OUT-A", request_digest: "2".repeat(64) };
+export const budgetResponse = (value: unknown, status = 200): Response => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });

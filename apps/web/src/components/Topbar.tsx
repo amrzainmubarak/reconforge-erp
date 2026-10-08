@@ -34,6 +34,9 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   adminAudit: "adminAudit",
   notifications: "notifications",
   receivables: "receivables",
+  budgetControl: "budgetControl",
+  inventoryReceipt: "inventoryReceipt",
+  durableJobs: "durableJobs",
 };
 
 interface TopbarProps {
@@ -71,7 +74,7 @@ export function Topbar({
         <Menu size={20} />
       </button>
       <div className="breadcrumbs" aria-label={translate("breadcrumb")}>
-        <span>{translate(activePage === "dashboard" ? "overview" : activePage === "inventory" || activePage === "manufacturingCost" ? "operations" : activePage === "mapping" || activePage === "rules" || activePage === "live" || activePage === "adminAudit" || activePage === "notifications" ? "platform" : "finance")}</span>
+        <span>{translate(activePage === "dashboard" ? "overview" : activePage === "inventory" || activePage === "manufacturingCost" || activePage === "inventoryReceipt" ? "operations" : activePage === "mapping" || activePage === "rules" || activePage === "live" || activePage === "adminAudit" || activePage === "notifications" || activePage === "durableJobs" ? "platform" : "finance")}</span>
         <span aria-hidden="true">/</span>
         <strong>{translate(pageLabels[activePage])}</strong>
       </div>

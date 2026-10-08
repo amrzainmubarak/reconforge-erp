@@ -39,7 +39,7 @@
   },
   "container_resolution": {
     "dockerfile": "Dockerfile",
-    "base_image": "python:3.12-alpine@sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31",
+    "base_image": "python:3.12.15-alpine3.24@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4",
     "dependency_command": "uv sync --locked --no-dev --no-editable --python 3.12 --link-mode copy",
     "service_images": {
       "airgap_python": "python:3.14.1-slim@sha256:b823ded4377ebb5ff1af5926702df2284e53cecbc6e3549e93a19d8632a1897e",
@@ -71,7 +71,7 @@
       "fail_severities": ["Critical", "High"],
       "unknown_severity_policy": "fail",
       "vex_document": "docs/security/container-runtime.openvex.json",
-      "vex_document_sha256": "fb8ddf9e58a3b28c861f1ab25fde9d975272bce0745912cbe2ec0712509e690e",
+      "vex_document_sha256": "dbaadf43e903aceb501b17a72bf67208d281a1c6a445d868ed865f1b7e3ea30e",
       "vex_context": "https://openvex.dev/ns/v0.2.0",
       "vex_allowed_statuses": ["fixed"],
       "vex_max_review_age_days": 30

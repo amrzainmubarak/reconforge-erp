@@ -176,7 +176,11 @@ def get_db(request: Request) -> Iterator[sqlite3.Connection]:
     """Open and close one SQLite connection per request."""
 
     try:
-        connection = connect(get_db_path(request), require_exists=True)
+        # FastAPI can enter, use and finalize a synchronous request dependency
+        # on different pool workers. The connection belongs to one request;
+        # dependency calls are sequential and concurrent requests get their own
+        # connection. Preserve strict affinity for ordinary DB callers.
+        connection = connect(get_db_path(request), require_exists=True, check_same_thread=False)
     except DatabaseError as exc:
         raise APIError(status_code=503, code="database_unavailable", message=str(exc)) from exc
     try:

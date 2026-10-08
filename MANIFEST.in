@@ -1277,3 +1277,6 @@ include docs/execution/HOSTED_GATES_REPAIR_2026-10-08.json
 include docs/execution/HTTP_FIXTURE_CLEANUP_2026-10-08.json
 include docs/execution/ACCEPTANCE_FINAL_2026-10-08.md
 include docs/execution/ACCEPTANCE_FINAL_2026-10-08.json
+include docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-08.json
+include docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-10-08.json
+include docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-08.json

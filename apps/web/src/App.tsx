@@ -26,6 +26,9 @@ const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) =>
 const AdminAudit = lazy(() => import("./components/AdminAudit").then((module) => ({ default: module.AdminAudit })));
 const NotificationInbox = lazy(() => import("./components/NotificationInbox").then((module) => ({ default: module.NotificationInbox })));
 const ReceivablesWorkspace = lazy(() => import("./components/ReceivablesWorkspace").then((module) => ({ default: module.ReceivablesWorkspace })));
+const BudgetControlWorkspace = lazy(() => import("./components/BudgetControlWorkspace").then((module) => ({ default: module.BudgetControlWorkspace })));
+const InventoryReceiptPosting = lazy(() => import("./components/InventoryReceiptPosting").then((module) => ({ default: module.InventoryReceiptPosting })));
+const JobOperationsWorkspace = lazy(() => import("./components/JobOperationsWorkspace").then((module) => ({ default: module.JobOperationsWorkspace })));
 
 function pageFromPath(pathname: string): StudioPage {
   const normalized = pathname.replace(/\/+$/, "");
@@ -43,6 +46,9 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/admin-audit")) return "adminAudit";
   if (normalized.endsWith("/notifications")) return "notifications";
   if (normalized.endsWith("/receivables")) return "receivables";
+  if (normalized.endsWith("/budget-control")) return "budgetControl";
+  if (normalized.endsWith("/inventory-receipts")) return "inventoryReceipt";
+  if (normalized.endsWith("/jobs")) return "durableJobs";
   return "dashboard";
 }
 
@@ -55,6 +61,9 @@ function pathForPage(page: StudioPage): string {
     professionalInvoicePayment: "professional-invoice-payment",
     individualCashflow: "individual-cashflow",
     adminAudit: "admin-audit",
+    budgetControl: "budget-control",
+    inventoryReceipt: "inventory-receipts",
+    durableJobs: "jobs",
   };
   return page === "dashboard" ? `${base}/` || "/" : `${base}/${routeNames[page] ?? page}`;
 }
@@ -76,6 +85,7 @@ function StudioApp() {
   const commandReturnFocus = useRef<HTMLElement | null>(null);
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [activePage, setActivePage] = useState<StudioPage>(() => pageFromPath(window.location.pathname));
+  const liveOperationalPage = ["receivables", "notifications", "budgetControl", "inventoryReceipt", "durableJobs", "exceptions"].includes(activePage);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -164,7 +174,7 @@ function StudioApp() {
           onMobileMenu={() => setMobileMenuOpen(true)}
           noticeCount={data?.notices.length ?? 0}
           activePage={activePage}
-          liveIdentity={activePage === "receivables" || activePage === "notifications" ? auth.username || t("arSignedOut") : undefined}
+          liveIdentity={liveOperationalPage ? auth.username || t("arSignedOut") : undefined}
         />
 
         {openPanel === "accessibility" ? (
@@ -178,9 +188,9 @@ function StudioApp() {
             onTheme={preferences.setTheme}
           />
         ) : null}
-        {openPanel === "notifications" && data && activePage !== "receivables" && activePage !== "notifications" ? <NoticesPanel notices={data.notices} translate={t} locale={preferences.locale} /> : null}
-        {openPanel === "quick" && activePage !== "receivables" && activePage !== "notifications" ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
-        {openPanel === "profile" && activePage !== "receivables" && activePage !== "notifications" ? <ProfilePanel translate={t} /> : null}
+        {openPanel === "notifications" && data && !liveOperationalPage ? <NoticesPanel notices={data.notices} translate={t} locale={preferences.locale} /> : null}
+        {openPanel === "quick" && !liveOperationalPage ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
+        {openPanel === "profile" && !liveOperationalPage ? <ProfilePanel translate={t} /> : null}
 
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}
@@ -230,6 +240,15 @@ function StudioApp() {
         ) : null}
         {activePage === "receivables" ? (
           <Suspense fallback={<LoadingView translate={t} />}><ReceivablesWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "budgetControl" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><BudgetControlWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "inventoryReceipt" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><InventoryReceiptPosting locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "durableJobs" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><JobOperationsWorkspace locale={preferences.locale} /></Suspense>
         ) : null}
       </div>
 

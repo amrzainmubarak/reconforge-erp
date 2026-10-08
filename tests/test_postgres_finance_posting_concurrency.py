@@ -164,6 +164,7 @@ def test_live_review_and_child_write_serialize(posting_database: dict[str, Any],
         assert preview["validation_digest"] == preview["current_content_digest"]
 
 
+@pytest.mark.parametrize("finance_database", ["0098_pg_finance_posting"], indirect=True)
 def test_live_posting_downgrade_preserves_legacy_and_refuses_new_provenance(posting_database: dict[str, Any]) -> None:
     import psycopg
 
@@ -248,6 +249,7 @@ def test_live_independent_review_cannot_race_period_close(posting_database: dict
 
 
 @pytest.mark.parametrize("column", ["validator_actor_id", "validation_contract_version", "reverses_posting_id"])
+@pytest.mark.parametrize("finance_database", ["0098_pg_finance_posting"], indirect=True)
 def test_live_downgrade_refuses_partial_operator_provenance(posting_database: dict[str, Any], column: str) -> None:
     """Simulate a partial out-of-band restore; downgrade must not erase it."""
     import psycopg

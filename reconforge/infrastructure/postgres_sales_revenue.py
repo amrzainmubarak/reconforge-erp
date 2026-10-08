@@ -693,6 +693,26 @@ class PostgresSalesRevenueRepository:
             identifier, "post_invoice", expected_version, reason, command_id, actor, "sales.manage", {}, change
         )
 
+    def _claim_receipt_name(self, document: dict[str, Any], number: str) -> None:
+        # Match native AR's customer -> namespace -> invoice locking order.
+        self.connection.execute(
+            "SELECT id FROM reconforge.ar_customers WHERE tenant_id=%s AND id=%s FOR NO KEY UPDATE",
+            (self.tenant_id, document["customer_id"]),
+        ).fetchone()
+        try:
+            self.connection.execute(
+                "SELECT reconforge.sales_receipt_name_claim(%s,%s,%s,'Sales',%s)",
+                (self.tenant_id, self.scope["workspace_id"], number, document["id"]),
+            )
+        except Exception as exc:
+            if getattr(exc, "sqlstate", None) == "23514" and getattr(
+                getattr(exc, "diag", None), "constraint_name", None
+            ) == "sales_revenue_owner_phase":
+                raise FinancePostingError(
+                    "sales_collection_conflict", "The receipt number already belongs to another native operation."
+                ) from exc
+            raise
+
     def prepare_collection(
         self,
         identifier: str,
@@ -708,12 +728,19 @@ class PostgresSalesRevenueRepository:
         cash_account_code: str,
     ) -> dict[str, Any]:
         payload = {
-            "receipt_number": text(receipt_number, "receipt number", maximum=64),
+            "receipt_number": text(receipt_number, "receipt number", maximum=64).upper(),
             "receipt_date": date.fromisoformat(receipt_date).isoformat(),
             "journal_code": text(journal_code, "journal code"),
             "period_id": text(period_id, "period"),
             "cash_account_code": text(cash_account_code, "cash account"),
         }
+        number = text(payload["receipt_number"], "canonical receipt number", maximum=64)
+        if not number.isascii() or not number[0].isalnum() or any(
+            not (character.isalnum() or character in "._-") for character in number
+        ):
+            raise FinancePostingError(
+                "sales_collection_invalid", "Sales receipt references require letters A-Z, digits, dot, underscore or hyphen."
+            )
 
         def change(document: dict[str, Any]) -> dict[str, Any]:
             self._status(document, "Invoiced")
@@ -723,6 +750,7 @@ class PostgresSalesRevenueRepository:
                     "sales_collection_conflict", "This cycle supports one full unpaid invoice settlement."
                 )
             parameters = _json(document["invoice_parameters"])
+            self._claim_receipt_name(document, payload["receipt_number"])
             plan = self.finance.prepare(
                 OperationalFinancePreparation(
                     **self.scope,
@@ -780,6 +808,7 @@ class PostgresSalesRevenueRepository:
                 actor, "receivables.manage", amount=int(document["total_minor"]), currency=document["currency_code"]
             )
             parameters, quotation = _json(document["collection_parameters"]), _json(document["quotation"])
+            self._claim_receipt_name(document, parameters["receipt_number"])
             plan = self.finance.get(document["collection_plan_id"], actor=actor)
             receipt = self.ar.post_receipt(
                 receipt_number=parameters["receipt_number"],

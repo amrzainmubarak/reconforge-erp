@@ -112,6 +112,54 @@ CREATE FUNCTION reconforge.sales_revenue_policy_matches(t TEXT,q JSONB,c TEXT,p 
  'source',s.snapshot_json::jsonb->>'source','source_url',s.snapshot_json::jsonb->>'source_url',
  'published_at',s.snapshot_json::jsonb->>'published_at'))
 $sales$;
+CREATE FUNCTION reconforge.sales_receipt_name_claim(t TEXT,w TEXT,n TEXT,k TEXT,o TEXT) RETURNS VOID
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
+DECLARE retained JSONB; expected JSONB:=jsonb_build_object('schema_version',1,'owner_kind',k,'owner_id',o);
+BEGIN
+ PERFORM pg_advisory_xact_lock(hashtextextended('sales_receipt_name_v1:'||jsonb_build_array(t,w,n)::text,0));
+ INSERT INTO reconforge.ar_idempotency_keys(tenant_id,workspace_id,scope,idempotency_key,response_json)
+ VALUES(t,w,'sales_receipt_name_v1:'||w,n,expected) ON CONFLICT(tenant_id,scope,idempotency_key) DO NOTHING;
+ SELECT response_json INTO retained FROM reconforge.ar_idempotency_keys
+ WHERE tenant_id=t AND workspace_id=w AND scope='sales_receipt_name_v1:'||w AND idempotency_key=n;
+ IF retained IS DISTINCT FROM expected THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Receipt name requires its exact existing namespace owner.';
+ END IF;
+END $sales$;
+CREATE FUNCTION reconforge.sales_receipt_name_protect() RETURNS trigger
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
+BEGIN
+ IF left(OLD.scope,length('sales_receipt_name_v1:'))='sales_receipt_name_v1:'
+ OR (TG_OP='UPDATE' AND left(NEW.scope,length('sales_receipt_name_v1:'))='sales_receipt_name_v1:') THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Retained native receipt namespace ownership is immutable.';
+ END IF;
+ RETURN CASE WHEN TG_OP='DELETE' THEN OLD ELSE NEW END;
+END $sales$;
+CREATE TRIGGER sales_receipt_name_immutable BEFORE UPDATE OR DELETE ON reconforge.ar_idempotency_keys
+ FOR EACH ROW EXECUTE FUNCTION reconforge.sales_receipt_name_protect();
+CREATE FUNCTION reconforge.sales_receipt_name_admit() RETURNS trigger
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
+DECLARE retained JSONB; d RECORD;
+BEGIN
+ IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('sales_receipt_name_v1:'||jsonb_build_array(NEW.tenant_id,NEW.workspace_id,NEW.receipt_number)::text,0));
+ SELECT response_json INTO retained FROM reconforge.ar_idempotency_keys WHERE tenant_id=NEW.tenant_id
+ AND workspace_id=NEW.workspace_id AND scope='sales_receipt_name_v1:'||NEW.workspace_id AND idempotency_key=NEW.receipt_number;
+ IF retained->>'owner_kind'='Sales' THEN
+  SELECT * INTO d FROM reconforge.sales_revenue_documents WHERE tenant_id=NEW.tenant_id AND id=retained->>'owner_id';
+  IF d IS NULL OR d.status NOT IN ('CollectionReviewed','Paid')
+  OR d.collection_parameters->>'receipt_number' IS DISTINCT FROM NEW.receipt_number
+  OR (d.workspace_id,d.organization_id,d.legal_entity_id,d.customer_id,d.currency_code,d.total_minor)
+  IS DISTINCT FROM (NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id,NEW.customer_id,NEW.currency_code,NEW.amount_minor)
+  OR (d.status='Paid' AND d.receipt_id IS DISTINCT FROM NEW.id) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Reserved receipt name requires its coordinated Sales collection.';
+  END IF;
+ ELSE
+  PERFORM reconforge.sales_receipt_name_claim(NEW.tenant_id,NEW.workspace_id,NEW.receipt_number,'ARReceipt',NEW.id);
+ END IF;
+ RETURN NEW;
+END $sales$;
+CREATE TRIGGER sales_receipt_name_admission BEFORE INSERT OR UPDATE ON reconforge.ar_receipts
+ FOR EACH ROW EXECUTE FUNCTION reconforge.sales_receipt_name_admit();
 CREATE FUNCTION reconforge.sales_revenue_admit() RETURNS trigger
  LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
 DECLARE q JSONB; l JSONB; aggregate NUMERIC:=0; unit NUMERIC; value NUMERIC; customer RECORD; a TEXT:=current_setting('app.sales_actor_id',true); p TEXT;
@@ -123,6 +171,13 @@ BEGIN
   END IF;
   IF NEW.status='Approved' AND (NEW.approved_by IS DISTINCT FROM a OR a=NEW.created_by) THEN
    RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Sales quotation requires its distinct actual checker.';
+  END IF;
+  IF NEW.status='CollectionPrepared' THEN
+   IF NEW.collection_parameters->>'receipt_number' IS NULL
+   OR NEW.collection_parameters->>'receipt_number' !~ '^[A-Z0-9][A-Z0-9._-]{0,63}$' THEN
+    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Sales collection requires its canonical replayable receipt reference.';
+   END IF;
+   PERFORM reconforge.sales_receipt_name_claim(NEW.tenant_id,NEW.workspace_id,NEW.collection_parameters->>'receipt_number','Sales',NEW.id);
   END IF;
   q:=NEW.quotation;
   PERFORM reconforge.irp_bounded(q);
@@ -249,6 +304,15 @@ BEGIN
   END IF;
  END IF;
  IF d.collection_plan_id IS NOT NULL THEN
+  IF d.collection_parameters->>'receipt_number' IS NULL
+  OR d.collection_parameters->>'receipt_number' !~ '^[A-Z0-9][A-Z0-9._-]{0,63}$'
+  OR NOT EXISTS(SELECT 1 FROM reconforge.ar_idempotency_keys k WHERE k.tenant_id=d.tenant_id AND k.workspace_id=d.workspace_id
+   AND k.scope='sales_receipt_name_v1:'||d.workspace_id AND k.idempotency_key=d.collection_parameters->>'receipt_number'
+   AND k.response_json=jsonb_build_object('schema_version',1,'owner_kind','Sales','owner_id',d.id))
+  OR (d.status<>'Paid' AND EXISTS(SELECT 1 FROM reconforge.ar_receipts r WHERE r.tenant_id=d.tenant_id
+   AND r.workspace_id=d.workspace_id AND r.receipt_number=d.collection_parameters->>'receipt_number')) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Collection capture requires its unoccupied immutable receipt name.';
+  END IF;
   SELECT * INTO plan FROM reconforge.operational_finance_plans WHERE tenant_id=d.tenant_id AND id=d.collection_plan_id;
   IF plan IS NULL OR (plan.workspace_id,plan.organization_id,plan.legal_entity_id,plan.source_kind,plan.source_id,plan.currency_code,plan.amount_minor)
   IS DISTINCT FROM (d.workspace_id,d.organization_id,d.legal_entity_id,'ARReceipt'::text,d.invoice_id,d.currency_code,d.total_minor)
@@ -266,6 +330,7 @@ BEGIN
  IF d.status='Paid' THEN
   SELECT * INTO receipt FROM reconforge.ar_receipts WHERE tenant_id=d.tenant_id AND id=d.receipt_id;
   IF receipt IS NULL OR receipt.status<>'Posted' OR invoice.status<>'Paid'
+  OR receipt.receipt_number IS DISTINCT FROM d.collection_parameters->>'receipt_number'
   OR (receipt.workspace_id,receipt.organization_id,receipt.legal_entity_id,receipt.customer_id,receipt.currency_code,receipt.amount_minor)
   IS DISTINCT FROM (d.workspace_id,d.organization_id,d.legal_entity_id,d.customer_id,d.currency_code,d.total_minor)
   OR NOT reconforge.sales_revenue_policy_matches(d.tenant_id,d.quotation->'monetary_policy',receipt.currency_code,
@@ -279,6 +344,48 @@ BEGIN
   END IF;
  END IF;
  RETURN;
+END $sales$;
+CREATE FUNCTION reconforge.sales_receipt_name_close(t TEXT,w TEXT,n TEXT) RETURNS VOID
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
+DECLARE retained JSONB; d RECORD; r RECORD;
+BEGIN
+ SELECT response_json INTO retained FROM reconforge.ar_idempotency_keys WHERE tenant_id=t AND workspace_id=w
+ AND scope='sales_receipt_name_v1:'||w AND idempotency_key=n;
+ IF retained->>'owner_kind'='Sales' THEN
+  SELECT * INTO d FROM reconforge.sales_revenue_documents WHERE tenant_id=t AND id=retained->>'owner_id';
+  IF d IS NULL OR d.workspace_id IS DISTINCT FROM w OR d.collection_parameters->>'receipt_number' IS DISTINCT FROM n
+  OR d.status NOT IN ('CollectionPrepared','CollectionReviewed','Paid')
+  OR retained IS DISTINCT FROM jsonb_build_object('schema_version',1,'owner_kind','Sales','owner_id',d.id) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Receipt reservation lacks its exact retained Sales capture.';
+  END IF;
+  PERFORM reconforge.sales_revenue_close_document(t,d.id);
+ ELSIF retained->>'owner_kind'='ARReceipt' THEN
+  SELECT * INTO r FROM reconforge.ar_receipts WHERE tenant_id=t AND id=retained->>'owner_id';
+  IF r IS NULL OR r.workspace_id IS DISTINCT FROM w OR r.receipt_number IS DISTINCT FROM n
+  OR retained IS DISTINCT FROM jsonb_build_object('schema_version',1,'owner_kind','ARReceipt','owner_id',r.id) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Receipt namespace lacks its exact immutable native owner.';
+  END IF;
+ ELSE
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Receipt namespace has no valid retained owner.';
+ END IF;
+END $sales$;
+CREATE FUNCTION reconforge.sales_receipt_name_close_trigger() RETURNS trigger
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
+DECLARE changed JSONB; previous JSONB; current_row JSONB;
+BEGIN
+ IF TG_OP<>'INSERT' THEN previous:=to_jsonb(OLD); END IF;
+ IF TG_OP<>'DELETE' THEN current_row:=to_jsonb(NEW); END IF;
+ FOR changed IN SELECT previous WHERE previous IS NOT NULL UNION SELECT current_row WHERE current_row IS NOT NULL LOOP
+  IF TG_TABLE_NAME='ar_receipts' THEN
+   PERFORM reconforge.sales_receipt_name_close(changed->>'tenant_id',changed->>'workspace_id',changed->>'receipt_number');
+  ELSIF left(changed->>'scope',length('sales_receipt_name_v1:'))='sales_receipt_name_v1:' THEN
+   IF changed->>'scope' IS DISTINCT FROM 'sales_receipt_name_v1:'||(changed->>'workspace_id') THEN
+    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Receipt namespace workspace differs from its exact key.';
+   END IF;
+   PERFORM reconforge.sales_receipt_name_close(changed->>'tenant_id',changed->>'workspace_id',changed->>'idempotency_key');
+  END IF;
+ END LOOP;
+ RETURN NULL;
 END $sales$;
 CREATE FUNCTION reconforge.sales_revenue_close() RETURNS trigger
  LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
@@ -386,6 +493,56 @@ CREATE TRIGGER sales_revenue_permission_role AFTER INSERT ON reconforge.identity
  FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_seed_permissions();
 """
 
+POSTGRES_SALES_RECEIPT_NAMESPACE_BACKFILL_SQL = r"""
+INSERT INTO reconforge.ar_idempotency_keys(tenant_id,workspace_id,scope,idempotency_key,response_json,created_at)
+ SELECT d.tenant_id,d.workspace_id,'sales_receipt_name_v1:'||d.workspace_id,d.collection_parameters->>'receipt_number',
+ jsonb_build_object('schema_version',1,'owner_kind','Sales','owner_id',d.id),c.created_at
+ FROM reconforge.sales_revenue_documents d JOIN reconforge.sales_revenue_commands c
+ ON c.tenant_id=d.tenant_id AND c.document_id=d.id AND c.operation='prepare_collection'
+ WHERE d.status IN ('CollectionPrepared','CollectionReviewed','Paid')
+ ON CONFLICT(tenant_id,scope,idempotency_key) DO NOTHING;
+INSERT INTO reconforge.ar_idempotency_keys(tenant_id,workspace_id,scope,idempotency_key,response_json,created_at)
+ SELECT r.tenant_id,r.workspace_id,'sales_receipt_name_v1:'||r.workspace_id,r.receipt_number,
+ jsonb_build_object('schema_version',1,'owner_kind','ARReceipt','owner_id',r.id),r.created_at FROM reconforge.ar_receipts r
+ WHERE NOT EXISTS(SELECT 1 FROM reconforge.sales_revenue_documents d WHERE d.tenant_id=r.tenant_id AND d.receipt_id=r.id)
+ ON CONFLICT(tenant_id,scope,idempotency_key) DO NOTHING;
+DO $sales$ DECLARE k RECORD; d RECORD; r RECORD; setting_name TEXT; settings JSONB;
+BEGIN
+ settings:=jsonb_build_object('app.tenant_id',current_setting('app.tenant_id',true),
+ 'app.workspace_id',current_setting('app.workspace_id',true),'app.organization_id',current_setting('app.organization_id',true),
+ 'app.legal_entity_id',current_setting('app.legal_entity_id',true),'app.entity_id',current_setting('app.entity_id',true));
+ FOREACH setting_name IN ARRAY ARRAY['app.workspace_id','app.organization_id','app.legal_entity_id','app.entity_id'] LOOP
+  PERFORM set_config(setting_name,'',true);
+ END LOOP;
+ FOR d IN SELECT * FROM reconforge.sales_revenue_documents WHERE status IN ('CollectionPrepared','CollectionReviewed','Paid') LOOP
+  PERFORM set_config('app.tenant_id',d.tenant_id,true);
+  PERFORM reconforge.sales_receipt_name_close(d.tenant_id,d.workspace_id,d.collection_parameters->>'receipt_number');
+ END LOOP;
+ FOR r IN SELECT * FROM reconforge.ar_receipts LOOP
+  PERFORM set_config('app.tenant_id',r.tenant_id,true);
+  PERFORM reconforge.sales_receipt_name_close(r.tenant_id,r.workspace_id,r.receipt_number);
+ END LOOP;
+ FOR k IN SELECT * FROM reconforge.ar_idempotency_keys WHERE left(scope,length('sales_receipt_name_v1:'))='sales_receipt_name_v1:' LOOP
+  IF k.scope IS DISTINCT FROM 'sales_receipt_name_v1:'||k.workspace_id THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Existing receipt namespace has incompatible workspace attribution.';
+  END IF;
+  PERFORM set_config('app.tenant_id',k.tenant_id,true);
+  PERFORM reconforge.sales_receipt_name_close(k.tenant_id,k.workspace_id,k.idempotency_key);
+ END LOOP;
+ FOR setting_name IN SELECT jsonb_object_keys(settings) LOOP
+  PERFORM set_config(setting_name,COALESCE(settings->>setting_name,''),true);
+ END LOOP;
+END $sales$;
+"""
+
+POSTGRES_SALES_REVENUE_SCHEMA_SQL += POSTGRES_SALES_RECEIPT_NAMESPACE_BACKFILL_SQL
+POSTGRES_SALES_REVENUE_SCHEMA_SQL += r"""
+CREATE CONSTRAINT TRIGGER sales_receipt_name_source_closure AFTER INSERT OR UPDATE OR DELETE ON reconforge.ar_receipts
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.sales_receipt_name_close_trigger();
+CREATE CONSTRAINT TRIGGER sales_receipt_name_key_closure AFTER INSERT OR UPDATE OR DELETE ON reconforge.ar_idempotency_keys
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.sales_receipt_name_close_trigger();
+"""
+
 POSTGRES_SALES_REVENUE_DOWNGRADE_SQL = r"""
 DO $sales$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.sales_revenue_documents)
@@ -397,6 +554,16 @@ DROP TRIGGER sales_revenue_permission_tenant ON reconforge.tenants;
 DROP TRIGGER sales_revenue_permission_role ON reconforge.identity_roles;
 DROP TRIGGER sales_invoice_policy_closure ON reconforge.ar_invoices;
 DROP TRIGGER sales_receipt_policy_closure ON reconforge.ar_receipts;
+DROP TRIGGER sales_receipt_name_source_closure ON reconforge.ar_receipts;
+DROP TRIGGER sales_receipt_name_admission ON reconforge.ar_receipts;
+DROP TRIGGER sales_receipt_name_key_closure ON reconforge.ar_idempotency_keys;
+DROP TRIGGER sales_receipt_name_immutable ON reconforge.ar_idempotency_keys;
+DELETE FROM reconforge.ar_idempotency_keys WHERE left(scope,length('sales_receipt_name_v1:'))='sales_receipt_name_v1:';
+DROP FUNCTION reconforge.sales_receipt_name_close_trigger();
+DROP FUNCTION reconforge.sales_receipt_name_close(TEXT,TEXT,TEXT);
+DROP FUNCTION reconforge.sales_receipt_name_admit();
+DROP FUNCTION reconforge.sales_receipt_name_protect();
+DROP FUNCTION reconforge.sales_receipt_name_claim(TEXT,TEXT,TEXT,TEXT,TEXT);
 DO $sales$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['operational_finance_plans','operational_finance_reviews','operational_finance_links',
  'operational_finance_commands','ar_invoices','ar_receipts','ar_receipt_allocations'] LOOP

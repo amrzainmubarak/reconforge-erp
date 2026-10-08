@@ -23,6 +23,8 @@ domain_invariants:
   - one-immutable-command-and-audit-event-per-version
   - exact-sales-owner-finance-and-native-ar-phase-at-outer-commit
   - reverse-finance-and-ar-mutations-cannot-detach-or-consume-owned-sources
+  - immutable-tenant-workspace-receipt-name-reservation-before-financial-capture
+  - canonical-ascii-receipt-reference-replayable-after-uppercase-with-maximum-64-characters
 domain_events: [sales.create, sales.submit, sales.approve, sales.order, sales.fulfill, sales.prepare_invoice, sales.review_invoice, sales.post_invoice, sales.prepare_collection, sales.review_collection, sales.post_collection, sales.cancel]
 api_routes: [/api/v1/sales-revenue/documents, /api/v1/sales-revenue/quotations, "/api/v1/sales-revenue/documents/{identifier}"]
 cli_commands: []
@@ -39,5 +41,6 @@ limitations:
   - completed-services-with-one-to-sixteen-lines
   - functional-currency-zero-tax-no-jurisdictional-tax-calculation
   - one-invoice-and-one-full-unallocated-settlement-per-order
+  - new-sales-receipt-references-use-canonical-ascii-alphanumeric-dot-underscore-hyphen-maximum-64
   - no-stock-delivery-fifo-cogs-returns-credit-notes-or-refunds
   - no-independent-production-or-banking-readiness-claim

@@ -112,7 +112,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert ar_api in groups["receivables"]
     recovery = "uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q"
     assert recovery in groups["receivables"]
-    receipt = "uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py -q"
+    receipt = "uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_procurement_operations.py -q"
     assert receipt in groups["inventory-payables"]
     assert "verify_redis_live.py" in "\n".join(groups["native"])
 

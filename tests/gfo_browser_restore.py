@@ -12,6 +12,7 @@ import psycopg
 from psycopg import sql
 
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings, PostgresTenantBoundary
+from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REVISIONS
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 
 FINANCIAL_TABLES = (
@@ -32,7 +33,7 @@ def digest(value: object) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
 
 
-def database_snapshot(dsn: str) -> dict[str, Any]:
+def database_snapshot(dsn: str, *, financial_tables: tuple[str, ...] = FINANCIAL_TABLES) -> dict[str, Any]:
     """Hash canonical rows and PostgreSQL object definitions without exporting data."""
     with psycopg.connect(dsn) as connection:
         tables = [row[0] for row in connection.execute(
@@ -101,8 +102,8 @@ def database_snapshot(dsn: str) -> dict[str, Any]:
         head = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
         protected = connection.execute(
             "SELECT c.relname,c.relrowsecurity,c.relforcerowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
-            "WHERE n.nspname='reconforge' AND c.relname=ANY(%s) ORDER BY c.relname", (list(FINANCIAL_TABLES),)).fetchall()
-        require(len(protected) == len(FINANCIAL_TABLES), "Native restore invariant failed.")
+            "WHERE n.nspname='reconforge' AND c.relname=ANY(%s) ORDER BY c.relname", (list(financial_tables),)).fetchall()
+        require(len(protected) == len(financial_tables), "Native restore invariant failed.")
         require(all(row[1] and row[2] for row in protected), "Native restore invariant failed.")
         return {"tables": data, "objects": objects, "head": head, "forced_rls_financial_tables": len(protected)}
 
@@ -122,7 +123,7 @@ def verify_native_browser_restore(runtime: ReceiptRuntime, container: str,
     database = "gfo_browser_restore_" + uuid4().hex[:12]
     source_effects = verified_effects(runtime)
     before = database_snapshot(runtime.admin_dsn)
-    require(before["head"] == "0108_pg_receipt_admission", "Native restore invariant failed.")
+    require(before["head"] == POSTGRES_MIGRATION_REVISIONS[-1], "Native restore invariant failed.")
     dump = subprocess.run(["docker", "exec", container, "pg_dump", "--username=postgres", "--dbname=postgres", "--format=custom"],
                           capture_output=True, check=True, timeout=120)  # nosec B603 B607
     require(dump.stdout.startswith(b"PGDMP"), "Native restore invariant failed.")

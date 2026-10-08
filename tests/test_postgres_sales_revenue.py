@@ -523,8 +523,8 @@ def test_customer_registry_migration_cannot_reinterpret_reviewed_quote_or_leave_
         )
         admin.execute("ALTER TABLE reconforge.ar_customers ENABLE TRIGGER ar_customers_currency_policy_guard")
         admin.execute(
-            "UPDATE reconforge.currency_registry_bindings SET registry_digest=%s WHERE tenant_id=%s AND workspace_id='work'",
-            (changed.digest, sales_runtime.tenant),
+            "INSERT INTO reconforge.currency_registry_bindings(tenant_id,workspace_id,registry_version,registry_digest,bound_by) VALUES(%s,'work',%s,%s,'synthetic-policy-migration') ON CONFLICT(tenant_id,workspace_id) DO UPDATE SET registry_version=excluded.registry_version,registry_digest=excluded.registry_digest",
+            (sales_runtime.tenant, changed.registry_version, changed.digest),
         )
     with sales_runtime.actor("maker") as (connection, _, actor):
         with pytest.raises(FinancePostingError) as error:

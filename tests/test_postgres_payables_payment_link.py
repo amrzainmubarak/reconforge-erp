@@ -319,6 +319,19 @@ def payment_link_database(finance_database: dict[str, Any]) -> dict[str, Any]:
                 "reconforge.ap_payment_link_reversal_commands TO {}"
             ).format(identifier)
         )
+        # Native AP mutations run the additive Procurement ownership lookup.
+        # Historical profiles without that table keep their existing privileges.
+        if admin.execute("SELECT to_regclass('reconforge.procurement_cycles')").fetchone()[0] is not None:
+            admin.execute(
+                psycopg.sql.SQL("GRANT SELECT ON reconforge.procurement_cycles TO {}").format(identifier)
+            )
+            assert admin.execute(
+                "SELECT has_table_privilege(%s,'reconforge.procurement_cycles','SELECT'),"
+                "has_table_privilege(%s,'reconforge.procurement_cycles','INSERT'),"
+                "has_table_privilege(%s,'reconforge.procurement_cycles','UPDATE'),"
+                "has_table_privilege(%s,'reconforge.procurement_cycles','DELETE')",
+                (role,) * 4,
+            ).fetchone() == (True, False, False, False)
         for actor in (MAKER, CHECKER, POSTER, SETTLER, REVERSER):
             admin.execute(
                 """INSERT INTO reconforge.identity_users

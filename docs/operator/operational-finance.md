@@ -46,3 +46,13 @@ Manual entry has no operational owner. Grant this read dependency to the existin
 runtime role before resuming writes; it does not require INSERT, UPDATE, DELETE,
 table ownership, BYPASSRLS or SECURITY DEFINER execution. Preserve and verify this
 ACL during native backup/restore along with the existing Finance grants.
+
+After installing migration 0111, existing runtime roles that write native AP
+purchase orders, receiving, supplier invoices, matching or payment links also
+need `SELECT` on `reconforge.procurement_cycles`. The additive AP integrity
+trigger checks that forced-RLS ownership index for each native mutation,
+including payments outside a Procurement cycle. Grant only this read dependency
+to a legacy AP runtime role; this dependency does not require INSERT, UPDATE,
+DELETE, table ownership, BYPASSRLS or SECURITY DEFINER execution. Verify that the
+runtime role can read the index and cannot mutate it, and retain its ACL in
+backup/restore. Profiles before migration 0111 have no such table or dependency.

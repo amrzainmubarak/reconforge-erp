@@ -13153,3 +13153,10 @@ Keep the whole-suite832ceeee and fixture98e3b0a3 identities separate. Fresh host
 CI at the final head remains pending; historical parity and Finance downgrade
 fixtures and identity projections remain unaccepted. ACCEPTANCE_FINAL_2026-10-08.json
 retains the exact logs, fixture hashes and remaining scope.
+# D-GFO-20261008 — Operational composition and parallel ownership
+
+ADR0834 reuses retained budget, inventory/GL and durable-job engines through
+governed operational APIs and real Studio workflows. The new user request
+authorizes receipt API/UI completion. Three isolated implementation branches
+have exclusive leaf ownership; the lead owns central integration and final
+gates. Main and unrelated cancellation-projection work remain separate.

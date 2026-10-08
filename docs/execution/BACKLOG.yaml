@@ -9,6 +9,42 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-GFO-007
+    priority: P1
+    area: platform-core
+    title: Operate governed budgets and commitments from authenticated Studio
+    status: in_progress
+    depends_on: [AMR-GFO-003]
+    exit_evidence: >-
+      Persisted create submit independent approval reserve release consume flow,
+      current scope and exact units, stable command retries, API/component/browser gates.
+  - id: AMR-GFO-008
+    priority: P0
+    area: finance-operations
+    title: Integrate independently reviewed inventory receipts and atomic GL effects
+    status: in_progress
+    depends_on: [AUD-20261008-006]
+    exit_evidence: >-
+      Scoped authenticated API and live Studio compose existing reviewed receipt engine;
+      receipt reversal replay isolation concurrency and SQLite/PostgreSQL evidence.
+  - id: AMR-GFO-009
+    priority: P0
+    area: enterprise-quality
+    title: Govern scoped durable job inspection cancellation and recovery
+    status: in_progress
+    depends_on: [AMR-GFO-004]
+    exit_evidence: >-
+      Least-privileged human command authority current persisted scope/version,
+      bounded redacted reads immutable transitions retry races and migration parity.
+  - id: AMR-GFO-010
+    priority: P0
+    area: sprint-integration
+    title: Accept composed operational capabilities at aggregate verification gates
+    status: in_progress
+    depends_on: [AMR-GFO-007, AMR-GFO-008, AMR-GFO-009]
+    exit_evidence: >-
+      Exact source full Python nonowner PostgreSQL migration restore security recovery
+      concurrency performance web build browser and hosted CI results with retained gaps.
   - id: AUD-20261008-001
     priority: P0
     area: baseline

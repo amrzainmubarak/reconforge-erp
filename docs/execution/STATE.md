@@ -1,5 +1,16 @@
 # Execution State
 
+## Global operational capability sprint (2026-10-08; ADR0834)
+
+The user authorized three parallel implementation agents and reopened the
+previously deferred reviewed-receipt API/Studio scope. Integration starts from
+clean `6c194e7c` on `amr/global-platform-execution-20261008`; main remains
+`b61ea56b`. Existing engines are reused for live budget management, atomic
+inventory/GL receipt workflows and scoped durable-job control. Shared
+registration and acceptance have a single lead owner. Implementation and
+final aggregate gates are in progress; earlier baseline results do not accept
+this later source. [Ownership and dependencies](GLOBAL_PLATFORM_SPRINT_2026-10-08.md).
+
 ## October8 hosted gate repair (2026-10-08)
 
 Draft [PR123](https://github.com/amrzainmubarak/reconforge-erp/pull/123) is stacked

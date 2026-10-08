@@ -1298,8 +1298,10 @@ include tests/gfo_browser_runtime.py
 include tests/gfo_receipt_browser_seed.py
 include tests/test_operational_finance.py
 include tests/test_postgres_operational_finance.py
+include tests/test_postgres_operational_finance_api.py
 include tests/test_sales_revenue.py
 include tests/test_postgres_sales_revenue.py
+include tests/test_postgres_sales_owner_closure.py
 include tests/test_procurement_operations.py
 include tests/test_postgres_procurement_operations.py
 

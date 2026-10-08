@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, NoReturn
 from uuid import uuid4
 
 from reconforge.auth.policy import evaluate_principal_access
@@ -33,7 +33,7 @@ from reconforge.platform.common import current_server_principal
 from reconforge.utils.time import utc_now_text
 
 
-def _fail(message: str, code: str = "operational_source_invalid") -> None:
+def _fail(message: str, code: str = "operational_source_invalid") -> NoReturn:
     raise FinancePostingError(code, message)
 
 

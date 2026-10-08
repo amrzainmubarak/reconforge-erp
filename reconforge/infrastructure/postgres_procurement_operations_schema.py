@@ -64,7 +64,9 @@ CREATE FUNCTION reconforge.procurement_immutable_command() RETURNS trigger LANGU
 BEGIN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement command evidence is append-only.'; END $$;
 CREATE TRIGGER procurement_commands_immutable BEFORE UPDATE OR DELETE ON reconforge.procurement_commands FOR EACH ROW EXECUTE FUNCTION reconforge.procurement_immutable_command();
 CREATE FUNCTION reconforge.procurement_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-DECLARE p RECORD; l RECORD; r RECORD; g RECORD; i RECORD; qty NUMERIC; a RECORD; q RECORD; ap_account TEXT; cash_account TEXT;
+DECLARE p reconforge.ap_purchase_orders%ROWTYPE;l reconforge.ap_purchase_order_lines%ROWTYPE;
+ r reconforge.inventory_receipt_plans%ROWTYPE;g reconforge.ap_goods_receipts%ROWTYPE;i reconforge.ap_supplier_invoices%ROWTYPE;
+ qty NUMERIC;a reconforge.operational_finance_plans%ROWTYPE;q reconforge.operational_finance_plans%ROWTYPE;ap_account TEXT;cash_account TEXT;
 BEGIN
  IF TG_OP='DELETE' THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement source history is retained.'; END IF;
  IF TG_OP='UPDATE' AND (NEW.tenant_id,NEW.id,NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id,NEW.number,NEW.request_json,NEW.total_minor,NEW.purchase_order_id,NEW.creator_actor_id,NEW.created_at)
@@ -170,7 +172,9 @@ _verification = UPGRADE_SQL.split(" SELECT * INTO p FROM", 1)[1].split(" RETURN 
 UPGRADE_SQL += r"""
 CREATE FUNCTION reconforge.procurement_verify_cycle(c reconforge.procurement_cycles) RETURNS VOID
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-DECLARE p RECORD;l RECORD;r RECORD;g RECORD;i RECORD;qty NUMERIC;a RECORD;q RECORD;ap_account TEXT;cash_account TEXT;
+DECLARE p reconforge.ap_purchase_orders%ROWTYPE;l reconforge.ap_purchase_order_lines%ROWTYPE;
+ r reconforge.inventory_receipt_plans%ROWTYPE;g reconforge.ap_goods_receipts%ROWTYPE;i reconforge.ap_supplier_invoices%ROWTYPE;
+ qty NUMERIC;a reconforge.operational_finance_plans%ROWTYPE;q reconforge.operational_finance_plans%ROWTYPE;ap_account TEXT;cash_account TEXT;
 BEGIN SELECT * INTO p FROM""" + _verification.replace("NEW.", "c.") + r""" RETURN; END $$;
 CREATE FUNCTION reconforge.procurement_source_closure() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$

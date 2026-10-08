@@ -1,0 +1,21 @@
+.budget-control-workspace, .budget-control-workspace * { box-sizing: border-box; }
+.budget-control-workspace { display: grid; gap: 1rem; max-width: 1080px; width: 100%; min-width: 0; margin: auto; padding: 1.5rem; }
+.budget-control-workspace h1, .budget-control-workspace h2, .budget-control-workspace h3 { margin: 0 0 .5rem; }
+.budget-control-workspace form, .budget-control-workspace section, .budget-control-workspace aside { border: 1px solid var(--border, #cbd5e1); border-radius: .75rem; padding: 1rem; min-width: 0; }
+.budget-control-workspace fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: .75rem; border: 0; padding: 0; }
+.budget-control-workspace fieldset > p, .budget-control-workspace legend { grid-column: 1 / -1; }
+.budget-control-workspace label { display: grid; gap: .35rem; margin: .5rem 0; }
+.budget-control-workspace input, .budget-control-workspace select { min-width: 0; width: 100%; padding: .65rem; border: 1px solid #64748b; border-radius: .35rem; background: var(--surface, #fff); color: var(--text, #172033); }
+.budget-control-workspace button { padding: .65rem .9rem; margin: .25rem; border: 1px solid #64748b; border-radius: .35rem; background: var(--surface, #fff); color: var(--text, #172033); min-height: 44px; }
+.budget-control-workspace button:disabled { opacity: .55; cursor: default; }
+.budget-control-workspace :focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.budget-control-workspace [role=alert] { border-inline-start: 4px solid #b91c1c; padding: .75rem; background: #fff1f2; color: #881337; }
+.budget-control-toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.budget-control-list, .budget-control-history { display: grid; gap: .75rem; padding-inline-start: 1.5rem; }
+.budget-control-list li { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
+.budget-control-history li { border-block-end: 1px solid #cbd5e1; padding-block-end: 1rem; }
+.budget-control-workspace dl { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 3fr); gap: .4rem; }
+.budget-control-workspace dd { margin: 0; overflow-wrap: anywhere; }
+.budget-control-workspace code { overflow-wrap: anywhere; font-size: .85em; }
+.budget-control-balances > div { display: contents; }
+@media (max-width: 600px) { .budget-control-workspace { padding: .75rem; } .budget-control-workspace dl { grid-template-columns: 1fr; } .budget-control-workspace dd { margin-block-end: .5rem; } }

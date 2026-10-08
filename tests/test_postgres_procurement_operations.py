@@ -106,12 +106,14 @@ def test_options_are_named_json_serializable_scoped_and_bounded(procurement_runt
 
 def test_options_exclude_accounts_without_reviewed_manual_posting_authority(procurement_runtime: ReceiptRuntime) -> None:
     runtime = procurement_runtime
-    with runtime.actor("maker") as (connection, _, actor):
+    # Workspace financial masters require broader authority than an entity-selected read.
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work", organization_id="org") as connection:
         finance = PostgresFinanceCoreRepository(connection, runtime.tenant)
         finance.upsert_account(account_code="BLOCKED", name="Synthetic blocked manual account", account_type="Liability",
             normal_balance="Credit", chart_code="DEFAULT", workspace="work", allow_manual_posting=False)
         finance.upsert_account(account_code="INACTIVE", name="Synthetic inactive account", account_type="Asset",
             chart_code="DEFAULT", workspace="work", active=False)
+    with runtime.actor("maker") as (connection, _, actor):
         value = PostgresProcurementOperationsRepository(connection, runtime.tenant).options("work", "ORG", "ENTITY", actor=actor)
         codes = {row["code"] for row in value["accounts"]}
         assert {"BLOCKED", "INACTIVE"}.isdisjoint(codes) and {"AP", "CASH"} <= codes

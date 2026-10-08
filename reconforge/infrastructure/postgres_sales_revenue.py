@@ -773,6 +773,7 @@ class PostgresSalesRevenueRepository:
                 actor, "receivables.manage", amount=int(document["total_minor"]), currency=document["currency_code"]
             )
             parameters, quotation = _json(document["collection_parameters"]), _json(document["quotation"])
+            plan = self.finance.get(document["collection_plan_id"], actor=actor)
             receipt = self.ar.post_receipt(
                 receipt_number=parameters["receipt_number"],
                 customer_code=quotation["customer_code"],
@@ -789,7 +790,6 @@ class PostgresSalesRevenueRepository:
                 actor_label=actor.username,
             )
             require_sales_monetary_affinity(quotation["monetary_policy"], receipt["monetary_policy"])
-            plan = self.finance.get(document["collection_plan_id"], actor=actor)
             self.finance.post(
                 plan["id"],
                 expected_plan_digest=plan["plan_digest"],

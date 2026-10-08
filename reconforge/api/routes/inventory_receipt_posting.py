@@ -143,7 +143,7 @@ def _execute(request: Request, user: LocalUser, permissions: frozenset[str], ope
     _authority(request, permissions)
     def invoke(repository: Any, scope: FinanceCoreExecutionScope) -> dict[str, Any]:
         try:
-            service = InventoryReceiptPostingApplicationService(PostgresInventoryReceiptPostingRepository(repository.connection, scope.tenant_id))
+            service = InventoryReceiptPostingApplicationService(PostgresInventoryReceiptPostingRepository(repository.connection, scope.tenant_id, strict_command_actor=True))
             view = operation(service, actor, scope)
             _authority(request, permissions, view["plan"], audit=False)
             return {"receipt": project_receipt_view(view)}

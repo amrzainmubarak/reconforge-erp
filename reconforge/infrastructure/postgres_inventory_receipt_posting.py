@@ -54,9 +54,10 @@ from reconforge.utils.time import utc_now_text
 class PostgresInventoryReceiptPostingRepository:
     """Own each complete command; internal participants cannot finalize the transaction."""
 
-    def __init__(self, connection: Any, tenant_id: str) -> None:
+    def __init__(self, connection: Any, tenant_id: str, *, strict_command_actor: bool = False) -> None:
         self.connection = connection
         self.tenant_id = validate_tenant_id(tenant_id)
+        self.strict_command_actor = strict_command_actor
         self._active = False
         self._rollback_only = False
         self.inventory = PostgresInventoryCoreRepository(connection, tenant_id)
@@ -178,6 +179,10 @@ class PostgresInventoryReceiptPostingRepository:
         row = rows[0]
         if row["request_digest"] != digest or any(row[k] != scope[k] for k in ("workspace_id", "organization_id", "legal_entity_id")):
             fail("Receipt command already binds different content.", "inventory_receipt_command_conflict")
+        if self.strict_command_actor:
+            principal = current_server_principal()
+            if principal is None or row["actor_user_id"] != principal.user.id:
+                fail("Receipt command belongs to another authenticated human.", "inventory_receipt_command_actor_denied")
         return digest, self._json(row["result_json"])
 
     def _remember(self, plan: ReceiptPlan, operation: str, command_id: str, digest: str,

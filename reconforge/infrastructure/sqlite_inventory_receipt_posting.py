@@ -64,10 +64,12 @@ def _insert(connection: sqlite3.Connection, table: str, values: Mapping[str, Any
 
 class SQLiteInventoryReceiptPostingRepository:
     def __init__(
-        self, connection: sqlite3.Connection, *, unit_of_work: SQLiteInventoryUnitOfWork | None = None
+        self, connection: sqlite3.Connection, *, unit_of_work: SQLiteInventoryUnitOfWork | None = None,
+        strict_command_actor: bool = False
     ) -> None:
         self.connection = connection
         self.unit_of_work = unit_of_work
+        self.strict_command_actor = strict_command_actor
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if not tables >= _SOURCE_TABLES:
             _fail(
@@ -313,6 +315,10 @@ class SQLiteInventoryReceiptPostingRepository:
             or row["request_digest"] != digest
         ):
             _fail("Command identity was already used for different content.", "inventory_receipt_command_conflict")
+        if self.strict_command_actor:
+            principal = current_server_principal()
+            if principal is None or row["actor_user_id"] != principal.user.id:
+                _fail("Receipt command belongs to another authenticated human.", "inventory_receipt_command_actor_denied")
         plan = self._plan(row["plan_id"])
         expected: Mapping[str, Any]
         if operation in {"prepare_receipt", "prepare_reversal"}:

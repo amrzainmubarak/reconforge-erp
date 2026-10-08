@@ -1,7 +1,9 @@
 """Password-authenticated HTTPS receipt/FIFO/GL commands over the real restricted role."""
 import json
+import os
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
@@ -10,6 +12,7 @@ from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuth
 from tests.test_postgres_inventory_receipt_posting import receipt_database, receipt_runtime
 
 __all__ = ["receipt_database", "receipt_runtime"]
+pytestmark = pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN"), reason="requires owned live PostgreSQL fixture")
 
 def test_live_http_review_commit_recovery_full_inverse_and_denials(receipt_runtime, tmp_path: Path):
     import psycopg
@@ -23,15 +26,16 @@ def test_live_http_review_commit_recovery_full_inverse_and_denials(receipt_runti
     scope = {"X-ReconForge-Tenant": runtime.tenant, "X-ReconForge-Workspace": "work", "X-ReconForge-Organization": "org", "X-ReconForge-Legal-Entity": "entity"}
     with TestClient(app, base_url="https://testserver") as client:
         identities = {}
-        for name in ("maker", "checker"):
+        for name in ("maker", "checker", "poster"):
             response = client.post("/api/v1/auth/login", headers=scope, json={"username": name, "password": runtime.password})
             assert response.status_code == 200, response.text
             identities[name] = {**scope, "Authorization": "Bearer " + response.json()["access_token"]}
         maker, checker = identities["maker"], identities["checker"]
+        poster = identities["poster"]
         body = dict(command_id="http-prepare", receipt_number="HTTP-REC", posting_date="2026-10-03", period_id="period", item_code="ITEM", location_code="MAIN/STOCK", quantity="10", total_value_minor="12000", policy_code="FIFO", organization_code="ORG", entity_code="ENTITY", workspace="work", reason="Actual exact stock source")
         endpoint = "/api/v1/inventory-receipt-posting/plans"
         assert client.post(endpoint, headers=maker, json=body).status_code == 403
-        for headers in (maker, checker):
+        for headers in (maker, checker, poster):
             assert client.post("/api/v1/auth/step-up", headers=headers, json={"password": runtime.password}).status_code == 200
         prepared = client.post(endpoint, headers=maker, json=body)
         assert prepared.status_code == 200, prepared.text
@@ -44,6 +48,8 @@ def test_live_http_review_commit_recovery_full_inverse_and_denials(receipt_runti
         reviewed = client.post(uri + "/review", headers=checker, json=review_body)
         assert reviewed.status_code == 200, reviewed.text
         review = reviewed.json()["receipt"]
+        assert client.post(uri + "/review", headers=poster, json=review_body).status_code == 403
+        assert client.post(uri + "/review", headers=checker, json=review_body).json() == reviewed.json()
         commit_body = {"command_id": "http-commit", "expected_review_digest": review["review_digest"], "reason": "Complete reviewed stock and GL"}
         posted = client.post(uri + "/commit", headers=checker, json=commit_body)
         assert posted.status_code == 200, posted.text
@@ -51,6 +57,9 @@ def test_live_http_review_commit_recovery_full_inverse_and_denials(receipt_runti
         assert effect["status"] == "Committed"
         assert json.loads(effect["effect_json"])["finance_effect"]["snapshot"]["lines"][0]["debit_minor"] == 12000
         assert client.post(uri + "/commit", headers=checker, json=commit_body).json() == posted.json()
+        assert client.post(uri + "/commit", headers=poster, json=commit_body).status_code == 403
+        assert client.post(endpoint, headers=poster, json=body).status_code == 403
+        assert client.get(uri, headers=poster).json() == posted.json()
         assert client.post(uri + "/commit", headers=checker, json={**commit_body, "reason": "Changed retry"}).status_code == 409
         # Preparation recovery is authoritative even after another human completed the source.
         assert client.post(endpoint, headers=maker, json=body).json() == posted.json()

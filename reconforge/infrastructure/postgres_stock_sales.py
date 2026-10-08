@@ -436,7 +436,7 @@ class PostgresStockSalesRepository:
                 ORDER BY warehouse_code COLLATE "C" LIMIT 100""", (self.tenant_id, self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"])).fetchall()]
             options["locations"] = [dict(row) for row in self.connection.execute("""SELECT w.warehouse_code,l.location_code,l.name
                 FROM reconforge.inventory_locations l JOIN reconforge.inventory_warehouses w ON w.tenant_id=l.tenant_id AND w.id=l.warehouse_id
-                WHERE l.tenant_id=%s AND l.workspace_id=%s AND w.organization_id=%s AND w.legal_entity_id=%s AND w.active AND l.active AND NOT l.allow_negative
+                WHERE l.tenant_id=%s AND w.workspace_id=%s AND w.organization_id=%s AND w.legal_entity_id=%s AND w.active AND l.active AND NOT l.allow_negative
                 ORDER BY w.warehouse_code COLLATE "C",l.location_code COLLATE "C" LIMIT 200""", (self.tenant_id, self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"])).fetchall()]
             options["policies"] = [dict(row) for row in self.connection.execute("""SELECT p.policy_code,p.policy_code name,j.journal_code
                 FROM reconforge.inventory_valuation_policies p JOIN reconforge.finance_journals j ON j.tenant_id=p.tenant_id AND j.id=p.finance_journal_id

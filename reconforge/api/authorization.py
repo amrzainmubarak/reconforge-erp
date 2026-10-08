@@ -47,6 +47,21 @@ _IDENTITY_MUTATION_ALLOWLIST = frozenset(
 # a broader or merely adjacent capability while still looking "protected".
 # The route inventory validates this contract at application construction time.
 _CRITICAL_ROUTE_CONTRACTS: dict[tuple[str, str], tuple[str, tuple[str, ...]]] = {
+    ("POST", "/api/v1/ops/durable-jobs/{job_id}/cancel"): ("all", ("jobs.manage",)),
+    ("POST", "/api/v1/ops/durable-jobs/{job_id}/requeue"): ("all", ("jobs.manage",)),
+    ("POST", "/api/v1/inventory-receipt-posting/plans"): (
+        "all", ("finance_core.manage", "finance_core.read", "inventory.manage", "inventory.read", "inventory.valuation.manage")
+    ),
+    ("POST", "/api/v1/inventory-receipt-posting/plans/{plan_id}/review"): (
+        "all", ("finance_core.read", "finance_core.validate", "inventory.post", "inventory.read", "inventory.valuation.approve")
+    ),
+    ("POST", "/api/v1/inventory-receipt-posting/plans/{plan_id}/commit"): (
+        "all", ("finance_core.post", "finance_core.read", "inventory.post", "inventory.read", "inventory.valuation.approve")
+    ),
+    ("POST", "/api/v1/inventory-receipt-posting/plans/{plan_id}/reversal"): (
+        "all", ("finance_core.manage", "finance_core.read", "finance_core.reverse", "inventory.manage", "inventory.read",
+                "inventory.valuation.manage", "inventory.valuation.reverse.manage")
+    ),
     ("POST", "/api/v1/accounts/reconciliations"): ("all", ("accounts.prepare",)),
     ("POST", "/api/v1/accounts/reconciliations/{reconciliation_id}/prepare"): ("all", ("accounts.prepare",)),
     ("POST", "/api/v1/accounts/reconciliations/{reconciliation_id}/submit"): ("all", ("accounts.prepare",)),

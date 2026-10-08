@@ -52,6 +52,7 @@ from reconforge.api.routes import (
     consolidation_ownership,
     consolidation_ownership_change,
     consolidation_ppa,
+    durable_job_operations,
     emergency_access,
     evidence,
     exceptions,
@@ -62,6 +63,7 @@ from reconforge.api.routes import (
     individual_cashflow,
     inventory_core,
     inventory_planning,
+    inventory_receipt_posting,
     inventory_valuation,
     inventory_valuation_reversal,
     manufacturing_cost_control,
@@ -409,6 +411,7 @@ def create_api_app(
     app.include_router(notification_inbox.router, prefix="/api/v1")
     app.include_router(budget_control.router, prefix="/api/v1")
     app.include_router(operations.router, prefix="/api/v1")
+    app.include_router(durable_job_operations.router, prefix="/api/v1")
     app.include_router(payables.router, prefix="/api/v1")
     app.include_router(receivables.router, prefix="/api/v1")
     app.include_router(master_data.router, prefix="/api/v1")
@@ -416,6 +419,7 @@ def create_api_app(
     app.include_router(finance_posting.router, prefix="/api/v1")
     app.include_router(inventory_core.router, prefix="/api/v1")
     app.include_router(inventory_planning.router, prefix="/api/v1")
+    app.include_router(inventory_receipt_posting.router, prefix="/api/v1")
     app.include_router(inventory_valuation.router, prefix="/api/v1")
     app.include_router(inventory_valuation_reversal.router, prefix="/api/v1")
     app.include_router(scim.router)
@@ -459,6 +463,7 @@ def create_api_app(
         notification_inbox.router,
         budget_control.router,
         operations.router,
+        durable_job_operations.router,
         payables.router,
         receivables.router,
         master_data.router,
@@ -466,6 +471,7 @@ def create_api_app(
         finance_posting.router,
         inventory_core.router,
         inventory_planning.router,
+        inventory_receipt_posting.router,
         inventory_valuation.router,
         inventory_valuation_reversal.router,
     )

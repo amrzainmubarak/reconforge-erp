@@ -13,7 +13,9 @@ Main retained: `b61ea56bb9c135fda12546e173795af3c243e4fb`.
 
 No new financial storage engine is introduced. Enterprise owns additive
 SQLite migration 56 / PostgreSQL revision 0107 for job-management permission
-and bounded inspection indexes. Platform and Finance reuse existing schemas.
+and bounded inspection indexes. Finance adds forward revision 0108 to align
+receipt admission with the existing Stock/Consumable domain and serialize the
+first monetary-policy binding against receipt capture; no new posting engine.
 
 Dependencies: canonical identity/scope → existing financial/job engines →
 authenticated operational APIs → real Studio workflows → integrated gates.

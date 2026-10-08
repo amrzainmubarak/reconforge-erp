@@ -5,7 +5,6 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
-from reconforge.api.routes.inventory_receipt_posting import router
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from tests.test_postgres_inventory_receipt_posting import receipt_database, receipt_runtime
@@ -21,7 +20,6 @@ def test_live_http_review_commit_recovery_full_inverse_and_denials(receipt_runti
             for kind, identifier in (("workspace", "work"), ("organization", "org"), ("legal_entity", "entity")):
                 grants.grant(tenant_id=runtime.tenant, grant_id=f"{username}-{identifier}", principal_type="user", principal_id=username, scope_type=kind, scope_id=identifier, actor_id=username)
     app = create_api_app(tmp_path / "unused.db", tenant_db_root=tmp_path / "tenants", postgres_dsn=runtime.factory.settings.dsn, postgres_require_tls=False, secure_transport=True)
-    app.include_router(router, prefix="/api/v1")
     scope = {"X-ReconForge-Tenant": runtime.tenant, "X-ReconForge-Workspace": "work", "X-ReconForge-Organization": "org", "X-ReconForge-Legal-Entity": "entity"}
     with TestClient(app, base_url="https://testserver") as client:
         identities = {}

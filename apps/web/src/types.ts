@@ -480,7 +480,7 @@ export interface IndividualCashflowStudioContract {
   notices: string[];
 }
 
-export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "professionalInvoicePayment" | "individualCashflow" | "mapping" | "rules" | "live" | "adminAudit" | "notifications" | "receivables";
+export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "professionalInvoicePayment" | "individualCashflow" | "mapping" | "rules" | "live" | "adminAudit" | "notifications" | "receivables" | "budgetControl" | "inventoryReceipt" | "durableJobs";
 
 export interface StudioOverview {
   schema_version: 1;

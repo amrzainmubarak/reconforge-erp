@@ -17,6 +17,7 @@ from reconforge.db.migration_54_payables_payment_link import SQLITE_PAYABLES_PAY
 from reconforge.db.migration_55_payables_payment_link_reversal import (
     SQLITE_PAYABLES_PAYMENT_LINK_REVERSAL_SQL,
 )
+from reconforge.db.migration_56_job_operations import SQLITE_JOB_OPERATIONS_UPGRADE_SQL
 from reconforge.db.schema import (
     ACCOUNT_RECONCILIATION_MONEY_MIGRATION_SQL,
     API_SESSIONS_SCHEMA_SQL,
@@ -181,6 +182,7 @@ MIGRATIONS = [
         name="payables_finance_payment_link_reversal",
         sql=SQLITE_PAYABLES_PAYMENT_LINK_REVERSAL_SQL,
     ),
+    Migration(version=56, name="governed_durable_job_operations", sql=SQLITE_JOB_OPERATIONS_UPGRADE_SQL),
 ]
 
 _MIGRATION_TABLE_SQL = """
@@ -260,7 +262,7 @@ def run_migrations(db_path: Path | str, *, target_version: int | None = None) ->
                                        name=migration.name, applied_at=_utc_now())
                 applied_now.append(migration.version)
                 continue
-            if migration.version in {51, 52, 54}:
+            if migration.version in {51, 52, 54, 56}:
                 _atomic_schema_upgrade(
                     connection,
                     schema_sql=migration.sql,

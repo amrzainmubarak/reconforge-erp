@@ -250,9 +250,9 @@ def test_service_quote_discount_fulfillment_invoice_collection_and_exact_double_
             ).fetchone()["n"]
             == 2
         )
-        assert connection.execute(
-            "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user"
-        ).fetchone() == {"rolsuper": False, "rolbypassrls": False}
+        assert dict(
+            connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
+        ) == {"rolsuper": False, "rolbypassrls": False}
 
 
 def test_lost_ack_replays_frozen_same_actor_once_and_changed_command_rejected(sales_runtime: ReceiptRuntime) -> None:
@@ -405,6 +405,11 @@ def test_raw_foreign_entity_hides_headers_commands_events_and_refuses_insert(sal
 
     document = create_fulfilled_sale(sales_runtime)
     with sales_runtime.actor("maker") as (connection, _, actor):
+        native_quotation = connection.execute(
+            "SELECT quotation FROM reconforge.sales_revenue_documents WHERE tenant_id=%s AND id=%s",
+            (sales_runtime.tenant, document["id"]),
+        ).fetchone()["quotation"]
+        connection.execute("SELECT set_config('app.sales_actor_id',%s,true)", (actor.user_id,))
         connection.execute("SELECT set_config('app.legal_entity_id','foreign',true)")
         for table in ("sales_revenue_documents", "sales_revenue_commands", "sales_revenue_events"):
             assert (
@@ -413,7 +418,7 @@ def test_raw_foreign_entity_hides_headers_commands_events_and_refuses_insert(sal
                 ).fetchone()["n"]
                 == 0
             )
-        with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
+        with pytest.raises(psycopg.errors.CheckViolation, match="customer and hierarchy"), connection.transaction():
             connection.execute(
                 """INSERT INTO reconforge.sales_revenue_documents
                 (tenant_id,id,workspace_id,organization_id,legal_entity_id,customer_id,number,quotation,quotation_digest,currency_code,total_minor,created_by)
@@ -422,7 +427,7 @@ def test_raw_foreign_entity_hides_headers_commands_events_and_refuses_insert(sal
                     sales_runtime.tenant,
                     document["customer_id"],
                     document["number"],
-                    __import__("json").dumps(document["quotation"]),
+                    __import__("json").dumps(native_quotation),
                     document["quotation_digest"],
                     actor.user_id,
                 ),
@@ -441,7 +446,7 @@ def test_raw_publication_without_posted_effect_is_refused(sales_runtime: Receipt
                 "UPDATE reconforge.sales_revenue_documents SET status='Invoiced',row_version=row_version+1 WHERE tenant_id=%s AND id=%s",
                 (sales_runtime.tenant, document["id"]),
             )
-            connection.execute("SET CONSTRAINTS sales_revenue_source_closure IMMEDIATE")
+            connection.execute("SET CONSTRAINTS reconforge.sales_revenue_source_closure IMMEDIATE")
         assert repository(connection, sales_runtime).get(document["id"], actor=actor)["status"] == "InvoiceReviewed"
         assert (
             connection.execute(

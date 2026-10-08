@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from reconforge.domain.finance_posting import FinancePostingError, digest_payload
-from reconforge.domain.sales_revenue import SalesLine, SalesQuotation
+from reconforge.domain.sales_revenue import SalesLine, SalesQuotation, require_sales_monetary_affinity
 
 
 def test_exact_discount_quantity_and_context_independent_large_amount() -> None:
@@ -16,6 +16,22 @@ def test_exact_discount_quantity_and_context_independent_large_amount() -> None:
     assert line["unit_price_minor"] == 7_881_299_347_898_369
     assert line["line_total_minor"] == 23_643_898_043_695_107
     assert line["discount_basis_points"] == 1250
+
+
+@pytest.mark.parametrize("field,value", [
+    ("precision", 3), ("precision", True), ("rounding_policy", "ROUND_DOWN"),
+    ("registry_version", "changed"), ("registry_digest", "0" * 64),
+    ("status", "unverified"), ("source", "changed source"),
+])
+def test_reviewed_quote_policy_requires_exact_native_interpretation(field: str, value: object) -> None:
+    from reconforge.domain.receivables_policy import verify_receivables_policy
+    from tests.test_receivables_monetary_policy import SNAPSHOT, record
+
+    policy = verify_receivables_policy(record(), snapshot=SNAPSHOT).public_metadata()
+    require_sales_monetary_affinity(policy, dict(policy))
+    with pytest.raises(FinancePostingError) as error:
+        require_sales_monetary_affinity(policy, {**policy, field: value})
+    assert error.value.code == "sales_monetary_policy_changed"
 
 
 @pytest.mark.parametrize("quantity", ["NaN", "Infinity", "-1", "0", "1e3", "", "0.0000000000000000000000000000001"])

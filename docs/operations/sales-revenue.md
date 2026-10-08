@@ -14,4 +14,6 @@ Use the retained command after any lost response or 5xx. Its actor, selected sco
 
 Every version retains one immutable command, event and audit reference. PostgreSQL guards verify quotation pricing/digest, selected scope, source ancestry, review and final native AR/GL closure. Direct history mutations and incomplete stage publication fail. A populated downgrade refuses to discard these sources. Before upgrading, preserve a verified backup; rollback a populated deployment through its reviewed restore procedure.
 
+The reviewed quotation, native invoice and collection receipt preserve the same captured currency, precision, rounding policy, registry version/digest and publication provenance. A later registry or customer policy migration cannot reinterpret quoted minor units: invoice preparation fails atomically before publishing an AR or GL plan. Native PostgreSQL source hooks also reject a linked monetary interpretation that differs from the quotation. A policy change requires a new reviewed quotation.
+
 Stock delivery, cost-of-sales, service credits, refunds, partial collection, taxes and foreign-currency settlement require separate completed workflows. Their absence is shown in the interface and manifest. The module remains experimental pending the integrated native/API/browser/restore gates.

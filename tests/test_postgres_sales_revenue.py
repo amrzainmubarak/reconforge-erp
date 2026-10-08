@@ -483,6 +483,99 @@ def test_raw_quotation_pricing_cannot_be_rehashed_to_fabricate_value(sales_runti
             )
 
 
+def test_customer_registry_migration_cannot_reinterpret_reviewed_quote_or_leave_invoice_effects(
+    sales_runtime: ReceiptRuntime,
+) -> None:
+    import json
+
+    import psycopg
+
+    from reconforge.utils.money import CurrencyRegistryContext
+
+    document = create_fulfilled_sale(sales_runtime)
+    quoted = document["quotation"]["monetary_policy"]
+    with sales_runtime.actor("maker") as (connection, _, _actor):
+        snapshot = dict(connection.execute(
+            "SELECT snapshot_json FROM reconforge.currency_registry_snapshots WHERE tenant_id=%s AND registry_digest=%s",
+            (sales_runtime.tenant, quoted["registry_digest"]),
+        ).fetchone()["snapshot_json"])
+    snapshot["source"] = "Synthetic independently retained replacement source"
+    snapshot.pop("digest", None)
+    context = CurrencyRegistryContext.from_snapshot(snapshot)
+    changed = context.registry_manifest
+    # Ordinary AR mutation forbids rewriting captured policy. This explicit
+    # administrator migration fixture retains a valid replacement snapshot;
+    # the sales owner must still refuse to reinterpret an earlier quotation.
+    with psycopg.connect(sales_runtime.admin_dsn) as admin:
+        admin.execute(
+            "INSERT INTO reconforge.currency_registry_snapshots(tenant_id,registry_digest,registry_version,snapshot_json,captured_by) VALUES(%s,%s,%s,%s::jsonb,'synthetic-policy-migration')",
+            (sales_runtime.tenant, changed.digest, changed.registry_version, json.dumps(context.snapshot())),
+        )
+        with pytest.raises(psycopg.errors.RaiseException, match="immutable"), admin.transaction():
+            admin.execute(
+                "UPDATE reconforge.ar_customers SET currency_registry_digest=%s WHERE tenant_id=%s AND id=%s",
+                (changed.digest, sales_runtime.tenant, document["customer_id"]),
+            )
+        admin.execute("ALTER TABLE reconforge.ar_customers DISABLE TRIGGER ar_customers_currency_policy_guard")
+        admin.execute(
+            "UPDATE reconforge.ar_customers SET currency_registry_digest=%s WHERE tenant_id=%s AND id=%s",
+            (changed.digest, sales_runtime.tenant, document["customer_id"]),
+        )
+        admin.execute("ALTER TABLE reconforge.ar_customers ENABLE TRIGGER ar_customers_currency_policy_guard")
+        admin.execute(
+            "UPDATE reconforge.currency_registry_bindings SET registry_digest=%s WHERE tenant_id=%s AND workspace_id='work'",
+            (changed.digest, sales_runtime.tenant),
+        )
+    with sales_runtime.actor("maker") as (connection, _, actor):
+        with pytest.raises(FinancePostingError) as error:
+            repository(connection, sales_runtime).prepare_invoice(
+                document["id"], invoice_preparation(), expected_version=5, command_id="changed-policy-invoice", actor=actor,
+            )
+        assert error.value.code == "sales_monetary_policy_changed"
+        for table in ("ar_invoices", "ar_invoice_lines", "ar_idempotency_keys", "operational_finance_plans", "finance_posting_effects"):
+            assert connection.execute(
+                f"SELECT count(*) n FROM reconforge.{table} WHERE tenant_id=%s", (sales_runtime.tenant,),
+            ).fetchone()["n"] == 0
+        retained = repository(connection, sales_runtime).get(document["id"], actor=actor)
+        assert retained["status"] == "Fulfilled" and retained["row_version"] == 5
+        assert retained["quotation"]["monetary_policy"] == quoted
+        assert len(retained["events"]) == 5
+
+
+@pytest.mark.parametrize("source", ["invoice", "receipt"])
+def test_raw_native_update_refuses_administratively_damaged_quote_policy(
+    sales_runtime: ReceiptRuntime, source: str,
+) -> None:
+    import psycopg
+
+    document = create_complete_sales_cycle(sales_runtime)
+    # Deliberate administrator-only history corruption models a damaged import
+    # or restore. Do not weaken any runtime role, application or financial guard.
+    with psycopg.connect(sales_runtime.admin_dsn) as admin:
+        admin.execute("ALTER TABLE reconforge.sales_revenue_documents DISABLE TRIGGER sales_revenue_immutable")
+        admin.execute("ALTER TABLE reconforge.sales_revenue_documents DISABLE TRIGGER sales_revenue_admission")
+        admin.execute("ALTER TABLE reconforge.sales_revenue_documents DISABLE TRIGGER sales_revenue_source_closure")
+        admin.execute(
+            "UPDATE reconforge.sales_revenue_documents SET quotation=jsonb_set(quotation,'{monetary_policy,source}','\"Synthetic damaged historical source\"'::jsonb) WHERE tenant_id=%s AND id=%s",
+            (sales_runtime.tenant, document["id"]),
+        )
+        admin.execute("ALTER TABLE reconforge.sales_revenue_documents ENABLE TRIGGER sales_revenue_immutable")
+        admin.execute("ALTER TABLE reconforge.sales_revenue_documents ENABLE TRIGGER sales_revenue_admission")
+        admin.execute("ALTER TABLE reconforge.sales_revenue_documents ENABLE TRIGGER sales_revenue_source_closure")
+    table = "ar_invoices" if source == "invoice" else "ar_receipts"
+    constraint = "sales_invoice_policy_closure" if source == "invoice" else "sales_receipt_policy_closure"
+    with sales_runtime.actor("poster") as (connection, _, _actor):
+        with pytest.raises(psycopg.errors.CheckViolation, match="monetary interpretation differs"), connection.transaction():
+            connection.execute(
+                f"UPDATE reconforge.{table} SET updated_at=updated_at WHERE tenant_id=%s AND id=%s",
+                (sales_runtime.tenant, document[source + "_id"]),
+            )
+            connection.execute(f"SET CONSTRAINTS reconforge.{constraint} IMMEDIATE")
+        assert connection.execute(
+            "SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (sales_runtime.tenant,),
+        ).fetchone()["n"] == 2
+
+
 def test_failure_after_native_collection_allocation_rolls_back_ar_and_gl(
     sales_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch
 ) -> None:

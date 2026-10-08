@@ -16,6 +16,7 @@ domain_invariants:
   - quotation-creator-cannot-approve-own-discount-or-terms
   - full-service-completion-precedes-invoice
   - native-ar-credit-and-currency-policy-reused
+  - exact-retained-quotation-invoice-receipt-monetary-interpretation-affinity
   - independently-reviewed-balanced-gl-required-before-revenue-published
   - full-collection-native-ar-allocation-cash-gl-and-source-complete-in-one-transaction
   - exact-current-scope-and-persisted-authority-before-frozen-retry
@@ -27,7 +28,7 @@ ui_routes: [/sales-revenue]
 import_schemas: []
 export_schemas: []
 synthetic_fixtures: [tests/test_postgres_sales_revenue.py]
-threat_model: [cross-scope-raw-sql, forged-actor-or-source, source-gl-partial-commit, self-approval, lost-ack-double-effect, exact-money-loss, stale-or-revoked-permission, forged-command-evidence]
+threat_model: [cross-scope-raw-sql, forged-actor-or-source, source-gl-partial-commit, self-approval, lost-ack-double-effect, exact-money-loss, stale-or-revoked-permission, forged-command-evidence, captured-policy-drift]
 benchmarks: []
 rollback_plan: preserve-source-and-financial-history-reject-populated-downgrade-restore-verified-pre-upgrade-backup
 test_matrix: [tests/test_sales_revenue.py, tests/test_postgres_sales_revenue.py, apps/web/src/sales-revenue-data.test.ts]

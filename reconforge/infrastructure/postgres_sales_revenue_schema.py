@@ -101,6 +101,17 @@ CREATE FUNCTION reconforge.sales_revenue_actor(t TEXT,a TEXT,p TEXT) RETURNS BOO
  JOIN reconforge.identity_role_permissions rp ON rp.tenant_id=r.tenant_id AND rp.role_id=r.id AND rp.active
  WHERE u.tenant_id=t AND u.id=a AND NOT u.disabled AND rp.permission_name=p)
 $sales$;
+CREATE FUNCTION reconforge.sales_revenue_policy_matches(t TEXT,q JSONB,c TEXT,p INTEGER,r TEXT,v TEXT,h TEXT)
+ RETURNS BOOLEAN LANGUAGE sql STABLE SET search_path=pg_catalog AS $sales$
+ SELECT EXISTS(SELECT 1 FROM reconforge.currency_registry_snapshots s
+ WHERE s.tenant_id=t AND s.registry_digest=h AND s.registry_version=v
+ AND q IS NOT DISTINCT FROM jsonb_build_object(
+ 'schema_version',1,'status','captured','currency_code',c,'precision',p,'rounding_policy',r,
+ 'registry_version',v,'registry_digest',h,
+ 'policy_digest',reconforge.irp_digest(jsonb_build_object('code',c,'minor_units',p,'rounding_policy',r)),
+ 'source',s.snapshot_json::jsonb->>'source','source_url',s.snapshot_json::jsonb->>'source_url',
+ 'published_at',s.snapshot_json::jsonb->>'published_at'))
+$sales$;
 CREATE FUNCTION reconforge.sales_revenue_admit() RETURNS trigger
  LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
 DECLARE q JSONB; l JSONB; aggregate NUMERIC:=0; unit NUMERIC; value NUMERIC; customer RECORD; a TEXT:=current_setting('app.sales_actor_id',true); p TEXT;
@@ -146,9 +157,9 @@ BEGIN
   IF customer IS NULL OR q->>'customer_code' IS DISTINCT FROM customer.customer_code THEN
    RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Sales customer and hierarchy differ from their canonical source.';
   END IF;
-  IF TG_OP='INSERT' AND (customer.status<>'Active' OR q->'monetary_policy'->>'status' IS DISTINCT FROM 'captured'
-  OR (q->'monetary_policy'->>'precision')::integer IS DISTINCT FROM customer.currency_precision
-  OR q->'monetary_policy'->>'registry_digest' IS DISTINCT FROM customer.currency_registry_digest) THEN
+  IF TG_OP='INSERT' AND (customer.status<>'Active' OR NOT reconforge.sales_revenue_policy_matches(NEW.tenant_id,
+  q->'monetary_policy',customer.currency_code,customer.currency_precision,customer.currency_rounding_policy,
+  customer.currency_registry_version,customer.currency_registry_digest)) THEN
    RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Sales quotation requires its retained customer monetary policy.';
   END IF;
  ELSE
@@ -218,7 +229,9 @@ BEGIN
   IF invoice IS NULL OR plan IS NULL OR (invoice.workspace_id,invoice.organization_id,invoice.legal_entity_id,invoice.customer_id,invoice.currency_code,invoice.total_minor)
   IS DISTINCT FROM (d.workspace_id,d.organization_id,d.legal_entity_id,d.customer_id,d.currency_code,d.total_minor)
   OR (plan.workspace_id,plan.organization_id,plan.legal_entity_id,plan.source_kind,plan.source_id,plan.currency_code,plan.amount_minor)
-  IS DISTINCT FROM (d.workspace_id,d.organization_id,d.legal_entity_id,'ARInvoice'::text,d.invoice_id,d.currency_code,d.total_minor) THEN
+  IS DISTINCT FROM (d.workspace_id,d.organization_id,d.legal_entity_id,'ARInvoice'::text,d.invoice_id,d.currency_code,d.total_minor)
+  OR NOT reconforge.sales_revenue_policy_matches(d.tenant_id,d.quotation->'monetary_policy',invoice.currency_code,
+  invoice.currency_precision,invoice.currency_rounding_policy,invoice.currency_registry_version,invoice.currency_registry_digest) THEN
    RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Sales invoice does not have its exact native AR and financial source.';
   END IF;
   IF d.status='InvoicePrepared' AND (invoice.status<>'Submitted' OR EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=d.tenant_id AND plan_id=plan.id))
@@ -241,6 +254,8 @@ BEGIN
   IF receipt IS NULL OR receipt.status<>'Posted' OR invoice.status<>'Paid'
   OR (receipt.workspace_id,receipt.organization_id,receipt.legal_entity_id,receipt.customer_id,receipt.currency_code,receipt.amount_minor)
   IS DISTINCT FROM (d.workspace_id,d.organization_id,d.legal_entity_id,d.customer_id,d.currency_code,d.total_minor)
+  OR NOT reconforge.sales_revenue_policy_matches(d.tenant_id,d.quotation->'monetary_policy',receipt.currency_code,
+  receipt.currency_precision,receipt.currency_rounding_policy,receipt.currency_registry_version,receipt.currency_registry_digest)
   OR NOT EXISTS(SELECT 1 FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=d.tenant_id AND a.receipt_id=receipt.id
   AND a.invoice_id=invoice.id AND a.amount_minor=d.total_minor)
   OR (SELECT count(*) FROM reconforge.ar_receipt_allocations WHERE tenant_id=d.tenant_id AND receipt_id=receipt.id)<>1
@@ -256,6 +271,21 @@ CREATE CONSTRAINT TRIGGER sales_revenue_event_closure AFTER INSERT ON reconforge
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_close();
 CREATE CONSTRAINT TRIGGER sales_revenue_command_closure AFTER INSERT ON reconforge.sales_revenue_commands
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_close();
+CREATE FUNCTION reconforge.sales_revenue_native_policy_close() RETURNS trigger
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
+BEGIN
+ IF EXISTS(SELECT 1 FROM reconforge.sales_revenue_documents d WHERE d.tenant_id=NEW.tenant_id
+ AND ((TG_TABLE_NAME='ar_invoices' AND d.invoice_id=NEW.id) OR (TG_TABLE_NAME='ar_receipts' AND d.receipt_id=NEW.id))
+ AND NOT reconforge.sales_revenue_policy_matches(d.tenant_id,d.quotation->'monetary_policy',NEW.currency_code,
+ NEW.currency_precision,NEW.currency_rounding_policy,NEW.currency_registry_version,NEW.currency_registry_digest)) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Sales native source monetary interpretation differs from its reviewed quotation.';
+ END IF;
+ RETURN NULL;
+END $sales$;
+CREATE CONSTRAINT TRIGGER sales_invoice_policy_closure AFTER INSERT OR UPDATE ON reconforge.ar_invoices
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_native_policy_close();
+CREATE CONSTRAINT TRIGGER sales_receipt_policy_closure AFTER INSERT OR UPDATE ON reconforge.ar_receipts
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_native_policy_close();
 DO $sales$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['sales_revenue_documents','sales_revenue_commands','sales_revenue_events'] LOOP
   EXECUTE format('ALTER TABLE reconforge.%I ENABLE ROW LEVEL SECURITY',n);
@@ -298,6 +328,9 @@ DO $sales$ BEGIN
 END $sales$;
 DROP TRIGGER sales_revenue_permission_tenant ON reconforge.tenants;
 DROP TRIGGER sales_revenue_permission_role ON reconforge.identity_roles;
+DROP TRIGGER sales_invoice_policy_closure ON reconforge.ar_invoices;
+DROP TRIGGER sales_receipt_policy_closure ON reconforge.ar_receipts;
+DROP FUNCTION reconforge.sales_revenue_native_policy_close();
 DROP FUNCTION reconforge.sales_revenue_seed_permissions();
 DELETE FROM reconforge.identity_role_permissions WHERE permission_name IN ('sales.read','sales.manage','sales.approve');
 DELETE FROM reconforge.identity_permissions WHERE name IN ('sales.read','sales.manage','sales.approve');
@@ -306,4 +339,5 @@ DROP FUNCTION reconforge.sales_revenue_protect();
 DROP FUNCTION reconforge.sales_revenue_admit();
 DROP FUNCTION reconforge.sales_revenue_actor(TEXT,TEXT,TEXT);
 DROP FUNCTION reconforge.sales_revenue_close();
+DROP FUNCTION reconforge.sales_revenue_policy_matches(TEXT,JSONB,TEXT,INTEGER,TEXT,TEXT,TEXT);
 """

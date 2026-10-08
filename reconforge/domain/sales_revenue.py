@@ -2,16 +2,40 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from reconforge.domain.finance_posting import FinancePostingError, digest_payload, text
+from reconforge.domain.finance_posting import FinancePostingError, canonical_json, digest_payload, text
 from reconforge.domain.quantities import quantity_decimal_text, quantity_product_minor
 
 MAX_MINOR = 9_000_000_000_000_000_000
 SALES_PERMISSIONS = frozenset({"sales.read", "sales.manage", "sales.approve"})
+
+
+def require_sales_monetary_affinity(quoted: object, native: object) -> None:
+    """A reviewed quote's minor units retain the complete closed AR interpretation.
+
+    AR's public projection contains registry publication provenance, not the
+    individual document's creation/capture timestamp. Compare its canonical
+    JSON to avoid Python's implicit integer/boolean equivalence.
+    """
+    fields = {
+        "schema_version", "status", "currency_code", "precision", "rounding_policy",
+        "registry_version", "registry_digest", "policy_digest", "source", "source_url", "published_at",
+    }
+    if (
+        not isinstance(quoted, Mapping) or not isinstance(native, Mapping)
+        or set(quoted) != fields or set(native) != fields
+        or quoted.get("status") != "captured" or native.get("status") != "captured"
+        or canonical_json(dict(quoted)) != canonical_json(dict(native))
+    ):
+        raise FinancePostingError(
+            "sales_monetary_policy_changed",
+            "Quoted minor units and native AR must retain the same verified monetary interpretation.",
+        )
 
 
 @dataclass(frozen=True)

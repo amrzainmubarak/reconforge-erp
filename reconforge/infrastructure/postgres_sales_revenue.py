@@ -12,7 +12,12 @@ from reconforge.application.receivables import ReceiptAllocationInput, Receivabl
 from reconforge.auth.policy import evaluate_principal_access
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor, canonical_json, digest_payload, text
 from reconforge.domain.operational_finance import OperationalFinancePreparation
-from reconforge.domain.sales_revenue import SalesInvoicePreparation, SalesLine, SalesQuotation
+from reconforge.domain.sales_revenue import (
+    SalesInvoicePreparation,
+    SalesLine,
+    SalesQuotation,
+    require_sales_monetary_affinity,
+)
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
@@ -195,6 +200,7 @@ class PostgresSalesRevenueRepository:
         ]
         if document["invoice_id"]:
             invoice = self.ar.get_invoice(document["invoice_id"])
+            require_sales_monetary_affinity(result["quotation"]["monetary_policy"], invoice["monetary_policy"])
             result["invoice"] = {
                 key: invoice[key]
                 for key in (
@@ -213,6 +219,7 @@ class PostgresSalesRevenueRepository:
                 result[key.removesuffix("_id")] = self.finance.get(document[key], actor=actor)
         if document["receipt_id"]:
             receipt = self.ar.get_receipt(document["receipt_id"])
+            require_sales_monetary_affinity(result["quotation"]["monetary_policy"], receipt["monetary_policy"])
             result["receipt"] = {
                 key: receipt[key]
                 for key in ("id", "receipt_number", "amount_minor", "allocated_minor", "status", "monetary_policy")
@@ -600,6 +607,7 @@ class PostgresSalesRevenueRepository:
                 idempotency_key="sales:" + identifier,
                 actor_label=actor.username,
             )
+            require_sales_monetary_affinity(snapshot["monetary_policy"], invoice["monetary_policy"])
             self.ar.submit_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.username)
             plan = self.finance.prepare(
                 OperationalFinancePreparation(
@@ -780,6 +788,7 @@ class PostgresSalesRevenueRepository:
                 idempotency_key="sales-collection:" + identifier,
                 actor_label=actor.username,
             )
+            require_sales_monetary_affinity(quotation["monetary_policy"], receipt["monetary_policy"])
             plan = self.finance.get(document["collection_plan_id"], actor=actor)
             self.finance.post(
                 plan["id"],

@@ -121,9 +121,18 @@ def main() -> int:
         secret_values.append(runtime.password)
         create_sales_runtime((admin_dsn, app_dsn), base_runtime=runtime)
         seed_procurement(runtime)
-        with socket.socket() as listener:
-            listener.bind(("127.0.0.1", 0))
-            https_port = listener.getsockname()[1]
+        # Chromium blocks several OS-assigned low ephemeral ports. Bind an
+        # available dynamic/private port without relaxing browser port policy.
+        for _ in range(64):
+            with socket.socket() as listener:
+                try:
+                    listener.bind(("127.0.0.1", 49152 + secrets.randbelow(16383)))
+                except OSError:
+                    continue
+                https_port = listener.getsockname()[1]
+                break
+        else:
+            raise RuntimeError("No owned dynamic HTTPS port is available.")
         url = f"https://localhost:{https_port}"
         environment.update(RECONFORGE_ERP_LIVE_URL=url, RECONFORGE_ERP_TENANT=runtime.tenant,
             RECONFORGE_ERP_PASSWORD=runtime.password, RECONFORGE_ERP_BROWSER_REPORT=str(output / "playwright.json"),

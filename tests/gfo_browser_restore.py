@@ -113,7 +113,13 @@ def verify_native_browser_restore(runtime: ReceiptRuntime, container: str,
         subprocess.run(["docker", "exec", "-i", container, "pg_restore", "--username=postgres", "--exit-on-error", f"--dbname={database}"],
                        input=dump.stdout, capture_output=True, check=True, timeout=180)  # nosec B603 B607
         after = database_snapshot(restored_admin_dsn)
-        require(before == after, "Native restore changed table contents, definitions, RLS, ACL or migration head.")
+        if before != after:
+            differences = {"tables": {key: {"before": value, "after": after["tables"].get(key)}
+                for key, value in before["tables"].items() if value != after["tables"].get(key)},
+                "objects": {key: {"before": value, "after": after["objects"].get(key)}
+                for key, value in before["objects"].items() if value != after["objects"].get(key)},
+                "head": [before["head"], after["head"]]}
+            raise AssertionError("Native restore fingerprint differences: " + json.dumps(differences, sort_keys=True))
         factory = PostgresConnectionFactory(PostgresSettings(dsn=restored_app_dsn, require_tls=False))
         restored = ReceiptRuntime(factory, restored_admin_dsn, runtime.tenant, runtime.password)
         with psycopg.connect(restored_app_dsn) as connection:

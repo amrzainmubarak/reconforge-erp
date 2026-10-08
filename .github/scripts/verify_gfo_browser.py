@@ -178,6 +178,9 @@ def main() -> int:
             browser = run([executable, "--prefix", "apps/web", "playwright", "test", "--config", "apps/web/live/gfo.playwright.config.ts"], environment=environment, check=False)
             (output / "browser.log").write_text(browser.stdout + browser.stderr, encoding="utf-8")
             report["browser_exit_code"] = browser.returncode
+        server.terminate()
+        server.wait(timeout=15)
+        report["owned_https_process_stopped"] = True
         if (output / "playwright.json").is_file():
             report["browser_counts"] = json.loads((output / "playwright.json").read_text(encoding="utf-8"))["stats"]
         if browser.returncode == 0:
@@ -193,7 +196,7 @@ def main() -> int:
             diagnostic = diagnostic.replace(value, "[redacted]")
         report["error"] = diagnostic
     finally:
-        if server is not None:
+        if server is not None and server.poll() is None:
             server.terminate()
             try:
                 server.wait(timeout=15)

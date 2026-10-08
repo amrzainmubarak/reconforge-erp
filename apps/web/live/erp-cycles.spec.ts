@@ -204,7 +204,9 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
     await expect(poster.getByText("Synthetic preview", { exact: true })).toHaveCount(0);
     await poster.reload();
     await expect(poster.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
-  } finally {
-    await Promise.allSettled(contexts.map((context) => context.close()));
+  } catch (error) {
+    // The browser fixture owns failure cleanup after diagnostic screenshots.
+    throw error;
   }
+  await Promise.all(contexts.map((context) => context.close()));
 });

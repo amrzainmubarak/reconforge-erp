@@ -105,7 +105,7 @@ function StockSalesSession({ locale }: { locale: Locale }) {
   const journals = options?.journals.filter((row) => !detail || row.currency_code === detail.currency_code).map((row) => ({ value: row.journal_code, label: `${row.name} · ${row.journal_code}` })) || [];
   const accounts = (kind: "Asset" | "Income") => options?.accounts.filter((row) => row.account_type === kind).filter((row, index, all) => all.findIndex((value) => value.account_code === row.account_code) === index).map((row) => ({ value: row.account_code, label: `${row.name} · ${row.account_code}` })) || [];
   const action = detail && nextAction[detail.status];
-  const actionAllowed = action && can(...action.permissions) && !(detail?.status === "Submitted" && detail.created_by === identity?.id) && !(detail?.status === "IssuePrepared" && detail.created_by === identity?.id);
+  const actionAllowed = action && can(...action.permissions) && !(detail?.status === "Submitted" && detail.created_by === identity?.id) && !(detail?.status === "IssuePrepared" && detail.issue_preparer_id === identity?.id);
   function perform(event: FormEvent) {
     event.preventDefault(); if (!action || !detail || !actionAllowed) return;
     transition(action.path, detail.status === "Reserved" ? issue : detail.status === "Delivered" ? invoice : detail.status === "Invoiced" ? collection : {});
@@ -137,8 +137,9 @@ function StockSalesSession({ locale }: { locale: Locale }) {
               {detail.status === "Invoiced" && <fieldset><legend>{t("prepareCollection")}</legend><p>{t("nameHint")}</p>{input("receipt", collection.receipt_number, (value) => setCollection({ ...collection, receipt_number: value }))}{input("date", collection.receipt_date, (value) => setCollection({ ...collection, receipt_date: value }), "date")}{choose("journal", collection.journal_code, (value) => setCollection({ ...collection, journal_code: value }), journals)}{choose("period", collection.period_id, (value) => setCollection({ ...collection, period_id: value }), periods)}{choose("cash", collection.cash_account_code, (value) => setCollection({ ...collection, cash_account_code: value }), accounts("Asset"))}</fieldset>}
               <button disabled={!actionAllowed}>{t(action.label)}</button>
             </form>}
-            {["Draft", "Submitted", "Approved", "Reserved", "IssuePrepared", "IssueReviewed"].includes(detail.status) && <button disabled={!can("sales.manage", "finance_core.manage") || !reason.trim()} onClick={() => transition("cancel")}>{t("cancel")}</button>}
-            <details><summary>{t("evidence")}</summary><dl>{[detail.movement_id, detail.valuation_id, detail.cogs_entry_id, detail.cogs_effect_id, detail.invoice_id, detail.invoice_plan_id, detail.collection_plan_id, detail.receipt_id].filter(Boolean).map((id) => <dd key={id}><code>{id}</code></dd>)}</dl></details><h3>{t("events")}</h3><ol>{detail.events.map((event) => <li key={event.version}>{event.reason} · {event.actor_id}<p><code>{event.audit_event_id}</code></p></li>)}</ol>
+            {detail.status === "IssuePrepared" && <p>{t("cancelReview")}</p>}
+            {["Draft", "Submitted", "Approved", "Reserved", "IssueReviewed"].includes(detail.status) && <button disabled={!can("sales.manage", "finance_core.manage") || !reason.trim()} onClick={() => transition("cancel")}>{t("cancel")}</button>}
+            <details><summary>{t("evidence")}</summary><ul>{[detail.movement_id, detail.valuation_id, detail.cogs_entry_id, detail.cogs_effect_id, detail.invoice_id, detail.invoice_plan_id, detail.collection_plan_id, detail.receipt_id].filter(Boolean).map((id) => <li key={id}><code>{id}</code></li>)}</ul></details><h3>{t("events")}</h3><ol>{detail.events.map((event) => <li key={event.version}>{event.reason} · {event.actor_id}<p><code>{event.audit_event_id}</code></p></li>)}</ol>
           </section>}
         </>}
       </> : <p>{identity ? t("denied") : t("loading")}</p>}

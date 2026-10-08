@@ -9,7 +9,7 @@ export interface StockOrder extends SalesScope {
   currency_code: string; total_minor: string; cogs_minor: string | null; quantity: string; quantity_scaled: string; quantity_precision: number;
   unit_price_minor: string; net_unit_price_minor: string; discount_basis_points: number; description: string;
   customer_code: string; customer_reference: string; item_code: string; warehouse_code: string; location_code: string; order_date: string;
-  created_by: string; approved_by: string | null; issue_reviewer_id: string | null; monetary_policy: { precision: number };
+  created_by: string; approved_by: string | null; issue_preparer_id: string | null; issue_reviewer_id: string | null; monetary_policy: { precision: number };
   movement_id: string | null; valuation_id: string | null; cogs_entry_id: string | null; cogs_effect_id: string | null;
   invoice_id: string | null; invoice_plan_id: string | null; collection_plan_id: string | null; receipt_id: string | null;
   events: { version: number; actor_id: string; operation: string; reason: string; status: StockStage; audit_event_id: string }[];
@@ -35,7 +35,7 @@ export function parseStockOrder(value: unknown, scope: SalesScope, identifier?: 
   for (const key of ["total_minor", "unit_price_minor", "net_unit_price_minor", "quantity_scaled"]) minor(row[key]);
   integer(row.row_version, 1, 13); integer(row.quantity_precision, 0, 6); integer(row.discount_basis_points, 0, 9999); integer(policy.precision, 0, 8);
   if (row.cogs_minor !== null) minor(row.cogs_minor);
-  for (const key of ["approved_by", "issue_reviewer_id", "movement_id", "valuation_id", "cogs_entry_id", "cogs_effect_id", "invoice_id", "invoice_plan_id", "collection_plan_id", "receipt_id"]) if (row[key] !== null) text(row[key]);
+  for (const key of ["approved_by", "issue_preparer_id", "issue_reviewer_id", "movement_id", "valuation_id", "cogs_entry_id", "cogs_effect_id", "invoice_id", "invoice_plan_id", "collection_plan_id", "receipt_id"]) if (row[key] !== null) text(row[key]);
   row.events.forEach((value, index) => { const event = object(value); if (integer(event.version, 1, 13) !== index + 1 || !stockStages.includes(event.status as StockStage)) invalid(); for (const key of ["actor_id", "operation", "reason", "audit_event_id"]) text(event[key]); });
   if (row.events.length !== row.row_version || object(row.events.at(-1)).status !== row.status) invalid();
   const stage = stockStages.indexOf(row.status as StockStage);

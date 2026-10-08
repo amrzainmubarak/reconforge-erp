@@ -3,7 +3,7 @@ import { executeStockCommand, parseStockOrder, prepareStockCommand } from "./sto
 
 const scope = { workspace_id: "work", organization_id: "org", legal_entity_id: "entity" };
 function document() {
-  return { ...scope, id: "STSALE-1", number: "PRODUCT-1", status: "Draft", row_version: 1, source_digest: "a".repeat(64), currency_code: "USD", total_minor: "9007199254740993", cogs_minor: null, quantity: "1", quantity_scaled: "1", quantity_precision: 0, unit_price_minor: "9007199254740993", net_unit_price_minor: "9007199254740993", discount_basis_points: 0, description: "Product", customer_code: "C", customer_reference: "PO-1", item_code: "I", warehouse_code: "W", location_code: "L", order_date: "2026-10-09", created_by: "maker", approved_by: null, issue_reviewer_id: null, monetary_policy: { precision: 2 }, movement_id: null, valuation_id: null, cogs_entry_id: null, cogs_effect_id: null, invoice_id: null, invoice_plan_id: null, collection_plan_id: null, receipt_id: null, events: [{ version: 1, actor_id: "maker", operation: "create", reason: "Create", status: "Draft", audit_event_id: "audit-1" }] };
+  return { ...scope, id: "STSALE-1", number: "PRODUCT-1", status: "Draft", row_version: 1, source_digest: "a".repeat(64), currency_code: "USD", total_minor: "9007199254740993", cogs_minor: null, quantity: "1", quantity_scaled: "1", quantity_precision: 0, unit_price_minor: "9007199254740993", net_unit_price_minor: "9007199254740993", discount_basis_points: 0, description: "Product", customer_code: "C", customer_reference: "PO-1", item_code: "I", warehouse_code: "W", location_code: "L", order_date: "2026-10-09", created_by: "maker", approved_by: null, issue_reviewer_id: null, issue_preparer_id: null, monetary_policy: { precision: 2 }, movement_id: null, valuation_id: null, cogs_entry_id: null, cogs_effect_id: null, invoice_id: null, invoice_plan_id: null, collection_plan_id: null, receipt_id: null, events: [{ version: 1, actor_id: "maker", operation: "create", reason: "Create", status: "Draft", audit_event_id: "audit-1" }] };
 }
 afterEach(() => vi.unstubAllGlobals());
 describe("stock sales exact transport and evidence", () => {
@@ -35,3 +35,4 @@ describe("stock sales exact transport and evidence", () => {
     expect(() => prepareStockCommand(scope, "/api/v1/stock-sales/orders", { command_id: "spoof" })).toThrow();
   });
 });
+

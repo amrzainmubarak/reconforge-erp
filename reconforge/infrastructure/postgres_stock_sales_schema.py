@@ -78,6 +78,7 @@ CREATE FUNCTION reconforge.stock_sales_public(d reconforge.stock_sales_orders) R
  'customer_code',d.source->>'customer_code','customer_reference',d.source->>'customer_reference','item_code',d.source->>'item_code',
  'warehouse_code',d.source->>'warehouse_code','location_code',d.source->>'location_code','quantity',d.source->>'quantity','description',d.source->>'description',
  'created_by',d.created_by,'approved_by',d.approved_by,'issue_reviewer_id',d.issue_reviewer_id,
+ 'issue_preparer_id',d.issue_plan->>'preparer_actor_id',
  'unit_price_minor',d.source->>'unit_price_minor','discount_basis_points',d.source->'discount_basis_points',
  'net_unit_price_minor',d.source->>'net_unit_price_minor','order_date',d.source->>'order_date','monetary_policy',d.source->'monetary_policy',
  'issue_digest',CASE WHEN d.issue_plan IS NULL THEN NULL ELSE reconforge.irp_digest(d.issue_plan) END,
@@ -98,7 +99,7 @@ BEGIN
    IS DISTINCT FROM(to_jsonb(OLD)-ARRAY['status','approved_by','issue_plan','cogs_entry_id','issue_reviewer_id','movement_id','valuation_id','cogs_effect_id',
    'invoice_id','invoice_plan_id','invoice_parameters','collection_plan_id','collection_parameters','receipt_id','row_version','updated_at'])
    OR NEW.row_version<>OLD.row_version+1 OR NOT COALESCE((reconforge.stock_sales_stage(NEW.status)=reconforge.stock_sales_stage(OLD.status)+1
-    OR(NEW.status='Cancelled' AND reconforge.stock_sales_stage(OLD.status)<6)),FALSE)
+    OR(NEW.status='Cancelled' AND reconforge.stock_sales_stage(OLD.status) IN(0,1,2,3,5))),FALSE)
    OR(OLD.issue_plan IS NOT NULL AND(NEW.issue_plan,NEW.cogs_entry_id) IS DISTINCT FROM(OLD.issue_plan,OLD.cogs_entry_id))
    OR(OLD.approved_by IS NOT NULL AND NEW.approved_by IS DISTINCT FROM OLD.approved_by)
    OR(OLD.invoice_id IS NOT NULL AND(NEW.invoice_id,NEW.invoice_plan_id,NEW.invoice_parameters) IS DISTINCT FROM(OLD.invoice_id,OLD.invoice_plan_id,OLD.invoice_parameters))
@@ -338,6 +339,10 @@ BEGIN
     EXIT WHEN remaining=0;
     x:=d.issue_plan->'allocations'->ordinal;
     IF x IS NULL OR x->>'cost_layer_id' IS DISTINCT FROM layer.id
+     OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_lines vl JOIN reconforge.inventory_valuation_documents vd
+      ON vd.tenant_id=vl.tenant_id AND vd.id=vl.valuation_document_id WHERE vl.tenant_id=t AND vl.id=layer.source_valuation_line_id
+      AND reconforge.sales_revenue_policy_matches(t,d.source->'monetary_policy',vd.currency_code,vd.currency_precision,
+       vd.currency_rounding_policy,vd.currency_registry_version,vd.currency_registry_digest))
      OR(x->>'quantity_scaled')::bigint IS DISTINCT FROM least(remaining,layer.remaining_quantity_scaled) THEN
      RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Selected slices are not the complete earliest native FIFO layers.';
     END IF;

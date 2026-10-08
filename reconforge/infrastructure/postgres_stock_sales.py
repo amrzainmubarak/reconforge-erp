@@ -325,6 +325,8 @@ class PostgresStockSalesRepository:
             elif operation == "cancel":
                 if stage >= STOCK_STAGES.index("Delivered"):
                     raise FinancePostingError("stock_sales_state_invalid", "Financially delivered orders require a complete inverse, outside this cycle.")
+                if row["status"] == "IssuePrepared":
+                    raise FinancePostingError("stock_sales_review_required", "Independently review the retained COGS draft before cancelling its financial plan.")
                 self._stock_lock(row)
                 self._fifo_lock(row)
                 if row["cogs_entry_id"]:

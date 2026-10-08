@@ -146,6 +146,9 @@ def test_cancel_releases_actual_capacity_and_retains_voided_unposted_cogs(stock_
     runtime = stock_runtime
     result = execute(runtime, create_reserved_order(runtime, "CANCEL-1", "10"), "prepare-issue", "maker", {
         "posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
+    with pytest.raises(FinancePostingError, match="Independently review"):
+        execute(runtime, result, "cancel", "maker")
+    result = execute(runtime, result, "review-issue", "checker")
     cancelled = execute(runtime, result, "cancel", "maker")
     assert cancelled["status"] == "Cancelled"
     with runtime.actor("maker") as (connection, _, actor):

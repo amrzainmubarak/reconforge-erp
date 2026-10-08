@@ -55,3 +55,8 @@ Reproduced gaps include mutable historical currency precision, cumulative AP ove
 | Documentation | The deleted root `DEMO.md` links and overbroad determinism wording were corrected; large historical/strategy surfaces can drift again | Automated link, maturity-claim, schema, and evidence-matrix consistency gates |
 | Architecture | Modular boundaries and protocols are partial; SQLite schema/application modules remain broad | Enforced dependency rules and repository-contract parity without a bulk rewrite |
 | Durable scheduler fairness | E-596/E-597 add tenant-scoped SQLite/PostgreSQL scheduler cursors bound to an ordered lane digest; E-658 proves two spawned PostgreSQL processes reserve distinct lanes; E-659 proves a fresh process resumes after an abrupt checkpointing-worker exit without duplicate effects; E-664 adds a real PostgreSQL backend termination after a committed checkpoint and proves generation-2 recovery without duplicate effects; E-674 repeats the multi-worker PostgreSQL profile across three isolated tenant-lane iterations with stable effect digests | Cross-host fairness, throughput, queue HA/failover, distributed soak/capacity, RPO/RTO, and production SLO evidence remain open |
+
+
+## October8 hosted recovery gate supplement
+
+[Bounded live recovery repairs and remaining hosted gaps](HOSTED_GATES_REPAIR_2026-10-08.md); [source/diff/log hashes](HOSTED_GATES_REPAIR_2026-10-08.json). Earlier b8f5a772 results remain source-bound history. Whole regression after ADR0833 is pending; shared downgrade fixtures, identity projections and paused receipt cases prevent full CI acceptance.

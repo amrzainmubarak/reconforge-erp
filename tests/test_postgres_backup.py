@@ -50,6 +50,7 @@ class _Runner:
         fail_dump_attempts: int = 0,
     ) -> None:
         self.calls: list[tuple[str, ...]] = []
+        self.profile_queries: list[str] = []
         self.fail_restore = fail_restore
         self.fail_verification = fail_verification
         self.fail_security_definer_hardening = fail_security_definer_hardening
@@ -87,7 +88,8 @@ class _Runner:
             return 1
         if executable == "psql":
             database = call[call.index("--dbname") + 1]
-            query = call[-1]
+            query = Path(call[-1]).read_text(encoding="ascii") if "--file" in call else call[-1]
+            self.profile_queries.append(query)
             if self.fail_target_access_fencing and "REVOKE CONNECT ON DATABASE" in query:
                 return 1
             if self.fail_security_definer_hardening and "REVOKE ALL ON %s" in query:
@@ -168,7 +170,9 @@ def test_postgres_native_backup_is_encrypted_and_uses_service_not_secret(tmp_pat
     assert Path(runner.calls[0][0]).stem == "psql"
     assert "service=reconforge_source" in runner.calls[0]
     assert f"reconforge_expected_revision={COMPATIBILITY_ALEMBIC_REVISION}" in runner.calls[0]
-    assert ":'reconforge_expected_revision'" in runner.calls[0][-1]
+    assert "--file" in runner.calls[0]
+    assert ":'reconforge_expected_revision'" in runner.profile_queries[0]
+    assert not Path(runner.calls[0][-1]).exists()
     dump_call = next(call for call in runner.calls if Path(call[0]).stem == "pg_dump")
     assert dump_call[1:] == (
         "--format=custom",
@@ -289,9 +293,7 @@ def test_restore_rehardens_security_definer_routines_before_profile_verification
 
     psql_calls = [call for call in runner.calls if Path(call[0]).stem == "psql"]
     assert len(psql_calls) == 4
-    creation_query, access_fence_query, hardening_query, verification_query = (
-        call[-1] for call in psql_calls
-    )
+    creation_query, access_fence_query, hardening_query, verification_query = runner.profile_queries
     assert creation_query == 'CREATE DATABASE "reconforge_restore_drill" WITH ALLOW_CONNECTIONS false;'
     assert access_fence_query == (
         "BEGIN;\n"

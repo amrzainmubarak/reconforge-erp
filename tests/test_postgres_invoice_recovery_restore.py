@@ -53,6 +53,11 @@ def test_native_restore_preserves_versioned_and_legacy_invoice_recovery(database
     changed["source"] = "Synthetic replacement after original creation"
     bind(database, changed)
     before = state(database)
+    source_revisions = [
+        tuple(row) for row in database.admin.execute("SELECT version_num FROM alembic_version").fetchall()
+    ]
+    assert len(source_revisions) == 1
+    source_revision = source_revisions[0][0]
     parameters = psycopg.conninfo.conninfo_to_dict(os.environ["RECONFORGE_TEST_POSTGRES_ADMIN_DSN"])
     source = database.admin.info.dbname
     control_dsn = psycopg.conninfo.make_conninfo(**{**parameters, "dbname": "postgres"})
@@ -71,7 +76,7 @@ def test_native_restore_preserves_versioned_and_legacy_invoice_recovery(database
     dump = native("pg_dump", ["--format=custom", "--dbname", source])
     assert dump.startswith(b"PGDMP")
     target = "reconforge_invoice_restore_" + uuid4().hex[:16]
-    evidence = {"schema": "0099_pg_receivables_policy", "source": source, "target": target,
+    evidence = {"schema": source_revision, "source": source, "target": target,
                 "dump_sha256": hashlib.sha256(dump).hexdigest(), "dump_bytes": len(dump),
                 "financial_history_sha256": hashlib.sha256(before.encode()).hexdigest(), "cleanup": False}
     with psycopg.connect(control_dsn, autocommit=True) as control:
@@ -82,7 +87,7 @@ def test_native_restore_preserves_versioned_and_legacy_invoice_recovery(database
         app_dsn = psycopg.conninfo.make_conninfo(os.environ["RECONFORGE_TEST_POSTGRES_DSN"], dbname=target)
         admin_dsn = psycopg.conninfo.make_conninfo(**{**parameters, "dbname": target})
         with psycopg.connect(admin_dsn) as admin:
-            assert admin.execute("SELECT version_num FROM alembic_version").fetchone() == ("0099_pg_receivables_policy",)
+            assert admin.execute("SELECT version_num FROM alembic_version").fetchall() == source_revisions
             restored = ReceivablesDatabase(factory=PostgresConnectionFactory(PostgresSettings(dsn=app_dsn, require_tls=False)), tenant=database.tenant, admin=admin)
             assert state(restored) == before
             with restored.repository() as repo:

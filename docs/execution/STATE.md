@@ -1,5 +1,22 @@
 # Execution State
 
+## October8 hosted gate repair (2026-10-08)
+
+Draft [PR123](https://github.com/amrzainmubarak/reconforge-erp/pull/123) is stacked
+on unchanged sprint636786e8. ADR0833 repairs executable pinned recovery checks,
+service-only Docker tool translation, moving-head restore evidence and deferred
+fixture cleanup. Local live PostgreSQL17.10 analogous acceptance passes97 with
+zero skips; strict encrypted current0106 restore and wrong-source refusal pass.
+Writeback16.14/17.10 and three repeated single-host HA drills pass. Exact
+synthetic-auth Gitleaks fingerprints retain the default history/tree gate.
+[Evidence and remaining CI gaps](HOSTED_GATES_REPAIR_2026-10-08.md).
+
+Whole regression after this runtime repair is pending on the next clean commit.
+AMR-GFO-005 remains in progress: hosted downgrade fixture isolation and identity
+expectations are open; Inventory receipt stays paused, cancellation0107 stays
+outside this source and main staysb61ea56b. Earlier results below retain their
+own source identities and are not acceptance of this later runtime repair.
+
 ## October 8 baseline refresh and bounded repair (2026-10-08)
 
 The audit branch is `amr/baseline-refresh-20261008`, based on clean sprint

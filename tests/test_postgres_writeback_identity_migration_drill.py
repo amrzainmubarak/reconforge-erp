@@ -12,7 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_identity_migration_drill.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0099_2026-10-03.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-08.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_identity_migration.py"
 
 
@@ -50,10 +50,13 @@ def test_drill_runner_and_retained_report_bind_the_same_runtime_contract() -> No
     scripts = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
     current_head = scripts.get_current_head()
     assert current_head is not None
+    assert runner._current_migration_head() == current_head
 
     assert report["runtime"]["image"] == runner.IMAGE_REFERENCE
     assert report["runtime"]["source_revision"] == runner.SOURCE_REVISION
-    assert report["runtime"]["target_revision"] == runner.TARGET_REVISION
+    assert report["runtime"]["target_revision"] in {
+        revision.revision for revision in scripts.iterate_revisions(current_head, "base")
+    }
     # The retained report proves the named historical head. Follow-on
     # migrations must retain that revision in the current ancestry rather
     # than rewriting the immutable observation to claim a later head.
@@ -81,6 +84,13 @@ def test_drill_runner_and_retained_report_bind_the_same_runtime_contract() -> No
         "include docs/schemas/postgres_writeback_identity_migration_drill.schema.json",
         "include tests/test_postgres_writeback_identity_migration_drill.py",
     } <= manifest
+
+
+def test_current_head_resolution_refuses_a_missing_retained_checkpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    runner = _load_runner()
+    monkeypatch.setattr(runner, "TARGET_REVISION", "9999_missing_checkpoint")
+    with pytest.raises(runner.DrillError, match="retain the verified checkpoint"):
+        runner._current_migration_head()
 
 
 @pytest.mark.parametrize(

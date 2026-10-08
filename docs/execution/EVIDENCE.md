@@ -22813,3 +22813,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   prove native encrypted backup/restore execution on this host, promotion of a
   restored target, key custody, backup duration, cross-version recovery,
   RPO/RTO, HA/DR, or production recovery readiness.
+
+
+## October8 hosted recovery gate supplement
+
+[Bounded live recovery repairs and remaining hosted gaps](HOSTED_GATES_REPAIR_2026-10-08.md); [source/diff/log hashes](HOSTED_GATES_REPAIR_2026-10-08.json). Earlier b8f5a772 results remain source-bound history. Whole regression after ADR0833 is pending; shared downgrade fixtures, identity projections and paused receipt cases prevent full CI acceptance.

@@ -1268,3 +1268,9 @@ include docs/execution/BASELINE_REFRESH_2026-10-08.md
 include tests/test_money_minor_context.py
 include docs/execution/ACCEPTANCE_2026-10-08.json
 include docs/execution/ACCEPTANCE_2026-10-08.md
+include tests/test_postgres_docker_tool_runner.py
+include docs/adr/0833-executable-postgres-recovery-profile-and-gate-evidence.md
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-08.json
+include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-08.json
+include docs/execution/HOSTED_GATES_REPAIR_2026-10-08.md
+include docs/execution/HOSTED_GATES_REPAIR_2026-10-08.json

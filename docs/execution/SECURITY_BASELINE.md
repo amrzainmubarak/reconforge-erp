@@ -543,3 +543,8 @@ Allowed wording: "Security checks and threat-model documentation exist; deployme
 - Four migration-0037 tables use forced RLS. PostgreSQL triggers enforce permission and TTL ceilings, immutable credential identity, monotonic account versions, same-account rotation, and append-only events.
 - Raw credentials are returned once by the operator CLI and only SHA-256 digests persist. Disable revokes all active credentials atomically.
 - Residual boundary: workload identity federation, WebAuthn recovery/attestation governance and broad authenticator interoperability, hosted identity operation, independent assessment, and production operation remain unverified; current service-principal, password-step-up, emergency-review, and WebAuthn evidence is synthetic and bounded.
+
+
+## October8 hosted recovery gate supplement
+
+[Bounded live recovery repairs and remaining hosted gaps](HOSTED_GATES_REPAIR_2026-10-08.md); [source/diff/log hashes](HOSTED_GATES_REPAIR_2026-10-08.json). Earlier b8f5a772 results remain source-bound history. Whole regression after ADR0833 is pending; shared downgrade fixtures, identity projections and paused receipt cases prevent full CI acceptance.

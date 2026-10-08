@@ -340,6 +340,8 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
             with admin.transaction():
                 admin.execute("ALTER TABLE reconforge.domain_audit_events DISABLE TRIGGER domain_audit_events_immutable")
                 admin.execute("DELETE FROM reconforge.domain_audit_events WHERE tenant_id IN (%s,%s)", (tenant_a, tenant_b))
+                # Drain deferred FK trigger events before changing trigger state.
+                admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
                 admin.execute("ALTER TABLE reconforge.domain_audit_events ENABLE TRIGGER domain_audit_events_immutable")
                 admin.execute("ALTER TABLE reconforge.principal_scope_grants DISABLE TRIGGER principal_scope_grants_guard")
                 admin.execute(

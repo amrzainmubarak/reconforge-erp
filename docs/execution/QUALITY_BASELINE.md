@@ -791,3 +791,8 @@ outside the quality baseline.
 The post-slice isolated Python 3.12 all-extra regression, Ruff, Mypy, Bandit,
 package build, and whitespace checks pass; the complete-history Gitleaks scan
 also remains clean.
+
+
+## October8 hosted recovery gate supplement
+
+[Bounded live recovery repairs and remaining hosted gaps](HOSTED_GATES_REPAIR_2026-10-08.md); [source/diff/log hashes](HOSTED_GATES_REPAIR_2026-10-08.json). Earlier b8f5a772 results remain source-bound history. Whole regression after ADR0833 is pending; shared downgrade fixtures, identity projections and paused receipt cases prevent full CI acceptance.

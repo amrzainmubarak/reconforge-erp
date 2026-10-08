@@ -58,6 +58,44 @@ tasks:
       SELECT/UPDATE bindings for FOR SHARE and SELECT/INSERT snapshots only; fresh
       PostgreSQL17.10 migration to0106, 22 restricted-role lifecycle/scoped-route/operations/
       target-fence passes and owned cleanup; native source/maintenance restore remains separate.
+  - id: AUD-20261008-006
+    priority: P0
+    area: native-recovery-gates
+    title: Execute pinned recovery verification and bind fresh restore evidence
+    status: completed
+    depends_on: [AUD-20261008-005]
+    exit_evidence: >-
+      ADR0833, 119 focused contracts, 97 live PostgreSQL analogous regressions,
+      strict current0106 encrypted restore/wrong-source refusal/ACL/cleanup,
+      PostgreSQL16.14/17.10 writeback matrix and three owned single-host HA runs.
+      Whole/hosted regression remains separate; HOSTED_GATES_REPAIR_2026-10-08.json.
+  - id: AUD-20261008-007
+    priority: P0
+    area: postgres-fixture-isolation
+    title: Isolate downgrade fixtures while preserving newer outbox evidence guards
+    status: planned
+    depends_on: [AUD-20261008-006]
+    exit_evidence: >-
+      Original hosted failed nodes retained in HOSTED_GATES_REPAIR_2026-10-08.json.
+      No deletion of lease evidence or weakened downgrade guard is accepted.
+  - id: AUD-20261008-008
+    priority: P0
+    area: identity-security-contracts
+    title: Review current role and permission projection assertions
+    status: planned
+    depends_on: [AUD-20261008-006]
+    exit_evidence: >-
+      Reconcile hosted security-center/access-admin expectations with source-bound
+      current migration/default-role and public projection contracts before acceptance.
+  - id: AUD-20261008-009
+    priority: P0
+    area: paused-inventory-receipt
+    title: Retain inherited receipt failures without reopening paused feature work
+    status: deferred
+    depends_on: []
+    exit_evidence: >-
+      Three hosted receipt cases remain unaccepted and outside this authorized repair.
+      Resume only on a new receipt-scope instruction; no skip or guard relaxation added.
   - id: AMR-GFO-001
     priority: P0
     area: sprint-handoff

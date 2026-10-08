@@ -1291,6 +1291,7 @@ include docs/runbooks/procurement-operations.md
 include .github/scripts/verify_erp_browser.py
 include .github/scripts/verify_reliability_capacity.py
 include tests/__init__.py
+include tests/postgres_test_hygiene.py
 include tests/erp_browser_restore.py
 include tests/erp_browser_seed.py
 include tests/gfo_browser_restore.py

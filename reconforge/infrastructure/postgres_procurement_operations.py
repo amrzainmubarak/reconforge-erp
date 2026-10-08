@@ -286,7 +286,7 @@ class PostgresProcurementOperationsRepository:
         link = PostgresPayablesPaymentLinkRepository(self.connection, self.tenant_id).link_finance_payment(invoice["id"],
             finance_effect_id=result["posting_effect_id"], **accounts, expected_invoice_version=invoice["row_version"],
             command_id=command, actor_label=actor.user_id)
-        return {"payment_effect_id": result["posting_effect_id"], "payment_link_id": link["id"]}
+        return {"payment_effect_id": result["posting_effect_id"], "payment_link_id": link["payment_link_id"]}
 
     def _view(self, row: Mapping[str, Any], actor: PostingActor) -> dict[str, Any]:
         self.connection.execute("SELECT reconforge.procurement_verify_cycle(c) FROM reconforge.procurement_cycles c WHERE tenant_id=%s AND id=%s",

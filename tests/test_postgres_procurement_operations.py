@@ -60,7 +60,7 @@ def request(number: str = "PO-1") -> ProcurementPreparation:
 
 def create(runtime: ReceiptRuntime, number: str = "PO-1") -> dict[str, Any]:
     with runtime.actor("maker") as (connection, _, actor):
-        assert connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone() == {"rolsuper": False, "rolbypassrls": False}
+        assert dict(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()) == {"rolsuper": False, "rolbypassrls": False}
         return PostgresProcurementOperationsRepository(connection, runtime.tenant).create(request(number), command_id="create-" + number, actor=actor)
 
 
@@ -159,10 +159,9 @@ def test_raw_stage_without_command_evidence_rolls_back_order_transition(procurem
     import psycopg
     runtime = procurement_runtime
     view = create(runtime)
-    with pytest.raises(psycopg.errors.CheckViolation, match="exactly one retained command"):
-        with runtime.actor("maker") as (connection, _, _actor):
-            PostgresPayablesRepository(connection, runtime.tenant).submit_purchase_order(view["cycle"]["purchase_order_id"], expected_version=1, actor_label="maker")
-            connection.execute("UPDATE reconforge.procurement_cycles SET stage=1,row_version=2 WHERE tenant_id=%s AND id=%s", (runtime.tenant, view["cycle"]["id"]))
+    with pytest.raises(psycopg.errors.CheckViolation, match="exactly one retained command"), runtime.actor("maker") as (connection, _, _actor):
+        PostgresPayablesRepository(connection, runtime.tenant).submit_purchase_order(view["cycle"]["purchase_order_id"], expected_version=1, actor_label="maker")
+        connection.execute("UPDATE reconforge.procurement_cycles SET stage=1,row_version=2 WHERE tenant_id=%s AND id=%s", (runtime.tenant, view["cycle"]["id"]))
     with runtime.actor("maker") as (connection, _, actor):
         assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor)["cycle"]["stage"] == "Draft"
 
@@ -171,22 +170,19 @@ def test_retained_po_line_change_and_command_evidence_delete_are_refused(procure
     import psycopg
     runtime = procurement_runtime
     view = advance(runtime, create(runtime), stop=5)
-    with pytest.raises(psycopg.errors.CheckViolation):
-        with runtime.actor("maker") as (connection, _, _actor):
-            connection.execute("UPDATE reconforge.ap_purchase_order_lines SET ordered_quantity=11,ordered_quantity_text='11' WHERE tenant_id=%s AND purchase_order_id=%s", (runtime.tenant, view["cycle"]["purchase_order_id"]))
-    with pytest.raises(psycopg.errors.CheckViolation, match="append-only"):
-        with runtime.actor("maker") as (connection, _, _actor):
-            connection.execute("DELETE FROM reconforge.procurement_commands WHERE tenant_id=%s AND cycle_id=%s", (runtime.tenant, view["cycle"]["id"]))
+    with pytest.raises(psycopg.errors.CheckViolation), runtime.actor("maker") as (connection, _, _actor):
+        connection.execute("UPDATE reconforge.ap_purchase_order_lines SET ordered_quantity=11,ordered_quantity_text='11' WHERE tenant_id=%s AND purchase_order_id=%s", (runtime.tenant, view["cycle"]["purchase_order_id"]))
+    with pytest.raises(psycopg.errors.CheckViolation, match="append-only"), runtime.actor("maker") as (connection, _, _actor):
+        connection.execute("DELETE FROM reconforge.procurement_commands WHERE tenant_id=%s AND cycle_id=%s", (runtime.tenant, view["cycle"]["id"]))
 
 
 def test_real_stock_effect_cannot_be_attached_as_invoice_accrual(procurement_runtime: ReceiptRuntime) -> None:
     import psycopg
     runtime = procurement_runtime
     view = advance(runtime, create(runtime), stop=9)
-    with pytest.raises(psycopg.errors.CheckViolation, match="accrual effect must belong"):
-        with runtime.actor("poster") as (connection, _, _actor):
-            effect = connection.execute("SELECT posting_effect_id FROM reconforge.inventory_receipt_links WHERE tenant_id=%s AND plan_id=%s", (runtime.tenant, view["cycle"]["receipt_plan_id"])).fetchone()["posting_effect_id"]
-            connection.execute("UPDATE reconforge.procurement_cycles SET stage=10,row_version=row_version+1,accrual_effect_id=%s WHERE tenant_id=%s AND id=%s", (effect, runtime.tenant, view["cycle"]["id"]))
+    with pytest.raises(psycopg.errors.CheckViolation, match="accrual effect must belong"), runtime.actor("poster") as (connection, _, _actor):
+        effect = connection.execute("SELECT posting_effect_id FROM reconforge.inventory_receipt_links WHERE tenant_id=%s AND plan_id=%s", (runtime.tenant, view["cycle"]["receipt_plan_id"])).fetchone()["posting_effect_id"]
+        connection.execute("UPDATE reconforge.procurement_cycles SET stage=10,row_version=row_version+1,accrual_effect_id=%s WHERE tenant_id=%s AND id=%s", (effect, runtime.tenant, view["cycle"]["id"]))
 
 
 def test_entity_alias_confusion_hides_both_cycle_and_commands(procurement_runtime: ReceiptRuntime) -> None:
@@ -205,7 +201,5 @@ def test_populated_downgrade_refuses_erasing_retained_sources(procurement_runtim
     from reconforge.infrastructure.postgres_procurement_operations_schema import DOWNGRADE_SQL
     runtime = procurement_runtime
     create(runtime)
-    with psycopg.connect(runtime.admin_dsn) as admin:
-        with pytest.raises(psycopg.errors.RaiseException, match="Retained procurement cycles prohibit downgrade"):
-            with admin.transaction():
-                admin.execute(DOWNGRADE_SQL)
+    with psycopg.connect(runtime.admin_dsn) as admin, pytest.raises(psycopg.errors.RaiseException, match="Retained procurement cycles prohibit downgrade"), admin.transaction():
+        admin.execute(DOWNGRADE_SQL)

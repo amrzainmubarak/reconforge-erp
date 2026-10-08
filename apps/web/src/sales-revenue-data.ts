@@ -18,6 +18,12 @@ export interface SalesDocument extends SalesSummary, SalesScope {
   events: { version: number; operation: string; actor_id: string; reason: string; audit_event_id: string }[];
 }
 export interface SalesPage { documents: SalesSummary[]; next_cursor: string | null }
+export interface SalesOptions {
+  customers: { customer_code: string; name: string; currency_code: string }[];
+  periods: { id: string; name: string; start_date: string; end_date: string }[];
+  journals: { journal_code: string; name: string; currency_code: string }[];
+  accounts: { account_code: string; name: string; account_type: "Asset" | "Income"; chart_id: string }[];
+}
 export interface SalesCommand { readonly path: string; readonly scope: Readonly<SalesScope>; readonly body: Readonly<Record<string, unknown>> }
 
 function object(value: unknown): Record<string, unknown> { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("sales_contract_invalid"); return value as Record<string, unknown>; }
@@ -57,6 +63,14 @@ export async function loadSalesPage(session: BrowserAdminSession, scope: SalesSc
   const row = object(await salesRequest(session, scope, `/api/v1/sales-revenue/documents?after=${encodeURIComponent(after)}`, undefined, signal));
   if (!Array.isArray(row.documents) || row.documents.length > 25 || !(row.next_cursor === null || typeof row.next_cursor === "string")) throw new Error("sales_contract_invalid");
   return { documents: row.documents.map(summary), next_cursor: row.next_cursor as string | null };
+}
+export async function loadSalesOptions(session: BrowserAdminSession, scope: SalesScope, signal?: AbortSignal): Promise<SalesOptions> {
+  const row = object(await salesRequest(session, scope, "/api/v1/sales-revenue/options", undefined, signal));
+  for (const [name, bound, fields] of [["customers", 100, ["customer_code", "name", "currency_code"]], ["periods", 50, ["id", "name", "start_date", "end_date"]], ["journals", 100, ["journal_code", "name", "currency_code"]], ["accounts", 200, ["account_code", "name", "account_type", "chart_id"]]] as const) {
+    const values = row[name]; if (!Array.isArray(values) || values.length > bound) throw new Error("sales_contract_invalid");
+    values.forEach((value) => { const entry = object(value); fields.forEach((field) => text(entry[field])); });
+  }
+  return row as unknown as SalesOptions;
 }
 export async function loadSalesDocument(session: BrowserAdminSession, scope: SalesScope, id: string, signal?: AbortSignal): Promise<SalesDocument> {
   return parseSalesDocument(object(await salesRequest(session, scope, `/api/v1/sales-revenue/documents/${encodeURIComponent(id)}`, undefined, signal)).document, scope, id);

@@ -204,6 +204,11 @@ def documents(request: Request, user: Reader, after: Annotated[str, Query(max_le
     return _execute(request, user, lambda sales, actor: sales.list(actor=actor, after=after))
 
 
+@router.get("/options")
+def options(request: Request, user: Reader) -> dict[str, Any]:
+    return _execute(request, user, lambda sales, actor: sales.options(actor=actor))
+
+
 @router.get("/documents/{identifier}")
 def document(request: Request, identifier: str, user: Reader) -> dict[str, Any]:
     return _execute(request, user, lambda sales, actor: {"document": sales.get(identifier, actor=actor)})

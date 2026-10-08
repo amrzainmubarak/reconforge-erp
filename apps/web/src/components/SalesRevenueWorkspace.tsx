@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useBrowserSession } from "../browserSession";
 import { AdminApiError, beginBrowserAdminSession, endBrowserAdminSession, stepUpBrowserAdminSession } from "../data";
-import { executeSalesCommand, loadSalesDocument, loadSalesIdentity, loadSalesPage, prepareSalesCommand, salesMoney, salesRequest, type SalesCommand, type SalesDocument, type SalesIdentity, type SalesLine, type SalesPage, type SalesScope } from "../sales-revenue-data";
+import { executeSalesCommand, loadSalesDocument, loadSalesIdentity, loadSalesOptions, loadSalesPage, prepareSalesCommand, salesMoney, salesRequest, type SalesCommand, type SalesDocument, type SalesIdentity, type SalesLine, type SalesOptions, type SalesPage, type SalesScope } from "../sales-revenue-data";
 import { salesTranslate, type SalesMessage } from "../sales-revenue-i18n";
 import type { Locale } from "../types";
 import "./SalesRevenueWorkspace.css";
@@ -16,6 +16,7 @@ function SalesRevenueSession({ locale }: { locale: Locale }) {
   const [identity, setIdentity] = useState<SalesIdentity | null>(null), [scopeInput, setScopeInput] = useState<SalesScope>({ workspace_id: "", organization_id: "", legal_entity_id: "" }), [scope, setScope] = useState<SalesScope | null>(null);
   const [page, setPage] = useState<SalesPage | null>(null), [detail, setDetail] = useState<SalesDocument | null>(null), [selected, setSelected] = useState(""), [cursor, setCursor] = useState(""), [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false), [pending, setPending] = useState<SalesCommand | null>(null), [error, setError] = useState<SalesMessage | null>(null), [stale, setStale] = useState(false);
+  const [options, setOptions] = useState<SalesOptions | null>(null);
   const [customers, setCustomers] = useState<{ customer_code: string; name: string; currency_code: string }[]>([]);
   const [customer, setCustomer] = useState({ customer_code: "", name: "", currency_code: "", credit_limit_minor: "", payment_terms_days: "0" });
   const [quote, setQuote] = useState({ number: "", customer_code: "", business_date: "", valid_until: "", currency_code: "" });
@@ -44,8 +45,8 @@ function SalesRevenueSession({ locale }: { locale: Locale }) {
   useEffect(() => {
     if (!auth.session || !scope || !read) return;
     const controller = new AbortController();
-    Promise.all([loadSalesPage(auth.session, scope, cursor, controller.signal), selected ? loadSalesDocument(auth.session, scope, selected, controller.signal) : Promise.resolve(null)]).then(([next, document]) => {
-      if (controller.signal.aborted || !active()) return; setPage(next); setDetail(document); setStale(false); setError(null);
+    Promise.all([loadSalesPage(auth.session, scope, cursor, controller.signal), selected ? loadSalesDocument(auth.session, scope, selected, controller.signal) : Promise.resolve(null), loadSalesOptions(auth.session, scope, controller.signal)]).then(([next, document, choices]) => {
+      if (controller.signal.aborted || !active()) return; setPage(next); setDetail(document); setOptions(choices); setCustomers(choices.customers); setStale(false); setError(null);
     }).catch((caught) => { if (!controller.signal.aborted) fail(caught); });
     return () => controller.abort();
   }, [auth.session, scope, read, selected, cursor, reload]);
@@ -67,12 +68,11 @@ function SalesRevenueSession({ locale }: { locale: Locale }) {
   function applyScope(event: FormEvent) {
     event.preventDefault(); if (locked || !identity) return;
     if (Object.values(scopeInput).some((value) => !value || value !== value.trim()) || [[scopeInput.workspace_id, identity.workspaces], [scopeInput.organization_id, identity.organizations], [scopeInput.legal_entity_id, identity.entities]].some(([value, grants]) => !(grants as string[]).includes(value as string))) { setError("denied"); return; }
-    setScope({ ...scopeInput }); setSelected(""); setDetail(null); setPage(null); setCursor(""); setCustomers([]); setStale(false); setError(null);
+    setScope({ ...scopeInput }); setSelected(""); setDetail(null); setPage(null); setCursor(""); setCustomers([]); setOptions(null); setStale(false); setError(null);
   }
   async function loadCustomers() {
     if (!auth.session || !scope || lock.current) return; lock.current = true; setBusy(true);
-    try { const value = await salesRequest(auth.session, scope, "/api/v1/receivables/customers?status=Active&limit=100"); if (!value || typeof value !== "object" || !("customers" in value) || !Array.isArray(value.customers)) throw new Error("sales_contract_invalid");
-      const rows = value.customers as { customer_code: string; name: string; currency_code: string }[];
+    try { const value = await loadSalesOptions(auth.session, scope); const rows = value.customers; if (active()) setOptions(value);
       if (rows.some((row) => !row.customer_code || !row.name || !/^[A-Z]{3}$/.test(row.currency_code))) throw new Error("sales_contract_invalid"); if (active()) setCustomers(rows);
     } catch (caught) { fail(caught); } finally { lock.current = false; if (active()) setBusy(false); }
   }
@@ -94,6 +94,10 @@ function SalesRevenueSession({ locale }: { locale: Locale }) {
   function create(event: FormEvent) { event.preventDefault(); command("/api/v1/sales-revenue/quotations", { ...quote, lines }); }
   const input = (label: SalesMessage, value: string, change: (value: string) => void, type = "text", required = true) => <label>{t(label)}<input type={type} required={required} value={value} maxLength={type === "password" ? 200 : 160} disabled={locked} onChange={(event) => change(event.target.value)} /></label>;
   const scopeField = (field: keyof SalesScope, label: SalesMessage, grants: string[]) => <label>{t(label)}<select required disabled={locked} value={scopeInput[field]} onChange={(event) => { setScopeInput({ ...scopeInput, [field]: event.target.value }); setScope(null); setDetail(null); setPage(null); }}><option value="">—</option>{grants.map((value) => <option key={value}>{value}</option>)}</select></label>;
+  const choose = (label: SalesMessage, value: string, change: (value: string) => void, entries: { value: string; label: string }[]) => <label>{t(label)}<select required disabled={locked} value={value} onChange={(event) => change(event.target.value)}><option value="">—</option>{entries.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}</select></label>;
+  const journals = options?.journals.filter((row) => !detail || row.currency_code === detail.currency_code).map((row) => ({ value: row.journal_code, label: `${row.name} · ${row.journal_code}` })) || [];
+  const periods = options?.periods.map((row) => ({ value: row.id, label: `${row.name} · ${row.start_date} — ${row.end_date}` })) || [];
+  const accounts = (kind: "Asset" | "Income") => options?.accounts.filter((row) => row.account_type === kind).filter((row, i, all) => all.findIndex((other) => other.account_code === row.account_code) === i).map((row) => ({ value: row.account_code, label: `${row.name} · ${row.account_code}` })) || [];
   const can = (...permissions: string[]) => Boolean(writable && has(...permissions));
   const total = detail ? salesMoney(detail.total_minor, detail.currency_code, detail.quotation.monetary_policy.precision, locale) : "";
   return <main id="main-content" className="sales-revenue" dir={locale === "ar" ? "rtl" : "ltr"}>
@@ -118,10 +122,10 @@ function SalesRevenueSession({ locale }: { locale: Locale }) {
             {detail.status === "Submitted" && <button disabled={!can("sales.approve") || detail.created_by === identity.id} onClick={() => transition("approve")}>{t("approve")}</button>}
             {["Approved", "Ordered"].includes(detail.status) && <form onSubmit={(event) => { event.preventDefault(); transition(detail.status === "Approved" ? "order" : "fulfill", { reference, business_date: businessDate }); }}>{input("reference", reference, setReference)}{input("date", businessDate, setBusinessDate, "date")}<button disabled={!can("sales.manage")}>{t(detail.status === "Approved" ? "order" : "fulfill")}</button></form>}
             {["Draft", "Submitted", "Approved", "Ordered"].includes(detail.status) && <button disabled={!can("sales.manage")} onClick={() => transition("cancel")}>{t("cancel")}</button>}
-            {detail.status === "Fulfilled" && <form onSubmit={(event) => { event.preventDefault(); transition("invoice/prepare", invoice); }}>{input("invoiceNumber", invoice.invoice_number, (value) => setInvoice({ ...invoice, invoice_number: value }))}{input("date", invoice.invoice_date, (value) => setInvoice({ ...invoice, invoice_date: value }), "date")}{input("due", invoice.due_date, (value) => setInvoice({ ...invoice, due_date: value }), "date")}{input("journal", invoice.journal_code, (value) => setInvoice({ ...invoice, journal_code: value }))}{input("period", invoice.period_id, (value) => setInvoice({ ...invoice, period_id: value }))}{input("ar", invoice.receivable_account_code, (value) => setInvoice({ ...invoice, receivable_account_code: value }))}{input("revenue", invoice.revenue_account_code, (value) => setInvoice({ ...invoice, revenue_account_code: value }))}<button disabled={!can("sales.manage", "receivables.manage", "finance_core.manage")}>{t("invoice")}</button></form>}
+            {detail.status === "Fulfilled" && <form onSubmit={(event) => { event.preventDefault(); transition("invoice/prepare", invoice); }}>{input("invoiceNumber", invoice.invoice_number, (value) => setInvoice({ ...invoice, invoice_number: value }))}{input("date", invoice.invoice_date, (value) => setInvoice({ ...invoice, invoice_date: value }), "date")}{input("due", invoice.due_date, (value) => setInvoice({ ...invoice, due_date: value }), "date")}{choose("journal", invoice.journal_code, (value) => setInvoice({ ...invoice, journal_code: value }), journals)}{choose("period", invoice.period_id, (value) => setInvoice({ ...invoice, period_id: value }), periods)}{choose("ar", invoice.receivable_account_code, (value) => setInvoice({ ...invoice, receivable_account_code: value }), accounts("Asset"))}{choose("revenue", invoice.revenue_account_code, (value) => setInvoice({ ...invoice, revenue_account_code: value }), accounts("Income"))}<button disabled={!can("sales.manage", "receivables.manage", "finance_core.manage")}>{t("invoice")}</button></form>}
             {detail.status === "InvoicePrepared" && <button disabled={!can("sales.approve", "receivables.approve", "finance_core.validate")} onClick={() => transition("invoice/review")}>{t("reviewInvoice")}</button>}
             {detail.status === "InvoiceReviewed" && <button disabled={!can("sales.manage", "receivables.approve", "finance_core.post")} onClick={() => transition("invoice/post")}>{t("postInvoice")}</button>}
-            {detail.status === "Invoiced" && <form onSubmit={(event) => { event.preventDefault(); transition("collection/prepare", collection); }}>{input("receipt", collection.receipt_number, (value) => setCollection({ ...collection, receipt_number: value }))}{input("date", collection.receipt_date, (value) => setCollection({ ...collection, receipt_date: value }), "date")}{input("journal", collection.journal_code, (value) => setCollection({ ...collection, journal_code: value }))}{input("period", collection.period_id, (value) => setCollection({ ...collection, period_id: value }))}{input("cash", collection.cash_account_code, (value) => setCollection({ ...collection, cash_account_code: value }))}<button disabled={!can("sales.manage", "finance_core.manage")}>{t("collection")}</button></form>}
+            {detail.status === "Invoiced" && <form onSubmit={(event) => { event.preventDefault(); transition("collection/prepare", collection); }}>{input("receipt", collection.receipt_number, (value) => setCollection({ ...collection, receipt_number: value }))}{input("date", collection.receipt_date, (value) => setCollection({ ...collection, receipt_date: value }), "date")}{choose("journal", collection.journal_code, (value) => setCollection({ ...collection, journal_code: value }), journals)}{choose("period", collection.period_id, (value) => setCollection({ ...collection, period_id: value }), periods)}{choose("cash", collection.cash_account_code, (value) => setCollection({ ...collection, cash_account_code: value }), accounts("Asset"))}<button disabled={!can("sales.manage", "finance_core.manage")}>{t("collection")}</button></form>}
             {detail.status === "CollectionPrepared" && <button disabled={!can("sales.approve", "finance_core.validate")} onClick={() => transition("collection/review")}>{t("reviewCollection")}</button>}
             {detail.status === "CollectionReviewed" && <button disabled={!can("sales.manage", "receivables.manage", "finance_core.post")} onClick={() => transition("collection/post")}>{t("postCollection")}</button>}
             {detail.invoice && <p>{t("outstanding")}: {salesMoney(detail.invoice.outstanding_minor, detail.currency_code, detail.quotation.monetary_policy.precision, locale)}</p>}

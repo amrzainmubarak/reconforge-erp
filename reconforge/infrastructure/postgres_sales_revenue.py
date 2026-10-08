@@ -224,6 +224,50 @@ class PostgresSalesRevenueRepository:
             ensure_repository_tenant_scope(self.connection, self.tenant_id)
             return self._view(self._document(identifier), actor)
 
+    def options(self, *, actor: PostingActor) -> dict[str, Any]:
+        """Bounded canonical choices; finance still rechecks every selected map."""
+        with self.connection.transaction():
+            ensure_repository_tenant_scope(self.connection, self.tenant_id)
+            for permission in ("sales.read", "receivables.read", "finance_core.read"):
+                self._actor(actor, permission, mutation=False)
+            customers = self.connection.execute(
+                """SELECT customer_code,name,currency_code FROM reconforge.ar_customers
+                WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND status='Active'
+                ORDER BY customer_code COLLATE "C" LIMIT 100""",
+                (
+                    self.tenant_id,
+                    self.scope["workspace_id"],
+                    self.scope["organization_id"],
+                    self.scope["legal_entity_id"],
+                ),
+            )
+            periods = self.connection.execute(
+                """SELECT id,name,start_date,end_date FROM reconforge.fiscal_periods
+                WHERE tenant_id=%s AND application_workspace_id=%s AND status='Open' ORDER BY start_date DESC,id LIMIT 50""",
+                (self.tenant_id, self.scope["workspace_id"]),
+            )
+            journals = self.connection.execute(
+                """SELECT journal_code,name,currency_code FROM reconforge.finance_journals
+                WHERE tenant_id=%s AND workspace_id=%s AND organization_code=%s AND active ORDER BY journal_code COLLATE "C" LIMIT 100""",
+                (self.tenant_id, self.scope["workspace_id"], self.scope["organization_code"]),
+            )
+            accounts = self.connection.execute(
+                """SELECT a.account_code,a.name,a.account_type,a.chart_id FROM reconforge.finance_accounts a
+                JOIN reconforge.finance_charts c ON c.tenant_id=a.tenant_id AND c.id=a.chart_id
+                WHERE a.tenant_id=%s AND a.workspace_id=%s AND c.organization_code IN ('',%s) AND a.active AND c.active
+                AND a.allow_posting AND a.allow_manual_posting AND a.account_type IN ('Asset','Income')
+                ORDER BY a.account_code COLLATE "C",a.id LIMIT 200""",
+                (self.tenant_id, self.scope["workspace_id"], self.scope["organization_code"]),
+            )
+            return _public(
+                {
+                    "customers": [dict(row) for row in customers],
+                    "periods": [dict(row) for row in periods],
+                    "journals": [dict(row) for row in journals],
+                    "accounts": [dict(row) for row in accounts],
+                }
+            )
+
     def list(self, *, actor: PostingActor, after: str = "") -> dict[str, Any]:
         with self.connection.transaction():
             ensure_repository_tenant_scope(self.connection, self.tenant_id)

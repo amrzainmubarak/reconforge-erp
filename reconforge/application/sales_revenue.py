@@ -9,6 +9,7 @@ from reconforge.domain.sales_revenue import SalesInvoicePreparation, SalesQuotat
 
 
 class SalesRevenueRepositoryProtocol(Protocol):
+    def options(self, *, actor: PostingActor) -> dict[str, Any]: ...
     def create(self, quotation: SalesQuotation, *, command_id: str, actor: PostingActor) -> dict[str, Any]: ...
     def get(self, identifier: str, *, actor: PostingActor) -> dict[str, Any]: ...
     def list(self, *, actor: PostingActor, after: str = "") -> dict[str, Any]: ...
@@ -66,6 +67,9 @@ class SalesRevenueApplicationService:
 
     def __init__(self, repository: SalesRevenueRepositoryProtocol) -> None:
         self.repository = repository
+
+    def options(self, *, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.options(actor=actor)
 
     def create(self, quotation: SalesQuotation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         return self.repository.create(quotation, command_id=command_id, actor=actor)

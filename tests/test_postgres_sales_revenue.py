@@ -549,3 +549,18 @@ def test_populated_native_downgrade_preserves_financial_history(sales_runtime: R
             ).fetchone()["n"]
             == 2
         )
+
+
+def test_scoped_master_choices_are_actual_current_customer_period_and_accounts(sales_runtime: ReceiptRuntime) -> None:
+    with sales_runtime.actor("maker") as (connection, _, actor):
+        choices = repository(connection, sales_runtime).options(actor=actor)
+        assert choices["customers"] == [
+            {"customer_code": "CUSTOMER", "name": "Synthetic customer", "currency_code": "USD"}
+        ]
+        assert any(row["id"] == "period" and row["start_date"] == "2026-10-01" for row in choices["periods"])
+        assert {row["journal_code"] for row in choices["journals"]} >= {"SALES", "CASH"}
+        assert {(row["account_code"], row["account_type"]) for row in choices["accounts"]} >= {
+            ("AR", "Asset"),
+            ("CASH", "Asset"),
+            ("REVENUE", "Income"),
+        }

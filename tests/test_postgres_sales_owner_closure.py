@@ -12,12 +12,14 @@ from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
 from reconforge.application.receivables import ReceiptAllocationInput
+from reconforge.auth.policy import verify_policy_decision_evidence
 from reconforge.domain.operational_finance import OperationalFinancePreparation
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
+from tests.test_postgres_operational_finance_api import retained_business
 from tests.test_postgres_sales_revenue import (
     create_fulfilled_sale,
     create_reviewed_collection,
@@ -80,6 +82,7 @@ def retained_state(runtime: ReceiptRuntime, identifier: str) -> dict[str, Any]:
     with runtime.actor("checker") as (connection, _, actor):
         return {
             "document": repository(connection, runtime).get(identifier, actor=actor),
+            "business_rows": retained_business(runtime),
             "native_counts": dict(
                 connection.execute(
                     """SELECT
@@ -90,12 +93,34 @@ def retained_state(runtime: ReceiptRuntime, identifier: str) -> dict[str, Any]:
                 (SELECT count(*) FROM reconforge.operational_finance_links WHERE tenant_id=%s) links,
                 (SELECT count(*) FROM reconforge.operational_finance_commands WHERE tenant_id=%s) commands,
                 (SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s) effects,
-                (SELECT count(*) FROM reconforge.domain_audit_events WHERE tenant_id=%s) audits,
+                (SELECT count(*) FROM reconforge.domain_audit_events WHERE tenant_id=%s
+                 AND object_type<>'authorization.policy_decision') audits,
                 (SELECT count(*) FROM reconforge.outbox_events WHERE tenant_id=%s) outbox""",
                     (runtime.tenant,) * 9,
                 ).fetchone()
             ),
         }
+
+
+def authorization_evidence(runtime: ReceiptRuntime) -> dict[str, Any]:
+    with runtime.actor("checker") as (connection, _, _actor):
+        return {
+            row["id"]: row["evidence"]
+            for row in connection.execute(
+                """SELECT id, metadata_json->'policy_decision_evidence' evidence
+            FROM reconforge.domain_audit_events WHERE tenant_id=%s
+            AND object_type='authorization.policy_decision' AND action='evaluated'""",
+                (runtime.tenant,),
+            ).fetchall()
+        }
+
+
+def assert_authorization_was_retained(runtime: ReceiptRuntime, before: dict[str, Any]) -> None:
+    after = authorization_evidence(runtime)
+    assert before.keys() < after.keys()
+    assert all(after[identifier] == payload for identifier, payload in before.items())
+    for identifier in after.keys() - before.keys():
+        verify_policy_decision_evidence(after[identifier])
 
 
 def authenticated_headers(client: TestClient, runtime: ReceiptRuntime, actor_name: str) -> dict[str, str]:
@@ -334,6 +359,7 @@ def test_normal_https_public_ops_cannot_advance_sales_owned_phase(
     with TestClient(app, base_url="https://testserver") as client:
         headers = authenticated_headers(client, runtime, actor_name)
         before = retained_state(runtime, document["id"])
+        policy_before = authorization_evidence(runtime)
         response = client.post(
             "/api/v1/operational-finance/plans/" + plan["id"] + "/" + phase,
             headers=headers,
@@ -345,6 +371,7 @@ def test_normal_https_public_ops_cannot_advance_sales_owned_phase(
         )
     assert response.status_code == 409, response.text
     assert retained_state(runtime, document["id"]) == before
+    assert_authorization_was_retained(runtime, policy_before)
 
 
 @pytest.mark.parametrize("phase", ["approve", "partial_receipt", "full_allocation"])
@@ -384,6 +411,7 @@ def test_normal_https_native_ar_cannot_advance_or_consume_sales_owned_invoice(
     with TestClient(app, base_url="https://testserver") as client:
         headers = authenticated_headers(client, runtime, actor_name)
         before = retained_state(runtime, document["id"])
+        policy_before = authorization_evidence(runtime)
         if phase == "approve":
             response = client.post(
                 "/api/v1/receivables/invoices/" + document["invoice_id"] + "/approve",
@@ -420,3 +448,4 @@ def test_normal_https_native_ar_cannot_advance_or_consume_sales_owned_invoice(
             )
     assert response.status_code == 409, response.text
     assert retained_state(runtime, document["id"]) == before
+    assert_authorization_was_retained(runtime, policy_before)

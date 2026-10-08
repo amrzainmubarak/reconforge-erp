@@ -38,3 +38,11 @@ An existing unbound OPS1 ID or number aborts installation. A populated downgrade
 refuses evidence loss. Recover using a verified backup and a forward migration.
 Keep native source rows, finance snapshots, immutable links, commands, audit,
 outbox, functions/triggers and forced RLS together in backup/restore verification.
+
+After installing migration 0109, an existing runtime role that can write ordinary
+Finance entries also needs `SELECT` on `reconforge.operational_finance_plans`.
+The additive integrity trigger reads that forced-RLS source index even when a
+Manual entry has no operational owner. Grant this read dependency to the existing
+runtime role before resuming writes; it does not require INSERT, UPDATE, DELETE,
+table ownership, BYPASSRLS or SECURITY DEFINER execution. Preserve and verify this
+ACL during native backup/restore along with the existing Finance grants.

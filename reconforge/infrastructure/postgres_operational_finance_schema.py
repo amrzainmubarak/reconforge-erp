@@ -111,6 +111,11 @@ BEGIN
  IS DISTINCT FROM (p.workspace_id,p.entry_number,p.preparer_actor_id,p.amount_minor,p.amount_minor,p.currency_code,p.currency_precision)
  OR e.source_type<>'Manual' OR e.reverses_posting_id IS NOT NULL THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Operational source must retain exact native money, scope, provenance and plan.'; END IF;
+ IF s->>'currency_code' IS DISTINCT FROM p.currency_code OR
+ (p.source_kind IN ('ARInvoice','ARReceipt') AND
+ ((s->>'currency_precision')::integer,s->>'currency_rounding_policy',s->>'currency_registry_version',s->>'currency_registry_digest')
+ IS DISTINCT FROM (e.currency_precision,e.currency_rounding_policy,e.currency_registry_version,e.currency_registry_digest)) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Operational native currency and retained monetary policy must match the GL.'; END IF;
  IF NOT EXISTS(SELECT 1 FROM reconforge.organizations o JOIN reconforge.legal_entities x ON x.tenant_id=o.tenant_id AND x.organization_id=o.id
  WHERE o.tenant_id=t AND o.id=p.organization_id AND x.id=p.legal_entity_id AND o.application_workspace_id=p.workspace_id
  AND e.organization_code=o.organization_code AND e.entity_code=x.entity_code AND x.currency_code=p.currency_code) THEN

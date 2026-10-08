@@ -406,3 +406,161 @@ def test_empty_migration_roundtrip_and_installer_repeat(receipt_database: tuple[
     finally:
         with psycopg.connect(control, autocommit=True) as connection:
             connection.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(name)))
+
+
+@pytest.mark.parametrize("mismatch", ["currency", "registry"])
+def test_raw_source_admission_requires_native_currency_and_gl_affinity(
+    runtime: tuple[ReceiptRuntime, str], mismatch: str
+) -> None:
+    """A complete SQL plan cannot reinterpret EUR source units as functional USD."""
+    import psycopg
+
+    from reconforge.domain.finance_posting import canonical_json, digest_payload, validation_digest
+    from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot
+    from reconforge.utils.time import utc_now_text
+
+    rt, existing_invoice = runtime
+    if mismatch == "currency":
+        with PostgresTenantBoundary(rt.factory).transaction(rt.tenant) as connection:
+            connection.execute(
+                "INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES(%s,'EUR','Euro',2)",
+                (rt.tenant,),
+            )
+        with rt.actor("maker") as (connection, _, actor):
+            ar = PostgresReceivablesRepository(connection, rt.tenant)
+            ar.upsert_customer(
+                customer_code="EUR-CUSTOMER",
+                name="Synthetic foreign customer",
+                currency_code="EUR",
+                credit_limit_minor=1000000,
+                workspace="work",
+                organization_code="ORG",
+                entity_code="ENTITY",
+                actor_label=actor.username,
+            )
+            invoice = ar.create_invoice(
+                invoice_number="EUR-INV",
+                customer_code="EUR-CUSTOMER",
+                invoice_date="2026-10-08",
+                currency_code="EUR",
+                tax_minor=0,
+                lines=[ReceivableInvoiceLineInput("Foreign services", "1", 12000, 12000)],
+                workspace="work",
+                organization_code="ORG",
+                entity_code="ENTITY",
+                actor_label=actor.username,
+            )
+            ar.submit_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.username)
+            invoice_id = invoice["id"]
+    else:
+        from copy import deepcopy
+
+        from reconforge.utils.money import CurrencyRegistryContext
+
+        invoice_id = existing_invoice
+        with rt.actor("maker") as (connection, _, actor):
+            source = PostgresOperationalFinanceRepository(connection, rt.tenant)._source("ARInvoice", invoice_id)
+            retained = connection.execute(
+                "SELECT snapshot_json FROM reconforge.currency_registry_snapshots WHERE tenant_id=%s AND registry_digest=%s",
+                (rt.tenant, source["currency_registry_digest"]),
+            ).fetchone()["snapshot_json"]
+            changed = deepcopy(retained)
+            changed["source"] = "Synthetic new registry provenance after retained AR capture"
+            changed.pop("digest", None)
+            context = CurrencyRegistryContext.from_snapshot(changed)
+            manifest = context.registry_manifest
+            connection.execute(
+                """INSERT INTO reconforge.currency_registry_snapshots
+                (tenant_id,registry_digest,registry_version,snapshot_json,captured_by) VALUES(%s,%s,%s,%s::jsonb,%s)""",
+                (
+                    rt.tenant,
+                    manifest.digest,
+                    manifest.registry_version,
+                    canonical_json(context.snapshot()),
+                    actor.user_id,
+                ),
+            )
+            connection.execute(
+                """INSERT INTO reconforge.currency_registry_bindings(tenant_id,workspace_id,registry_digest,registry_version,bound_by)
+                VALUES(%s,'work',%s,%s,%s) ON CONFLICT(tenant_id,workspace_id) DO UPDATE
+                SET registry_digest=excluded.registry_digest,registry_version=excluded.registry_version,bound_by=excluded.bound_by""",
+                (rt.tenant, manifest.digest, manifest.registry_version, actor.user_id),
+            )
+
+    with (
+        pytest.raises(psycopg.errors.CheckViolation, match="native currency and retained monetary policy"),
+        rt.actor("maker") as (connection, _, actor),
+    ):
+        repository = PostgresOperationalFinanceRepository(connection, rt.tenant)
+        arguments = preparation(invoice_id).payload()
+        request_digest, _ = repository._command(arguments, "raw-affinity", "prepare", actor, arguments)
+        source = repository._source("ARInvoice", invoice_id)
+        plan_id = "OPS1-" + digest_payload(["work", "ARInvoice", invoice_id])[:32]
+        entry = repository.finance.create_entry(
+            entry_number=plan_id.upper(),
+            organization_code="ORG",
+            entity_code="ENTITY",
+            period_id="period",
+            journal_code="STOCK",
+            posting_date="2026-10-08",
+            description=arguments["reason"],
+            lines=[
+                {"account_code": "AR", "debit": "120.00", "credit": "0", "description": arguments["reason"]},
+                {"account_code": "REVENUE", "debit": "0", "credit": "120.00", "description": arguments["reason"]},
+            ],
+            workspace="work",
+            external_reference=plan_id,
+            actor_label=actor.username,
+        )
+        snapshot = posting_snapshot(connection, rt.tenant, posting_entry(connection, rt.tenant, entry["id"]))
+        assert snapshot["entry"]["currency_code"] == "USD"
+        if mismatch == "currency":
+            assert source["currency_code"] == "EUR"
+        else:
+            assert source["currency_code"] == "USD"
+            assert source["currency_registry_digest"] != snapshot["entry"]["currency_registry_digest"]
+        payload = {
+            "schema_version": "operational-finance-v1",
+            "id": plan_id,
+            "entry_id": entry["id"],
+            **arguments,
+            "amount_minor": source["amount_minor"],
+            "currency_code": "USD",
+            "currency_precision": 2,
+            "preparer_actor_id": actor.user_id,
+            "source_snapshot": source,
+            "snapshot": snapshot,
+        }
+        seal, validation = digest_payload(payload), validation_digest(snapshot)
+        audit, outbox = repository._event(
+            payload, "operational_finance_prepared", actor, {"plan_digest": seal, "validation_digest": validation}
+        )
+        connection.execute(
+            """INSERT INTO reconforge.operational_finance_plans(tenant_id,id,workspace_id,organization_id,legal_entity_id,
+            source_kind,source_id,entry_id,entry_number,preparer_actor_id,amount_minor,currency_code,currency_precision,
+            plan_digest,validation_digest,payload,audit_event_id,outbox_event_id,created_at)
+            VALUES(%s,%s,'work','org','entity','ARInvoice',%s,%s,%s,%s,12000,'USD',2,%s,%s,%s::jsonb,%s,%s,%s)""",
+            (
+                rt.tenant,
+                plan_id,
+                invoice_id,
+                entry["id"],
+                plan_id.upper(),
+                actor.user_id,
+                seal,
+                validation,
+                canonical_json(payload),
+                audit,
+                outbox,
+                utc_now_text(),
+            ),
+        )
+        result = repository._get(plan_id)
+        repository._remember(result, "raw-affinity", "prepare", actor, request_digest, result)
+    with rt.actor("checker") as (connection, _, _):
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.operational_finance_plans WHERE tenant_id=%s", (rt.tenant,)
+            ).fetchone()["n"]
+            == 0
+        )

@@ -113,6 +113,12 @@ def finance_database(isolated_postgres_migration_dsn: str, request: pytest.Fixtu
                 admin.execute(psycopg.sql.SQL(
                     "GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.finance_posting_effects,reconforge.finance_posting_commands TO {}"
                 ).format(psycopg.sql.Identifier(params["user"])))
+            # Plain Finance writes run the additive source-closure trigger too.
+            # It must read the forced-RLS source index without granting source mutations.
+            if admin.execute("SELECT to_regclass('reconforge.operational_finance_plans')").fetchone()[0] is not None:
+                admin.execute(psycopg.sql.SQL(
+                    "GRANT SELECT ON reconforge.operational_finance_plans TO {}"
+                ).format(psycopg.sql.Identifier(params["user"])))
         yield {"factory": factory, "boundary": boundary, "entries": entries, "ids": ids, "admin": isolated_postgres_migration_dsn, "config": config, "before_policies": before_policies}
     finally:
         factory.close()

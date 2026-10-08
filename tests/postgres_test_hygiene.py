@@ -115,6 +115,9 @@ RECEIVABLES_TENANT_CLEANUP_PLAN = PostgresTenantCleanupPlan(
         ImmutableTrigger("ar_invoice_lines", "ar_invoice_line_update_blocked"),
         ImmutableTrigger("ar_invoice_lines", "ar_line_policy_guard"),
         ImmutableTrigger("ar_receipt_allocations", "ar_allocation_policy_affinity"),
+        ImmutableTrigger("ar_idempotency_keys", "sales_receipt_name_immutable"),
+        ImmutableTrigger("ar_idempotency_keys", "sales_receipt_name_key_closure"),
+        ImmutableTrigger("ar_receipts", "sales_receipt_name_source_closure"),
         ImmutableTrigger("currency_registry_snapshots", "currency_snapshot_immutable"),
     ),
 )
@@ -142,6 +145,19 @@ def _table_exists(admin: Any, table: TenantScopedTable) -> bool:
     return row is not None and row[0] is not None
 
 
+def _trigger_exists(admin: Any, trigger: ImmutableTrigger) -> bool:
+    # Historical migration profiles may retain the table before an additive
+    # guard exists. Only a declared, installed trigger may be suspended.
+    row = admin.execute(
+        "SELECT 1 FROM pg_catalog.pg_trigger t "
+        "JOIN pg_catalog.pg_class c ON c.oid=t.tgrelid "
+        "JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace "
+        "WHERE n.nspname='reconforge' AND c.relname=%s AND t.tgname=%s AND NOT t.tgisinternal",
+        (trigger.table_name, trigger.trigger_name),
+    ).fetchone()
+    return row is not None
+
+
 def cleanup_postgres_test_tenants_as_admin(
     admin: Any,
     *,
@@ -167,7 +183,7 @@ def cleanup_postgres_test_tenants_as_admin(
         available_tables = {table.name: _table_exists(admin, table) for table in plan.tables}
         disabled_triggers: list[ImmutableTrigger] = []
         for trigger in plan.immutable_triggers:
-            if available_tables.get(trigger.table_name, False):
+            if available_tables.get(trigger.table_name, False) and _trigger_exists(admin, trigger):
                 admin.execute(
                     f"ALTER TABLE reconforge.{trigger.table_name} DISABLE TRIGGER {trigger.trigger_name}"
                 )

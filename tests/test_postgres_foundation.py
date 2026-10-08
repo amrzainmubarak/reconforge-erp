@@ -28,6 +28,7 @@ from reconforge.infrastructure.postgres import (
 )
 from tests.postgres_test_hygiene import (
     PAYABLES_TENANT_CLEANUP_PLAN,
+    RECEIVABLES_TENANT_CLEANUP_PLAN,
     RLS_TENANT_CLEANUP_PLAN,
     cleanup_postgres_test_tenants_as_admin,
 )
@@ -89,10 +90,13 @@ class _CleanupTransaction:
 
 
 class _CleanupAdminConnection:
-    def __init__(self, *, fail_on: str | None = None) -> None:
+    def __init__(
+        self, *, fail_on: str | None = None, absent_triggers: frozenset[tuple[str, str]] = frozenset()
+    ) -> None:
         self.events: list[str] = []
         self.executed: list[tuple[str, tuple[object, ...] | None]] = []
         self.fail_on = fail_on
+        self.absent_triggers = absent_triggers
 
     def transaction(self) -> _CleanupTransaction:
         return _CleanupTransaction(self)
@@ -104,6 +108,9 @@ class _CleanupAdminConnection:
         if sql == "SELECT to_regclass(%s)":
             assert params is not None
             return _CleanupCursor(row=(params[0],))
+        if "FROM pg_catalog.pg_trigger" in sql:
+            assert params is not None and len(params) == 2
+            return _CleanupCursor(row=None if params in self.absent_triggers else (1,))
         if sql.startswith("SELECT "):
             return _CleanupCursor(rows=[])
         return _CleanupCursor()
@@ -152,6 +159,44 @@ def test_admin_postgres_test_cleanup_surfaces_delete_failures_and_rolls_back_tri
 
     assert admin.events == ["begin", "rollback"]
     assert not any("ENABLE TRIGGER" in sql for sql, _ in admin.executed)
+
+
+@pytest.mark.parametrize("namespace_installed", [False, True])
+def test_admin_receivables_cleanup_only_toggles_installed_namespace_guards(namespace_installed: bool) -> None:
+    namespace_guards = frozenset(
+        {
+            ("ar_idempotency_keys", "sales_receipt_name_immutable"),
+            ("ar_idempotency_keys", "sales_receipt_name_key_closure"),
+            ("ar_receipts", "sales_receipt_name_source_closure"),
+        }
+    )
+    declared_namespace = frozenset(
+        (trigger.table_name, trigger.trigger_name)
+        for trigger in RECEIVABLES_TENANT_CLEANUP_PLAN.immutable_triggers
+        if trigger.trigger_name.startswith("sales_receipt_name_")
+    )
+    assert declared_namespace == namespace_guards
+    admin = _CleanupAdminConnection(absent_triggers=frozenset() if namespace_installed else namespace_guards)
+    cleanup_postgres_test_tenants_as_admin(
+        admin, tenant_ids=("receivables_owned_test",), plan=RECEIVABLES_TENANT_CLEANUP_PLAN
+    )
+    assert admin.events == ["begin", "commit"]
+    calls = [statement for statement, _ in admin.executed]
+    first_delete = next(index for index, statement in enumerate(calls) if statement.startswith("DELETE FROM"))
+    constraints_checked = calls.index("SET CONSTRAINTS ALL IMMEDIATE")
+    for table, trigger in namespace_guards:
+        disabled = f"ALTER TABLE reconforge.{table} DISABLE TRIGGER {trigger}"
+        enabled = f"ALTER TABLE reconforge.{table} ENABLE TRIGGER {trigger}"
+        if namespace_installed:
+            assert calls.index(disabled) < first_delete < constraints_checked < calls.index(enabled)
+        else:
+            assert disabled not in calls and enabled not in calls
+    assert all(
+        params == (["receivables_owned_test"],)
+        for statement, params in admin.executed
+        if statement.startswith("DELETE FROM")
+    )
+    assert not any("TRIGGER USER" in statement or "TRIGGER ALL" in statement for statement in calls)
 
 
 def test_postgres_settings_reject_unsafe_configuration() -> None:

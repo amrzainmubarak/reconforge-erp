@@ -902,11 +902,31 @@ class SQLiteDurableJobRepository:
         except (TypeError, ValueError) as exc:
             raise SQLiteJobRepositoryError("Stored durable-job partition effect is invalid.") from exc
 
-    def list_transitions(self, *, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
+    def list_jobs(self, *, tenant_id: str, workspace_id: str, organization_id: str, entity_id: str,
+                  status: JobStatus | None, after_id: str, limit: int) -> list[DurableJob]:
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 51:
+            raise ValueError("Job page limit is invalid.")
+        rows = self.connection.execute(
+            "SELECT * FROM durable_jobs WHERE tenant_id=? AND workspace_id=? AND organization_id=? "
+            "AND entity_id=? AND id COLLATE BINARY > ? AND (? IS NULL OR status=?) "
+            "ORDER BY id COLLATE BINARY LIMIT ?",
+            (tenant_id, workspace_id, organization_id, entity_id, after_id,
+             None if status is None else status.value, None if status is None else status.value, limit),
+        ).fetchall()
+        return [_decode_job(row) for row in rows]
+
+    def list_transitions(self, *, tenant_id: str, job_id: str,
+                         limit: int | None = None) -> list[dict[str, Any]]:
         if self.get(tenant_id=tenant_id, job_id=job_id) is None:
             return []
-        rows = self.connection.execute(
-            "SELECT * FROM durable_job_transitions WHERE job_id = ? ORDER BY job_version",
-            (job_id,),
-        ).fetchall()
+        if limit is not None and (isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 201):
+            raise ValueError("Transition history limit is invalid.")
+        query = "SELECT * FROM durable_job_transitions WHERE job_id = ? ORDER BY job_version"
+        parameters: tuple[object, ...] = (job_id,)
+        if limit is not None:
+            query += " DESC LIMIT ?"
+            parameters = (job_id, limit)
+        rows = self.connection.execute(query, parameters).fetchall()
+        if limit is not None:
+            rows.reverse()
         return [dict(row) for row in rows]

@@ -32,12 +32,19 @@ class DurableJobNotFoundError(LookupError):
     """Raised without disclosing another tenant's job existence."""
 
 
+class DurableJobVersionConflictError(RuntimeError):
+    """An operator command no longer targets the reviewed job version."""
+
+
 class DurableJobRepositoryProtocol(Protocol):
     """Atomic storage contract required by the durable-job application service."""
 
     def create_or_get(self, job: DurableJob, *, actor_id: str) -> tuple[DurableJob, bool]: ...
 
     def get(self, *, tenant_id: str, job_id: str) -> DurableJob | None: ...
+
+    def list_transitions(self, *, tenant_id: str, job_id: str,
+                         limit: int | None = None) -> list[dict[str, object]]: ...
 
     def queue_snapshot(
         self,
@@ -286,7 +293,8 @@ class DurableJobApplicationService:
             )
             return persisted, created
 
-    def requeue(self, *, tenant_id: str, job_id: str, actor_id: str, occurred_at: str) -> DurableJob:
+    def requeue(self, *, tenant_id: str, job_id: str, actor_id: str, occurred_at: str,
+                expected_version: int | None = None) -> DurableJob:
         return self._transition(
             tenant_id=tenant_id,
             job_id=job_id,
@@ -294,9 +302,11 @@ class DurableJobApplicationService:
             actor_id=actor_id,
             occurred_at=occurred_at,
             reason_code="REQUEUED",
+            expected_version=expected_version,
         )
 
-    def cancel(self, *, tenant_id: str, job_id: str, actor_id: str, occurred_at: str) -> DurableJob:
+    def cancel(self, *, tenant_id: str, job_id: str, actor_id: str, occurred_at: str,
+               expected_version: int | None = None) -> DurableJob:
         return self._transition(
             tenant_id=tenant_id,
             job_id=job_id,
@@ -304,6 +314,7 @@ class DurableJobApplicationService:
             actor_id=actor_id,
             occurred_at=occurred_at,
             reason_code="CANCELLED",
+            expected_version=expected_version,
         )
 
     def _transition(
@@ -315,8 +326,22 @@ class DurableJobApplicationService:
         actor_id: str,
         occurred_at: str,
         reason_code: str,
+        expected_version: int | None = None,
     ) -> DurableJob:
         previous = self._require_job(tenant_id=tenant_id, job_id=job_id)
+        if expected_version is not None:
+            if isinstance(expected_version, bool) or not isinstance(expected_version, int) or expected_version < 1:
+                raise ValueError("expected_version must be a positive integer")
+            if previous.version != expected_version:
+                # A lost response can be replayed only against the immediately
+                # following version, with the same actor and immutable event.
+                events = self._repository.list_transitions(tenant_id=tenant_id, job_id=job_id, limit=1)
+                if previous.version == expected_version + 1 and previous.status is to_status and events:
+                    last = events[-1]
+                    if (last.get("job_version") == previous.version and last.get("actor_id") == actor_id
+                            and last.get("reason_code") == reason_code and last.get("to_status") == to_status.value):
+                        return previous
+                raise DurableJobVersionConflictError("Durable-job version changed; refresh before acting.")
         changed, event = previous.transition(
             to_status,
             actor_id=actor_id,
@@ -422,6 +447,7 @@ class GovernedDurableJobApplicationService:
         policy_context: PolicyEvaluationContext,
         required_permission: str,
         request_id: str = "",
+        expected_version: int | None = None,
     ) -> DurableJob:
         self._authorize(
             policy_context,
@@ -435,8 +461,13 @@ class GovernedDurableJobApplicationService:
             action="cancel",
             request_id=request_id,
         )
+        job = self._service._require_job(tenant_id=tenant_id, job_id=job_id)
+        if (job.workspace_id != workspace_id or (job.organization_id or None) != organization_id
+                or job.entity_id != entity_id):
+            raise JobAuthorizationError("job policy scope does not match persisted job scope")
         return self._service.cancel(
-            tenant_id=tenant_id, job_id=job_id, actor_id=actor_id, occurred_at=occurred_at
+            tenant_id=tenant_id, job_id=job_id, actor_id=actor_id, occurred_at=occurred_at,
+            expected_version=expected_version,
         )
 
     def requeue(
@@ -452,6 +483,7 @@ class GovernedDurableJobApplicationService:
         policy_context: PolicyEvaluationContext,
         required_permission: str,
         request_id: str = "",
+        expected_version: int | None = None,
     ) -> DurableJob:
         """Authorize an exact job scope before requeueing a terminal job."""
 
@@ -480,6 +512,7 @@ class GovernedDurableJobApplicationService:
             job_id=job_id,
             actor_id=actor_id,
             occurred_at=occurred_at,
+            expected_version=expected_version,
         )
 
     def queue_snapshot(

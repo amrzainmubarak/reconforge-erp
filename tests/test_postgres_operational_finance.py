@@ -1,10 +1,17 @@
 """Actual nonowner source/GL closure, human review and immutable native links."""
 
+import os
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
+from uuid import uuid4
 
 import pytest
 
-from reconforge.application.receivables import ReceivableInvoiceLineInput
+from reconforge.application.receivables import ReceiptAllocationInput, ReceivableInvoiceLineInput
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.operational_finance import OperationalFinancePreparation
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
@@ -16,6 +23,10 @@ from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRe
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime, receipt_database
 
 __all__ = ["receipt_database"]
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN"),
+    reason="Owned PostgreSQL integration prerequisite; docs/operator/operational-finance.md; review 2026-10-08",
+)
 
 
 @pytest.fixture
@@ -200,3 +211,198 @@ def test_raw_native_line_tamper_and_opaque_command_poison_rejected(runtime: tupl
             """INSERT INTO reconforge.operational_finance_commands SELECT tenant_id,workspace_id,'poison',operation,actor_id,request_digest,request_json,plan_id,result_json||'{"amount_minor":1}'::jsonb FROM reconforge.operational_finance_commands WHERE tenant_id=%s AND plan_id=%s""",
             (rt.tenant, plan["id"]),
         )
+
+
+def test_reserved_gl_line_delete_rolls_back_and_unowned_number_is_denied(runtime: tuple[ReceiptRuntime, str]) -> None:
+    import psycopg
+
+    rt, invoice = runtime
+    with rt.actor("maker") as (connection, _, actor):
+        plan = PostgresOperationalFinanceRepository(connection, rt.tenant).prepare(
+            preparation(invoice), command_id="prepare", actor=actor
+        )
+    with pytest.raises(psycopg.errors.CheckViolation, match="snapshot"), rt.actor("maker") as (connection, _, _):
+        connection.execute(
+            "DELETE FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s",
+            (rt.tenant, plan["entry_id"]),
+        )
+    with (
+        pytest.raises(psycopg.errors.CheckViolation, match="no source owner"),
+        rt.actor("maker") as (connection, _, actor),
+    ):
+        PostgresFinanceCoreRepository(connection, rt.tenant).create_entry(
+            entry_number="oPs1-unowned",
+            organization_code="ORG",
+            entity_code="ENTITY",
+            period_id="period",
+            journal_code="STOCK",
+            posting_date="2026-10-08",
+            description="Unowned namespace",
+            workspace="work",
+            lines=[
+                {"account_code": "AR", "debit": "1", "credit": "0"},
+                {"account_code": "REVENUE", "debit": "0", "credit": "1"},
+            ],
+            actor_label=actor.username,
+        )
+    with rt.actor("maker") as (connection, _, actor):
+        assert (
+            PostgresOperationalFinanceRepository(connection, rt.tenant).get(plan["id"], actor=actor)["status"]
+            == "Draft"
+        )
+
+
+def collection_plan(runtime: tuple[ReceiptRuntime, str]) -> dict[str, Any]:
+    rt, invoice = runtime
+    prepare_review(runtime)
+    with rt.actor("maker") as (connection, _, actor):
+        plan = PostgresOperationalFinanceRepository(connection, rt.tenant).prepare(
+            preparation(invoice, "ARReceipt"), command_id="collection-prepare", actor=actor
+        )
+    with rt.actor("checker") as (connection, _, actor):
+        return PostgresOperationalFinanceRepository(connection, rt.tenant).review(
+            plan["id"],
+            expected_plan_digest=plan["plan_digest"],
+            command_id="collection-review",
+            reason="Independent full collection review",
+            actor=actor,
+        )
+
+
+def post_native_receipt(connection: Any, rt: ReceiptRuntime, invoice: str, actor: Any) -> dict[str, Any]:
+    return PostgresReceivablesRepository(connection, rt.tenant).post_receipt(
+        receipt_number="CASH-1",
+        customer_code="CUSTOMER",
+        receipt_date="2026-10-08",
+        currency_code="USD",
+        amount_minor=12000,
+        allocations=[ReceiptAllocationInput(invoice, 12000)],
+        workspace="work",
+        organization_code="ORG",
+        entity_code="ENTITY",
+        actor_label=actor.username,
+    )
+
+
+def test_native_collection_and_gl_commit_together_without_partial_paid_state(
+    runtime: tuple[ReceiptRuntime, str],
+) -> None:
+    import psycopg
+
+    rt, invoice = runtime
+    plan = collection_plan(runtime)
+    with (
+        pytest.raises(psycopg.errors.CheckViolation, match="cannot commit without"),
+        rt.actor("poster") as (connection, _, actor),
+    ):
+        post_native_receipt(connection, rt, invoice, actor)
+    with rt.actor("poster") as (connection, _, actor):
+        assert PostgresReceivablesRepository(connection, rt.tenant).get_invoice(invoice)["status"] == "Approved"
+        receipt = post_native_receipt(connection, rt, invoice, actor)
+        value = PostgresOperationalFinanceRepository(connection, rt.tenant).post(
+            plan["id"],
+            expected_plan_digest=plan["plan_digest"],
+            command_id="collection-post",
+            reason="Publish actual full collection",
+            source_effect_id=receipt["id"],
+            actor=actor,
+        )
+        assert value["source_effect_id"] == receipt["id"] and value["status"] == "Posted"
+    with rt.actor("checker") as (connection, _, actor):
+        assert PostgresReceivablesRepository(connection, rt.tenant).get_invoice(invoice)["status"] == "Paid"
+        assert (
+            PostgresOperationalFinanceRepository(connection, rt.tenant).get(plan["id"], actor=actor)[
+                "posting_effect_id"
+            ]
+            == value["posting_effect_id"]
+        )
+
+
+def test_concurrent_exact_acknowledgements_have_one_financial_effect(runtime: tuple[ReceiptRuntime, str]) -> None:
+    rt, _ = runtime
+    plan = prepare_review(runtime)
+
+    def run(_: int) -> dict[str, Any]:
+        with rt.actor("poster") as (connection, _, actor):
+            return PostgresOperationalFinanceRepository(connection, rt.tenant).post(
+                plan["id"],
+                expected_plan_digest=plan["plan_digest"],
+                command_id="concurrent-post",
+                reason="One concurrent effect",
+                actor=actor,
+            )
+
+    with ThreadPoolExecutor(max_workers=6) as workers:
+        values = list(workers.map(run, range(6)))
+    assert all(value == values[0] for value in values)
+    with rt.actor("poster") as (connection, _, _):
+        assert (
+            connection.execute(
+                "SELECT count(*) AS n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (rt.tenant,)
+            ).fetchone()["n"]
+            == 1
+        )
+
+
+def test_populated_downgrade_refuses_financial_history_loss(runtime: tuple[ReceiptRuntime, str]) -> None:
+    rt, _ = runtime
+    plan = prepare_review(runtime)
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "downgrade", "0108_pg_receipt_admission"],
+        cwd=Path(__file__).resolve().parents[1],
+        env={**os.environ, "RECONFORGE_POSTGRES_DSN": rt.admin_dsn},
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    assert result.returncode != 0 and "Operational source history cannot be discarded" in result.stdout + result.stderr
+    with rt.actor("checker") as (connection, _, actor):
+        assert (
+            PostgresOperationalFinanceRepository(connection, rt.tenant).get(plan["id"], actor=actor)["plan_digest"]
+            == plan["plan_digest"]
+        )
+
+
+def test_empty_migration_roundtrip_and_installer_repeat(receipt_database: tuple[str, str]) -> None:
+    import psycopg
+    from psycopg import sql
+
+    from reconforge.infrastructure.postgres_operational_finance_schema import (
+        install_postgres_operational_finance_schema,
+    )
+
+    control = receipt_database[0]
+    name = "ops_empty_" + uuid4().hex[:12]
+    dsn = psycopg.conninfo.make_conninfo(control, dbname=name)
+    migration_dsn = urlunsplit(urlsplit(control)._replace(path="/" + name))
+    with psycopg.connect(control, autocommit=True) as connection:
+        connection.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+    try:
+        for target, operation in (("head", "upgrade"), ("0108_pg_receipt_admission", "downgrade"), ("head", "upgrade")):
+            result = subprocess.run(
+                [sys.executable, "-m", "alembic", operation, target],
+                cwd=Path(__file__).resolve().parents[1],
+                env={**os.environ, "RECONFORGE_POSTGRES_DSN": migration_dsn},
+                capture_output=True,
+                text=True,
+                timeout=180,
+            )
+            assert result.returncode == 0, result.stdout + result.stderr
+        with psycopg.connect(dsn) as connection:
+            install_postgres_operational_finance_schema(connection)
+            install_postgres_operational_finance_schema(connection)
+            assert (
+                connection.execute(
+                    "SELECT count(*) FROM pg_tables WHERE schemaname='reconforge' AND tablename LIKE 'operational_finance_%'"
+                ).fetchone()[0]
+                == 4
+            )
+            assert (
+                connection.execute(
+                    "SELECT count(*) FROM pg_policies WHERE schemaname='reconforge' AND tablename LIKE 'operational_finance_%' AND policyname='operational_scope'"
+                ).fetchone()[0]
+                == 4
+            )
+    finally:
+        with psycopg.connect(control, autocommit=True) as connection:
+            connection.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(name)))

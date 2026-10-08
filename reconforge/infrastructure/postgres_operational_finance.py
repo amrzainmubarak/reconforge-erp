@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
+from decimal import Decimal
 from typing import Any, NoReturn
 from uuid import uuid4
 
@@ -110,13 +111,32 @@ class PostgresOperationalFinanceRepository:
             _fail("A current bound human identity is required.", "operational_actor_denied")
         for required in permissions:
             actor.require(required, mutation=mutation)
+            amount = (
+                Decimal(exact_minor_text(scope["amount_minor"], scope["currency_precision"]))
+                if "amount_minor" in scope and "currency_precision" in scope
+                else None
+            )
             if (
                 required not in principal.permissions
                 or required
                 not in PostgresIdentityRepository(self.connection).user_permissions(
                     tenant_id=self.tenant_id, user_id=actor.user_id
                 )
-                or not evaluate_principal_access(principal, required_permission=required).allowed
+                or not evaluate_principal_access(
+                    principal,
+                    required_permission=required,
+                    tenant_id=self.tenant_id,
+                    workspace_id=scope["workspace_id"],
+                    organization_id=scope["organization_id"],
+                    entity_id=scope["legal_entity_id"],
+                    amount=amount,
+                    authorized_tenant_ids=principal.authorized_tenant_ids or frozenset({self.tenant_id}),
+                    authorized_workspace_ids=principal.authorized_workspace_ids or frozenset({scope["workspace_id"]}),
+                    authorized_organization_ids=principal.authorized_organization_ids
+                    or frozenset({scope["organization_id"]}),
+                    authorized_entity_ids=principal.authorized_legal_entity_ids
+                    or frozenset({scope["legal_entity_id"]}),
+                ).allowed
             ):
                 _fail("Central authorization denied this source command.", "operational_actor_denied")
         if principal.principal_type != "user" or (mutation and not principal.step_up_active):
@@ -364,6 +384,11 @@ class PostgresOperationalFinanceRepository:
             if len(currency) != 1:
                 _fail("Source currency is inactive or absent.")
             precision = currency[0]["minor_units"]
+            self._actor(
+                actor,
+                "finance_core.manage",
+                {**arguments, "amount_minor": source["amount_minor"], "currency_precision": precision},
+            )
             amount = exact_minor_text(source["amount_minor"], precision)
             plan_id = "OPS1-" + digest_payload([request.workspace_id, request.source_kind, request.source_id])[:32]
             entry_number = plan_id.upper()

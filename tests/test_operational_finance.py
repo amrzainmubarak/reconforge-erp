@@ -1,11 +1,14 @@
 """Native AR/AP operational source money admission is exact and closed."""
 
+import ast
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.operational_finance import OperationalFinancePreparation, exact_minor_text
+from reconforge.infrastructure.postgres_operational_finance_schema import POSTGRES_OPERATIONAL_FINANCE_SCHEMA_SQL
 
 
 def request() -> OperationalFinancePreparation:
@@ -50,3 +53,17 @@ def test_closed_native_source_request() -> None:
     ):
         with pytest.raises(FinancePostingError):
             invalid.payload()
+
+
+def test_forward_migration_freezes_source_and_closure_installer() -> None:
+    tree = ast.parse(Path("alembic/versions/0109_postgres_operational_finance.py").read_text())
+    values = {
+        target.id: ast.literal_eval(node.value)
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        for target in node.targets
+        if isinstance(target, ast.Name)
+    }
+    assert values["revision"] == "0109_pg_operational_finance"
+    assert values["down_revision"] == "0108_pg_receipt_admission"
+    assert values["UPGRADE_SQL"].strip() == POSTGRES_OPERATIONAL_FINANCE_SCHEMA_SQL.strip()

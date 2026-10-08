@@ -32,6 +32,7 @@ from reconforge.infrastructure.postgres_procurement_operations import (
 )
 from reconforge.infrastructure.postgres_repository_scope import ensure_repository_tenant_scope
 from reconforge.platform.common import platform_id
+from reconforge.platform.inventory_values import quantity_to_scaled
 
 OPERATIONS = ("submit-order", "approve-order", "review-receipt", "receive", "approve-invoice", "prepare-accrual", "review-accrual", "post-accrual")
 
@@ -139,6 +140,10 @@ class PostgresProcurementPartialRepository:
                 self.shared._authorize(self._order(order_id), actor, "create")
                 self.connection.execute("SELECT reconforge.pp_verify_order(%s,%s)", (self.tenant_id, order_id))
                 return replay
+            item = self.receipts.inventory._item(scope["workspace_id"], request.item_code, active=True)
+            if item["item_type"] not in ("Stock", "Consumable") or item["tracking_mode"] != "None" or not item["uom_active"] or item["organization_id"] not in (None, scope["organization_id"]):
+                raise ProcurementPartialError("procurement_partial_item_invalid", "An active untracked stock item and unit in this organization are required.")
+            quantity_to_scaled(request.quantity, item["decimal_places"])
             self._one("""SELECT id FROM reconforge.ap_suppliers WHERE tenant_id=%s AND workspace_id=%s AND supplier_code=%s
                 AND status='Active' AND (organization_id IS NULL OR organization_id=%s) AND (legal_entity_id IS NULL OR legal_entity_id=%s)
                 AND currency_code=%s FOR SHARE""", (self.tenant_id, scope["workspace_id"], request.supplier_code,
@@ -200,6 +205,10 @@ class PostgresProcurementPartialRepository:
             self._approved(row, len(invoices))
             received = quantity_text(exact_sum(Decimal(item["quantity_text"]) for item in self._documents(order_id, "receipt") if item["stage"] == 2))
             reserve_quantity(request.quantity, received, tuple(item["quantity_text"] for item in invoices))
+            unit = self._one("""SELECT p.quantity_precision FROM reconforge.procurement_partial_receipts r
+                JOIN reconforge.inventory_receipt_plans p ON p.tenant_id=r.tenant_id AND p.id=r.receipt_plan_id
+                WHERE r.tenant_id=%s AND r.order_id=%s AND r.stage=2 ORDER BY r.sequence LIMIT 1""", (self.tenant_id, order_id))
+            quantity_to_scaled(request.quantity, unit["quantity_precision"])
             native_order = self.payables.get_purchase_order(row["purchase_order_id"])
             original = ProcurementPreparation(**row["request_json"])
             sequence, number = len(invoices) + 1, "PPI-" + row["number"] + "-" + str(len(invoices) + 1)

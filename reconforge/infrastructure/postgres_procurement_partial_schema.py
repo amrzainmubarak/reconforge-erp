@@ -125,7 +125,7 @@ DECLARE c reconforge.procurement_partial_orders%ROWTYPE;p reconforge.ap_purchase
  d reconforge.procurement_partial_receipts%ROWTYPE;i reconforge.procurement_partial_invoices%ROWTYPE;
  r reconforge.inventory_receipt_plans%ROWTYPE;g reconforge.ap_goods_receipts%ROWTYPE;h reconforge.ap_supplier_invoices%ROWTYPE;
  a reconforge.operational_finance_plans%ROWTYPE;m reconforge.procurement_partial_commands%ROWTYPE;
- ordered NUMERIC;received NUMERIC;invoiced NUMERIC;clearing TEXT;ap_account TEXT;cash_account TEXT;paid BIGINT;
+ ordered NUMERIC;received NUMERIC;invoiced NUMERIC;clearing TEXT;ap_account TEXT;cash_account TEXT;paid BIGINT;precision INTEGER;
 BEGIN
  SELECT * INTO c FROM reconforge.procurement_partial_orders WHERE tenant_id=t AND id=identifier;
  IF c IS NULL THEN RETURN; END IF;
@@ -145,6 +145,14 @@ BEGIN
  OR NOT EXISTS(SELECT 1 FROM reconforge.ap_suppliers s WHERE s.tenant_id=t AND s.id=p.supplier_id AND s.supplier_code=c.request_json->>'supplier_code')
  OR l.item_code<>c.request_json->>'item_code' OR l.ordered_quantity<>ordered OR l.ordered_quantity_text::numeric<>ordered
  OR l.unit_price_minor<>(c.request_json->>'unit_price_minor')::bigint OR l.tax_minor<>0 OR ordered*l.unit_price_minor<>c.total_minor
+ OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_items stock JOIN reconforge.inventory_units_of_measure u
+ ON u.tenant_id=stock.tenant_id AND u.id=stock.uom_id WHERE stock.tenant_id=t AND stock.workspace_id=c.workspace_id AND stock.item_code=l.item_code
+ AND ordered*power(10::numeric,COALESCE((SELECT q.quantity_precision FROM reconforge.procurement_partial_receipts v
+ JOIN reconforge.inventory_receipt_plans q ON q.tenant_id=v.tenant_id AND q.id=v.receipt_plan_id
+ WHERE v.tenant_id=t AND v.order_id=c.id ORDER BY v.sequence LIMIT 1),u.decimal_places))=
+ trunc(ordered*power(10::numeric,COALESCE((SELECT q.quantity_precision FROM reconforge.procurement_partial_receipts v
+ JOIN reconforge.inventory_receipt_plans q ON q.tenant_id=v.tenant_id AND q.id=v.receipt_plan_id
+ WHERE v.tenant_id=t AND v.order_id=c.id ORDER BY v.sequence LIMIT 1),u.decimal_places))))
  OR reconforge.procurement_actor_id(t,p.created_by)<>c.creator_actor_id
  OR (c.stage=0 AND p.status<>'Draft') OR (c.stage=1 AND p.status<>'Submitted') OR (c.stage=2 AND p.status<>'Approved')
  OR (c.stage<1 AND c.submitted_version IS NOT NULL) OR (c.stage<2 AND c.approved_version IS NOT NULL) THEN
@@ -205,6 +213,9 @@ BEGIN
  END IF;
  END LOOP;
  SELECT COALESCE(sum(quantity),0) INTO received FROM reconforge.procurement_partial_receipts WHERE tenant_id=t AND order_id=c.id AND stage=2;
+ SELECT q.quantity_precision INTO precision FROM reconforge.procurement_partial_receipts v
+ JOIN reconforge.inventory_receipt_plans q ON q.tenant_id=v.tenant_id AND q.id=v.receipt_plan_id
+ WHERE v.tenant_id=t AND v.order_id=c.id AND v.stage=2 ORDER BY v.sequence LIMIT 1;
  SELECT COALESCE(sum(quantity),0) INTO invoiced FROM reconforge.procurement_partial_invoices WHERE tenant_id=t AND order_id=c.id;
  IF invoiced>received THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial invoice reservations exceed posted received quantity.'; END IF;
@@ -216,6 +227,7 @@ BEGIN
  SELECT * INTO h FROM reconforge.ap_supplier_invoices WHERE tenant_id=t AND id=i.native_invoice_id;
  IF h IS NULL OR h.purchase_order_id<>p.id OR h.supplier_id<>p.supplier_id OR h.total_minor<>i.total_minor OR h.tax_minor<>0 OR h.currency_code<>p.currency_code
  OR h.invoice_number<>i.number OR i.number<>'PPI-'||c.number||'-'||i.sequence OR h.invoice_date<>i.posting_date OR i.posting_date<p.order_date OR i.quantity*l.unit_price_minor<>i.total_minor
+ OR precision IS NULL OR i.quantity*power(10::numeric,precision)<>trunc(i.quantity*power(10::numeric,precision))
  OR NOT EXISTS(SELECT 1 FROM reconforge.fiscal_periods f JOIN reconforge.master_data_workspace_periods w ON w.tenant_id=f.tenant_id AND w.period_id=f.id
  WHERE f.tenant_id=t AND f.id=i.period_id AND w.workspace_id=c.workspace_id AND i.posting_date BETWEEN f.start_date AND f.end_date)
  OR (h.workspace_id,h.organization_id,h.legal_entity_id) IS DISTINCT FROM (c.workspace_id,c.organization_id,c.legal_entity_id)
@@ -264,6 +276,14 @@ BEGIN
  WHERE y.tenant_id=t AND y.supplier_invoice_id=h.id) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial payable payments require accrued source, exact mapping and immutable allocations.'; END IF;
  END LOOP;
+ IF EXISTS(SELECT event_version FROM (
+ SELECT unnest(ARRAY[1::bigint,c.submitted_version,c.approved_version]) AS event_version
+ UNION ALL SELECT unnest(ARRAY[v.created_version,v.reviewed_version,v.posted_version])
+ FROM reconforge.procurement_partial_receipts v WHERE v.tenant_id=t AND v.order_id=c.id
+ UNION ALL SELECT unnest(ARRAY[v.created_version,v.approved_version,v.prepared_version,v.reviewed_version,v.posted_version])
+ FROM reconforge.procurement_partial_invoices v WHERE v.tenant_id=t AND v.order_id=c.id) events
+ WHERE event_version IS NOT NULL GROUP BY event_version HAVING count(*)<>1) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial source phases require unique retained owner command versions.'; END IF;
  IF (SELECT count(*) FROM reconforge.procurement_partial_commands WHERE tenant_id=t AND order_id=c.id)<>c.row_version THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Each partial order version needs one retained command and audit.'; END IF;
  FOR m IN SELECT * FROM reconforge.procurement_partial_commands WHERE tenant_id=t AND order_id=c.id LOOP

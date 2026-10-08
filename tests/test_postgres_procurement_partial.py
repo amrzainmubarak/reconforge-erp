@@ -174,6 +174,48 @@ def test_matched_invoices_reserve_posted_receipt_capacity_before_approval(partia
     assert view["totals"]["accrued_minor"] == "0"
 
 
+def test_partial_order_rejects_fraction_beyond_stock_unit_scale(partial_runtime: ReceiptRuntime) -> None:
+    from reconforge.platform.common import PlatformError
+
+    runtime = partial_runtime
+    with pytest.raises(PlatformError, match="precision"), runtime.actor(MAKER) as (connection, _, actor):
+        PostgresProcurementPartialRepository(connection, runtime.tenant).create(replace(request(), quantity="10.5"),
+            command_id="invalid-order-item-scale", actor=actor)
+
+
+def test_partial_invoice_rejects_fraction_beyond_retained_receipt_unit_scale(partial_runtime: ReceiptRuntime) -> None:
+    from reconforge.platform.common import PlatformError
+
+    runtime = partial_runtime
+    view = receive_partial(runtime, create_partial(runtime), "4")
+    with pytest.raises(PlatformError, match="precision"):
+        match_partial_invoice(runtime, view, "3.5")
+    with runtime.actor(MAKER) as (connection, _, actor):
+        assert PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor) == view
+
+
+def test_second_raw_receipt_cannot_reuse_first_owner_command_version(partial_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    from reconforge.domain.inventory_receipt_posting import ReceiptPreparation
+
+    runtime = partial_runtime
+    view = prepare_partial_receipt(runtime, create_partial(runtime), "4")
+    existing = view["receipts"][0]
+    with pytest.raises(psycopg.errors.CheckViolation, match="command|version"), runtime.actor(MAKER) as (connection, receipts, actor):
+        plan = receipts.prepare_receipt(ReceiptPreparation(receipt_number="PPR-" + view["order"]["number"] + "-2",
+            posting_date="2026-10-03", period_id="period", item_code="ITEM", location_code="MAIN/STOCK", quantity="4",
+            total_value_minor=4800, policy_code="FIFO", workspace="work", organization_code="ORG", entity_code="ENTITY",
+            reason="Actual detached source reusing another owner acknowledgement"), command_id="raw-second-receipt", actor=actor)
+        connection.execute("""INSERT INTO reconforge.procurement_partial_receipts(tenant_id,id,order_id,sequence,number,
+            quantity,quantity_text,total_minor,posting_date,period_id,receipt_plan_id,created_version)
+            VALUES(%s,'RAW-CLONED-RECEIPT',%s,2,%s,4,'4',4800,'2026-10-03','period',%s,%s)""",
+            (runtime.tenant, view["order"]["id"], plan["source"]["number"], plan["plan_id"], existing["created_version"]))
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    with runtime.actor(MAKER) as (connection, _, actor):
+        assert PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor) == view
+
+
 def test_concurrent_receipt_reservations_allow_one_current_version(partial_runtime: ReceiptRuntime) -> None:
     runtime = partial_runtime
     view = create_partial(runtime)

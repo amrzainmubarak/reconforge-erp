@@ -267,3 +267,38 @@ def test_retained_partial_history_and_downgrade_are_refused(partial_runtime: Rec
         admin.execute(DOWNGRADE_SQL)
     with runtime.actor(POSTER) as (connection, _, actor):
         assert PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor) == view
+
+
+def test_generic_manual_payment_cannot_bypass_reviewed_installment_owner(partial_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    from reconforge.domain.payables_payment_link import payment_external_reference
+    from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
+    from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
+    from reconforge.infrastructure.postgres_payables_payment_link import PostgresPayablesPaymentLinkRepository
+
+    runtime = partial_runtime
+    view = accrue_partial_invoice(runtime, receive_partial(runtime, create_partial(runtime), "4"), "3")
+    invoice_id = view["invoices"][0]["native_invoice_id"]
+    with runtime.actor(MAKER) as (connection, _, actor):
+        entry = PostgresFinanceCoreRepository(connection, runtime.tenant).create_entry(entry_number="UNOWNED-MANUAL-AP-PAYMENT",
+            organization_code="ORG", entity_code="ENTITY", period_id="period", journal_code="STOCK", posting_date="2026-10-04",
+            description="Real unrelated manual financial source", workspace="work", external_reference=payment_external_reference(invoice_id),
+            actor_label=actor.user_id, lines=[{"account_code": "AP", "debit": "15.00", "credit": "0"},
+                                           {"account_code": "CASH", "debit": "0", "credit": "15.00"}])
+    with runtime.actor(CHECKER) as (connection, _, actor):
+        PostgresFinanceCoreRepository(connection, runtime.tenant).validate_entry(entry["id"], reason="Actual independent financial review", actor_label=actor.user_id)
+    with runtime.actor(POSTER) as (connection, _, actor):
+        posting = PostgresFinancePostingRepository(connection, runtime.tenant)
+        preview = posting.preview(entry["id"], actor=actor)
+        effect = posting.post(entry["id"], command_id="unowned-manual-post", expected_validation_digest=preview["current_content_digest"],
+                              reason="Actual independent manual financial posting", actor=actor)
+    with pytest.raises(psycopg.errors.CheckViolation, match="installment|Installment"), runtime.actor(POSTER) as (connection, _, actor):
+        accounts = {row["account_code"]: row["id"] for row in connection.execute(
+            "SELECT account_code,id FROM reconforge.finance_accounts WHERE tenant_id=%s AND account_code IN ('AP','CASH')", (runtime.tenant,)).fetchall()}
+        PostgresPayablesPaymentLinkRepository(connection, runtime.tenant).link_finance_payment(invoice_id,
+            finance_effect_id=effect["id"], ap_account_id=accounts["AP"], cash_account_id=accounts["CASH"],
+            expected_invoice_version=view["invoices"][0]["native_version"], command_id="detached-native-ap-payment", actor_label=actor.user_id)
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    with runtime.actor(POSTER) as (connection, _, actor):
+        assert PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor) == view

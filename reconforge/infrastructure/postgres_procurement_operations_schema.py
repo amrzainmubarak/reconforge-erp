@@ -105,6 +105,11 @@ DECLARE p reconforge.ap_purchase_orders%ROWTYPE;l reconforge.ap_purchase_order_l
  r reconforge.inventory_receipt_plans%ROWTYPE;g reconforge.ap_goods_receipts%ROWTYPE;i reconforge.ap_supplier_invoices%ROWTYPE;
  qty NUMERIC;a reconforge.operational_finance_plans%ROWTYPE;q reconforge.operational_finance_plans%ROWTYPE;ap_account TEXT;cash_account TEXT;
 BEGIN
+ IF (c.stage<3 AND c.receipt_plan_id IS NOT NULL) OR (c.stage<5 AND c.goods_receipt_id IS NOT NULL)
+ OR (c.stage<6 AND c.invoice_id IS NOT NULL) OR (c.stage<8 AND c.accrual_plan_id IS NOT NULL)
+ OR (c.stage<10 AND c.accrual_effect_id IS NOT NULL) OR (c.stage<11 AND c.payment_plan_id IS NOT NULL)
+ OR (c.stage<13 AND (c.payment_effect_id IS NOT NULL OR c.payment_link_id IS NOT NULL)) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement retained engine references must match their exact cycle phase.'; END IF;
  SELECT * INTO p FROM reconforge.ap_purchase_orders WHERE tenant_id=c.tenant_id AND id=c.purchase_order_id;
  SELECT * INTO l FROM reconforge.ap_purchase_order_lines WHERE tenant_id=c.tenant_id AND purchase_order_id=p.id;
  qty:=(c.request_json->>'quantity')::numeric;
@@ -127,6 +132,9 @@ BEGIN
  OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_items WHERE tenant_id=c.tenant_id AND id=r.item_id AND item_code=l.item_code) THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement receipt capture differs from ordered stock and cost.'; END IF;
  END IF;
+ IF c.stage=3 AND EXISTS(SELECT 1 FROM reconforge.inventory_receipt_reviews WHERE tenant_id=c.tenant_id AND plan_id=r.id)
+ OR c.stage IN (3,4) AND EXISTS(SELECT 1 FROM reconforge.inventory_receipt_links WHERE tenant_id=c.tenant_id AND plan_id=r.id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement receipt review and posting must advance its exact owner phase.'; END IF;
  IF c.stage>=4 AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_reviews WHERE tenant_id=c.tenant_id AND plan_id=r.id) THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement receipt needs independent review.'; END IF;
  IF c.stage>=5 THEN
@@ -160,6 +168,9 @@ BEGIN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement accrual requires this invoice, receipt clearing and exact AP mapping.'; END IF;
  PERFORM reconforge.ops_close_plan(c.tenant_id,a.id);
  END IF;
+ IF c.stage=8 AND EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=c.tenant_id AND plan_id=a.id)
+ OR c.stage IN (8,9) AND EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=c.tenant_id AND plan_id=a.id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement accrual review and posting must advance its exact owner phase.'; END IF;
  IF c.stage>=9 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=c.tenant_id AND plan_id=a.id AND plan_digest=a.plan_digest) THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement accrual needs retained independent review.'; END IF;
  IF c.stage>=10 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=c.tenant_id AND plan_id=a.id AND posting_effect_id=c.accrual_effect_id) THEN
@@ -178,6 +189,9 @@ BEGIN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement payment requires this invoice and exact AP/cash mapping.'; END IF;
  PERFORM reconforge.ops_close_plan(c.tenant_id,q.id);
  END IF;
+ IF c.stage=11 AND EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=c.tenant_id AND plan_id=q.id)
+ OR c.stage IN (11,12) AND EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=c.tenant_id AND plan_id=q.id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement payment review and posting must advance its exact owner phase.'; END IF;
  IF c.stage>=12 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=c.tenant_id AND plan_id=q.id AND plan_digest=q.plan_digest) THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement payment needs retained independent review.'; END IF;
  IF c.stage=13 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=c.tenant_id AND plan_id=q.id AND posting_effect_id=c.payment_effect_id) THEN
@@ -217,12 +231,14 @@ CREATE TRIGGER procurement_cycles_guard BEFORE INSERT OR UPDATE OR DELETE ON rec
 UPGRADE_SQL += r"""
 CREATE FUNCTION reconforge.procurement_source_closure() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-DECLARE j JSONB;references_json JSONB[];parent TEXT;c reconforge.procurement_cycles;
+DECLARE j JSONB;references_json JSONB[];parent TEXT;owned_plan_id TEXT;source_kind TEXT;source_id TEXT;
+ receipt reconforge.inventory_receipt_plans%ROWTYPE;c reconforge.procurement_cycles;
 BEGIN
  IF TG_OP='INSERT' THEN references_json:=ARRAY[to_jsonb(NEW)];
  ELSIF TG_OP='DELETE' THEN references_json:=ARRAY[to_jsonb(OLD)];
  ELSE references_json:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)]; END IF;
  FOREACH j IN ARRAY references_json LOOP
+ owned_plan_id:=NULL;source_kind:=NULL;source_id:=NULL;receipt:=NULL;
  parent:=CASE TG_TABLE_NAME
  WHEN 'procurement_cycles' THEN j->>'id'
  WHEN 'ap_purchase_orders' THEN j->>'id'
@@ -233,8 +249,28 @@ BEGIN
  WHEN 'ap_supplier_invoice_lines' THEN j->>'supplier_invoice_id'
  WHEN 'ap_three_way_matches' THEN j->>'supplier_invoice_id'
  WHEN 'ap_payment_links' THEN j->>'supplier_invoice_id' END;
+ IF TG_TABLE_NAME IN ('operational_finance_plans','operational_finance_reviews','operational_finance_links','operational_finance_commands') THEN
+ owned_plan_id:=CASE WHEN TG_TABLE_NAME='operational_finance_plans' THEN j->>'id' ELSE j->>'plan_id' END;
+ SELECT p.source_kind,p.source_id INTO source_kind,source_id FROM reconforge.operational_finance_plans p
+ WHERE p.tenant_id=j->>'tenant_id' AND p.id=owned_plan_id;
+ IF source_kind IN ('APInvoice','APPayment') THEN parent:=source_id; END IF;
+ ELSIF TG_TABLE_NAME IN ('inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_links','inventory_receipt_commands') THEN
+ owned_plan_id:=CASE WHEN TG_TABLE_NAME='inventory_receipt_plans' THEN j->>'id' ELSE j->>'plan_id' END;
+ SELECT * INTO receipt FROM reconforge.inventory_receipt_plans p WHERE p.tenant_id=j->>'tenant_id' AND p.id=owned_plan_id;
+ END IF;
  FOR c IN SELECT * FROM reconforge.procurement_cycles WHERE tenant_id=j->>'tenant_id'
- AND (id=parent OR purchase_order_id=parent OR goods_receipt_id=parent OR invoice_id=parent) LOOP
+ AND (id=parent OR purchase_order_id=parent OR goods_receipt_id=parent OR invoice_id=parent
+ OR receipt_plan_id=owned_plan_id OR accrual_plan_id=owned_plan_id OR payment_plan_id=owned_plan_id
+ OR receipt_plan_id=receipt.original_plan_id
+ OR (receipt.operation='Receipt' AND receipt.source_number='GR-'||number
+ AND (receipt.workspace_id,receipt.organization_id,receipt.legal_entity_id)=(workspace_id,organization_id,legal_entity_id))) LOOP
+ IF (source_kind='APInvoice' AND (c.stage<8 OR c.accrual_plan_id IS DISTINCT FROM owned_plan_id))
+ OR (source_kind='APPayment' AND (c.stage<11 OR c.payment_plan_id IS DISTINCT FROM owned_plan_id)) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement operational source must be captured by its exact owner phase.'; END IF;
+ IF receipt.operation='FullReceiptReversal' AND receipt.original_plan_id=c.receipt_plan_id THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement receipt reversal requires an integrated supplier return owner.'; END IF;
+ IF receipt.operation='Receipt' AND (c.stage<3 OR c.receipt_plan_id IS DISTINCT FROM owned_plan_id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_owner_phase',MESSAGE='Procurement receipt source must be captured by its exact owner phase.'; END IF;
  PERFORM reconforge.procurement_verify_cycle(c);
  PERFORM reconforge.procurement_verify_approval_commands(c);
  END LOOP;
@@ -243,7 +279,9 @@ BEGIN
 END $$;
 DO $$ DECLARE t TEXT; BEGIN
  FOREACH t IN ARRAY ARRAY['procurement_cycles','ap_purchase_orders','ap_purchase_order_lines','ap_goods_receipts','ap_goods_receipt_lines',
-  'ap_supplier_invoices','ap_supplier_invoice_lines','ap_three_way_matches','ap_payment_links'] LOOP
+  'ap_supplier_invoices','ap_supplier_invoice_lines','ap_three_way_matches','ap_payment_links',
+  'operational_finance_plans','operational_finance_reviews','operational_finance_links','operational_finance_commands',
+  'inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_links','inventory_receipt_commands'] LOOP
  EXECUTE format('CREATE CONSTRAINT TRIGGER %I AFTER INSERT OR UPDATE OR DELETE ON reconforge.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.procurement_source_closure()',t||'_procurement_closure',t);
  END LOOP;
 END $$;
@@ -300,7 +338,9 @@ DO $$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.procurement_cycles) OR EXISTS(SEL
  RAISE EXCEPTION 'Retained procurement cycles prohibit downgrade; restore a verified pre-upgrade backup.'; END IF; END $$;
 DO $$ DECLARE t TEXT; BEGIN
  FOREACH t IN ARRAY ARRAY['ap_purchase_orders','ap_purchase_order_lines','ap_goods_receipts','ap_goods_receipt_lines',
-  'ap_supplier_invoices','ap_supplier_invoice_lines','ap_three_way_matches','ap_payment_links'] LOOP
+  'ap_supplier_invoices','ap_supplier_invoice_lines','ap_three_way_matches','ap_payment_links',
+  'operational_finance_plans','operational_finance_reviews','operational_finance_links','operational_finance_commands',
+  'inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_links','inventory_receipt_commands'] LOOP
  EXECUTE format('DROP TRIGGER IF EXISTS %I ON reconforge.%I',t||'_procurement_closure',t);
  END LOOP;
 END $$;

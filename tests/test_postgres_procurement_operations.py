@@ -4,16 +4,19 @@ from __future__ import annotations
 import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from reconforge.application.payables import PurchaseOrderLineInput
 from reconforge.domain.finance_posting import FinancePostingError
+from reconforge.domain.inventory_receipt_posting import ReceiptReversalPreparation
 from reconforge.domain.procurement_operations import ProcurementPreparation
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
+from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
 from reconforge.infrastructure.postgres_payables import PostgresPayablesRepository
 from reconforge.infrastructure.postgres_payables_payment_link import PostgresPayablesPaymentLinkRepository
 from reconforge.infrastructure.postgres_procurement_operations import (
@@ -26,6 +29,9 @@ from tests.test_postgres_inventory_receipt_posting import (
     create_receipt_runtime,
     pytestmark,
     receipt_database,
+)
+from tests.test_postgres_inventory_receipt_posting import (
+    request as receipt_request,
 )
 
 __all__ = ["receipt_database", "pytestmark"]
@@ -81,6 +87,190 @@ def advance(runtime: ReceiptRuntime, view: dict[str, Any], stop: int = 13) -> di
 
 def complete_procurement_cycle(runtime: ReceiptRuntime, number: str = "PO-1") -> dict[str, Any]:
     return advance(runtime, create(runtime, number))
+
+
+def procurement_phase_digest(connection: Any, tenant: str, *, include_audit: bool = True) -> str:
+    from psycopg import sql
+
+    from reconforge.domain.finance_posting import digest_payload
+
+    tables = ("procurement_cycles", "procurement_commands", "ap_purchase_orders", "ap_purchase_order_lines",
+              "ap_goods_receipts", "ap_goods_receipt_lines", "ap_supplier_invoices", "ap_supplier_invoice_lines",
+              "ap_three_way_matches", "ap_payment_links", "ap_payment_link_commands", "operational_finance_plans",
+              "operational_finance_reviews", "operational_finance_links", "operational_finance_commands",
+              "inventory_receipt_plans", "inventory_receipt_reviews", "inventory_receipt_links", "inventory_receipt_commands",
+              "inventory_movements", "inventory_movement_lines", "inventory_valuation_documents", "inventory_valuation_lines",
+              "inventory_cost_layers", "finance_entries", "finance_entry_lines", "finance_posting_effects")
+    if include_audit:
+        tables += ("domain_audit_events", "domain_audit_ledger_state", "outbox_events")
+    captured = {}
+    for table in tables:
+        rows = connection.execute(sql.SQL("SELECT to_jsonb(t) AS payload FROM reconforge.{} t WHERE tenant_id=%s ORDER BY to_jsonb(t)::text")
+                                  .format(sql.Identifier(table)), (tenant,)).fetchall()
+        captured[table] = [row["payload"] for row in rows]
+    return digest_payload(captured)
+
+
+@pytest.mark.parametrize("stop", [3, 4, 7, 8, 9, 10, 11, 12])
+def test_generic_participant_cannot_commit_a_detached_procurement_phase(procurement_runtime: ReceiptRuntime, stop: int) -> None:
+    import psycopg
+
+    runtime = procurement_runtime
+    view = advance(runtime, create(runtime), stop=stop)
+    actor_name = ACTORS[stop]
+    with runtime.actor(actor_name) as (connection, _, actor):
+        before = procurement_phase_digest(connection, runtime.tenant)
+        assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor) == view
+    # Real engine participants write valid immutable review/GL/payment evidence.
+    # Force deferred raw SQL closure before the owner advances: every retained
+    # source, financial row and command/audit/outbox write must roll back.
+    with pytest.raises(psycopg.errors.CheckViolation, match="Procurement"), runtime.actor(actor_name) as (connection, receipts, actor):
+        if stop == 3:
+            plan = receipts.get_plan(view["cycle"]["receipt_plan_id"], actor=actor)["plan"]
+            receipts.review(plan["plan_id"], command_id="detached-review", expected_plan_digest=plan["plan_digest"], reason="Independent generic review", actor=actor)
+        elif stop == 4:
+            captured = receipts.get_plan(view["cycle"]["receipt_plan_id"], actor=actor)
+            receipts.commit(captured["plan"]["plan_id"], command_id="detached-commit", expected_review_digest=captured["review"]["review_digest"], reason="Independent generic stock GL", actor=actor)
+        else:
+            owner = PostgresProcurementOperationsRepository(connection, runtime.tenant)
+            row = owner._cycle(view["cycle"]["id"])
+            owner._finance(row, request(), OPERATIONS[stop], "detached-finance", "Real generic financial participant", actor)
+        assert connection.execute("SELECT stage FROM reconforge.procurement_cycles WHERE tenant_id=%s AND id=%s", (runtime.tenant, view["cycle"]["id"])).fetchone()["stage"] == stop
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    with runtime.actor(actor_name) as (connection, _, actor):
+        assert procurement_phase_digest(connection, runtime.tenant) == before
+        assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor) == view
+    assert advance(runtime, view)["cycle"]["stage"] == "Paid"
+
+
+@pytest.mark.parametrize("stop", [2, 3, 4, 5, 7, 8, 9, 10, 11, 12])
+def test_authenticated_public_engines_refuse_procurement_owned_phase_without_effects(
+    procurement_runtime: ReceiptRuntime, stop: int, tmp_path: Path,
+) -> None:
+    from fastapi.testclient import TestClient
+
+    from reconforge.api import create_api_app
+    from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
+
+    runtime = procurement_runtime
+    view = advance(runtime, create(runtime), stop=stop)
+    actor_name = "maker" if stop in (2, 5) else ACTORS[stop]
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+        grants = PostgresScopeAuthorityRepository(connection)
+        for kind, identifier in (("workspace", "work"), ("organization", "org"), ("legal_entity", "entity")):
+            grants.grant(tenant_id=runtime.tenant, grant_id=f"public-{kind}", principal_type="user", principal_id=actor_name,
+                         scope_type=kind, scope_id=identifier, actor_id=actor_name)
+    with runtime.actor(actor_name) as (connection, receipts, actor):
+        before = procurement_phase_digest(connection, runtime.tenant, include_audit=False)
+        receipt = receipts.get_plan(view["cycle"]["receipt_plan_id"], actor=actor) if stop >= 3 else None
+        if stop == 2:
+            uri = "/api/v1/inventory-receipt-posting/plans"
+            body = {"command_id": "public-reserved-prepare", "receipt_number": "GR-PO-1", "posting_date": "2026-10-03", "period_id": "period",
+                    "item_code": "ITEM", "location_code": "MAIN/STOCK", "quantity": "10", "total_value_minor": "12000", "policy_code": "FIFO",
+                    "organization_code": "ORG", "entity_code": "ENTITY", "workspace": "work", "reason": "Public reserved source must remain governed"}
+        elif stop in (7, 10):
+            clearing = connection.execute("SELECT account_code FROM reconforge.finance_accounts WHERE tenant_id=%s AND id=%s", (runtime.tenant, receipt["plan"]["mapping"]["receipt_clearing_account_id"])).fetchone()["account_code"]
+            uri = "/api/v1/operational-finance/plans"
+            body = {"command_id": "public-prepare", "source_kind": "APInvoice" if stop == 7 else "APPayment", "source_id": view["cycle"]["invoice_id"],
+                    "journal_code": "STOCK", "period_id": "period", "posting_date": "2026-10-03", "debit_account_code": clearing if stop == 7 else "AP",
+                    "credit_account_code": "AP" if stop == 7 else "CASH", "reason": "Public phase must remain governed"}
+        elif stop in (3, 4, 5):
+            action = {3: "review", 4: "commit", 5: "reversal"}[stop]
+            uri = "/api/v1/inventory-receipt-posting/plans/" + receipt["plan"]["plan_id"] + "/" + action
+            body = {"command_id": "public-receipt-" + action, "reason": "Public phase must remain governed"}
+            if stop == 3:
+                body["expected_plan_digest"] = receipt["plan"]["plan_digest"]
+            elif stop == 4:
+                body["expected_review_digest"] = receipt["review"]["review_digest"]
+            else:
+                body.update(reversal_number="UNOWNED-RETURN", posting_date="2026-10-04", period_id="period")
+        else:
+            field = "accrual_plan_id" if stop in (8, 9) else "payment_plan_id"
+            plan = PostgresOperationalFinanceRepository(connection, runtime.tenant).get(view["cycle"][field], actor=actor)
+            uri = "/api/v1/operational-finance/plans/" + plan["id"] + ("/review" if stop in (8, 11) else "/post")
+            body = {"command_id": "public-finance-phase", "expected_plan_digest": plan["plan_digest"], "reason": "Public phase must remain governed"}
+    app = create_api_app(tmp_path / "unused.db", tenant_db_root=tmp_path / "tenants", postgres_dsn=runtime.factory.settings.dsn,
+                         postgres_require_tls=False, secure_transport=True)
+    scope = {"X-ReconForge-Tenant": runtime.tenant, "X-ReconForge-Workspace": "work", "X-ReconForge-Organization": "org", "X-ReconForge-Legal-Entity": "entity"}
+    # HTTPS transport semantics in TestClient; no claim of a real TLS socket.
+    with TestClient(app, base_url="https://testserver") as client:
+        login = client.post("/api/v1/auth/login", headers=scope, json={"username": actor_name, "password": runtime.password})
+        assert login.status_code == 200, login.text
+        headers = {**scope, "Authorization": "Bearer " + login.json()["access_token"]}
+        assert client.post("/api/v1/auth/step-up", headers=headers, json={"password": runtime.password}).status_code == 200
+        denied = client.post(uri, headers=headers, json=body)
+        assert denied.status_code == 409, denied.text
+        assert "owner_required" in denied.text
+        retry = client.post(uri, headers=headers, json=body)
+        assert retry.status_code == 409, retry.text
+        assert retry.json()["error"]["code"] == denied.json()["error"]["code"]
+        assert retry.json()["error"]["message"] == denied.json()["error"]["message"]
+    with runtime.actor(actor_name) as (connection, _, actor):
+        assert procurement_phase_digest(connection, runtime.tenant, include_audit=False) == before
+        assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor) == view
+    assert advance(runtime, view)["cycle"]["stage"] == "Paid"
+
+
+def test_reserved_receipt_source_cannot_be_prepared_outside_its_owner_capture(procurement_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    runtime = procurement_runtime
+    view = advance(runtime, create(runtime), stop=2)
+    with runtime.actor("maker") as (connection, _, _actor):
+        before = procurement_phase_digest(connection, runtime.tenant)
+    with pytest.raises(psycopg.errors.CheckViolation, match="exact owner phase") as refused, runtime.actor("maker") as (connection, receipts, actor):
+        receipts.prepare_receipt(receipt_request("GR-PO-1"), command_id="unowned-reserved-source", actor=actor)
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert refused.value.diag.constraint_name == "procurement_owner_phase"
+    with runtime.actor("maker") as (connection, _, actor):
+        assert procurement_phase_digest(connection, runtime.tenant) == before
+        assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor) == view
+    assert advance(runtime, view)["cycle"]["stage"] == "Paid"
+
+
+@pytest.mark.parametrize("stop", [5, 13])
+@pytest.mark.parametrize("commit_inverse", [False, True])
+def test_independent_reversal_of_owned_receipt_cannot_commit_any_phase(
+    procurement_runtime: ReceiptRuntime, stop: int, commit_inverse: bool,
+) -> None:
+    import psycopg
+
+    from reconforge.domain.finance_posting import PostingActor
+    from reconforge.platform.common import ServerPrincipal, server_principal_context
+
+    runtime = procurement_runtime
+    view = advance(runtime, create(runtime), stop=stop)
+    with runtime.actor("maker") as (connection, _, _actor):
+        before = procurement_phase_digest(connection, runtime.tenant)
+    with pytest.raises(psycopg.errors.CheckViolation, match="supplier return owner") as refused, runtime.actor("maker") as (connection, receipts, actor):
+        inverse = receipts.prepare_reversal(ReceiptReversalPreparation(original_plan_id=view["cycle"]["receipt_plan_id"], reversal_number="DETACHED-RETURN",
+            posting_date="2026-10-04", period_id="period", reason="Independent inverse of a governed purchase"), command_id="detached-inverse-prepare", actor=actor)
+        if commit_inverse:
+            # Persisted authenticated humans execute all three participants on
+            # the same outer connection, producing a real inverse before the
+            # deferred owner invariant rejects and rolls back the complete write.
+            identities = PostgresIdentityRepository(connection)
+            for name in ("checker", "poster"):
+                user = identities.authenticate_user(tenant_id=runtime.tenant, username=name, password=runtime.password)
+                assert user is not None
+                permissions = identities.user_permissions(tenant_id=runtime.tenant, user_id=user.id)
+                principal = ServerPrincipal(user=user, permissions=permissions, step_up_active=True,
+                    authorized_tenant_ids=frozenset({runtime.tenant}), authorized_workspace_ids=frozenset({"work"}),
+                    authorized_organization_ids=frozenset({"org"}), authorized_legal_entity_ids=frozenset({"entity"}))
+                with server_principal_context(principal):
+                    participant = PostingActor(user.id, user.username, permissions, step_up_active=True)
+                    if name == "checker":
+                        review = receipts.review(inverse["plan_id"], command_id="detached-inverse-review", expected_plan_digest=inverse["plan_digest"],
+                            reason="Independent valid inverse review", actor=participant)
+                    else:
+                        receipts.commit(inverse["plan_id"], command_id="detached-inverse-commit", expected_review_digest=review["review_digest"],
+                            reason="Independent valid inverse post", actor=participant)
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert refused.value.diag.constraint_name == "procurement_owner_phase"
+    with runtime.actor("maker") as (connection, _, actor):
+        assert procurement_phase_digest(connection, runtime.tenant) == before
+        assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor) == view
+    assert advance(runtime, view)["cycle"]["stage"] == "Paid"
 
 
 def seed_distinct_procurement_identities(runtime: ReceiptRuntime) -> None:

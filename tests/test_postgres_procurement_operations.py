@@ -29,8 +29,7 @@ from tests.test_postgres_inventory_receipt_posting import (
 __all__ = ["receipt_database", "pytestmark"]
 
 
-def create_procurement_runtime(receipt_database: tuple[str, str]) -> ReceiptRuntime:
-    runtime = create_receipt_runtime(receipt_database)
+def seed_procurement(runtime: ReceiptRuntime) -> ReceiptRuntime:
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work", organization_id="org") as connection:
         finance = PostgresFinanceCoreRepository(connection, runtime.tenant)
         finance.upsert_account(account_code="AP", name="Accounts payable", account_type="Liability", normal_balance="Credit", chart_code="DEFAULT", workspace="work")
@@ -42,6 +41,10 @@ def create_procurement_runtime(receipt_database: tuple[str, str]) -> ReceiptRunt
             identities.create_permission(tenant_id=runtime.tenant, permission_name=permission)
             identities.grant_permission(tenant_id=runtime.tenant, role_name="receipt-operator", permission_name=permission)
     return runtime
+
+
+def create_procurement_runtime(receipt_database: tuple[str, str], base_runtime: ReceiptRuntime | None = None) -> ReceiptRuntime:
+    return seed_procurement(base_runtime or create_receipt_runtime(receipt_database))
 
 
 @pytest.fixture
@@ -150,3 +153,59 @@ def test_six_connections_one_create_command_produces_one_po_and_ack(procurement_
     with runtime.actor("maker") as (connection, _, _actor):
         assert connection.execute("SELECT count(*) AS n FROM reconforge.procurement_cycles WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
         assert connection.execute("SELECT count(*) AS n FROM reconforge.ap_purchase_orders WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+
+
+def test_raw_stage_without_command_evidence_rolls_back_order_transition(procurement_runtime: ReceiptRuntime) -> None:
+    import psycopg
+    runtime = procurement_runtime
+    view = create(runtime)
+    with pytest.raises(psycopg.errors.CheckViolation, match="exactly one retained command"):
+        with runtime.actor("maker") as (connection, _, _actor):
+            PostgresPayablesRepository(connection, runtime.tenant).submit_purchase_order(view["cycle"]["purchase_order_id"], expected_version=1, actor_label="maker")
+            connection.execute("UPDATE reconforge.procurement_cycles SET stage=1,row_version=2 WHERE tenant_id=%s AND id=%s", (runtime.tenant, view["cycle"]["id"]))
+    with runtime.actor("maker") as (connection, _, actor):
+        assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor)["cycle"]["stage"] == "Draft"
+
+
+def test_retained_po_line_change_and_command_evidence_delete_are_refused(procurement_runtime: ReceiptRuntime) -> None:
+    import psycopg
+    runtime = procurement_runtime
+    view = advance(runtime, create(runtime), stop=5)
+    with pytest.raises(psycopg.errors.CheckViolation):
+        with runtime.actor("maker") as (connection, _, _actor):
+            connection.execute("UPDATE reconforge.ap_purchase_order_lines SET ordered_quantity=11,ordered_quantity_text='11' WHERE tenant_id=%s AND purchase_order_id=%s", (runtime.tenant, view["cycle"]["purchase_order_id"]))
+    with pytest.raises(psycopg.errors.CheckViolation, match="append-only"):
+        with runtime.actor("maker") as (connection, _, _actor):
+            connection.execute("DELETE FROM reconforge.procurement_commands WHERE tenant_id=%s AND cycle_id=%s", (runtime.tenant, view["cycle"]["id"]))
+
+
+def test_real_stock_effect_cannot_be_attached_as_invoice_accrual(procurement_runtime: ReceiptRuntime) -> None:
+    import psycopg
+    runtime = procurement_runtime
+    view = advance(runtime, create(runtime), stop=9)
+    with pytest.raises(psycopg.errors.CheckViolation, match="accrual effect must belong"):
+        with runtime.actor("poster") as (connection, _, _actor):
+            effect = connection.execute("SELECT posting_effect_id FROM reconforge.inventory_receipt_links WHERE tenant_id=%s AND plan_id=%s", (runtime.tenant, view["cycle"]["receipt_plan_id"])).fetchone()["posting_effect_id"]
+            connection.execute("UPDATE reconforge.procurement_cycles SET stage=10,row_version=row_version+1,accrual_effect_id=%s WHERE tenant_id=%s AND id=%s", (effect, runtime.tenant, view["cycle"]["id"]))
+
+
+def test_entity_alias_confusion_hides_both_cycle_and_commands(procurement_runtime: ReceiptRuntime) -> None:
+    runtime = procurement_runtime
+    view = create(runtime)
+    with runtime.actor("maker") as (connection, _, _actor):
+        connection.execute("SELECT set_config('app.entity_id','foreign',true)")
+        for table in ("procurement_cycles", "procurement_commands"):
+            assert connection.execute("SELECT count(*) AS n FROM reconforge." + table + " WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+    assert view["cycle"]["stage"] == "Draft"
+
+
+def test_populated_downgrade_refuses_erasing_retained_sources(procurement_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    from reconforge.infrastructure.postgres_procurement_operations_schema import DOWNGRADE_SQL
+    runtime = procurement_runtime
+    create(runtime)
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        with pytest.raises(psycopg.errors.RaiseException, match="Retained procurement cycles prohibit downgrade"):
+            with admin.transaction():
+                admin.execute(DOWNGRADE_SQL)

@@ -29,6 +29,7 @@ from reconforge.domain.procurement_operations import (
 )
 from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.postgres_inventory_receipt_posting import PostgresInventoryReceiptPostingRepository
 from reconforge.infrastructure.postgres_payables import PostgresPayablesRepository
 from reconforge.infrastructure.postgres_payables_payment_link import PostgresPayablesPaymentLinkRepository
@@ -96,6 +97,8 @@ class PostgresProcurementOperationsRepository:
     def _authorize(self, row: Mapping[str, Any], actor: PostingActor, operation: str) -> None:
         required = READ | (PERMISSIONS[operation] if operation != "read" else frozenset())
         self.receipts._actor(actor, required, mutation=operation != "read")
+        if not required.issubset(PostgresIdentityRepository(self.connection).user_permissions(tenant_id=self.tenant_id, user_id=actor.user_id)):
+            raise ProcurementError("procurement_actor_denied", "Persisted current permissions no longer authorize this operation.")
         request = row.get("request_json", row)
         scope = {key: row[key] for key in ("workspace_id", "organization_id", "legal_entity_id")}
         scope.update(organization_code=request["organization_code"], entity_code=request["entity_code"])

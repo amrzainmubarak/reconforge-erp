@@ -18,7 +18,7 @@ domain_invariants:
   - Reviewed clearing-to-AP accrual precedes independently reviewed AP-to-cash full settlement
   - Each retained cycle version has one actor-bound exact command with matching audit and outbox evidence
 domain_events: [procurement.cycle_changed]
-api_routes: [/api/v1/procurement-operations/cycles, /api/v1/procurement-operations/cycles/{id}, /api/v1/procurement-operations/cycles/{id}/commands/{action}, /api/v1/procurement-operations/scopes, /api/v1/procurement-operations/options]
+api_routes: ["/api/v1/procurement-operations/cycles", "/api/v1/procurement-operations/cycles/{id}", "/api/v1/procurement-operations/cycles/{id}/commands/{action}", "/api/v1/procurement-operations/scopes", "/api/v1/procurement-operations/options"]
 cli_commands: []
 ui_routes: [/procurement]
 import_schemas: []

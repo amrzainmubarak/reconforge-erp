@@ -1,6 +1,11 @@
 """Forced-RLS purchase cycle ownership and exact existing-engine closure."""
 from typing import Any
 
+_AUTHORITY_SQL = r"""
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND (rolsuper OR rolbypassrls)) THEN
+ RAISE EXCEPTION 'Procurement schema migration requires bypass of forced row security.'; END IF; END $$;
+"""
+
 UPGRADE_SQL = r"""
 CREATE TABLE reconforge.procurement_cycles (
  tenant_id TEXT NOT NULL,id TEXT NOT NULL,workspace_id TEXT NOT NULL,organization_id TEXT NOT NULL,legal_entity_id TEXT NOT NULL,
@@ -266,3 +271,7 @@ DROP FUNCTION reconforge.procurement_immutable_command();
 
 def install_postgres_procurement_operations(connection: Any) -> None:
     connection.execute(UPGRADE_SQL)
+
+
+UPGRADE_SQL = _AUTHORITY_SQL + UPGRADE_SQL
+DOWNGRADE_SQL = _AUTHORITY_SQL + DOWNGRADE_SQL

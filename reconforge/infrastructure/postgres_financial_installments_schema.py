@@ -64,7 +64,10 @@ BEGIN
  OR e.entry_number<>upper(p.id) OR e.source_type<>'Manual' OR e.external_reference<>'AP-PAYMENT:'||p.source_id
  OR e.preparer_actor_id<>maker OR e.total_debit_minor<>p.amount_minor OR e.total_credit_minor<>p.amount_minor
  OR e.currency_code<>s->>'currency_code' OR e.currency_code<>p.payload->>'currency_code'
- OR e.currency_precision<>(p.payload->>'currency_precision')::integer OR e.reverses_posting_id IS NOT NULL THEN
+ OR e.currency_precision<>(p.payload->>'currency_precision')::integer OR e.reverses_posting_id IS NOT NULL
+ OR (p.payload->>'allocated_before_minor')::numeric<0
+ OR (p.payload->>'allocated_before_minor')::numeric+p.amount_minor>h.total_minor
+ OR (SELECT count(*) FROM reconforge.financial_installment_plans q WHERE q.tenant_id=t AND q.source_id=p.source_id)>200 THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment native source, exact amount and retained plan differ'; END IF;
  IF NOT EXISTS(SELECT 1 FROM reconforge.organizations o JOIN reconforge.legal_entities x ON x.tenant_id=o.tenant_id AND x.organization_id=o.id
  WHERE o.tenant_id=t AND o.id=p.organization_id AND x.id=p.legal_entity_id AND o.application_workspace_id=p.workspace_id
@@ -110,6 +113,10 @@ BEGIN
  OR f.validation_digest<>p.payload->>'validation_digest' OR f.posted_actor_id<>l.posted_actor_id
  OR l.posted_actor_id IN (maker,r.reviewer_actor_id) OR a.finance_effect_id<>f.id OR a.supplier_invoice_id<>p.source_id
  OR a.amount_minor<>p.amount_minor OR a.currency_code<>e.currency_code OR a.invoice_version_before<>(p.payload->>'invoice_version')::integer
+ OR h.row_version<a.invoice_version_before+1
+ OR (SELECT COALESCE(sum(z.amount_minor),0) FROM reconforge.ap_payment_links z WHERE z.tenant_id=t AND z.supplier_invoice_id=p.source_id
+ AND z.invoice_version_before<a.invoice_version_before
+ AND NOT EXISTS(SELECT 1 FROM reconforge.ap_payment_link_reversals v WHERE v.tenant_id=t AND v.payment_link_id=z.id))<>(p.payload->>'allocated_before_minor')::numeric
  OR (a.ap_account_id,a.cash_account_id) IS DISTINCT FROM (lines->0->>'account_id',lines->1->>'account_id')
  OR EXISTS(SELECT 1 FROM reconforge.finance_posting_effects z WHERE z.tenant_id=t AND z.reverses_effect_id=f.id)
  OR NOT reconforge.ops_event(t,i,l.audit_event_id,l.outbox_event_id,l.posted_actor_id,'financial_installment_posted',
@@ -133,19 +140,38 @@ BEGIN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment phase requires an immutable command'; END IF;
 END $fi$;
 CREATE FUNCTION reconforge.installment_reverse_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fi$
-DECLARE changed JSONB;changes JSONB[];p RECORD;native_entry TEXT;
+DECLARE changed JSONB;changes JSONB[];p RECORD;native_entry TEXT;native_number TEXT;owner_id TEXT;
 BEGIN
  IF TG_OP='INSERT' THEN changes:=ARRAY[to_jsonb(NEW)]; ELSIF TG_OP='DELETE' THEN changes:=ARRAY[to_jsonb(OLD)];
  ELSE changes:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)]; END IF;
  FOREACH changed IN ARRAY changes LOOP
+  IF TG_TABLE_NAME IN ('domain_audit_events','outbox_events') THEN
+   owner_id:=CASE WHEN TG_TABLE_NAME='domain_audit_events' THEN changed->>'object_id' ELSE changed->>'aggregate_id' END;
+   IF upper(left(COALESCE(owner_id,''),4))<>'FI1-' THEN CONTINUE; END IF;
+   PERFORM reconforge.installment_close(changed->>'tenant_id',owner_id);
+   CONTINUE;
+  END IF;
   native_entry:=CASE WHEN TG_TABLE_NAME='finance_entries' THEN changed->>'id' ELSE changed->>'entry_id' END;
+  IF TG_TABLE_NAME='finance_entry_line_dimensions' THEN
+   SELECT entry_id INTO native_entry FROM reconforge.finance_entry_lines WHERE tenant_id=changed->>'tenant_id' AND id=changed->>'entry_line_id';
+  END IF;
+  IF TG_TABLE_NAME IN ('finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects') THEN
+   IF TG_TABLE_NAME='finance_posting_effects' AND changed->>'reverses_effect_id' IS NOT NULL THEN
+    SELECT entry_id INTO native_entry FROM reconforge.finance_posting_effects WHERE tenant_id=changed->>'tenant_id' AND id=changed->>'reverses_effect_id';
+   END IF;
+   native_number:=CASE WHEN TG_TABLE_NAME='finance_entries' THEN changed->>'entry_number' ELSE NULL END;
+   IF native_number IS NULL THEN SELECT entry_number INTO native_number FROM reconforge.finance_entries
+    WHERE tenant_id=changed->>'tenant_id' AND id=native_entry; END IF;
+   IF upper(left(COALESCE(native_number,''),4))<>'FI1-' THEN CONTINUE; END IF;
+  END IF;
   IF TG_TABLE_NAME='finance_entries' AND upper(changed->>'entry_number') LIKE 'FI1-%' THEN
    SELECT * INTO p FROM reconforge.financial_installment_plans WHERE tenant_id=changed->>'tenant_id' AND entry_id=native_entry;
    IF p IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Reserved FI1 entry requires its source'; END IF;
   END IF;
   FOR p IN SELECT * FROM reconforge.financial_installment_plans WHERE tenant_id=changed->>'tenant_id' AND
    (id=changed->>'id' OR id=changed->>'plan_id' OR entry_id=native_entry OR source_id=changed->>'id'
-    OR source_id=changed->>'supplier_invoice_id' OR entry_id IN (SELECT z.entry_id FROM reconforge.finance_posting_effects z
+    OR source_id=changed->>'supplier_invoice_id'
+    OR entry_id IN (SELECT z.entry_id FROM reconforge.finance_posting_effects z
      WHERE z.tenant_id=changed->>'tenant_id' AND z.id=changed->>'reverses_effect_id')) LOOP
    PERFORM reconforge.installment_close(p.tenant_id,p.id);
   END LOOP;
@@ -163,7 +189,8 @@ DO $fi$ DECLARE n TEXT; BEGIN
   EXECUTE format('CREATE TRIGGER immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.installment_protect()',n);
  END LOOP;
  FOREACH n IN ARRAY ARRAY['financial_installment_plans','financial_installment_reviews','financial_installment_links','financial_installment_commands',
- 'finance_entries','finance_entry_lines','finance_posting_effects','ap_supplier_invoices','ap_payment_links'] LOOP
+ 'finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','ap_supplier_invoices','ap_payment_links',
+ 'domain_audit_events','outbox_events'] LOOP
   EXECUTE format('CREATE CONSTRAINT TRIGGER installment_owner_closure AFTER INSERT OR UPDATE OR DELETE ON reconforge.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.installment_reverse_close()',n);
  END LOOP;
 END $fi$;
@@ -174,7 +201,8 @@ DO $fi$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.financial_installment_plans) TH
  RAISE EXCEPTION 'Installment downgrade refuses to discard retained financial evidence'; END IF; END $fi$;
 DO $fi$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['financial_installment_plans','financial_installment_reviews','financial_installment_links','financial_installment_commands',
- 'finance_entries','finance_entry_lines','finance_posting_effects','ap_supplier_invoices','ap_payment_links'] LOOP
+ 'finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','ap_supplier_invoices','ap_payment_links',
+ 'domain_audit_events','outbox_events'] LOOP
  EXECUTE format('DROP TRIGGER installment_owner_closure ON reconforge.%I',n); END LOOP;
 END $fi$;
 DROP TABLE reconforge.financial_installment_commands,reconforge.financial_installment_links,reconforge.financial_installment_reviews,reconforge.financial_installment_plans;

@@ -788,6 +788,16 @@ class PostgresInventoryReceiptPostingRepository:
                     plan["source"]["number"],
                 ),
             )
+            if not owner["owned"] and self._one(
+                "SELECT to_regclass('reconforge.procurement_partial_receipts') AS installed", ()
+            )["installed"] is not None:
+                owner = self._one("""SELECT EXISTS(SELECT 1 FROM reconforge.procurement_partial_receipts r
+                    JOIN reconforge.procurement_partial_orders o ON o.tenant_id=r.tenant_id AND o.id=r.order_id
+                    WHERE r.tenant_id=%s AND o.workspace_id=%s AND o.organization_id=%s AND o.legal_entity_id=%s
+                    AND (r.receipt_plan_id=%s OR r.receipt_plan_id=%s OR (%s='Receipt' AND r.number=%s))) AS owned""",
+                    (self.tenant_id, plan["scope"]["workspace_id"], plan["scope"]["organization_id"],
+                     plan["scope"]["legal_entity_id"], plan_id, plan["original"]["plan_id"] if plan["original"] else None,
+                     plan["operation"], plan["source"]["number"]))
             if owner["owned"]:
                 fail(
                     "Use the Procurement receiving command to commit its receipt, inventory, GL and AP source together.",

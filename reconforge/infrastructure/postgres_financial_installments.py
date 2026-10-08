@@ -124,6 +124,15 @@ class PostgresFinancialInstallmentsRepository:
             if replay is not None:
                 return replay
             source, version, allocated = self._source(request.source_id)
+            if self.connection.execute(
+                "SELECT 1 FROM reconforge.financial_installment_plans WHERE tenant_id=%s AND source_id=%s AND phase<2",
+                (self.tenant_id, request.source_id)).fetchone() is not None:
+                raise FinancePostingError("installment_state_conflict", "Complete the retained pending installment first.")
+            count = records(self.connection.execute(
+                "SELECT count(*) AS count FROM reconforge.financial_installment_plans WHERE tenant_id=%s AND source_id=%s",
+                (self.tenant_id, request.source_id)))[0]["count"]
+            if count >= 200:
+                raise FinancePostingError("installment_limit", "The invoice exceeds the bounded 200-installment evidence budget.")
             if any(source[k] != args[k] for k in ("workspace_id", "organization_id", "legal_entity_id")):
                 raise FinancePostingError("installment_scope_denied", "Source is outside selected hierarchy.")
             if request.amount_minor > source["amount_minor"] - allocated:

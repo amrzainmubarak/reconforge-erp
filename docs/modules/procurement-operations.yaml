@@ -1,0 +1,44 @@
+id: procurement-operations
+name: Governed stock purchase to pay
+version: 0.1.0
+maturity: experimental
+owner: finance-operations
+dependencies: [payables, inventory-receipt-posting, operational-finance, finance-core, postgres-identity]
+incompatible_versions: []
+data_classification: confidential-financial
+retention_policy: immutable source links and append-only commands; verified backup required before populated downgrade
+permissions: [payables.read, payables.manage, payables.match, payables.approve, payables.settle, inventory.read, inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
+default_roles: []
+migrations: [0111_pg_procurement_operations]
+domain_invariants:
+  - Exact positive quantity times positive minor-unit price; fractional minor-unit products are rejected
+  - One approved PO line, full untracked Stock or Consumable receipt, FIFO, functional currency, zero tax
+  - Reviewed stock receiving, cost layer, receipt GL and AP goods receipt share one outer transaction
+  - Exact passed three-way match and independent supplier-invoice approval
+  - Reviewed clearing-to-AP accrual precedes independently reviewed AP-to-cash full settlement
+  - Each retained cycle version has one actor-bound exact command with matching audit and outbox evidence
+domain_events: [procurement.cycle_changed]
+api_routes: [/api/v1/procurement-operations/cycles, /api/v1/procurement-operations/cycles/{id}, /api/v1/procurement-operations/cycles/{id}/commands/{action}, /api/v1/procurement-operations/scopes, /api/v1/procurement-operations/options]
+cli_commands: []
+ui_routes: [/procurement]
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/test_postgres_procurement_operations.py]
+threat_model:
+  - Forced tenant and canonical hierarchy RLS; app.entity_id and app.legal_entity_id must agree
+  - Current persisted human identity, scoped amount authority and fresh step-up on each mutation and retry
+  - Strict same-actor same-command same-payload replay; version fencing and source locks
+  - Reverse reference and deferred command evidence closure prevent detached source/effect/audit mutations
+benchmarks: []
+rollback_plan: restore verified pre-upgrade backup if any procurement history exists; empty downgrade only
+test_matrix:
+  domain: tests/test_procurement_operations.py
+  postgres: tests/test_postgres_procurement_operations.py
+  browser: integration gate maintained by sprint lead
+adapter_matrix:
+  postgres: implemented pending integration acceptance
+  sqlite: no public or implicit fallback
+limitations:
+  - Does not execute bank transfers or claim live banking integration
+  - Does not cover PR/RFQ, tax, FX, partial receiving, tracked inventory, supplier returns, credit notes or partial payments
+  - Supplier and inventory/finance master references are configured separately through their existing governed engines

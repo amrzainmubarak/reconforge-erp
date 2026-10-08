@@ -1,0 +1,15 @@
+# Governed stock purchase to pay
+
+The PostgreSQL-only `/procurement` workspace composes existing Payables, reviewed Inventory receipt/FIFO/GL, the reviewed operational Finance owner and AP settlement evidence. Configure active organization/entity, functional currency, supplier, untracked stock item/base UOM, internal non-negative location, FIFO policy, open period, journal, liability AP account and asset cash account first. Select references from the scoped live catalog; no synthetic IDs are required in a production workflow.
+
+Create one stock purchase with exact positive quantity and integer minor-unit unit price. Fractional minor-unit products are rejected. Submit and independently approve the order. Prepare receiving, have another human review its immutable quantity/cost/mapping capture, then have a third authorized human post. The receiving command commits inventory movement, FIFO layer, reviewed GL and AP goods receipt atomically.
+
+Create and match the supplier invoice. Its exact PO price and fully received quantity must pass the existing three-way engine. A distinct approver authorizes the invoice. Prepare its clearing-to-AP accrual, independently review, then post. Prepare the full unpaid AP-to-cash payment, independently review and post/settle in one outer transaction. The invoice creator and approver cannot post or settle their payment; Finance preparation, review and posting remain independent.
+
+Each action supplies the displayed cycle version, a frozen command key and a reason. A lost response or 5xx retains the same request for retry. Do not create a different key while the outcome is unknown. Current permission, scope, amount and identity are checked on every retry. Current version conflicts require reading the persisted result before a new action.
+
+Source history and command evidence are retained. Do not edit posted invoice values, detach reviewed source/effect links, remove command evidence or relabel an invoice as paid. Database constraints check native source affinity, exact money, canonical scope, plan/review/effect backing and per-version audit/outbox closure, including reverse reference changes.
+
+This slice supports one full purchase line, FIFO untracked Stock/Consumable, functional currency, zero tax and one full payment. It does not execute a bank transfer. Tax, FX, PR/RFQ, partial receipts/payments, supplier returns/credit notes and tracked inventory require their own integrated source contracts.
+
+Migration `0111_pg_procurement_operations` is additive. Empty downgrade removes this namespace and its reverse guards; populated downgrade refuses to erase retained history. Roll back application code only while preserving the migrated database, or restore an independently verified pre-upgrade backup when necessary. Integration acceptance and native backup/restore evidence are recorded by the sprint gate.

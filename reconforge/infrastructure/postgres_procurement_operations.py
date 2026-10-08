@@ -353,12 +353,17 @@ class PostgresProcurementOperationsRepository:
                 (*parameters, scope["organization_id"], scope["legal_entity_id"])).fetchall()
             periods = self.connection.execute("""SELECT p.id,p.name,p.start_date,p.end_date FROM reconforge.fiscal_periods p JOIN reconforge.master_data_workspace_periods w
                 ON w.tenant_id=p.tenant_id AND w.period_id=p.id WHERE p.tenant_id=%s AND w.workspace_id=%s AND p.status='Open' ORDER BY p.start_date DESC LIMIT 200""", parameters).fetchall()
-            journals = self.connection.execute("""SELECT journal_code AS code,name,currency_code FROM reconforge.finance_journals WHERE tenant_id=%s AND workspace_id=%s
-                AND organization_code=%s AND active ORDER BY journal_code LIMIT 200""", (*parameters, organization)).fetchall()
-            accounts = self.connection.execute("""SELECT account_code AS code,name,account_type FROM reconforge.finance_accounts WHERE tenant_id=%s AND workspace_id=%s
-                AND active AND allow_posting ORDER BY account_code LIMIT 200""", parameters).fetchall()
-            return json_value({"suppliers": suppliers, "items": items, "locations": locations, "policies": policies,
-                "periods": periods, "journals": journals, "accounts": accounts})
+            journals = self.connection.execute("""SELECT j.journal_code AS code,j.name,j.currency_code,c.chart_code FROM reconforge.finance_journals j
+                JOIN reconforge.finance_charts c ON c.tenant_id=j.tenant_id AND c.id=j.chart_id WHERE j.tenant_id=%s AND j.workspace_id=%s
+                AND j.organization_code=%s AND j.active AND c.active AND c.organization_code IN ('',%s) ORDER BY j.journal_code LIMIT 200""",
+                (*parameters, organization, organization)).fetchall()
+            accounts = self.connection.execute("""SELECT a.account_code AS code,a.name,a.account_type,c.chart_code FROM reconforge.finance_accounts a
+                JOIN reconforge.finance_charts c ON c.tenant_id=a.tenant_id AND c.id=a.chart_id WHERE a.tenant_id=%s AND a.workspace_id=%s
+                AND a.active AND a.allow_posting AND a.allow_manual_posting AND c.active AND c.organization_code IN ('',%s)
+                AND a.account_type IN ('Asset','Liability') ORDER BY a.account_code LIMIT 200""", (*parameters, organization)).fetchall()
+            catalogs = {"suppliers": suppliers, "items": items, "locations": locations, "policies": policies,
+                "periods": periods, "journals": journals, "accounts": accounts}
+            return json_value({key: [dict(row) for row in rows] for key, rows in catalogs.items()})
 
     def scopes(self, workspace: str, *, actor: PostingActor) -> list[dict[str, Any]]:
         with self.connection.transaction():

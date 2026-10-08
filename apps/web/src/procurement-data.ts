@@ -13,7 +13,7 @@ export interface ProcurementCycle {
   request: Record<string, string>;
 }
 export interface ProcurementDetail { cycle: ProcurementCycle; receipt: unknown }
-export interface ProcurementOption { code: string; name?: string; currency_code?: string; account_type?: string }
+export interface ProcurementOption { code: string; name?: string; currency_code?: string; account_type?: string; chart_code?: string }
 export interface ProcurementOptions { suppliers: ProcurementOption[]; items: ProcurementOption[]; locations: ProcurementOption[]; policies: ProcurementOption[]; periods: { id: string; name: string; start_date: string; end_date: string }[]; journals: ProcurementOption[]; accounts: ProcurementOption[] }
 export interface ProcurementSupplier { id: string; supplier_code: string; name: string; currency_code: string; tax_identifier: string; status: "Draft" | "Active" | "Suspended" | "Closed" }
 export interface ProcurementSupplierInput { supplier_code: string; name: string; tax_identifier: string }
@@ -58,8 +58,13 @@ export async function procurementScopes(session: BrowserAdminSession, workspace:
 
 export async function procurementOptions(session: BrowserAdminSession, scope: ProcurementScope, signal?: AbortSignal): Promise<ProcurementOptions> {
   const value = await procurementFetch(session, scope.workspace_id, scope, root + "/options", { signal });
+  return parseProcurementOptions(value);
+}
+
+export function parseProcurementOptions(value: unknown): ProcurementOptions {
   if (!object(value) || !["suppliers", "items", "locations", "policies", "periods", "journals", "accounts"].every((key) => Array.isArray(value[key]) && (value[key] as unknown[]).length <= 200 &&
-    (value[key] as unknown[]).every((item) => object(item) && text(key === "periods" ? item.id : item.code)))) invalid();
+    (value[key] as unknown[]).every((item) => object(item) && text(key === "periods" ? item.id : item.code) &&
+      (!["journals", "accounts"].includes(key) || text(item.chart_code))))) invalid();
   return value as unknown as ProcurementOptions;
 }
 

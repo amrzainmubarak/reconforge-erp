@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseProcurementAcknowledgement, parseProcurementCycle, procurementSaveSupplier, procurementActions, procurementStages, type ProcurementScope } from "./procurement-data";
+import { parseProcurementAcknowledgement, parseProcurementCycle, parseProcurementOptions, procurementSaveSupplier, procurementActions, procurementStages, type ProcurementScope } from "./procurement-data";
 import type { BrowserAdminSession } from "./types";
 
 const scope: ProcurementScope = { workspace_id: "work", organization_id: "org", legal_entity_id: "entity", organization_code: "ORG", entity_code: "ENTITY", organization_name: "Synthetic", entity_name: "Synthetic", currency_code: "USD" };
@@ -42,5 +42,13 @@ describe("procurement financial response contracts", () => {
     const sent = JSON.parse(fetchMock.mock.calls[0][1].body); expect(sent).not.toHaveProperty("command_id"); expect(sent).toMatchObject({ workspace: "work", entity_code: "ENTITY", currency_code: "USD", status: "Active" });
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ ...supplier, legal_entity_id: "foreign" }), { status: 200 }));
     await expect(procurementSaveSupplier(session, scope, { supplier_code: "vendor", name: "Synthetic vendor", tax_identifier: "SYNTHETIC" })).rejects.toThrow("procurement_contract_invalid");
+  });
+  it("accepts only bounded named catalog rows with journal-account chart references", () => {
+    const option = { code: "SUP", name: "Synthetic", currency_code: "USD", chart_code: "DEFAULT" };
+    const value = { suppliers: [option], items: [option], locations: [option], policies: [option], periods: [{ id: "period", name: "Synthetic", start_date: "2026-10-01", end_date: "2026-10-31" }], journals: [option], accounts: [{ ...option, code: "AP", account_type: "Liability" }] };
+    expect(parseProcurementOptions(value).journals[0].chart_code).toBe("DEFAULT");
+    expect(() => parseProcurementOptions({ ...value, suppliers: Array.from({ length: 201 }, () => option) })).toThrow("procurement_contract_invalid");
+    expect(() => parseProcurementOptions({ ...value, locations: [["MAIN/STOCK", "Synthetic"]] })).toThrow("procurement_contract_invalid");
+    expect(() => parseProcurementOptions({ ...value, accounts: [{ code: "AP", account_type: "Liability" }] })).toThrow("procurement_contract_invalid");
   });
 });

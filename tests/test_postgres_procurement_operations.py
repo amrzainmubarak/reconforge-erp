@@ -1,6 +1,7 @@
 """Restricted-role actual purchase-to-stock-to-AP-to-paid-GL cycle."""
 from __future__ import annotations
 
+import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from typing import Any
@@ -79,6 +80,41 @@ def advance(runtime: ReceiptRuntime, view: dict[str, Any], stop: int = 13) -> di
 
 def complete_procurement_cycle(runtime: ReceiptRuntime, number: str = "PO-1") -> dict[str, Any]:
     return advance(runtime, create(runtime, number))
+
+
+def test_options_are_named_json_serializable_scoped_and_bounded(procurement_runtime: ReceiptRuntime) -> None:
+    runtime = procurement_runtime
+    with runtime.actor("maker") as (connection, _, actor):
+        suppliers = PostgresPayablesRepository(connection, runtime.tenant)
+        for index in range(201):
+            suppliers.upsert_supplier(supplier_code=f"Z-{index:03d}", name=f"Synthetic vendor {index}", currency_code="USD",
+                workspace="work", organization_code="ORG", entity_code="ENTITY", actor_label=actor.username)
+        value = PostgresProcurementOperationsRepository(connection, runtime.tenant).options("work", "ORG", "ENTITY", actor=actor)
+        response = json.loads(json.dumps(value))
+        assert set(response) == {"suppliers", "items", "locations", "policies", "periods", "journals", "accounts"}
+        assert len(response["suppliers"]) == 200
+        assert all(isinstance(row, dict) for rows in response.values() for row in rows)
+        assert all(len(rows) <= 200 for rows in response.values())
+        assert response["suppliers"][0] == {"code": "SUP", "name": "Synthetic supplier", "currency_code": "USD"}
+        assert response["items"][0]["code"] == "ITEM" and response["locations"][0]["code"] == "MAIN/STOCK"
+        assert response["policies"][0] == {"code": "FIFO", "currency_code": "USD"}
+        assert response["periods"] == [{"id": "period", "name": "2026-10", "start_date": "2026-10-01", "end_date": "2026-10-31"}]
+        assert response["journals"][0]["code"] == "STOCK" and response["journals"][0]["chart_code"] == "DEFAULT"
+        assert {row["code"] for row in response["accounts"]} >= {"AP", "CASH"}
+        assert all(row["chart_code"] == "DEFAULT" for row in response["accounts"])
+
+
+def test_options_exclude_accounts_without_reviewed_manual_posting_authority(procurement_runtime: ReceiptRuntime) -> None:
+    runtime = procurement_runtime
+    with runtime.actor("maker") as (connection, _, actor):
+        finance = PostgresFinanceCoreRepository(connection, runtime.tenant)
+        finance.upsert_account(account_code="BLOCKED", name="Synthetic blocked manual account", account_type="Liability",
+            normal_balance="Credit", chart_code="DEFAULT", workspace="work", allow_manual_posting=False)
+        finance.upsert_account(account_code="INACTIVE", name="Synthetic inactive account", account_type="Asset",
+            chart_code="DEFAULT", workspace="work", active=False)
+        value = PostgresProcurementOperationsRepository(connection, runtime.tenant).options("work", "ORG", "ENTITY", actor=actor)
+        codes = {row["code"] for row in value["accounts"]}
+        assert {"BLOCKED", "INACTIVE"}.isdisjoint(codes) and {"AP", "CASH"} <= codes
 
 
 def test_actual_full_cycle_has_fifo_stock_cleared_accrual_paid_ap_and_exact_gl(procurement_runtime: ReceiptRuntime) -> None:

@@ -144,6 +144,33 @@ def test_live_postgres_receivables_lifecycle_credit_allocation_aging_and_rls() -
                 "ar_receipt_allocations,ar_idempotency_keys,currency_registry_bindings,currency_registry_snapshots"
             )
             admin.execute(f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}")
+            assert tuple(
+                admin.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=%s", (app_user,)).fetchone()
+            ) == (False, False)
+            for dependency in ("operational_finance_plans", "operational_finance_links", "sales_revenue_documents"):
+                qualified = f"reconforge.{dependency}"
+                if admin.execute("SELECT to_regclass(%s)", (qualified,)).fetchone()[0] is None:
+                    continue
+                previous_dml = admin.execute(
+                    "SELECT has_table_privilege(%s,%s,'INSERT'),has_table_privilege(%s,%s,'UPDATE'),"
+                    "has_table_privilege(%s,%s,'DELETE')",
+                    (app_user, qualified, app_user, qualified, app_user, qualified),
+                ).fetchone()
+                admin.execute(f"GRANT SELECT ON {qualified} TO {app_user}")
+                assert tuple(
+                    admin.execute(
+                        "SELECT has_table_privilege(%s,%s,'SELECT'),has_table_privilege(%s,%s,'INSERT'),"
+                        "has_table_privilege(%s,%s,'UPDATE'),has_table_privilege(%s,%s,'DELETE')",
+                        (app_user, qualified, app_user, qualified, app_user, qualified, app_user, qualified),
+                    ).fetchone()
+                ) == (True, *previous_dml)
+                assert tuple(
+                    admin.execute(
+                        "SELECT pg_get_userbyid(relowner)<>%s,relrowsecurity,relforcerowsecurity "
+                        "FROM pg_class WHERE oid=to_regclass(%s)",
+                        (app_user, qualified),
+                    ).fetchone()
+                ) == (True, True, True)
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)", (tenant_a, tenant_a, tenant_b, tenant_b))
         for tenant in (tenant_a, tenant_b):
             with PostgresTenantBoundary(factory).transaction(tenant) as connection:

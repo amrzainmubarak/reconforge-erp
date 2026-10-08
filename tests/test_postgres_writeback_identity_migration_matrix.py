@@ -25,7 +25,7 @@ def _report() -> dict[str, object]:
     return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
 
 
-@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03", "0094_2026-10-03", "CLEANUP_2026-10-03", "0094_CLEANUP_2026-10-03", "0095_2026-10-03", "0096_2026-10-03", "0097_2026-10-03", "0098_2026-10-03", "0099_2026-10-03"])
+@pytest.mark.parametrize("report_date", ["2026-08-22", "2026-10-03", "0094_2026-10-03", "CLEANUP_2026-10-03", "0094_CLEANUP_2026-10-03", "0095_2026-10-03", "0096_2026-10-03", "0097_2026-10-03", "0098_2026-10-03", "0099_2026-10-03", "2026-10-08"])
 def test_retained_postgres_writeback_identity_matrix_is_closed_digest_bound_and_parity_checked(report_date: str) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     report = json.loads((ROOT / f"docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_{report_date}.json").read_text(encoding="utf-8"))
@@ -69,6 +69,7 @@ def test_matrix_subject_supply_chain_and_package_contracts_bind_current_sources(
     assert {
         "include .github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-08-22.json",
+        "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-08.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-03.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0094_2026-10-03.json",
         "include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_CLEANUP_2026-10-03.json",

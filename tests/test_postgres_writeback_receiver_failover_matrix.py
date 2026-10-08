@@ -14,7 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "docs/schemas/postgres_writeback_receiver_failover_matrix.schema.json"
-REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-03.json"
+REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-08.json"
 CURRENT_REPORT_PATH = ROOT / "docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-23.json"
 RUNNER_PATH = ROOT / ".github/scripts/verify_postgres_writeback_receiver_failover_matrix.py"
 RECEIVER_PATH = ROOT / "reconforge/connectors/writeback_receiver.py"
@@ -46,9 +46,10 @@ def test_current_receiver_failover_matrix_is_schema_valid_and_replay_parity_boun
     assert all(run["recovery"]["acknowledged_effect_rpo"] == 0 for run in report["runs"])
 
 
-def test_retained_receiver_failover_matrix_is_closed_digest_and_source_bound() -> None:
+@pytest.mark.parametrize("report_date", ["2026-10-03", "2026-10-08"])
+def test_retained_receiver_failover_matrix_is_closed_digest_and_source_bound(report_date: str) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
-    report = _report()
+    report = json.loads((ROOT / f"docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_{report_date}.json").read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator.check_schema(schema)
     jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(report)
 
@@ -62,7 +63,19 @@ def test_retained_receiver_failover_matrix_is_closed_digest_and_source_bound() -
     assert subject["receiver_source_sha256"] == _source_digest(RECEIVER_PATH)
     assert subject["postgres_receiver_source_sha256"] == _source_digest(POSTGRES_RECEIVER_PATH)
     assert subject["matrix_runner_source_sha256"] == _source_digest(RUNNER_PATH)
-    assert subject["supply_chain_policy_sha256"] == _source_digest(POLICY_PATH)
+    # Historical reports remain bound to their recorded policy subject.
+    if report_date == "2026-10-08":
+        policy_source = POLICY_PATH.read_text(encoding="utf-8")
+    else:
+        policy_source = subprocess.run(
+            ("git", "show", f"{subject['base_commit']}:docs/security/supply-chain-policy.v1.json"),
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    policy_digest = hashlib.sha256(policy_source.replace("\r\n", "\n").encode("utf-8")).hexdigest()
+    assert subject["supply_chain_policy_sha256"] == policy_digest
     subprocess.run(
         ("git", "cat-file", "-e", f"{subject['base_commit']}^{{commit}}"),
         cwd=ROOT,
@@ -106,6 +119,7 @@ def test_matrix_exact_images_package_and_secret_boundaries() -> None:
     assert {
         "include .github/scripts/verify_postgres_writeback_receiver_failover_matrix.py",
         "include docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-08-22.json",
+        "include docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-08.json",
         "include docs/schemas/postgres_writeback_receiver_failover_matrix.schema.json",
         "include tests/test_postgres_writeback_receiver_failover_matrix.py",
         "include docs/adr/0544-prove-receiver-replay-across-synchronous-postgres-failover.md",

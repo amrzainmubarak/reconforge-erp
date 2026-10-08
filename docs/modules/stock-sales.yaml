@@ -1,0 +1,61 @@
+id: stock-sales
+name: Governed product sales and stock-to-cash
+version: 0.1.0
+maturity: experimental
+owner: Amr
+dependencies: [identity, master-data, inventory-core, inventory-valuation, inventory-receipt-posting, finance-posting, receivables, operational-finance]
+incompatible_versions: []
+data_classification: confidential-financial
+retention_policy: immutable source, command, review and posted financial history
+permissions: [sales.read, sales.manage, sales.approve, inventory.read, inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve, receivables.read, receivables.manage, receivables.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
+default_roles: []
+migrations: [0113_pg_stock_sales]
+domain_invariants:
+  - exact existing HALF_EVEN FIFO and integer minor units
+  - reservations share native inventory advisory lock and cannot exceed actual stock
+  - one frozen issue owner per scoped FIFO item
+  - independent human order and finance approval
+  - native stock, FIFO consumption and COGS publish in one PostgreSQL transaction
+  - AR and cash source phases and posting evidence close in both directions
+  - exact retained actor, scope, payload, version and acknowledgement replay
+domain_events: [stock_sales.create, stock_sales.submit, stock_sales.approve, stock_sales.reserve, stock_sales.prepare-issue, stock_sales.review-issue, stock_sales.deliver, stock_sales.prepare-invoice, stock_sales.review-invoice, stock_sales.invoice, stock_sales.prepare-collection, stock_sales.review-collection, stock_sales.collect, stock_sales.cancel]
+api_routes:
+  - GET /stock-sales/options
+  - GET /stock-sales/orders
+  - GET /stock-sales/orders/{identifier}
+  - POST /stock-sales/orders
+  - POST /stock-sales/orders/{identifier}/submit
+  - POST /stock-sales/orders/{identifier}/approve
+  - POST /stock-sales/orders/{identifier}/reserve
+  - POST /stock-sales/orders/{identifier}/issue/prepare
+  - POST /stock-sales/orders/{identifier}/issue/review
+  - POST /stock-sales/orders/{identifier}/deliver
+  - POST /stock-sales/orders/{identifier}/invoice/prepare
+  - POST /stock-sales/orders/{identifier}/invoice/review
+  - POST /stock-sales/orders/{identifier}/invoice/post
+  - POST /stock-sales/orders/{identifier}/collection/prepare
+  - POST /stock-sales/orders/{identifier}/collection/review
+  - POST /stock-sales/orders/{identifier}/collection/post
+  - POST /stock-sales/orders/{identifier}/cancel
+cli_commands: []
+ui_routes: [stock-sales]
+import_schemas: []
+export_schemas: [stock-sales-order-v1, stock-sales-issue-v1]
+synthetic_fixtures:
+  - tests/test_postgres_stock_sales.py canonical persisted human fixture and actual reviewed inbound FIFO receipt
+threat_model:
+  - stale or forged authority and amount permissions
+  - over-reservation and concurrent native stock withdrawal
+  - re-costing frozen FIFO or bypassing native source owner
+  - detached COGS, revenue or cash posting
+  - cross-entity receipt namespace collision
+benchmarks: []
+rollback_plan: empty migration downgrade restores exact predecessor receipt namespace functions; retained stock-sale history requires backup restore
+test_matrix:
+  - tests/test_stock_sales.py exact discount and existing FIFO interpretation
+  - tests/test_postgres_stock_sales.py actual stock-to-cash, independent review, detached native rollback and six concurrent reservations
+runtime_acceptance: pending actual PostgreSQL, API and Studio integration gates
+scope_limits:
+  - PostgreSQL only; existing local workflows remain available
+  - one non-lot item and one full shipment/invoice/settlement in functional currency
+  - explicit zero-tax; no tax calculation, partial delivery, stock return or credit-note inverse

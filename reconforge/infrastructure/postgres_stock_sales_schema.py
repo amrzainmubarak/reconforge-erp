@@ -206,7 +206,7 @@ DO $$ DECLARE n TEXT; BEGIN FOREACH n IN ARRAY ARRAY['stock_sales_orders','stock
  EXECUTE format('CREATE TRIGGER stock_sales_admission BEFORE INSERT OR UPDATE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.stock_sales_admit()',n);
 END LOOP; END $$;
 CREATE FUNCTION reconforge.stock_sales_close(t TEXT,target TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-DECLARE d RECORD; s INTEGER; e RECORD; c RECORD; r RECORD; claim RECORD; entry RECORD; x JSONB; total NUMERIC:=0; quantity NUMERIC:=0;
+DECLARE d reconforge.stock_sales_orders%ROWTYPE; s INTEGER; e RECORD; c RECORD; r RECORD; claim RECORD; entry RECORD; x JSONB; total NUMERIC:=0; quantity NUMERIC:=0;
  invoice RECORD; p RECORD; reviewed BOOLEAN; posted BOOLEAN; native_receipt RECORD; layer RECORD; remaining BIGINT; ordinal INTEGER:=0;
 BEGIN
  SELECT * INTO d FROM reconforge.stock_sales_orders WHERE tenant_id=t AND id=target;
@@ -270,7 +270,7 @@ BEGIN
   OR d.issue_plan->>'source_digest' IS DISTINCT FROM d.source_digest
   OR(entry.workspace_id,entry.organization_id,entry.legal_entity_id,entry.currency_code) IS DISTINCT FROM(d.workspace_id,d.organization_id,d.legal_entity_id,d.currency_code)
   OR entry.preparer_actor_id IS DISTINCT FROM d.issue_plan->>'preparer_actor_id' OR entry.preparer_actor_id=d.issue_reviewer_id
-  OR entry.status IS DISTINCT FROM CASE WHEN d.status='Cancelled' THEN'Voided' WHEN s=4 THEN'Draft' ELSE'Validated' END
+  OR entry.status IS DISTINCT FROM(CASE WHEN d.status='Cancelled' THEN'Voided' WHEN s=4 THEN'Draft' ELSE'Validated' END)
   OR entry.total_debit_minor IS DISTINCT FROM(d.issue_plan->>'total_cost_minor')::bigint OR entry.total_credit_minor<>entry.total_debit_minor
   OR NOT reconforge.sales_revenue_policy_matches(t,d.source->'monetary_policy',entry.currency_code,entry.currency_precision,
       entry.currency_rounding_policy,entry.currency_registry_version,entry.currency_registry_digest)
@@ -359,7 +359,7 @@ BEGIN
   IF invoice IS NULL OR p IS NULL OR(invoice.workspace_id,invoice.organization_id,invoice.legal_entity_id,invoice.customer_id,invoice.currency_code,invoice.total_minor)
    IS DISTINCT FROM(d.workspace_id,d.organization_id,d.legal_entity_id,d.customer_id,d.currency_code,d.total_minor)
   OR(p.source_kind,p.source_id,p.amount_minor,p.currency_code) IS DISTINCT FROM('ARInvoice'::text,d.invoice_id,d.total_minor,d.currency_code)
-  OR invoice.status IS DISTINCT FROM CASE WHEN s=7 THEN'Submitted' WHEN s=12 THEN'Paid' ELSE'Approved' END
+  OR invoice.status IS DISTINCT FROM(CASE WHEN s=7 THEN'Submitted' WHEN s=12 THEN'Paid' ELSE'Approved' END)
   OR reviewed IS DISTINCT FROM(s>=8) OR posted IS DISTINCT FROM(s>=9)
   OR NOT reconforge.sales_revenue_policy_matches(t,d.source->'monetary_policy',invoice.currency_code,invoice.currency_precision,
     invoice.currency_rounding_policy,invoice.currency_registry_version,invoice.currency_registry_digest)

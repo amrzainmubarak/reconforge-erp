@@ -187,7 +187,8 @@ class PostgresStockSalesRepository:
             AND p.policy_code=%s AND p.active AND p.currency_code=%s AND a.active AND a.allow_posting AND a.allow_manual_posting
             AND b.active AND b.allow_posting AND b.allow_manual_posting AND a.account_type='Expense' AND b.account_type='Asset'""",
             (row["item_id"], self.tenant_id, row["workspace_id"], row["organization_id"], row["legal_entity_id"], request["policy_code"], row["currency_code"]))
-        layers = [dict(value) for value in self.connection.execute("""SELECT l.* FROM reconforge.inventory_cost_layers l
+        layers = [dict(value) for value in self.connection.execute("""SELECT l.*,d.currency_precision,d.currency_rounding_policy,
+            d.currency_registry_version,d.currency_registry_digest FROM reconforge.inventory_cost_layers l
             JOIN reconforge.inventory_valuation_lines v ON v.tenant_id=l.tenant_id AND v.id=l.source_valuation_line_id
             JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=v.tenant_id AND d.id=v.valuation_document_id
             WHERE l.tenant_id=%s AND l.workspace_id=%s AND l.legal_entity_id=%s AND l.item_id=%s
@@ -327,7 +328,7 @@ class PostgresStockSalesRepository:
                     self.finance.void_entry(row["cogs_entry_id"], reason=reason, actor_label=actor.username)
                 self.connection.execute("UPDATE reconforge.stock_sales_reservations SET state='Released' WHERE tenant_id=%s AND order_id=%s", (self.tenant_id, row["id"]))
                 self.connection.execute("UPDATE reconforge.stock_sales_issue_claims SET state='Released' WHERE tenant_id=%s AND order_id=%s", (self.tenant_id, row["id"]))
-            else:
+            elif operation != "submit":
                 changes.update(self._revenue(row, operation, parameters, actor, command_id, reason))
             self._advance(row, changes)
             return self._remember(self._order(identifier), command_id, request, reason, actor)
@@ -420,7 +421,20 @@ class PostgresStockSalesRepository:
             ensure_repository_tenant_scope(self.connection, self.tenant_id)
             self._actor(actor, "read")
             options = self.authority.options(actor=actor)
-            options["items"] = self.inventory.list_items(workspace=self.scope["workspace_id"], actor_label=actor.username)
-            options["warehouses"] = self.inventory.list_warehouses(workspace=self.scope["workspace_id"], actor_label=actor.username)
-            options["locations"] = self.inventory.list_locations(workspace=self.scope["workspace_id"], actor_label=actor.username)
+            options["items"] = [dict(row) for row in self.connection.execute("""SELECT i.item_code,i.name,u.uom_code,u.decimal_places
+                FROM reconforge.inventory_items i JOIN reconforge.inventory_units_of_measure u ON u.tenant_id=i.tenant_id AND u.id=i.uom_id
+                WHERE i.tenant_id=%s AND i.workspace_id=%s AND(i.organization_id IS NULL OR i.organization_id=%s)
+                AND i.active AND u.active AND i.item_type<>'Service' AND i.tracking_mode='None' AND i.inventory_account_id IS NOT NULL
+                ORDER BY i.item_code COLLATE "C" LIMIT 100""", (self.tenant_id, self.scope["workspace_id"], self.scope["organization_id"])).fetchall()]
+            options["warehouses"] = [dict(row) for row in self.connection.execute("""SELECT warehouse_code,name FROM reconforge.inventory_warehouses
+                WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND active
+                ORDER BY warehouse_code COLLATE "C" LIMIT 100""", (self.tenant_id, self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"])).fetchall()]
+            options["locations"] = [dict(row) for row in self.connection.execute("""SELECT w.warehouse_code,l.location_code,l.name
+                FROM reconforge.inventory_locations l JOIN reconforge.inventory_warehouses w ON w.tenant_id=l.tenant_id AND w.id=l.warehouse_id
+                WHERE l.tenant_id=%s AND l.workspace_id=%s AND w.organization_id=%s AND w.legal_entity_id=%s AND w.active AND l.active AND NOT l.allow_negative
+                ORDER BY w.warehouse_code COLLATE "C",l.location_code COLLATE "C" LIMIT 200""", (self.tenant_id, self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"])).fetchall()]
+            options["policies"] = [dict(row) for row in self.connection.execute("""SELECT p.policy_code,p.policy_code name,j.journal_code
+                FROM reconforge.inventory_valuation_policies p JOIN reconforge.finance_journals j ON j.tenant_id=p.tenant_id AND j.id=p.finance_journal_id
+                WHERE p.tenant_id=%s AND p.workspace_id=%s AND p.organization_id=%s AND p.legal_entity_id=%s AND p.active AND j.active
+                ORDER BY p.policy_code COLLATE "C" LIMIT 100""", (self.tenant_id, self.scope["workspace_id"], self.scope["organization_id"], self.scope["legal_entity_id"])).fetchall()]
             return options

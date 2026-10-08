@@ -220,9 +220,12 @@ DECLARE p reconforge.ap_purchase_orders%ROWTYPE;l reconforge.ap_purchase_order_l
 BEGIN SELECT * INTO p FROM""" + _verification.replace("NEW.", "c.") + r""" RETURN; END $$;
 CREATE FUNCTION reconforge.procurement_source_closure() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-DECLARE j JSONB;parent TEXT;c reconforge.procurement_cycles;
+DECLARE j JSONB;references_json JSONB[];parent TEXT;c reconforge.procurement_cycles;
 BEGIN
- j:=CASE WHEN TG_OP='DELETE' THEN to_jsonb(OLD) ELSE to_jsonb(NEW) END;
+ IF TG_OP='INSERT' THEN references_json:=ARRAY[to_jsonb(NEW)];
+ ELSIF TG_OP='DELETE' THEN references_json:=ARRAY[to_jsonb(OLD)];
+ ELSE references_json:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)]; END IF;
+ FOREACH j IN ARRAY references_json LOOP
  parent:=CASE TG_TABLE_NAME
  WHEN 'procurement_cycles' THEN j->>'id'
  WHEN 'ap_purchase_orders' THEN j->>'id'
@@ -237,6 +240,7 @@ BEGIN
  AND (id=parent OR purchase_order_id=parent OR goods_receipt_id=parent OR invoice_id=parent) LOOP
  PERFORM reconforge.procurement_verify_cycle(c);
  PERFORM reconforge.procurement_verify_approval_commands(c);
+ END LOOP;
  END LOOP;
  RETURN NULL;
 END $$;

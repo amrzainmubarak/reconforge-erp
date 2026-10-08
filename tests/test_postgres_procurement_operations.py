@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from reconforge.application.payables import PurchaseOrderLineInput
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.procurement_operations import ProcurementPreparation
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
@@ -146,6 +147,26 @@ def test_retained_approval_cannot_be_reassigned_to_another_real_identity(procure
         connection.execute("UPDATE reconforge.ap_purchase_orders SET approved_by='poster' WHERE tenant_id=%s AND id=%s", (runtime.tenant, view["cycle"]["purchase_order_id"]))
     with runtime.actor("checker") as (connection, _, actor):
         assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor) == view
+
+
+def test_retained_line_cannot_move_to_unrelated_native_order_before_receiving(procurement_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    runtime = procurement_runtime
+    view = advance(runtime, create(runtime), stop=2)
+    with runtime.actor("maker") as (connection, _, actor):
+        ap = PostgresPayablesRepository(connection, runtime.tenant)
+        other = ap.create_purchase_order(po_number="UNRELATED", supplier_code="SUP", order_date="2026-10-03", currency_code="USD",
+            lines=[PurchaseOrderLineInput(item_code="ITEM", ordered_quantity="1", unit_price_minor=1200)],
+            workspace="work", organization_code="ORG", entity_code="ENTITY", actor_label=actor.user_id)
+        original = ap.get_purchase_order(view["cycle"]["purchase_order_id"])
+    with pytest.raises(psycopg.errors.CheckViolation, match="source differs from its exact purchase order"), runtime.actor("maker") as (connection, _, _actor):
+        connection.execute("UPDATE reconforge.ap_purchase_order_lines SET purchase_order_id=%s,line_number=2 WHERE tenant_id=%s AND purchase_order_id=%s",
+            (other["id"], runtime.tenant, original["id"]))
+    with runtime.actor("poster") as (connection, _, actor):
+        assert PostgresPayablesRepository(connection, runtime.tenant).get_purchase_order(original["id"]) == original
+        assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor) == view
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
 
 
 def test_historical_actor_resolution_retains_disabled_identity_and_denies_ambiguous_alias(procurement_runtime: ReceiptRuntime) -> None:

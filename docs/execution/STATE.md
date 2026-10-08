@@ -1,5 +1,16 @@
 # Execution State
 
+## ERP completion sprint (2026-10-08; ADR0841)
+
+The newly authorized sprint starts at clean `dbad7b03` on
+`amr/global-erp-completion-20261008`; main remains `b61ea56b`. Three independent
+managed worktrees implement Sales, Procurement and operational Finance. The
+lead owns shared registration. Dependencies are additive0109 reviewed source
+posting ->0110 service revenue ->0111 stock procure-to-pay -> unified live
+Studio. Existing AR/AP/FIFO/GL/scope engines remain authoritative. Acceptance is
+pending; prior sprint evidence does not prove these new cycles.
+[Ownership and contracts](../adr/0841-composed-sales-procurement-operational-finance.md).
+
 ## Global operational capability sprint (2026-10-08; ADR0834)
 
 The user authorized three parallel implementation agents and reopened the

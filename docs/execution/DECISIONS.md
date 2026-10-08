@@ -1,4 +1,12 @@
-﻿# ReconForge Execution Decisions Log
+# ReconForge Execution Decisions Log
+
+## D-ERP-20261008: Composed source posting and complete bounded cycles
+
+ADR0841 establishes0109/0110/0111 dependencies, agent ownership and one scoped
+transaction per source/GL effect. Reuse AR/AP/FIFO/GL/payment links. Start with
+actual service revenue and functional-currency stock procure-to-pay; extend
+after their gates. The lead registers shared API/policy/migration/Studio/CI.
+New acceptance requires exact source-bound integration evidence.
 
 ## D-GFO-20261008 — Compose existing engines and preserve accepted history
 

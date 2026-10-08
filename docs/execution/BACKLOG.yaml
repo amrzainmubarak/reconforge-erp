@@ -1,4 +1,4 @@
-﻿schema_version: 2
+schema_version: 2
 updated_at: "2026-10-08"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
@@ -9,6 +9,42 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ERP-001
+    priority: P0
+    area: operational-finance
+    title: Compose reviewed native AR/AP sources and balanced GL effects
+    status: in_progress
+    depends_on: [AMR-GFO-010]
+    exit_evidence: >-
+      Pending source/review/posting transaction, direct SQL closure,
+      scope/SoD/idempotency/concurrency and populated recovery gate.
+  - id: AMR-ERP-002
+    priority: P0
+    area: sales-revenue
+    title: Complete service quotation order fulfillment invoice and collection
+    status: in_progress
+    depends_on: [AMR-ERP-001]
+    exit_evidence: >-
+      Pending exact discounts, independent approvals, AR/revenue and cash/AR
+      effects, immutable lineage and actual API/Studio cycle.
+  - id: AMR-ERP-003
+    priority: P0
+    area: procurement-supply
+    title: Complete stock PO receiving FIFO matched AP and reviewed payment
+    status: in_progress
+    depends_on: [AMR-ERP-001]
+    exit_evidence: >-
+      Pending same-owner receipt/FIFO/GL, 3way invoice clearing/AP,
+      AP/cash settlement and authorized API/Studio cycle.
+  - id: AMR-ERP-004
+    priority: P0
+    area: sprint-integration
+    title: Accept composed cycles and unified live ERP on a stable source
+    status: in_progress
+    depends_on: [AMR-ERP-001, AMR-ERP-002, AMR-ERP-003]
+    exit_evidence: >-
+      Pending aggregate Python/PostgreSQL/API/React/E2E/security, concurrency,
+      recovery/performance/package/container/CI gates and Draft PR.
   - id: AMR-GFO-007
     priority: P1
     area: platform-core

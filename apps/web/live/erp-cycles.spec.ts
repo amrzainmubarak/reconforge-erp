@@ -22,9 +22,9 @@ async function login(page: Page, username: string) {
 
 async function sales(page: Page) {
   await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Sales & revenue", exact: true }).click();
-  await page.getByLabel("Workspace", { exact: true }).selectOption("work");
-  await page.getByLabel("Organization", { exact: true }).selectOption("org");
-  await page.getByLabel("Legal entity", { exact: true }).selectOption("entity");
+  await page.getByRole("combobox", { name: "Workspace", exact: true }).selectOption("work");
+  await page.getByRole("combobox", { name: "Organization", exact: true }).selectOption("org");
+  await page.getByRole("combobox", { name: "Legal entity", exact: true }).selectOption("entity");
   await page.getByRole("button", { name: "Load sales", exact: true }).click();
   await expect(page.getByRole("button", { name: "Refresh", exact: true })).toBeVisible();
 }
@@ -55,8 +55,8 @@ async function saleAction(page: Page, button: string, endpoint: string) {
 
 async function procurement(page: Page) {
   await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Procurement & payments", exact: true }).click();
-  await page.getByLabel("Workspace", { exact: true }).selectOption("work");
-  await page.getByLabel("Organization and legal entity", { exact: true }).selectOption("entity");
+  await page.getByRole("combobox", { name: "Workspace", exact: true }).selectOption("work");
+  await page.getByRole("combobox", { name: "Organization and legal entity", exact: true }).selectOption("entity");
   await expect(page.getByRole("heading", { name: "Purchases", exact: true })).toBeVisible();
 }
 
@@ -82,7 +82,7 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
     }
     const number = "BROWSER-SALE";
     await maker.getByRole("button", { name: "Load active customers", exact: true }).click();
-    await maker.getByLabel("Customer", { exact: true }).selectOption("CUSTOMER");
+    await maker.getByRole("combobox", { name: "Customer", exact: true }).selectOption("CUSTOMER");
     for (const [label, value] of Object.entries({ "Quotation number": number, "Business date": "2026-10-08", "Valid until": "2026-10-20", "Service description": "Completed professional service", Quantity: "2", "Unit price (minor units)": "5000", "Discount (basis points)": "200" })) {
       await maker.getByLabel(label, { exact: true }).fill(value);
     }
@@ -103,7 +103,7 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
     for (const [label, value] of Object.entries({ "Invoice number": "BROWSER-INVOICE", "Business date": "2026-10-08", "Due date": "2026-10-20" })) {
       await maker.locator(".sales-detail").getByLabel(label, { exact: true }).fill(value);
     }
-    for (const [label, value] of Object.entries({ Journal: "SALES", "Fiscal period": "period", "Receivable account": "AR", "Revenue account": "REVENUE" })) await maker.locator(".sales-detail").getByLabel(label, { exact: true }).selectOption(value);
+    for (const [label, value] of Object.entries({ Journal: "SALES", "Fiscal period": "period", "Receivable account": "AR", "Revenue account": "REVENUE" })) await maker.locator(".sales-detail").getByRole("combobox", { name: label, exact: true }).selectOption(value);
     await saleAction(maker, "Prepare invoice", "/invoice/prepare");
     await openSale(checker, number);
     await saleAction(checker, "Review invoice & GL", "/invoice/review");
@@ -113,7 +113,7 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
     for (const [label, value] of Object.entries({ "Receipt number": "BROWSER-COLLECTION", "Business date": "2026-10-08" })) {
       await maker.locator(".sales-detail").getByLabel(label, { exact: true }).fill(value);
     }
-    for (const [label, value] of Object.entries({ Journal: "CASH", "Fiscal period": "period", "Cash account": "CASH" })) await maker.locator(".sales-detail").getByLabel(label, { exact: true }).selectOption(value);
+    for (const [label, value] of Object.entries({ Journal: "CASH", "Fiscal period": "period", "Cash account": "CASH" })) await maker.locator(".sales-detail").getByRole("combobox", { name: label, exact: true }).selectOption(value);
     await saleAction(maker, "Prepare full collection", "/collection/prepare");
     await openSale(checker, number);
     await saleAction(checker, "Review collection", "/collection/review");
@@ -126,7 +126,7 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
     const purchaseNumber = "BROWSER-PURCHASE";
     const order = maker.getByRole("form", { name: "New stock purchase", exact: true });
     for (const [label, value] of Object.entries({ "Purchase number": purchaseNumber, Quantity: "10", "Unit price in minor units": "1200", "Posting date": "2026-10-08" })) await order.getByLabel(label, { exact: true }).fill(value);
-    for (const [label, value] of Object.entries({ Supplier: "SUP", Item: "ITEM", "Open fiscal period": "period", "Receiving location": "MAIN/STOCK", "FIFO valuation policy": "FIFO", "Accrual and payment journal": "STOCK", "Accounts payable": "AP", "Cash account": "CASH" })) await order.getByLabel(label, { exact: true }).selectOption(value);
+    for (const [label, value] of Object.entries({ Supplier: "SUP", Item: "ITEM", "Open fiscal period": "period", "Receiving location": "MAIN/STOCK", "FIFO valuation policy": "FIFO", "Accrual and payment journal": "STOCK", "Accounts payable": "AP", "Cash account": "CASH" })) await order.getByRole("combobox", { name: label, exact: true }).selectOption(value);
     const purchaseCreated = maker.waitForResponse((response) => response.url().endsWith("/procurement-operations/cycles") && response.request().method() === "POST");
     await order.getByRole("button", { name: "Create purchase order", exact: true }).click();
     const purchaseReply = await purchaseCreated;
@@ -205,6 +205,6 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
     await poster.reload();
     await expect(poster.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
   } finally {
-    await Promise.all(contexts.map((context) => context.close()));
+    await Promise.allSettled(contexts.map((context) => context.close()));
   }
 });

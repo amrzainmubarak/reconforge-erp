@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import secrets
+import shutil
 import socket
 import ssl
 import subprocess  # nosec B404
@@ -202,7 +203,10 @@ def main() -> int:
             if path.exists():
                 report[filename + "_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
         (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-        print(json.dumps(report, indent=2))
+        artifacts = ROOT / "apps/web/test-results"
+        if artifacts.is_dir():
+            shutil.copytree(artifacts, output / "playwright-artifacts", dirs_exist_ok=True)
+        print(json.dumps({key: report[key] for key in ("status", "source_commit", "wall_seconds", "browser_counts", "error", "source_unchanged", "owned_container_removed") if key in report}, indent=2))
     return 0 if report["status"] == "passed" else 1
 
 

@@ -82,9 +82,9 @@ def repository(connection: Any, runtime: ReceiptRuntime) -> PostgresSalesRevenue
         runtime.tenant,
         workspace_id="work",
         organization_id="org",
-        legal_entity_id="entity",
+        legal_entity_id=getattr(runtime, "sales_entity_id", "entity"),
         organization_code="ORG",
-        entity_code="ENTITY",
+        entity_code=getattr(runtime, "sales_entity_code", "ENTITY"),
     )
 
 
@@ -93,10 +93,10 @@ def sales_runtime(receipt_database: tuple[str, str]) -> ReceiptRuntime:
     return create_sales_runtime(receipt_database)
 
 
-def quotation(number: str = "QUOTE-1") -> SalesQuotation:
+def quotation(number: str = "QUOTE-1", customer_code: str = "CUSTOMER") -> SalesQuotation:
     return SalesQuotation(
         number,
-        "CUSTOMER",
+        customer_code,
         "2026-10-08",
         "2026-10-31",
         "USD",
@@ -106,7 +106,9 @@ def quotation(number: str = "QUOTE-1") -> SalesQuotation:
 
 def create_fulfilled_sale(runtime: ReceiptRuntime, number: str = "QUOTE-1") -> dict[str, Any]:
     with runtime.actor("maker") as (connection, _, actor):
-        document = repository(connection, runtime).create(quotation(number), command_id=number + "-create", actor=actor)
+        document = repository(connection, runtime).create(
+            quotation(number, getattr(runtime, "sales_customer_code", "CUSTOMER")), command_id=number + "-create", actor=actor
+        )
         document = repository(connection, runtime).transition(
             document["id"],
             operation="submit",

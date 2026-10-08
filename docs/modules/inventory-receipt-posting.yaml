@@ -2,7 +2,7 @@ id: inventory-receipt-posting
 name: Independently reviewed receipt and complete unused inverse
 version: 1.0.0
 maturity: experimental
-implementation_status: in_progress
+implementation_status: implemented
 owner: financial-integrity
 dependencies: [inventory.core, finance.core, platform.core, sqlite-inventory-composition]
 incompatible_versions: [unreviewed-generated-operational-posting, generic-gl-only-inventory-correction]
@@ -58,9 +58,10 @@ threat_model:
 benchmarks: []
 rollback_plan: preserve-verified-pre-upgrade-backup-and-operational-history-refuse-populated-lossy-downgrade
 test_matrix: [tests/test_inventory_receipt_posting_domain.py, tests/test_inventory_receipt_api_contract.py, tests/test_postgres_inventory_receipt_api.py, apps/web/src/components/InventoryReceiptPosting.test.tsx, apps/web/live/inventory-receipt.spec.ts]
-planned_adapter_test_matrix: [tests/test_sqlite_inventory_receipt_posting.py, tests/test_postgres_inventory_receipt_posting.py, tests/test_sqlite_inventory_composition.py, tests/test_sqlite_finance_posting.py]
+adapter_test_matrix: [tests/test_sqlite_inventory_receipt_posting.py, tests/test_postgres_inventory_receipt_posting.py, tests/test_sqlite_inventory_composition.py, tests/test_sqlite_finance_posting.py]
+restore_test_matrix: [tests/test_postgres_inventory_receipt_migration.py, tests/test_receipt_admission_migration_contract.py, .github/scripts/verify_gfo_browser.py, tests/gfo_browser_restore.py]
+acceptance_evidence: docs/execution/GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.md
 limitations:
-  - integration-registration-and-live-browser-final-gate-owned-by-sprint-lead
   - server-interface-requires-configured-postgresql-and-source-master-identifiers
   - one-untracked-stock-item-base-uom-internal-location-and-fifo-mapping
   - positive-exact-quantity-and-minor-cost-in-functional-currency

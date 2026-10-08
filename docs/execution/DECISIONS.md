@@ -1,5 +1,38 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-GFO-20261008 — Compose existing engines and preserve accepted history
+
+Three isolated agents implement budget Studio, reviewed receipt API/Studio and
+durable-job operations; the lead owns shared registration/permission/migration
+inventories and final gates. Existing identity/scope/money/finance/FIFO/evidence
+engines remain authoritative. SQLite request-only thread handling is widened
+for FastAPI pool handoff while default connection affinity remains strict.
+Job cancel authority resolves stored scope rather than trusting submitted scope;
+new receipt API mutation replay is original-actor-bound, retaining inherited
+repository compatibility for old callers. Additive56/0107 and forward0108 retain
+history and refuse unsafe downgrade. ADR0834 and ADR0839 record boundaries.
+
+Full regression runs once at stable runtime9bcbeb07. Later verification-only
+changes strengthen native populated restore and fix a stale moving-installer
+test without editing frozen0100. Pin historical SQL and exact replacement;
+execute pure static contracts without external prerequisites. Native CHECK
+comparison reparses through PostgreSQL, preserving every constraint/flag.
+Experimental maturity and synthetic single-node limits remain until broader
+independent evidence exists. [Acceptance](GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.md).
+
+ADR0840 refreshes the exact container subject after the existing policy refused
+stale VEX and a fresh scan found6High. Pin official Python3.12.15/Alpine3.24 and
+signed checksum-bound zlib1.3.2-r1; retain OpenSSL3.5.9, review30days, scanner
+DB120hours, unknown-severity refusal and Critical/High blockers. No new exception
+is added. Fresh hosted and independent root scans pass0Critical/0High and retain
+9Medium/1Negligible for triage, with distinct configuration and Docker identities.
+
+Regenerate the four actual PostgreSQL16.14/17.10 native Writeback matrices under
+the refreshed full policy. Keep October3 evidence unchanged and verify its policy
+at its recorded Git base; current reports bind the complete current policy.
+Add only current0108 to the closed identity target enum and package the three
+new reports. Do not rewrite historical hashes or weaken schema/security checks.
+
 ## D-AUD-20261008-HOSTED — Preserve gate strength while repairing inherited fixture drift
 
 The first Draft PR123 run exposed twelve generic-key findings for the constant

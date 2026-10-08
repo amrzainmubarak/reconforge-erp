@@ -23,5 +23,10 @@ Central registration, permission inventory, migration registry, navigation,
 packaging and execution state files have one lead owner.
 
 Baseline evidence and original failures remain in the October 8 baseline and
-recovery records. Current sprint acceptance is pending and will bind the
-implemented source, command results and limitations separately.
+recovery records. The three integrated operational paths passed the final local
+regression and explicit PostgreSQL/browser/native-restore gates. Full regression
+binds runtime9bcbeb07; later application/migration/Studio bytes are unchanged.
+Verification and pinned container refresh are separately accepted. Source563ad127
+passes all20hosted CI jobs plus Docker/Security/CodeQL; manual exact-image and
+independent root scans accept the refreshed image with remaining findings recorded. [Acceptance and operating limits](GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.md)
+and [command/source/hash index](GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.json).

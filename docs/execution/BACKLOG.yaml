@@ -2,7 +2,7 @@
 updated_at: "2026-10-08"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
-  evidence_base_commit: "a91147adc58bffff5a6e62a0fdeb884bbe92d7ea"
+  evidence_base_commit: "9bcbeb077db805a1e149ac57bd1e78c182e373b1"
   policy_change_commit: "the commit containing this file"
   published: false
 status_values: [planned, in_progress, blocked, deferred, completed]
@@ -13,38 +13,60 @@ tasks:
     priority: P1
     area: platform-core
     title: Operate governed budgets and commitments from authenticated Studio
-    status: in_progress
+    status: completed
     depends_on: [AMR-GFO-003]
     exit_evidence: >-
-      Persisted create submit independent approval reserve release consume flow,
-      current scope and exact units, stable command retries, API/component/browser gates.
+      Integrated existing budget engine with normal Studio; exact persisted lifecycle,
+      independent approval and frozen retry commands. Live PG and real HTTPS browser
+      balance8500/reserved0/consumed1500-v6,3events,scope/CSRF/RTL/axe/reload pass.
+      GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.md binds source and limits.
   - id: AMR-GFO-008
     priority: P0
     area: finance-operations
     title: Integrate independently reviewed inventory receipts and atomic GL effects
-    status: in_progress
+    status: completed
     depends_on: [AUD-20261008-006]
     exit_evidence: >-
-      Scoped authenticated API and live Studio compose existing reviewed receipt engine;
-      receipt reversal replay isolation concurrency and SQLite/PostgreSQL evidence.
+      PostgreSQL public API and normal Studio compose reviewed atomic receipt/FIFO/GL;
+      25live receipt and7affected migration cases zero skips. Actual original/inverse
+      browser and populated native restore verify186table hashes,guards,RLS,ACL and
+      restricted direct tamper refusal. SQLite engine verified independently.
+      Bounded untracked functional-currency FIFO/full-unused inverse only.
   - id: AMR-GFO-009
     priority: P0
     area: enterprise-quality
     title: Govern scoped durable job inspection cancellation and recovery
-    status: in_progress
+    status: completed
     depends_on: [AMR-GFO-004]
     exit_evidence: >-
-      Least-privileged human command authority current persisted scope/version,
-      bounded redacted reads immutable transitions retry races and migration parity.
+      Least-privileged human step-up and persisted scope/version commands; bounded
+      redacted reads,immutable transitions,6worker-one-transition race,lease fencing,
+      actual HTTP/native restore/migration and normal-Studio cancel/requeue pass.
   - id: AMR-GFO-010
     priority: P0
     area: sprint-integration
     title: Accept composed operational capabilities at aggregate verification gates
-    status: in_progress
+    status: completed
     depends_on: [AMR-GFO-007, AMR-GFO-008, AMR-GFO-009]
     exit_evidence: >-
-      Exact source full Python nonowner PostgreSQL migration restore security recovery
-      concurrency performance web build browser and hosted CI results with retained gaps.
+      Runtime9bcbeb07 full4455pass/492explicit prerequisites; local nonowner PG,
+      native restore,concurrency,recovery,10Kbenchmark,web/package/container gates.
+      Current563ad127 CI37733619873 all20jobs and Docker/Security/CodeQL pass.
+      Actual16.14/17.10 Writeback matrices refresh current policy-bound evidence;
+      historical reports unchanged. Exact hosted/root image scans0Critical/0High,
+      9Medium/1Negligible,zero exceptions;30dayVEX/120hourDB guards retained.
+      Main unchanged; experimental bounded operational acceptance, no stable release.
+  - id: AMR-GFO-011
+    priority: P2
+    area: container-security
+    title: Triage retained Medium and Negligible exact-image findings
+    status: planned
+    depends_on: [AMR-GFO-010]
+    exit_evidence: >-
+      Preserve fresh raw findings and current subjects; assess compatible upstream
+      Python and Alpine fixes, reproduce affected packaged behavior, and run the
+      unchanged exact-image policy after a reviewed pin change. No new blanket
+      exception, unknown-severity acceptance or zero-vulnerability claim.
   - id: AUD-20261008-001
     priority: P0
     area: baseline
@@ -109,31 +131,33 @@ tasks:
       ACCEPTANCE_FINAL_2026-10-08.json preserves separate source identities and CI gaps.
   - id: AUD-20261008-007
     priority: P0
-    area: postgres-fixture-isolation
+    area: postgres-acceptance
     title: Isolate downgrade fixtures while preserving newer outbox evidence guards
-    status: planned
+    status: completed
     depends_on: [AUD-20261008-006]
     exit_evidence: >-
-      Original hosted failed nodes retained in HOSTED_GATES_REPAIR_2026-10-08.json.
-      No deletion of lease evidence or weakened downgrade guard is accepted.
+      Source563ad127 current hosted PostgreSQL shards and full CI37733619873 pass;
+      populated downgrade guards retain lease/effect history. No guard weakening.
   - id: AUD-20261008-008
     priority: P0
-    area: identity-security-contracts
+    area: postgres-acceptance
     title: Review current role and permission projection assertions
-    status: planned
+    status: completed
     depends_on: [AUD-20261008-006]
     exit_evidence: >-
-      Reconcile hosted security-center/access-admin expectations with source-bound
-      current migration/default-role and public projection contracts before acceptance.
+      Current default roles, migration registration and authority contracts pass
+      local and hosted final gates on563ad127; additive jobs.manage retains admin
+      defaults and existing inherited projections.
   - id: AUD-20261008-009
     priority: P0
-    area: paused-inventory-receipt
-    title: Retain inherited receipt failures without reopening paused feature work
-    status: deferred
-    depends_on: []
+    area: inventory-receipt
+    title: Integrate reopened receipt acceptance under the authorized operational sprint
+    status: completed
+    depends_on: [AMR-GFO-008]
     exit_evidence: >-
-      Three hosted receipt cases remain unaccepted and outside this authorized repair.
-      Resume only on a new receipt-scope instruction; no skip or guard relaxation added.
+      The new sprint explicitly superseded the historical receipt pause;
+      AMR-GFO-008 accepts the reviewed API/Studio and current live migration
+      contracts, including normal-browser original/inverse and native restore.
   - id: AMR-GFO-001
     priority: P0
     area: sprint-handoff
@@ -202,7 +226,13 @@ tasks:
     status: in_progress
     depends_on: [AMR-GFO-002, AMR-GFO-003, AMR-GFO-004]
     exit_evidence: >-
-      Current evidence: a locked Python3.12 whole regression rerun after the scoped exception
+      Current aggregate evidence is GLOBAL_PLATFORM_ACCEPTANCE_2026-10-08.md/json:
+      runtime9bcbeb07 whole4455pass/492explicit prerequisites and current563ad127
+      CI37733619873 all20jobs pass, with zero-skip dedicated native/HTTP/browser
+      gates. The broader roll-up retains externally configured product journeys
+      and the separately unintegrated cancellation-projection worktree; no global
+      release acceptance follows from this bounded sprint. Historical evidence:
+      a locked Python3.12 whole regression rerun after the scoped exception
       Studio integration, selected migration/recovery tests, static/security/build gates, and
       local web typecheck/219-unit-test/build plus two focused Chromium review journeys pass.
       The October8 clean b8f5a772 regression passes4422 with490 explicit skips;

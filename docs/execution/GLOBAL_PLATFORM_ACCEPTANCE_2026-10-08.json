@@ -1,0 +1,1376 @@
+{
+  "schema_version": 1,
+  "acceptance": "bounded local and hosted operational sprint; experimental maturity, no production deployment",
+  "branch": "amr/global-platform-execution-20261008",
+  "base_commit": "6c194e7c95b32f8afd55b260bd89e44c82576678",
+  "main_unchanged": "b61ea56bb9c135fda12546e173795af3c243e4fb",
+  "full_regression_runtime_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+  "verification_source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+  "application_runtime_unchanged_after_full_regression": true,
+  "versions": {
+    "python_local_regression": "3.12.13",
+    "python_container": "3.12.15",
+    "alpine_container": "3.24.2",
+    "node": "26.3.0",
+    "npm": "11.16.0",
+    "postgresql_live": "17.10",
+    "postgresql_native_matrix": [
+      "16.14",
+      "17.10"
+    ],
+    "sqlite_migration": 56,
+    "postgresql_head": "0108_pg_receipt_admission"
+  },
+  "container_security": {
+    "source_commit": "aa81176d36be81f2d75822d146ef488c62d37728",
+    "hosted_run": 37731225415,
+    "critical": 0,
+    "high": 0,
+    "medium": 9,
+    "negligible": 1,
+    "unknown": 0,
+    "active_exceptions": 0,
+    "vex_applied_matches": 0,
+    "root_docker_image_id": "sha256:04295c8f4cfbdf42f98ace07d5379fc3c407c0174200dd3a74e61acff41883c4",
+    "root_config_digest": "sha256:79e40997a4db989e096eb43d4441c67cffea209aa84b7be8079d9f3ff0d2e6e8",
+    "hosted_config_digest": "sha256:8a753119aeb6dcb9e59276272662f0c014276783e82361377bea9dc85708b9ba"
+  },
+  "tests": {
+    "python-final.xml": {
+      "tests": 4947,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 492
+    },
+    "integrated-postgres-final.xml": {
+      "tests": 58,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "final-receipt-live.xml": {
+      "tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "final-operations-live.xml": {
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "final-receipt-migration-corrected.xml": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "closing-writeback-contracts.xml": {
+      "tests": 50,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "reports": [
+    {
+      "path": "output/gfo-sprint-20261008/python-final.json",
+      "sha256": "1c33bc857659b084f2a208c0a01a5e9681f8fad5fdc32989d99a4c648de13d84",
+      "source_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "-ra",
+        "--junitxml=output/gfo-sprint-20261008/python-final.xml"
+      ],
+      "duration_seconds": 1215.0,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\python-final.log",
+          "sha256": "3bfd87f90760a3e5ae1374cb1d9ba3ea4ece8d713e79e487f468638440a234fa"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/integrated-postgres-final.json",
+      "sha256": "7e297fef09f0189410d0f3f13e4785f2ef82f3f3f9b275516955d4c090cf20c7",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        [
+          "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+          "-m",
+          "pytest",
+          "tests/test_postgres_finance_scope.py",
+          "tests/test_postgres_master_data_authority.py",
+          "tests/test_postgres_finance_posting_concurrency.py",
+          "tests/test_postgres_access_administration.py",
+          "tests/test_postgres_security_center.py",
+          "tests/test_postgres_security_governance.py",
+          "tests/test_postgres_budget_control.py",
+          "tests/test_postgres_budget_control_migration.py",
+          "-q",
+          "-ra",
+          "--tb=short",
+          "--junitxml=F:\\reconforge-erp\\output\\gfo-sprint-20261008\\integrated-postgres-final.xml"
+        ]
+      ],
+      "duration_seconds": 257.562,
+      "source_unchanged": null,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\integrated-postgres-final.log",
+          "sha256": "4fbbd70c3e09e134e9a80841a6f15a953272c4bd1450272f908c7c085f22e546"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-receipt-live.json",
+      "sha256": "65c38c8044cfca9f73ff6e0c77be72128f936b3fbbe42809dc041ea6843417eb",
+      "source_commit": "573a6425e6fa311c54cde6ac1bab17f1ce42e204",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        [
+          "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+          "-m",
+          "pytest",
+          "tests/test_postgres_inventory_receipt_posting.py",
+          "tests/test_postgres_inventory_receipt_api.py",
+          "tests/test_receipt_admission_migration_contract.py",
+          "-q",
+          "-ra",
+          "--tb=short",
+          "--junitxml=F:\\reconforge-erp\\output\\gfo-sprint-20261008\\final-receipt-live.xml"
+        ]
+      ],
+      "duration_seconds": 197.125,
+      "source_unchanged": null,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\final-receipt-live.log",
+          "sha256": "6ce7f2ce4f65768e29de7d37d7da6842129e7869567b61a59ae85f2dfd400070"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-operations-live.json",
+      "sha256": "67bb81c62d6c97c78085563969297fd3309d22211377e5867bca5d4f4d9ce3ca",
+      "source_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        [
+          "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+          "-m",
+          "pytest",
+          "tests/test_postgres_operations.py",
+          "-q",
+          "-ra",
+          "--tb=short",
+          "--junitxml=F:\\reconforge-erp\\output\\gfo-sprint-20261008\\final-operations-live.xml"
+        ]
+      ],
+      "duration_seconds": 30.328,
+      "source_unchanged": null,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\final-operations-live.log",
+          "sha256": "b3f363fc61420f83576b0b639aab5a098ce98c454c3e4a81afd953f4bc98ad23"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-job-native.json",
+      "sha256": "bce56c3e38f715d30efc8a840c47145e58167f56d456c89b2d94599f7c444d59",
+      "source_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+      "status": "passed",
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": 35.891,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-web-unit.json",
+      "sha256": "ddaf4af42f975766d49041ee1edde70ef1a59d862ccbbc727408878ee68959d7",
+      "source_commit": "573a6425e6fa311c54cde6ac1bab17f1ce42e204",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "apps/web",
+        "run",
+        "test:run"
+      ],
+      "duration_seconds": 26.422,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\final-web-unit.log",
+          "sha256": "ea330db489667148381589a85c523681aabb726932971a7ddf6862caa1cdb0b9"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/receipt-keyboard-unit.json",
+      "sha256": "84e15f9d221647625471ee0e0d5738b76ce31e028138c4aeae2bb41b56cbc485",
+      "source_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "apps/web",
+        "run",
+        "test:run",
+        "--",
+        "src/components/InventoryReceiptPosting.test.tsx",
+        "src/inventory-receipt-data.test.ts"
+      ],
+      "duration_seconds": 4.797,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\receipt-keyboard-unit.log",
+          "sha256": "ea2bd470ef268fbb132dc0c96d7848e4997572cb4658e751e6b1f072f1ca7171"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-web-build.json",
+      "sha256": "e4b41639ba865f688b992b0c92a7ba4d3c259f6aa429c0cce2fefaa10907d80b",
+      "source_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "apps/web",
+        "run",
+        "build"
+      ],
+      "duration_seconds": 2.282,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\final-web-build.log",
+          "sha256": "171e0877ae0cc22b852016220bff9f5b167d8df9e773911d3bd41ebeab833d00"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-quality-ruff.json",
+      "sha256": "4b0115b5481119542a93c7176f582b22808d2c102f5c97e8a6217a3d55dd49f7",
+      "source_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "duration_seconds": 0.282,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\final-quality-ruff.log",
+          "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-quality-mypy.json",
+      "sha256": "753e496ce2e9a5fb0db921c8744f2c2cbf7f6828e1ad2dba60cceea0cb5e3ddb",
+      "source_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "duration_seconds": 3.094,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\final-quality-mypy.log",
+          "sha256": "33f3ee3dd9d6ae23cfa8d78992d5d9e18955276e8177b489b09552d96bc492c2"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-bandit.json",
+      "sha256": "ce595df164450c2a3e144d28e2f23646e2d51ca15cb7cafcc4f3947d8d90c70a",
+      "source_commit": "573a6425e6fa311c54cde6ac1bab17f1ce42e204",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "duration_seconds": 43.016,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\final-bandit.log",
+          "sha256": "bb995393dcc80c80bda9673407ba39b5fb19ee64772f5dc2e1745c1ba11a874b"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/dependency-audit.json",
+      "sha256": "7056381bb65b1ec7bc71f40747835ed0a6d0d3cda3d9a2a12e8cf0404815824f",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "pip_audit"
+      ],
+      "duration_seconds": 70.828,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\dependency-audit.log",
+          "sha256": "0358e3b678817efeb5140e9736d4ebf7d51e984f29395d1c48b7ef8156a4c67b"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/web-audit.json",
+      "sha256": "76f5a46ea86f349de458f69425fb1e4dfe0217df8c30991796be4ae170f32881",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "apps/web",
+        "audit",
+        "--json"
+      ],
+      "duration_seconds": 5.015,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\web-audit.log",
+          "sha256": "5172e4f3000f72fa8a65ad93fed7f1c90176afe38062cbf0f57a2ca6713ccc14"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-container-build.json",
+      "sha256": "367728e59a3e815a31dc2db3f4aa01fe88400f2287b29a63b4168c3780caae03",
+      "source_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "docker",
+        "build",
+        "-t",
+        "reconforge:gfo-20261008-final",
+        "."
+      ],
+      "duration_seconds": 533.0,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\final-container-build.log",
+          "sha256": "d5c002df0988bbd29063a7bfb0c20b7ab3afda0ef3df6acc92e6761f21d575b0"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hardened-container-doctor.json",
+      "sha256": "df8bc366efc96721ceeba50ba9760f3c9ec5f1c665a8fe989c8bf4d0b2bb01a3",
+      "source_commit": "9bcbeb077db805a1e149ac57bd1e78c182e373b1",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network=none",
+        "--read-only",
+        "--cap-drop=ALL",
+        "--security-opt=no-new-privileges",
+        "reconforge:gfo-20261008-final",
+        "reconforge",
+        "doctor"
+      ],
+      "duration_seconds": 9.156,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\hardened-container-doctor.log",
+          "sha256": "011c4651aee4407ec9aced841e5bb39ac2770c016405627628712a6720ab108f"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/performance-10k.json",
+      "sha256": "f3107cd3ff1a3a6ab5de064051087031228f0daf10fc3c95f51c8ed72d17488a",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "reconforge.cli",
+        "benchmark-reconciliation",
+        "--records",
+        "10000",
+        "--output",
+        "output/gfo-sprint-20261008/performance-10k"
+      ],
+      "duration_seconds": 39.812,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\performance-10k.log",
+          "sha256": "634f2fb27be3475dc6f8acc1451b7bb5015fdbbe4519e28b29ada6b2001a88b5"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/performance-10k/reconciliation-execution.json",
+      "sha256": "5c0fd353bd70d204fbc060d1a2c6720c8cd4262053b328c8af0e27cc9d130eb1",
+      "source_commit": null,
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/reliability-drill.json",
+      "sha256": "5e3fea521d7cb3632b4b076707b8e3759ad2bcf42ba6e86bc571988d0d6a2679",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        ".github/scripts/verify_enterprise_reliability.py",
+        "--output",
+        "output/gfo-sprint-20261008/reliability.json"
+      ],
+      "duration_seconds": 1.109,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\reliability-drill.log",
+          "sha256": "3c7e52894f9f6e4d9fd07d16da4aef6451d6657a56dc28fac2f877a4cef62c5c"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/reliability.json",
+      "sha256": "b53683dbf201a8ef9d5b0c126630bbc43d644eae007422c8390dc8797afa9878",
+      "source_commit": null,
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/ha-quorum-drill.json",
+      "sha256": "b6bc422e7d14a7afd99f6a9dd246665bf9e83e8c579d4f53c1dff19dbbcd739d",
+      "source_commit": "bf74273b7b265accc0a40a65d9394994c44450f6",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        ".github/scripts/verify_ha_dr_quorum_simulation.py",
+        "--output",
+        "output/gfo-sprint-20261008/ha-quorum.json"
+      ],
+      "duration_seconds": 0.203,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\ha-quorum-drill.log",
+          "sha256": "4437a101fe27caefcfce7d14ec98bae6213643b8e13f279a80157c6a16eb2623"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/ha-quorum.json",
+      "sha256": "f8f80d3c079515fc824fd070a2ed6f12286318d4adb01c1a040c4bf017e365a4",
+      "source_commit": null,
+      "status": "simulation_only",
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/cli-doctor.json",
+      "sha256": "5a50d22097486f2ccfabd94a78b5d46769e61af509ffddbd08a5acee1df99d9c",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "reconforge.cli",
+        "doctor"
+      ],
+      "duration_seconds": 4.062,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\cli-doctor.log",
+          "sha256": "d9783d649de930d00d282cd2f5e55bae86b84a0a6c77065c961b096ba568b628"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/cli-validate.json",
+      "sha256": "f95742a561c309316699cf1f6a50fffafdaadfcd1326ec8039a676e7a46f8fd4",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "reconforge.cli",
+        "validate",
+        "examples/sample_data"
+      ],
+      "duration_seconds": 3.813,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\cli-validate.log",
+          "sha256": "761baec488afa32f64865dc5f64015fa5674dc7f4a23d87c683595cf9ed38711"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/cli-demo.json",
+      "sha256": "eb3892c6371e8e259aa4685e1413b745d3a865b1ac1286632f718ddc54a617b3",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "reconforge.cli",
+        "demo",
+        "run",
+        "--output",
+        "output/gfo-sprint-20261008/demo"
+      ],
+      "duration_seconds": 5.86,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\cli-demo.log",
+          "sha256": "cdc993e13649e4c2f83c105a2b7c68425379426e2940d85456e4f98f72fcbf62"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/web-e2e.json",
+      "sha256": "1f63428de5ac6833d06cc8edacbcd41b1009f6959ba2ae0d4a60b51170769d4e",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "npm.cmd",
+        "--prefix",
+        "apps/web",
+        "run",
+        "e2e"
+      ],
+      "duration_seconds": 72.921,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\web-e2e.log",
+          "sha256": "c321dcc6a9ea976c9478459a4d90d9600e5f3d2796e2fcb017c76d67a9e2dcee"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-package.json",
+      "sha256": "ba059ea5f1f585c29b0452f35b5689c3cf0427e8fb195c5d01ac4b185bbc9ed9",
+      "source_commit": "d59bc4d0383453606947e32de844c750b6f88e65",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "build",
+        "--no-isolation"
+      ],
+      "duration_seconds": 34.344,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-package.log",
+          "sha256": "3e9498037de37c666d821837194e6391643917980cf1b0511525a56e6d422a4f"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-receipt-migration-corrected.json",
+      "sha256": "01f13ef1bdb4341787de1f7c3af254171f981f106e531101647fa17df0d5b88c",
+      "source_commit": "d59bc4d0383453606947e32de844c750b6f88e65",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        [
+          "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+          "-m",
+          "pytest",
+          "tests/test_postgres_inventory_receipt_migration.py",
+          "tests/test_receipt_admission_migration_contract.py",
+          "-q",
+          "-ra",
+          "--tb=short",
+          "--junitxml=F:\\reconforge-erp\\output\\gfo-sprint-20261008\\final-receipt-migration-corrected.xml"
+        ]
+      ],
+      "duration_seconds": 48.516,
+      "source_unchanged": null,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\final-receipt-migration-corrected.log",
+          "sha256": "bfce81a920a305e888c2d21f12eb35beb7c515e88d5d692d6df4756a46f89a0e"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/final-combined-native-restore/report.json",
+      "sha256": "bd429a5f4086beee21a8c7b2fb82c1b0f1622c5c894203b378cbd22c588c7b0a",
+      "source_commit": "f89396a06e0d00d2e801a23d87a49e9a8372c7dd",
+      "status": "passed",
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": 63.985,
+      "source_unchanged": true,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/platform-final/budget-integrated.json",
+      "sha256": "8bebd2ae9669807597fc0d40689a6415d9092e753a3ae456818d8496ae12d576",
+      "source_commit": "8f9948a98a087060cb0ae5a7150b4c731841c798",
+      "status": "passed",
+      "conclusion": null,
+      "command": "npx.cmd playwright test --config e2e/budget-control.playwright.config.ts --reporter=list",
+      "duration_seconds": 11.8,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/tracked-secret-final.json",
+      "sha256": "3ea8fef46fe5388af81f7cc93b1cbd6ea602586f6d3815ccfd40540ced6ce9cf",
+      "source_commit": "53ee55a45d78a1687c891361ba5cecb8abbd810f",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "output/gfo-sprint-20261008/scan_tracked.py"
+      ],
+      "duration_seconds": 8.828,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\tracked-secret-final.log",
+          "sha256": "39395725202e9f2e8d687b5f33e253286c0f7140f004c59cc1af836e05275da8"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/source-history-secrets.json",
+      "sha256": "e67a7ac4ec3edf377798fe6df6d4734c27267faac5b414bfb2cfed48a176c0fe",
+      "source_commit": "573a6425e6fa311c54cde6ac1bab17f1ce42e204",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "output/baseline-2026-10-08/tools/gitleaks.exe",
+        "git",
+        ".",
+        "--log-opts=amr/baseline-refresh-20261008..HEAD",
+        "--config",
+        ".gitleaks.toml",
+        "--redact",
+        "--no-banner",
+        "--report-format",
+        "json",
+        "--report-path",
+        "output/gfo-sprint-20261008/history-secret-findings.json"
+      ],
+      "duration_seconds": 0.656,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\source-history-secrets.log",
+          "sha256": "40c62d2cbcb645ca47c24d7d3ba157970fd4cad6ceebedfbd98c44f2b596565f"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-budget-browser.json",
+      "sha256": "d3e2a40752802bc05c005b090f0e013fdfc6cc15ed4e753b8975f6422c6e197b",
+      "source_commit": "d59bc4d0383453606947e32de844c750b6f88e65",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "npx.cmd",
+        "playwright",
+        "test",
+        "--config",
+        "e2e/budget-control.playwright.config.ts",
+        "--reporter=json"
+      ],
+      "duration_seconds": 28.938,
+      "source_unchanged": null,
+      "logs": [
+        {
+          "path": "output/gfo-sprint-20261008/closing-budget-browser.log",
+          "sha256": "561d724a1b5656c3f6dfb3f4e503737bd1a73d2c2d782b72ebb1ebe226ebf736"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37727480462-summary.json",
+      "sha256": "da48bd054cf01fc86a0161c60bb7ec44fec78df1b2ccca26ac30d10a9d7a097d",
+      "source_commit": "d59bc4d0383453606947e32de844c750b6f88e65",
+      "status": "completed",
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37727480462-counts.json",
+      "sha256": "5ab3e6d933b1fdace782f5f3ca4f58ba84c02f3f1800b000f3a0c0582a86d927",
+      "source_commit": "d59bc4d0383453606947e32de844c750b6f88e65",
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37727480463-summary.json",
+      "sha256": "61959d8335c6c553284beb4b313bfe737f6950e86b1c59be136032afbc0d68b3",
+      "source_commit": "d59bc4d0383453606947e32de844c750b6f88e65",
+      "status": "completed",
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37727480466-summary.json",
+      "sha256": "e819976f425471807b66fba07597b50084efe6883da3434f39d62f4cfd8f4a52",
+      "source_commit": "d59bc4d0383453606947e32de844c750b6f88e65",
+      "status": "completed",
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37727480481-summary.json",
+      "sha256": "87ddbc60a3b024636b0738c0d0d4c091c1fcdad67461bcf1288c5ad7b93a61a2",
+      "source_commit": "d59bc4d0383453606947e32de844c750b6f88e65",
+      "status": "completed",
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-container-policy.json",
+      "sha256": "3c32424d45e675de3ae50c75bc727b01ab2db10f36a2fbf8a33087d391fcc900",
+      "source_commit": "aa81176d36be81f2d75822d146ef488c62d37728",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/test_container_security_gate.py",
+        "tests/test_supply_chain_policy.py",
+        "-ra"
+      ],
+      "duration_seconds": 7.297,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-container-policy.log",
+          "sha256": "dc7f84c773d9fc795874f5879b7fb001e4e15bc0ae56c5d208aedaa583194d2f"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-secure-container-build.json",
+      "sha256": "b0b57b349daa6f95bb97c42ed3f1bfb95f5f9dc90422e98b326ba36968815c4a",
+      "source_commit": "aa81176d36be81f2d75822d146ef488c62d37728",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "docker",
+        "build",
+        "--platform",
+        "linux/amd64",
+        "-t",
+        "reconforge:gfo-sprint-20261008-secure",
+        "."
+      ],
+      "duration_seconds": 850.406,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-secure-container-build.log",
+          "sha256": "3a635eddc89e22d89c6f8bfa830dd4409734573ac08252bef861f59488efe9a1"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-secure-container-doctor-corrected.json",
+      "sha256": "482b28ea70dbf491163df7f12e9b5791fb313609e1616b4d312d150052672299",
+      "source_commit": "aa81176d36be81f2d75822d146ef488c62d37728",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network=none",
+        "--read-only",
+        "--cap-drop=ALL",
+        "--security-opt=no-new-privileges",
+        "sha256:9b4300bc73e9497f80efee5bd00b878d5b512a14a366306de19e08d7b5087cf2",
+        "reconforge",
+        "doctor"
+      ],
+      "duration_seconds": 8.0,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-secure-container-doctor-corrected.log",
+          "sha256": "011c4651aee4407ec9aced841e5bb39ac2770c016405627628712a6720ab108f"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-root-secure-container-doctor.json",
+      "sha256": "2e47cfcef2278e1f4e23e0856fdeb0ce28cdba03f05bafe15d51bad7ed2cf8be",
+      "source_commit": "aa81176d36be81f2d75822d146ef488c62d37728",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network=none",
+        "--read-only",
+        "--cap-drop=ALL",
+        "--security-opt=no-new-privileges",
+        "sha256:04295c8f4cfbdf42f98ace07d5379fc3c407c0174200dd3a74e61acff41883c4",
+        "reconforge",
+        "doctor"
+      ],
+      "duration_seconds": 9.484,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-root-secure-container-doctor.log",
+          "sha256": "011c4651aee4407ec9aced841e5bb39ac2770c016405627628712a6720ab108f"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-root-security-policy.json",
+      "sha256": "17b4fd77162df08dc2808f0788a38309cce1696a253769c8ccd1cc8262389897",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        ".github/scripts/validate_container_security.py",
+        "--project-root",
+        ".",
+        "--syft-json",
+        "output/gfo-sprint-20261008/hosted-final/root-container-review/image.syft.json",
+        "--grype-report",
+        "output/gfo-sprint-20261008/hosted-final/root-container-review/image.grype.json",
+        "--grype-exit-code",
+        "0",
+        "--image-config-digest",
+        "sha256:79e40997a4db989e096eb43d4441c67cffea209aa84b7be8079d9f3ff0d2e6e8",
+        "--output",
+        "output/gfo-sprint-20261008/hosted-final/root-container-review/container-security-evidence.json"
+      ],
+      "duration_seconds": 0.297,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-root-security-policy.log",
+          "sha256": "c063f34a89e2f3d1cb4e4d8188383571b46e919a0f5596fd30a562a41f28c41b"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-final-package.json",
+      "sha256": "67f52e9ed84a8bf27035a0be1855be9863e645e7e23118150ee716fc5124a653",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "build",
+        "--no-isolation"
+      ],
+      "duration_seconds": 29.313,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-final-package.log",
+          "sha256": "1b2385211b442b44f87c711a4aec24d571722d93d6b348ecc8b5e1e1e3dcf44d"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-final-ruff.json",
+      "sha256": "efd8377876a044ae1910cfb9ee0de3d9fbb19670b9d8ef917dc4202f6316304a",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "duration_seconds": 0.515,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-final-ruff.log",
+          "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-writeback-contracts.json",
+      "sha256": "c29a7423254ee2a09fd5b17f56aae7a498db1ecc80ffc831659831335bb5acc6",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "-m",
+        "pytest",
+        "tests/test_postgres_writeback_identity_migration_matrix.py",
+        "tests/test_postgres_writeback_receiver_failover_matrix.py",
+        "tests/test_postgres_writeback_receiver_idempotency_matrix.py",
+        "tests/test_postgres_writeback_recovery_compensation_matrix.py",
+        "-q",
+        "--junitxml=output/gfo-sprint-20261008/closing-writeback-contracts.xml"
+      ],
+      "duration_seconds": 7.406,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-writeback-contracts.log",
+          "sha256": "f56ca56649f13edaa45e491838f4cb4aa425066c9a3366d147d65e1f0ac5cc0a"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/native-current-writeback/refresh-acceptance-index.json",
+      "sha256": "639f64fc74978e36558ed72fec6f369b4873526f53b2bebfc08992056a63b343",
+      "source_commit": null,
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/root-container-review/acceptance-index.json",
+      "sha256": "83e4862f5a9822fd1fd15bd375d87a5774e83b452a95bc3122947911b5620047",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/root-container-review/container-security-evidence.json",
+      "sha256": "06aefb27cd1709b53c72b3b2ffba2f9bcdb07de9482465ab99afd30aec188191",
+      "source_commit": null,
+      "status": "passed",
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/root-container-review/image.syft.json",
+      "sha256": "7f9cf78eea1de14a895f14744ec25f57a566c218330c1babfa661515cd313f32",
+      "source_commit": null,
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/root-container-review/image.grype.json",
+      "sha256": "6460163644e033198ba9ecab7738d26abb91efafdc740e9bad3f92647cc4fc4b",
+      "source_commit": null,
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37731227022-summary.json",
+      "sha256": "644a54db7aab331ca15b576dd857ee092d1a37ce417016ab303147746b8c4fa7",
+      "source_commit": "aa81176d36be81f2d75822d146ef488c62d37728",
+      "status": "completed",
+      "conclusion": "failure",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37731225415-acceptance-index.json",
+      "sha256": "71a055939f551c52b00b858432f2280f71d9ec4e781e354f75fc2a5e9f0ac234",
+      "source_commit": "aa81176d36be81f2d75822d146ef488c62d37728",
+      "status": null,
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37731225415-summary.json",
+      "sha256": "fb6bf6c3ea851a2d4d1e12afe4669d9e7f77144b73f37cfbefda975a4005d117",
+      "source_commit": "aa81176d36be81f2d75822d146ef488c62d37728",
+      "status": "completed",
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37731225415-artifacts/container-security-evidence.json",
+      "sha256": "accc14928f91c3c995b1465bebb578c6d56c61e1dce1a3efeabec739b815a559",
+      "source_commit": null,
+      "status": "passed",
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37731225415-artifacts/image.syft.json",
+      "sha256": "e63566ffd418c74ef3861f047a936573e3cca783cb46d3848b2a904c20f786fc",
+      "source_commit": null,
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37731225415-artifacts/image.grype.json",
+      "sha256": "698a7a03e5a3930b71fb859dfce3e3b96082b4df00ff7f1a6826136d8a104df7",
+      "source_commit": null,
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-tracked-secrets.json",
+      "sha256": "7b38dc6bd94e7df75388eb4e1d74f4d6be1cc789d8f72e0d14f8f7cd18cd2c31",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "output/gfo-sprint-20261008/scan_tracked.py"
+      ],
+      "duration_seconds": 6.89,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-tracked-secrets.log",
+          "sha256": "915c964a7a920744e573777850f2a71d83ce13bc241ae4a7d2c55056fdf37d74"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-history-secrets.json",
+      "sha256": "88bcb69d0dc6266fe6846b6c50f34363320fd5c369e67be6b965c563a61fd3e1",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        "output/baseline-2026-10-08/tools/gitleaks.exe",
+        "git",
+        ".",
+        "--log-opts=amr/baseline-refresh-20261008..HEAD",
+        "--config",
+        ".gitleaks.toml",
+        "--redact",
+        "--no-banner",
+        "--report-format",
+        "json",
+        "--report-path",
+        "output/gfo-sprint-20261008/closing-history-findings.json"
+      ],
+      "duration_seconds": 0.672,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-history-secrets.log",
+          "sha256": "2d43d268335e7be277cb40ff093e9116ac580a9b6fe00641039e9f7f7c20986e"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37733619873-summary.json",
+      "sha256": "ffbc4ca88cd5b5ff569de7f98d5d3fe243986ee1496cabfd7e47e51a3cad72da",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "completed",
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37733619873-counts.json",
+      "sha256": "67307e3246f02233031a354f2e2455a89e75da4dde48c9eebd562a131e4f8f62",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37733619909-summary.json",
+      "sha256": "9b721c03593c9ef9615ae082de92d21c936aa6183cd7875d5aadea85db810f18",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "completed",
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37733619919-summary.json",
+      "sha256": "40538b28d9ae8d41fb87877f3b41492f1d2716762da65d2c1181ddcf6b15d483",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "completed",
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/run-37733619856-summary.json",
+      "sha256": "f02cbc3634228079235df568bbb413b44f292c624d90447350c494470bc05cda",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "completed",
+      "conclusion": "success",
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/source-563ad127-security-binding.json",
+      "sha256": "0c522d575c4e26b2756926b95256fe8d14acd7d30693846486684297ad437e38",
+      "source_commit": null,
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/source-563ad127-hosted-tree-binding.json",
+      "sha256": "b3c6185d51c53d20ef3baa75720909f87ed51d7658426b41d8d7f0086b77026e",
+      "source_commit": null,
+      "status": null,
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/hosted-final/source-563ad127-hosted-acceptance-index.json",
+      "sha256": "b8346aac5f69bd0d9fee4124d4eaed3a353c0c90d2fedfcbcf47d353c747c1c7",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "accepted",
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/distribution-artifact-index.json",
+      "sha256": "84af940f9b287c9fd7966c0a04b072950ec6eae4f6928bd864ee4fb1efd077fe",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": []
+    },
+    {
+      "path": "output/gfo-sprint-20261008/closing-installed-wheel.json",
+      "sha256": "e44c59662d54554e5a9420496523552ba0b4a5fe27ba2e5b4c840794c6e85671",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        ".venv-baseline-20261008/Scripts/python.exe",
+        "output/gfo-sprint-20261008/verify_installed_wheel.py"
+      ],
+      "duration_seconds": 13.688,
+      "source_unchanged": true,
+      "logs": [
+        {
+          "path": "output\\gfo-sprint-20261008\\closing-installed-wheel.log",
+          "sha256": "017c97db04f95d7e2ec69b8f735cbaff906cf0cf3a8ef746e0a3769ad73d8360"
+        }
+      ]
+    },
+    {
+      "path": "output/gfo-sprint-20261008/wheel-install-acceptance/report.json",
+      "sha256": "017c97db04f95d7e2ec69b8f735cbaff906cf0cf3a8ef746e0a3769ad73d8360",
+      "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+      "status": "passed",
+      "conclusion": null,
+      "command": [
+        [
+          "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+          "-m",
+          "pip",
+          "install",
+          "--no-index",
+          "--no-deps",
+          "--target",
+          "F:\\reconforge-erp\\output\\gfo-sprint-20261008\\wheel-install-acceptance\\installed",
+          "F:\\reconforge-erp\\dist\\reconforge_erp-0.7.1-py3-none-any.whl"
+        ],
+        [
+          "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+          "-c",
+          "import importlib,json,sys\nfrom pathlib import Path\ntarget=Path(sys.argv[1]).resolve()\nmodules=['reconforge','reconforge.api.routes.inventory_receipt_posting','reconforge.api.routes.durable_job_operations','reconforge.application.job_operations','reconforge.db.migration_56_job_operations']\nobserved={}\nfor name in modules:\n module=importlib.import_module(name)\n path=Path(module.__file__).resolve()\n assert path.is_relative_to(target),(name,path)\n observed[name]=str(path)\nprint(json.dumps(observed,indent=2))\n",
+          "F:\\reconforge-erp\\output\\gfo-sprint-20261008\\wheel-install-acceptance\\installed"
+        ],
+        [
+          "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+          "-m",
+          "reconforge.cli",
+          "doctor"
+        ]
+      ],
+      "duration_seconds": null,
+      "source_unchanged": null,
+      "logs": [
+        {
+          "path": "output/gfo-sprint-20261008/wheel-install-acceptance/offline-wheel-install.log",
+          "sha256": null
+        },
+        {
+          "path": "output/gfo-sprint-20261008/wheel-install-acceptance/installed-runtime-origin.log",
+          "sha256": null
+        },
+        {
+          "path": "output/gfo-sprint-20261008/wheel-install-acceptance/installed-cli-doctor.log",
+          "sha256": null
+        }
+      ]
+    }
+  ],
+  "retained_initial_failures": [
+    "python-full.json: two moving inventory/CI migration contracts; fixed before python-final",
+    "final-docker-build.json: dependency-download timeout; clean final-container-build succeeded",
+    "final-receipt-migration.json: mistyped test filename; corrected invocation separately passed",
+    "hosted manualSecurity37728310528: stale41day OpenVEX review refused by unchanged30daypolicy",
+    "CI37731227022: four retained Writeback policy bindings; genuine current native reports and historical policy provenance accepted separately",
+    "closing-secure-container-doctor.json: configuration digest is not a runnable Docker index ID; corrected immutable Docker ID separately passed",
+    "native-current-writeback/targeted-contracts.log: initial49pass/1closed target-revision drift; add only current0108 and corrected50passed"
+  ],
+  "limits": [
+    "synthetic single-node acceptance, no production deployment",
+    "experimental module maturity retained",
+    "receipt public HTTP requires PostgreSQL; untracked Stock/Consumable base-UOM FIFO and full unused inverse only",
+    "budget does not automatically post purchase/AP/GL",
+    "no completed sales/procurement/AR/AP/tax/FX/intercompany/assets end-to-end integration from this sprint",
+    "10K benchmark is local matching only, not operational capacity",
+    "HA simulation and hosted drill do not prove cross-host service RPO/RTO",
+    "whole local Python includes explicit external-service/platform prerequisites; live new gates have zero skips",
+    "9Medium/1Negligible container findings retained; no zero-vulnerability or legal license compatibility claim"
+  ],
+  "draft_pr": "https://github.com/amrzainmubarak/reconforge-erp/pull/124",
+  "hosted_ci": {
+    "run_id": 37733619873,
+    "source_commit": "563ad127408712c753c72c5098f548d9cbf0e2f2",
+    "conclusion": "success",
+    "all_twenty_jobs_passed": true
+  }
+}

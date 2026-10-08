@@ -246,3 +246,16 @@ def install_postgres_finance_posting_schema(connection: Any) -> None:
         )
 
         install_postgres_inventory_receipt_posting_schema(connection)
+
+    # A current installer must retain the additive native-source admission
+    # guards when an existing posting kernel is reinstalled during provisioning.
+    row = connection.execute(
+        "SELECT to_regclass('reconforge.operational_finance_plans') IS NOT NULL AS installed"
+    ).fetchone()
+    operational_installed = row["installed"] if isinstance(row, Mapping) else row[0]
+    if operational_installed:
+        from reconforge.infrastructure.postgres_operational_finance_schema import (
+            install_postgres_operational_finance_schema,
+        )
+
+        install_postgres_operational_finance_schema(connection)

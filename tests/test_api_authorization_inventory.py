@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 301
-EXPECTED_DIGEST = "28b8b7cf9caf56f79d576b88cb6a97ce12ba6f50d35a79c4b4e87cd53a14ce4e"
+EXPECTED_ROUTE_COUNT = 339
+EXPECTED_DIGEST = "9a7ec1e81b5ed59e4b90c4b13efefec1f9e51d2dd6b150de58d44edc4489ddf3"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -46,6 +46,9 @@ HANDLER_BOUNDARY_HELPERS = {
     "finance_posting.py": frozenset({"_authority"}),
     "durable_job_operations.py": frozenset({"_command"}),
     "inventory_receipt_posting.py": frozenset({"_execute"}),
+    "operational_finance.py": frozenset({"_authority", "_execute"}),
+    "sales_revenue.py": frozenset({"_execute", "_transition"}),
+    "procurement_operations.py": frozenset({"execute"}),
     "identity_administration.py": frozenset({"_service"}),
     "inventory_core.py": frozenset({"_server_call"}),
     "inventory_planning.py": frozenset({"_server_call"}),
@@ -266,3 +269,13 @@ def test_critical_financial_route_permission_contract_cannot_drift() -> None:
                 ),
             )
         )
+
+
+@pytest.mark.parametrize("route,permissions", [
+    ("/api/v1/sales-revenue/documents/{identifier}/invoice/review", ("sales.manage", "finance_core.validate")),
+    ("/api/v1/procurement-operations/cycles/{cycle_id}/commands/receive", ("payables.manage", "finance_core.post")),
+    ("/api/v1/procurement-operations/cycles/{cycle_id}/commands/pay", ("finance_core.post",)),
+])
+def test_erp_financial_actions_refuse_adjacent_authority(route: str, permissions: tuple[str, ...]) -> None:
+    with pytest.raises(ValueError, match="Critical API route authorization contract drifted"):
+        validate_authorization_surface((RouteAuthorizationContract("POST", route, "all", tuple(sorted(permissions))),))

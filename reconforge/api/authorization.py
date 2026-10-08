@@ -162,6 +162,51 @@ _CRITICAL_ROUTE_CONTRACTS: dict[tuple[str, str], tuple[str, tuple[str, ...]]] = 
 }
 
 
+_SALES_READ = frozenset({"sales.read", "receivables.read", "finance_core.read"})
+_PROCUREMENT_READ = frozenset({"payables.read", "inventory.read", "finance_core.read"})
+
+
+def _erp_contract(base: frozenset[str], *permissions: str) -> tuple[str, tuple[str, ...]]:
+    return "all", tuple(sorted(base | frozenset(permissions)))
+
+
+_CRITICAL_ROUTE_CONTRACTS.update({
+    ("POST", "/api/v1/operational-finance/plans"): ("all", ("finance_core.manage",)),
+    ("POST", "/api/v1/operational-finance/plans/{plan_id}/review"): ("all", ("finance_core.validate",)),
+    ("POST", "/api/v1/operational-finance/plans/{plan_id}/post"): ("all", ("finance_core.post",)),
+    ("POST", "/api/v1/sales-revenue/quotations"): _erp_contract(_SALES_READ, "sales.manage"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/submit"): _erp_contract(_SALES_READ, "sales.manage"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/approve"): _erp_contract(_SALES_READ, "sales.approve"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/order"): _erp_contract(_SALES_READ, "sales.manage"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/fulfill"): _erp_contract(_SALES_READ, "sales.manage"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/cancel"): _erp_contract(_SALES_READ, "sales.manage"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/invoice/prepare"): _erp_contract(_SALES_READ, "sales.manage", "receivables.manage", "finance_core.manage"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/invoice/review"): _erp_contract(_SALES_READ, "sales.approve", "receivables.approve", "finance_core.validate"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/invoice/post"): _erp_contract(_SALES_READ, "sales.manage", "receivables.approve", "finance_core.post"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/collection/prepare"): _erp_contract(_SALES_READ, "sales.manage", "finance_core.manage"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/collection/review"): _erp_contract(_SALES_READ, "sales.approve", "finance_core.validate"),
+    ("POST", "/api/v1/sales-revenue/documents/{identifier}/collection/post"): _erp_contract(_SALES_READ, "sales.manage", "receivables.manage", "finance_core.post"),
+    ("POST", "/api/v1/procurement-operations/cycles"): _erp_contract(_PROCUREMENT_READ, "payables.manage"),
+})
+for _operation, _permissions in {
+    "submit-order": ("payables.manage",),
+    "approve-order": ("payables.approve",),
+    "prepare-receipt": ("payables.manage", "inventory.manage", "inventory.valuation.manage", "finance_core.manage"),
+    "review-receipt": ("payables.approve", "inventory.post", "inventory.valuation.approve", "finance_core.validate"),
+    "receive": ("payables.manage", "inventory.post", "inventory.valuation.approve", "finance_core.post"),
+    "match-invoice": ("payables.manage", "payables.match"),
+    "approve-invoice": ("payables.approve",),
+    "prepare-accrual": ("payables.manage", "finance_core.manage"),
+    "review-accrual": ("payables.approve", "finance_core.validate"),
+    "post-accrual": ("payables.approve", "finance_core.post"),
+    "prepare-payment": ("payables.settle", "finance_core.manage"),
+    "review-payment": ("payables.settle", "finance_core.validate"),
+    "pay": ("payables.settle", "finance_core.post"),
+}.items():
+    _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-operations/cycles/{cycle_id}/commands/" + _operation)] = _erp_contract(_PROCUREMENT_READ, *_permissions)
+
+
+
 def _dependency_contract(route: APIRoute) -> tuple[str, tuple[str, ...]] | None:
     found: set[tuple[str, tuple[str, ...]]] = set()
     pending = list(route.dependant.dependencies)

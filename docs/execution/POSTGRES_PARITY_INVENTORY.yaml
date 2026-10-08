@@ -4,7 +4,7 @@ claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0108_pg_receipt_admission"
+current_source_migration_head: "0111_pg_procurement_operations"
 production_foundation_review:
   executed_at: "2026-10-03"
   evidence: "PRODUCTION_AUDIT_2026-10-03.md"
@@ -342,10 +342,13 @@ boundaries:
   - {file: inventory_valuation.py, service: InventoryValuationApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation.PostgresInventoryValuationRepository, test: tests/test_postgres_inventory_valuation.py, risk: financial_critical}
   - {file: inventory_valuation_reversal.py, service: InventoryValuationReversalApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_valuation_reversal.PostgresInventoryValuationReversalRepository, test: tests/test_postgres_inventory_valuation_reversal.py, risk: financial_critical}
   - {file: inventory_planning.py, service: InventoryPlanningApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_inventory_planning.PostgresInventoryPlanningRepository, test: tests/test_postgres_inventory_planning.py, risk: financial_high}
+  - {file: operational_finance.py, service: OperationalFinanceService, status: live_test_available, adapter: reconforge.infrastructure.postgres_operational_finance.PostgresOperationalFinanceRepository, test: tests/test_postgres_operational_finance.py, risk: reviewed_exact_scoped_operational_financial_effects}
+  - {file: sales_revenue.py, service: SalesRevenueApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_sales_revenue.PostgresSalesRevenueRepository, test: tests/test_postgres_sales_revenue.py, risk: reviewed_exact_scoped_operational_financial_effects}
+  - {file: procurement_operations.py, service: ProcurementApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_procurement_operations.PostgresProcurementOperationsRepository, test: tests/test_postgres_procurement_operations.py, risk: reviewed_exact_scoped_operational_financial_effects}
 summary:
-  total: 52
+  total: 55
   live_verified_current: 20
-  live_test_available: 28
+  live_test_available: 31
   absent: 0
   contract_only: 1
   not_applicable: 3

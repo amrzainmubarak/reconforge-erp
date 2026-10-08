@@ -243,9 +243,21 @@ application_services:
     service: InventoryPlanningApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.sqlite_inventory_planning.SQLiteInventoryPlanningRepositoryAdapter
+  - file: operational_finance.py
+    service: OperationalFinanceService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_operational_finance.PostgresOperationalFinanceRepository
+  - file: sales_revenue.py
+    service: SalesRevenueApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_sales_revenue.PostgresSalesRevenueRepository
+  - file: procurement_operations.py
+    service: ProcurementApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_procurement_operations.PostgresProcurementOperationsRepository
 summary:
   platform_total: 21
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 21
-  backend_neutral_application: 52
+  backend_neutral_application: 55

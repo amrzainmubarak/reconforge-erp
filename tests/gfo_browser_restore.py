@@ -151,6 +151,16 @@ def verify_native_browser_restore(runtime: ReceiptRuntime, container: str,
             require(connection.execute("SELECT count(*) FROM reconforge.inventory_receipt_plans").fetchone()[0] == 0, "Native restore invariant failed.")
         with PostgresTenantBoundary(factory).transaction(runtime.tenant, workspace_id="foreign", organization_id="org", legal_entity_id="entity") as connection:
             require(connection.execute("SELECT count(*) n FROM reconforge.inventory_receipt_plans").fetchone()["n"] == 0, "Native restore invariant failed.")
+        with PostgresTenantBoundary(factory).transaction(runtime.tenant, workspace_id="work", organization_id="org", legal_entity_id="entity") as connection:
+            require(connection.execute("SELECT count(*) n FROM reconforge.inventory_receipt_links").fetchone()["n"] == 2,
+                    "Restored source links must be visible in their authorized lane.")
+            refused = False
+            try:
+                with connection.transaction():
+                    connection.execute("UPDATE reconforge.inventory_receipt_links SET reason='Native restored tamper probe' WHERE tenant_id=%s", (runtime.tenant,))
+            except psycopg.errors.CheckViolation:
+                refused = True
+            require(refused, "Restored immutable receipt trigger did not reject direct mutation.")
         restored_effects = verified_effects(restored)
         require(source_effects == restored_effects, "Native restore invariant failed.")
         postconditions = persisted(restored)
@@ -161,7 +171,9 @@ def verify_native_browser_restore(runtime: ReceiptRuntime, container: str,
                 "table_count": len(before["tables"]), "table_row_hashes": before["tables"],
                 "forced_rls_financial_tables": before["forced_rls_financial_tables"], "head": before["head"],
                 "verified_original_inverse_effect_hashes": source_effects, "role_privileges": flags,
-                "raw_unscoped_and_foreign_workspace_concealed": True, "persisted_effects": postconditions}
+                "raw_unscoped_and_foreign_workspace_concealed": True, "restored_immutable_trigger_executed": True,
+                "check_constraint_canonicalization": "native PostgreSQL reparse into empty temporary LIKE tables",
+                "persisted_effects": postconditions}
     finally:
         if created:
             with psycopg.connect(runtime.admin_dsn, autocommit=True) as admin:

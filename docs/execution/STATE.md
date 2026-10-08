@@ -11,7 +11,9 @@ Writeback16.14/17.10 and three repeated single-host HA drills pass. Exact
 synthetic-auth Gitleaks fingerprints retain the default history/tree gate.
 [Evidence and remaining CI gaps](HOSTED_GATES_REPAIR_2026-10-08.md).
 
-Whole regression after this runtime repair is pending on the next clean commit.
+Whole regression after this runtime repair passes4429 with490 explicit skips
+and zero failures on clean832ceeee.
+[Final source-bound acceptance](ACCEPTANCE_FINAL_2026-10-08.md).
 AMR-GFO-005 remains in progress: hosted downgrade fixture isolation and identity
 expectations are open; Inventory receipt stays paused, cancellation0107 stays
 outside this source and main staysb61ea56b. Earlier results below retain their

@@ -32,3 +32,8 @@ Measured through 2026-08-28. Vulnerability scan success is not the same as repro
 ## Current allowed conclusion
 
 The isolated locked Python 3.11/3.12 all-extra graph and current npm lock report no known vulnerabilities in the executed audits after the `pip 26.2` remediation. A deterministic universal Python/server lock, exact-subject SBOM definitions, fixed-only reviewed VEX, bounded exception policy, weekly update definitions, and fail-closed candidate/security workflow gates exist. E-824's fresh exact Grype gate now passes locally with a valid v6.1.9 database; Docker Scout also reports zero Critical/High/Medium/Low findings. E-1074 prevents CI from confusing a BuildKit manifest-list identity with Syft's image-configuration subject. The hosted clean-build/release gate is still pending, so the container is not yet releaseable. Local evidence does not prove hosted enforcement, safety, reachability, provenance, license suitability, or production operation. The current npm lock has no recorded SRI gap; no hosted signed result exists for this slice.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

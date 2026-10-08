@@ -1275,3 +1275,5 @@ include docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-08.j
 include docs/execution/HOSTED_GATES_REPAIR_2026-10-08.md
 include docs/execution/HOSTED_GATES_REPAIR_2026-10-08.json
 include docs/execution/HTTP_FIXTURE_CLEANUP_2026-10-08.json
+include docs/execution/ACCEPTANCE_FINAL_2026-10-08.md
+include docs/execution/ACCEPTANCE_FINAL_2026-10-08.json

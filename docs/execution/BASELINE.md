@@ -320,3 +320,8 @@ Fresh locked Python 3.12 baseline: 3366 passed, 124 skipped, 23 warnings in 817.
 
 ### Boundary notes
 - This section reflects local, environment-scoped evidence and does not constitute hosted production assurance, capacity/SLO claims, or release-closure substitution for open gates.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

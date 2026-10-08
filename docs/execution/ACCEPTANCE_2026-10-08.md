@@ -67,3 +67,7 @@ Rollback reverts the Money/Finance conversion and gate-repair commits with
 their tests and lock change; no database migration is required. This restores
 the known original exactness and dependency findings, which require an explicit
 disposition if rollback is selected.
+
+## Later source-bound acceptance
+
+[Final runtime recovery and regression acceptance](ACCEPTANCE_FINAL_2026-10-08.md) supersedes the pending native/whole-regression status only for its exact later source. The original table and limitations above remain historical b8f5a772 evidence.

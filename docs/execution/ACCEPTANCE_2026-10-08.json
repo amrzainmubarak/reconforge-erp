@@ -366,7 +366,7 @@
       "exit_code": 0,
       "status": "passed",
       "error": null,
-      "log": "output/baseline-2026-10-08/build-after.log",
+      "log": "output/baseline-2026-10-08/build-after-c134ec2944d7e5549fc342fdf8d4bb5ab91b8b36bf950c79b3fbc16caacfc14f.log",
       "log_sha256": "c134ec2944d7e5549fc342fdf8d4bb5ab91b8b36bf950c79b3fbc16caacfc14f",
       "source_commit": "b8f5a772f560b7a9a3b81aedff7878cf4fc35257",
       "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -670,7 +670,7 @@
       "exit_code": 0,
       "status": "passed",
       "error": null,
-      "log": "output/baseline-2026-10-08/docker-build.log",
+      "log": "output/baseline-2026-10-08/docker-build-c2d5d74c36b96ef71981c3091e6b83f7d79aa8705c38a50f0607ad6d4b4e324f.log",
       "log_sha256": "c2d5d74c36b96ef71981c3091e6b83f7d79aa8705c38a50f0607ad6d4b4e324f",
       "source_commit": "b8f5a772f560b7a9a3b81aedff7878cf4fc35257",
       "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -714,7 +714,7 @@
       "exit_code": 0,
       "status": "passed",
       "error": null,
-      "log": "output/baseline-2026-10-08/docker-inspect.log",
+      "log": "output/baseline-2026-10-08/docker-inspect-172790b1d81765d398f78d07205634dc16d071fd900b63e9e0f3d80d0bbcb358.log",
       "log_sha256": "172790b1d81765d398f78d07205634dc16d071fd900b63e9e0f3d80d0bbcb358",
       "source_commit": "b8f5a772f560b7a9a3b81aedff7878cf4fc35257",
       "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -753,5 +753,6 @@
     "worktree_diff_sha256": "caabddf78db6a88725a961598c553517c64500c2016b1248d20079c6a233f094",
     "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
     "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
-  }
+  },
+  "later_acceptance": "docs/execution/ACCEPTANCE_FINAL_2026-10-08.json"
 }

@@ -68,7 +68,9 @@ tasks:
       ADR0833, 119 focused contracts, 97 live PostgreSQL analogous regressions,
       strict current0106 encrypted restore/wrong-source refusal/ACL/cleanup,
       PostgreSQL16.14/17.10 writeback matrix and three owned single-host HA runs.
-      Whole/hosted regression remains separate; HOSTED_GATES_REPAIR_2026-10-08.json.
+      Full source832ceeee regression4429pass/490skip/0fail and Ubuntu4431pass/488skip
+      on both Python versions; later live-only HTTP fixture follow-up34pass.
+      ACCEPTANCE_FINAL_2026-10-08.json preserves separate source identities and CI gaps.
   - id: AUD-20261008-007
     priority: P0
     area: postgres-fixture-isolation

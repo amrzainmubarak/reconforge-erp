@@ -13141,3 +13141,15 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Rollback**: Revert `441f0cf9`, `c58d1006`, and `c3addf52` together only if
   an equivalent pre-restore access fence and post-restore routine ACL hardening
   replace them.
+
+
+## D-AUD-20261008-FINAL — Preserve source-bound acceptance partitions
+
+Full Windows regression on clean832ceeee passes4429/490skip/0fail; hosted Ubuntu
+whole gates pass4431/488skip on both Python versions. A later five-line live-only
+fixture cleanup follow-up passes34 owned PostgreSQL HTTP/industry/provenance
+cases with CI bootstrap predecessors; it changes no financial/recovery runtime.
+Keep the whole-suite832ceeee and fixture98e3b0a3 identities separate. Fresh hosted
+CI at the final head remains pending; historical parity and Finance downgrade
+fixtures and identity projections remain unaccepted. ACCEPTANCE_FINAL_2026-10-08.json
+retains the exact logs, fixture hashes and remaining scope.

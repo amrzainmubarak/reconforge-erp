@@ -68,3 +68,8 @@ Measured 2026-07-24. Items are ordered by impact on user decisions and release t
 ## Claim boundary
 
 DOC-006 and DOC-007 remain open, and the worktree is not an isolated release candidate. Public surfaces may say only that ReconForge is alpha-stage, local/file-first, open source, and intended for evaluation or controlled pilots. They must not state general cross-engine determinism, scale, enterprise readiness, bank-grade quality, compliance, or certification.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

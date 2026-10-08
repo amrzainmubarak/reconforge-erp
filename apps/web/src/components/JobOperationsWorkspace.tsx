@@ -114,7 +114,7 @@ function JobSession({ locale }: { locale: Locale }) {
       </section> : null}
       {detail ? <section className="panel job-detail" aria-label={t("evidence")}><h2><bdi>{detail.job.id}</bdi></h2><p>{t("status")}: {detail.job.status} · {t("version")}: {detail.job.version} · {t("retries")}: {detail.job.retry_count}/{detail.job.retry_ceiling}</p>
         {detail.job.safe_error_code ? <p>{t("reason")}: <bdi>{detail.job.safe_error_code}</bdi></p> : null}
-        {canManage && ["queued", "paused", "retrying"].includes(detail.job.status) ? <button type="button" disabled={busy || unknown} onClick={() => void act("cancel")}>{t("cancel")}</button> : null}
+        {canManage && detail.job.status === "queued" ? <button type="button" disabled={busy || unknown} onClick={() => void act("cancel")}>{t("cancel")}</button> : null}
         {canManage && ["failed", "paused"].includes(detail.job.status) ? <button type="button" disabled={busy || unknown} onClick={() => void act("requeue")}>{t("requeue")}</button> : null}
         <h3>{t("evidence")}</h3>{detail.history_truncated ? <p>{t("truncated")}</p> : null}<ol>{detail.transitions.map((event) => <li key={event.job_version}><span>{event.from_status || "—"} → {event.to_status}</span><span>{t("version")}: {event.job_version}</span><span>{t("actor")}: <bdi>{event.actor_id}</bdi></span><span>{t("reason")}: <bdi>{event.reason_code}</bdi></span><time dateTime={event.occurred_at}><bdi>{event.occurred_at}</bdi></time></li>)}</ol>
       </section> : null}

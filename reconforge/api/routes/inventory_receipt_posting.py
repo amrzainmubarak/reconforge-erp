@@ -167,6 +167,7 @@ def prepare(request: Request, payload: ReceiptRequest, user: Prepare) -> dict[st
         prepared = replace(ReceiptPreparation(**fields), workspace=bound.workspace_id, organization_code=bound.organization_code, entity_code=bound.entity_code)
         plan = service.prepare_receipt(prepared, command_id=payload.command_id, actor=actor)
         _authority(request, PREPARE_PERMISSIONS, plan, audit=False)
+        cast(PostgresInventoryReceiptPostingRepository, service.repository).assert_public_phase(plan["plan_id"], actor=actor)
         return service.get_plan(plan["plan_id"], actor=actor)
     return _execute(request, user, PREPARE_PERMISSIONS, run, organization_code=payload.organization_code, entity_code=payload.entity_code)
 

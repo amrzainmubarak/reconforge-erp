@@ -21,6 +21,13 @@ class APIError(ValueError):
         self.message = message
 
 
+def financial_owner_phase_conflict(exc: Exception) -> bool:
+    """Recognize only the database's named composed-owner phase rejection."""
+    return getattr(exc, "sqlstate", None) == "23514" and getattr(
+        getattr(exc, "diag", None), "constraint_name", None
+    ) in {"sales_revenue_owner_phase", "procurement_owner_phase"}
+
+
 def request_id(request: Request) -> str:
     """Return the per-request id assigned by middleware."""
 

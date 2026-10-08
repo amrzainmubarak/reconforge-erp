@@ -766,7 +766,7 @@ class PostgresInventoryReceiptPostingRepository:
         """Public receipt commands cannot advance a retained Procurement owner."""
         with self._transaction(write=False):
             self._actor(actor, READ_PERMISSIONS, mutation=False)
-            self._plan(plan_id)
+            plan = self._plan(plan_id)
             installed = self._one(
                 "SELECT to_regclass('reconforge.procurement_cycles') AS owner_index", ()
             )
@@ -774,8 +774,19 @@ class PostgresInventoryReceiptPostingRepository:
                 return
             owner = self._one(
                 """SELECT EXISTS(SELECT 1 FROM reconforge.procurement_cycles
-                WHERE tenant_id=%s AND receipt_plan_id=%s) AS owned""",
-                (self.tenant_id, plan_id),
+                WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s
+                AND legal_entity_id=%s AND (receipt_plan_id=%s OR receipt_plan_id=%s
+                OR (%s='Receipt' AND %s='GR-'||number))) AS owned""",
+                (
+                    self.tenant_id,
+                    plan["scope"]["workspace_id"],
+                    plan["scope"]["organization_id"],
+                    plan["scope"]["legal_entity_id"],
+                    plan_id,
+                    plan["original"]["plan_id"] if plan["original"] else None,
+                    plan["operation"],
+                    plan["source"]["number"],
+                ),
             )
             if owner["owned"]:
                 fail(

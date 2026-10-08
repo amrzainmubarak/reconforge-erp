@@ -22,7 +22,7 @@ export interface SalesCommand { readonly path: string; readonly scope: Readonly<
 
 function object(value: unknown): Record<string, unknown> { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("sales_contract_invalid"); return value as Record<string, unknown>; }
 function text(value: unknown): string { if (typeof value !== "string" || !value || value.length > 500 || /[\u0000-\u001f\u007f]/.test(value)) throw new Error("sales_contract_invalid"); return value; }
-function minor(value: unknown): string { if (typeof value !== "string" || !/^(0|[1-9]\d{0,18})$/.test(value) || BigInt(value) > 9223372036854775807n) throw new Error("sales_contract_invalid"); return value; }
+function minor(value: unknown): string { if (typeof value !== "string" || !/^(0|[1-9]\d{0,18})$/.test(value) || BigInt(value) > 9000000000000000000n) throw new Error("sales_contract_invalid"); return value; }
 function version(value: unknown): number { if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) throw new Error("sales_contract_invalid"); return value; }
 function summary(value: unknown): SalesSummary {
   const row = object(value);
@@ -31,7 +31,7 @@ function summary(value: unknown): SalesSummary {
 }
 export function parseSalesDocument(value: unknown, scope: SalesScope, id?: string): SalesDocument {
   const row = object(value), base = summary(row), quote = object(row.quotation), policy = object(quote.monetary_policy);
-  if ((id && base.id !== id) || Object.entries(scope).some(([key, value]) => row[key] !== value) || !/^[a-f0-9]{64}$/.test(String(row.quotation_digest)) || !Array.isArray(quote.lines) || !Array.isArray(row.events) || quote.lines.length > 100 || row.events.length > 20 || !Number.isInteger(policy.precision) || Number(policy.precision) < 0 || Number(policy.precision) > 8) throw new Error("sales_contract_invalid");
+  if ((id && base.id !== id) || Object.entries(scope).some(([key, value]) => row[key] !== value) || !/^[a-f0-9]{64}$/.test(String(row.quotation_digest)) || !Array.isArray(quote.lines) || !Array.isArray(row.events) || quote.lines.length > 16 || row.events.length > 20 || !Number.isInteger(policy.precision) || Number(policy.precision) < 0 || Number(policy.precision) > 8) throw new Error("sales_contract_invalid");
   const lines = quote.lines.map((value) => { const line = object(value); const bps = line.discount_basis_points; if (!Number.isInteger(bps) || Number(bps) < 0 || Number(bps) >= 10000) throw new Error("sales_contract_invalid"); return { description: text(line.description), quantity: text(line.quantity), unit_price_minor: minor(line.unit_price_minor), line_total_minor: minor(line.line_total_minor), discount_basis_points: Number(bps) }; });
   if (lines.reduce((sum, line) => sum + BigInt(line.line_total_minor), 0n) !== BigInt(base.total_minor)) throw new Error("sales_contract_invalid");
   const events = row.events.map((value) => { const event = object(value); return { version: version(event.version), operation: text(event.operation), actor_id: text(event.actor_id), reason: text(event.reason), audit_event_id: text(event.audit_event_id) }; });

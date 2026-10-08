@@ -6,7 +6,7 @@ CREATE TABLE reconforge.sales_revenue_documents (
  workspace_id TEXT NOT NULL, organization_id TEXT NOT NULL, legal_entity_id TEXT NOT NULL,
  customer_id TEXT NOT NULL, number TEXT NOT NULL, quotation JSONB NOT NULL,
  quotation_digest TEXT NOT NULL CHECK(quotation_digest ~ '^[0-9a-f]{64}$'),
- currency_code TEXT NOT NULL, total_minor BIGINT NOT NULL CHECK(total_minor>0),
+ currency_code TEXT NOT NULL, total_minor BIGINT NOT NULL CHECK(total_minor BETWEEN 1 AND 9000000000000000000),
  status TEXT NOT NULL DEFAULT 'Draft' CHECK(status IN ('Draft','Submitted','Approved','Ordered','Fulfilled',
  'InvoicePrepared','InvoiceReviewed','Invoiced','CollectionPrepared','CollectionReviewed','Paid','Cancelled')),
  created_by TEXT NOT NULL, approved_by TEXT, approved_reason TEXT,
@@ -131,7 +131,7 @@ BEGIN
    END IF;
    unit:=floor(((l->>'gross_unit_price_minor')::numeric*(10000-(l->>'discount_basis_points')::integer)+5000)/10000);
    value:=round((l->>'quantity')::numeric*unit,0);
-   IF unit<=0 OR value<=0 OR value>9223372036854775807 OR unit IS DISTINCT FROM (l->>'unit_price_minor')::numeric
+   IF unit<=0 OR value<=0 OR value>9000000000000000000 OR unit IS DISTINCT FROM (l->>'unit_price_minor')::numeric
    OR value IS DISTINCT FROM (l->>'line_total_minor')::numeric THEN
     RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Sales line does not reproduce exact discounted service value.';
    END IF;

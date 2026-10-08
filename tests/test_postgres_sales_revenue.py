@@ -38,9 +38,9 @@ SALES_PERMISSIONS = frozenset(
 )
 
 
-def create_sales_runtime(database: tuple[str, str]) -> ReceiptRuntime:
+def create_sales_runtime(database: tuple[str, str], base_runtime: ReceiptRuntime | None = None) -> ReceiptRuntime:
     """Reusable canonical fixture for real browser/native restore integration."""
-    runtime = create_receipt_runtime(database)
+    runtime = base_runtime or create_receipt_runtime(database)
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         identity = PostgresIdentityRepository(connection)
         for permission in sorted(SALES_PERMISSIONS):
@@ -233,8 +233,9 @@ def test_service_quote_discount_fulfillment_invoice_collection_and_exact_double_
             connection.execute(
                 """SELECT a.account_code,SUM(l.debit_minor) debit,SUM(l.credit_minor) credit
             FROM reconforge.finance_entry_lines l JOIN reconforge.finance_entries e ON e.tenant_id=l.tenant_id AND e.id=l.entry_id
+            JOIN reconforge.finance_posting_effects effect ON effect.tenant_id=e.tenant_id AND effect.entry_id=e.id
             JOIN reconforge.finance_accounts a ON a.tenant_id=l.tenant_id AND a.id=l.account_id
-            WHERE e.tenant_id=%s AND e.status='Posted' GROUP BY a.account_code ORDER BY a.account_code""",
+            WHERE e.tenant_id=%s GROUP BY a.account_code ORDER BY a.account_code""",
                 (sales_runtime.tenant,),
             )
         )
@@ -391,8 +392,155 @@ def test_current_permission_revocation_and_immutable_history(sales_runtime: Rece
                 "DELETE FROM reconforge.sales_revenue_commands WHERE tenant_id=%s", (sales_runtime.tenant,)
             )
         connection.execute(
-            "UPDATE reconforge.identity_role_permissions SET active=FALSE WHERE tenant_id=%s AND permission_name='sales.read'",
+            """UPDATE reconforge.identity_role_permissions SET active=FALSE,revoked_at=now(),revoked_by='checker',
+            revocation_reason_code='access_change',lifecycle_version=lifecycle_version+1 WHERE tenant_id=%s AND permission_name='sales.read'""",
             (sales_runtime.tenant,),
         )
         with pytest.raises(FinancePostingError, match="persisted"):
             repository(connection, sales_runtime).get(document["id"], actor=actor)
+
+
+def test_raw_foreign_entity_hides_headers_commands_events_and_refuses_insert(sales_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    document = create_fulfilled_sale(sales_runtime)
+    with sales_runtime.actor("maker") as (connection, _, actor):
+        connection.execute("SELECT set_config('app.legal_entity_id','foreign',true)")
+        for table in ("sales_revenue_documents", "sales_revenue_commands", "sales_revenue_events"):
+            assert (
+                connection.execute(
+                    f"SELECT count(*) n FROM reconforge.{table} WHERE tenant_id=%s", (sales_runtime.tenant,)
+                ).fetchone()["n"]
+                == 0
+            )
+        with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
+            connection.execute(
+                """INSERT INTO reconforge.sales_revenue_documents
+                (tenant_id,id,workspace_id,organization_id,legal_entity_id,customer_id,number,quotation,quotation_digest,currency_code,total_minor,created_by)
+                VALUES(%s,'foreign-copy','work','org','entity',%s,%s,%s::jsonb,%s,'USD',18000,%s)""",
+                (
+                    sales_runtime.tenant,
+                    document["customer_id"],
+                    document["number"],
+                    __import__("json").dumps(document["quotation"]),
+                    document["quotation_digest"],
+                    actor.user_id,
+                ),
+            )
+
+
+def test_raw_publication_without_posted_effect_is_refused(sales_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    document = create_reviewed_invoice(sales_runtime)
+    with sales_runtime.actor("checker") as (connection, _, actor):
+        # A valid state edge still requires its exact full command and finance link.
+        with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+            connection.execute("SELECT set_config('app.sales_actor_id',%s,true)", (actor.user_id,))
+            connection.execute(
+                "UPDATE reconforge.sales_revenue_documents SET status='Invoiced',row_version=row_version+1 WHERE tenant_id=%s AND id=%s",
+                (sales_runtime.tenant, document["id"]),
+            )
+            connection.execute("SET CONSTRAINTS sales_revenue_source_closure IMMEDIATE")
+        assert repository(connection, sales_runtime).get(document["id"], actor=actor)["status"] == "InvoiceReviewed"
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (sales_runtime.tenant,)
+            ).fetchone()["n"]
+            == 0
+        )
+
+
+def test_raw_quotation_pricing_cannot_be_rehashed_to_fabricate_value(sales_runtime: ReceiptRuntime) -> None:
+    import json
+
+    import psycopg
+
+    from reconforge.domain.finance_posting import digest_payload
+
+    with sales_runtime.actor("maker") as (connection, _, actor):
+        document = repository(connection, sales_runtime).create(quotation(), command_id="create", actor=actor)
+        forged = json.loads(json.dumps(document["quotation"]))
+        # Public money is text; reconstruct the exact retained integer representation.
+        for line in forged["lines"]:
+            for key in ("gross_unit_price_minor", "unit_price_minor", "line_total_minor", "tax_minor"):
+                line[key] = int(line[key])
+        forged["number"] = "FORGED"
+        forged["total_minor"], forged["tax_minor"] = 1, 0
+        forged["lines"][0]["line_total_minor"] = 1
+        forged["digest"] = digest_payload({key: value for key, value in forged.items() if key != "digest"})
+        with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+            connection.execute(
+                """INSERT INTO reconforge.sales_revenue_documents
+                (tenant_id,id,workspace_id,organization_id,legal_entity_id,customer_id,number,quotation,quotation_digest,currency_code,total_minor,created_by)
+                VALUES(%s,'forged','work','org','entity',%s,'FORGED',%s::jsonb,%s,'USD',1,%s)""",
+                (sales_runtime.tenant, document["customer_id"], json.dumps(forged), forged["digest"], actor.user_id),
+            )
+
+
+def test_failure_after_native_collection_allocation_rolls_back_ar_and_gl(
+    sales_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
+
+    document = create_reviewed_collection(sales_runtime)
+
+    def fault(*args: Any, **kwargs: Any) -> Any:
+        raise FinancePostingError("synthetic_post_failure", "Injected failure after native allocation")
+
+    with sales_runtime.actor("poster") as (connection, _, actor):
+        with monkeypatch.context() as patch:
+            patch.setattr(PostgresOperationalFinanceRepository, "post", fault)
+            with pytest.raises(FinancePostingError, match="Injected"):
+                repository(connection, sales_runtime).post_collection(
+                    document["id"],
+                    expected_version=10,
+                    command_id="faulted-post",
+                    reason="Publish collection",
+                    actor=actor,
+                )
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.ar_receipts WHERE tenant_id=%s", (sales_runtime.tenant,)
+            ).fetchone()["n"]
+            == 0
+        )
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.ar_receipt_allocations WHERE tenant_id=%s", (sales_runtime.tenant,)
+            ).fetchone()["n"]
+            == 0
+        )
+        current = repository(connection, sales_runtime).get(document["id"], actor=actor)
+        assert current["status"] == "CollectionReviewed" and current["invoice"]["outstanding_minor"] == "18000"
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (sales_runtime.tenant,)
+            ).fetchone()["n"]
+            == 1
+        )
+
+
+def test_populated_native_downgrade_preserves_financial_history(sales_runtime: ReceiptRuntime) -> None:
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    document = create_complete_sales_cycle(sales_runtime)
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "downgrade", "0109_pg_operational_finance"],
+        cwd=Path(__file__).resolve().parents[1],
+        env={**os.environ, "RECONFORGE_POSTGRES_DSN": sales_runtime.admin_dsn},
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode != 0 and "refuses to discard" in result.stderr
+    with sales_runtime.actor("checker") as (connection, _, actor):
+        assert repository(connection, sales_runtime).get(document["id"], actor=actor)["status"] == "Paid"
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (sales_runtime.tenant,)
+            ).fetchone()["n"]
+            == 2
+        )

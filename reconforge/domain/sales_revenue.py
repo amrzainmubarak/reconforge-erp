@@ -10,7 +10,7 @@ from typing import Any
 from reconforge.domain.finance_posting import FinancePostingError, digest_payload, text
 from reconforge.domain.quantities import quantity_decimal_text, quantity_product_minor
 
-MAX_MINOR = 9_223_372_036_854_775_807
+MAX_MINOR = 9_000_000_000_000_000_000
 SALES_PERMISSIONS = frozenset({"sales.read", "sales.manage", "sales.approve"})
 
 

@@ -1,0 +1,40 @@
+id: sales-revenue
+name: Governed service sales and exact revenue collection
+version: 1.0.0
+maturity: experimental
+implementation_status: implemented-pending-integrated-gate
+owner: financial-integrity
+dependencies: [platform.core, finance.core, receivables, operational-finance]
+incompatible_versions: [unreviewed-source-posting]
+data_classification: financial-sensitive
+retention_policy: immutable-quotation-command-review-source-and-financial-history
+permissions: [sales.read, sales.manage, sales.approve, receivables.read, receivables.manage, receivables.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
+default_roles: [admin]
+migrations: [postgresql0110]
+domain_invariants:
+  - canonical-exact-per-unit-discount-and-service-quantity
+  - quotation-creator-cannot-approve-own-discount-or-terms
+  - full-service-completion-precedes-invoice
+  - native-ar-credit-and-currency-policy-reused
+  - independently-reviewed-balanced-gl-required-before-revenue-published
+  - full-collection-native-ar-allocation-cash-gl-and-source-complete-in-one-transaction
+  - exact-current-scope-and-persisted-authority-before-frozen-retry
+  - one-immutable-command-and-audit-event-per-version
+domain_events: [sales.create, sales.submit, sales.approve, sales.order, sales.fulfill, sales.prepare_invoice, sales.review_invoice, sales.post_invoice, sales.prepare_collection, sales.review_collection, sales.post_collection, sales.cancel]
+api_routes: [/api/v1/sales-revenue/documents, /api/v1/sales-revenue/quotations, "/api/v1/sales-revenue/documents/{identifier}"]
+cli_commands: []
+ui_routes: [/sales-revenue]
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/test_postgres_sales_revenue.py]
+threat_model: [cross-scope-raw-sql, forged-actor-or-source, source-gl-partial-commit, self-approval, lost-ack-double-effect, exact-money-loss, stale-or-revoked-permission, forged-command-evidence]
+benchmarks: []
+rollback_plan: preserve-source-and-financial-history-reject-populated-downgrade-restore-verified-pre-upgrade-backup
+test_matrix: [tests/test_sales_revenue.py, tests/test_postgres_sales_revenue.py, apps/web/src/sales-revenue-data.test.ts]
+limitations:
+  - PostgreSQL-only-selected-workspace-organization-and-legal-entity
+  - completed-services-with-one-to-sixteen-lines
+  - functional-currency-zero-tax-no-jurisdictional-tax-calculation
+  - one-invoice-and-one-full-unallocated-settlement-per-order
+  - no-stock-delivery-fifo-cogs-returns-credit-notes-or-refunds
+  - no-independent-production-or-banking-readiness-claim

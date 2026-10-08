@@ -1,0 +1,398 @@
+"""Native service sales using restricted PostgreSQL roles and persisted humans."""
+
+from __future__ import annotations
+
+import os
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+
+import pytest
+
+from reconforge.domain.finance_posting import FinancePostingError
+from reconforge.domain.sales_revenue import SalesInvoicePreparation, SalesLine, SalesQuotation
+from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
+from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
+from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+from reconforge.infrastructure.postgres_sales_revenue import PostgresSalesRevenueRepository
+from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, create_receipt_runtime, receipt_database
+
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN"), reason="requires owned live PostgreSQL fixture"
+)
+_ = receipt_database  # Register the existing owned, migrated native database fixture.
+
+SALES_PERMISSIONS = frozenset(
+    {
+        "sales.read",
+        "sales.manage",
+        "sales.approve",
+        "receivables.read",
+        "receivables.manage",
+        "receivables.approve",
+        "finance_core.read",
+        "finance_core.manage",
+        "finance_core.validate",
+        "finance_core.post",
+    }
+)
+
+
+def create_sales_runtime(database: tuple[str, str]) -> ReceiptRuntime:
+    """Reusable canonical fixture for real browser/native restore integration."""
+    runtime = create_receipt_runtime(database)
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+        identity = PostgresIdentityRepository(connection)
+        for permission in sorted(SALES_PERMISSIONS):
+            identity.create_permission(tenant_id=runtime.tenant, permission_name=permission)
+            identity.grant_permission(
+                tenant_id=runtime.tenant, role_name="receipt-operator", permission_name=permission
+            )
+        finance = PostgresFinanceCoreRepository(connection, runtime.tenant)
+        for account, kind, balance in (
+            ("AR", "Asset", "Debit"),
+            ("CASH", "Asset", "Debit"),
+            ("REVENUE", "Income", "Credit"),
+        ):
+            finance.upsert_account(
+                account_code=account, name=account, account_type=kind, normal_balance=balance, workspace="work"
+            )
+        finance.upsert_journal(
+            journal_code="SALES", name="Service revenue", organization_code="ORG", currency_code="USD", workspace="work"
+        )
+        finance.upsert_journal(
+            journal_code="CASH", name="Collections", organization_code="ORG", currency_code="USD", workspace="work"
+        )
+        PostgresReceivablesRepository(connection, runtime.tenant).upsert_customer(
+            customer_code="CUSTOMER",
+            name="Synthetic customer",
+            currency_code="USD",
+            credit_limit_minor=1000000,
+            payment_terms_days=30,
+            workspace="work",
+            organization_code="ORG",
+            entity_code="ENTITY",
+        )
+    return runtime
+
+
+def repository(connection: Any, runtime: ReceiptRuntime) -> PostgresSalesRevenueRepository:
+    return PostgresSalesRevenueRepository(
+        connection,
+        runtime.tenant,
+        workspace_id="work",
+        organization_id="org",
+        legal_entity_id="entity",
+        organization_code="ORG",
+        entity_code="ENTITY",
+    )
+
+
+@pytest.fixture
+def sales_runtime(receipt_database: tuple[str, str]) -> ReceiptRuntime:
+    return create_sales_runtime(receipt_database)
+
+
+def quotation(number: str = "QUOTE-1") -> SalesQuotation:
+    return SalesQuotation(
+        number,
+        "CUSTOMER",
+        "2026-10-08",
+        "2026-10-31",
+        "USD",
+        (SalesLine("Completed professional service", "2", 10000, 1000),),
+    )
+
+
+def create_fulfilled_sale(runtime: ReceiptRuntime, number: str = "QUOTE-1") -> dict[str, Any]:
+    with runtime.actor("maker") as (connection, _, actor):
+        document = repository(connection, runtime).create(quotation(number), command_id=number + "-create", actor=actor)
+        document = repository(connection, runtime).transition(
+            document["id"],
+            operation="submit",
+            expected_version=1,
+            reason="Quote ready",
+            command_id=number + "-submit",
+            actor=actor,
+        )
+    with runtime.actor("checker") as (connection, _, actor):
+        document = repository(connection, runtime).transition(
+            document["id"],
+            operation="approve",
+            expected_version=2,
+            reason="Discount and terms approved",
+            command_id=number + "-approve",
+            actor=actor,
+        )
+    with runtime.actor("maker") as (connection, _, actor):
+        document = repository(connection, runtime).transition(
+            document["id"],
+            operation="order",
+            expected_version=3,
+            reason="Customer accepted",
+            command_id=number + "-order",
+            actor=actor,
+            reference="CUSTOMER-PO-1",
+            business_date="2026-10-08",
+        )
+        return repository(connection, runtime).transition(
+            document["id"],
+            operation="fulfill",
+            expected_version=4,
+            reason="Service completion verified",
+            command_id=number + "-fulfill",
+            actor=actor,
+            reference="DELIVERY-1",
+            business_date="2026-10-08",
+        )
+
+
+def invoice_preparation(number: str = "INVOICE-1", period: str = "period") -> SalesInvoicePreparation:
+    return SalesInvoicePreparation(
+        number, "2026-10-08", "2026-11-07", "SALES", period, "AR", "REVENUE", "Invoice completed services"
+    )
+
+
+def create_reviewed_invoice(runtime: ReceiptRuntime, number: str = "QUOTE-1") -> dict[str, Any]:
+    document = create_fulfilled_sale(runtime, number)
+    with runtime.actor("maker") as (connection, _, actor):
+        document = repository(connection, runtime).prepare_invoice(
+            document["id"],
+            invoice_preparation(number + "-INV"),
+            expected_version=5,
+            command_id=number + "-invoice",
+            actor=actor,
+        )
+    with runtime.actor("checker") as (connection, _, actor):
+        return repository(connection, runtime).review_invoice(
+            document["id"],
+            expected_version=6,
+            command_id=number + "-invoice-review",
+            reason="Independent customer credit and balanced GL review",
+            actor=actor,
+        )
+
+
+def create_reviewed_collection(runtime: ReceiptRuntime, number: str = "QUOTE-1") -> dict[str, Any]:
+    document = create_reviewed_invoice(runtime, number)
+    with runtime.actor("poster") as (connection, _, actor):
+        document = repository(connection, runtime).post_invoice(
+            document["id"],
+            expected_version=7,
+            command_id=number + "-post-invoice",
+            reason="Publish revenue",
+            actor=actor,
+        )
+    with runtime.actor("maker") as (connection, _, actor):
+        document = repository(connection, runtime).prepare_collection(
+            document["id"],
+            expected_version=8,
+            command_id=number + "-collection",
+            reason="Bank evidence confirms complete payment",
+            receipt_number=number + "-RECEIPT",
+            receipt_date="2026-10-09",
+            journal_code="CASH",
+            period_id="period",
+            cash_account_code="CASH",
+            actor=actor,
+        )
+    with runtime.actor("checker") as (connection, _, actor):
+        return repository(connection, runtime).review_collection(
+            document["id"],
+            expected_version=9,
+            command_id=number + "-collection-review",
+            reason="Independent cash allocation review",
+            actor=actor,
+        )
+
+
+def create_complete_sales_cycle(runtime: ReceiptRuntime, number: str = "QUOTE-1") -> dict[str, Any]:
+    document = create_reviewed_collection(runtime, number)
+    with runtime.actor("poster") as (connection, _, actor):
+        return repository(connection, runtime).post_collection(
+            document["id"],
+            expected_version=10,
+            command_id=number + "-post-collection",
+            reason="Publish complete cash and AR effect",
+            actor=actor,
+        )
+
+
+def test_service_quote_discount_fulfillment_invoice_collection_and_exact_double_entry(
+    sales_runtime: ReceiptRuntime,
+) -> None:
+    document = create_complete_sales_cycle(sales_runtime)
+    assert document["status"] == "Paid" and document["row_version"] == 11
+    assert document["total_minor"] == "18000"
+    assert document["invoice"]["status"] == "Paid" and document["invoice"]["outstanding_minor"] == "0"
+    assert document["receipt"]["amount_minor"] == "18000"
+    assert len(document["events"]) == 11
+    with sales_runtime.actor("checker") as (connection, _, actor):
+        assert repository(connection, sales_runtime).get(document["id"], actor=actor) == document
+        amounts = list(
+            connection.execute(
+                """SELECT a.account_code,SUM(l.debit_minor) debit,SUM(l.credit_minor) credit
+            FROM reconforge.finance_entry_lines l JOIN reconforge.finance_entries e ON e.tenant_id=l.tenant_id AND e.id=l.entry_id
+            JOIN reconforge.finance_accounts a ON a.tenant_id=l.tenant_id AND a.id=l.account_id
+            WHERE e.tenant_id=%s AND e.status='Posted' GROUP BY a.account_code ORDER BY a.account_code""",
+                (sales_runtime.tenant,),
+            )
+        )
+        assert [(row["account_code"], int(row["debit"]), int(row["credit"])) for row in amounts] == [
+            ("AR", 18000, 18000),
+            ("CASH", 18000, 0),
+            ("REVENUE", 0, 18000),
+        ]
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (sales_runtime.tenant,)
+            ).fetchone()["n"]
+            == 2
+        )
+        assert connection.execute(
+            "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user"
+        ).fetchone() == {"rolsuper": False, "rolbypassrls": False}
+
+
+def test_lost_ack_replays_frozen_same_actor_once_and_changed_command_rejected(sales_runtime: ReceiptRuntime) -> None:
+    document = create_complete_sales_cycle(sales_runtime)
+    with sales_runtime.actor("poster") as (connection, _, actor):
+        sales = repository(connection, sales_runtime)
+        assert (
+            sales.post_collection(
+                document["id"],
+                expected_version=10,
+                command_id="QUOTE-1-post-collection",
+                reason="Publish complete cash and AR effect",
+                actor=actor,
+            )
+            == document
+        )
+        with pytest.raises(FinancePostingError, match="different"):
+            sales.post_collection(
+                document["id"],
+                expected_version=10,
+                command_id="QUOTE-1-post-collection",
+                reason="Changed content",
+                actor=actor,
+            )
+    with (
+        sales_runtime.actor("checker") as (connection, _, actor),
+        pytest.raises(FinancePostingError, match="different"),
+    ):
+        repository(connection, sales_runtime).post_collection(
+            document["id"],
+            expected_version=10,
+            command_id="QUOTE-1-post-collection",
+            reason="Publish complete cash and AR effect",
+            actor=actor,
+        )
+
+
+def test_six_concurrent_collection_commands_have_one_ar_and_gl_effect(sales_runtime: ReceiptRuntime) -> None:
+    document = create_reviewed_collection(sales_runtime)
+
+    def post(index: int) -> str:
+        try:
+            with sales_runtime.actor("poster") as (connection, _, actor):
+                repository(connection, sales_runtime).post_collection(
+                    document["id"],
+                    expected_version=10,
+                    command_id=f"concurrent-{index}",
+                    reason="Publish collection",
+                    actor=actor,
+                )
+            return "posted"
+        except FinancePostingError as exc:
+            return exc.code
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        outcomes = list(executor.map(post, range(6)))
+    assert outcomes.count("posted") == 1 and outcomes.count("sales_version_conflict") == 5
+    with sales_runtime.actor("checker") as (connection, _, actor):
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.ar_receipts WHERE tenant_id=%s", (sales_runtime.tenant,)
+            ).fetchone()["n"]
+            == 1
+        )
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (sales_runtime.tenant,)
+            ).fetchone()["n"]
+            == 2
+        )
+        assert (
+            repository(connection, sales_runtime).get(document["id"], actor=actor)["invoice"]["outstanding_minor"]
+            == "0"
+        )
+
+
+def test_failed_gl_preparation_rolls_back_new_ar_source(sales_runtime: ReceiptRuntime) -> None:
+    document = create_fulfilled_sale(sales_runtime)
+    with sales_runtime.actor("maker") as (connection, _, actor):
+        with pytest.raises((FinancePostingError, ValueError)):
+            repository(connection, sales_runtime).prepare_invoice(
+                document["id"],
+                invoice_preparation(period="absent"),
+                expected_version=5,
+                command_id="bad-finance",
+                actor=actor,
+            )
+        assert (
+            connection.execute(
+                "SELECT count(*) n FROM reconforge.ar_invoices WHERE tenant_id=%s", (sales_runtime.tenant,)
+            ).fetchone()["n"]
+            == 0
+        )
+        assert repository(connection, sales_runtime).get(document["id"], actor=actor)["status"] == "Fulfilled"
+
+
+def test_self_approval_stale_version_and_cross_entity_are_denied(sales_runtime: ReceiptRuntime) -> None:
+    with sales_runtime.actor("maker") as (connection, _, actor):
+        sales = repository(connection, sales_runtime)
+        document = sales.create(quotation(), command_id="create", actor=actor)
+        sales.transition(
+            document["id"], operation="submit", expected_version=1, reason="Ready", command_id="submit", actor=actor
+        )
+        with pytest.raises(FinancePostingError, match="creator"):
+            sales.transition(
+                document["id"], operation="approve", expected_version=2, reason="Self", command_id="self", actor=actor
+            )
+        with pytest.raises(FinancePostingError, match="version"):
+            sales.transition(
+                document["id"], operation="cancel", expected_version=1, reason="Stale", command_id="stale", actor=actor
+            )
+        foreign = PostgresSalesRevenueRepository(
+            connection,
+            sales_runtime.tenant,
+            workspace_id="work",
+            organization_id="org",
+            legal_entity_id="foreign",
+            organization_code="ORG",
+            entity_code="FOREIGN",
+        )
+        with pytest.raises(FinancePostingError):
+            foreign.get(document["id"], actor=actor)
+
+
+def test_current_permission_revocation_and_immutable_history(sales_runtime: ReceiptRuntime) -> None:
+    document = create_complete_sales_cycle(sales_runtime)
+    with sales_runtime.actor("maker") as (connection, _, actor):
+        import psycopg
+
+        with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+            connection.execute(
+                "UPDATE reconforge.sales_revenue_documents SET total_minor=1,row_version=row_version+1 WHERE tenant_id=%s AND id=%s",
+                (sales_runtime.tenant, document["id"]),
+            )
+        with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
+            connection.execute(
+                "DELETE FROM reconforge.sales_revenue_commands WHERE tenant_id=%s", (sales_runtime.tenant,)
+            )
+        connection.execute(
+            "UPDATE reconforge.identity_role_permissions SET active=FALSE WHERE tenant_id=%s AND permission_name='sales.read'",
+            (sales_runtime.tenant,),
+        )
+        with pytest.raises(FinancePostingError, match="persisted"):
+            repository(connection, sales_runtime).get(document["id"], actor=actor)

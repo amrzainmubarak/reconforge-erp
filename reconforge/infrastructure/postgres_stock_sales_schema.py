@@ -149,7 +149,9 @@ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Stock-sale source requires current persisted human authority.';
  END IF;
  IF TG_TABLE_NAME='stock_sales_orders' THEN
-  IF(TG_OP='INSERT' AND(NEW.status<>'Draft' OR NEW.created_by IS DISTINCT FROM a))
+  IF(TG_OP='INSERT' AND(NEW.status<>'Draft' OR NEW.row_version<>1 OR NEW.created_by IS DISTINCT FROM a
+   OR NEW.approved_by IS NOT NULL OR NEW.issue_plan IS NOT NULL OR NEW.cogs_entry_id IS NOT NULL
+   OR NEW.movement_id IS NOT NULL OR NEW.invoice_id IS NOT NULL OR NEW.collection_plan_id IS NOT NULL))
   OR(NEW.status='Approved' AND(NEW.approved_by IS DISTINCT FROM a OR a=NEW.created_by))
   OR(NEW.status='IssueReviewed' AND NEW.issue_reviewer_id IS DISTINCT FROM a) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Actual creator and independent review must be retained.';
@@ -188,7 +190,12 @@ BEGIN
   END IF;
  ELSIF TG_TABLE_NAME IN('stock_sales_commands','stock_sales_events') THEN
   IF NEW.actor_id IS DISTINCT FROM a THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Evidence actor differs from actual command human.'; END IF;
+  IF TG_TABLE_NAME='stock_sales_commands' THEN PERFORM reconforge.irp_bounded(NEW.request); PERFORM reconforge.irp_bounded(NEW.result); END IF;
  ELSE
+  IF TG_OP='INSERT' AND NEW.state<>'Active' THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='New stock ownership must begin active.';
+  END IF;
+  IF TG_TABLE_NAME='stock_sales_issue_claims' THEN PERFORM reconforge.irp_bounded(NEW.payload); END IF;
   IF(NEW.workspace_id,NEW.legal_entity_id,NEW.item_id) IS DISTINCT FROM(d.workspace_id,d.legal_entity_id,d.item_id)
   THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Reservation differs from its exact product source.';
@@ -214,6 +221,16 @@ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Stock-sale source scope is incomplete.';
  END IF;
  s:=reconforge.stock_sales_stage(d.status);
+ IF d.status<>'Cancelled' AND(
+  (s>=2) IS DISTINCT FROM(d.approved_by IS NOT NULL)
+  OR(s>=4) IS DISTINCT FROM(d.issue_plan IS NOT NULL AND d.cogs_entry_id IS NOT NULL)
+  OR(s>=5) IS DISTINCT FROM(d.issue_reviewer_id IS NOT NULL)
+  OR(s>=6) IS DISTINCT FROM(d.movement_id IS NOT NULL AND d.valuation_id IS NOT NULL AND d.cogs_effect_id IS NOT NULL)
+  OR(s>=7) IS DISTINCT FROM(d.invoice_id IS NOT NULL AND d.invoice_plan_id IS NOT NULL AND d.invoice_parameters IS NOT NULL)
+  OR(s>=10) IS DISTINCT FROM(d.collection_plan_id IS NOT NULL AND d.collection_parameters IS NOT NULL)
+  OR(s=12) IS DISTINCT FROM(d.receipt_id IS NOT NULL)) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Native owner links must exist exactly at their complete source phase.';
+ END IF;
  IF(SELECT count(*) FROM reconforge.stock_sales_events WHERE tenant_id=t AND order_id=target)<>d.row_version
  OR NOT EXISTS(SELECT 1 FROM reconforge.stock_sales_events WHERE tenant_id=t AND order_id=target AND version=1)
  OR EXISTS(SELECT 1 FROM reconforge.stock_sales_events WHERE tenant_id=t AND order_id=target AND version NOT BETWEEN 1 AND d.row_version)
@@ -251,12 +268,14 @@ BEGIN
   END IF;
  END LOOP;
  SELECT * INTO r FROM reconforge.stock_sales_reservations WHERE tenant_id=t AND order_id=target;
- IF(s>=3 AND r IS NULL) OR(r IS NOT NULL AND r.state IS DISTINCT FROM CASE WHEN d.status='Cancelled' THEN'Released' WHEN s>=6 THEN'Consumed' ELSE'Active' END) THEN
+ IF(s>=3 AND r IS NULL) OR(d.status<>'Cancelled' AND s<3 AND r IS NOT NULL)
+ OR(r IS NOT NULL AND r.state IS DISTINCT FROM CASE WHEN d.status='Cancelled' THEN'Released' WHEN s>=6 THEN'Consumed' ELSE'Active' END) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Reservation phase differs from source owner.';
  END IF;
  IF r IS NOT NULL THEN PERFORM reconforge.stock_sales_capacity(t,d.workspace_id,d.legal_entity_id,d.location_id,d.item_id); END IF;
  SELECT * INTO claim FROM reconforge.stock_sales_issue_claims WHERE tenant_id=t AND order_id=target;
- IF(s>=4 AND claim IS NULL) OR(claim IS NOT NULL AND(claim.payload IS DISTINCT FROM d.issue_plan OR reconforge.irp_digest(claim.payload) IS DISTINCT FROM claim.plan_digest
+ IF(s>=4 AND claim IS NULL) OR(d.status<>'Cancelled' AND s<4 AND claim IS NOT NULL)
+ OR(claim IS NOT NULL AND(claim.payload IS DISTINCT FROM d.issue_plan OR reconforge.irp_digest(claim.payload) IS DISTINCT FROM claim.plan_digest
  OR claim.state IS DISTINCT FROM CASE WHEN d.status='Cancelled' THEN'Released' WHEN s>=6 THEN'Consumed' ELSE'Active' END)) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Frozen FIFO claim differs from source owner.';
  END IF;
@@ -333,6 +352,7 @@ BEGIN
   IF NOT EXISTS(SELECT 1 FROM reconforge.inventory_movements m JOIN reconforge.inventory_movement_lines l ON l.tenant_id=m.tenant_id AND l.movement_id=m.id
    WHERE m.tenant_id=t AND m.id=d.movement_id AND(m.workspace_id,m.organization_id,m.legal_entity_id)=(d.workspace_id,d.organization_id,d.legal_entity_id)
    AND m.status='Posted' AND m.movement_type='Delivery' AND m.source_reference=d.id AND l.item_id=d.item_id AND l.uom_id=d.uom_id
+   AND m.period_id=entry.period_id AND m.movement_date::text=entry.posting_date::text
    AND l.from_location_id=d.location_id AND l.to_location_id IS NULL AND l.inventory_lot_id IS NULL AND l.quantity_scaled=d.quantity_scaled)
   OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents v WHERE v.tenant_id=t AND v.id=d.valuation_id AND v.movement_id=d.movement_id
    AND v.status='Approved' AND v.finance_entry_id=d.cogs_entry_id AND v.total_value_minor=entry.total_debit_minor
@@ -363,6 +383,9 @@ BEGIN
    IS DISTINCT FROM(d.workspace_id,d.organization_id,d.legal_entity_id,d.customer_id,d.currency_code,d.total_minor)
   OR(p.source_kind,p.source_id,p.amount_minor,p.currency_code) IS DISTINCT FROM('ARInvoice'::text,d.invoice_id,d.total_minor,d.currency_code)
   OR invoice.status IS DISTINCT FROM(CASE WHEN s=7 THEN'Submitted' WHEN s=12 THEN'Paid' ELSE'Approved' END)
+  OR invoice.invoice_number IS DISTINCT FROM d.invoice_parameters->>'invoice_number'
+  OR invoice.invoice_date::text IS DISTINCT FROM d.invoice_parameters->>'invoice_date'
+  OR invoice.due_date::text IS DISTINCT FROM d.invoice_parameters->>'due_date'
   OR reviewed IS DISTINCT FROM(s>=8) OR posted IS DISTINCT FROM(s>=9)
   OR NOT reconforge.sales_revenue_policy_matches(t,d.source->'monetary_policy',invoice.currency_code,invoice.currency_precision,
     invoice.currency_rounding_policy,invoice.currency_registry_version,invoice.currency_registry_digest)
@@ -392,6 +415,7 @@ BEGIN
   OR(native_receipt.workspace_id,native_receipt.organization_id,native_receipt.legal_entity_id,native_receipt.customer_id,native_receipt.currency_code)
    IS DISTINCT FROM(d.workspace_id,d.organization_id,d.legal_entity_id,d.customer_id,d.currency_code)
   OR native_receipt.receipt_number IS DISTINCT FROM d.collection_parameters->>'receipt_number'
+  OR native_receipt.receipt_date::text IS DISTINCT FROM d.collection_parameters->>'receipt_date'
   OR NOT reconforge.sales_revenue_policy_matches(t,d.source->'monetary_policy',native_receipt.currency_code,native_receipt.currency_precision,
     native_receipt.currency_rounding_policy,native_receipt.currency_registry_version,native_receipt.currency_registry_digest)
   OR(SELECT count(*) FROM reconforge.ar_receipt_allocations WHERE tenant_id=t AND invoice_id=d.invoice_id)<>1

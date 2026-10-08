@@ -22,13 +22,15 @@ def repository(connection: Any, runtime: ReceiptRuntime) -> PostgresStockSalesRe
                                        legal_entity_id="entity", organization_code="ORG", entity_code="ENTITY")
 
 
-def create_stock_runtime(database: tuple[str, str]) -> ReceiptRuntime:
-    runtime = create_sales_runtime(database)
+def create_stock_runtime(database: tuple[str, str], base_runtime: ReceiptRuntime | None = None, *, seed_stock: bool = True) -> ReceiptRuntime:
+    runtime = create_sales_runtime(database, base_runtime=base_runtime)
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         identities = PostgresIdentityRepository(connection)
         for permission in sorted(set().union(*OPERATION_PERMISSIONS.values())):
             identities.create_permission(tenant_id=runtime.tenant, permission_name=permission)
             identities.grant_permission(tenant_id=runtime.tenant, role_name="receipt-operator", permission_name=permission)
+    if not seed_stock:
+        return runtime
     with runtime.actor("maker") as (_, participant, actor):
         plan = participant.prepare_receipt(request(), command_id="inbound-prepare", actor=actor)
     with runtime.actor("checker") as (_, participant, actor):
@@ -138,3 +140,63 @@ def test_six_concurrent_reservations_cannot_overcommit_ten_units(stock_runtime: 
     with runtime.actor("maker") as (connection, _, _actor):
         assert connection.execute("SELECT sum(quantity_scaled) n FROM reconforge.stock_sales_reservations WHERE tenant_id=%s AND state='Active'",
                                   (runtime.tenant,)).fetchone()["n"] == 9
+
+
+def test_cancel_releases_actual_capacity_and_retains_voided_unposted_cogs(stock_runtime: ReceiptRuntime) -> None:
+    runtime = stock_runtime
+    result = execute(runtime, create_reserved_order(runtime, "CANCEL-1", "10"), "prepare-issue", "maker", {
+        "posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
+    cancelled = execute(runtime, result, "cancel", "maker")
+    assert cancelled["status"] == "Cancelled"
+    with runtime.actor("maker") as (connection, _, actor):
+        assert connection.execute("SELECT status FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s",
+                                  (runtime.tenant, result["cogs_entry_id"])).fetchone()["status"] == "Voided"
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+        assert repository(connection, runtime).get(cancelled["id"], actor=actor)["status"] == "Cancelled"
+    assert create_reserved_order(runtime, "REPLACEMENT", "10")["status"] == "Reserved"
+
+
+def test_reserved_quantity_survives_uncoordinated_native_stock_withdrawal(stock_runtime: ReceiptRuntime) -> None:
+    import psycopg
+    runtime = stock_runtime
+    result = create_reserved_order(runtime, "HELD", "10")
+    with pytest.raises(psycopg.errors.CheckViolation), runtime.actor("poster") as (connection, _, actor):
+        owner = repository(connection, runtime)
+        movement = owner.inventory.create_movement(movement_number="UNOWNED-DELIVERY", movement_type="Delivery",
+            organization_code="ORG", entity_code="ENTITY", period_id="period", movement_date="2026-10-09",
+            description="Native detached withdrawal", source_reference="EXTERNAL", workspace="work", actor_label="maker",
+            lines=[{"item_code": "ITEM", "quantity": "1", "from_location": "MAIN/STOCK"}])
+        owner.inventory.post_movement(movement["id"], reason="Bypass reserved stock", actor_label=actor.username)
+    with runtime.actor("maker") as (connection, _, actor):
+        assert repository(connection, runtime).get(result["id"], actor=actor)["status"] == "Reserved"
+        assert connection.execute("SELECT count(*) n FROM reconforge.inventory_movements WHERE tenant_id=%s AND movement_number='UNOWNED-DELIVERY'",
+                                  (runtime.tenant,)).fetchone()["n"] == 0
+
+
+def test_raw_forged_phase_requires_native_issue_and_auditable_command(stock_runtime: ReceiptRuntime) -> None:
+    import psycopg
+    runtime = stock_runtime
+    result = create_reserved_order(runtime)
+    with pytest.raises(psycopg.errors.CheckViolation), runtime.actor("maker") as (connection, _, actor):
+        owner = repository(connection, runtime)
+        owner._actor(actor, "prepare-issue", owner._order(result["id"]))
+        connection.execute("UPDATE reconforge.stock_sales_orders SET status='IssuePrepared',row_version=row_version+1 WHERE tenant_id=%s AND id=%s",
+                           (runtime.tenant, result["id"]))
+    with runtime.actor("maker") as (connection, _, actor):
+        assert repository(connection, runtime).get(result["id"], actor=actor)["status"] == "Reserved"
+
+
+def test_exact_scope_is_hidden_and_raw_stock_dml_is_denied(stock_runtime: ReceiptRuntime) -> None:
+    import psycopg
+    runtime = stock_runtime
+    result = create_reserved_order(runtime)
+    with runtime.actor("maker") as (connection, _, _actor):
+        connection.execute("SELECT set_config('app.organization_id','foreign',true)")
+        assert connection.execute("SELECT id FROM reconforge.stock_sales_orders WHERE tenant_id=%s", (runtime.tenant,)).fetchall() == []
+    with pytest.raises(psycopg.errors.CheckViolation), runtime.actor("maker") as (connection, _, actor):
+        owner = repository(connection, runtime)
+        row = owner._order(result["id"])
+        owner._actor(actor, "reserve", row)
+        connection.execute("SELECT set_config('app.organization_id','foreign',true)")
+        connection.execute("INSERT INTO reconforge.stock_sales_reservations(tenant_id,order_id,workspace_id,organization_id,legal_entity_id,location_id,item_id,quantity_scaled) VALUES(%s,%s,'work','foreign','entity',%s,%s,%s)",
+                           (runtime.tenant, result["id"], row["location_id"], row["item_id"], row["quantity_scaled"]))

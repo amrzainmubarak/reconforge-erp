@@ -1302,3 +1302,19 @@ include tests/test_sales_revenue.py
 include tests/test_postgres_sales_revenue.py
 include tests/test_procurement_operations.py
 include tests/test_postgres_procurement_operations.py
+
+# Ship the editable Studio and its real API/browser clients in source archives.
+# Deliberately exclude node_modules, dist, test-results and generated outputs.
+recursive-include apps/web/src *.ts *.tsx *.css *.svg
+recursive-include apps/web/public *
+recursive-include apps/web/live *.ts *.tsx *.html
+recursive-include apps/web/e2e *.ts
+include apps/web/package.json
+include apps/web/package-lock.json
+include apps/web/index.html
+include apps/web/vite.config.ts
+include apps/web/vitest.config.ts
+include apps/web/playwright.config.ts
+include apps/web/tsconfig.json
+include apps/web/tsconfig.app.json
+include apps/web/tsconfig.node.json

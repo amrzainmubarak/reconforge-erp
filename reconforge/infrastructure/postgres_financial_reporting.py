@@ -276,7 +276,7 @@ class PostgresFinancialReportingRepository:
             for account in arguments["accounts"]:
                 rows = records(
                     self.connection.execute(
-                        "SELECT id,account_code,name,account_type,normal_balance FROM reconforge.finance_accounts WHERE tenant_id=%s AND workspace_id=%s AND account_code=%s FOR SHARE",
+                        "SELECT id,account_code,name,account_type,normal_balance FROM reconforge.finance_accounts WHERE tenant_id=%s AND workspace_id=%s AND account_code=%s",
                         (self.tenant_id, scope.workspace_id, account["account_code"]),
                     )
                 )

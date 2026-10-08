@@ -279,15 +279,14 @@ def test_native_detached_review_and_generic_post_and_selfapproval_are_refused(
             command_id="opening-review",
             actor=actor,
         )
-    with rt.actor("poster") as (connection, _, actor):
-        with pytest.raises(FinancePostingError, match="complete reviewed source"):
-            PostgresFinancePostingRepository(connection, rt.tenant).post(
-                plan["entry_id"],
-                command_id="generic",
-                expected_validation_digest=plan["validation_digest"],
-                reason="Detached source",
-                actor=actor,
-            )
+    with rt.actor("poster") as (connection, _, actor), pytest.raises(FinancePostingError, match="complete reviewed source"):
+        PostgresFinancePostingRepository(connection, rt.tenant).post(
+            plan["entry_id"],
+            command_id="generic",
+            expected_validation_digest=plan["validation_digest"],
+            reason="Detached source",
+            actor=actor,
+        )
     post_opening(rt, plan)
 
 

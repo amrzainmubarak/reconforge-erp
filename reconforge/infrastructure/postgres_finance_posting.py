@@ -281,15 +281,6 @@ class PostgresFinancePostingRepository:
         self._read(actor)
         with self._transaction():
             entry = posting_entry(self.connection, self.tenant_id, text(entry_id, "entry_id"))
-            if entry["entry_number"].upper().startswith("FI1-") or entry["id"].upper().startswith("FI1-"):
-                from reconforge.infrastructure.postgres_financial_installments import _InstallmentPostingParticipant
-
-                if not isinstance(_source_owner, _InstallmentPostingParticipant) or not _source_owner.admits(
-                    self.connection, self.tenant_id, entry["id"]
-                ):
-                    raise FinancePostingError(
-                        "posting_source_unsupported", "Installments must post through their complete settlement owner."
-                    )
             snapshot = posting_snapshot(self.connection, self.tenant_id, entry)
             return {
                 "entry_id": entry["id"],
@@ -379,6 +370,15 @@ class PostgresFinancePostingRepository:
                 ):
                     raise FinancePostingError(
                         "posting_source_unsupported", "Opening balances must post through their complete reviewed source owner."
+                    )
+            if entry["entry_number"].upper().startswith("FI1-") or entry["id"].upper().startswith("FI1-"):
+                from reconforge.infrastructure.postgres_financial_installments import _InstallmentPostingParticipant
+
+                if not isinstance(_source_owner, _InstallmentPostingParticipant) or not _source_owner.admits(
+                    self.connection, self.tenant_id, entry["id"]
+                ):
+                    raise FinancePostingError(
+                        "posting_source_unsupported", "Installments must post through their complete settlement owner."
                     )
             if entry["entry_number"].upper().startswith("OPS1-") or entry["id"].upper().startswith("OPS1-"):
                 from reconforge.infrastructure.postgres_operational_finance import _OperationalPostingParticipant

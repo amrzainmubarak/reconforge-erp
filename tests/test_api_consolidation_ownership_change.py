@@ -338,6 +338,7 @@ def test_live_postgres_ownership_change_api_is_rls_scoped_and_non_posting(tmp_pa
                         (tenant_a, tenant_b),
                     )
                     admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
+                    admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
                     admin.execute(
                         "ALTER TABLE reconforge.domain_audit_events "
                         "ENABLE TRIGGER domain_audit_events_immutable"

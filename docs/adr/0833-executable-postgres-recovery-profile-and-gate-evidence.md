@@ -51,3 +51,17 @@ These results are synthetic development acceptance, not provider interoperabilit
 independent security assurance, compliance, production or cross-host recovery.
 Revert this bounded gate repair with its tests and reports to roll back; the
 original failures return and the affected acceptance gates must remain blocked.
+
+## Follow-up: shared HTTP audit fixture cleanup
+
+On source832ceeee, Linux native encrypted current0106 restore passes, but the
+native shard then fails scoped-export audit teardown; industry-close fails the
+same deferred-event boundary in its shared audit helper. Drain deferred
+constraints before restoring the trigger in that helper and the remaining
+scoped-export/consolidation/policy-provenance owned cleanup transactions.
+34 fresh PostgreSQL17.10 HTTP/metrics/industry/close/provenance regressions pass
+with the same CI bootstrap predecessors, followed by strict current0106 native
+restore, revision/ACL refusal checks and cleanup. No runtime or permission
+change follows; earlier whole-suite source832ceeee stays separately bound.
+HTTP_FIXTURE_CLEANUP_2026-10-08.json records original failures and exact fixture
+hashes. Hosted final-head acceptance remains separate.

@@ -348,6 +348,7 @@ def test_live_server_scoped_export_http_is_service_scoped_and_tenant_isolated(tm
                 ):
                     admin.execute(f"DELETE FROM reconforge.{table} WHERE tenant_id IN (%s,%s)", (tenant_a, tenant_b))
                 admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
+                admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
                 admin.execute("ALTER TABLE reconforge.principal_scope_grants ENABLE TRIGGER principal_scope_grants_guard")
                 admin.execute("ALTER TABLE reconforge.service_account_events ENABLE TRIGGER trg_service_account_events_append_only")
                 admin.execute("ALTER TABLE reconforge.domain_audit_events ENABLE TRIGGER domain_audit_events_immutable")

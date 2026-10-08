@@ -121,5 +121,6 @@ def test_live_postgres_server_policy_provenance_is_redacted_scoped_and_verifiabl
                 )
                 admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s, %s)", (tenant_a, tenant_b))
             finally:
+                admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
                 admin.execute("ALTER TABLE reconforge.domain_audit_events ENABLE TRIGGER domain_audit_events_immutable")
         admin.close()

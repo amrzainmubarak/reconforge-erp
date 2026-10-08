@@ -74,7 +74,30 @@ def database_snapshot(dsn: str) -> dict[str, Any]:
         objects = {}
         for kind, statement in definitions.items():
             rows = connection.execute(statement).fetchall()
+            if kind == "constraints":
+                # pg_dump reparses BETWEEN as flattened associative AND. Reparse
+                # CHECK definitions through PostgreSQL itself, preserving every
+                # operator and grouping; never strip parentheses or ignore guards.
+                canonical = []
+                temporary_tables = {}
+                for table, name, validated, definition in rows:
+                    if definition.startswith("CHECK ("):
+                        if table not in temporary_tables:
+                            temporary = "restore_check_" + str(len(temporary_tables))
+                            temporary_tables[table] = temporary
+                            connection.execute(sql.SQL("CREATE TEMPORARY TABLE {} (LIKE reconforge.{}) ON COMMIT DROP").format(
+                                sql.Identifier(temporary), sql.Identifier(table)))
+                        temporary = temporary_tables[table]
+                        connection.execute(sql.SQL("ALTER TABLE {} ADD CONSTRAINT canonical_check ").format(
+                            sql.Identifier(temporary)) + sql.SQL(definition))
+                        definition = connection.execute(
+                            "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid=to_regclass(%s) AND conname='canonical_check'",
+                            ("pg_temp." + temporary,)).fetchone()[0]
+                        connection.execute(sql.SQL("ALTER TABLE {} DROP CONSTRAINT canonical_check").format(sql.Identifier(temporary)))
+                    canonical.append((table, name, validated, definition))
+                rows = canonical
             objects[kind] = {"count": len(rows), "sha256": digest(rows)}
+
         head = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
         protected = connection.execute(
             "SELECT c.relname,c.relrowsecurity,c.relforcerowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "

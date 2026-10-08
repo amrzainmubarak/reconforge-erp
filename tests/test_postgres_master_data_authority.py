@@ -181,6 +181,7 @@ def test_live_sql_org_selection_blocks_shared_currency_and_period_but_allows_org
             connection.execute("UPDATE reconforge.organizations SET name=name WHERE id='org_a'")
 
 
+@pytest.mark.parametrize("finance_database", ["0096_pg_master_authority"], indirect=True)
 def test_live_authority_migration_downgrade_reupgrade_preserves_rows(finance_database: Any) -> None:
     import psycopg
 
@@ -198,6 +199,7 @@ def test_live_authority_migration_downgrade_reupgrade_preserves_rows(finance_dat
 
 
 @pytest.mark.parametrize("installer", ["master", "finance"])
+@pytest.mark.parametrize("finance_database", ["0096_pg_master_authority"], indirect=True)
 def test_live_current_installer_restores_authority_without_migration_head(finance_database: Any, installer: str) -> None:
     import psycopg
 

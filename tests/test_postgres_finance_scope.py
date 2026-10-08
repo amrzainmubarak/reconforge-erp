@@ -39,7 +39,7 @@ def _entry(finance: Any, number: str, *, org: str = "A", entity: str = "A1", wor
 
 
 @pytest.fixture
-def finance_database(isolated_postgres_migration_dsn: str):
+def finance_database(isolated_postgres_migration_dsn: str, request: pytest.FixtureRequest):
     import psycopg
     from alembic.config import Config
 
@@ -102,12 +102,17 @@ def finance_database(isolated_postgres_migration_dsn: str):
         with psycopg.connect(isolated_postgres_migration_dsn, autocommit=True) as admin:
             # Retain an explicit pre-0095 legacy row, without a guessed upgrade backfill.
             admin.execute("UPDATE reconforge.organizations SET application_workspace_id=NULL WHERE id='org_legacy'")
-        command.upgrade(config, "head")
+        # Historical downgrade tests stop at the revision under test. Applying
+        # the later outbox fencing migration reserves legacy generations and
+        # correctly makes that unrelated history irreversible.
+        target_revision = getattr(request, "param", "head")
+        command.upgrade(config, target_revision)
         with psycopg.connect(isolated_postgres_migration_dsn, autocommit=True) as admin:
             # Upgrade introduces posting tables used by Finance integrity triggers.
-            admin.execute(psycopg.sql.SQL(
-                "GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.finance_posting_effects,reconforge.finance_posting_commands TO {}"
-            ).format(psycopg.sql.Identifier(params["user"])))
+            if admin.execute("SELECT to_regclass('reconforge.finance_posting_effects')").fetchone()[0] is not None:
+                admin.execute(psycopg.sql.SQL(
+                    "GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.finance_posting_effects,reconforge.finance_posting_commands TO {}"
+                ).format(psycopg.sql.Identifier(params["user"])))
         yield {"factory": factory, "boundary": boundary, "entries": entries, "ids": ids, "admin": isolated_postgres_migration_dsn, "config": config, "before_policies": before_policies}
     finally:
         factory.close()
@@ -189,6 +194,7 @@ def test_live_finance_legacy_is_not_rebound_and_permitted_entity_workflow_succee
         assert finance.void_entry(draft["id"], reason="Synthetic correction", actor_label="checker")["status"] == "Voided"
 
 
+@pytest.mark.parametrize("finance_database", ["0095_pg_finance_scope"], indirect=True)
 def test_live_finance_scope_downgrade_restores_policies_and_replay(finance_database: Any) -> None:
     import psycopg
 
@@ -202,6 +208,28 @@ def test_live_finance_scope_downgrade_restores_policies_and_replay(finance_datab
     command.upgrade(db["config"], "head")
     with db["boundary"].transaction("finance_scope", organization_id="org_a", workspace_id="shared", legal_entity_id="entity_a1") as connection:
         assert [tuple(row) for row in connection.execute("SELECT entry_number FROM reconforge.finance_entries")] == [("ENTRY-A1",)]
+
+
+def test_live_current_head_refuses_legacy_outbox_evidence_loss(finance_database: Any) -> None:
+    import psycopg
+
+    from alembic import command
+
+    db = finance_database
+    with psycopg.connect(db["admin"]) as admin:
+        revision = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+        before = admin.execute(
+            "SELECT event_id,lease_generation,lease_generation_floor FROM reconforge.outbox_events ORDER BY event_id"
+        ).fetchall()
+        assert before and all(row[1:] == (2, 2) for row in before)
+    with pytest.raises(Exception, match="outbox fencing downgrade refused: non-default generations are retained"):
+        command.downgrade(db["config"], "0094_pg_finance_policy")
+    with psycopg.connect(db["admin"]) as admin:
+        assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == revision
+        assert admin.execute(
+            "SELECT event_id,lease_generation,lease_generation_floor FROM reconforge.outbox_events ORDER BY event_id"
+        ).fetchall() == before
+        assert admin.execute("SELECT count(*) FROM reconforge.finance_entries").fetchone()[0] == 4
 
 
 def test_live_finance_identity_cannot_be_relabelled_or_deleted(finance_database: Any) -> None:

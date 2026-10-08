@@ -131,18 +131,25 @@ class PostgresSalesRevenueRepository:
             self.connection.execute("SELECT set_config('app.sales_actor_id',%s,true)", (actor.user_id,))
 
     def _document(self, identifier: str, *, lock: bool = False) -> dict[str, Any]:
-        result = self.connection.execute(
-            """SELECT * FROM reconforge.sales_revenue_documents WHERE tenant_id=%s AND id=%s
-            AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s"""
-            + (" FOR UPDATE" if lock else ""),
-            (
-                self.tenant_id,
-                text(identifier, "document id"),
-                self.scope["workspace_id"],
-                self.scope["organization_id"],
-                self.scope["legal_entity_id"],
-            ),
-        ).fetchone()
+        parameters = (
+            self.tenant_id,
+            text(identifier, "document id"),
+            self.scope["workspace_id"],
+            self.scope["organization_id"],
+            self.scope["legal_entity_id"],
+        )
+        if lock:
+            result = self.connection.execute(
+                """SELECT * FROM reconforge.sales_revenue_documents WHERE tenant_id=%s AND id=%s
+                AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s FOR UPDATE""",
+                parameters,
+            ).fetchone()
+        else:
+            result = self.connection.execute(
+                """SELECT * FROM reconforge.sales_revenue_documents WHERE tenant_id=%s AND id=%s
+                AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s""",
+                parameters,
+            ).fetchone()
         if result is None:
             raise FinancePostingError("sales_source_missing", "Sales document is absent from the selected scope.")
         document = dict(result)

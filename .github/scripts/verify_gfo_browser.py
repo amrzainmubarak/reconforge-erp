@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from reconforge.infrastructure.postgres import PostgresTenantBoundary  # noqa: E402
+from tests.gfo_browser_restore import verify_native_browser_restore  # noqa: E402
 from tests.gfo_browser_runtime import seed_browser_jobs  # noqa: E402
 from tests.gfo_receipt_browser_seed import seed_receipt_browser  # noqa: E402
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime  # noqa: E402
@@ -78,6 +79,7 @@ def verify_persisted_browser_effects(runtime: ReceiptRuntime) -> dict[str, objec
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--verify-native-restore", action="store_true")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/gfo-browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -180,6 +182,8 @@ def main() -> int:
             report["browser_counts"] = json.loads((output / "playwright.json").read_text(encoding="utf-8"))["stats"]
         if browser.returncode == 0:
             report["persisted_effects"] = verify_persisted_browser_effects(runtime)
+            if args.verify_native_restore:
+                report["native_restore"] = verify_native_browser_restore(runtime, container, verify_persisted_browser_effects)
         report["built_web_unchanged"] = built_web_digest(args.web_root.resolve()) == report["built_web_sha256"]
         report["source_unchanged"] = source_digest(runtime_root) == report["source_sha256"]
         report["status"] = "passed" if browser.returncode == 0 and report["source_unchanged"] and report["built_web_unchanged"] else "failed"

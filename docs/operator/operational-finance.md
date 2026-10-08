@@ -47,6 +47,14 @@ runtime role before resuming writes; it does not require INSERT, UPDATE, DELETE,
 table ownership, BYPASSRLS or SECURITY DEFINER execution. Preserve and verify this
 ACL during native backup/restore along with the existing Finance grants.
 
+Native AR invoice, receipt and allocation writers and native AP invoice/payment
+writers additionally need `SELECT` on both `reconforge.operational_finance_plans`
+and `reconforge.operational_finance_links` after migration 0109. Their invoker
+closure query references both relations, so PostgreSQL checks both read ACLs even
+for a source with no operational owner. Grant each read explicitly and preserve
+its forced RLS; these dependencies require no additional DML privileges. Verify
+them on a fresh restricted role rather than a role with pre-existing broad grants.
+
 After installing migration 0111, existing runtime roles that write native AP
 purchase orders, receiving, supplier invoices, matching or payment links also
 need `SELECT` on `reconforge.procurement_cycles`. The additive AP integrity

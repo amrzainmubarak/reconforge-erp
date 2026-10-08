@@ -76,7 +76,7 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
   const contexts = await Promise.all(["maker", "checker", "poster"].map(() => browser.newContext({ ignoreHTTPSErrors: true })));
   try {
     const [maker, checker, poster] = await Promise.all(contexts.map((context) => context.newPage()));
-    for (const [page, name] of [[maker, "maker"], [checker, "checker"], [poster, "poster"]] as const) {
+    for (const [page, name] of [[maker, "browser-maker"], [checker, "browser-checker"], [poster, "browser-poster"]] as const) {
       await login(page, name);
       await sales(page);
     }

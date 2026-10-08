@@ -22,7 +22,7 @@ ERP_TABLES = (
 
 
 def verify_cycles(runtime: ReceiptRuntime) -> dict[str, Any]:
-    with runtime.actor("poster") as (connection, _, actor):
+    with runtime.actor("browser-poster") as (connection, _, actor):
         sale = connection.execute("SELECT * FROM reconforge.sales_revenue_documents WHERE tenant_id=%s", (runtime.tenant,)).fetchone()
         purchase = connection.execute("SELECT * FROM reconforge.procurement_cycles WHERE tenant_id=%s", (runtime.tenant,)).fetchone()
         require(sale is not None and sale["status"] == "Paid" and sale["total_minor"] == 9800, "Browser sale is incomplete.")
@@ -75,19 +75,26 @@ def verify_erp_native_restore(runtime: ReceiptRuntime, container: str) -> dict[s
             for table in ERP_TABLES:
                 require(connection.execute(sql.SQL("SELECT count(*) n FROM reconforge.{}").format(sql.Identifier(table))).fetchone()["n"] == 0, "Sibling workspace leaked after recovery.")
         refused = 0
-        for statement in (
-            "UPDATE reconforge.operational_finance_links SET posted_actor_id='maker' WHERE tenant_id=%s",
-            "UPDATE reconforge.sales_revenue_documents SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
-            "UPDATE reconforge.procurement_cycles SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
-        ):
-            try:
-                with restored.actor("poster") as (connection, _, _):
-                    connection.execute(statement, (runtime.tenant,))
-            except psycopg.errors.CheckViolation:
-                refused += 1
+        with restored.actor("browser-poster") as (connection, _, _):
+            # Authentication legitimately updates identity metadata in its own
+            # committed transaction. Keep the exact restored snapshot above;
+            # compare refused writes against a complete post-authentication
+            # checkpoint without removing identity or audit tables.
+            probe_checkpoint = database_snapshot(admin_dsn, financial_tables=FINANCIAL_TABLES + ERP_TABLES)
+            for statement in (
+                "UPDATE reconforge.operational_finance_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+                "UPDATE reconforge.sales_revenue_documents SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
+                "UPDATE reconforge.procurement_cycles SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
+            ):
+                try:
+                    with connection.transaction():
+                        connection.execute(statement, (runtime.tenant,))
+                except psycopg.errors.CheckViolation:
+                    refused += 1
         require(refused == 3, "A restored immutable financial guard was absent.")
-        require(after == database_snapshot(admin_dsn, financial_tables=FINANCIAL_TABLES + ERP_TABLES), "Rejected recovery probes changed data.")
-        return {"status": "passed", "dump_sha256": hashlib.sha256(dump.stdout).hexdigest(), "snapshot": after, "verified_effects": before_effects, "tamper_refusals": refused}
+        require(probe_checkpoint == database_snapshot(admin_dsn, financial_tables=FINANCIAL_TABLES + ERP_TABLES), "Rejected recovery probes changed data.")
+        return {"status": "passed", "dump_sha256": hashlib.sha256(dump.stdout).hexdigest(), "snapshot": after,
+                "probe_checkpoint": probe_checkpoint, "verified_effects": before_effects, "tamper_refusals": refused}
     finally:
         if created:
             with psycopg.connect(runtime.admin_dsn, autocommit=True) as admin:

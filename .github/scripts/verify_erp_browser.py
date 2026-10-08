@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from tests.erp_browser_restore import verify_cycles, verify_erp_native_restore  # noqa: E402
+from tests.erp_browser_seed import seed_erp_browser_principals  # noqa: E402
 from tests.gfo_receipt_browser_seed import seed_receipt_browser  # noqa: E402
 from tests.test_postgres_procurement_operations import seed_procurement  # noqa: E402
 from tests.test_postgres_sales_revenue import create_sales_runtime  # noqa: E402
@@ -122,6 +123,7 @@ def main() -> int:
         secret_values.append(runtime.password)
         create_sales_runtime((admin_dsn, app_dsn), base_runtime=runtime)
         seed_procurement(runtime)
+        seed_erp_browser_principals(runtime)
         # Chromium blocks several OS-assigned low ephemeral ports. Bind an
         # available dynamic/private port without relaxing browser port policy.
         for _ in range(64):

@@ -182,7 +182,7 @@ def test_docker_runtime_is_multistage_and_non_root() -> None:
     assert dockerfile.index("USER 10001:10001") < dockerfile.index('CMD ["reconforge", "doctor"]')
 
 
-def test_docker_stages_refresh_the_open_ssl_runtime_libraries_without_cli() -> None:
+def test_docker_stages_refresh_checksum_bound_security_libraries_without_cli() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     stages = dockerfile.split("FROM ")[1:]
 
@@ -190,10 +190,13 @@ def test_docker_stages_refresh_the_open_ssl_runtime_libraries_without_cli() -> N
     assert all("apk add --no-cache --upgrade" in stage for stage in stages)
     assert dockerfile.count("libcrypto3-3.5.9-r0.apk") == 2
     assert dockerfile.count("libssl3-3.5.9-r0.apk") == 2
+    assert dockerfile.count("zlib-1.3.2-r1.apk") == 2
     assert dockerfile.count("sha256:6632d758d8f5e9ea3b650fe966f23bbf9a202f8b8dceecac93da135dec5e3689") == 2
     assert dockerfile.count("sha256:05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7ad01877") == 2
+    assert dockerfile.count("sha256:63aeea03c15a2f9018f81805cfc8aa926bdf5cd68921f22149c2fbb5d0ee9f47") == 2
     assert dockerfile.count("/tmp/libcrypto3.apk") == 6
     assert dockerfile.count("/tmp/libssl3.apk") == 6
+    assert dockerfile.count("/tmp/zlib.apk") == 6
     assert "openssl " not in dockerfile
 
 

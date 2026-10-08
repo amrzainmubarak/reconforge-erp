@@ -46,9 +46,9 @@ def _json(path: Path) -> dict[str, Any]:
 
 def _artifact(index: int, *, licensed: bool = True) -> dict[str, Any]:
     name = "python" if index == 0 else f"package-{index}"
-    version = "3.12.14" if index == 0 else "1.0.0"
+    version = "3.12.15" if index == 0 else "1.0.0"
     package_type = "binary" if index == 0 else "python"
-    purl = "pkg:generic/python@3.12.14" if index == 0 else f"pkg:pypi/{name}@{version}"
+    purl = "pkg:generic/python@3.12.15" if index == 0 else f"pkg:pypi/{name}@{version}"
     return {
         "id": f"artifact-{index}",
         "name": name,
@@ -96,8 +96,8 @@ def _finding(*, severity: str = "High", identifier: str = "CVE-2026-0001") -> di
         },
         "artifact": {
             "name": "python",
-            "version": "3.12.14",
-            "purl": "pkg:generic/python@3.12.14",
+            "version": "3.12.15",
+            "purl": "pkg:generic/python@3.12.15",
         },
         "matchDetails": [{"type": "cpe-match"}],
     }
@@ -119,7 +119,7 @@ def _grype(*, matches: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         "descriptor": {
             "name": "grype",
             "version": "0.117.0",
-            "timestamp": "2026-08-22T12:00:00Z",
+            "timestamp": "2026-10-08T12:00:00Z",
             "configuration": {
                 "output": ["json"],
                 "exclude": [],
@@ -129,7 +129,7 @@ def _grype(*, matches: list[dict[str, Any]] | None = None) -> dict[str, Any]:
             },
             "db": {
                 "status": {
-                    "built": "2026-08-22T06:00:00Z",
+                    "built": "2026-10-08T06:00:00Z",
                     "schemaVersion": "v6.1.9",
                     "valid": True,
                 }
@@ -167,7 +167,7 @@ def _evaluate(
         grype_report=grype_path,
         scanner_exit_code=scanner_exit_code,
         image_config_digest=CONFIG_DIGEST,
-        as_of=date(2026, 8, 28),
+        as_of=date(2026, 10, 8),
     )
 
 
@@ -181,6 +181,9 @@ def test_clean_exact_image_gate_passes_and_matches_closed_schema(
     assert evidence["blockers"] == []
     assert evidence["image"]["config_digest"] == CONFIG_DIGEST
     assert evidence["license_inventory"]["coverage_basis_points"] == 9000
+    assert evidence["vex"]["document_id"].endswith("container-runtime-2026-10-08")
+    assert evidence["vex"]["document_sha256"] == _json(POLICY)["container_audits"]["vulnerability"]["vex_document_sha256"]
+    assert evidence["vex"]["review_age_days"] == 0
     schema = _json(SCHEMA)
     Draft202012Validator.check_schema(schema)
     errors = sorted(
@@ -309,7 +312,7 @@ def test_exact_reviewed_fixed_vex_is_recorded_without_weakening_other_findings(
     assert findings[0]["vex_status"] == "fixed"
     assert findings[1]["vex_status"] is None
     assert evidence["blockers"] == [
-        "unexcepted high finding CVE-2026-9999 for python@3.12.14"
+        "unexcepted high finding CVE-2026-9999 for python@3.12.15"
     ]
 
 
@@ -318,8 +321,8 @@ def test_exact_reviewed_fixed_vex_is_recorded_without_weakening_other_findings(
     [
         (
             lambda vex: vex.update(
-                timestamp="2026-07-01T00:00:00Z",
-                last_updated="2026-07-01T00:00:00Z",
+                timestamp="2026-08-28T12:30:00Z",
+                last_updated="2026-08-28T12:30:00Z",
             ),
             "older than",
         ),
@@ -329,7 +332,7 @@ def test_exact_reviewed_fixed_vex_is_recorded_without_weakening_other_findings(
         ),
         (
             lambda vex: vex["statements"][0]["products"][0].update(
-                {"@id": "pkg:generic/python@3.12.13"}
+                {"@id": "pkg:generic/python@3.12.14"}
             ),
             "absent from",
         ),

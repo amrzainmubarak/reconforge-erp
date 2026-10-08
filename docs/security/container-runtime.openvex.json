@@ -1,10 +1,10 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://reconforge.local/security/vex/container-runtime-2026-08-22",
+  "@id": "https://reconforge.local/security/vex/container-runtime-2026-10-08",
   "author": "ReconForge automated security review",
   "role": "Document Creator",
-  "timestamp": "2026-08-28T12:30:00Z",
-  "last_updated": "2026-08-28T12:30:00Z",
+  "timestamp": "2026-10-08T04:52:00Z",
+  "last_updated": "2026-10-08T04:52:00Z",
   "version": 1,
   "statements": [
     {
@@ -13,11 +13,11 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/python@3.12.14"
+          "@id": "pkg:generic/python@3.12.15"
         }
       ],
       "status": "fixed",
-      "impact_statement": "The official Python 3.12.14 security release records gh-145599 as the CPython fix for CVE-2026-3644; the pinned image contains CPython 3.12.14."
+      "impact_statement": "The official Python 3.12.14 security release records gh-145599 as the CVE-2026-3644 fix, inherited by the official 3.12.15 security release. The checksum-pinned 3.12.15-alpine3.24 image was probed on 2026-10-08: CPython 3.12.15 and Morsel.update/js_output reject control characters."
     },
     {
       "vulnerability": {
@@ -25,11 +25,11 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/python@3.12.14"
+          "@id": "pkg:generic/python@3.12.15"
         }
       ],
       "status": "fixed",
-      "impact_statement": "The official Python 3.12.14 security release records gh-145986 as the CPython fix for CVE-2026-4224; the pinned image contains CPython 3.12.14."
+      "impact_statement": "The official Python 3.12.14 security release records gh-145986 as the CVE-2026-4224 fix, inherited by the official 3.12.15 security release. The checksum-pinned 3.12.15-alpine3.24 image was probed on 2026-10-08: CPython 3.12.15 and pyexpat 2.8.5."
     },
     {
       "vulnerability": {
@@ -37,11 +37,11 @@
       },
       "products": [
         {
-          "@id": "pkg:generic/python@3.12.14"
+          "@id": "pkg:generic/python@3.12.15"
         }
       ],
       "status": "fixed",
-      "impact_statement": "The official Python 3.12.14 security release records gh-149018's improved XML hash-flooding protection and the bundled libexpat 2.8.3 update; the pinned image contains CPython 3.12.14."
+      "impact_statement": "The official Python release announcement records gh-149018 hash-flooding protection in 3.12.14; the 3.12.15 release updates bundled Expat to 2.8.5. The checksum-pinned 3.12.15-alpine3.24 image was probed on 2026-10-08: CPython 3.12.15 and pyexpat 2.8.5 retain the reviewed fix."
     }
   ]
 }

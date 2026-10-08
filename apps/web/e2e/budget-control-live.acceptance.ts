@@ -10,6 +10,7 @@ test("populated HTTPS budget workflow persists maker-checker decisions, exact re
   const scope = { workspace_id: fixture.workspace_id, organization_id: fixture.organization_id, legal_entity_id: fixture.legal_entity_id };
   const evidence: Record<string, unknown> = { synthetic_only: true, backend: "SQLite", scope };
   const label = (name: string) => page.getByLabel(name, { exact: true });
+  const toggleLocale = () => process.env.RECONFORGE_BUDGET_UI_PATH === "/budget-control" ? page.getByTestId("locale-toggle").click() : page.getByRole("button", { name: "Toggle acceptance language", exact: true }).click();
   async function signIn(username: string) { await label("Username").fill(username); await label("Password").fill(password); await page.getByRole("button", { name: "Sign in", exact: true }).click(); await expect(label("Workspace ID")).toBeVisible(); }
   async function load() { await label("Workspace ID").fill(scope.workspace_id); await label("Organization ID").fill(scope.organization_id); await label("Legal entity ID").fill(scope.legal_entity_id); await page.getByRole("button", { name: "Load budgets", exact: true }).click(); }
   await page.goto(`${process.env.RECONFORGE_BUDGET_UI_BASE_URL ?? ""}${process.env.RECONFORGE_BUDGET_UI_PATH ?? "/e2e/budget-control-harness.html"}`); await signIn("maker"); await load();
@@ -36,7 +37,7 @@ test("populated HTTPS budget workflow persists maker-checker decisions, exact re
   await page.getByRole("combobox", { name: "Operation", exact: true }).selectOption("Release"); await label("Recorded reason").fill("Release remaining synthetic capacity"); await label("Amount in currency units").fill("25.00"); await page.getByRole("button", { name: "Record commitment", exact: true }).click();
   await expect(page.getByRole("region", { name: "Budget details", exact: true })).toContainText("85.00 EGP");
   const accessibility = await new AxeBuilder({ page }).include(".budget-control-workspace").analyze(); expect(accessibility.violations).toEqual([]); evidence.accessibility_violations = accessibility.violations;
-  await page.setViewportSize({ width: 390, height: 844 }); await page.getByRole("button", { name: "Toggle acceptance language", exact: true }).click(); await expect(page.getByRole("main")).toHaveAttribute("dir", "rtl");
+  await page.setViewportSize({ width: 390, height: 844 }); await toggleLocale(); await expect(page.getByRole("main")).toHaveAttribute("dir", "rtl");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true); evidence.mobile_rtl_no_horizontal_overflow = true;
   const result = await page.evaluate(async ({ selectedScope }) => {
     const headers = { "X-ReconForge-Tenant": "local", "X-ReconForge-Workspace": selectedScope.workspace_id, "X-ReconForge-Organization": selectedScope.organization_id, "X-ReconForge-Legal-Entity": selectedScope.legal_entity_id };
@@ -49,6 +50,9 @@ test("populated HTTPS budget workflow persists maker-checker decisions, exact re
     return { detail, foreign_status: foreign.status, no_csrf_status: noCsrf.status };
   }, { selectedScope: scope });
   expect(result.detail).toMatchObject({ status: "Approved", row_version: 6, limit_minor: "10000", reserved_minor: "0", consumed_minor: "1500", available_minor: "8500" }); expect(result.detail.events).toHaveLength(3); expect(result.foreign_status).toBe(409); expect(result.no_csrf_status).toBe(403);
-  evidence.final = result; writeFileSync(resolve("../../output/budget-ui/runtime/browser-evidence.json"), JSON.stringify(evidence, null, 2));
+  evidence.final = result;
+  await toggleLocale();
   await page.reload(); await signIn("checker"); await load(); await page.getByRole("button", { name: "Open budget OPS-BROWSER", exact: true }).click(); await expect(page.getByRole("region", { name: "Budget details", exact: true })).toContainText("85.00 EGP");
+  evidence.reloaded_persisted_balances = true;
+  writeFileSync(resolve("../../output/budget-ui/runtime/browser-evidence.json"), JSON.stringify(evidence, null, 2));
 });

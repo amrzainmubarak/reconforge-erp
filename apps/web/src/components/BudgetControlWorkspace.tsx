@@ -122,7 +122,7 @@ function BudgetControlSession({ locale }: { locale: Locale }) {
   const input = (label: BudgetMessage, value: string, change: (value: string) => void, maximum = 160, type = "text") => <label>{t(label)}<input required type={type} value={value} maxLength={maximum} disabled={locked} onChange={(event) => change(event.target.value)} /></label>;
   const money = (value: string) => detail ? budgetMoney(value, detail.monetary_policy, detail.currency_code, locale) : "";
 
-  return <main className="budget-control-workspace" dir={locale === "ar" ? "rtl" : "ltr"}>
+  return <main id="main-content" className="budget-control-workspace" dir={locale === "ar" ? "rtl" : "ltr"}>
     <header><h1>{t("title")}</h1><p>{t("intro")}</p></header>
     {error && <div role="alert" tabIndex={-1} ref={errorRef}>{t(error)}</div>}
     {pending && !busy && <aside role="status"><p>{t("unknown")}</p><button type="button" onClick={() => void send(pending)}>{t("retry")}</button><code dir="ltr">{String(pending.body.command_id)}</code></aside>}

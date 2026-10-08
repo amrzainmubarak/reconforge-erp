@@ -71,6 +71,9 @@ refusal, page reload, accessibility and mobile Arabic rendering. Evidence is
 written to `output/budget-ui/runtime/browser-evidence.json`. The harness tests the
 unchanged product component independently of the central application registration;
 the integrated `/budget-control` route must additionally pass the lead's gate.
+To run that same actual workflow against the normal built Studio, set
+`RECONFORGE_BUDGET_UI_WEB_ROOT=dist` and
+`RECONFORGE_BUDGET_UI_PATH=/budget-control` after `npm.cmd run build`.
 
 The live acceptance depends on the request-owned SQLite connection worker-handoff
 repair in `api.dependencies.get_db`: FastAPI may open, execute and close a single

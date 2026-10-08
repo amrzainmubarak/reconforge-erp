@@ -10,7 +10,11 @@ async function login(page: Page, username: string) {
  await page.goto(`${base}/admin-audit`);
  await page.getByLabel("Tenant ID", { exact: true }).fill(tenant!); await page.getByLabel("Username", { exact: true }).fill(username); await page.getByLabel("Password", { exact: true }).fill(password!);
  await page.getByRole("button", { name: "Sign in to administration", exact: true }).click();
+ await expect(page.getByRole("heading", { name: "Confirm privileged access", exact: true })).toBeVisible();
+ const elevatedReply = page.waitForResponse(r => r.url().endsWith("/auth/step-up") && r.request().method() === "POST");
  await page.getByLabel("Password", { exact: true }).fill(password!); await page.getByRole("button", { name: "Confirm and continue", exact: true }).click();
+ const elevated = await elevatedReply; expect(elevated.status(), await elevated.text()).toBe(200);
+ await expect(page.getByText("Privileged access is active", { exact: true })).toBeVisible();
  await page.getByRole("button", { name: /Inventory receipt/i }).first().click();
  await page.getByLabel("Workspace ID", { exact: true }).fill("work"); await page.getByLabel("Organization ID", { exact: true }).fill("org"); await page.getByLabel("Legal entity ID", { exact: true }).fill("entity");
 }

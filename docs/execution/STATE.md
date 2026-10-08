@@ -1,5 +1,24 @@
 # Execution State
 
+## Current hosted ERP gate repair (2026-10-09)
+
+Current-source CI37837201370 on `88d2fe20740b` failed its receivables and parity
+shards and aggregate; its seven other PostgreSQL shards, both Python versions,
+web, actual HTTPS ERP/restore and separate Security/Docker/CodeQL passed.
+Retain that failed run as failed. Fresh restricted-role AR/AP fixtures need
+only SELECT on the additive invoker ownership relations, without new owner-table
+DML or RLS bypass. The independent tenant permission expectation must include
+the three Sales catalog entries seeded by0110; catalog presence does not grant
+roles. A corrected successor requires affected native gates and complete stable
+hosted verification before acceptance. Earlier local results below retain their
+actual execution identities and do not claim that this failed CI succeeded.
+
+## ERP completion sprint (2026-10-08; ADR0841)
+
+Source `547b65391587` accepts the bounded connected service Sales, stock Procurement and shared operational Finance cycles locally. Three isolated managed worktrees are integrated on `amr/global-erp-completion-20261008`; main stays `b61ea56b`. Full Python: 4538 passed/595 explicit prerequisites; configured critical PostgreSQL: 564 passed/zero skips; native recovery profile: 33 passed/zero skips. Actual wire HTTPS Studio, Paid AR/AP, FIFO, balanced GL, lost-ack replay, Arabic/mobile/accessibility and195-table populated restore pass. Packaging/default secrets are fresh after a one-line MANIFEST dependency correction. Earlier failures and exact mixed source/byte identities are preserved. [Acceptance and remaining ERP scope](ERP_COMPLETION_ACCEPTANCE_2026-10-08.md) · [Commands, hashes and sources](ERP_COMPLETION_ACCEPTANCE_2026-10-08.json).
+
+[Draft PR](https://github.com/amrzainmubarak/reconforge-erp/pull/125) is stacked on the accepted platform branch. Final hosted results must be read from its [current-source checks](https://github.com/amrzainmubarak/reconforge-erp/pull/125/checks) and retained Actions artifacts; this documentation checkpoint records local acceptance. The broad global ERP expansion and independent release assurance remain in progress.
+
 ## Global operational capability sprint (2026-10-08; ADR0834)
 
 The user authorized three parallel implementation agents and reopened the

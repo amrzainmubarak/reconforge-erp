@@ -8,7 +8,7 @@ from typing import Any, Literal, TypeVar
 
 from fastapi import Request
 
-from reconforge.api.errors import APIError
+from reconforge.api.errors import APIError, financial_owner_phase_conflict
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.infrastructure.postgres import (
     PostgresConfigurationError,
@@ -184,6 +184,12 @@ def execute_postgres_payables(
     except (PostgresConfigurationError, PostgresUnavailableError) as exc:
         raise APIError(status_code=503, code="payables_unavailable", message="Server Payables is temporarily unavailable.") from exc
     except Exception as exc:
+        if financial_owner_phase_conflict(exc):
+            raise APIError(
+                status_code=409,
+                code="operational_owner_required",
+                message="Advance this source through its owning operational cycle.",
+            ) from exc
         raise APIError(status_code=503, code="payables_unavailable", message="Server Payables is temporarily unavailable.") from exc
 
 

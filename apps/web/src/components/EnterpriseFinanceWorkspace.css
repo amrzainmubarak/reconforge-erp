@@ -1,0 +1,15 @@
+.enterprise-finance { display: grid; gap: 1rem; min-width: 0; }
+.enterprise-finance .panel { display: grid; gap: .75rem; padding: 1rem; min-width: 0; }
+.enterprise-finance .finance-form { grid-template-columns: repeat(auto-fit,minmax(min(100%,16rem),1fr)); align-items: end; }
+.enterprise-finance h2,.enterprise-finance .finance-form>p { grid-column: 1/-1; }
+.enterprise-finance label { display: grid; gap: .375rem; min-width: 0; }
+.enterprise-finance input,.enterprise-finance select { min-width: 0; max-width: 100%; }
+.enterprise-finance .finance-source-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit,minmax(min(100%,18rem),1fr)); }
+.enterprise-finance article { border: 1px solid var(--border); border-radius: .5rem; padding: .75rem; min-width: 0; }
+.enterprise-finance .finance-table { overflow: auto; max-width: 100%; }
+.enterprise-finance table { border-collapse: collapse; min-width: 30rem; width: 100%; }
+.enterprise-finance td,.enterprise-finance th { text-align: start; padding: .625rem; border-bottom: 1px solid var(--border); }
+.enterprise-finance code { display: block; overflow-wrap: anywhere; max-width: 100%; }
+.enterprise-finance pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; font-size: .8rem; }
+.enterprise-finance button:focus-visible,.enterprise-finance input:focus-visible,.enterprise-finance summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.enterprise-finance [role=alert] { color: var(--danger-text); background: var(--danger-bg); padding: .75rem; }

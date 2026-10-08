@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { BrowserSessionProvider, useBrowserSession } from "../browserSession";
@@ -101,6 +101,49 @@ test("refuses a server-rejected terminal decision without fabricating a complete
   await screen.findByText("Select an eligible reviewer in the same authorized scope before making that decision.");
   expect(screen.queryByText("The server confirmed the action and returned the current record version.")).not.toBeInTheDocument();
   expect(screen.getAllByText("In Review").length).toBeGreaterThan(0);
+});
+
+test("preserves a decision reason entered immediately after the server confirms reviewer assignment", async () => {
+  let current = { ...record, history: [history], history_page: { limit: 25, has_more: false, next_cursor: null } };
+  let confirmAssignment: ((value: Response) => void) | undefined;
+  let finishReadback: ((value: Response) => void) | undefined;
+  let detailReads = 0;
+  const assignmentReply = new Promise<Response>((resolve) => { confirmAssignment = resolve; });
+  const fetcher = vi.fn(async (path: RequestInfo | URL, options?: RequestInit) => {
+    const url = String(path);
+    if (url.endsWith("/auth/me")) return response(identity);
+    if (options?.method === "POST" && url.endsWith("/assign")) {
+      current = { ...current, owner: "reviewer-2", row_version: 3, history: [{ ...history, id: "EXH-002", to_owner: "reviewer-2", audit_event_id: "AUD-002", outbox_event_id: "OUT-002" }] };
+      return assignmentReply;
+    }
+    if (options?.method === "POST" && url.endsWith("/status")) return response({ exception: { ...current, status: "Resolved", row_version: 4 } });
+    if (url.includes("/EXC-001?")) {
+      detailReads += 1;
+      if (detailReads === 1) return response({ exception: current });
+      return new Promise<Response>((resolve) => { finishReadback = resolve; });
+    }
+    return response({ exceptions: [record], pagination: { limit: 25, returned: 1, has_more: false, next_cursor: null } });
+  });
+  setup(fetcher);
+  await enterWorkspace();
+  fireEvent.click(screen.getByRole("button", { name: "Review" }));
+  await screen.findByRole("heading", { name: "Exception details" });
+  fireEvent.change(screen.getByLabelText("Reviewer user ID"), { target: { value: "reviewer-2" } });
+  fireEvent.click(screen.getByRole("button", { name: "Assign reviewer" }));
+  await act(async () => { confirmAssignment?.(response({ exception: current })); });
+  expect(screen.getByText("The server confirmed the action and returned the current record version.")).toBeVisible();
+
+  const reason = "Source corrected immediately after assignment.";
+  fireEvent.change(screen.getByLabelText("Recorded reason"), { target: { value: reason } });
+  // Complete any outstanding read after the user's next edit. A successful
+  // assignment must not discard the authoritative form or that new input.
+  await act(async () => { finishReadback?.(response({ exception: current })); });
+  expect(screen.getByLabelText("Recorded reason")).toHaveValue(reason);
+  fireEvent.click(screen.getByRole("button", { name: "Submit decision" }));
+  await waitFor(() => {
+    const transition = fetcher.mock.calls.find(([path, options]) => String(path).endsWith("/status") && options?.method === "POST");
+    expect(JSON.parse(String(transition?.[1]?.body))).toEqual({ status: "Resolved", expected_version: 3, reason });
+  });
 });
 
 test("Arabic review surface remains RTL, labeled, focusable, and does not create local fallback records", async () => {

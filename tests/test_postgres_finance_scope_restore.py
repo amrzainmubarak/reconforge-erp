@@ -91,6 +91,14 @@ def verify_native_finance_restore(db: dict[str, Any], native: NativeTool) -> dic
         native("pg_restore", ["--exit-on-error", "--no-owner", "--dbname", database], dump)
         restored_admin = psycopg.conninfo.make_conninfo(**{**original, "dbname": database})
         with psycopg.connect(restored_admin) as admin:
+            runtime_role = psycopg.conninfo.conninfo_to_dict(os.environ["RECONFORGE_TEST_POSTGRES_DSN"])["user"]
+            assert admin.execute(
+                "SELECT has_table_privilege(%s,'reconforge.operational_finance_plans','SELECT'),"
+                "has_table_privilege(%s,'reconforge.operational_finance_plans','INSERT'),"
+                "has_table_privilege(%s,'reconforge.operational_finance_plans','UPDATE'),"
+                "has_table_privilege(%s,'reconforge.operational_finance_plans','DELETE')",
+                (runtime_role,) * 4,
+            ).fetchone() == (True, False, False, False)
             assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == revision
             assert _history(admin) == before
             assert _policies(admin) == policies

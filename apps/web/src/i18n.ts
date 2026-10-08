@@ -2,6 +2,11 @@ import type { Locale } from "./types";
 
 export const messages = {
   en: {
+    salesRevenue: "Sales & revenue",
+    procurementOperations: "Procurement & payments",
+    enterpriseFinance: "Finance & reporting",
+    erpNavigation: "ERP operations",
+    skipToMain: "Skip to main content",
     budgetControl: "Budget control",
     inventoryReceipt: "Inventory receipts",
     durableJobs: "Durable jobs",
@@ -591,6 +596,11 @@ export const messages = {
     adminError: "Administration data is unavailable. No synthetic fallback was used.",
   },
   ar: {
+    salesRevenue: "المبيعات والإيرادات",
+    procurementOperations: "المشتريات والمدفوعات",
+    enterpriseFinance: "المالية والتقارير",
+    erpNavigation: "عمليات ERP",
+    skipToMain: "انتقل إلى المحتوى الرئيسي",
     budgetControl: "رقابة الميزانيات",
     inventoryReceipt: "استلام المخزون",
     durableJobs: "الوظائف الدائمة",

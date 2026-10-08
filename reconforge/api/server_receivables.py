@@ -8,7 +8,7 @@ from typing import Any, Literal, TypeVar
 
 from fastapi import Request
 
-from reconforge.api.errors import APIError
+from reconforge.api.errors import APIError, financial_owner_phase_conflict
 from reconforge.api.server_identity import RequestExecutionScope, request_execution_scope
 from reconforge.infrastructure.postgres import (
     PostgresConfigurationError,
@@ -209,6 +209,12 @@ def execute_postgres_receivables(
             message="Server Receivables is temporarily unavailable.",
         ) from exc
     except Exception as exc:
+        if financial_owner_phase_conflict(exc):
+            raise APIError(
+                status_code=409,
+                code="operational_owner_required",
+                message="Complete this operation through the Sales or Procurement workflow that owns its source.",
+            ) from exc
         raise APIError(
             status_code=503,
             code="receivables_unavailable",

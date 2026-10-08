@@ -70,13 +70,16 @@ from reconforge.api.routes import (
     master_data,
     metrics,
     notification_inbox,
+    operational_finance,
     operations,
     payables,
+    procurement_operations,
     professional_invoice_payment,
     receivables,
     reconciliation,
     retail_settlement,
     roles,
+    sales_revenue,
     scim,
     scope_grants,
     scoped_exports,
@@ -417,6 +420,9 @@ def create_api_app(
     app.include_router(master_data.router, prefix="/api/v1")
     app.include_router(finance_core.router, prefix="/api/v1")
     app.include_router(finance_posting.router, prefix="/api/v1")
+    app.include_router(operational_finance.router, prefix="/api/v1")
+    app.include_router(sales_revenue.router, prefix="/api/v1")
+    app.include_router(procurement_operations.router, prefix="/api/v1")
     app.include_router(inventory_core.router, prefix="/api/v1")
     app.include_router(inventory_planning.router, prefix="/api/v1")
     app.include_router(inventory_receipt_posting.router, prefix="/api/v1")
@@ -469,6 +475,9 @@ def create_api_app(
         master_data.router,
         finance_core.router,
         finance_posting.router,
+        operational_finance.router,
+        sales_revenue.router,
+        procurement_operations.router,
         inventory_core.router,
         inventory_planning.router,
         inventory_receipt_posting.router,

@@ -63,6 +63,31 @@ def test_live_server_payables_http_lifecycle_is_scoped_exact_and_human_governed(
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
             )
+            assert tuple(admin.execute(
+                "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=%s", (app_user,)
+            ).fetchone()) == (False, False)
+            for dependency in (
+                "operational_finance_plans", "operational_finance_links", "procurement_cycles"
+            ):
+                qualified = f"reconforge.{dependency}"
+                if admin.execute("SELECT to_regclass(%s)", (qualified,)).fetchone()[0] is None:
+                    continue
+                previous_dml = tuple(admin.execute(
+                    "SELECT has_table_privilege(%s,%s,'INSERT'),has_table_privilege(%s,%s,'UPDATE'),"
+                    "has_table_privilege(%s,%s,'DELETE')",
+                    (app_user, qualified, app_user, qualified, app_user, qualified),
+                ).fetchone())
+                admin.execute(f"GRANT SELECT ON {qualified} TO {app_user}")
+                assert tuple(admin.execute(
+                    "SELECT has_table_privilege(%s,%s,'SELECT'),has_table_privilege(%s,%s,'INSERT'),"
+                    "has_table_privilege(%s,%s,'UPDATE'),has_table_privilege(%s,%s,'DELETE')",
+                    (app_user, qualified, app_user, qualified, app_user, qualified, app_user, qualified),
+                ).fetchone()) == (True, *previous_dml)
+                assert tuple(admin.execute(
+                    "SELECT pg_get_userbyid(relowner)<>%s,relrowsecurity,relforcerowsecurity "
+                    "FROM pg_class WHERE oid=to_regclass(%s)",
+                    (app_user, qualified),
+                ).fetchone()) == (True, True, True)
             admin.execute("INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s)", (tenant_id, tenant_id))
 
         app_factory = PostgresConnectionFactory(PostgresSettings(dsn=dsn, require_tls=False))

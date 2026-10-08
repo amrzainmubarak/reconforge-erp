@@ -1,0 +1,42 @@
+id: operational-finance
+name: Reviewed Native Operational Finance
+version: 0.1.0
+maturity: experimental
+owner: Finance Operations
+dependencies: [identity, master-data, finance-core, finance-posting, receivables, payables]
+incompatible_versions: []
+data_classification: financial-confidential
+retention_policy: immutable posted sources and evidence; forward recovery
+permissions: [finance_core.read, finance_core.manage, finance_core.validate, finance_core.post, receivables.approve, receivables.manage, payables.approve, payables.settle]
+default_roles: existing administrator grants; scoped explicit operator grants
+migrations: [0109_pg_operational_finance]
+domain_invariants:
+  - Closed native AR/AP source types only; no arbitrary source SQL or runtime plugin
+  - Exact positive integer minor units and retained functional currency policy
+  - Balanced two-line GL composed through the existing Manual posting kernel
+  - Native invoice immutable monetary snapshot equals the reviewed source capture
+  - Independent authenticated human reviewer and nonpreparer poster
+  - Source/GL/link/audit/outbox commit on one scoped READ COMMITTED connection
+  - Native full AR allocation or AP payment link required at outer commit
+  - Same actor and exact content replay only; stored acknowledgements verified against actual phases
+domain_events: [operational_finance_prepared, operational_finance_reviewed, operational_finance_posted]
+api_routes: [/api/v1/operational-finance/plans, /api/v1/operational-finance/plans/{plan_id}, /api/v1/operational-finance/plans/{plan_id}/review, /api/v1/operational-finance/plans/{plan_id}/post]
+cli_commands: []
+ui_routes: [/enterprise-finance]
+import_schemas: [operational-finance-v1]
+export_schemas: [operational-finance-api-v1, finance-posting-api-v1]
+synthetic_fixtures: tests/test_postgres_operational_finance.py
+threat_model:
+  - OPS1 namespace preflight refuses existing unbound historical entries
+  - Generic posting and reversal cannot bypass the active exact source owner
+  - Forced hierarchy RLS and native source closure reject scope drift and SQL tamper
+  - Immutable commands bind actor, request, native phase and exact response
+benchmarks: existing posted-finance report budget; no new capacity claim
+rollback_plan: populated downgrade refuses evidence loss; restore verified backup and use forward fix
+test_matrix: [exact-domain, live-postgres-nonowner, native-source-tamper, independent-review, command-replay, integration, browser, restore, concurrency]
+limitations:
+  - PostgreSQL operational composition only; existing local APIs remain compatible
+  - Functional currency, zero tax, at most 64 native invoice lines
+  - Full unpaid invoice collection/payment; partial/FX/netting/inverse require their own reviewed native contract
+  - Direct API posting handles AR/AP accruals; Sales/Procurement owners perform settlements
+  - No tax compliance, bank connectivity or global ERP completeness claim

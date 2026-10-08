@@ -129,3 +129,41 @@ tests/test_notification_inbox.py:generic-api-key:46
 tests/test_notification_inbox.py:generic-api-key:47
 tests/test_postgres_notification_inbox.py:generic-api-key:100
 tests/test_postgres_notification_inbox.py:generic-api-key:188
+
+# Reviewed public operational-finance-api-v1 contract identifiers, not
+# credentials. Exact history and current-tree locations; default rules stay on.
+133fa867d674d53dfd978ab59374c9eb6e999b10:reconforge/api/routes/operational_finance.py:generic-api-key:80
+133fa867d674d53dfd978ab59374c9eb6e999b10:apps/web/src/enterprise-finance-data.test.ts:generic-api-key:5
+133fa867d674d53dfd978ab59374c9eb6e999b10:apps/web/src/enterprise-finance-data.ts:generic-api-key:7
+74b14f38770d1d20852362b7f5e19359af3c99ca:reconforge/api/routes/operational_finance.py:generic-api-key:80
+74b14f38770d1d20852362b7f5e19359af3c99ca:apps/web/src/enterprise-finance-data.test.ts:generic-api-key:5
+74b14f38770d1d20852362b7f5e19359af3c99ca:apps/web/src/enterprise-finance-data.ts:generic-api-key:7
+7879d052b6d771b26cc50180eab22d0bb72aed3f:reconforge/api/routes/operational_finance.py:generic-api-key:80
+7879d052b6d771b26cc50180eab22d0bb72aed3f:apps/web/src/enterprise-finance-data.test.ts:generic-api-key:5
+7879d052b6d771b26cc50180eab22d0bb72aed3f:apps/web/src/enterprise-finance-data.ts:generic-api-key:7
+reconforge/api/routes/operational_finance.py:generic-api-key:80
+apps/web/src/enterprise-finance-data.test.ts:generic-api-key:5
+apps/web/src/enterprise-finance-data.ts:generic-api-key:7
+
+# Reviewed historical copies of the existing disposable Synthetic-123 local
+# notification authentication fixtures. Each fingerprint was inspected in Git.
+7aefc528eb149373199244eade585cb1b6c6f856:tests/test_api_notification_inbox.py:generic-api-key:26
+7aefc528eb149373199244eade585cb1b6c6f856:tests/test_api_notification_inbox.py:generic-api-key:27
+7aefc528eb149373199244eade585cb1b6c6f856:tests/test_api_notification_inbox.py:generic-api-key:28
+7aefc528eb149373199244eade585cb1b6c6f856:tests/test_api_notification_inbox.py:generic-api-key:36
+7aefc528eb149373199244eade585cb1b6c6f856:tests/test_api_notification_inbox.py:generic-api-key:80
+7aefc528eb149373199244eade585cb1b6c6f856:tests/test_notification_inbox.py:generic-api-key:43
+7aefc528eb149373199244eade585cb1b6c6f856:tests/test_notification_inbox.py:generic-api-key:44
+7aefc528eb149373199244eade585cb1b6c6f856:tests/test_postgres_notification_inbox.py:generic-api-key:102
+7aefc528eb149373199244eade585cb1b6c6f856:tests/test_postgres_notification_inbox.py:generic-api-key:190
+
+# Reviewed public operational-finance-api-v1 identifiers in the owner-phase
+# UI fixture and the unchanged route contract (moved from line 80 to line 83).
+# The four exact history copies share the same public literal; these entries
+# add no credential patterns, scanner rules, path exclusions or risk exceptions.
+d85fd0ba17aede6e2f0956236b677ac5b00be8f1:apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+19332849b5b82ff3e85ebab5f28aa86ef819c7d8:apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+a0f4f8f257bb4bca44e0e05d2f1c449c51b5afd6:apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+aea56da19c40e7820accb762046e7feb87b70186:apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+apps/web/src/components/EnterpriseFinanceWorkspace.test.tsx:generic-api-key:19
+reconforge/api/routes/operational_finance.py:generic-api-key:83

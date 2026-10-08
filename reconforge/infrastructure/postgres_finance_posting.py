@@ -349,12 +349,29 @@ class PostgresFinancePostingRepository:
             return self._get_effect(text(effect_id, "effect_id"))
 
     def post(
-        self, entry_id: str, *, command_id: str, expected_validation_digest: str, reason: str, actor: PostingActor
+        self,
+        entry_id: str,
+        *,
+        command_id: str,
+        expected_validation_digest: str,
+        reason: str,
+        actor: PostingActor,
+        _source_owner: object | None = None,
     ) -> dict[str, Any]:
         actor.require("finance_core.post")
         reason = text(reason, "reason", maximum=500)
         with self._transaction(write=True):
             entry = posting_entry(self.connection, self.tenant_id, text(entry_id, "entry_id"))
+            if entry["entry_number"].upper().startswith("OPS1-") or entry["id"].upper().startswith("OPS1-"):
+                from reconforge.infrastructure.postgres_operational_finance import _OperationalPostingParticipant
+
+                if not isinstance(_source_owner, _OperationalPostingParticipant) or not _source_owner.admits(
+                    self.connection, self.tenant_id, entry["id"]
+                ):
+                    raise FinancePostingError(
+                        "posting_source_unsupported",
+                        "Operational sources must post through their complete source owner.",
+                    )
             if entry["id"].upper().startswith("IRP1-") or entry["entry_number"].upper().startswith("IRP1-"):
                 raise FinancePostingError("posting_source_unsupported", "Reviewed inventory sources must post through their complete source command.")
             if entry["reverses_posting_id"]:
@@ -460,6 +477,10 @@ class PostgresFinancePostingRepository:
             if original["source_kind"] not in {"Manual", "Reversal"}:
                 raise FinancePostingError("posting_source_unsupported", "Inventory postings require a reviewed full source inverse.")
             source = posting_entry(self.connection, self.tenant_id, original["entry_id"])
+            if source["entry_number"].upper().startswith("OPS1-") or source["id"].upper().startswith("OPS1-"):
+                raise FinancePostingError(
+                    "posting_source_unsupported", "Operational sources require a reviewed native source inverse."
+                )
             digest, replay = self._command(
                 source,
                 command_id,

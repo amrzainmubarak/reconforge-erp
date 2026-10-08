@@ -320,12 +320,13 @@ surfaces:
       - reconforge/infrastructure/sqlite_matching.py::SQLiteMatchingRepository._matching_rule_document
       - reconforge/infrastructure/sqlite_payables.py::SQLitePayablesRepository._idempotent
       - reconforge/infrastructure/sqlite_receivables.py::SQLiteReceivablesRepository._idempotent
+      - reconforge/infrastructure/postgres_sales_revenue.py::_json
     formats: [json]
     parser_families: [json-stdlib]
     policy_coverage: partial
     status: partial
     controls: [SEC-C-002, SEC-C-004, SEC-C-005]
-    test_evidence: [tests/test_audit_metadata_json.py, tests/test_budget_control.py, tests/test_notification_inbox.py, tests/test_postgres_outbox_payload_json.py, tests/test_postgres_reconciliation_persisted_json.py, tests/test_sqlite_matching_rule_json.py, tests/test_redis_session_json.py, tests/test_db_export_persisted_json.py, tests/test_audit_events.py, tests/test_db_export_import.py, tests/test_postgres_ledger.py, tests/test_postgres_outbox.py, tests/test_postgres_reconciliation.py, tests/test_redis_foundation.py, tests/test_payables.py, tests/test_receivables.py, tests/test_financial_idempotency_json.py]
+    test_evidence: [tests/test_audit_metadata_json.py, tests/test_budget_control.py, tests/test_notification_inbox.py, tests/test_postgres_outbox_payload_json.py, tests/test_postgres_reconciliation_persisted_json.py, tests/test_sqlite_matching_rule_json.py, tests/test_redis_session_json.py, tests/test_db_export_persisted_json.py, tests/test_audit_events.py, tests/test_db_export_import.py, tests/test_postgres_ledger.py, tests/test_postgres_outbox.py, tests/test_postgres_reconciliation.py, tests/test_redis_foundation.py, tests/test_payables.py, tests/test_receivables.py, tests/test_financial_idempotency_json.py, tests/test_postgres_sales_revenue.py]
     residual_risk_ids: [R-018]
     limitations:
       - These are database, cache, or event values rather than filesystem ingress and must not be described as accepted upload paths.
@@ -341,6 +342,7 @@ surfaces:
       - "The public SQLite export has a closed registry of JSON fields: audit metadata and both matching rules reuse their established profiles; legacy summaries use sqlite-legacy-import-summary-json-v1; matching lineage uses sqlite-matching-lineage-json-v1; currency-registry snapshots use currency-registry-snapshot-json-v1 with a bounded 1000000-byte/integer-token object profile. All reject malformed values before destination creation and preserve their declared output shapes."
       - "Legacy-summary and matching-lineage producers use their respective contracts. Export preflights every registered row before creating the destination or writing any file, rejects non-text/corrupt values without sentinels, preserves metadata/summary/rule object outputs, and retains lineage_json as its historical string field."
       - Stored values and source artifacts are not authenticated; actor/disclosure authorization, malware quarantine, full business-semantic schemas, and supported-throughput evidence remain outside this structural boundary.
+      - "Sales reads native JSONB quotation, financial parameters and command acknowledgements after tenant/workspace/entity selection. Quotation arithmetic and digest are reproduced and replay binds the retained source and actor; this compatibility string reader has no separate application pre-parse graph budget, so this surface remains partial."
     next_action: Add authenticated producer/source provenance and centralized actor/disclosure authorization, then exercise bounded persisted-state profiles at declared throughput and live-service boundaries.
   - id: FI-014
     name: Local review-state JSON compatibility ingress
@@ -948,6 +950,11 @@ direct_tabular_parser_allowlist:
     surface_id: FI-023
     rationale: Parses only size- and hash-verified public responses after strict decoding, then requires an exact unique header set and complete rows before financial normalization.
 direct_json_parser_allowlist:
+  - path: reconforge/infrastructure/postgres_sales_revenue.py
+    parser: json.loads
+    call_count: 1
+    surface_id: FI-013
+    rationale: Parses only database-returned sales JSONB/text after scoped selection; quotation arithmetic and digest are reproduced, and command replay checks retained source, actor and version. No separate pre-parse graph budget is claimed.
   - path: reconforge/infrastructure/budget_control_repository.py
     parser: json.loads
     call_count: 1

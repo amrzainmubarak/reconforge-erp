@@ -1280,3 +1280,45 @@ include docs/execution/ACCEPTANCE_FINAL_2026-10-08.json
 include docs/execution/POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-08.json
 include docs/execution/POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-10-08.json
 include docs/execution/POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-08.json
+
+# Include every versioned module contract in source artifacts, including the
+# composed operational owners and their executable native/browser fixtures.
+recursive-include docs/modules *.yaml
+include docs/adr/0841-composed-sales-procurement-operational-finance.md
+include docs/operator/operational-finance.md
+include docs/operations/sales-revenue.md
+include docs/runbooks/procurement-operations.md
+include .github/scripts/verify_erp_browser.py
+include .github/scripts/verify_reliability_capacity.py
+include tests/__init__.py
+include tests/postgres_test_hygiene.py
+include tests/postgres_seed_contract.py
+include tests/erp_browser_restore.py
+include tests/erp_browser_seed.py
+include tests/gfo_browser_restore.py
+include tests/gfo_browser_runtime.py
+include tests/gfo_receipt_browser_seed.py
+include tests/test_operational_finance.py
+include tests/test_postgres_operational_finance.py
+include tests/test_postgres_operational_finance_api.py
+include tests/test_sales_revenue.py
+include tests/test_postgres_sales_revenue.py
+include tests/test_postgres_sales_owner_closure.py
+include tests/test_procurement_operations.py
+include tests/test_postgres_procurement_operations.py
+
+# Ship the editable Studio and its real API/browser clients in source archives.
+# Deliberately exclude node_modules, dist, test-results and generated outputs.
+recursive-include apps/web/src *.ts *.tsx *.css *.svg
+recursive-include apps/web/public *
+recursive-include apps/web/live *.ts *.tsx *.html
+recursive-include apps/web/e2e *.ts
+include apps/web/package.json
+include apps/web/package-lock.json
+include apps/web/index.html
+include apps/web/vite.config.ts
+include apps/web/vitest.config.ts
+include apps/web/playwright.config.ts
+include apps/web/tsconfig.json
+include apps/web/tsconfig.app.json
+include apps/web/tsconfig.node.json

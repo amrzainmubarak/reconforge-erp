@@ -21,6 +21,26 @@ class APIError(ValueError):
         self.message = message
 
 
+def financial_owner_phase_conflict(exc: Exception) -> bool:
+    """Recognize named owner rejections, including the native AR wrapper."""
+    from reconforge.infrastructure.postgres_receivables import PostgresReceivablesError
+
+    current: BaseException = exc
+    visited: set[int] = set()
+    for _ in range(4):
+        if id(current) in visited:
+            return False
+        visited.add(id(current))
+        if getattr(current, "sqlstate", None) == "23514" and getattr(
+            getattr(current, "diag", None), "constraint_name", None
+        ) in {"sales_revenue_owner_phase", "procurement_owner_phase"}:
+            return True
+        if not isinstance(current, PostgresReceivablesError) or current.__cause__ is None:
+            return False
+        current = current.__cause__
+    return False
+
+
 def request_id(request: Request) -> str:
     """Return the per-request id assigned by middleware."""
 

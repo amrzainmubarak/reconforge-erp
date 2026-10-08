@@ -20,6 +20,9 @@ export type OpenPanel = "notifications" | "quick" | "profile" | "accessibility" 
 
 const pageLabels: Record<StudioPage, MessageKey> = {
   dashboard: "dashboard",
+  salesRevenue: "salesRevenue",
+  procurementOperations: "procurementOperations",
+  enterpriseFinance: "enterpriseFinance",
   exceptions: "exceptions",
   evidence: "evidence",
   inventory: "inventory",

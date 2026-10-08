@@ -27,6 +27,8 @@ PrincipalType = Literal["user", "service_account"]
 HUMAN_ONLY_PERMISSIONS = frozenset(
     {
         "jobs.manage",
+        "sales.manage",
+        "sales.approve",
         "accounts.review",
         "accounts.complete",
         "audit.read",
@@ -57,6 +59,8 @@ HUMAN_ONLY_PERMISSIONS = frozenset(
 PRIVILEGED_STEP_UP_PERMISSIONS = frozenset(
     {
         "jobs.manage",
+        "sales.manage",
+        "sales.approve",
         "audit.read",
         "audit.verify",
         "close.manage",

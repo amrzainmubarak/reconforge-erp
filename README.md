@@ -29,6 +29,29 @@ ReconForge works beside ERP, accounting, inventory, banking, payroll, commerce, 
 
 It is deliberately positioned as a **finance-controls platform**, not a replacement ERP. The project prioritizes financial correctness, reproducibility, explainability, and honest capability boundaries over opaque automation.
 
+The development branch also contains **experimental operational transaction
+modules** that compose its existing financial engines under
+[ADR0841](docs/adr/0841-composed-sales-procurement-operational-finance.md):
+
+- [Service sales and revenue](docs/operations/sales-revenue.md): customer,
+  discounted quotation, independent approval, order, service completion,
+  AR/revenue posting, and one full cash collection with cash/AR posting.
+- [Stock purchase to pay](docs/runbooks/procurement-operations.md): supplier,
+  independently approved one-line PO, full receiving and FIFO with inventory/GL
+  posting, three-way supplier invoice, AP accrual, and reviewed full payment.
+- [Operational Finance](docs/operator/operational-finance.md): reviewed native
+  AR/AP source posting, immutable effect references, and a net posted period
+  activity trial balance with JSON export.
+
+These modules use authenticated PostgreSQL workspaces and the live Studio
+routes `/sales-revenue`, `/procurement-operations` and `/enterprise-finance`.
+They require configured master data and scoped human permissions. The initial
+cycles use functional currency and zero tax; stock sales/COGS, partial
+receiving or settlement, returns, credit notes, tax/FX and live bank execution
+remain outside their supported boundary. The
+[execution state](docs/execution/STATE.md) records acceptance for an exact source;
+the modules do not imply a complete ERP or production release.
+
 > [!IMPORTANT]
 > ReconForge is an alpha-stage, local-first toolkit for evaluation and controlled pilots. It does not issue audit opinions, provide compliance certification, or write transactions back to a source ERP.
 

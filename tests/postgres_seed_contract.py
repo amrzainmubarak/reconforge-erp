@@ -9,4 +9,5 @@ CURRENT_TENANT_SEEDED_PERMISSIONS = frozenset({
     "budget_control.read", "budget_control.manage", "budget_control.approve",
     "exceptions.read", "exceptions.manage", "payables.settle", "payables.reverse",
     "jobs.manage",
+    "sales.read", "sales.manage", "sales.approve",
 })

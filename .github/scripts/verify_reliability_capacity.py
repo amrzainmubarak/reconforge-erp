@@ -6,6 +6,7 @@ import argparse
 import json
 import platform
 import tempfile
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter_ns
@@ -27,39 +28,43 @@ def run_drill() -> dict[str, Any]:
         database = Path(temporary) / "capacity.db"
         run_migrations(database)
         window = HttpReliabilityWindow(capacity=REQUESTS)
-        client = TestClient(create_api_app(database, reliability_window=window))
-        api_started = perf_counter_ns()
-        statuses = [client.get("/api/v1/health").status_code for _ in range(REQUESTS)]
-        api_wall_ms = (perf_counter_ns() - api_started) // 1_000_000
-        connection = connect(database)
-        created_at = "2026-07-30T10:00:00Z"
-        rows = [
-            (
-                f"job-{index:04d}", 1, 1, "queued", "capacity", f"key-{index:04d}", "tenant",
-                "workspace", "", "a" * 64, "b" * 64, "worker/1", 0, 1, "", 0, 1, "",
-                created_at, created_at, "", "", None, "", "",
+        with TestClient(create_api_app(database, reliability_window=window)) as client:
+            api_started = perf_counter_ns()
+            statuses = [client.get("/api/v1/health").status_code for _ in range(REQUESTS)]
+            api_wall_ms = (perf_counter_ns() - api_started) // 1_000_000
+        with closing(connect(database)) as connection:
+            created_at = "2026-07-30T10:00:00Z"
+            rows = [
+                (
+                    f"job-{index:04d}", 1, 1, "queued", "capacity", f"key-{index:04d}", "tenant",
+                    "workspace", "", "a" * 64, "b" * 64, "worker/1", 0, 1, "", 0, 1, "",
+                    created_at, created_at, "", "", None, "", "",
+                )
+                for index in range(QUEUED_JOBS)
+            ]
+            connection.executemany(
+                """INSERT INTO durable_jobs (
+                    id,schema_version,version,status,idempotency_scope,idempotency_key,tenant_id,workspace_id,entity_id,
+                    input_digest,config_digest,worker_version,completed_units,total_units,checkpoint_digest,retry_count,
+                    retry_ceiling,safe_error_code,created_at,updated_at,started_at,completed_at,output_manifest_schema_version,
+                    output_manifest_digest,output_manifest_reference
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                rows,
             )
-            for index in range(QUEUED_JOBS)
-        ]
-        connection.executemany(
-            "INSERT INTO durable_jobs VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            rows,
-        )
-        connection.commit()
-        collector = SQLiteReliabilityCollector(
-            connection, http_window=window, dependency_probes=(lambda: True,), memory_mib=process_memory_mib
-        )
-        query_started = perf_counter_ns()
-        overloaded = collector.collect(observed_at=datetime(2026, 7, 30, 10, 10, tzinfo=UTC))
-        query_ms = (perf_counter_ns() - query_started) // 1_000_000
-        overloaded_alerts = {result.policy_id: result for result in evaluate_alerts(overloaded.values)}
-        connection.execute(
-            "UPDATE durable_jobs SET status = 'completed', completed_units = total_units, completed_at = updated_at"
-        )
-        connection.commit()
-        recovered = collector.collect(observed_at=datetime(2026, 7, 30, 10, 11, tzinfo=UTC))
-        recovered_alerts = {result.policy_id: result for result in evaluate_alerts(recovered.values)}
-        connection.close()
+            connection.commit()
+            collector = SQLiteReliabilityCollector(
+                connection, http_window=window, dependency_probes=(lambda: True,), memory_mib=process_memory_mib
+            )
+            query_started = perf_counter_ns()
+            overloaded = collector.collect(observed_at=datetime(2026, 7, 30, 10, 10, tzinfo=UTC))
+            query_ms = (perf_counter_ns() - query_started) // 1_000_000
+            overloaded_alerts = {result.policy_id: result for result in evaluate_alerts(overloaded.values)}
+            connection.execute(
+                "UPDATE durable_jobs SET status = 'completed', completed_units = total_units, completed_at = updated_at"
+            )
+            connection.commit()
+            recovered = collector.collect(observed_at=datetime(2026, 7, 30, 10, 11, tzinfo=UTC))
+            recovered_alerts = {result.policy_id: result for result in evaluate_alerts(recovered.values)}
     return {
         "schema_version": 1,
         "profile": "local-synthetic-capacity-and-backlog-recovery",

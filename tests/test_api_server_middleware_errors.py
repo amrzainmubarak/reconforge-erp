@@ -4,13 +4,64 @@ from __future__ import annotations
 
 from importlib import import_module
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
-from reconforge.api.errors import APIError
+from reconforge.api.errors import APIError, financial_owner_phase_conflict
 from reconforge.db import run_migrations
+from reconforge.infrastructure.postgres_receivables import PostgresReceivablesError
+
+
+class _NamedDatabaseRejection(Exception):
+    def __init__(self, state: str, constraint: str) -> None:
+        self.sqlstate = state
+        self.diag = SimpleNamespace(constraint_name=constraint)
+
+
+@pytest.mark.parametrize("constraint", ["sales_revenue_owner_phase", "procurement_owner_phase"])
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_named_owner_rejection_survives_only_known_native_wrapper(constraint: str, wrapped: bool) -> None:
+    failure: Exception = _NamedDatabaseRejection("23514", constraint)
+    if wrapped:
+        wrapper = PostgresReceivablesError("PostgreSQL Receivables operation failed.")
+        wrapper.__cause__ = failure
+        failure = wrapper
+    assert financial_owner_phase_conflict(failure)
+
+
+@pytest.mark.parametrize("state,constraint", [("23505", "sales_revenue_owner_phase"), ("23514", "other_check"), ("08006", "procurement_owner_phase")])
+def test_unrelated_native_failures_do_not_become_owner_conflicts(state: str, constraint: str) -> None:
+    failure = _NamedDatabaseRejection(state, constraint)
+    wrapper = PostgresReceivablesError("sales_revenue_owner_phase")
+    wrapper.__cause__ = failure
+    assert not financial_owner_phase_conflict(failure)
+    assert not financial_owner_phase_conflict(wrapper)
+
+
+def test_owner_rejection_does_not_follow_unknown_wrapper_or_implicit_context() -> None:
+    failure = _NamedDatabaseRejection("23514", "sales_revenue_owner_phase")
+    unknown = RuntimeError("unrelated wrapper")
+    unknown.__cause__ = failure
+    implicit = PostgresReceivablesError("PostgreSQL Receivables operation failed.")
+    implicit.__context__ = failure
+    assert not financial_owner_phase_conflict(unknown)
+    assert not financial_owner_phase_conflict(implicit)
+    assert not financial_owner_phase_conflict(Exception("23514 sales_revenue_owner_phase"))
+
+
+def test_native_owner_cause_inspection_is_bounded_and_cycle_safe() -> None:
+    cyclic = PostgresReceivablesError("cycle")
+    cyclic.__cause__ = cyclic
+    assert not financial_owner_phase_conflict(cyclic)
+    failure: Exception = _NamedDatabaseRejection("23514", "sales_revenue_owner_phase")
+    for _ in range(5):
+        wrapper = PostgresReceivablesError("deep wrapper")
+        wrapper.__cause__ = failure
+        failure = wrapper
+    assert not financial_owner_phase_conflict(failure)
 
 
 def _client(tmp_path: Path, *, web_root: Path | None = None) -> TestClient:

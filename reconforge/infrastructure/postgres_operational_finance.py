@@ -167,17 +167,22 @@ class PostgresOperationalFinanceRepository:
             _fail("Canonical source hierarchy is unauthorized.", "operational_scope_denied")
 
     def _source(self, kind: str, source_id: str, *, final: bool = False, settlement: bool = False) -> dict[str, Any]:
-        # The closed source kind selects an internal constant, never SQL input.
-        table = "ar_invoices" if kind in {"ARInvoice", "ARReceipt"} else "ap_supplier_invoices"
+        # The closed source kind selects a complete literal statement.
+        is_receivable = kind in {"ARInvoice", "ARReceipt"}
+        source_query = (
+            "SELECT status FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s FOR UPDATE"
+            if is_receivable
+            else "SELECT status FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s FOR UPDATE"
+        )
         rows = records(
             self.connection.execute(
-                f"SELECT status FROM reconforge.{table} WHERE tenant_id=%s AND id=%s FOR UPDATE",
+                source_query,
                 (self.tenant_id, source_id),
             )
         )
         if not rows:
             _fail("Native source is absent or outside scope.", "operational_source_not_found")
-        states = {"Approved", "PartiallyPaid", "Paid"} if table == "ar_invoices" else {"Approved", "Paid"}
+        states = {"Approved", "PartiallyPaid", "Paid"} if is_receivable else {"Approved", "Paid"}
         if not final and kind == "ARInvoice":
             states |= {"Submitted"}
         if rows[0]["status"] not in states:

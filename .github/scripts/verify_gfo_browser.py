@@ -27,8 +27,10 @@ from psycopg import sql
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+from reconforge.infrastructure.postgres import PostgresTenantBoundary  # noqa: E402
 from tests.gfo_browser_runtime import seed_browser_jobs  # noqa: E402
 from tests.gfo_receipt_browser_seed import seed_receipt_browser  # noqa: E402
+from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime  # noqa: E402
 
 IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
 
@@ -40,6 +42,38 @@ def source_digest(directory: Path = ROOT) -> str:
         digest.update(name.encode())
         digest.update(hashlib.sha256((directory / name).read_bytes()).digest())
     return digest.hexdigest()
+
+
+def built_web_digest(directory: Path) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(p for p in directory.rglob("*") if p.is_file()):
+        digest.update(path.relative_to(directory).as_posix().encode())
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
+
+
+def verify_persisted_browser_effects(runtime: ReceiptRuntime) -> dict[str, object]:
+    # Every read uses the same non-owner boundary as the actual HTTPS server.
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work",
+                                                             organization_id="org", legal_entity_id="entity") as connection:
+        states = {row["id"]: row["status"] for row in connection.execute(
+            "SELECT id,status FROM reconforge.durable_jobs WHERE tenant_id=%s", (runtime.tenant,))}
+        assert states == {"GFO-job-failed": "queued", "GFO-job-queued": "cancelled"}
+        plan_rows = connection.execute(
+            "SELECT p.id,r.reviewer_actor_id,p.preparer_actor_id,l.posting_effect_id FROM reconforge.inventory_receipt_plans p "
+            "JOIN reconforge.inventory_receipt_reviews r ON r.tenant_id=p.tenant_id AND r.plan_id=p.id "
+            "JOIN reconforge.inventory_receipt_links l ON l.tenant_id=p.tenant_id AND l.plan_id=p.id "
+            "WHERE p.tenant_id=%s", (runtime.tenant,)).fetchall()
+        assert len(plan_rows) == 2 and all(row["reviewer_actor_id"] != row["preparer_actor_id"] for row in plan_rows)
+        effect_count = connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"]
+        assert effect_count == 2
+        layers = connection.execute("SELECT remaining_quantity_scaled,remaining_value_minor FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchall()
+        assert len(layers) == 1 and dict(layers[0]) == {"remaining_quantity_scaled": 0, "remaining_value_minor": 0}
+        transitions = connection.execute("SELECT count(*) n FROM reconforge.durable_job_transitions WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"]
+        assert transitions == 6
+        return {"job_states": states, "job_transitions": transitions, "committed_receipt_plans": len(plan_rows),
+                "retained_original_and_inverse_finance_effects": effect_count,
+                "remaining_stock_quantity_scaled": 0, "remaining_stock_value_minor": 0}
 
 
 def main() -> int:
@@ -63,7 +97,7 @@ def main() -> int:
         "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip(),  # nosec B603 B607
         "source_sha256": source_digest(runtime_root), "runtime_root": str(runtime_root),
         "tooling_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-        "status": "failed",
+        "built_web_sha256": built_web_digest(args.web_root.resolve()), "status": "failed",
     }
     started = time.monotonic()
     def run(argv: list[str], *, environment: dict[str, str] | None = None, check: bool = True, directory: Path = ROOT) -> subprocess.CompletedProcess[str]:
@@ -142,8 +176,13 @@ def main() -> int:
             browser = run([executable, "--prefix", "apps/web", "playwright", "test", "--config", "apps/web/live/gfo.playwright.config.ts"], environment=environment, check=False)
             (output / "browser.log").write_text(browser.stdout + browser.stderr, encoding="utf-8")
             report["browser_exit_code"] = browser.returncode
+        if (output / "playwright.json").is_file():
+            report["browser_counts"] = json.loads((output / "playwright.json").read_text(encoding="utf-8"))["stats"]
+        if browser.returncode == 0:
+            report["persisted_effects"] = verify_persisted_browser_effects(runtime)
+        report["built_web_unchanged"] = built_web_digest(args.web_root.resolve()) == report["built_web_sha256"]
         report["source_unchanged"] = source_digest(runtime_root) == report["source_sha256"]
-        report["status"] = "passed" if browser.returncode == 0 and report["source_unchanged"] else "failed"
+        report["status"] = "passed" if browser.returncode == 0 and report["source_unchanged"] and report["built_web_unchanged"] else "failed"
     except Exception as exc:
         diagnostic = str(exc)
         for value in secret_values:

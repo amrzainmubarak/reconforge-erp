@@ -8,7 +8,7 @@ const entity = process.env.RECONFORGE_GFO_JOB_ENTITY ?? "ENTITY-GFO";
 const password = process.env.RECONFORGE_GFO_LIVE_PASSWORD ?? "Synthetic-Gfo-2026-Only";
 test("real persisted job operator lifecycle, read-only controls and mobile", async ({ page }) => {
   await page.goto(`${base}/jobs`);
-  await page.getByLabel("Tenant ID", { exact: true }).fill(tenant);
+  await page.getByLabel("Tenant", { exact: true }).fill(tenant);
   await page.getByLabel("Username", { exact: true }).fill("gfo-reader");
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -20,7 +20,7 @@ test("real persisted job operator lifecycle, read-only controls and mobile", asy
   await expect(page.getByText("CREATED", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cancel job", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await page.getByLabel("Tenant ID", { exact: true }).fill(tenant);
+  await page.getByLabel("Tenant", { exact: true }).fill(tenant);
   await page.getByLabel("Username", { exact: true }).fill("gfo-admin");
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -33,7 +33,7 @@ test("real persisted job operator lifecycle, read-only controls and mobile", asy
   await page.getByRole("button", { name: "Inspect job: GFO-job-queued" }).click();
   await page.getByRole("button", { name: "Cancel job", exact: true }).click();
   await page.reload();
-  await page.getByLabel("Tenant ID", { exact: true }).fill(tenant);
+  await page.getByLabel("Tenant", { exact: true }).fill(tenant);
   await page.getByLabel("Username", { exact: true }).fill("gfo-admin");
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();

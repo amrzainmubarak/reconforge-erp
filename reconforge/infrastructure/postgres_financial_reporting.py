@@ -740,4 +740,12 @@ class PostgresFinancialReportingRepository:
                     (self.tenant_id, scope.workspace_id),
                 )
             )
-            return {**scope.payload(), "accounts": accounts, "periods": periods, "journals": journals}
+            currency = records(
+                self.connection.execute(
+                    "SELECT e.currency_code,c.minor_units AS currency_precision FROM reconforge.legal_entities e JOIN reconforge.currencies c ON c.tenant_id=e.tenant_id AND c.code=e.currency_code AND c.active WHERE e.tenant_id=%s AND e.id=%s",
+                    (self.tenant_id, scope.legal_entity_id),
+                )
+            )
+            if len(currency) != 1:
+                fail("The selected entity requires one active functional currency.")
+            return {**scope.payload(), **currency[0], "accounts": accounts, "periods": periods, "journals": journals}

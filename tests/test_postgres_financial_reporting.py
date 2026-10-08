@@ -142,14 +142,15 @@ def manual(rt: ReceiptRuntime, number: str, debit: str, credit: str, amount: int
             actor_label=actor.username,
         )
     with rt.actor("checker") as (connection, _, actor):
-        reviewed = PostgresFinanceCoreRepository(connection, rt.tenant).validate_entry(
+        PostgresFinanceCoreRepository(connection, rt.tenant).validate_entry(
             entry["id"], reason="Independent actual movement", actor_label=actor.username
         )
+        reviewed = PostgresFinancePostingRepository(connection, rt.tenant).preview(entry["id"], actor=actor)
     with rt.actor("poster") as (connection, _, actor):
         PostgresFinancePostingRepository(connection, rt.tenant).post(
             entry["id"],
             command_id=number,
-            expected_validation_digest=reviewed["validation_digest"],
+            expected_validation_digest=reviewed["current_content_digest"],
             reason="Actual movement",
             actor=actor,
         )
@@ -279,7 +280,10 @@ def test_native_detached_review_and_generic_post_and_selfapproval_are_refused(
             command_id="opening-review",
             actor=actor,
         )
-    with rt.actor("poster") as (connection, _, actor), pytest.raises(FinancePostingError, match="complete reviewed source"):
+    with (
+        rt.actor("poster") as (connection, _, actor),
+        pytest.raises(FinancePostingError, match="complete reviewed source"),
+    ):
         PostgresFinancePostingRepository(connection, rt.tenant).post(
             plan["entry_id"],
             command_id="generic",

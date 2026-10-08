@@ -113,7 +113,7 @@ DECLARE m RECORD;r RECORD;a JSONB;
 BEGIN
  SELECT * INTO m FROM reconforge.financial_reporting_maps WHERE tenant_id=t AND id=i;
  IF m IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_reporting_owner_phase',MESSAGE='Reporting map source is required.'; END IF;
- IF reconforge.irp_digest(m.payload) IS DISTINCT FROM m.map_digest OR m.payload->>'contract_version'<>'financial-reporting-map-v1'
+ IF reconforge.irp_digest(m.payload) IS DISTINCT FROM m.map_digest OR m.payload->>'contract_version' IS DISTINCT FROM 'financial-reporting-map-v1'
  OR (m.payload->>'id',m.payload->>'workspace_id',m.payload->>'organization_id',m.payload->>'legal_entity_id',m.payload->>'preparer_actor_id') IS DISTINCT FROM (m.id,m.workspace_id,m.organization_id,m.legal_entity_id,m.preparer_actor_id)
  OR jsonb_typeof(m.payload->'accounts')<>'array' OR jsonb_array_length(m.payload->'accounts') NOT BETWEEN 1 AND 1000
  OR (SELECT count(*) FROM jsonb_object_keys(m.payload))<>8
@@ -148,13 +148,15 @@ BEGIN
  SELECT * INTO period FROM reconforge.fiscal_periods WHERE tenant_id=t AND id=e.period_id AND application_workspace_id=p.workspace_id;
  captured:=reconforge.fr_snapshot(t,p.entry_id,p.organization_id,p.legal_entity_id);
  IF e IS NULL OR m IS NULL OR period IS NULL OR reconforge.irp_digest(p.payload) IS DISTINCT FROM p.plan_digest
- OR p.payload->>'contract_version'<>'financial-opening-v1' OR p.payload->'snapshot' IS DISTINCT FROM captured OR reconforge.irp_digest(captured) IS DISTINCT FROM p.validation_digest
+ OR p.payload->>'contract_version' IS DISTINCT FROM 'financial-opening-v1' OR p.payload->'snapshot' IS DISTINCT FROM captured OR reconforge.irp_digest(captured) IS DISTINCT FROM p.validation_digest
  OR (p.payload->>'id',p.payload->>'entry_id',p.payload->>'workspace_id',p.payload->>'organization_id',p.payload->>'legal_entity_id',p.payload->>'map_id',p.payload->>'map_digest',p.payload->>'preparer_actor_id')
  IS DISTINCT FROM (p.id,p.entry_id,p.workspace_id,p.organization_id,p.legal_entity_id,p.map_id,m.map_digest,p.preparer_actor_id)
  OR (e.workspace_id,e.entry_number,e.external_reference,e.source_type,e.preparer_actor_id,e.reverses_posting_id)
  IS DISTINCT FROM (p.workspace_id,p.id,p.id,'Manual',p.preparer_actor_id,NULL::text)
  OR (p.payload->>'period_id',p.payload->>'posting_date',p.payload->>'reason',p.payload->>'currency_code',(p.payload->>'currency_precision')::integer,(p.payload->>'amount_minor')::bigint)
  IS DISTINCT FROM (e.period_id,e.posting_date,e.description,e.currency_code,e.currency_precision,e.total_debit_minor)
+ OR p.id IS DISTINCT FROM 'OB1-'||upper(left(reconforge.irp_digest(jsonb_build_array(t,jsonb_build_object('workspace_id',p.workspace_id,'organization_id',p.organization_id,'legal_entity_id',p.legal_entity_id))),32))
+ OR NOT EXISTS(SELECT 1 FROM reconforge.finance_journals j WHERE j.tenant_id=t AND j.id=e.journal_id AND j.journal_code=p.payload->>'journal_code')
  OR e.total_debit_minor<>e.total_credit_minor OR e.total_debit_minor NOT BETWEEN 1 AND 9000000000000000000 OR e.posting_date<>period.start_date::text
  OR (SELECT count(*) FROM jsonb_object_keys(p.payload))<>20
  OR jsonb_array_length(captured->'lines') NOT BETWEEN 2 AND 64 OR jsonb_array_length(p.payload->'lines')<>jsonb_array_length(captured->'lines')

@@ -15,4 +15,6 @@ def test_receipt_admission_upgrade_is_frozen_and_preserves_populated_history():
     assert "currency_registry_admission_lock" in assignments["UPGRADE_SQL"]
     assert "IF EXISTS(SELECT 1 FROM reconforge.inventory_receipt_plans)" in assignments["DOWNGRADE_SQL"]
     assert "RAISE EXCEPTION" in assignments["DOWNGRADE_SQL"]
+    assert "rolsuper OR rolbypassrls" in assignments["DOWNGRADE_SQL"]
+    assert "rolsuper OR rolbypassrls" in assignments["UPGRADE_SQL"]
     assert "AND i.item_type='Stock'" in assignments["PREVIOUS_ADMISSION_SQL"]

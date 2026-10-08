@@ -8,6 +8,11 @@ down_revision = "0107_pg_job_operations"
 branch_labels = None
 depends_on = None
 UPGRADE_SQL = r"""
+DO $authority$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND (rolsuper OR rolbypassrls)) THEN
+  RAISE EXCEPTION 'Receipt admission migration requires bypass of forced row security.';
+ END IF;
+END $authority$;
 
 CREATE OR REPLACE FUNCTION reconforge.irp_admit(j JSONB) RETURNS VOID
 LANGUAGE plpgsql SET search_path=pg_catalog AS $irp$
@@ -140,6 +145,11 @@ BEGIN
 END $irp$;
 """
 DOWNGRADE_SQL = r"""
+DO $authority$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND (rolsuper OR rolbypassrls)) THEN
+  RAISE EXCEPTION 'Receipt admission migration requires bypass of forced row security.';
+ END IF;
+END $authority$;
 DO $guard$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.inventory_receipt_plans) THEN
   RAISE EXCEPTION 'Retained receipt plans prohibit admission downgrade; restore a verified pre-upgrade backup.';

@@ -1,0 +1,13 @@
+.receipt-workspace fieldset { min-inline-size: 0; border: 0; padding: 0; margin: 0; }
+.receipt-workspace form, .receipt-workspace fieldset { display: grid; gap: 1rem; }
+.receipt-workspace label { display: grid; gap: .4rem; color: var(--text-secondary); }
+.receipt-workspace input { inline-size: 100%; min-inline-size: 0; box-sizing: border-box; padding: .7rem; border: 1px solid var(--border); border-radius: .5rem; color: var(--text); background: var(--surface); font: inherit; }
+.receipt-workspace button { justify-self: start; margin-block: .5rem; padding: .7rem 1rem; border: 1px solid var(--border); border-radius: .5rem; color: var(--text); background: var(--brand-soft); font: inherit; cursor: pointer; }
+.receipt-workspace button:disabled { cursor: default; opacity: .6; }
+.receipt-workspace input:focus-visible, .receipt-workspace button:focus-visible, .receipt-workspace summary:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+.receipt-workspace code { overflow-wrap: anywhere; }
+.receipt-workspace table { inline-size: 100%; border-collapse: collapse; text-align: start; }
+.receipt-workspace th, .receipt-workspace td { padding: .7rem; border-block-end: 1px solid var(--border); text-align: start; }
+.receipt-workspace details { margin-block: 1rem; }
+.receipt-workspace summary { cursor: pointer; font-weight: 600; }
+.receipt-workspace pre { padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: .5rem; }

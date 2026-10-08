@@ -281,6 +281,15 @@ class PostgresFinancePostingRepository:
         self._read(actor)
         with self._transaction():
             entry = posting_entry(self.connection, self.tenant_id, text(entry_id, "entry_id"))
+            if entry["entry_number"].upper().startswith("FI1-") or entry["id"].upper().startswith("FI1-"):
+                from reconforge.infrastructure.postgres_financial_installments import _InstallmentPostingParticipant
+
+                if not isinstance(_source_owner, _InstallmentPostingParticipant) or not _source_owner.admits(
+                    self.connection, self.tenant_id, entry["id"]
+                ):
+                    raise FinancePostingError(
+                        "posting_source_unsupported", "Installments must post through their complete settlement owner."
+                    )
             snapshot = posting_snapshot(self.connection, self.tenant_id, entry)
             return {
                 "entry_id": entry["id"],
@@ -362,6 +371,15 @@ class PostgresFinancePostingRepository:
         reason = text(reason, "reason", maximum=500)
         with self._transaction(write=True):
             entry = posting_entry(self.connection, self.tenant_id, text(entry_id, "entry_id"))
+            if entry["entry_number"].upper().startswith("OB1-") or entry["id"].upper().startswith("OB1-"):
+                from reconforge.infrastructure.postgres_financial_reporting import _OpeningPostingParticipant
+
+                if not isinstance(_source_owner, _OpeningPostingParticipant) or not _source_owner.admits(
+                    self.connection, self.tenant_id, entry["id"]
+                ):
+                    raise FinancePostingError(
+                        "posting_source_unsupported", "Opening balances must post through their complete reviewed source owner."
+                    )
             if entry["entry_number"].upper().startswith("OPS1-") or entry["id"].upper().startswith("OPS1-"):
                 from reconforge.infrastructure.postgres_operational_finance import _OperationalPostingParticipant
 
@@ -477,7 +495,7 @@ class PostgresFinancePostingRepository:
             if original["source_kind"] not in {"Manual", "Reversal"}:
                 raise FinancePostingError("posting_source_unsupported", "Inventory postings require a reviewed full source inverse.")
             source = posting_entry(self.connection, self.tenant_id, original["entry_id"])
-            if source["entry_number"].upper().startswith("OPS1-") or source["id"].upper().startswith("OPS1-"):
+            if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-")):
                 raise FinancePostingError(
                     "posting_source_unsupported", "Operational sources require a reviewed native source inverse."
                 )

@@ -94,7 +94,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 35  # Original 33 plus AR API and source-verified recovery.
+    assert len(commands) == 36  # Prior 35 plus reviewed inventory receipt acceptance.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -112,6 +112,8 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert ar_api in groups["receivables"]
     recovery = "uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q"
     assert recovery in groups["receivables"]
+    receipt = "uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py -q"
+    assert receipt in groups["inventory-payables"]
     assert "verify_redis_live.py" in "\n".join(groups["native"])
 
 

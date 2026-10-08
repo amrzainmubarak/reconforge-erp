@@ -81,8 +81,13 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
       await sales(page);
     }
     const number = "BROWSER-SALE";
+    await maker.locator("summary").filter({ hasText: /^Customers & credit$/ }).click();
+    for (const [label, value] of Object.entries({ "Customer code": "BROWSER-CUSTOMER", "Customer name": "Actual browser customer", Currency: "USD", "Credit limit (minor units)": "1000000", "Payment terms (days)": "30" })) await maker.getByLabel(label, { exact: true }).fill(value);
+    const customerSaved = maker.waitForResponse(response => response.url().endsWith("/receivables/customers") && response.request().method() === "POST");
+    await maker.getByRole("button", { name: "Save customer", exact: true }).click();
+    expect((await customerSaved).status()).toBe(200);
     await maker.getByRole("button", { name: "Load active customers", exact: true }).click();
-    await maker.getByRole("combobox", { name: "Customer", exact: true }).selectOption("CUSTOMER");
+    await maker.getByRole("combobox", { name: "Customer", exact: true }).selectOption("BROWSER-CUSTOMER");
     for (const [label, value] of Object.entries({ "Quotation number": number, "Business date": "2026-10-08", "Valid until": "2026-10-20", "Service description": "Completed professional service", Quantity: "2", "Unit price (minor units)": "5000", "Discount (basis points)": "200" })) {
       await maker.getByLabel(label, { exact: true }).fill(value);
     }
@@ -123,10 +128,17 @@ test("normal HTTPS ERP service revenue and stock purchase share exact reviewed G
     expect(paidSale.invoice.outstanding_minor).toBe("0");
 
     for (const page of [maker, checker, poster]) await procurement(page);
+    await maker.locator("summary").filter({ hasText: /^Supplier management$/ }).click();
+    const supplier = maker.getByRole("form", { name: "Supplier management", exact: true });
+    for (const [label, value] of Object.entries({ "Supplier code": "BROWSER-SUPPLIER", "Supplier name": "Actual browser supplier", "Tax identifier (optional)": "SYNTHETIC-BROWSER-ID" })) await supplier.getByLabel(label, { exact: true }).fill(value);
+    const supplierSaved = maker.waitForResponse(response => response.url().endsWith("/payables/suppliers") && response.request().method() === "POST");
+    await supplier.getByRole("button", { name: "Save active supplier", exact: true }).click();
+    expect((await supplierSaved).status()).toBe(200);
+    await expect(supplier.getByRole("status")).toHaveText("Supplier saved and available for purchases.");
     const purchaseNumber = "BROWSER-PURCHASE";
     const order = maker.getByRole("form", { name: "New stock purchase", exact: true });
     for (const [label, value] of Object.entries({ "Purchase number": purchaseNumber, Quantity: "10", "Unit price in minor units": "1200", "Posting date": "2026-10-08" })) await order.getByLabel(label, { exact: true }).fill(value);
-    for (const [label, value] of Object.entries({ Supplier: "SUP", Item: "ITEM", "Open fiscal period": "period", "Receiving location": "MAIN/STOCK", "FIFO valuation policy": "FIFO", "Accrual and payment journal": "STOCK", "Accounts payable": "AP", "Cash account": "CASH" })) await order.getByRole("combobox", { name: label, exact: true }).selectOption(value);
+    for (const [label, value] of Object.entries({ Supplier: "BROWSER-SUPPLIER", Item: "ITEM", "Open fiscal period": "period", "Receiving location": "MAIN/STOCK", "FIFO valuation policy": "FIFO", "Accrual and payment journal": "STOCK", "Accounts payable": "AP", "Cash account": "CASH" })) await order.getByRole("combobox", { name: label, exact: true }).selectOption(value);
     const purchaseCreated = maker.waitForResponse((response) => response.url().endsWith("/procurement-operations/cycles") && response.request().method() === "POST");
     await order.getByRole("button", { name: "Create purchase order", exact: true }).click();
     const purchaseReply = await purchaseCreated;

@@ -1,0 +1,13 @@
+.job-operations { display: grid; gap: 1rem; min-width: 0; }
+.job-form, .job-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; padding: 1rem; }
+.job-form label, .job-toolbar label { display: grid; gap: .5rem; min-width: 0; }
+.job-form input, .job-form select, .job-toolbar select { max-width: 100%; padding: .5rem; }
+.job-results, .job-detail { padding: 1rem; min-width: 0; }
+.job-list { list-style: none; padding: 0; }
+.job-list li, .job-detail li { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; border-bottom: 1px solid var(--border-color, #768195); padding: .75rem 0; }
+.job-list bdi, .job-detail bdi { overflow-wrap: anywhere; }
+.job-list li > bdi { flex: 1 1 12rem; }
+.job-operations nav { display: flex; gap: 1rem; margin-block-start: 1rem; }
+.job-operations button { min-height: 2.75rem; padding: .5rem .75rem; }
+.job-operations button:focus-visible, .job-operations input:focus-visible, .job-operations select:focus-visible { outline: 3px solid #627de5; outline-offset: 3px; }
+@media (max-width: 600px) { .job-form label, .job-toolbar label { flex: 1 1 100%; } .job-list li > span { flex: 1 1 100%; } }

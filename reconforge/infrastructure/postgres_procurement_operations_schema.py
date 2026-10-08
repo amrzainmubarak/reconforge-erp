@@ -99,10 +99,98 @@ BEGIN
  END IF;
  END IF;
 END $$;
-CREATE FUNCTION reconforge.procurement_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+CREATE FUNCTION reconforge.procurement_verify_cycle(c reconforge.procurement_cycles) RETURNS VOID
+LANGUAGE plpgsql SET search_path=pg_catalog AS $$
 DECLARE p reconforge.ap_purchase_orders%ROWTYPE;l reconforge.ap_purchase_order_lines%ROWTYPE;
  r reconforge.inventory_receipt_plans%ROWTYPE;g reconforge.ap_goods_receipts%ROWTYPE;i reconforge.ap_supplier_invoices%ROWTYPE;
  qty NUMERIC;a reconforge.operational_finance_plans%ROWTYPE;q reconforge.operational_finance_plans%ROWTYPE;ap_account TEXT;cash_account TEXT;
+BEGIN
+ SELECT * INTO p FROM reconforge.ap_purchase_orders WHERE tenant_id=c.tenant_id AND id=c.purchase_order_id;
+ SELECT * INTO l FROM reconforge.ap_purchase_order_lines WHERE tenant_id=c.tenant_id AND purchase_order_id=p.id;
+ qty:=(c.request_json->>'quantity')::numeric;
+ IF p IS NULL OR l IS NULL OR (SELECT count(*) FROM reconforge.ap_purchase_order_lines WHERE tenant_id=c.tenant_id AND purchase_order_id=p.id)<>1
+ OR (p.workspace_id,p.organization_id,p.legal_entity_id) IS DISTINCT FROM (c.workspace_id,c.organization_id,c.legal_entity_id)
+ OR p.currency_code<>c.request_json->>'currency_code' OR l.item_code<>c.request_json->>'item_code'
+ OR l.ordered_quantity<>qty OR l.unit_price_minor<>(c.request_json->>'unit_price_minor')::bigint OR l.tax_minor<>0
+ OR qty*l.unit_price_minor<>c.total_minor THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement source differs from its exact purchase order.'; END IF;
+ IF reconforge.procurement_actor_id(c.tenant_id,p.created_by) IS DISTINCT FROM c.creator_actor_id
+ OR c.stage=0 AND p.status<>'Draft' OR c.stage=1 AND p.status<>'Submitted' OR c.stage>=2 AND p.status<>'Approved' THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement requires its current approved purchase order.'; END IF;
+ IF c.stage>=2 AND reconforge.procurement_actor_id(c.tenant_id,p.approved_by)=c.creator_actor_id THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement order approval requires an independent canonical identity.'; END IF;
+ IF c.stage>=3 THEN
+ SELECT * INTO r FROM reconforge.inventory_receipt_plans WHERE tenant_id=c.tenant_id AND id=c.receipt_plan_id;
+ IF r IS NULL OR r.operation<>'Receipt' OR (r.workspace_id,r.organization_id,r.legal_entity_id) IS DISTINCT FROM (c.workspace_id,c.organization_id,c.legal_entity_id)
+ OR r.currency_code<>p.currency_code OR r.total_value_minor<>c.total_minor OR r.quantity_scaled<>qty*power(10::numeric,r.quantity_precision)
+ OR r.posting_date<>(c.request_json->>'posting_date')::date OR r.period_id<>c.request_json->>'period_id'
+ OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_items WHERE tenant_id=c.tenant_id AND id=r.item_id AND item_code=l.item_code) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement receipt capture differs from ordered stock and cost.'; END IF;
+ END IF;
+ IF c.stage>=4 AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_reviews WHERE tenant_id=c.tenant_id AND plan_id=r.id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement receipt needs independent review.'; END IF;
+ IF c.stage>=5 THEN
+ SELECT * INTO g FROM reconforge.ap_goods_receipts WHERE tenant_id=c.tenant_id AND id=c.goods_receipt_id;
+ IF g IS NULL OR g.purchase_order_id<>p.id OR g.workspace_id<>c.workspace_id OR g.status<>'Posted'
+ OR NOT EXISTS(SELECT 1 FROM reconforge.ap_goods_receipt_lines WHERE tenant_id=c.tenant_id AND receipt_id=g.id AND purchase_order_line_id=l.id AND received_quantity=qty)
+ OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_links WHERE tenant_id=c.tenant_id AND plan_id=r.id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement receiving requires stock/FIFO/GL and AP receipt atomically.'; END IF;
+ END IF;
+ IF c.stage>=6 THEN
+ SELECT * INTO i FROM reconforge.ap_supplier_invoices WHERE tenant_id=c.tenant_id AND id=c.invoice_id;
+ IF i IS NULL OR i.purchase_order_id<>p.id OR i.supplier_id<>p.supplier_id OR i.total_minor<>c.total_minor OR i.tax_minor<>0 OR i.currency_code<>p.currency_code
+ OR (i.workspace_id,i.organization_id,i.legal_entity_id) IS DISTINCT FROM (c.workspace_id,c.organization_id,c.legal_entity_id)
+ OR (c.stage=6 AND i.status<>'Matched') OR (c.stage BETWEEN 7 AND 12 AND i.status<>'Approved') OR (c.stage=13 AND i.status<>'Paid')
+ OR NOT EXISTS(SELECT 1 FROM reconforge.ap_three_way_matches WHERE tenant_id=c.tenant_id AND supplier_invoice_id=i.id AND status='Passed') THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement invoice needs exact passed three-way matching.'; END IF;
+ IF c.stage>=7 AND reconforge.procurement_actor_id(c.tenant_id,i.created_by)=reconforge.procurement_actor_id(c.tenant_id,i.approved_by) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement invoice approval requires an independent canonical identity.'; END IF;
+ END IF;
+ IF c.stage>=8 THEN
+ SELECT * INTO a FROM reconforge.operational_finance_plans WHERE tenant_id=c.tenant_id AND id=c.accrual_plan_id;
+ SELECT x.id INTO ap_account FROM reconforge.finance_accounts x JOIN reconforge.finance_journals j ON j.tenant_id=x.tenant_id AND j.chart_id=x.chart_id
+ WHERE x.tenant_id=c.tenant_id AND x.workspace_id=c.workspace_id AND x.account_code=c.request_json->>'ap_account_code'
+ AND j.workspace_id=c.workspace_id AND j.journal_code=c.request_json->>'journal_code';
+ IF a IS NULL OR a.source_kind<>'APInvoice' OR a.source_id<>i.id OR a.amount_minor<>c.total_minor OR a.currency_code<>p.currency_code
+ OR (a.workspace_id,a.organization_id,a.legal_entity_id) IS DISTINCT FROM (c.workspace_id,c.organization_id,c.legal_entity_id)
+ OR a.payload->'snapshot'->'entry'->>'period_id'<>c.request_json->>'period_id'
+ OR a.payload->'snapshot'->'entry'->>'posting_date'<>c.request_json->>'posting_date'
+ OR a.payload->'snapshot'->'lines'->0->>'account_id'<>r.receipt_clearing_account_id
+ OR ap_account IS NULL OR a.payload->'snapshot'->'lines'->1->>'account_id'<>ap_account THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement accrual requires this invoice, receipt clearing and exact AP mapping.'; END IF;
+ PERFORM reconforge.ops_close_plan(c.tenant_id,a.id);
+ END IF;
+ IF c.stage>=9 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=c.tenant_id AND plan_id=a.id AND plan_digest=a.plan_digest) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement accrual needs retained independent review.'; END IF;
+ IF c.stage>=10 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=c.tenant_id AND plan_id=a.id AND posting_effect_id=c.accrual_effect_id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement accrual effect must belong to this retained reviewed invoice plan.'; END IF;
+ IF c.stage>=11 THEN
+ SELECT * INTO q FROM reconforge.operational_finance_plans WHERE tenant_id=c.tenant_id AND id=c.payment_plan_id;
+ SELECT x.id INTO cash_account FROM reconforge.finance_accounts x JOIN reconforge.finance_journals j ON j.tenant_id=x.tenant_id AND j.chart_id=x.chart_id
+ WHERE x.tenant_id=c.tenant_id AND x.workspace_id=c.workspace_id AND x.account_code=c.request_json->>'cash_account_code'
+ AND j.workspace_id=c.workspace_id AND j.journal_code=c.request_json->>'journal_code';
+ IF q IS NULL OR q.source_kind<>'APPayment' OR q.source_id<>i.id OR q.amount_minor<>c.total_minor OR q.currency_code<>p.currency_code
+ OR (q.workspace_id,q.organization_id,q.legal_entity_id) IS DISTINCT FROM (c.workspace_id,c.organization_id,c.legal_entity_id)
+ OR q.payload->'snapshot'->'entry'->>'period_id'<>c.request_json->>'period_id'
+ OR q.payload->'snapshot'->'entry'->>'posting_date'<>c.request_json->>'posting_date'
+ OR q.payload->'snapshot'->'lines'->0->>'account_id'<>ap_account
+ OR cash_account IS NULL OR q.payload->'snapshot'->'lines'->1->>'account_id'<>cash_account THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement payment requires this invoice and exact AP/cash mapping.'; END IF;
+ PERFORM reconforge.ops_close_plan(c.tenant_id,q.id);
+ END IF;
+ IF c.stage>=12 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=c.tenant_id AND plan_id=q.id AND plan_digest=q.plan_digest) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement payment needs retained independent review.'; END IF;
+ IF c.stage=13 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=c.tenant_id AND plan_id=q.id AND posting_effect_id=c.payment_effect_id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement payment effect must belong to this retained reviewed payment plan.'; END IF;
+ IF c.stage>=7 AND i.status NOT IN ('Approved','Paid') OR c.stage>=10 AND c.accrual_effect_id IS NULL THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement needs independently approved invoice and retained accrual.'; END IF;
+ IF c.stage=13 AND (i.status<>'Paid' OR c.payment_effect_id IS NULL OR NOT EXISTS(SELECT 1 FROM reconforge.ap_payment_links
+ WHERE tenant_id=c.tenant_id AND id=c.payment_link_id AND supplier_invoice_id=i.id AND finance_effect_id=c.payment_effect_id AND amount_minor=c.total_minor
+ AND (workspace_id,organization_id,legal_entity_id,currency_code,ap_account_id,cash_account_id)=(c.workspace_id,c.organization_id,c.legal_entity_id,p.currency_code,ap_account,cash_account))) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement paid state requires exact governed payment evidence.'; END IF;
+ RETURN;
+END $$;
+CREATE FUNCTION reconforge.procurement_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
 BEGIN
  IF TG_OP='DELETE' THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement source history is retained.'; END IF;
  IF TG_OP='UPDATE' AND (NEW.tenant_id,NEW.id,NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id,NEW.number,NEW.request_json,NEW.total_minor,NEW.purchase_order_id,NEW.creator_actor_id,NEW.created_at)
@@ -119,105 +207,14 @@ BEGIN
  (OLD.payment_effect_id IS NOT NULL AND NEW.payment_effect_id IS DISTINCT FROM OLD.payment_effect_id) OR
  (OLD.payment_link_id IS NOT NULL AND NEW.payment_link_id IS DISTINCT FROM OLD.payment_link_id)) THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement retained engine link is immutable.'; END IF;
- SELECT * INTO p FROM reconforge.ap_purchase_orders WHERE tenant_id=NEW.tenant_id AND id=NEW.purchase_order_id;
- SELECT * INTO l FROM reconforge.ap_purchase_order_lines WHERE tenant_id=NEW.tenant_id AND purchase_order_id=p.id;
- qty:=(NEW.request_json->>'quantity')::numeric;
- IF p IS NULL OR l IS NULL OR (SELECT count(*) FROM reconforge.ap_purchase_order_lines WHERE tenant_id=NEW.tenant_id AND purchase_order_id=p.id)<>1
- OR (p.workspace_id,p.organization_id,p.legal_entity_id) IS DISTINCT FROM (NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id)
- OR p.currency_code<>NEW.request_json->>'currency_code' OR l.item_code<>NEW.request_json->>'item_code'
- OR l.ordered_quantity<>qty OR l.unit_price_minor<>(NEW.request_json->>'unit_price_minor')::bigint OR l.tax_minor<>0
- OR qty*l.unit_price_minor<>NEW.total_minor THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement source differs from its exact purchase order.'; END IF;
- IF reconforge.procurement_actor_id(NEW.tenant_id,p.created_by) IS DISTINCT FROM NEW.creator_actor_id
- OR NEW.stage=0 AND p.status<>'Draft' OR NEW.stage=1 AND p.status<>'Submitted' OR NEW.stage>=2 AND p.status<>'Approved' THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement requires its current approved purchase order.'; END IF;
- IF NEW.stage>=2 AND reconforge.procurement_actor_id(NEW.tenant_id,p.approved_by)=NEW.creator_actor_id THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement order approval requires an independent canonical identity.'; END IF;
- IF NEW.stage>=3 THEN
- SELECT * INTO r FROM reconforge.inventory_receipt_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.receipt_plan_id;
- IF r IS NULL OR r.operation<>'Receipt' OR (r.workspace_id,r.organization_id,r.legal_entity_id) IS DISTINCT FROM (NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id)
- OR r.currency_code<>p.currency_code OR r.total_value_minor<>NEW.total_minor OR r.quantity_scaled<>qty*power(10::numeric,r.quantity_precision)
- OR r.posting_date<>(NEW.request_json->>'posting_date')::date OR r.period_id<>NEW.request_json->>'period_id'
- OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_items WHERE tenant_id=NEW.tenant_id AND id=r.item_id AND item_code=l.item_code) THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement receipt capture differs from ordered stock and cost.'; END IF;
- END IF;
- IF NEW.stage>=4 AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_reviews WHERE tenant_id=NEW.tenant_id AND plan_id=r.id) THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement receipt needs independent review.'; END IF;
- IF NEW.stage>=5 THEN
- SELECT * INTO g FROM reconforge.ap_goods_receipts WHERE tenant_id=NEW.tenant_id AND id=NEW.goods_receipt_id;
- IF g IS NULL OR g.purchase_order_id<>p.id OR g.workspace_id<>NEW.workspace_id OR g.status<>'Posted'
- OR NOT EXISTS(SELECT 1 FROM reconforge.ap_goods_receipt_lines WHERE tenant_id=NEW.tenant_id AND receipt_id=g.id AND purchase_order_line_id=l.id AND received_quantity=qty)
- OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_links WHERE tenant_id=NEW.tenant_id AND plan_id=r.id) THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement receiving requires stock/FIFO/GL and AP receipt atomically.'; END IF;
- END IF;
- IF NEW.stage>=6 THEN
- SELECT * INTO i FROM reconforge.ap_supplier_invoices WHERE tenant_id=NEW.tenant_id AND id=NEW.invoice_id;
- IF i IS NULL OR i.purchase_order_id<>p.id OR i.supplier_id<>p.supplier_id OR i.total_minor<>NEW.total_minor OR i.tax_minor<>0 OR i.currency_code<>p.currency_code
- OR (i.workspace_id,i.organization_id,i.legal_entity_id) IS DISTINCT FROM (NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id)
- OR (NEW.stage=6 AND i.status<>'Matched') OR (NEW.stage BETWEEN 7 AND 12 AND i.status<>'Approved') OR (NEW.stage=13 AND i.status<>'Paid')
- OR NOT EXISTS(SELECT 1 FROM reconforge.ap_three_way_matches WHERE tenant_id=NEW.tenant_id AND supplier_invoice_id=i.id AND status='Passed') THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement invoice needs exact passed three-way matching.'; END IF;
- IF NEW.stage>=7 AND reconforge.procurement_actor_id(NEW.tenant_id,i.created_by)=reconforge.procurement_actor_id(NEW.tenant_id,i.approved_by) THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement invoice approval requires an independent canonical identity.'; END IF;
- END IF;
- IF NEW.stage>=8 THEN
- SELECT * INTO a FROM reconforge.operational_finance_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.accrual_plan_id;
- SELECT x.id INTO ap_account FROM reconforge.finance_accounts x JOIN reconforge.finance_journals j ON j.tenant_id=x.tenant_id AND j.chart_id=x.chart_id
- WHERE x.tenant_id=NEW.tenant_id AND x.workspace_id=NEW.workspace_id AND x.account_code=NEW.request_json->>'ap_account_code'
- AND j.workspace_id=NEW.workspace_id AND j.journal_code=NEW.request_json->>'journal_code';
- IF a IS NULL OR a.source_kind<>'APInvoice' OR a.source_id<>i.id OR a.amount_minor<>NEW.total_minor OR a.currency_code<>p.currency_code
- OR (a.workspace_id,a.organization_id,a.legal_entity_id) IS DISTINCT FROM (NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id)
- OR a.payload->'snapshot'->'entry'->>'period_id'<>NEW.request_json->>'period_id'
- OR a.payload->'snapshot'->'entry'->>'posting_date'<>NEW.request_json->>'posting_date'
- OR a.payload->'snapshot'->'lines'->0->>'account_id'<>r.receipt_clearing_account_id
- OR ap_account IS NULL OR a.payload->'snapshot'->'lines'->1->>'account_id'<>ap_account THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement accrual requires this invoice, receipt clearing and exact AP mapping.'; END IF;
- PERFORM reconforge.ops_close_plan(NEW.tenant_id,a.id);
- END IF;
- IF NEW.stage>=9 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=NEW.tenant_id AND plan_id=a.id AND plan_digest=a.plan_digest) THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement accrual needs retained independent review.'; END IF;
- IF NEW.stage>=10 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=NEW.tenant_id AND plan_id=a.id AND posting_effect_id=NEW.accrual_effect_id) THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement accrual effect must belong to this retained reviewed invoice plan.'; END IF;
- IF NEW.stage>=11 THEN
- SELECT * INTO q FROM reconforge.operational_finance_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.payment_plan_id;
- SELECT x.id INTO cash_account FROM reconforge.finance_accounts x JOIN reconforge.finance_journals j ON j.tenant_id=x.tenant_id AND j.chart_id=x.chart_id
- WHERE x.tenant_id=NEW.tenant_id AND x.workspace_id=NEW.workspace_id AND x.account_code=NEW.request_json->>'cash_account_code'
- AND j.workspace_id=NEW.workspace_id AND j.journal_code=NEW.request_json->>'journal_code';
- IF q IS NULL OR q.source_kind<>'APPayment' OR q.source_id<>i.id OR q.amount_minor<>NEW.total_minor OR q.currency_code<>p.currency_code
- OR (q.workspace_id,q.organization_id,q.legal_entity_id) IS DISTINCT FROM (NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id)
- OR q.payload->'snapshot'->'entry'->>'period_id'<>NEW.request_json->>'period_id'
- OR q.payload->'snapshot'->'entry'->>'posting_date'<>NEW.request_json->>'posting_date'
- OR q.payload->'snapshot'->'lines'->0->>'account_id'<>ap_account
- OR cash_account IS NULL OR q.payload->'snapshot'->'lines'->1->>'account_id'<>cash_account THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement payment requires this invoice and exact AP/cash mapping.'; END IF;
- PERFORM reconforge.ops_close_plan(NEW.tenant_id,q.id);
- END IF;
- IF NEW.stage>=12 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=NEW.tenant_id AND plan_id=q.id AND plan_digest=q.plan_digest) THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement payment needs retained independent review.'; END IF;
- IF NEW.stage=13 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=NEW.tenant_id AND plan_id=q.id AND posting_effect_id=NEW.payment_effect_id) THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement payment effect must belong to this retained reviewed payment plan.'; END IF;
- IF NEW.stage>=7 AND i.status NOT IN ('Approved','Paid') OR NEW.stage>=10 AND NEW.accrual_effect_id IS NULL THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement needs independently approved invoice and retained accrual.'; END IF;
- IF NEW.stage=13 AND (i.status<>'Paid' OR NEW.payment_effect_id IS NULL OR NOT EXISTS(SELECT 1 FROM reconforge.ap_payment_links
- WHERE tenant_id=NEW.tenant_id AND id=NEW.payment_link_id AND supplier_invoice_id=i.id AND finance_effect_id=NEW.payment_effect_id AND amount_minor=NEW.total_minor
- AND (workspace_id,organization_id,legal_entity_id,currency_code,ap_account_id,cash_account_id)=(NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id,p.currency_code,ap_account,cash_account))) THEN
- RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement paid state requires exact governed payment evidence.'; END IF;
+ PERFORM reconforge.procurement_verify_cycle(NEW);
  RETURN NEW;
 END $$;
 CREATE TRIGGER procurement_cycles_guard BEFORE INSERT OR UPDATE OR DELETE ON reconforge.procurement_cycles FOR EACH ROW EXECUTE FUNCTION reconforge.procurement_guard();
 """
 
-# Reuse the complete source projection for reverse reference guards and reads.
-# These constraints validate the final row at outer commit, allowing atomic
-# participant changes while rejecting a later standalone source mutation.
-_verification = UPGRADE_SQL.split("CREATE FUNCTION reconforge.procurement_guard()", 1)[1].split(" SELECT * INTO p FROM", 1)[1].split(" RETURN NEW;", 1)[0]
+# Reverse reference closure validates the statically declared complete source routine.
 UPGRADE_SQL += r"""
-CREATE FUNCTION reconforge.procurement_verify_cycle(c reconforge.procurement_cycles) RETURNS VOID
-LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-DECLARE p reconforge.ap_purchase_orders%ROWTYPE;l reconforge.ap_purchase_order_lines%ROWTYPE;
- r reconforge.inventory_receipt_plans%ROWTYPE;g reconforge.ap_goods_receipts%ROWTYPE;i reconforge.ap_supplier_invoices%ROWTYPE;
- qty NUMERIC;a reconforge.operational_finance_plans%ROWTYPE;q reconforge.operational_finance_plans%ROWTYPE;ap_account TEXT;cash_account TEXT;
-BEGIN SELECT * INTO p FROM""" + _verification.replace("NEW.", "c.") + r""" RETURN; END $$;
 CREATE FUNCTION reconforge.procurement_source_closure() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$
 DECLARE j JSONB;references_json JSONB[];parent TEXT;c reconforge.procurement_cycles;

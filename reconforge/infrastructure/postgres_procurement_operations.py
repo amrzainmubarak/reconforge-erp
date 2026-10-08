@@ -79,8 +79,10 @@ class PostgresProcurementOperationsRepository:
         return dict(result)
 
     def _cycle(self, cycle_id: str, *, lock: bool = False) -> dict[str, Any]:
-        return self._one("SELECT * FROM reconforge.procurement_cycles WHERE tenant_id=%s AND id=%s" +
-            (" FOR UPDATE" if lock else ""), (self.tenant_id, exact_text(cycle_id)))
+        query = "SELECT * FROM reconforge.procurement_cycles WHERE tenant_id=%s AND id=%s"
+        if lock:
+            query = "SELECT * FROM reconforge.procurement_cycles WHERE tenant_id=%s AND id=%s FOR UPDATE"
+        return self._one(query, (self.tenant_id, exact_text(cycle_id)))
 
     def _scope(self, request: ProcurementPreparation) -> dict[str, Any]:
         return self._codes_scope(request.workspace, request.organization_code, request.entity_code)
@@ -248,12 +250,20 @@ class PostgresProcurementOperationsRepository:
             return self._remember(self._cycle(cycle_id), operation, command_id, digest, actor, {"expected_version": expected_version, "reason": reason})
 
     def _advance(self, row: Mapping[str, Any], changes: Mapping[str, Any]) -> None:
-        allowed = {"receipt_plan_id", "goods_receipt_id", "invoice_id", "accrual_plan_id", "payment_plan_id", "accrual_effect_id", "payment_effect_id", "payment_link_id"}
-        if not set(changes).issubset(allowed):
+        fields = ("receipt_plan_id", "goods_receipt_id", "invoice_id", "accrual_plan_id", "payment_plan_id", "accrual_effect_id", "payment_effect_id", "payment_link_id")
+        if not set(changes).issubset(fields):
             raise ProcurementError("procurement_link_invalid", "Unsupported engine link.")
-        assignments = "".join("," + key + "=%s" for key in changes)
-        self.connection.execute("UPDATE reconforge.procurement_cycles SET stage=stage+1,row_version=row_version+1,updated_at=now()" +
-            assignments + " WHERE tenant_id=%s AND id=%s", (*changes.values(), self.tenant_id, row["id"]))
+        values = tuple(value for field in fields for value in (field in changes, changes.get(field)))
+        self.connection.execute("""UPDATE reconforge.procurement_cycles SET stage=stage+1,row_version=row_version+1,updated_at=now(),
+            receipt_plan_id=CASE WHEN %s THEN %s ELSE receipt_plan_id END,
+            goods_receipt_id=CASE WHEN %s THEN %s ELSE goods_receipt_id END,
+            invoice_id=CASE WHEN %s THEN %s ELSE invoice_id END,
+            accrual_plan_id=CASE WHEN %s THEN %s ELSE accrual_plan_id END,
+            payment_plan_id=CASE WHEN %s THEN %s ELSE payment_plan_id END,
+            accrual_effect_id=CASE WHEN %s THEN %s ELSE accrual_effect_id END,
+            payment_effect_id=CASE WHEN %s THEN %s ELSE payment_effect_id END,
+            payment_link_id=CASE WHEN %s THEN %s ELSE payment_link_id END
+            WHERE tenant_id=%s AND id=%s""", (*values, self.tenant_id, row["id"]))
 
     def _finance(self, row: Mapping[str, Any], request: ProcurementPreparation, operation: str,
                   command: str, reason: str, actor: PostingActor) -> dict[str, Any]:

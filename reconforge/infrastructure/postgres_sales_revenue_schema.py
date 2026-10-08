@@ -183,12 +183,11 @@ CREATE TRIGGER sales_revenue_command_admission BEFORE INSERT ON reconforge.sales
  FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_admit();
 CREATE TRIGGER sales_revenue_event_admission BEFORE INSERT ON reconforge.sales_revenue_events
  FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_admit();
-CREATE FUNCTION reconforge.sales_revenue_close() RETURNS trigger
+CREATE FUNCTION reconforge.sales_revenue_close_document(t TEXT,target TEXT) RETURNS VOID
  LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
-DECLARE d RECORD; ev RECORD; cmd RECORD; invoice RECORD; plan RECORD; receipt RECORD; target TEXT;
+DECLARE d RECORD; ev RECORD; cmd RECORD; invoice RECORD; plan RECORD; receipt RECORD; reviewed BOOLEAN; posted BOOLEAN;
 BEGIN
- IF TG_TABLE_NAME='sales_revenue_documents' THEN target:=NEW.id; ELSE target:=NEW.document_id; END IF;
- SELECT * INTO d FROM reconforge.sales_revenue_documents WHERE tenant_id=NEW.tenant_id AND id=target;
+ SELECT * INTO d FROM reconforge.sales_revenue_documents WHERE tenant_id=t AND id=target;
  IF d IS NULL OR NOT reconforge.irp_scope(d.tenant_id,d.workspace_id,d.organization_id,d.legal_entity_id)
  OR (SELECT count(*) FROM reconforge.sales_revenue_events WHERE tenant_id=d.tenant_id AND document_id=d.id)<>d.row_version
  OR (SELECT count(*) FROM reconforge.sales_revenue_commands WHERE tenant_id=d.tenant_id AND document_id=d.id)<>d.row_version THEN
@@ -234,19 +233,34 @@ BEGIN
   invoice.currency_precision,invoice.currency_rounding_policy,invoice.currency_registry_version,invoice.currency_registry_digest) THEN
    RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Sales invoice does not have its exact native AR and financial source.';
   END IF;
-  IF d.status='InvoicePrepared' AND (invoice.status<>'Submitted' OR EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=d.tenant_id AND plan_id=plan.id))
-  OR d.status='InvoiceReviewed' AND (invoice.status<>'Approved' OR NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=d.tenant_id AND plan_id=plan.id))
-  OR d.status IN ('Invoiced','CollectionPrepared','CollectionReviewed','Paid') AND (invoice.status NOT IN ('Approved','Paid')
-   OR NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=d.tenant_id AND plan_id=plan.id)) THEN
-   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Sales invoice stage lacks its reviewed or posted financial effect.';
+  IF EXISTS(SELECT 1 FROM reconforge.operational_finance_plans p WHERE p.tenant_id=d.tenant_id AND p.source_id=d.invoice_id
+   AND ((p.source_kind='ARInvoice' AND p.id IS DISTINCT FROM d.invoice_plan_id)
+     OR (p.source_kind='ARReceipt' AND p.id IS DISTINCT FROM d.collection_plan_id))) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Sales native invoice requires its exact owned financial plans.';
+  END IF;
+  reviewed:=EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=d.tenant_id AND plan_id=plan.id);
+  posted:=EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=d.tenant_id AND plan_id=plan.id);
+  IF (d.status='InvoicePrepared' AND (invoice.status<>'Submitted' OR reviewed OR posted))
+  OR (d.status='InvoiceReviewed' AND (invoice.status<>'Approved' OR NOT reviewed OR posted))
+  OR (d.status IN ('Invoiced','CollectionPrepared','CollectionReviewed') AND (invoice.status<>'Approved' OR NOT reviewed OR NOT posted))
+  OR (d.status='Paid' AND (invoice.status<>'Paid' OR NOT reviewed OR NOT posted))
+  OR (d.status<>'Paid' AND EXISTS(SELECT 1 FROM reconforge.ar_receipt_allocations WHERE tenant_id=d.tenant_id AND invoice_id=d.invoice_id)) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Sales invoice stage lacks its reviewed or posted financial effect.';
   END IF;
  END IF;
  IF d.collection_plan_id IS NOT NULL THEN
   SELECT * INTO plan FROM reconforge.operational_finance_plans WHERE tenant_id=d.tenant_id AND id=d.collection_plan_id;
   IF plan IS NULL OR (plan.workspace_id,plan.organization_id,plan.legal_entity_id,plan.source_kind,plan.source_id,plan.currency_code,plan.amount_minor)
   IS DISTINCT FROM (d.workspace_id,d.organization_id,d.legal_entity_id,'ARReceipt'::text,d.invoice_id,d.currency_code,d.total_minor)
-  OR (d.status IN ('CollectionReviewed','Paid') AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=d.tenant_id AND plan_id=plan.id)) THEN
+  THEN
    RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Sales collection stage lacks its exact reviewed source.';
+  END IF;
+  reviewed:=EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews WHERE tenant_id=d.tenant_id AND plan_id=plan.id);
+  posted:=EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=d.tenant_id AND plan_id=plan.id);
+  IF (d.status='CollectionPrepared' AND (reviewed OR posted))
+  OR (d.status='CollectionReviewed' AND (NOT reviewed OR posted))
+  OR (d.status='Paid' AND (NOT reviewed OR NOT posted)) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='sales_revenue_owner_phase',MESSAGE='Sales collection financial phase requires its coordinated owner command.';
   END IF;
  END IF;
  IF d.status='Paid' THEN
@@ -259,9 +273,20 @@ BEGIN
   OR NOT EXISTS(SELECT 1 FROM reconforge.ar_receipt_allocations a WHERE a.tenant_id=d.tenant_id AND a.receipt_id=receipt.id
   AND a.invoice_id=invoice.id AND a.amount_minor=d.total_minor)
   OR (SELECT count(*) FROM reconforge.ar_receipt_allocations WHERE tenant_id=d.tenant_id AND receipt_id=receipt.id)<>1
+  OR (SELECT count(*) FROM reconforge.ar_receipt_allocations WHERE tenant_id=d.tenant_id AND invoice_id=invoice.id)<>1
   OR NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=d.tenant_id AND plan_id=d.collection_plan_id AND source_effect_id=d.receipt_id) THEN
    RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Collected sale requires one complete AR allocation and its real cash GL effect.';
   END IF;
+ END IF;
+ RETURN;
+END $sales$;
+CREATE FUNCTION reconforge.sales_revenue_close() RETURNS trigger
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
+BEGIN
+ IF TG_TABLE_NAME='sales_revenue_documents' THEN
+  PERFORM reconforge.sales_revenue_close_document(NEW.tenant_id,NEW.id);
+ ELSE
+  PERFORM reconforge.sales_revenue_close_document(NEW.tenant_id,NEW.document_id);
  END IF;
  RETURN NULL;
 END $sales$;
@@ -286,6 +311,48 @@ CREATE CONSTRAINT TRIGGER sales_invoice_policy_closure AFTER INSERT OR UPDATE ON
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_native_policy_close();
 CREATE CONSTRAINT TRIGGER sales_receipt_policy_closure AFTER INSERT OR UPDATE ON reconforge.ar_receipts
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_native_policy_close();
+CREATE FUNCTION reconforge.sales_revenue_reverse_close() RETURNS trigger
+ LANGUAGE plpgsql SET search_path=pg_catalog AS $sales$
+DECLARE changed JSONB; previous JSONB; current_row JSONB; identifier TEXT; invoice_identifier TEXT; receipt_identifier TEXT; owner RECORD;
+BEGIN
+ IF TG_OP<>'INSERT' THEN previous:=to_jsonb(OLD); END IF;
+ IF TG_OP<>'DELETE' THEN current_row:=to_jsonb(NEW); END IF;
+ FOR changed IN SELECT previous WHERE previous IS NOT NULL UNION SELECT current_row WHERE current_row IS NOT NULL LOOP
+  identifier:=NULL; invoice_identifier:=NULL; receipt_identifier:=NULL;
+  IF TG_TABLE_NAME='operational_finance_plans' THEN
+   identifier:=changed->>'id';
+   IF changed->>'source_kind' IN ('ARInvoice','ARReceipt') THEN invoice_identifier:=changed->>'source_id'; END IF;
+  ELSIF TG_TABLE_NAME IN ('operational_finance_reviews','operational_finance_links','operational_finance_commands') THEN
+   identifier:=changed->>'plan_id';
+   SELECT p.source_id INTO invoice_identifier FROM reconforge.operational_finance_plans p
+    WHERE p.tenant_id=changed->>'tenant_id' AND p.id=identifier AND p.source_kind IN ('ARInvoice','ARReceipt');
+  ELSIF TG_TABLE_NAME='ar_invoices' THEN invoice_identifier:=changed->>'id';
+  ELSIF TG_TABLE_NAME='ar_receipts' THEN receipt_identifier:=changed->>'id';
+  ELSIF TG_TABLE_NAME='ar_receipt_allocations' THEN
+   invoice_identifier:=changed->>'invoice_id'; receipt_identifier:=changed->>'receipt_id';
+  END IF;
+  IF TG_TABLE_NAME='ar_receipts' THEN
+   FOR owner IN SELECT d.id FROM reconforge.sales_revenue_documents d WHERE d.tenant_id=changed->>'tenant_id'
+    AND (d.receipt_id=receipt_identifier OR EXISTS(SELECT 1 FROM reconforge.ar_receipt_allocations a
+     WHERE a.tenant_id=d.tenant_id AND a.invoice_id=d.invoice_id AND a.receipt_id=receipt_identifier)) LOOP
+    PERFORM reconforge.sales_revenue_close_document(changed->>'tenant_id',owner.id);
+   END LOOP;
+  ELSE
+   FOR owner IN SELECT d.id FROM reconforge.sales_revenue_documents d WHERE d.tenant_id=changed->>'tenant_id'
+    AND (d.invoice_plan_id=identifier OR d.collection_plan_id=identifier OR d.invoice_id=invoice_identifier
+     OR d.receipt_id=receipt_identifier) LOOP
+    PERFORM reconforge.sales_revenue_close_document(changed->>'tenant_id',owner.id);
+   END LOOP;
+  END IF;
+ END LOOP;
+ RETURN NULL;
+END $sales$;
+DO $sales$ DECLARE n TEXT; BEGIN
+ FOREACH n IN ARRAY ARRAY['operational_finance_plans','operational_finance_reviews','operational_finance_links',
+ 'operational_finance_commands','ar_invoices','ar_receipts','ar_receipt_allocations'] LOOP
+  EXECUTE format('CREATE CONSTRAINT TRIGGER sales_owner_reverse_closure AFTER INSERT OR UPDATE OR DELETE ON reconforge.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.sales_revenue_reverse_close()',n);
+ END LOOP;
+END $sales$;
 DO $sales$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['sales_revenue_documents','sales_revenue_commands','sales_revenue_events'] LOOP
   EXECUTE format('ALTER TABLE reconforge.%I ENABLE ROW LEVEL SECURITY',n);
@@ -330,6 +397,13 @@ DROP TRIGGER sales_revenue_permission_tenant ON reconforge.tenants;
 DROP TRIGGER sales_revenue_permission_role ON reconforge.identity_roles;
 DROP TRIGGER sales_invoice_policy_closure ON reconforge.ar_invoices;
 DROP TRIGGER sales_receipt_policy_closure ON reconforge.ar_receipts;
+DO $sales$ DECLARE n TEXT; BEGIN
+ FOREACH n IN ARRAY ARRAY['operational_finance_plans','operational_finance_reviews','operational_finance_links',
+ 'operational_finance_commands','ar_invoices','ar_receipts','ar_receipt_allocations'] LOOP
+  EXECUTE format('DROP TRIGGER sales_owner_reverse_closure ON reconforge.%I',n);
+ END LOOP;
+END $sales$;
+DROP FUNCTION reconforge.sales_revenue_reverse_close();
 DROP FUNCTION reconforge.sales_revenue_native_policy_close();
 DROP FUNCTION reconforge.sales_revenue_seed_permissions();
 DELETE FROM reconforge.identity_role_permissions WHERE permission_name IN ('sales.read','sales.manage','sales.approve');
@@ -339,5 +413,6 @@ DROP FUNCTION reconforge.sales_revenue_protect();
 DROP FUNCTION reconforge.sales_revenue_admit();
 DROP FUNCTION reconforge.sales_revenue_actor(TEXT,TEXT,TEXT);
 DROP FUNCTION reconforge.sales_revenue_close();
+DROP FUNCTION reconforge.sales_revenue_close_document(TEXT,TEXT);
 DROP FUNCTION reconforge.sales_revenue_policy_matches(TEXT,JSONB,TEXT,INTEGER,TEXT,TEXT,TEXT);
 """

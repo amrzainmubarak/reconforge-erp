@@ -233,7 +233,10 @@ function ExceptionReviewSession({ locale }: { locale: Locale }) {
       ...previous,
       exceptions: previous.exceptions.map((record) => record.id === updated.id ? updated : record),
     } : previous);
-    setHistoryCursors([undefined]);
+    // The mutation already returns the authoritative first history page.
+    // Preserve its cursor identity to avoid clearing that result and a newly
+    // entered decision reason through an unnecessary detail fetch.
+    setHistoryCursors((previous) => previous.length === 1 && previous[0] === undefined ? previous : [undefined]);
     setHistoryIndex(0);
     setUnknownOutcome(false);
     setSaved(true);

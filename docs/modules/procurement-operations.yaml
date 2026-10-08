@@ -18,7 +18,7 @@ domain_invariants:
   - Reviewed clearing-to-AP accrual precedes independently reviewed AP-to-cash full settlement
   - Each retained cycle version has one actor-bound exact command with matching audit and outbox evidence
 domain_events: [procurement.cycle_changed]
-api_routes: ["/api/v1/procurement-operations/cycles", "/api/v1/procurement-operations/cycles/{id}", "/api/v1/procurement-operations/cycles/{id}/commands/{action}", "/api/v1/procurement-operations/scopes", "/api/v1/procurement-operations/options"]
+api_routes: ["/api/v1/procurement-operations/cycles", "/api/v1/procurement-operations/cycles/{id}", "/api/v1/procurement-operations/cycles/{id}/commands/{action}", "/api/v1/procurement-operations/scopes", "/api/v1/procurement-operations/options", "/api/v1/payables/suppliers"]
 cli_commands: []
 ui_routes: [/procurement]
 import_schemas: []
@@ -41,4 +41,5 @@ adapter_matrix:
 limitations:
   - Does not execute bank transfers or claim live banking integration
   - Does not cover PR/RFQ, tax, FX, partial receiving, tracked inventory, supplier returns, credit notes or partial payments
-  - Supplier and inventory/finance master references are configured separately through their existing governed engines
+  - Supplier form reuses existing governed Payables metadata API; catalog inspection is bounded to the first 100 suppliers
+  - Inventory/finance master references are configured separately through their existing governed engines

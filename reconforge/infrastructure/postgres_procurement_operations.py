@@ -217,7 +217,10 @@ class PostgresProcurementOperationsRepository:
                     command_id=command, reason=reason, actor=actor)
             elif operation == "receive":
                 view = self.receipts.get_plan(row["receipt_plan_id"], actor=actor)
-                self.receipts.commit(row["receipt_plan_id"], expected_review_digest=view["review"]["review_digest"],
+                review = view["review"]
+                if review is None:
+                    raise ProcurementError("procurement_review_required", "Receiving requires retained independent review.")
+                self.receipts.commit(row["receipt_plan_id"], expected_review_digest=review["review_digest"],
                     command_id=command, reason=reason, actor=actor)
                 receipt = self.payables.post_receipt(receipt_number="GR-" + request.number, purchase_order_id=order["id"],
                     receipt_date=request.posting_date, quantities={order["lines"][0]["id"]: request.quantity},

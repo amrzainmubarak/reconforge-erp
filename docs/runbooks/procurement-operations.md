@@ -2,11 +2,15 @@
 
 The PostgreSQL-only `/procurement` workspace composes existing Payables, reviewed Inventory receipt/FIFO/GL, the reviewed operational Finance owner and AP settlement evidence. Configure active organization/entity, functional currency, supplier, untracked stock item/base UOM, internal non-negative location, FIFO policy, open period, journal, liability AP account and asset cash account first. Select references from the scoped live catalog; no synthetic IDs are required in a production workflow.
 
+The supplier management form reuses the existing authenticated Payables supplier API to save active suppliers in the selected entity and functional currency. It verifies the returned business key, scope, name and optional tax identifier before making the supplier available to the order form. Supplier metadata is an upsert; after an unverifiable acknowledgement, inspect the refreshed current catalog instead of automatically retrying the save. The existing supplier catalog is bounded to its first 100 records; this form is not a complete vendor lifecycle or large-catalog administration surface.
+
 Create one stock purchase with exact positive quantity and integer minor-unit unit price. Fractional minor-unit products are rejected. Submit and independently approve the order. Prepare receiving, have another human review its immutable quantity/cost/mapping capture, then have a third authorized human post. The receiving command commits inventory movement, FIFO layer, reviewed GL and AP goods receipt atomically.
 
 Create and match the supplier invoice. Its exact PO price and fully received quantity must pass the existing three-way engine. A distinct approver authorizes the invoice. Prepare its clearing-to-AP accrual, independently review, then post. Prepare the full unpaid AP-to-cash payment, independently review and post/settle in one outer transaction. The invoice creator and approver cannot post or settle their payment; Finance preparation, review and posting remain independent.
 
 Each action supplies the displayed cycle version, a frozen command key and a reason. A lost response or 5xx retains the same request for retry. Do not create a different key while the outcome is unknown. Current permission, scope, amount and identity are checked on every retry. Current version conflicts require reading the persisted result before a new action.
+
+Studio accepts an acknowledgement only for the retained route's exact purchase ID, expected next stage and incremented version. New-order responses must also match the captured source references and exact unit price/decimal quantity. Invalid responses keep the financial command pending for an identical retry. All money remains integer text across browser responses; JavaScript floating-point conversion is not used.
 
 Source history and command evidence are retained. Do not edit posted invoice values, detach reviewed source/effect links, remove command evidence or relabel an invoice as paid. Database constraints check native source affinity, exact money, canonical scope, plan/review/effect backing and per-version audit/outbox closure, including reverse reference changes.
 

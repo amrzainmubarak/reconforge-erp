@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useBrowserSession } from "../browserSession";
 import { AdminApiError, beginBrowserAdminSession, endBrowserAdminSession, stepUpBrowserAdminSession } from "../data";
 import { loadExceptionReviewIdentity, type ExceptionReviewIdentity } from "../exception-review-data";
-import { procurementCommand, procurementDetail, procurementList, procurementOptions, procurementScopes, type ProcurementCycle, type ProcurementDetail, type ProcurementOption, type ProcurementOptions, type ProcurementScope } from "../procurement-data";
+import { procurementCommand, procurementDetail, procurementList, procurementOptions, procurementSaveSupplier, procurementScopes, procurementSuppliers, type ProcurementCycle, type ProcurementDetail, type ProcurementOption, type ProcurementOptions, type ProcurementScope, type ProcurementSupplier } from "../procurement-data";
 import { procurementTranslate, type ProcurementMessage } from "../procurement-i18n";
 import { prepareScopedCommand, type PreparedScopedCommand } from "../scoped-command";
 import type { Locale } from "../types";
@@ -20,6 +20,7 @@ function ProcurementSession({ locale }: { locale: Locale }) {
   const [scopes, setScopes] = useState<ProcurementScope[]>([]), [scope, setScope] = useState<ProcurementScope | null>(null);
   const [options, setOptions] = useState<ProcurementOptions | null>(null), [cycles, setCycles] = useState<ProcurementCycle[]>([]);
   const [detail, setDetail] = useState<ProcurementDetail | null>(null), [reason, setReason] = useState("");
+  const [suppliers, setSuppliers] = useState<ProcurementSupplier[]>([]), [supplierDraft, setSupplierDraft] = useState({ supplier_code: "", name: "", tax_identifier: "" }), [supplierSaved, setSupplierSaved] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({ number: "", supplier_code: "", item_code: "", quantity: "", unit_price_minor: "", posting_date: "", period_id: "", location_code: "", policy_code: "", journal_code: "", ap_account_code: "", cash_account_code: "" });
   const [busy, setBusy] = useState(false), [error, setError] = useState<ProcurementMessage | null>(null), [pending, setPending] = useState<PreparedScopedCommand | null>(null), [refresh, setRefresh] = useState(0);
   const mounted = useRef(true), lock = useRef(false), errorRef = useRef<HTMLDivElement>(null), savedRef = useRef<HTMLParagraphElement>(null);
@@ -39,16 +40,17 @@ function ProcurementSession({ locale }: { locale: Locale }) {
   }, [auth.session, auth.revision]);
   useEffect(() => {
     if (!auth.session || !workspace) return;
-    const controller = new AbortController(); setScopes([]); setScope(null); setOptions(null); setDetail(null); setCycles([]);
+    const controller = new AbortController(); setScopes([]); setScope(null); setOptions(null); setDetail(null); setCycles([]); setSuppliers([]); setSupplierSaved(false);
     procurementScopes(auth.session, workspace, controller.signal).then((value) => { if (!controller.signal.aborted && current()) setScopes(value); }).catch((caught) => { if (!controller.signal.aborted) fail(caught); });
     return () => controller.abort();
   }, [auth.session, workspace]);
   useEffect(() => {
     if (!auth.session || !scope) return;
-    const controller = new AbortController(); setOptions(null); setCycles([]);
+    const controller = new AbortController(); setOptions(null); setCycles([]); setSuppliers([]);
     Promise.all([procurementOptions(auth.session, scope, controller.signal), procurementList(auth.session, scope, controller.signal)]).then(([references, records]) => {
       if (!controller.signal.aborted && current()) { setOptions(references); setCycles(records); }
     }).catch((caught) => { if (!controller.signal.aborted) fail(caught); });
+    procurementSuppliers(auth.session, scope, controller.signal).then((records) => { if (!controller.signal.aborted && current()) setSuppliers(records); }).catch((caught) => { if (!controller.signal.aborted) fail(caught); });
     return () => controller.abort();
   }, [auth.session, scope, refresh]);
   const locked = busy || pending !== null;
@@ -91,7 +93,18 @@ function ProcurementSession({ locale }: { locale: Locale }) {
     event.preventDefault(); if (!detail || !scope || locked || !detail.cycle.next_action) return;
     void send(prepareScopedCommand(`/api/v1/procurement-operations/cycles/${encodeURIComponent(detail.cycle.id)}/commands/${detail.cycle.next_action}`, { expected_version: detail.cycle.row_version, reason }));
   }
-  const input = (key: ProcurementMessage, value: string, change: (value: string) => void, type = "text") => <label>{t(key)}<input required type={type} maxLength={key === "reason" ? 500 : key === "number" ? 60 : 160} disabled={locked} value={value} onChange={(event) => change(event.target.value)} /></label>;
+  async function saveSupplier(event: FormEvent) {
+    event.preventDefault(); if (!auth.session || !scope || locked || lock.current) return; lock.current = true; setBusy(true); setError(null); setSupplierSaved(false);
+    try {
+      const value = await procurementSaveSupplier(auth.session, scope, supplierDraft);
+      if (current()) { setSupplierDraft({ supplier_code: value.supplier_code, name: value.name, tax_identifier: value.tax_identifier }); setDraft((prior) => ({ ...prior, supplier_code: value.supplier_code })); setSupplierSaved(true); setRefresh((count) => count + 1); }
+    } catch (caught) {
+      if (!current()) return;
+      if (!(caught instanceof AdminApiError) || caught.status >= 500) { setError("supplierUnknown"); setRefresh((count) => count + 1); }
+      else fail(caught);
+    } finally { lock.current = false; if (current()) setBusy(false); }
+  }
+  const input = (key: ProcurementMessage, value: string, change: (value: string) => void, type = "text") => <label>{t(key)}<input required type={type} pattern={key === "quantity" ? "[0-9]+(?:\\.[0-9]+)?" : undefined} maxLength={key === "reason" ? 500 : key === "number" ? 60 : 160} disabled={locked} value={value} onChange={(event) => change(event.target.value)} /></label>;
   const choose = (label: ProcurementMessage, field: string, values: ProcurementOption[]) => <label>{t(label)}<select required disabled={locked} value={draft[field]} onChange={(event) => setDraft({ ...draft, [field]: event.target.value })}><option value="">—</option>{values.map((option) => <option value={option.code} key={option.code}>{option.code} · {option.name ?? option.currency_code ?? ""}</option>)}</select></label>;
   const manageable = identity?.human && identity.permissions.includes("payables.manage") && Boolean(auth.stepUpExpiresAt);
   return <main id="main-content" className="procurement-workspace" dir={locale === "ar" ? "rtl" : "ltr"}>
@@ -102,9 +115,16 @@ function ProcurementSession({ locale }: { locale: Locale }) {
       <div className="procurement-toolbar"><bdi>{auth.username}</bdi><button type="button" disabled={locked} onClick={() => void logout()}>{t("signOut")}</button></div>
       {!auth.stepUpExpiresAt && <form onSubmit={(event) => void stepUp(event)} aria-label={t("stepUp")}>{input("password", password, setPassword, "password")}<button disabled={locked}>{t("stepUp")}</button></form>}
       <div className="procurement-scope"><label>{t("workspace")}<select disabled={locked} value={workspace} onChange={(event) => setWorkspace(event.target.value)}><option value="">—</option>{identity?.workspaces.map((value) => <option key={value}>{value}</option>)}</select></label>
-        <label>{t("scope")}<select disabled={locked} value={scope?.legal_entity_id ?? ""} onChange={(event) => { setScope(scopes.find((row) => row.legal_entity_id === event.target.value) ?? null); setDetail(null); setError(null); }}><option value="">—</option>{scopes.map((row) => <option value={row.legal_entity_id} key={row.legal_entity_id}>{row.organization_name} · {row.entity_name} · {row.currency_code}</option>)}</select></label></div>
+        <label>{t("scope")}<select disabled={locked} value={scope?.legal_entity_id ?? ""} onChange={(event) => { setScope(scopes.find((row) => row.legal_entity_id === event.target.value) ?? null); setDetail(null); setError(null); setSupplierDraft({ supplier_code: "", name: "", tax_identifier: "" }); setSupplierSaved(false); }}><option value="">—</option>{scopes.map((row) => <option value={row.legal_entity_id} key={row.legal_entity_id}>{row.organization_name} · {row.entity_name} · {row.currency_code}</option>)}</select></label></div>
       {scope && <><section><div className="procurement-toolbar"><h2>{t("cycles")}</h2><button disabled={locked} onClick={() => { setDetail(null); setRefresh((value) => value + 1); }}>{t("refresh")}</button></div>
         <ul className="procurement-cycles">{cycles.map((cycle) => <li key={cycle.id}><strong>{cycle.number}</strong><span>{t(cycle.stage)} · {cycle.total_minor} {cycle.request.currency_code}</span><button disabled={locked} onClick={() => void inspect(cycle.id)}>{t("open")} {cycle.number}</button></li>)}</ul>{cycles.length === 0 && <p>{t("empty")}</p>}</section>
+        {manageable && <details><summary>{t("supplierManagement")}</summary><form onSubmit={(event) => void saveSupplier(event)} aria-label={t("supplierManagement")}><fieldset disabled={locked}><legend>{t("supplierManagement")}</legend>
+          <label>{t("existingSupplier")}<select value="" onChange={(event) => { const row = suppliers.find((item) => item.id === event.target.value); if (row) { setSupplierDraft({ supplier_code: row.supplier_code, name: row.name, tax_identifier: row.tax_identifier }); setSupplierSaved(false); } }}><option value="">—</option>{suppliers.filter((row) => row.currency_code === scope.currency_code && row.status === "Active").map((row) => <option value={row.id} key={row.id}>{row.supplier_code} · {row.name}</option>)}</select></label>
+          <label>{t("supplierCode")}<input required maxLength={64} value={supplierDraft.supplier_code} onChange={(event) => { setSupplierDraft({ ...supplierDraft, supplier_code: event.target.value }); setSupplierSaved(false); }} /></label>
+          <label>{t("supplierName")}<input required maxLength={200} value={supplierDraft.name} onChange={(event) => { setSupplierDraft({ ...supplierDraft, name: event.target.value }); setSupplierSaved(false); }} /></label>
+          <label>{t("taxIdentifier")}<input maxLength={128} value={supplierDraft.tax_identifier} onChange={(event) => { setSupplierDraft({ ...supplierDraft, tax_identifier: event.target.value }); setSupplierSaved(false); }} /></label>
+          <p>{t("supplierCurrency")}: <bdi>{scope.currency_code}</bdi></p><button>{t("saveSupplier")}</button>
+        </fieldset>{supplierSaved && <p role="status">{t("supplierSaved")}</p>}</form></details>}
         {options && manageable && <form onSubmit={create} aria-label={t("newOrder")}><fieldset disabled={locked}><legend>{t("newOrder")}</legend>
           {!options.suppliers.length || !options.items.length || !options.policies.length || !options.periods.length ? <p>{t("noReferences")}</p> : null}
           {input("number", draft.number, (value) => setDraft({ ...draft, number: value }))}{choose("supplier", "supplier_code", options.suppliers)}{choose("item", "item_code", options.items)}{input("quantity", draft.quantity, (value) => setDraft({ ...draft, quantity: value }))}{input("unitPrice", draft.unit_price_minor, (value) => setDraft({ ...draft, unit_price_minor: value }))}{input("date", draft.posting_date, (value) => setDraft({ ...draft, posting_date: value }), "date")}
@@ -113,7 +133,7 @@ function ProcurementSession({ locale }: { locale: Locale }) {
         </fieldset></form>}
         {detail && <section aria-label={t("evidence")}><h2>{detail.cycle.number}</h2><p role="status" tabIndex={-1} ref={savedRef}>{t("stage")}: {t(detail.cycle.stage)} · {detail.cycle.row_version}</p><p>{t("amount")}: <bdi>{detail.cycle.total_minor} {detail.cycle.request.currency_code}</bdi></p><p>{t("independent")}</p>
           {detail.cycle.next_action && <form onSubmit={act}>{input("reason", reason, setReason)}<button disabled={locked || !auth.stepUpExpiresAt || !reason.trim()}>{t(detail.cycle.next_action)}</button></form>}
-          <dl>{["purchase_order_id", "receipt_plan_id", "goods_receipt_id", "invoice_id", "accrual_effect_id", "payment_effect_id", "payment_link_id"].map((key) => <div key={key}><dt>{key.replaceAll("_", " ")}</dt><dd><code dir="ltr">{String(detail.cycle[key as keyof ProcurementCycle] ?? "—")}</code></dd></div>)}</dl>
+          <dl>{([ ["purchase_order_id", "purchaseOrder"], ["receipt_plan_id", "receiptPlan"], ["goods_receipt_id", "goodsReceipt"], ["invoice_id", "invoice"], ["accrual_effect_id", "accrualEffect"], ["payment_effect_id", "paymentEffect"], ["payment_link_id", "paymentLink"] ] as const).map(([key, label]) => <div key={key}><dt>{t(label)}</dt><dd><code dir="ltr">{String(detail.cycle[key as keyof ProcurementCycle] ?? "—")}</code></dd></div>)}</dl>
         </section>}
       </>}
     </>}

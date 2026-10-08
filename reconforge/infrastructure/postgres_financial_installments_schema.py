@@ -40,6 +40,14 @@ BEGIN
  AND (to_jsonb(NEW)-'phase')=(to_jsonb(OLD)-'phase') THEN RETURN NEW; END IF;
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Retained installment evidence is immutable';
 END $fi$;
+CREATE FUNCTION reconforge.installment_event(t TEXT,p TEXT,a TEXT,b TEXT,actor TEXT,action TEXT,metadata JSONB) RETURNS BOOLEAN
+ LANGUAGE sql STABLE SET search_path=pg_catalog AS $fi$
+ SELECT EXISTS(SELECT 1 FROM reconforge.domain_audit_events x JOIN reconforge.outbox_events y ON y.tenant_id=x.tenant_id
+ JOIN reconforge.financial_installment_plans z ON z.tenant_id=x.tenant_id AND z.id=p
+ WHERE x.tenant_id=t AND x.id=a AND y.event_id=b AND x.actor_user_id=actor AND x.object_type='operational_finance' AND x.object_id=p
+ AND x.action=$6 AND x.metadata_json=$7 AND y.event_type=$6 AND y.aggregate_type='operational_finance' AND y.aggregate_id=p
+ AND y.payload=$7||jsonb_build_object('audit_event_id',a) AND (y.workspace_id,y.organization_id,y.legal_entity_id)=(z.workspace_id,z.organization_id,z.legal_entity_id))
+$fi$;
 CREATE FUNCTION reconforge.installment_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $fi$
 DECLARE p RECORD;e RECORD;r RECORD;l RECORD;f RECORD;a RECORD;h RECORD;s JSONB;header JSONB;lines JSONB;maker TEXT;seal TEXT;
  allocated NUMERIC; c RECORD; request_expected JSONB; effect_kind TEXT; account_kind TEXT;
@@ -90,19 +98,19 @@ BEGIN
  IF account_kind<>'Liability' THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='AP debit requires a liability account'; END IF;
  SELECT account_type INTO account_kind FROM reconforge.finance_accounts WHERE tenant_id=t AND id=lines->1->>'account_id';
  IF account_kind<>'Asset' THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Cash credit requires an asset account'; END IF;
- IF NOT reconforge.ops_event(t,i,p.audit_event_id,p.outbox_event_id,maker,'financial_installment_prepared',jsonb_build_object('plan_digest',seal)) THEN
+ IF NOT reconforge.installment_event(t,i,p.audit_event_id,p.outbox_event_id,maker,'financial_installment_prepared',jsonb_build_object('plan_digest',seal)) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment preparation evidence is incomplete'; END IF;
  IF p.phase=0 AND (e.status<>'Draft' OR r IS NOT NULL OR l IS NOT NULL) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Prepared installment source phase differs'; END IF;
  IF p.phase>=1 AND (r IS NULL OR r.reviewer_actor_id=maker OR e.validator_actor_id<>r.reviewer_actor_id
  OR e.validation_digest<>p.payload->>'validation_digest'
- OR NOT reconforge.ops_event(t,i,r.audit_event_id,r.outbox_event_id,r.reviewer_actor_id,'financial_installment_reviewed',jsonb_build_object('plan_digest',seal))) THEN
+ OR NOT reconforge.installment_event(t,i,r.audit_event_id,r.outbox_event_id,r.reviewer_actor_id,'financial_installment_reviewed',jsonb_build_object('plan_digest',seal))) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Independent installment review is required'; END IF;
  IF p.phase=1 AND (e.status<>'Validated' OR l IS NOT NULL) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Reviewed installment source phase differs'; END IF;
  IF p.phase<2 THEN
- SELECT COALESCE(sum(a.amount_minor),0) INTO allocated FROM reconforge.ap_payment_links a WHERE a.tenant_id=t AND a.supplier_invoice_id=p.source_id
- AND NOT EXISTS(SELECT 1 FROM reconforge.ap_payment_link_reversals z WHERE z.tenant_id=t AND z.payment_link_id=a.id);
+ SELECT COALESCE(sum(allocation.amount_minor),0) INTO allocated FROM reconforge.ap_payment_links allocation WHERE allocation.tenant_id=t AND allocation.supplier_invoice_id=p.source_id
+ AND NOT EXISTS(SELECT 1 FROM reconforge.ap_payment_link_reversals z WHERE z.tenant_id=t AND z.payment_link_id=allocation.id);
  IF h.status<>'Approved' OR h.row_version<>(p.payload->>'invoice_version')::integer
  OR allocated<>(p.payload->>'allocated_before_minor')::numeric OR allocated+p.amount_minor>h.total_minor THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Pending installment must retain the exact current invoice residual'; END IF;
@@ -119,7 +127,7 @@ BEGIN
  AND NOT EXISTS(SELECT 1 FROM reconforge.ap_payment_link_reversals v WHERE v.tenant_id=t AND v.payment_link_id=z.id))<>(p.payload->>'allocated_before_minor')::numeric
  OR (a.ap_account_id,a.cash_account_id) IS DISTINCT FROM (lines->0->>'account_id',lines->1->>'account_id')
  OR EXISTS(SELECT 1 FROM reconforge.finance_posting_effects z WHERE z.tenant_id=t AND z.reverses_effect_id=f.id)
- OR NOT reconforge.ops_event(t,i,l.audit_event_id,l.outbox_event_id,l.posted_actor_id,'financial_installment_posted',
+ OR NOT reconforge.installment_event(t,i,l.audit_event_id,l.outbox_event_id,l.posted_actor_id,'financial_installment_posted',
  jsonb_build_object('plan_digest',seal,'posting_effect_id',f.id,'payment_link_id',a.id)) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Posted installment requires its exact native AP allocation and financial effect'; END IF;
  END IF;
@@ -127,12 +135,20 @@ BEGIN
  IF (c.workspace_id,c.organization_id,c.legal_entity_id) IS DISTINCT FROM (p.workspace_id,p.organization_id,p.legal_entity_id)
  OR reconforge.irp_digest(c.request_json)<>c.request_digest OR c.request_json->>'operation'<>c.operation OR c.request_json->>'actor_id'<>c.actor_id
  OR (c.response_json-ARRAY['phase','status','reviewer_actor_id','posting_effect_id','payment_link_id']) IS DISTINCT FROM p.payload
- OR (c.response_json->>'phase')::integer<>CASE c.operation WHEN 'prepare' THEN 0 WHEN 'review' THEN 1 ELSE 2 END
- OR c.actor_id<>CASE c.operation WHEN 'prepare' THEN maker WHEN 'review' THEN r.reviewer_actor_id ELSE l.posted_actor_id END THEN
+ OR (c.response_json->>'phase')::integer<>(CASE c.operation WHEN 'prepare' THEN 0 WHEN 'review' THEN 1 ELSE 2 END)
+ OR c.response_json->>'status' IS DISTINCT FROM (CASE c.operation WHEN 'prepare' THEN 'Prepared' WHEN 'review' THEN 'Reviewed' ELSE 'Posted' END)
+ OR c.response_json->>'reviewer_actor_id' IS DISTINCT FROM (CASE WHEN c.operation='prepare' THEN NULL ELSE r.reviewer_actor_id END)
+ OR c.response_json->>'posting_effect_id' IS DISTINCT FROM (CASE WHEN c.operation='post' THEN l.posting_effect_id ELSE NULL END)
+ OR c.response_json->>'payment_link_id' IS DISTINCT FROM (CASE WHEN c.operation='post' THEN l.payment_link_id ELSE NULL END)
+ OR c.actor_id IS DISTINCT FROM (CASE c.operation WHEN 'prepare' THEN maker WHEN 'review' THEN r.reviewer_actor_id ELSE l.posted_actor_id END) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment command does not close its actor and retained response'; END IF;
  IF c.operation<>'prepare' AND c.request_json->'request'<>jsonb_build_object('plan_id',i,'expected_plan_digest',seal,'reason',
  CASE c.operation WHEN 'review' THEN r.reason ELSE l.reason END) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment retry request differs'; END IF;
+ IF c.operation='prepare' AND c.request_json->'request' IS DISTINCT FROM (p.payload-ARRAY[
+ 'schema_version','id','entry_id','invoice_version','allocated_before_minor','currency_code','currency_precision','source_snapshot',
+ 'snapshot','preparer_actor_id','plan_digest','validation_digest']) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment preparation request differs'; END IF;
  END LOOP;
  IF NOT EXISTS(SELECT 1 FROM reconforge.financial_installment_commands WHERE tenant_id=t AND plan_id=i AND operation='prepare')
  OR (p.phase>=1 AND NOT EXISTS(SELECT 1 FROM reconforge.financial_installment_commands WHERE tenant_id=t AND plan_id=i AND operation='review'))
@@ -145,6 +161,14 @@ BEGIN
  IF TG_OP='INSERT' THEN changes:=ARRAY[to_jsonb(NEW)]; ELSIF TG_OP='DELETE' THEN changes:=ARRAY[to_jsonb(OLD)];
  ELSE changes:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)]; END IF;
  FOREACH changed IN ARRAY changes LOOP
+  IF TG_TABLE_NAME='ap_payment_links' AND EXISTS(SELECT 1 FROM reconforge.procurement_partial_invoices v
+   WHERE v.tenant_id=changed->>'tenant_id' AND v.native_invoice_id=changed->>'supplier_invoice_id') AND NOT EXISTS(
+   SELECT 1 FROM reconforge.financial_installment_links l JOIN reconforge.financial_installment_plans p
+   ON p.tenant_id=l.tenant_id AND p.id=l.plan_id WHERE p.tenant_id=changed->>'tenant_id' AND p.phase=2
+   AND p.source_id=changed->>'supplier_invoice_id' AND l.payment_link_id=changed->>'id'
+   AND l.posting_effect_id=changed->>'finance_effect_id') THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Partial source payment requires its reviewed FI1 owner';
+  END IF;
   IF TG_TABLE_NAME IN ('domain_audit_events','outbox_events') THEN
    owner_id:=CASE WHEN TG_TABLE_NAME='domain_audit_events' THEN changed->>'object_id' ELSE changed->>'aggregate_id' END;
    IF upper(left(COALESCE(owner_id,''),4))<>'FI1-' THEN CONTINUE; END IF;
@@ -205,8 +229,9 @@ DO $fi$ DECLARE n TEXT; BEGIN
  'domain_audit_events','outbox_events'] LOOP
  EXECUTE format('DROP TRIGGER installment_owner_closure ON reconforge.%I',n); END LOOP;
 END $fi$;
-DROP TABLE reconforge.financial_installment_commands,reconforge.financial_installment_links,reconforge.financial_installment_reviews,reconforge.financial_installment_plans;
 DROP FUNCTION reconforge.installment_reverse_close();
 DROP FUNCTION reconforge.installment_protect();
 DROP FUNCTION reconforge.installment_close(TEXT,TEXT);
+DROP FUNCTION reconforge.installment_event(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,JSONB);
+DROP TABLE reconforge.financial_installment_commands,reconforge.financial_installment_links,reconforge.financial_installment_reviews,reconforge.financial_installment_plans;
 """

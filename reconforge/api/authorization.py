@@ -204,6 +204,38 @@ for _operation, _permissions in {
     "pay": ("payables.settle", "finance_core.post"),
 }.items():
     _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-operations/cycles/{cycle_id}/commands/" + _operation)] = _erp_contract(_PROCUREMENT_READ, *_permissions)
+    if _operation not in {"prepare-payment", "review-payment", "pay"}:
+        _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-partial/orders/{order_id}/commands/" + _operation)] = _erp_contract(_PROCUREMENT_READ, *_permissions)
+
+_CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-partial/orders")] = _erp_contract(_PROCUREMENT_READ, "payables.manage")
+_STOCK_READ = _SALES_READ | frozenset({"inventory.read"})
+for _path, _permissions in {
+    "": ("sales.manage",),
+    "/{identifier}/submit": ("sales.manage",),
+    "/{identifier}/approve": ("sales.approve",),
+    "/{identifier}/reserve": ("sales.manage", "inventory.manage"),
+    "/{identifier}/issue/prepare": ("sales.manage", "inventory.manage", "inventory.valuation.manage", "finance_core.manage"),
+    "/{identifier}/issue/review": ("sales.approve", "inventory.valuation.approve", "finance_core.validate"),
+    "/{identifier}/deliver": ("sales.manage", "inventory.post", "inventory.valuation.approve", "finance_core.post"),
+    "/{identifier}/invoice/prepare": ("sales.manage", "receivables.manage", "finance_core.manage"),
+    "/{identifier}/invoice/review": ("sales.approve", "receivables.approve", "finance_core.validate"),
+    "/{identifier}/invoice/post": ("sales.manage", "receivables.approve", "finance_core.post"),
+    "/{identifier}/collection/prepare": ("sales.manage", "finance_core.manage"),
+    "/{identifier}/collection/review": ("sales.approve", "finance_core.validate"),
+    "/{identifier}/collection/post": ("sales.manage", "receivables.manage", "finance_core.post"),
+    "/{identifier}/cancel": ("sales.manage", "finance_core.manage"),
+}.items():
+    _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/stock-sales/orders" + _path)] = _erp_contract(_STOCK_READ, *_permissions)
+for _path, _permission in {
+    "/maps": "finance_core.manage",
+    "/maps/{map_id}/review": "finance_core.validate",
+    "/openings": "finance_core.manage",
+    "/openings/{opening_id}/review": "finance_core.validate",
+    "/openings/{opening_id}/post": "finance_core.post",
+}.items():
+    _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/financial-reporting" + _path)] = ("all", (_permission,))
+for _path, _permission in {"": "finance_core.manage", "/{plan_id}/review": "finance_core.validate", "/{plan_id}/post": "finance_core.post"}.items():
+    _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/financial-installments/plans" + _path)] = _erp_contract(frozenset({"payables.settle"}), _permission)
 
 
 

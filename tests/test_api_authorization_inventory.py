@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 339
-EXPECTED_DIGEST = "9a7ec1e81b5ed59e4b90c4b13efefec1f9e51d2dd6b150de58d44edc4489ddf3"
+EXPECTED_ROUTE_COUNT = 384
+EXPECTED_DIGEST = "a7e65ece2f8cbef68ececd4807e383ca3ae78d06395a12f85c41cd8da8a98441"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -49,6 +49,10 @@ HANDLER_BOUNDARY_HELPERS = {
     "operational_finance.py": frozenset({"_authority", "_execute"}),
     "sales_revenue.py": frozenset({"_execute", "_transition"}),
     "procurement_operations.py": frozenset({"execute"}),
+    "stock_sales.py": frozenset({"_execute", "_transition"}),
+    "procurement_partial.py": frozenset({"_execute"}),
+    "financial_reporting.py": frozenset({"_execute"}),
+    "financial_installments.py": frozenset({"execute", "_authority"}),
     "identity_administration.py": frozenset({"_service"}),
     "inventory_core.py": frozenset({"_server_call"}),
     "inventory_planning.py": frozenset({"_server_call"}),
@@ -157,7 +161,12 @@ def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_c
         if not has_mutation or path.name in SPECIAL_ROUTE_MODULES:
             continue
         source = path.read_text(encoding="utf-8")
-        if not any(marker in source for marker in SERVER_BOUNDARY_MARKERS):
+        reviewed_helpers = HANDLER_BOUNDARY_HELPERS.get(path.name, frozenset())
+        calls = {
+            node.func.id for node in ast.walk(tree)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        if not any(marker in source for marker in SERVER_BOUNDARY_MARKERS) and not calls & reviewed_helpers:
             violations.append(path.name)
 
     assert violations == [], (

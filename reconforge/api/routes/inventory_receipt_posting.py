@@ -150,7 +150,7 @@ def _execute(request: Request, user: LocalUser, permissions: frozenset[str], ope
         except APIError:
             raise
         except FinancePostingError as exc:
-            status = 403 if any(word in exc.code for word in ("denied", "required")) else 409 if any(word in exc.code for word in ("conflict", "not_unused")) else 400
+            status = 409 if exc.code == "inventory_receipt_owner_required" else 403 if any(word in exc.code for word in ("denied", "required")) else 409 if any(word in exc.code for word in ("conflict", "not_unused")) else 400
             raise APIError(status_code=status, code=exc.code, message=str(exc)) from exc
         except (KeyError, TypeError, ValueError) as exc:
             raise APIError(status_code=503, code="inventory_receipt_response_invalid", message="Receipt evidence could not be verified.") from exc
@@ -179,6 +179,7 @@ def review(request: Request, plan_id: str, payload: ReviewRequest, user: Review)
     def run(service: InventoryReceiptPostingApplicationService, actor: PostingActor, scope: FinanceCoreExecutionScope) -> Mapping[str, Any]:
         view = service.get_plan(plan_id, actor=actor)
         _authority(request, REVIEW_PERMISSIONS | (frozenset({"inventory.valuation.reverse.approve", "finance_core.reverse"}) if view["plan"]["operation"] == "FullReceiptReversal" else frozenset()), view["plan"])
+        cast(PostgresInventoryReceiptPostingRepository, service.repository).assert_public_phase(plan_id, actor=actor)
         result = service.review(plan_id, **payload.model_dump(), actor=actor)
         return {**view, "review": result}
     return _execute(request, user, REVIEW_PERMISSIONS, run)
@@ -188,6 +189,7 @@ def commit(request: Request, plan_id: str, payload: CommitRequest, user: Commit)
     def run(service: InventoryReceiptPostingApplicationService, actor: PostingActor, scope: FinanceCoreExecutionScope) -> Mapping[str, Any]:
         view = service.get_plan(plan_id, actor=actor)
         _authority(request, COMMIT_PERMISSIONS | (frozenset({"inventory.valuation.reverse.approve", "finance_core.reverse"}) if view["plan"]["operation"] == "FullReceiptReversal" else frozenset()), view["plan"])
+        cast(PostgresInventoryReceiptPostingRepository, service.repository).assert_public_phase(plan_id, actor=actor)
         effect = service.commit(plan_id, **payload.model_dump(), actor=actor)
         return {**view, "effect": effect}
     return _execute(request, user, COMMIT_PERMISSIONS, run)
@@ -197,6 +199,7 @@ def prepare_reversal(request: Request, plan_id: str, payload: ReversalRequest, u
     def run(service: InventoryReceiptPostingApplicationService, actor: PostingActor, scope: FinanceCoreExecutionScope) -> Mapping[str, Any]:
         view = service.get_plan(plan_id, actor=actor)
         _authority(request, REVERSE_PERMISSIONS, view["plan"])
+        cast(PostgresInventoryReceiptPostingRepository, service.repository).assert_public_phase(plan_id, actor=actor)
         fields = payload.model_dump(exclude={"command_id"})
         plan = service.prepare_reversal(ReceiptReversalPreparation(original_plan_id=plan_id, **fields), command_id=payload.command_id, actor=actor)
         return service.get_plan(plan["plan_id"], actor=actor)

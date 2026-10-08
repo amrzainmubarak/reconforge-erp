@@ -762,6 +762,27 @@ class PostgresInventoryReceiptPostingRepository:
             exists = self.connection.execute("SELECT 1 FROM reconforge.inventory_receipt_links WHERE tenant_id=%s AND plan_id=%s", (self.tenant_id, plan_id)).fetchone()
             return {"plan": plan, "review": review, "effect": self._effect(plan) if exists else None}
 
+    def assert_public_phase(self, plan_id: str, *, actor: PostingActor) -> None:
+        """Public receipt commands cannot advance a retained Procurement owner."""
+        with self._transaction(write=False):
+            self._actor(actor, READ_PERMISSIONS, mutation=False)
+            self._plan(plan_id)
+            installed = self._one(
+                "SELECT to_regclass('reconforge.procurement_cycles') AS owner_index", ()
+            )
+            if installed["owner_index"] is None:
+                return
+            owner = self._one(
+                """SELECT EXISTS(SELECT 1 FROM reconforge.procurement_cycles
+                WHERE tenant_id=%s AND receipt_plan_id=%s) AS owned""",
+                (self.tenant_id, plan_id),
+            )
+            if owner["owned"]:
+                fail(
+                    "Use the Procurement receiving command to commit its receipt, inventory, GL and AP source together.",
+                    "inventory_receipt_owner_required",
+                )
+
     def get_effect(self, plan_id: str, *, actor: PostingActor) -> ReceiptEffect:
         with self._transaction(write=False):
             self._actor(actor, READ_PERMISSIONS, mutation=False)

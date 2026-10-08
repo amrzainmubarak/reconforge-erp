@@ -82,6 +82,87 @@ def complete_procurement_cycle(runtime: ReceiptRuntime, number: str = "PO-1") ->
     return advance(runtime, create(runtime, number))
 
 
+def seed_distinct_procurement_identities(runtime: ReceiptRuntime) -> None:
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+        identities = PostgresIdentityRepository(connection)
+        for name in ("maker", "checker", "poster"):
+            identities.create_user(tenant_id=runtime.tenant, user_id="erp-" + name, username="login-" + name,
+                password=runtime.password, role_name="receipt-operator")
+
+
+def test_distinct_login_and_id_cannot_self_approve_through_native_ap_and_full_cycle_succeeds(procurement_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    runtime = procurement_runtime
+    seed_distinct_procurement_identities(runtime)
+    with runtime.actor("login-maker") as (connection, _, actor):
+        assert actor.user_id == "erp-maker" and actor.username == "login-maker"
+        view = PostgresProcurementOperationsRepository(connection, runtime.tenant).create(request(), command_id="alias-create", actor=actor)
+    for index, actor_name in enumerate(ACTORS):
+        if index in (1, 6):
+            # Native API passes the canonical current_user.id. Same-person
+            # approval must fail even though the user's login is different.
+            with runtime.actor("login-maker") as (connection, _, actor):
+                ap = PostgresPayablesRepository(connection, runtime.tenant)
+                with pytest.raises(Exception, match="Separation of duties"):
+                    if index == 1:
+                        ap.approve_purchase_order(view["cycle"]["purchase_order_id"], expected_version=2, actor_label=actor.user_id)
+                    else:
+                        invoice = ap.get_supplier_invoice(view["cycle"]["invoice_id"])
+                        ap.approve_supplier_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.user_id)
+            # Even an independent native approval cannot advance the source
+            # without its procurement command, audit and stage in the owner.
+            with pytest.raises(psycopg.errors.CheckViolation), runtime.actor("login-checker") as (connection, _, actor):
+                ap = PostgresPayablesRepository(connection, runtime.tenant)
+                if index == 1:
+                    ap.approve_purchase_order(view["cycle"]["purchase_order_id"], expected_version=2, actor_label=actor.user_id)
+                else:
+                    invoice = ap.get_supplier_invoice(view["cycle"]["invoice_id"])
+                    ap.approve_supplier_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.user_id)
+        with runtime.actor("login-" + actor_name) as (connection, _, actor):
+            repository = PostgresProcurementOperationsRepository(connection, runtime.tenant)
+            arguments = {"expected_version": index + 1, "command_id": "alias-" + str(index), "reason": "Independent canonical actor", "actor": actor}
+            view = repository.act(view["cycle"]["id"], OPERATIONS[index], **arguments)
+            assert repository.act(view["cycle"]["id"], OPERATIONS[index], **arguments) == view
+    assert view["cycle"]["stage"] == "Paid"
+    with runtime.actor("login-poster") as (connection, _, actor):
+        ap = PostgresPayablesRepository(connection, runtime.tenant)
+        po = ap.get_purchase_order(view["cycle"]["purchase_order_id"])
+        invoice = ap.get_supplier_invoice(view["cycle"]["invoice_id"])
+        assert (po["created_by"], po["approved_by"], invoice["created_by"], invoice["approved_by"]) == ("erp-maker", "erp-checker", "erp-maker", "erp-checker")
+        assert invoice["status"] == "Paid"
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 3
+        rows = connection.execute("SELECT actor_id FROM reconforge.procurement_commands WHERE tenant_id=%s ORDER BY cycle_version", (runtime.tenant,)).fetchall()
+        assert [row["actor_id"] for row in rows] == ["erp-maker", *["erp-" + name for name in ACTORS]]
+        assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor) == view
+
+
+def test_retained_approval_cannot_be_reassigned_to_another_real_identity(procurement_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    runtime = procurement_runtime
+    view = advance(runtime, create(runtime), stop=2)
+    with pytest.raises(psycopg.errors.CheckViolation, match="retained command actor"), runtime.actor("poster") as (connection, _, _actor):
+        connection.execute("UPDATE reconforge.ap_purchase_orders SET approved_by='poster' WHERE tenant_id=%s AND id=%s", (runtime.tenant, view["cycle"]["purchase_order_id"]))
+    with runtime.actor("checker") as (connection, _, actor):
+        assert PostgresProcurementOperationsRepository(connection, runtime.tenant).get(view["cycle"]["id"], actor=actor) == view
+
+
+def test_historical_actor_resolution_retains_disabled_identity_and_denies_ambiguous_alias(procurement_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    runtime = procurement_runtime
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+        identities = PostgresIdentityRepository(connection)
+        identities.create_user(tenant_id=runtime.tenant, user_id="retired-id", username="retired-login", password=runtime.password, role_name="receipt-operator")
+        connection.execute("UPDATE reconforge.identity_users SET disabled=TRUE,disabled_at=now(),disabled_by='poster' WHERE tenant_id=%s AND id='retired-id'", (runtime.tenant,))
+        assert connection.execute("SELECT reconforge.procurement_actor_id(%s,'retired-login') AS id", (runtime.tenant,)).fetchone()["id"] == "retired-id"
+        assert connection.execute("SELECT reconforge.procurement_actor_id(%s,'retired-id') AS id", (runtime.tenant,)).fetchone()["id"] == "retired-id"
+        identities.create_user(tenant_id=runtime.tenant, user_id="other-id", username="retired-id", password=runtime.password, role_name="receipt-operator")
+    with pytest.raises(psycopg.errors.CheckViolation, match="absent or ambiguous"), runtime.actor("poster") as (connection, _, _actor):
+        connection.execute("SELECT reconforge.procurement_actor_id(%s,'retired-id')", (runtime.tenant,))
+
+
 def test_options_are_named_json_serializable_scoped_and_bounded(procurement_runtime: ReceiptRuntime) -> None:
     runtime = procurement_runtime
     with runtime.actor("maker") as (connection, _, actor):

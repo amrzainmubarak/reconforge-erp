@@ -63,6 +63,42 @@ CREATE POLICY procurement_commands_scope ON reconforge.procurement_commands USIN
 CREATE FUNCTION reconforge.procurement_immutable_command() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
 BEGIN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement command evidence is append-only.'; END $$;
 CREATE TRIGGER procurement_commands_immutable BEFORE UPDATE OR DELETE ON reconforge.procurement_commands FOR EACH ROW EXECUTE FUNCTION reconforge.procurement_immutable_command();
+CREATE FUNCTION reconforge.procurement_actor_id(t TEXT,label TEXT) RETURNS TEXT LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $$
+DECLARE identifier TEXT;matches INTEGER;
+BEGIN
+ SELECT count(*),min(id) INTO matches,identifier FROM reconforge.identity_users
+ WHERE tenant_id=t AND (id=label OR lower(username)=lower(label));
+ IF matches<>1 THEN RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement historical actor identity is absent or ambiguous.'; END IF;
+ RETURN identifier;
+END $$;
+CREATE FUNCTION reconforge.procurement_verify_approval_commands(c reconforge.procurement_cycles) RETURNS VOID
+LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+DECLARE p reconforge.ap_purchase_orders%ROWTYPE;i reconforge.ap_supplier_invoices%ROWTYPE;creator TEXT;approver TEXT;
+BEGIN
+ SELECT * INTO p FROM reconforge.ap_purchase_orders WHERE tenant_id=c.tenant_id AND id=c.purchase_order_id;
+ creator:=reconforge.procurement_actor_id(c.tenant_id,p.created_by);
+ IF creator IS DISTINCT FROM c.creator_actor_id THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement purchase creator differs from the retained command actor.'; END IF;
+ IF c.stage>=2 THEN
+ approver:=reconforge.procurement_actor_id(c.tenant_id,p.approved_by);
+ IF approver=creator OR NOT EXISTS(SELECT 1 FROM reconforge.procurement_commands m WHERE m.tenant_id=c.tenant_id AND m.cycle_id=c.id
+ AND m.cycle_version=3 AND m.operation='approve-order' AND m.actor_id=approver) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement order approval needs its independent retained command actor.'; END IF;
+ END IF;
+ IF c.stage>=6 THEN
+ SELECT * INTO i FROM reconforge.ap_supplier_invoices WHERE tenant_id=c.tenant_id AND id=c.invoice_id;
+ creator:=reconforge.procurement_actor_id(c.tenant_id,i.created_by);
+ IF NOT EXISTS(SELECT 1 FROM reconforge.procurement_commands m WHERE m.tenant_id=c.tenant_id AND m.cycle_id=c.id
+ AND m.cycle_version=7 AND m.operation='match-invoice' AND m.actor_id=creator) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement invoice creator differs from the retained match command actor.'; END IF;
+ IF c.stage>=7 THEN
+ approver:=reconforge.procurement_actor_id(c.tenant_id,i.approved_by);
+ IF approver=creator OR NOT EXISTS(SELECT 1 FROM reconforge.procurement_commands m WHERE m.tenant_id=c.tenant_id AND m.cycle_id=c.id
+ AND m.cycle_version=8 AND m.operation='approve-invoice' AND m.actor_id=approver) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement invoice approval needs its independent retained command actor.'; END IF;
+ END IF;
+ END IF;
+END $$;
 CREATE FUNCTION reconforge.procurement_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
 DECLARE p reconforge.ap_purchase_orders%ROWTYPE;l reconforge.ap_purchase_order_lines%ROWTYPE;
  r reconforge.inventory_receipt_plans%ROWTYPE;g reconforge.ap_goods_receipts%ROWTYPE;i reconforge.ap_supplier_invoices%ROWTYPE;
@@ -92,8 +128,11 @@ BEGIN
  OR l.ordered_quantity<>qty OR l.unit_price_minor<>(NEW.request_json->>'unit_price_minor')::bigint OR l.tax_minor<>0
  OR qty*l.unit_price_minor<>NEW.total_minor THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement source differs from its exact purchase order.'; END IF;
- IF NEW.stage>=1 AND p.status NOT IN ('Submitted','Approved') OR NEW.stage>=2 AND p.status<>'Approved' THEN
+ IF reconforge.procurement_actor_id(NEW.tenant_id,p.created_by) IS DISTINCT FROM NEW.creator_actor_id
+ OR NEW.stage=0 AND p.status<>'Draft' OR NEW.stage=1 AND p.status<>'Submitted' OR NEW.stage>=2 AND p.status<>'Approved' THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement requires its current approved purchase order.'; END IF;
+ IF NEW.stage>=2 AND reconforge.procurement_actor_id(NEW.tenant_id,p.approved_by)=NEW.creator_actor_id THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement order approval requires an independent canonical identity.'; END IF;
  IF NEW.stage>=3 THEN
  SELECT * INTO r FROM reconforge.inventory_receipt_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.receipt_plan_id;
  IF r IS NULL OR r.operation<>'Receipt' OR (r.workspace_id,r.organization_id,r.legal_entity_id) IS DISTINCT FROM (NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id)
@@ -115,8 +154,11 @@ BEGIN
  SELECT * INTO i FROM reconforge.ap_supplier_invoices WHERE tenant_id=NEW.tenant_id AND id=NEW.invoice_id;
  IF i IS NULL OR i.purchase_order_id<>p.id OR i.supplier_id<>p.supplier_id OR i.total_minor<>NEW.total_minor OR i.tax_minor<>0 OR i.currency_code<>p.currency_code
  OR (i.workspace_id,i.organization_id,i.legal_entity_id) IS DISTINCT FROM (NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id)
- OR i.status NOT IN ('Matched','Approved','Paid') OR NOT EXISTS(SELECT 1 FROM reconforge.ap_three_way_matches WHERE tenant_id=NEW.tenant_id AND supplier_invoice_id=i.id AND status='Passed') THEN
+ OR (NEW.stage=6 AND i.status<>'Matched') OR (NEW.stage BETWEEN 7 AND 12 AND i.status<>'Approved') OR (NEW.stage=13 AND i.status<>'Paid')
+ OR NOT EXISTS(SELECT 1 FROM reconforge.ap_three_way_matches WHERE tenant_id=NEW.tenant_id AND supplier_invoice_id=i.id AND status='Passed') THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement invoice needs exact passed three-way matching.'; END IF;
+ IF NEW.stage>=7 AND reconforge.procurement_actor_id(NEW.tenant_id,i.created_by)=reconforge.procurement_actor_id(NEW.tenant_id,i.approved_by) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement invoice approval requires an independent canonical identity.'; END IF;
  END IF;
  IF NEW.stage>=8 THEN
  SELECT * INTO a FROM reconforge.operational_finance_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.accrual_plan_id;
@@ -168,7 +210,7 @@ CREATE TRIGGER procurement_cycles_guard BEFORE INSERT OR UPDATE OR DELETE ON rec
 # Reuse the complete source projection for reverse reference guards and reads.
 # These constraints validate the final row at outer commit, allowing atomic
 # participant changes while rejecting a later standalone source mutation.
-_verification = UPGRADE_SQL.split(" SELECT * INTO p FROM", 1)[1].split(" RETURN NEW;", 1)[0]
+_verification = UPGRADE_SQL.split("CREATE FUNCTION reconforge.procurement_guard()", 1)[1].split(" SELECT * INTO p FROM", 1)[1].split(" RETURN NEW;", 1)[0]
 UPGRADE_SQL += r"""
 CREATE FUNCTION reconforge.procurement_verify_cycle(c reconforge.procurement_cycles) RETURNS VOID
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$
@@ -194,6 +236,7 @@ BEGIN
  FOR c IN SELECT * FROM reconforge.procurement_cycles WHERE tenant_id=j->>'tenant_id'
  AND (id=parent OR purchase_order_id=parent OR goods_receipt_id=parent OR invoice_id=parent) LOOP
  PERFORM reconforge.procurement_verify_cycle(c);
+ PERFORM reconforge.procurement_verify_approval_commands(c);
  END LOOP;
  RETURN NULL;
 END $$;
@@ -238,6 +281,7 @@ BEGIN
  AND o.payload=jsonb_build_object('cycle_id',c.id,'stage',m.response_json->'cycle'->>'stage','row_version',m.cycle_version,'audit_event_id',m.audit_event_id)) THEN
  RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='Procurement command, actor, exact request, audit or outbox evidence differs.'; END IF;
  END LOOP;
+ PERFORM reconforge.procurement_verify_approval_commands(c);
  RETURN NULL;
 END $$;
 CREATE CONSTRAINT TRIGGER procurement_cycle_commands AFTER INSERT OR UPDATE ON reconforge.procurement_cycles DEFERRABLE INITIALLY DEFERRED
@@ -267,9 +311,11 @@ DROP TRIGGER procurement_cycle_commands ON reconforge.procurement_cycles;
 DROP FUNCTION reconforge.procurement_close_commands();
 DROP FUNCTION reconforge.procurement_source_closure();
 DROP FUNCTION reconforge.procurement_verify_cycle(reconforge.procurement_cycles);
+DROP FUNCTION reconforge.procurement_verify_approval_commands(reconforge.procurement_cycles);
 DROP TABLE reconforge.procurement_cycles;
 DROP FUNCTION reconforge.procurement_guard();
 DROP FUNCTION reconforge.procurement_immutable_command();
+DROP FUNCTION reconforge.procurement_actor_id(TEXT,TEXT);
 """
 
 

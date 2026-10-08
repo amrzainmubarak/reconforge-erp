@@ -137,7 +137,7 @@ class PostgresProcurementOperationsRepository:
         response = self._view(row, actor)
         event_id = platform_id("PCOB", row["id"], row["row_version"])
         audit = PostgresAuditEventRepository(self.connection, self.tenant_id).append(actor_user_id=actor.user_id,
-            actor_label=actor.username, object_type="procurement_cycle", object_id=row["id"], action="procurement_" + operation.replace("-", "_"),
+            actor_label=actor.user_id, object_type="procurement_cycle", object_id=row["id"], action="procurement_" + operation.replace("-", "_"),
             metadata={"stage": STAGES[row["stage"]], "row_version": row["row_version"], "request_digest": digest})
         self.connection.execute("""INSERT INTO reconforge.outbox_events(tenant_id,event_id,event_type,aggregate_type,aggregate_id,
             workspace_id,organization_id,legal_entity_id,payload) VALUES(%s,%s,'procurement.cycle_changed','procurement_cycle',%s,%s,%s,%s,%s::jsonb)""",
@@ -170,7 +170,7 @@ class PostgresProcurementOperationsRepository:
                 order_date=request.posting_date, currency_code=request.currency_code,
                 lines=[PurchaseOrderLineInput(item_code=request.item_code, ordered_quantity=request.quantity, unit_price_minor=request.unit_price_minor)],
                 workspace=scope["workspace_id"], organization_code=request.organization_code, entity_code=request.entity_code,
-                idempotency_key=platform_id("PCMD", command_id, "order"), actor_label=actor.username)
+                idempotency_key=platform_id("PCMD", command_id, "order"), actor_label=actor.user_id)
             self.connection.execute("""INSERT INTO reconforge.procurement_cycles(tenant_id,id,workspace_id,organization_id,legal_entity_id,
                 number,request_json,total_minor,purchase_order_id,creator_actor_id) VALUES(%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s)""",
                 (self.tenant_id, cycle_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], request.number,
@@ -199,9 +199,9 @@ class PostgresProcurementOperationsRepository:
             changes: dict[str, Any] = {}
             command = platform_id("PCMD", cycle_id, command_id, operation)
             if operation == "submit-order":
-                self.payables.submit_purchase_order(order["id"], expected_version=order["row_version"], actor_label=actor.username)
+                self.payables.submit_purchase_order(order["id"], expected_version=order["row_version"], actor_label=actor.user_id)
             elif operation == "approve-order":
-                self.payables.approve_purchase_order(order["id"], expected_version=order["row_version"], actor_label=actor.username)
+                self.payables.approve_purchase_order(order["id"], expected_version=order["row_version"], actor_label=actor.user_id)
             elif operation == "prepare-receipt":
                 plan = self.receipts.prepare_receipt(ReceiptPreparation(receipt_number="GR-" + request.number,
                     posting_date=request.posting_date, period_id=request.period_id, item_code=request.item_code,
@@ -224,24 +224,24 @@ class PostgresProcurementOperationsRepository:
                     command_id=command, reason=reason, actor=actor)
                 receipt = self.payables.post_receipt(receipt_number="GR-" + request.number, purchase_order_id=order["id"],
                     receipt_date=request.posting_date, quantities={order["lines"][0]["id"]: request.quantity},
-                    workspace=row["workspace_id"], idempotency_key=command, actor_label=actor.username)
+                    workspace=row["workspace_id"], idempotency_key=command, actor_label=actor.user_id)
                 changes["goods_receipt_id"] = receipt["id"]
             elif operation == "match-invoice":
                 line = order["lines"][0]
                 invoice = self.payables.create_supplier_invoice(invoice_number="INV-" + request.number, supplier_code=request.supplier_code,
                     invoice_date=request.posting_date, currency_code=request.currency_code, total_minor=row["total_minor"],
                     purchase_order_id=order["id"], workspace=row["workspace_id"], organization_code=request.organization_code,
-                    entity_code=request.entity_code, idempotency_key=command, actor_label=actor.username,
+                    entity_code=request.entity_code, idempotency_key=command, actor_label=actor.user_id,
                     lines=[SupplierInvoiceLineInput(purchase_order_line_id=line["id"], invoiced_quantity=request.quantity,
                         unit_price_minor=request.unit_price_minor, line_total_minor=row["total_minor"])])
-                self.payables.submit_supplier_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.username)
-                result = self.payables.run_three_way_match(invoice["id"], actor_label=actor.username)
+                self.payables.submit_supplier_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.user_id)
+                result = self.payables.run_three_way_match(invoice["id"], actor_label=actor.user_id)
                 if result.status != "Passed":
                     raise ProcurementError("procurement_match_failed", "The supplier invoice failed exact three-way matching.")
                 changes["invoice_id"] = invoice["id"]
             elif operation == "approve-invoice":
                 invoice = self.payables.get_supplier_invoice(row["invoice_id"])
-                self.payables.approve_supplier_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.username)
+                self.payables.approve_supplier_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.user_id)
             else:
                 changes = self._finance(row, request, operation, command, reason, actor)
             self._advance(row, changes)

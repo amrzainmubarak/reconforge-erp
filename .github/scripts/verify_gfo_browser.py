@@ -33,20 +33,22 @@ from tests.gfo_receipt_browser_seed import seed_receipt_browser  # noqa: E402
 IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
 
 
-def source_digest() -> str:
-    files = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT).decode().split("\0")  # nosec B603 B607
+def source_digest(directory: Path = ROOT) -> str:
+    files = subprocess.check_output(["git", "ls-files", "-z"], cwd=directory).decode().split("\0")  # nosec B603 B607
     digest = hashlib.sha256()
     for name in sorted(filter(None, files)):
         digest.update(name.encode())
-        digest.update(hashlib.sha256((ROOT / name).read_bytes()).digest())
+        digest.update(hashlib.sha256((directory / name).read_bytes()).digest())
     return digest.hexdigest()
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/gfo-browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
     args = parser.parse_args()
+    runtime_root = args.runtime_root.resolve()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     if not (args.web_root / "index.html").is_file():
@@ -58,12 +60,14 @@ def main() -> int:
     server = None
     report: dict[str, object] = {
         "started_at": datetime.now(UTC).isoformat(), "image": IMAGE,
-        "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),  # nosec B603 B607
-        "source_sha256": source_digest(), "status": "failed",
+        "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip(),  # nosec B603 B607
+        "source_sha256": source_digest(runtime_root), "runtime_root": str(runtime_root),
+        "tooling_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+        "status": "failed",
     }
     started = time.monotonic()
-    def run(argv: list[str], *, environment: dict[str, str] | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
-        result = subprocess.run(argv, cwd=ROOT, env=environment, capture_output=True, text=True, timeout=240)  # nosec B603
+    def run(argv: list[str], *, environment: dict[str, str] | None = None, check: bool = True, directory: Path = ROOT) -> subprocess.CompletedProcess[str]:
+        result = subprocess.run(argv, cwd=directory, env=environment, capture_output=True, text=True, timeout=240)  # nosec B603
         if check and result.returncode:
             diagnostic = result.stdout + result.stderr
             for value in secret_values:
@@ -91,7 +95,7 @@ def main() -> int:
                     raise
                 time.sleep(.2)
         environment["RECONFORGE_POSTGRES_DSN"] = admin_dsn
-        migration = run([sys.executable, "-m", "alembic", "upgrade", "head"], environment=environment)
+        migration = run([sys.executable, "-m", "alembic", "upgrade", "head"], environment=environment, directory=runtime_root)
         (output / "migration.log").write_text(migration.stdout + migration.stderr, encoding="utf-8")
         with psycopg.connect(admin_dsn) as admin:
             admin.execute("GRANT USAGE ON SCHEMA reconforge TO gfo_browser_app")
@@ -116,7 +120,8 @@ def main() -> int:
             RECONFORGE_GFO_JOB_ORGANIZATION="org", RECONFORGE_GFO_JOB_ENTITY="entity",
             RECONFORGE_GFO_LIVE_PASSWORD=runtime.password, RECONFORGE_GFO_BROWSER_REPORT=str(output / "playwright.json"))
         with (output / "https-runtime.log").open("w", encoding="utf-8") as log:
-            server = subprocess.Popen([sys.executable, "-m", "tests.gfo_browser_runtime"], cwd=ROOT, env=environment, stdout=log, stderr=subprocess.STDOUT)  # nosec B603
+            runtime_command = "import sys; sys.path.insert(0, sys.argv[1]); from tests.gfo_browser_runtime import main; main()"
+            server = subprocess.Popen([sys.executable, "-c", runtime_command, str(runtime_root)], cwd=ROOT, env=environment, stdout=log, stderr=subprocess.STDOUT)  # nosec B603
             # Only the generated, owned localhost certificate is trusted here.
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             context.check_hostname = False
@@ -137,7 +142,7 @@ def main() -> int:
             browser = run([executable, "--prefix", "apps/web", "playwright", "test", "--config", "apps/web/live/gfo.playwright.config.ts"], environment=environment, check=False)
             (output / "browser.log").write_text(browser.stdout + browser.stderr, encoding="utf-8")
             report["browser_exit_code"] = browser.returncode
-        report["source_unchanged"] = source_digest() == report["source_sha256"]
+        report["source_unchanged"] = source_digest(runtime_root) == report["source_sha256"]
         report["status"] = "passed" if browser.returncode == 0 and report["source_unchanged"] else "failed"
     except Exception as exc:
         diagnostic = str(exc)

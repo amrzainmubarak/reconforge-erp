@@ -97,3 +97,30 @@ b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2
 docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:116
 b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:122
 docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:122
+
+# Reviewed Synthetic-123 disposable auth fixtures only; exact history and current tree locations.
+# SQLite temporary databases, tenant-scoped PostgreSQL tests and mocked browser login.
+38891a02c48e95310d34a24961be27823c0369a0:apps/web/e2e/exception-review.spec.ts:generic-api-key:26
+67f04db80cf27cfefbc22d448c47952ca3bb5bf5:apps/web/e2e/notification-inbox.spec.ts:generic-api-key:22
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:26
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:27
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:28
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:36
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:80
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_notification_inbox.py:generic-api-key:43
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_notification_inbox.py:generic-api-key:44
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_notification_inbox.py:generic-api-key:45
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_postgres_notification_inbox.py:generic-api-key:102
+27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_postgres_notification_inbox.py:generic-api-key:190
+apps/web/e2e/exception-review.spec.ts:generic-api-key:26
+apps/web/e2e/notification-inbox.spec.ts:generic-api-key:22
+tests/test_api_notification_inbox.py:generic-api-key:22
+tests/test_api_notification_inbox.py:generic-api-key:23
+tests/test_api_notification_inbox.py:generic-api-key:24
+tests/test_api_notification_inbox.py:generic-api-key:30
+tests/test_api_notification_inbox.py:generic-api-key:74
+tests/test_notification_inbox.py:generic-api-key:45
+tests/test_notification_inbox.py:generic-api-key:46
+tests/test_notification_inbox.py:generic-api-key:47
+tests/test_postgres_notification_inbox.py:generic-api-key:100
+tests/test_postgres_notification_inbox.py:generic-api-key:188

@@ -1,10 +1,18 @@
 # Security Baseline
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+Installed and hash-locked Python 3.12 audits pass; the initial npm audit fails on source-map-js 1.2.1. A dedicated PostgreSQL 17.10 fixture reaches head 0106 with SUPERUSER=false/BYPASSRLS=false; two Finance tests expose missing explicit policy-store privileges. Official references checked October 8 remain ASVS 5.0.0 stable, SSDF 1.1 Final/1.2 Draft and SLSA 1.2 Approved; mappings are not certification.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 The clean migrated PostgreSQL fixture has 167/167 tables with enabled/forced RLS and a non-superuser, non-BYPASSRLS runtime role. Runtime rejection of unsafe roles is still missing. Fresh Python/npm audits failed; old clean audit statements are historical. Current official references: ASVS 5.0.0; SSDF 1.1 Final (1.2 Draft); SLSA 1.2 Approved.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 ## E-1120 Strict Receivables quantity inputs (2026-08-29)
 
@@ -535,3 +543,13 @@ Allowed wording: "Security checks and threat-model documentation exist; deployme
 - Four migration-0037 tables use forced RLS. PostgreSQL triggers enforce permission and TTL ceilings, immutable credential identity, monotonic account versions, same-account rotation, and append-only events.
 - Raw credentials are returned once by the operator CLI and only SHA-256 digests persist. Disable revokes all active credentials atomically.
 - Residual boundary: workload identity federation, WebAuthn recovery/attestation governance and broad authenticator interoperability, hosted identity operation, independent assessment, and production operation remain unverified; current service-principal, password-step-up, emergency-review, and WebAuthn evidence is synthetic and bounded.
+
+
+## October8 hosted recovery gate supplement
+
+[Bounded live recovery repairs and remaining hosted gaps](HOSTED_GATES_REPAIR_2026-10-08.md); [source/diff/log hashes](HOSTED_GATES_REPAIR_2026-10-08.json). Earlier b8f5a772 results remain source-bound history. Whole regression after ADR0833 is pending; shared downgrade fixtures, identity projections and paused receipt cases prevent full CI acceptance.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

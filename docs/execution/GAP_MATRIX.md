@@ -1,10 +1,18 @@
 # Gap Matrix
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+The five reproduced pre-repair findings were ambient Decimal rounding in Money/Finance conversion, semicolon-delimited PostgreSQL CI test paths, source-map-js 1.2.1 audit failure, missing Finance policy-store fixture grants, and dated baseline/browser-contract drift. Full native PostgreSQL recovery and configured HTTPS journeys remain separate prerequisites.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Reproduced gaps include mutable historical currency precision, cumulative AP over-approval, quantity truncation, AR status/currency drift, unsafe runtime-role acceptance, CI deselection, missing metrics migration, dependency disclosures and disconnected live UI scope. See PROD tasks and current audit.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 ## Highest current risks
 
@@ -47,3 +55,13 @@ Reproduced gaps include mutable historical currency precision, cumulative AP ove
 | Documentation | The deleted root `DEMO.md` links and overbroad determinism wording were corrected; large historical/strategy surfaces can drift again | Automated link, maturity-claim, schema, and evidence-matrix consistency gates |
 | Architecture | Modular boundaries and protocols are partial; SQLite schema/application modules remain broad | Enforced dependency rules and repository-contract parity without a bulk rewrite |
 | Durable scheduler fairness | E-596/E-597 add tenant-scoped SQLite/PostgreSQL scheduler cursors bound to an ordered lane digest; E-658 proves two spawned PostgreSQL processes reserve distinct lanes; E-659 proves a fresh process resumes after an abrupt checkpointing-worker exit without duplicate effects; E-664 adds a real PostgreSQL backend termination after a committed checkpoint and proves generation-2 recovery without duplicate effects; E-674 repeats the multi-worker PostgreSQL profile across three isolated tenant-lane iterations with stable effect digests | Cross-host fairness, throughput, queue HA/failover, distributed soak/capacity, RPO/RTO, and production SLO evidence remain open |
+
+
+## October8 hosted recovery gate supplement
+
+[Bounded live recovery repairs and remaining hosted gaps](HOSTED_GATES_REPAIR_2026-10-08.md); [source/diff/log hashes](HOSTED_GATES_REPAIR_2026-10-08.json). Earlier b8f5a772 results remain source-bound history. Whole regression after ADR0833 is pending; shared downgrade fixtures, identity projections and paused receipt cases prevent full CI acceptance.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

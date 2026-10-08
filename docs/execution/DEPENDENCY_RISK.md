@@ -1,10 +1,18 @@
 # Dependency Risk
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+The Python lock remains unchanged and the isolated Python 3.12 audit reports no findings across 128 resolved packages. Initial npm audit reproduces GHSA-68fv-2mgg-jv7q in source-map-js 1.2.1. Only the compatible 1.2.2 version/resolved URL/SRI entry is refreshed; no broad npm audit fix, ignore or dependency-range change is used.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Fresh all-extra Python audit reports 11 entries (7 distinct advisory IDs) in urllib3 2.7.0 and virtualenv 21.7.0. npm reports two moderate and one high development dependency packages (Vitest/mocker and undici); production-only npm audit has zero findings. Remediation and upstream review are PROD-004; these findings are not accepted exceptions.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 Measured through 2026-08-28. Vulnerability scan success is not the same as reproducible resolution or low operational risk.
 
@@ -24,3 +32,8 @@ Measured through 2026-08-28. Vulnerability scan success is not the same as repro
 ## Current allowed conclusion
 
 The isolated locked Python 3.11/3.12 all-extra graph and current npm lock report no known vulnerabilities in the executed audits after the `pip 26.2` remediation. A deterministic universal Python/server lock, exact-subject SBOM definitions, fixed-only reviewed VEX, bounded exception policy, weekly update definitions, and fail-closed candidate/security workflow gates exist. E-824's fresh exact Grype gate now passes locally with a valid v6.1.9 database; Docker Scout also reports zero Critical/High/Medium/Low findings. E-1074 prevents CI from confusing a BuildKit manifest-list identity with Syft's image-configuration subject. The hosted clean-build/release gate is still pending, so the container is not yet releaseable. Local evidence does not prove hosted enforcement, safety, reachability, provenance, license suitability, or production operation. The current npm lock has no recorded SRI gap; no hosted signed result exists for this slice.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

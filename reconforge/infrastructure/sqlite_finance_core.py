@@ -7,7 +7,6 @@ import sqlite3
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date
-from decimal import Decimal
 from typing import Any
 
 from reconforge.application.finance_core import (
@@ -28,7 +27,7 @@ from reconforge.platform.common import (
     platform_id,
     require_permission,
 )
-from reconforge.utils.money import CurrencyRegistryContext, InvalidAmountError, Money
+from reconforge.utils.money import CurrencyRegistryContext, InvalidAmountError, Money, minor_units_to_decimal
 
 FINANCE_CORE_READ_PERMISSION = "finance_core.read"
 FINANCE_CORE_MANAGE_PERMISSION = "finance_core.manage"
@@ -147,7 +146,7 @@ def _amount_to_minor(
 
 
 def _minor_to_text(value: int, minor_units: int) -> str:
-    amount = Decimal(value).scaleb(-minor_units)
+    amount = minor_units_to_decimal(value, precision=minor_units)
     return f"{amount:.{minor_units}f}"
 
 

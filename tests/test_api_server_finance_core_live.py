@@ -59,6 +59,9 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             admin.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
             install_postgres_finance_core_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            # FOR SHARE in policy capture also requires UPDATE privilege.
+            admin.execute(f"GRANT SELECT,UPDATE ON reconforge.currency_registry_bindings TO {app_user}")
+            admin.execute(f"GRANT SELECT,INSERT ON reconforge.currency_registry_snapshots TO {app_user}")
             tables = (
                 "tenants,organizations,currencies,legal_entities,fiscal_periods,domain_workspaces,"
                 "master_data_workspace_organizations,"

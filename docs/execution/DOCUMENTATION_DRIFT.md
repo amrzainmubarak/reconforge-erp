@@ -1,10 +1,18 @@
 # Documentation Drift
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+The October 3 current summaries are historical snapshots. October 8 records the exact sprint source and preserves current fixture/skipped-gate limits. The `/exceptions` screenshot journey must require authenticated review and must not reinstate synthetic queue data. Current-state architecture distinguishes the read-only showcase from bounded authenticated routes.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Current drift: README/Studio understate existing administration writes and list 19 rather than 24 pack directories; AP/AR docs exclude implemented PostgreSQL adapters; parity inventory source head is 0089 instead of 0092; old zero-advisory snapshots are not current. Corrections must preserve historical evidence dates.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 Measured 2026-07-24. Items are ordered by impact on user decisions and release truth.
 
@@ -60,3 +68,8 @@ Measured 2026-07-24. Items are ordered by impact on user decisions and release t
 ## Claim boundary
 
 DOC-006 and DOC-007 remain open, and the worktree is not an isolated release candidate. Public surfaces may say only that ReconForge is alpha-stage, local/file-first, open source, and intended for evaluation or controlled pilots. They must not state general cross-engine determinism, scale, enterprise readiness, bank-grade quality, compliance, or certification.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

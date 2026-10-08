@@ -1,0 +1,590 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-08",
+  "status": "bounded_recovery_gate_repair_verified_whole_regression_pending",
+  "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+  "worktree_diff_sha256": "027449cce1d1da10fc4f378e09d0aa5a9529775e73931549fb9ba7a614a6d2cf",
+  "reviewed_files": [
+    {
+      "path": ".github/scripts/verify_postgres_upgrade.py",
+      "sha256": "1e33a2e2ca0e9c7fea252be2f2fd477d408fb55b9fee6cd49c79df9b5abca1f8"
+    },
+    {
+      "path": ".github/scripts/verify_postgres_writeback_identity_migration.py",
+      "sha256": "257b8cb182b31045c0282c8b327dc6fc286c2df5257b82271baa86b6adea9d0b"
+    },
+    {
+      "path": ".gitleaksignore",
+      "sha256": "462311e1ac8d9b02b01d6402f5e7e922b56b859bf1e0c323ad7951c0681e1041"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "df74277c59a4c42221be9f176041c0fc91c3ce3fcc9e3887e81f76f54ac80ce5"
+    },
+    {
+      "path": "MANIFEST.in",
+      "sha256": "a609a33004240adf95e1e5c66001e7ae91c3b51c922318f6380676272f27c2a4"
+    },
+    {
+      "path": "docs/execution/DECISIONS.md",
+      "sha256": "c8dd60480a85e566947211ab5e4ef14c761ed2adda5073c782c60650c8e68763"
+    },
+    {
+      "path": "docs/schemas/postgres_writeback_identity_migration_drill.schema.json",
+      "sha256": "3e12cbdf3de3fae6b0466961ec34a2ecb50c5d244ad8d660085bee3b222c816c"
+    },
+    {
+      "path": "docs/schemas/postgres_writeback_identity_migration_matrix.schema.json",
+      "sha256": "aac39101fb2dba6035d7080be9fd94f0d5ef99a29b4922bef2b94dc183303f2b"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_backup.py",
+      "sha256": "de4b3447c8741ea37adb907dcda190b12067200f5ab0c413a840e67a6e45b178"
+    },
+    {
+      "path": "tests/test_api_operations.py",
+      "sha256": "5b312ad24756d0998ced3e2f969bdd16b983e1898d76a8060d8c86d9a0ef5db2"
+    },
+    {
+      "path": "tests/test_postgres_backup.py",
+      "sha256": "2d0a8dd9ae823fccaa43d60443a27b8d892406de2626ce3667c3793a00491b0b"
+    },
+    {
+      "path": "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+      "sha256": "6571911094450099d99aa576facf01d43de10123b2a36e0aff661ce348745889"
+    },
+    {
+      "path": "tests/test_postgres_consolidation_impairment_runtime.py",
+      "sha256": "9fdf09492cf83e7d410836dac2091d2f925bd09884acbdf22e888ebfc3bb87fa"
+    },
+    {
+      "path": "tests/test_postgres_consolidation_ppa_runtime.py",
+      "sha256": "cb4b247ed3ed5f36602d6c7162ffc414b1f902044f6225b91057d3e180edd7a9"
+    },
+    {
+      "path": "tests/test_postgres_intercompany_elimination_runtime.py",
+      "sha256": "3cfd250664a80c3445528e3904171d529e57e6358339ee422a86037348d8a532"
+    },
+    {
+      "path": "tests/test_postgres_invoice_recovery_restore.py",
+      "sha256": "0de3174957e47163946519d2387cef9a08da50c2eac84208100a0f655596fb3e"
+    },
+    {
+      "path": "tests/test_postgres_writeback_identity_migration_drill.py",
+      "sha256": "9a70fa7f0dd12a09f0d92d2912f3df4d84c3888f92c4c3730f1a3c61b623f802"
+    },
+    {
+      "path": "tests/test_postgres_writeback_identity_migration_matrix.py",
+      "sha256": "b50a5750d1dc9844eb9307c30f90b257f9a369d14b14954597b8430e29b9fc9f"
+    },
+    {
+      "path": "docs/adr/0833-executable-postgres-recovery-profile-and-gate-evidence.md",
+      "sha256": "5074104766d6aef4abfb33278ad20c4a2f5adb33ce5723ff3da1c446ce66104d"
+    },
+    {
+      "path": "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-08.json",
+      "sha256": "3a50ac4b22da87e92e1d4ede88ee6f63318c37fc801360f53186a30ae89f41e5"
+    },
+    {
+      "path": "docs/execution/POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-08.json",
+      "sha256": "d761833dd1c7dd83e5252a4d7e9b9b6a22e090ca04cbf31fb85fcc17b1b298de"
+    },
+    {
+      "path": "tests/test_postgres_docker_tool_runner.py",
+      "sha256": "a37067dee0d7636a40c509b71617b8f7bb1e6c2b88f8b9a69439e9da19dec14e"
+    }
+  ],
+  "original_hosted_failures": [
+    {
+      "path": "output/baseline-2026-10-08/hosted-finance-posting-failure.log",
+      "sha256": "f680fe70753f282bdfcfdefcfa0c4ee50b8d77af3d74c9589bb62694988f2463"
+    },
+    {
+      "path": "output/baseline-2026-10-08/hosted-ha-dr-failure.log",
+      "sha256": "95b153539b4b5d75949f5e60eed8382a68e0d46872a9abfe0a32b04321f820eb"
+    },
+    {
+      "path": "output/baseline-2026-10-08/hosted-industry-close-failure.log",
+      "sha256": "8b5112d5eaf51b36d1870f71caf7230c8600934372da14e89a3ec9ab5fdd1cca"
+    },
+    {
+      "path": "output/baseline-2026-10-08/hosted-native-failure.log",
+      "sha256": "f4477923a5c8570a76df800bcc0848f1e7877f5cbb52e0271c24ae1617fecdc9"
+    },
+    {
+      "path": "output/baseline-2026-10-08/hosted-parity-failure.log",
+      "sha256": "c7aa1088105aa04b3eae5707c3642a2aa99515ce7ec36114fbf74841b4919e66"
+    },
+    {
+      "path": "output/baseline-2026-10-08/hosted-receivables-failure.log",
+      "sha256": "1400325c46c00a7e0f28451a130695a5a060d68171b65288fa0c709355225cc5"
+    },
+    {
+      "path": "output/baseline-2026-10-08/hosted-secret-failure.log",
+      "sha256": "ad9a1afa69fad0a94fe78422b4e5df481224ef14cc0dfc8da4b08e1c160decb7"
+    },
+    {
+      "path": "output/baseline-2026-10-08/hosted-writeback-failure.log",
+      "sha256": "5ab8cfc58817d8a1dc32be2d23495997e34645d997e7eb37a0334468e9006829"
+    }
+  ],
+  "commands": [
+    {
+      "name": "hosted-final-focused",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-ra",
+        "--tb=short",
+        "tests/test_postgres_backup.py",
+        "tests/test_postgres_docker_tool_runner.py",
+        "tests/test_postgres_writeback_identity_migration_drill.py",
+        "tests/test_postgres_writeback_identity_migration_matrix.py",
+        "tests/test_supply_chain_policy.py",
+        "tests/test_ha_dr_repeated_drill.py",
+        "tests/test_api_operations.py"
+      ],
+      "started_at": "2026-10-08T00:20:28.302985+00:00",
+      "duration_seconds": 11.214,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/hosted-final-focused.log",
+      "log_sha256": "9cfe1811a88631fe3fd935433d9fb629678f91bf348204aa4c5d6aea56eac540",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "5317daa1685b9a1eb5df80e0f108cb9d0dec2317c43e8e518aeb8e51c9ef9ff6",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "native-analogous-upgrade",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "alembic",
+        "upgrade",
+        "head"
+      ],
+      "started_at": "2026-10-08T00:42:02.786860+00:00",
+      "duration_seconds": 4.277,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/native-analogous-upgrade.log",
+      "log_sha256": "146679e8020d89c8909598aab396e1ae689e820095df7b72f102697d35af389d",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "027449cce1d1da10fc4f378e09d0aa5a9529775e73931549fb9ba7a614a6d2cf",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "native-analogous-regressions",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_api_operations.py",
+        "tests/test_postgres_consolidation_ppa_runtime.py",
+        "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+        "tests/test_postgres_consolidation_impairment_runtime.py",
+        "tests/test_postgres_intercompany_elimination_runtime.py",
+        "tests/test_api_server_receivables.py",
+        "tests/test_receivables_monetary_policy.py",
+        "tests/test_receivables_policy_schema.py",
+        "tests/test_receivables_policy_capture.py",
+        "tests/test_receivables_policy_raw_guards.py",
+        "tests/test_postgres_receivables_policy_restore.py",
+        "tests/test_postgres_invoice_recovery_restore.py",
+        "-ra",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-08T00:42:07.202384+00:00",
+      "duration_seconds": 59.847,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/native-analogous-regressions.log",
+      "log_sha256": "0985d1d5f9e1215f8581718b91a57b487849a694971a60ba78e62752c0518a8e",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "027449cce1d1da10fc4f378e09d0aa5a9529775e73931549fb9ba7a614a6d2cf",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "writeback-drill-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_writeback_identity_migration.py",
+        "--output",
+        "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-08.json"
+      ],
+      "started_at": "2026-10-08T00:15:25.000371+00:00",
+      "duration_seconds": 13.353,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/writeback-drill-after.log",
+      "log_sha256": "3be6b95c410acf609d15c954f64027c80e7d9709995aa070e19d606e6355fb28",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "877600826c5a110c83ff98faf57191ecbcda9262d826d7bc780dd97856d068ce",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "writeback-matrix-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
+        "--output",
+        "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-08.json"
+      ],
+      "started_at": "2026-10-08T00:13:26.396433+00:00",
+      "duration_seconds": 28.07,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/writeback-matrix-after.log",
+      "log_sha256": "ed8e0d97bbceaa2c042f5095652d3a636b4a22134d08e3be81ceef2fb996b257",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "877600826c5a110c83ff98faf57191ecbcda9262d826d7bc780dd97856d068ce",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "ha-dr-after",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_ha_dr_repeated.py",
+        "--executed-at",
+        "2026-10-08",
+        "--output",
+        "F:\\reconforge-erp\\output\\baseline-2026-10-08\\ha-dr-after-report.json"
+      ],
+      "started_at": "2026-10-07T23:55:29.119270+00:00",
+      "duration_seconds": 474.306,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/ha-dr-after.log",
+      "log_sha256": "5e1afc8001577dfcfeb517d4e497f0eb438caae8fa8b723556e3523be8bd5d0f",
+      "source_commit": "486a7552579f476b447e63c4dcbe898efe1e6541",
+      "worktree_diff_sha256": "d415ec3c935f92264cf43961b3d04961d8bb758bdbdcc9e19cca2ad76f40498a",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    }
+  ],
+  "native_postgres": {
+    "container": "reconforge-native-20261008-ca22dcfd",
+    "container_id": "218b0696f223db9899373818673996b25eb5b853af3180d2b66ca775e4511e6a",
+    "image": "postgres@sha256:dc17045ccfd343b49600570ea734b9c4991cf1c3f3302e67df51e3b402dd55c4",
+    "cleanup": true,
+    "application_role": {
+      "superuser": false,
+      "bypassrls": false
+    },
+    "server_version": "17.10",
+    "migration_head": "0106_pg_ap_link_reversal",
+    "restored_revision": "0106_pg_ap_link_reversal",
+    "restored_public_definer_execute": 0,
+    "native_backup_restore_passed": true,
+    "wrong_source_revision_refused": true,
+    "restored_database_removed": true,
+    "artifact_sha256": "781428ada13a9a5faef16638676219d281c577d030b9b71ff0077fe62d35bd68",
+    "artifact_bytes": 1463810
+  },
+  "native_regressions": {
+    "passed": 97,
+    "skipped": 0,
+    "failures": 0
+  },
+  "focused": {
+    "passed": 119,
+    "skipped": 3
+  },
+  "repeated_ha_dr": {
+    "executed_at": "2026-10-08",
+    "infrastructure": {
+      "docker_server": "Docker Engine 29.6.2",
+      "failure_domains_per_run": 1,
+      "node_count_per_run": 2,
+      "postgres_image": "postgres:17.10-alpine"
+    },
+    "limitations": [
+      "single_host_not_host_loss",
+      "no_cross_zone_or_cross_region",
+      "manual_controller_not_automatic_failover",
+      "no_quorum_or_witness",
+      "synthetic_data_and_key_only",
+      "three_runs_not_production_slo",
+      "no_enterprise_ready_claim"
+    ],
+    "profile": "docker-single-host-primary-synchronous-standby-v1",
+    "runs": [
+      {
+        "cleanup_passed": true,
+        "failback_rpo_transactions": 0,
+        "failback_rto_seconds": 1.64,
+        "failover_rpo_transactions": 0,
+        "failover_rto_seconds": 11.985,
+        "final_sequence": 4,
+        "run": 1
+      },
+      {
+        "cleanup_passed": true,
+        "failback_rpo_transactions": 0,
+        "failback_rto_seconds": 1.638,
+        "failover_rpo_transactions": 0,
+        "failover_rto_seconds": 12.047,
+        "final_sequence": 4,
+        "run": 2
+      },
+      {
+        "cleanup_passed": true,
+        "failback_rpo_transactions": 0,
+        "failback_rto_seconds": 1.665,
+        "failover_rpo_transactions": 0,
+        "failover_rto_seconds": 12.076,
+        "final_sequence": 4,
+        "run": 3
+      }
+    ],
+    "schema_version": 1,
+    "summary": {
+      "all_runs_passed": true,
+      "failback_rto_max_seconds": 1.665,
+      "failback_rto_median_seconds": 1.64,
+      "failback_rto_min_seconds": 1.638,
+      "failover_rto_max_seconds": 12.076,
+      "failover_rto_median_seconds": 12.047,
+      "failover_rto_min_seconds": 11.985,
+      "rto_ceiling_seconds": 60.0,
+      "run_count": 3,
+      "zero_acknowledged_transaction_loss_runs": 3
+    }
+  },
+  "secret_fixture_review": {
+    "classification": "Reviewed constant Synthetic-123 in disposable or mocked auth tests; no real credential",
+    "history_findings": [
+      {
+        "File": "apps/web/e2e/exception-review.spec.ts",
+        "StartLine": 26,
+        "RuleID": "generic-api-key",
+        "Commit": "38891a02c48e95310d34a24961be27823c0369a0",
+        "Fingerprint": "38891a02c48e95310d34a24961be27823c0369a0:apps/web/e2e/exception-review.spec.ts:generic-api-key:26"
+      },
+      {
+        "File": "apps/web/e2e/notification-inbox.spec.ts",
+        "StartLine": 22,
+        "RuleID": "generic-api-key",
+        "Commit": "67f04db80cf27cfefbc22d448c47952ca3bb5bf5",
+        "Fingerprint": "67f04db80cf27cfefbc22d448c47952ca3bb5bf5:apps/web/e2e/notification-inbox.spec.ts:generic-api-key:22"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 26,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:26"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 27,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:27"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 28,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:28"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 36,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:36"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 80,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_api_notification_inbox.py:generic-api-key:80"
+      },
+      {
+        "File": "tests/test_notification_inbox.py",
+        "StartLine": 43,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_notification_inbox.py:generic-api-key:43"
+      },
+      {
+        "File": "tests/test_notification_inbox.py",
+        "StartLine": 44,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_notification_inbox.py:generic-api-key:44"
+      },
+      {
+        "File": "tests/test_notification_inbox.py",
+        "StartLine": 45,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_notification_inbox.py:generic-api-key:45"
+      },
+      {
+        "File": "tests/test_postgres_notification_inbox.py",
+        "StartLine": 102,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_postgres_notification_inbox.py:generic-api-key:102"
+      },
+      {
+        "File": "tests/test_postgres_notification_inbox.py",
+        "StartLine": 190,
+        "RuleID": "generic-api-key",
+        "Commit": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3",
+        "Fingerprint": "27a0f51c6b2fc6da22cb49f55f9b2f9124993be3:tests/test_postgres_notification_inbox.py:generic-api-key:190"
+      }
+    ],
+    "tree_findings": [
+      {
+        "File": "apps/web/e2e/exception-review.spec.ts",
+        "StartLine": 26,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "apps/web/e2e/exception-review.spec.ts:generic-api-key:26"
+      },
+      {
+        "File": "apps/web/e2e/notification-inbox.spec.ts",
+        "StartLine": 22,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "apps/web/e2e/notification-inbox.spec.ts:generic-api-key:22"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 22,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_api_notification_inbox.py:generic-api-key:22"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 23,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_api_notification_inbox.py:generic-api-key:23"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 24,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_api_notification_inbox.py:generic-api-key:24"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 30,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_api_notification_inbox.py:generic-api-key:30"
+      },
+      {
+        "File": "tests/test_api_notification_inbox.py",
+        "StartLine": 74,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_api_notification_inbox.py:generic-api-key:74"
+      },
+      {
+        "File": "tests/test_notification_inbox.py",
+        "StartLine": 45,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_notification_inbox.py:generic-api-key:45"
+      },
+      {
+        "File": "tests/test_notification_inbox.py",
+        "StartLine": 46,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_notification_inbox.py:generic-api-key:46"
+      },
+      {
+        "File": "tests/test_notification_inbox.py",
+        "StartLine": 47,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_notification_inbox.py:generic-api-key:47"
+      },
+      {
+        "File": "tests/test_postgres_notification_inbox.py",
+        "StartLine": 100,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_postgres_notification_inbox.py:generic-api-key:100"
+      },
+      {
+        "File": "tests/test_postgres_notification_inbox.py",
+        "StartLine": 188,
+        "RuleID": "generic-api-key",
+        "Fingerprint": "tests/test_postgres_notification_inbox.py:generic-api-key:188"
+      }
+    ]
+  },
+  "scan_reports": [
+    {
+      "path": "output/baseline-2026-10-08/gitleaks-history-redacted.json",
+      "sha256": "88e9f175417e21792962a27635df151f730d7ad55eb1486df01a2ac748d6b602"
+    },
+    {
+      "path": "output/baseline-2026-10-08/gitleaks-dir-before-redacted.json",
+      "sha256": "3d6fdd205426f8f057d9eade7058614e77934150117fc2d5470a2772520ce231"
+    },
+    {
+      "path": "output/baseline-2026-10-08/gitleaks-git-after.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "output/baseline-2026-10-08/gitleaks-dir-after.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    }
+  ],
+  "remaining_acceptance_gaps": [
+    {
+      "id": "AUD-20261008-007",
+      "gate": "shared PostgreSQL downgrade fixtures",
+      "reason": "Retained nondefault outbox lease generations correctly refuse downgrade before later fixture guards. Isolate databases without deleting financial or delivery evidence.",
+      "tests": [
+        "test_live_finance_scope_downgrade_restores_policies_and_replay",
+        "test_live_authority_migration_downgrade_reupgrade_preserves_rows",
+        "test_live_current_installer_restores_authority_without_migration_head",
+        "test_live_posting_downgrade_preserves_legacy_and_refuses_new_provenance",
+        "test_live_downgrade_refuses_partial_operator_provenance",
+        "test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated"
+      ]
+    },
+    {
+      "id": "AUD-20261008-008",
+      "gate": "current identity/security projections",
+      "reason": "Hosted assertions still assume older default role/permission inventories; current migrations and public projection contracts require separate review.",
+      "tests": [
+        "test_live_security_center_http_is_tenant_scoped_redacted_and_human_only",
+        "test_live_access_admin_is_atomic_tenant_isolated_and_invalidates_authority"
+      ]
+    },
+    {
+      "id": "AUD-20261008-009",
+      "gate": "Inventory receipt",
+      "status": "deferred_by_scope",
+      "reason": "Receipt feature work remains paused. Record inherited failures without reopening or asserting acceptance.",
+      "tests": [
+        "test_existing_consumable_item_has_complete_reviewed_receipt",
+        "test_first_registry_binding_and_receipt_admission_serialize[True/False]"
+      ]
+    }
+  ],
+  "pr": "https://github.com/amrzainmubarak/reconforge-erp/pull/123",
+  "main_unchanged": "b61ea56bb9c135fda12546e173795af3c243e4fb",
+  "limitations": [
+    "synthetic disposable data only",
+    "single-host manual HA drill, not production availability",
+    "nine configured HTTPS browser prerequisites remain",
+    "cancellation0107 not integrated",
+    "no stable release, compliance, provider or universal CI success claim"
+  ]
+}

@@ -1,5 +1,19 @@
 # ReconForge Execution Evidence Log
 
+- AUD-20261008 acceptance: Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+  Full-run source b8f5a772 is clean; live PostgreSQL17.10 reaches0106 with
+  NOSUPERUSER/NOBYPASSRLS role and owned cleanup. Earlier focused records keep
+  their exact source/diff hashes. No native/network/hosted/release acceptance.
+
+- AUD-20261008 baseline: clean source636786e8; full Python4394pass/490skip/2fail
+  in1575.27s; Mypy610; web219 component passes and initial browser18pass/9skip/1fail;
+  Python installed/locked audits pass and npm initially reports one High finding.
+  Dedicated PostgreSQL17.10 reaches0106 under a nonowner/no-BYPASSRLS role, with
+  two Finance fixture-grant failures and20 passes. Raw command identities and
+  explicit boundaries are retained in BASELINE_2026-10-08.json. The initial
+  Money regression fails17 of24 cases before repair. Post-repair gates are
+  separate evidence and do not rewrite the baseline result.
+
 - AMR-GFO-005 current sprint integration verification (2026-10-04): the full
   suite exited zero both on the host and under the locked Python 3.12
   all-extras resolution. `ruff`, Mypy (609 source files), Bandit, `uv lock
@@ -22799,3 +22813,13 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
   prove native encrypted backup/restore execution on this host, promotion of a
   restored target, key custody, backup duration, cross-version recovery,
   RPO/RTO, HA/DR, or production recovery readiness.
+
+
+## October8 hosted recovery gate supplement
+
+[Bounded live recovery repairs and remaining hosted gaps](HOSTED_GATES_REPAIR_2026-10-08.md); [source/diff/log hashes](HOSTED_GATES_REPAIR_2026-10-08.json). Earlier b8f5a772 results remain source-bound history. Whole regression after ADR0833 is pending; shared downgrade fixtures, identity projections and paused receipt cases prevent full CI acceptance.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

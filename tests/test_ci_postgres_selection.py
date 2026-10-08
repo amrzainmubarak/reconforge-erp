@@ -28,8 +28,12 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
     )
     parity_modules = inventory_result.stdout.splitlines()
     inventory = yaml.safe_load((ROOT / "docs/execution/POSTGRES_PARITY_INVENTORY.yaml").read_text(encoding="utf-8"))
-    expected_parity = {row["test"] for row in inventory["boundaries"] if row.get("test")} - {JOBS_MODULE}
+    expected_parity = {
+        path for row in inventory["boundaries"]
+        for path in [row.get("test"), *row.get("additional_tests", [])] if path
+    } - {JOBS_MODULE}
     assert set(parity_modules) == expected_parity
+    assert "tests/test_postgres_payables_payment_link_reversal.py" in parity_modules
 
     command = shlex.split(next(line for line in lines if 'pytest "${parity_tests[@]}"' in line))
     arguments = command[command.index("pytest") + 1:]

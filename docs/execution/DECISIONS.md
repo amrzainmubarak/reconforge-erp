@@ -1,5 +1,42 @@
 ﻿# ReconForge Execution Decisions Log
 
+## D-AUD-20261008-HOSTED — Preserve gate strength while repairing inherited fixture drift
+
+The first Draft PR123 run exposed twelve generic-key findings for the constant
+Synthetic-123 in disposable SQLite/PostgreSQL and mocked browser auth tests.
+Review each historical and current-tree source location, keep exact
+commit/path/rule/line fingerprints only, and retain default rules and full
+history/tree coverage. Do not add rule/path/commit wildcards. The companion
+PostgreSQL HA/DR fixture failed when its Docker native-tool translator assumed
+every connection specification included dbname. Service-only source/maintenance
+commands select the runner's fixed postgres database; restore commands retain
+their explicit isolated target. Exercise the adapter's real preflight argv and
+the repeated disposable drill. No financial runtime, PostgreSQL revision or
+production recovery permission changes follow from this fixture correction.
+
+Pinned verification must execute through psql's script reader, preserving the
+quoted --set binding and deleting its temporary file. Fresh restore evidence
+records the actual source/head with retained0099 ancestry. Drain owned fixture
+deferred events before audit-trigger restoration; preserve financial history.
+ADR0833 and HOSTED_GATES_REPAIR_2026-10-08.json record exact evidence and limits.
+Shared downgrade guards and current identity projections remain unresolved;
+do not broaden acceptance or reopen paused receipt work to force CI green.
+
+## D-AUD-20261008 — Bind current audit and repair evidence separately
+
+Preserve the initial failing source636786e8 snapshot. Apply ADR0832 only to
+exact Money/minor conversion and Finance text interpretation. Keep one
+primary parity test path with an additional_tests list, and prove actual CI
+collection. Grant Finance fixture SELECT/UPDATE for policy binding row locks
+and SELECT/INSERT for snapshots; retain nonowner/no-BYPASSRLS profiles.
+Refresh only source-map-js1.2.2 and assert authenticated exception review
+in the browser journey. Historical evidence and environmental skips remain
+explicit; no unmerged cancellation or paused receipt acceptance is inferred.
+Final acceptance binds clean b8f5a772 and separately retained earlier diffs;
+stack the Draft PR on source636786e8 rather than including inherited sprint
+commits against main. Final documentation and packaging do not require another
+whole regression when runtime/test hashes remain unchanged.
+
 ## D-AMR-GFO-009 — Reverse AP allocation through retained Finance inverse evidence (2026-10-04)
 
 An AP payment-link reversal is an immutable compensating evidence node, not a
@@ -13104,3 +13141,15 @@ connectivity, ERP posting/write-back, HA/DR, or production readiness.
 - **Rollback**: Revert `441f0cf9`, `c58d1006`, and `c3addf52` together only if
   an equivalent pre-restore access fence and post-restore routine ACL hardening
   replace them.
+
+
+## D-AUD-20261008-FINAL — Preserve source-bound acceptance partitions
+
+Full Windows regression on clean832ceeee passes4429/490skip/0fail; hosted Ubuntu
+whole gates pass4431/488skip on both Python versions. A later five-line live-only
+fixture cleanup follow-up passes34 owned PostgreSQL HTTP/industry/provenance
+cases with CI bootstrap predecessors; it changes no financial/recovery runtime.
+Keep the whole-suite832ceeee and fixture98e3b0a3 identities separate. Fresh hosted
+CI at the final head remains pending; historical parity and Finance downgrade
+fixtures and identity projections remain unaccepted. ACCEPTANCE_FINAL_2026-10-08.json
+retains the exact logs, fixture hashes and remaining scope.

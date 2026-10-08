@@ -4,6 +4,7 @@ import importlib.util
 import inspect
 import os
 import re
+from decimal import ROUND_DOWN, localcontext
 from pathlib import Path
 from types import ModuleType
 from uuid import uuid4
@@ -276,6 +277,9 @@ def test_live_postgres_finance_core_lifecycle_exactness_and_rls() -> None:
             admin.execute(POSTGRES_FISCAL_PERIOD_SCHEMA_SQL)
             install_postgres_finance_core_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            # FOR SHARE in policy capture also requires UPDATE privilege.
+            admin.execute(f"GRANT SELECT,UPDATE ON reconforge.currency_registry_bindings TO {app_user}")
+            admin.execute(f"GRANT SELECT,INSERT ON reconforge.currency_registry_snapshots TO {app_user}")
             tables = (
                 "tenants,organizations,currencies,legal_entities,fiscal_periods,domain_workspaces,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,finance_charts,finance_accounts,"
@@ -331,22 +335,26 @@ def test_live_postgres_finance_core_lifecycle_exactness_and_rls() -> None:
                 currency_code="KWD",
                 workspace="Finance",
             )
-            draft = repository.create_entry(
-                entry_number="JE/1",
-                organization_code="ORG",
-                entity_code="ENTITY",
-                period_id="period-1",
-                journal_code="GENERAL",
-                posting_date="2026-07-28",
-                description="Synthetic",
-                workspace="Finance",
-                actor_label="maker",
-                lines=(
-                    {"account_code": "CASH", "debit": "10.125", "credit": "0"},
-                    {"account_code": "CAPITAL", "debit": "0", "credit": "10.125"},
-                ),
-            )
+            with localcontext() as decimal_context:
+                decimal_context.prec = 3
+                decimal_context.rounding = ROUND_DOWN
+                draft = repository.create_entry(
+                    entry_number="JE/1",
+                    organization_code="ORG",
+                    entity_code="ENTITY",
+                    period_id="period-1",
+                    journal_code="GENERAL",
+                    posting_date="2026-07-28",
+                    description="Synthetic",
+                    workspace="Finance",
+                    actor_label="maker",
+                    lines=(
+                        {"account_code": "CASH", "debit": "10.125", "credit": "0"},
+                        {"account_code": "CAPITAL", "debit": "0", "credit": "10.125"},
+                    ),
+                )
             assert draft["total_debit_minor"] == 10125
+            assert draft["total_debit"] == "10.125"
             with pytest.raises(PlatformError, match="Segregation of duties"):
                 repository.validate_entry(str(draft["id"]), reason="Self approval", actor_label="maker")
             validated = repository.validate_entry(str(draft["id"]), reason="Independent review", actor_label="checker")

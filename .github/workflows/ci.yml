@@ -430,7 +430,7 @@ jobs:
             'user=postgres' \
             'password=postgres' > "$PGSERVICEFILE"
           chmod 600 "$PGSERVICEFILE"
-          mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(item['test'] for item in document['boundaries'] if item.get('test') and item['test'] != 'tests/test_postgres_durable_jobs.py'), sep='\\n')")
+          mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(path for item in document['boundaries'] for path in [item.get('test'), *item.get('additional_tests', [])] if path and path != 'tests/test_postgres_durable_jobs.py'), sep='\\n')")
           case "$RECONFORGE_SERVER_BOUNDARY_SHARD" in
             writeback) ;; # Dedicated evidence runners above own this shard.
             native)

@@ -1072,6 +1072,17 @@ def _resolve_currency_policy(
     return (registry_context or CurrencyRegistry).resolve(code)
 
 
+def minor_units_to_decimal(minor_units: int, *, precision: int) -> Decimal:
+    """Decode exact integer units with the recorded scale, without context arithmetic."""
+
+    if isinstance(minor_units, bool) or not isinstance(minor_units, int):
+        raise InvalidAmountError("minor_units must be an integer")
+    if isinstance(precision, bool) or not isinstance(precision, int) or not 0 <= precision <= 8:
+        raise InvalidAmountError("financial precision must be between 0 and 8")
+    components = Decimal(minor_units).as_tuple()
+    return Decimal((components.sign, components.digits, -precision))
+
+
 class Money:
     """Canonical representation of an amount bound to an explicit currency."""
 
@@ -1206,8 +1217,8 @@ class Money:
         return self._registry_digest
 
     def to_minor_units(self) -> int:
-        factor = Decimal(10) ** self._minor_units
-        return int(self._amount * factor)
+        factor = Decimal((0, (1,), self._minor_units))
+        return int(_exact_multiply(self._amount, factor))
 
     @classmethod
     def from_minor_units(
@@ -1217,11 +1228,10 @@ class Money:
         *,
         registry_context: CurrencyRegistryContext | None = None,
     ) -> Money:
-        if not isinstance(minor_units, int):
+        if isinstance(minor_units, bool) or not isinstance(minor_units, int):
             raise InvalidAmountError("minor_units must be an integer")
         resolution = _resolve_currency_policy(currency, registry_context)
-        factor = Decimal(10) ** resolution.spec.minor_units
-        amount = Decimal(minor_units) / factor
+        amount = minor_units_to_decimal(minor_units, precision=resolution.spec.minor_units)
         return cls._from_resolved(amount, resolution, strict_precision=True)
 
     def as_canonical_str(self) -> str:

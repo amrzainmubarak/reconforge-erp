@@ -1,5 +1,37 @@
 # Execution State
 
+## October8 hosted gate repair (2026-10-08)
+
+Draft [PR123](https://github.com/amrzainmubarak/reconforge-erp/pull/123) is stacked
+on unchanged sprint636786e8. ADR0833 repairs executable pinned recovery checks,
+service-only Docker tool translation, moving-head restore evidence and deferred
+fixture cleanup. Local live PostgreSQL17.10 analogous acceptance passes97 with
+zero skips; strict encrypted current0106 restore and wrong-source refusal pass.
+Writeback16.14/17.10 and three repeated single-host HA drills pass. Exact
+synthetic-auth Gitleaks fingerprints retain the default history/tree gate.
+[Evidence and remaining CI gaps](HOSTED_GATES_REPAIR_2026-10-08.md).
+
+Whole regression after this runtime repair passes4429 with490 explicit skips
+and zero failures on clean832ceeee.
+[Final source-bound acceptance](ACCEPTANCE_FINAL_2026-10-08.md).
+AMR-GFO-005 remains in progress: hosted downgrade fixture isolation and identity
+expectations are open; Inventory receipt stays paused, cancellation0107 stays
+outside this source and main staysb61ea56b. Earlier results below retain their
+own source identities and are not acceptance of this later runtime repair.
+
+## October 8 baseline refresh and bounded repair (2026-10-08)
+
+The audit branch is `amr/baseline-refresh-20261008`, based on clean sprint
+source `636786e8`. Initial failures remain in `BASELINE_2026-10-08.json`.
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+AUD-20261008-001 through -005 are complete for the bounded repair.
+`AMR-GFO-005` stays in progress pending native recovery/configured network
+acceptance and separate cancellation integration. Reviewed Inventory receipt
+work stays paused, cancellation revision0107 is unmerged, and main remains
+`b61ea56b`. The final evidence documentation commit changes no tested runtime.
+The Draft repair review is stacked on the unchanged sprint checkpoint.
+
 ## Amr current sprint integration verification (2026-10-04)
 
 `AMR-GFO-005` remains in progress. The source through the scoped exception-review

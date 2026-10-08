@@ -212,6 +212,7 @@ def test_live_postgres_consolidation_tax_and_impairment_api_is_replayable_and_te
                         (tenant_a, tenant_b),
                     )
                     admin.execute("DELETE FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b))
+                    admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
                     admin.execute(
                         "ALTER TABLE reconforge.domain_audit_events "
                         "ENABLE TRIGGER domain_audit_events_immutable"

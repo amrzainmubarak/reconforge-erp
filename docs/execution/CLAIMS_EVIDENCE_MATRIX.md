@@ -1,6 +1,19 @@
 ﻿# Claims Evidence Matrix
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+This refresh supports local evaluation and bounded synthetic verification only. Failed baseline commands remain failures even where a later repair passes. The latest dated report below supersedes older current-summary wording, not historical evidence.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+| Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |
+| --- | --- | --- | --- | --- | --- |
+| Context-independent Money/Finance conversion | Money exact multiply and integer-coefficient decoder; both Finance adapters; ADR0832 | 26 integer-oracle/property/persisted SQLite cases; existing Finance/policy/consolidation contracts; full regression | Restricted-role PostgreSQL KWD lifecycle under precision3; ACCEPTANCE_2026-10-08.json | Bounded implemented correctness repair | "Preserves exact units and recorded scale in the tested conversions"; no historical repair, complete financial engine or production claim |
+| October 8 exact-source baseline | Clean sprint source 636786e8, current locks and version 55/0106 | Full regression 4394 pass/490 skip/2 failures; 219 web unit passes; initial browser 18/9/1 | BASELINE_2026-10-08.json; CLI/Docker pass; dedicated PostgreSQL 17.10 upgrade with restricted role and two fixture-grant failures | Local audit with reproduced gaps | "Records the available local gates and explicit failures on the named source"; no whole-platform acceptance, release, capacity or production claim |
+
+## Historical PROD-001 audit (2026-10-03)
 
 ### Verified increments after the initial audit
 
@@ -29,7 +42,7 @@ These bounded increments do not supersede outstanding production acceptance gate
 
 The initial audit maps all six requested production outcomes to code, tests, runtime, maturity and allowed wording. Complete GL/trade cycles, universal hard isolation and customer outcomes remain unproven. Financial React views were synthetic at that baseline; the later authenticated invoice and cash slices retain their own bounded runtime evidence.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 This matrix governs public wording for the evidence-bounded Phase 0 implementation and non-publishing v0.7.1 candidate. A file, tag, or green check is not sufficient evidence unless the exact subject and corresponding gate are identified and verified.
 
@@ -455,3 +468,8 @@ This matrix governs public wording for the evidence-bounded Phase 0 implementati
 | Inventory movement void responses use fail-closed projection | `/api/v1/inventory/movements/{movement_id}/void` projects both local SQLite and tenant-scoped PostgreSQL adapter records through the existing central movement allowlist before serialization | `tests/test_field_access.py` covers the movement allowlist; `tests/test_api_inventory_core.py` exercises the authenticated PostgreSQL-shaped void route with a synthetic future movement field and proves it is absent; focused, full regression, Ruff, Mypy, Bandit, pip-audit, package build, source YAML, and diff gates pass | Synthetic authenticated server fixture; movement posting/voiding invariants, source authenticity, broader authorization, and production effectiveness remain separately bounded; pip-audit cannot audit the local distribution because it is not published on PyPI | Experimental / bounded disclosure control | "Drops unknown fields from the reviewed Inventory movement void response through the existing central allowlist"; not inventory posting correctness or production readiness |
 | Risk scoring receives an explicit financial input policy | `amount_component`, `assess_risk`, Stock/Work-order reconciliation, and WIP aging validate and propagate `FinancialInputPolicy`; strict v2 is the default and legacy v1 is available only when named | `tests/test_risk_scoring.py` proves binary-float behavior differs only under an explicit legacy policy; existing reconciliation and report suites pass; focused, full regression, Ruff, Mypy, Bandit, pip-audit, package build, source YAML, and diff gates pass | Synthetic/local exact-input and policy-boundary evidence; remaining legacy callers, source authenticity, posting correctness, and production financial assurance remain separately bounded; pip-audit cannot audit the local distribution because it is not published on PyPI | Experimental / bounded exactness control | "Risk scoring propagates the selected financial input policy and defaults new calls to strict v2"; not complete financial exactness or production assurance |
 | Master Currency Registry reconciliation responses use fail-closed projection | `/api/v1/master-data/currencies/reconciliation` applies `project_master_registry` to local SQLite and tenant-scoped PostgreSQL result mappings, including nested registry, issue, and binding fields | `tests/test_api_master_data_projection.py` injects unknown top-level and nested fields through the local route result and proves they are absent; focused, full regression, Ruff, Mypy, Bandit, pip-audit, package build, source YAML, and diff gates pass | Synthetic local route fixture plus reviewed server projection branch; registry source correctness, live rate sourcing, universal authorization, and production effectiveness remain separately bounded; pip-audit cannot audit the local distribution because it is not published on PyPI | Experimental / bounded disclosure control | "Drops unknown fields from the reviewed Master Currency Registry reconciliation response through one central nested projection"; not registry correctness or production readiness |
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

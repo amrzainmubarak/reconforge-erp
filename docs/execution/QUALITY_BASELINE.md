@@ -1,10 +1,18 @@
 # Quality Baseline
 
-## PROD-001 current audit (2026-10-03)
+## Source-bound refresh (2026-10-08)
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+The October 8 source collected 4,886 Python tests: 4,394 passed, 490 skipped, two failed and 25 warnings in 1,575.27s. Web component coverage executes 219 tests in 26 files. The full regression and browser failures are reproduced before repair; capability skips are not accepted as passes.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
 
 Fresh locked Python 3.12 regression: 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). Live PostgreSQL selection: 70 passed, zero skipped. Web: 77 component tests; 16 standard E2E passes and five capability skips, plus one separately passed HTTPS scenario. Passing existing tests did not prevent the newly reproduced financial defects.
 
-[Current audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
 
 ## E-1120 - Strict Receivables quantity inputs (2026-08-29)
 
@@ -783,3 +791,13 @@ outside the quality baseline.
 The post-slice isolated Python 3.12 all-extra regression, Ruff, Mypy, Bandit,
 package build, and whitespace checks pass; the complete-history Gitleaks scan
 also remains clean.
+
+
+## October8 hosted recovery gate supplement
+
+[Bounded live recovery repairs and remaining hosted gaps](HOSTED_GATES_REPAIR_2026-10-08.md); [source/diff/log hashes](HOSTED_GATES_REPAIR_2026-10-08.json). Earlier b8f5a772 results remain source-bound history. Whole regression after ADR0833 is pending; shared downgrade fixtures, identity projections and paused receipt cases prevent full CI acceptance.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

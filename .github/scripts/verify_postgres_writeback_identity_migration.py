@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from psycopg import Error as PsycopgError
 from psycopg import connect
 from psycopg.types.json import Jsonb
@@ -50,6 +51,15 @@ CLEANUP_POLL_SECONDS = 0.1
 
 class DrillError(RuntimeError):
     """Raised when the disposable migration drill cannot prove its contract."""
+
+
+def _current_migration_head() -> str:
+    """Bind this run to the source head while retaining the historical checkpoint."""
+    scripts = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
+    head = scripts.get_current_head()
+    if head is None or TARGET_REVISION not in {revision.revision for revision in scripts.iterate_revisions(head, "base")}:
+        raise DrillError("current migration head does not retain the verified checkpoint")
+    return head
 
 
 def _run(
@@ -393,8 +403,9 @@ def run_observation(
                 raise DrillError("restored pre-drift history does not match its backup")
             if _revision(restored_dsn) != SOURCE_REVISION:
                 raise DrillError("restored pre-drift revision is incorrect")
-            _upgrade(restored_dsn, "head")
-            if _revision(restored_dsn) != TARGET_REVISION:
+            current_head = _current_migration_head()
+            _upgrade(restored_dsn, current_head)
+            if _revision(restored_dsn) != current_head:
                 raise DrillError("restored database did not reach migration head")
             if _canonical_digest(_history(restored_dsn)) != valid_history_digest:
                 raise DrillError("successful migration changed valid write-back history")
@@ -415,7 +426,7 @@ def run_observation(
                 "image": image_reference,
                 "postgresql": postgres_version,
                 "source_revision": SOURCE_REVISION,
-                "target_revision": TARGET_REVISION,
+                "target_revision": current_head,
             },
             "history": {
                 "valid_versions": len(valid_history),

@@ -23,6 +23,14 @@ Existing installed trigger routines continue to enforce integrity; trigger and
 event-trigger functions are excluded from the direct-call check. Trusted
 administrators remain responsible for reviewing installed triggers and policies.
 
+Finance currency-policy capture additionally requires SELECT and UPDATE on
+`reconforge.currency_registry_bindings`: PostgreSQL requires UPDATE permission
+for the `SELECT ... FOR SHARE` lock that serializes policy selection. Retained
+snapshot capture/readback requires SELECT and INSERT on
+`reconforge.currency_registry_snapshots`. These are explicit application DML
+grants, not object ownership, TRIGGER/TRUNCATE rights or a superuser exception.
+The nonowner Finance fixtures exercise this profile after migration to head.
+
 When a deployment fails admission after an upgrade:
 
 1. Use an administrative session to inspect the runtime role's effective object

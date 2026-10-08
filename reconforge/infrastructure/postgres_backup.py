@@ -561,11 +561,19 @@ class PostgresNativeBackupAdapter:
         expected_revision = self._settings.expected_alembic_revision
         if expected_revision is not None:
             command.extend(("--set", f"reconforge_expected_revision={_alembic_revision(expected_revision)}"))
-        command.extend(("--dbname", connection_specification, "--command", self._profile_verification_query()))
-        self._run(
-            tuple(command),
-            action=action,
-        )
+        command.extend(("--dbname", connection_specification))
+        if expected_revision is None:
+            command.extend(("--command", self._profile_verification_query()))
+            self._run(tuple(command), action=action)
+            return
+        # psql does not interpolate variables in SQL passed with --command.
+        # Its script reader applies the quoted variable binding before sending
+        # SQL, without constructing a revision literal ourselves.
+        with tempfile.TemporaryDirectory(prefix="reconforge-profile-") as temporary:
+            script = Path(temporary) / "verify-profile.sql"
+            script.write_text(self._profile_verification_query() + "\n", encoding="ascii")
+            command.extend(("--file", str(script)))
+            self._run(tuple(command), action=action)
 
     def _revoke_public_security_definer_execute(self, *, service: str, database: str) -> None:
         """Restore the no-public-execute invariant before accepting a target.

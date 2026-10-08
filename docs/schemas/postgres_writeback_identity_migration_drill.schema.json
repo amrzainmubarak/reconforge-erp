@@ -67,7 +67,7 @@
           "const": "0088_pg_currency_snapshot"
         },
         "target_revision": {
-          "enum": ["0090_pg_writeback_observations", "0093_pg_metrics", "0094_pg_finance_policy", "0095_pg_finance_scope", "0096_pg_master_authority", "0097_pg_reconciliation_seal", "0098_pg_finance_posting", "0099_pg_receivables_policy"]
+          "enum": ["0090_pg_writeback_observations", "0093_pg_metrics", "0094_pg_finance_policy", "0095_pg_finance_scope", "0096_pg_master_authority", "0097_pg_reconciliation_seal", "0098_pg_finance_posting", "0099_pg_receivables_policy", "0106_pg_ap_link_reversal"]
         }
       }
     },

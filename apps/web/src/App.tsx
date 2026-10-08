@@ -9,8 +9,12 @@ import { translate, type MessageKey } from "./i18n";
 import { usePreferences } from "./preferences";
 import type { StudioOverviewWithProvenance, StudioPage, ThemePreference } from "./types";
 import { BrowserSessionProvider, useBrowserSession } from "./browserSession";
+import { isLiveOperationalPage } from "./studio-pages";
 
 const themes: ThemePreference[] = ["system", "light", "dark"];
+const SalesRevenueWorkspace = lazy(() => import("./components/SalesRevenueWorkspace").then((module) => ({ default: module.SalesRevenueWorkspace })));
+const ProcurementWorkspace = lazy(() => import("./components/ProcurementWorkspace").then((module) => ({ default: module.ProcurementWorkspace })));
+const EnterpriseFinanceWorkspace = lazy(() => import("./components/EnterpriseFinanceWorkspace"));
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
 const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((module) => ({ default: module.EvidenceBinder })));
@@ -49,6 +53,9 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/budget-control")) return "budgetControl";
   if (normalized.endsWith("/inventory-receipts")) return "inventoryReceipt";
   if (normalized.endsWith("/jobs")) return "durableJobs";
+  if (normalized.endsWith("/sales-revenue")) return "salesRevenue";
+  if (normalized.endsWith("/procurement-operations")) return "procurementOperations";
+  if (normalized.endsWith("/enterprise-finance") || normalized.endsWith("/erp")) return "enterpriseFinance";
   return "dashboard";
 }
 
@@ -64,6 +71,9 @@ function pathForPage(page: StudioPage): string {
     budgetControl: "budget-control",
     inventoryReceipt: "inventory-receipts",
     durableJobs: "jobs",
+    salesRevenue: "sales-revenue",
+    procurementOperations: "procurement-operations",
+    enterpriseFinance: "enterprise-finance",
   };
   return page === "dashboard" ? `${base}/` || "/" : `${base}/${routeNames[page] ?? page}`;
 }
@@ -85,12 +95,13 @@ function StudioApp() {
   const commandReturnFocus = useRef<HTMLElement | null>(null);
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [activePage, setActivePage] = useState<StudioPage>(() => pageFromPath(window.location.pathname));
-  const liveOperationalPage = ["receivables", "notifications", "budgetControl", "inventoryReceipt", "durableJobs", "exceptions"].includes(activePage);
+  const liveOperationalPage = isLiveOperationalPage(activePage);
 
   useEffect(() => {
     const controller = new AbortController();
     setData(null);
     setError("");
+    if (liveOperationalPage) return () => controller.abort();
     loadStudioOverview(controller.signal)
       .then(setData)
       .catch((reason: unknown) => {
@@ -98,7 +109,7 @@ function StudioApp() {
         setError(reason instanceof Error ? reason.message : "The local Studio artifact could not be loaded.");
       });
     return () => controller.abort();
-  }, [loadAttempt]);
+  }, [loadAttempt, liveOperationalPage]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -149,7 +160,7 @@ function StudioApp() {
 
   return (
     <div className={`app-shell ${sidebarCollapsed ? "app-shell--collapsed" : ""}`}>
-      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <a className="skip-link" href="#main-content">{t("skipToMain")}</a>
       <Sidebar
         translate={t}
         collapsed={sidebarCollapsed}
@@ -246,6 +257,16 @@ function StudioApp() {
         ) : null}
         {activePage === "inventoryReceipt" ? (
           <Suspense fallback={<LoadingView translate={t} />}><InventoryReceiptPosting locale={preferences.locale} /></Suspense>
+        ) : null}
+
+        {activePage === "salesRevenue" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><SalesRevenueWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "procurementOperations" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><ProcurementWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "enterpriseFinance" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><EnterpriseFinanceWorkspace locale={preferences.locale} /></Suspense>
         ) : null}
         {activePage === "durableJobs" ? (
           <Suspense fallback={<LoadingView translate={t} />}><JobOperationsWorkspace locale={preferences.locale} /></Suspense>

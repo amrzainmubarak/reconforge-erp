@@ -1,4 +1,9 @@
 # False-positive fingerprint for the literal idempotency_scope test keyword.
+# Closed public API version identifier, not a credential or token.
+apps/web/src/inventory-receipt-data.ts:generic-api-key:5
+apps/web/src/inventory-receipt-fixtures.ts:generic-api-key:1
+10388848045601b962cc8642a6f92f562e786081:apps/web/src/inventory-receipt-data.ts:generic-api-key:5
+10388848045601b962cc8642a6f92f562e786081:apps/web/src/inventory-receipt-fixtures.ts:generic-api-key:1
 11a033c650e6947f3454181e6043868e6db19430:tests/test_reliability_sources.py:generic-api-key:32
 # Current-tree fingerprint for the same synthetic idempotency-scope fixture.
 tests/test_reliability_sources.py:generic-api-key:32

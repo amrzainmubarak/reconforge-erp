@@ -207,11 +207,21 @@ END $fr$;
 CREATE OR REPLACE FUNCTION reconforge.fr_immutable() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fr$
  BEGIN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_reporting_owner_phase',MESSAGE='Reporting classifications, opening sources and phase evidence are immutable.'; END $fr$;
 CREATE OR REPLACE FUNCTION reconforge.fr_admit() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fr$
-DECLARE payload JSONB;row_scope RECORD;a JSONB;permission TEXT;
+DECLARE payload JSONB;row_scope RECORD;a JSONB;identifier TEXT;
 BEGIN
- IF TG_TABLE_NAME='financial_reporting_maps' THEN payload:=NEW.payload;row_scope:=NEW;permission:='finance_core.manage';
+ IF TG_TABLE_NAME='financial_reporting_commands' THEN
+ IF (NEW.operation='prepare_map' AND EXISTS(SELECT 1 FROM reconforge.financial_reporting_map_reviews WHERE tenant_id=NEW.tenant_id AND map_id=NEW.object_id))
+ OR (NEW.operation='prepare_opening' AND EXISTS(SELECT 1 FROM reconforge.financial_opening_reviews WHERE tenant_id=NEW.tenant_id AND plan_id=NEW.object_id))
+ OR (NEW.operation IN ('prepare_opening','review_opening') AND EXISTS(SELECT 1 FROM reconforge.financial_opening_links WHERE tenant_id=NEW.tenant_id AND plan_id=NEW.object_id)) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_reporting_owner_phase',MESSAGE='A new acknowledgement must belong to the actual current owner phase.'; END IF;
+ RETURN NEW;
+ ELSIF TG_TABLE_NAME='financial_reporting_maps' THEN payload:=NEW.payload;row_scope:=NEW;
  ELSIF TG_TABLE_NAME='financial_reporting_map_reviews' THEN
- SELECT * INTO row_scope FROM reconforge.financial_reporting_maps WHERE tenant_id=NEW.tenant_id AND id=NEW.map_id;payload:=row_scope.payload;permission:='finance_core.validate';
+ SELECT * INTO row_scope FROM reconforge.financial_reporting_maps WHERE tenant_id=NEW.tenant_id AND id=NEW.map_id;payload:=row_scope.payload;
+ ELSIF TG_TABLE_NAME IN ('financial_opening_plans','financial_opening_reviews') THEN
+ IF TG_TABLE_NAME='financial_opening_plans' THEN identifier:=NEW.map_id;
+ ELSE SELECT map_id INTO identifier FROM reconforge.financial_opening_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.plan_id; END IF;
+ SELECT * INTO row_scope FROM reconforge.financial_reporting_maps WHERE tenant_id=NEW.tenant_id AND id=identifier;payload:=row_scope.payload;
  ELSE RETURN NEW; END IF;
  FOR a IN SELECT value FROM jsonb_array_elements(payload->'accounts') LOOP
  IF NOT EXISTS(SELECT 1 FROM reconforge.finance_accounts x WHERE x.tenant_id=NEW.tenant_id AND x.workspace_id=row_scope.workspace_id
@@ -299,7 +309,7 @@ BEGIN
  EXECUTE format('DROP TRIGGER IF EXISTS financial_reporting_immutable ON reconforge.%I',n);
  EXECUTE format('CREATE TRIGGER financial_reporting_immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.fr_immutable()',n);
  END LOOP;
- FOREACH n IN ARRAY ARRAY['financial_reporting_maps','financial_reporting_map_reviews'] LOOP
+ FOREACH n IN ARRAY ARRAY['financial_reporting_maps','financial_reporting_map_reviews','financial_opening_plans','financial_opening_reviews','financial_reporting_commands'] LOOP
  EXECUTE format('DROP TRIGGER IF EXISTS financial_reporting_admission ON reconforge.%I',n);
  EXECUTE format('CREATE TRIGGER financial_reporting_admission BEFORE INSERT ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.fr_admit()',n); END LOOP;
  FOREACH n IN ARRAY ARRAY['financial_opening_plans','finance_posting_effects'] LOOP

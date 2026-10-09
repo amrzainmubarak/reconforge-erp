@@ -325,3 +325,145 @@ def test_late_command_failure_rolls_back_native_gl_and_source_link(
         )
         assert repo.get_opening(plan["id"], actor=actor)["status"] == "Reviewed"
     assert post_opening(rt, plan)["status"] == "Posted"
+
+
+def test_raw_reserved_owner_and_immutable_phase_acknowledgements_are_refused(reporting_runtime: ReceiptRuntime) -> None:
+    from psycopg.errors import CheckViolation
+
+    rt = reporting_runtime
+    with pytest.raises(CheckViolation, match="Reserved OB1"), rt.actor("maker") as (connection, _, actor):
+        PostgresFinanceCoreRepository(connection, rt.tenant).create_entry(
+            entry_number="oB1-forged",
+            organization_code="ORG",
+            entity_code="ENTITY",
+            period_id="period",
+            journal_code="STOCK",
+            posting_date="2026-10-01",
+            description="Unowned reserved source",
+            workspace="work",
+            lines=[
+                {"account_code": "CASH", "debit": "100", "credit": "0"},
+                {"account_code": "EQUITY", "debit": "0", "credit": "100"},
+            ],
+            actor_label=actor.username,
+        )
+    plan = opening_cycle(rt)
+    post_opening(rt, plan)
+    with rt.actor("poster") as (connection, _, actor):
+        for statement in (
+            "UPDATE reconforge.financial_opening_plans SET payload=payload||'{\"amount_minor\":10001}'::jsonb WHERE tenant_id=%s",
+            "DELETE FROM reconforge.financial_opening_links WHERE tenant_id=%s",
+            "UPDATE reconforge.financial_reporting_commands SET result_json=result_json||'{\"amount_minor\":10001}'::jsonb WHERE tenant_id=%s",
+        ):
+            with pytest.raises(CheckViolation, match="immutable"), connection.transaction():
+                connection.execute(statement, (rt.tenant,))
+        with pytest.raises(CheckViolation, match="actual current owner phase"), connection.transaction():
+            connection.execute(
+                """INSERT INTO reconforge.financial_reporting_commands
+                SELECT tenant_id,workspace_id,'RAW-LATE-PREPARE',operation,actor_id,request_digest,request_json,object_id,result_json
+                FROM reconforge.financial_reporting_commands WHERE tenant_id=%s AND operation='prepare_opening'""",
+                (rt.tenant,),
+            )
+        with pytest.raises(CheckViolation, match="acknowledged phase"), connection.transaction():
+            connection.execute(
+                """INSERT INTO reconforge.financial_reporting_commands
+                SELECT tenant_id,workspace_id,'RAW-FORGED-RESULT',operation,actor_id,request_digest,request_json,object_id,result_json||'{"amount_minor":10001}'::jsonb
+                FROM reconforge.financial_reporting_commands WHERE tenant_id=%s AND operation='post_opening'""",
+                (rt.tenant,),
+            )
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        assert (
+            PostgresFinancialReportingRepository(connection, rt.tenant).get_opening(plan["id"], actor=actor)["status"]
+            == "Posted"
+        )
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (rt.tenant,)
+            ).fetchone()[0]
+            == 1
+        )
+
+
+def test_new_opening_requires_the_current_semantics_of_its_reviewed_accounts(reporting_runtime: ReceiptRuntime) -> None:
+    from tests.test_postgres_financial_reporting_api import opening_cycle_for_map
+
+    rt = reporting_runtime
+    mapping = map_cycle(rt)
+    with PostgresTenantBoundary(rt.factory).transaction(rt.tenant) as connection:
+        PostgresFinanceCoreRepository(connection, rt.tenant).upsert_account(
+            account_code="EQUITY",
+            name="Renamed current equity",
+            account_type="Equity",
+            normal_balance="Credit",
+            chart_code="DEFAULT",
+            workspace="work",
+        )
+    with pytest.raises(FinancePostingError) as rejected:
+        opening_cycle_for_map(rt, mapping)
+    assert rejected.value.code == "financial_reporting_state_conflict"
+    assert getattr(rejected.value.__cause__, "sqlstate", None) == "23514"
+    assert rejected.value.__cause__.diag.constraint_name == "financial_reporting_owner_phase"
+    with rt.actor("maker") as (connection, _, actor):
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM reconforge.financial_opening_plans WHERE tenant_id=%s", (rt.tenant,)
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM reconforge.finance_entries WHERE tenant_id=%s", (rt.tenant,)
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            PostgresFinancialReportingRepository(connection, rt.tenant).get_map(mapping["id"], actor=actor)["status"]
+            == "Reviewed"
+        )
+
+
+def test_opening_cannot_rewrite_retained_prior_financial_history(reporting_runtime: ReceiptRuntime) -> None:
+    from tests.test_postgres_financial_reporting_api import opening_cycle_for_map
+
+    rt = reporting_runtime
+    manual(rt, "PRIOR-ACTUAL-CAPITAL", "CASH", "EQUITY", 10000, "2026-10-08")
+    mapping = map_cycle(rt)
+    with pytest.raises(FinancePostingError, match="retained financial posting history"):
+        opening_cycle_for_map(rt, mapping)
+    with rt.actor("poster") as (connection, _, actor):
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM reconforge.financial_opening_plans WHERE tenant_id=%s", (rt.tenant,)
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            connection.execute(
+                "SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (rt.tenant,)
+            ).fetchone()[0]
+            == 1
+        )
+
+
+def test_additive_installer_preserves_populated_sources_and_refuses_destructive_downgrade(
+    reporting_runtime: ReceiptRuntime,
+) -> None:
+    import psycopg
+    from psycopg.errors import RaiseException
+
+    from reconforge.infrastructure.postgres_financial_reporting_schema import (
+        DOWNGRADE_SQL,
+        install_postgres_financial_reporting_schema,
+    )
+    from tests.test_postgres_financial_reporting_api import retained_financial_business
+
+    rt = reporting_runtime
+    post_opening(rt, opening_cycle(rt))
+    before = retained_financial_business(rt)
+    with psycopg.connect(rt.admin_dsn) as admin:
+        install_postgres_financial_reporting_schema(admin)
+        install_postgres_financial_reporting_schema(admin)
+    assert retained_financial_business(rt) == before
+    with pytest.raises(RaiseException, match="forward recovery"), psycopg.connect(rt.admin_dsn) as admin:
+        admin.execute(DOWNGRADE_SQL)
+    assert retained_financial_business(rt) == before

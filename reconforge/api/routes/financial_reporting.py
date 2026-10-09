@@ -10,8 +10,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from reconforge.api.dependencies import require_permission
 from reconforge.api.errors import APIError
 from reconforge.api.routes.finance_posting import _actor
-from reconforge.api.routes.operational_finance import _authority
-from reconforge.api.server_finance_core import execute_postgres_finance_core_scoped, server_finance_core_enabled
+from reconforge.api.routes.operational_finance import _authority as _source_authority
+from reconforge.api.server_finance_core import (
+    execute_postgres_finance_core_scoped,
+    server_finance_core_enabled,
+)
+from reconforge.api.server_identity import request_execution_scope
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.financial_reporting import AccountClassification, OpeningLine, OpeningPreparation, ReportingScope
 from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
@@ -71,6 +75,28 @@ def project(value: Any, key: str = "") -> Any:
     if type(value) is int and key.endswith("_minor"):
         return str(value)
     return value
+
+
+def _authority(request: Request, permission: str, value: dict[str, Any] | None = None, *, audit: bool = True) -> None:
+    """Classifications and read reports have scope, without an opening command amount."""
+    if value is not None:
+        scope = request_execution_scope(request)
+        if any(
+            value[key] != expected
+            for key, expected in (
+                ("workspace_id", scope.workspace_id),
+                ("organization_id", scope.organization_id),
+                ("legal_entity_id", scope.legal_entity_id),
+            )
+        ):
+            raise APIError(
+                status_code=403,
+                code="financial_reporting_scope_denied",
+                message="Reporting evidence is outside selected authority.",
+            )
+    _source_authority(
+        request, permission, value if value is not None and "amount_minor" in value else None, audit=audit
+    )
 
 
 def _execute(request: Request, user: Any, operation: Any) -> dict[str, Any]:

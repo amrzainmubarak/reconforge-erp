@@ -35,6 +35,15 @@ def candidate_projection(body: str) -> str:
     return body.replace(join, join + " LEFT JOIN LATERAL (SELECT sum(amount_minor) allocated FROM reconforge.ar_receipt_allocations WHERE tenant_id=s.tenant_id AND workspace_id=s.workspace_id AND invoice_id=s.invoice_id) cash ON TRUE")
 
 
+def retained_baseline(body: str) -> str:
+    """Reconstruct only the previously measured projection from the shipped one."""
+    shared_join = " LEFT JOIN LATERAL (SELECT sum(amount_minor) allocated FROM reconforge.ar_receipt_allocations WHERE tenant_id=s.tenant_id AND workspace_id=s.workspace_id AND invoice_id=s.invoice_id) cash ON TRUE"
+    native_sum = "(SELECT sum(amount_minor) FROM reconforge.ar_receipt_allocations WHERE tenant_id=s.tenant_id AND invoice_id=s.invoice_id)"
+    if body.count(shared_join) != 1 or body.count("cash.allocated") != 3:
+        raise AssertionError("Expected the measured shared projection contract")
+    return body.replace(shared_join, "").replace("cash.allocated", native_sum)
+
+
 def allocation_scans(node: dict[str, Any]) -> int:
     return (int(node.get("Actual Loops", 0)) if node.get("Relation Name") == "ar_receipt_allocations" else 0) + sum(
         allocation_scans(child) for child in node.get("Plans", []))
@@ -48,6 +57,10 @@ def test_profile_real_collection_projection(receipt_database: tuple[str, str]) -
         expected = repository(connection, runtime).get(order["id"], actor=actor)
         definition = connection.execute("SELECT pg_get_functiondef('reconforge.stock_commerce_public(reconforge.stock_commerce_orders)'::regprocedure) d").fetchone()["d"]
         body = definition.split("AS $function$", 1)[1].rsplit("$function$", 1)[0].strip().rstrip(";")
+        if "cash.allocated" in body:
+            shipped = body
+            body = retained_baseline(shipped)
+            assert candidate_projection(body) == shipped
         candidate = candidate_projection(body)
         tail = " FROM reconforge.stock_commerce_orders d WHERE d.tenant_id=%s AND d.id=%s"
         arguments = (runtime.tenant, order["id"])

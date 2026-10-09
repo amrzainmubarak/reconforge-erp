@@ -33,7 +33,10 @@ BEGIN
 END $ca$;
 CREATE TRIGGER commercial_collection_command_admission BEFORE INSERT ON reconforge.commercial_collection_commands
  FOR EACH ROW EXECUTE FUNCTION reconforge.collection_command_admit();
-DO $ca$ DECLARE definition TEXT; original TEXT; BEGIN
+DO $ca$ DECLARE definition TEXT; original TEXT;
+ allocation_query TEXT:='(SELECT sum(amount_minor) FROM reconforge.ar_receipt_allocations WHERE tenant_id=s.tenant_id AND invoice_id=s.invoice_id)';
+ tranche_join TEXT:='FROM reconforge.stock_commerce_tranches t JOIN reconforge.stock_sales_orders s ON s.tenant_id=t.tenant_id AND s.id=t.stock_order_id';
+BEGIN
  definition:=pg_get_functiondef('reconforge.stock_sales_close(text,text)'::regprocedure);original:=definition;
  definition:=replace(definition,
   'OR invoice.status IS DISTINCT FROM(CASE WHEN s=7 THEN''Submitted'' WHEN s=12 THEN''Paid'' ELSE''Approved'' END)',
@@ -57,6 +60,15 @@ DO $ca$ DECLARE definition TEXT; original TEXT; BEGIN
    ''pending_collection'',(SELECT jsonb_build_object(''id'',p.id,''plan_digest'',p.payload->>''plan_digest'',''phase'',p.phase,''amount_minor'',p.amount_minor::text,
     ''preparer_actor_id'',p.payload->>''preparer_actor_id'',''reviewer_actor_id'',(SELECT reviewer_actor_id FROM reconforge.commercial_collection_reviews WHERE tenant_id=p.tenant_id AND plan_id=p.id))
     FROM reconforge.commercial_collection_plans p WHERE p.tenant_id=s.tenant_id AND p.source_id=s.invoice_id AND p.phase<2),');
+ IF length(definition)-length(replace(definition,allocation_query,''))<>3*length(allocation_query)
+ OR length(definition)-length(replace(definition,tranche_join,''))<>length(tranche_join) THEN
+  RAISE EXCEPTION 'Commercial projection differs from its retained aggregate contract';
+ END IF;
+ -- One exact indexed native sum supplies line total, tranche cash and residual.
+ -- The source/effect closure functions retain their independent checks.
+ definition:=replace(definition,allocation_query,'cash.allocated');
+ definition:=replace(definition,tranche_join,tranche_join||
+  ' LEFT JOIN LATERAL (SELECT sum(amount_minor) allocated FROM reconforge.ar_receipt_allocations WHERE tenant_id=s.tenant_id AND workspace_id=s.workspace_id AND invoice_id=s.invoice_id) cash ON TRUE');
  EXECUTE definition;
 END $ca$;
 """

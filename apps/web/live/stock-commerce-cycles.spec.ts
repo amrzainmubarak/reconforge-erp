@@ -69,7 +69,7 @@ test("wire Studio conserves two products and warehouses across four partial cycl
     }
     const created = maker.waitForResponse(reply => reply.url().endsWith("/commerce/orders") && reply.request().method() === "POST");
     await form.getByRole("button", { name: "Create commercial order", exact: true }).click();
-    expect((await created).status()).toBe(200);
+    expect((await created).status()).toBe(201);
     await command(maker, "Submit order", "submit");
     await expect((await inspect(maker)).getByRole("button", { name: "Approve commercial terms", exact: true })).toBeDisabled();
     await command(checker, "Approve commercial terms", "approve");

@@ -21,6 +21,7 @@ const text = (value: unknown): value is string => typeof value === "string" && v
 const minor = (value: unknown): value is string => typeof value === "string" && /^(0|[1-9]\d{0,18})$/.test(value) && BigInt(value) <= 9000000000000000000n;
 const integer = (value: unknown, maximum: number): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= maximum;
 const digest = (value: unknown) => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+const date = (value: unknown) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
 function invalid(): never { throw new Error("fixed_asset_contract_invalid"); }
 function scoped(value: unknown, scope: FinanceScope): asserts value is Record<string, unknown> { if (!object(value) || Object.entries(scope).some(([key, expected]) => value[key] !== expected)) invalid(); }
 export function parseAssetSummary(value: unknown, scope: FinanceScope): AssetSummary {
@@ -33,6 +34,12 @@ export function parseAssetPlan(value: unknown, scope: FinanceScope): AssetPlan {
   if (!["id", "asset_id", "entry_id", "preparer_actor_id", "currency_code", "posting_date", "period_id"].every(key => text(value[key])) || !digest(value.plan_digest) || !digest(value.validation_digest) || !["acquire", "depreciate", "dispose"].includes(String(value.kind)) || !integer(value.phase, 2) || ["Prepared", "Reviewed", "Posted"][value.phase] !== value.status || !integer(value.sequence, 1201) || !integer(value.months_after, 1200) || !integer(value.currency_precision, 8) || !["amount_minor", "accumulated_before_minor", "proceeds_minor"].every(key => minor(value[key])) || !object(value.snapshot) || !Array.isArray(value.snapshot.lines) || value.snapshot.lines.length < 2 || value.snapshot.lines.length > 5) invalid();
   if (value.phase === 0 ? value.reviewer_actor_id !== null : !text(value.reviewer_actor_id) || value.reviewer_actor_id === value.preparer_actor_id) invalid();
   if (value.phase === 2 ? !text(value.posting_effect_id) : value.posting_effect_id !== null) invalid();
+  if (!date(value.posting_date) || !/^[A-Z]{3}$/.test(String(value.currency_code)) || !object(value.snapshot.entry)) invalid();
+  const header = value.snapshot.entry;
+  scoped(header, scope);
+  for (const key of ["currency_code", "currency_precision", "posting_date", "period_id", "preparer_actor_id"])
+    if (header[key] !== value[key]) invalid();
+  if (header.id !== value.entry_id) invalid();
   let debit = 0n, credit = 0n;
   const accounts = new Set<string>();
   for (const [index, line] of value.snapshot.lines.entries()) {

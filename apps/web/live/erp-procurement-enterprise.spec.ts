@@ -131,10 +131,12 @@ test("real HTTPS Studio posts a mixed-unit multiwarehouse order, four receipts, 
     await poster.setViewportSize({ width: 390, height: 844 });
     expect(await poster.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page: poster }).include(".procurement-partial-page").analyze()).violations).toEqual([]);
+    await poster.screenshot({ path: test.info().outputPath("procurement-390px-en.png"), fullPage: true });
     await poster.getByTestId("locale-toggle").click();
     await expect(poster.getByRole("main")).toHaveAttribute("dir", "rtl");
     await expect(poster.getByRole("heading", { name: "المشتريات الجزئية", exact: true }).first()).toBeVisible();
     await expect(poster.getByRole("table", { name: "توافر بنود أمر الشراء", exact: true })).toBeVisible();
     expect((await new AxeBuilder({ page: poster }).include(".procurement-partial-page").analyze()).violations).toEqual([]);
+    await poster.screenshot({ path: test.info().outputPath("procurement-390px-ar-rtl.png"), fullPage: true });
   } finally { await Promise.all(contexts.map(context => context.close())); }
 });

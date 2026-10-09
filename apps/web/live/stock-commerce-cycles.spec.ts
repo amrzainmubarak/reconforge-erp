@@ -115,11 +115,13 @@ test("wire Studio conserves two products and warehouses across four partial cycl
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(0)).toContainText("45000"); await expect(rows.nth(1)).toContainText("24000");
     await poster.setViewportSize({ width: 390, height: 844 });
+    expect(await panel(poster).evaluate(node => node.scrollWidth <= node.clientWidth + 1), "Commercial controls and prose must fit; only the bounded table scrolls").toBe(true);
     expect((await new AxeBuilder({ page: poster }).include(".stock-commerce").analyze()).violations).toEqual([]);
     await panel(poster).screenshot({ path: test.info().outputPath("commerce-en-mobile.png") });
     await poster.getByTestId("locale-toggle").click();
     await expect(panel(poster).getByRole("heading", { name: "أوامر المبيعات التجارية", exact: true })).toBeVisible();
     expect(await panel(poster).getAttribute("dir")).toBe("rtl");
+    expect(await panel(poster).evaluate(node => node.scrollWidth <= node.clientWidth + 1), "RTL commercial controls must fit their viewport").toBe(true);
     expect((await new AxeBuilder({ page: poster }).include(".stock-commerce").analyze()).violations).toEqual([]);
     await panel(poster).screenshot({ path: test.info().outputPath("commerce-ar-mobile.png") });
   } finally { for (const context of contexts) await context.close(); }

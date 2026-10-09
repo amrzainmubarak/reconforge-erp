@@ -15,9 +15,12 @@
 .stock-sales dd { margin: 0; }
 .stock-sales-boundary { border-inline-start: 4px solid #126abf; padding-inline-start: .9rem; }
 @media(max-width: 40rem) { .stock-sales { padding: .75rem; } .stock-sales fieldset, .stock-sales dl { grid-template-columns: 1fr; } .stock-sales button { width: 100%; } }
-.stock-commerce { border-block-start: 2px solid var(--border-color, #b5c1d2); margin-block: 1.5rem; padding-block: 1.5rem; }
-.stock-commerce-table { max-width: 100%; overflow-x: auto; margin-block: 1rem; }
-.stock-commerce table { border-collapse: collapse; width: 100%; }
+.stock-commerce { min-inline-size: 0; max-inline-size: 100%; border-block-start: 2px solid var(--border, #b5c1d2); margin-block: 1.5rem; padding-block: 1.5rem; }
+.stock-commerce > *, .stock-commerce article, .stock-commerce form, .stock-commerce label { min-inline-size: 0; max-inline-size: 100%; }
+.stock-commerce input, .stock-commerce select, .stock-commerce button { box-sizing: border-box; min-inline-size: 0; max-inline-size: 100%; inline-size: 100%; color: var(--text, #14211f); background: var(--surface-raised, #fff); border: 1px solid var(--border, #b5c1d2); }
+.stock-commerce p, .stock-commerce h2, .stock-commerce h3, .stock-commerce li { overflow-wrap: anywhere; }
+.stock-commerce-table { min-inline-size: 0; max-inline-size: 100%; overflow-x: auto; margin-block: 1rem; }
+.stock-commerce table { border-collapse: collapse; width: 100%; min-inline-size: 42rem; }
 .stock-commerce th, .stock-commerce td { padding: .65rem; border: 1px solid #b5c1d2; text-align: start; }
 .stock-commerce fieldset { min-width: 0; }
 .stock-commerce code { overflow-wrap: anywhere; }

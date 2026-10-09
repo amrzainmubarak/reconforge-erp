@@ -141,12 +141,16 @@ jobs:
           npx --prefix apps/web playwright install --with-deps chromium
       - name: Execute real HTTPS ERP cycles and populated PostgreSQL recovery
         run: uv run --no-sync python .github/scripts/verify_erp_browser.py --verify-native-restore --output "${{ runner.temp }}/erp-browser"
+      - name: Execute real HTTPS ERP expansion cycles and populated recovery
+        run: uv run --no-sync python .github/scripts/verify_erp_expansion_browser.py --verify-native-restore --output "${{ runner.temp }}/erp-expansion-browser"
       - name: Retain source-bound ERP recovery evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: erp-browser-recovery
-          path: ${{ runner.temp }}/erp-browser
+          path: |
+            ${{ runner.temp }}/erp-browser
+            ${{ runner.temp }}/erp-expansion-browser
           if-no-files-found: error
 
   engine-parity:
@@ -523,10 +527,10 @@ jobs:
               uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q
               ;;
             finance-posting)
-              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_postgres_operational_finance.py tests/test_postgres_operational_finance_api.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
+              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_postgres_operational_finance.py tests/test_postgres_operational_finance_api.py tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
               ;;
             inventory-payables)
-              uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py -q
+              uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
               uv run --no-sync pytest tests/test_api_server_inventory_core.py -q
               uv run --no-sync pytest tests/test_api_server_payables.py tests/test_postgres_payables_replay.py tests/test_postgres_exact_trade_primitives.py -q
               uv run --no-sync pytest tests/test_api_server_local_boundaries.py -q

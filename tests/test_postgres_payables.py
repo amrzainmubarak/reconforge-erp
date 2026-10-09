@@ -355,7 +355,8 @@ def test_live_postgres_payables_lifecycle_exactness_and_rls() -> None:
                 "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=%s", (app_user,)
             ).fetchone()) == (False, False)
             for dependency in (
-                "operational_finance_plans", "operational_finance_links", "procurement_cycles"
+                "operational_finance_plans", "operational_finance_links", "procurement_cycles",
+                "procurement_partial_orders", "procurement_partial_receipts", "procurement_partial_invoices", "procurement_partial_commands", "financial_installment_plans", "financial_installment_reviews", "financial_installment_links", "financial_installment_commands"
             ):
                 qualified = f"reconforge.{dependency}"
                 if admin.execute("SELECT to_regclass(%s)", (qualified,)).fetchone()[0] is None:

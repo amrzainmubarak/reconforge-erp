@@ -115,10 +115,13 @@ def finance_database(isolated_postgres_migration_dsn: str, request: pytest.Fixtu
                 ).format(psycopg.sql.Identifier(params["user"])))
             # Plain Finance writes run the additive source-closure trigger too.
             # It must read the forced-RLS source index without granting source mutations.
-            if admin.execute("SELECT to_regclass('reconforge.operational_finance_plans')").fetchone()[0] is not None:
-                admin.execute(psycopg.sql.SQL(
-                    "GRANT SELECT ON reconforge.operational_finance_plans TO {}"
-                ).format(psycopg.sql.Identifier(params["user"])))
+            for dependency in ("operational_finance_plans", "financial_opening_plans", "stock_sales_orders", "stock_sales_issue_claims", "procurement_partial_orders", "procurement_partial_receipts", "procurement_partial_invoices", "procurement_partial_commands"):
+                qualified = "reconforge." + dependency
+                if admin.execute("SELECT to_regclass(%s)", (qualified,)).fetchone()[0] is not None:
+                    before = admin.execute("SELECT has_table_privilege(%s,%s,'INSERT'),has_table_privilege(%s,%s,'UPDATE'),has_table_privilege(%s,%s,'DELETE')", (params["user"],qualified,params["user"],qualified,params["user"],qualified)).fetchone()
+                    admin.execute(psycopg.sql.SQL("GRANT SELECT ON {}.{} TO {}").format(psycopg.sql.Identifier("reconforge"),psycopg.sql.Identifier(dependency),psycopg.sql.Identifier(params["user"])))
+                    after = admin.execute("SELECT has_table_privilege(%s,%s,'INSERT'),has_table_privilege(%s,%s,'UPDATE'),has_table_privilege(%s,%s,'DELETE')", (params["user"],qualified,params["user"],qualified,params["user"],qualified)).fetchone()
+                    assert before == after
         yield {"factory": factory, "boundary": boundary, "entries": entries, "ids": ids, "admin": isolated_postgres_migration_dsn, "config": config, "before_policies": before_policies}
     finally:
         factory.close()

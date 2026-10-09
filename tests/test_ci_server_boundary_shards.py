@@ -112,11 +112,18 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert ar_api in groups["receivables"]
     recovery = "uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q"
     assert recovery in groups["receivables"]
-    receipt = "uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py -q"
+    receipt = "uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q"
     assert receipt in groups["inventory-payables"]
     for filename, owner in (
         ("tests/test_postgres_sales_owner_closure.py", "inventory-payables"),
         ("tests/test_postgres_operational_finance_api.py", "finance-posting"),
+        ("tests/test_postgres_financial_installments.py", "finance-posting"),
+        ("tests/test_postgres_financial_reporting.py", "finance-posting"),
+        ("tests/test_postgres_stock_sales.py", "inventory-payables"),
+        ("tests/test_postgres_stock_sales_api.py", "inventory-payables"),
+        ("tests/test_postgres_procurement_partial.py", "inventory-payables"),
+        ("tests/test_postgres_procurement_partial_api.py", "inventory-payables"),
+
     ):
         selected = [shard for shard, entries in groups.items()
                     for command in entries if filename in shlex.split(command)]

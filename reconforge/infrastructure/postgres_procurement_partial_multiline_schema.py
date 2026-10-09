@@ -360,7 +360,7 @@ CREATE CONSTRAINT TRIGGER multiline_reserved_invoice_closure AFTER INSERT OR UPD
 """
 
 UPGRADE_SQL = _AUTHORITY + _TABLES + _MULTILINE_CLOSURE + _DISPATCH
-DOWNGRADE_SQL = _AUTHORITY + r"""
+_DOWNGRADE_BODY = r"""
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.procurement_partial_orders WHERE multiline) THEN
  RAISE EXCEPTION 'Retained multiline procurements prohibit downgrade; restore a verified pre-upgrade backup.'; END IF; END $$;
 DROP TRIGGER multiline_reserved_receipt_closure ON reconforge.inventory_receipt_plans;
@@ -394,6 +394,8 @@ ALTER TABLE reconforge.procurement_partial_invoices DROP CONSTRAINT procurement_
 ALTER TABLE reconforge.procurement_partial_invoices ADD CONSTRAINT procurement_partial_invoices_sequence_check CHECK(sequence BETWEEN 1 AND 32);
 DROP INDEX reconforge.procurement_partial_order_keyset;
 """
+
+DOWNGRADE_SQL = "".join((_AUTHORITY, _DOWNGRADE_BODY))
 
 
 def install_postgres_procurement_partial_multiline(connection: Any) -> None:

@@ -75,6 +75,15 @@ def test_inflight_backdated_native_post_cannot_change_captured_source_or_later_p
 def test_late_audit_failure_rolls_back_capture_membership_and_exact_command_can_recover(snapshot_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch) -> None:
     rt = snapshot_runtime
     mapping = map_cycle(rt)
+    empty = capture(rt, mapping, "empty-reviewed-source")
+    assert empty["currency_policy"] is None and empty["effect_count"] == empty["line_count"] == 0
+    assert empty["trial_balance"]["accounts"] == [] and empty["balance_sheet"]["assets_minor"] == 0
+    with rt.actor("poster") as (connection, _, actor):
+        empty_page = PostgresFinancialReportingRepository(connection, rt.tenant).snapshot_evidence(
+            empty["id"], expected_digest=empty["report_digest"], actor=actor,
+        )
+        assert empty_page["items"] == [] and empty_page["next_after"] is None
+        assert empty_page["previous_digest"] == empty["evidence_digest"]
     manual(rt, "RECOVERY", "CASH", "REVENUE", 101, "2026-10-09")
     with rt.actor("poster") as (connection, _, actor):
         repo = PostgresFinancialReportingRepository(connection, rt.tenant)

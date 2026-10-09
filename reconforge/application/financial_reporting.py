@@ -10,6 +10,7 @@ from reconforge.domain.financial_reporting import AccountClassification, Opening
 
 
 class FinancialReportingRepository(Protocol):
+    def catalog(self, scope: ReportingScope, *, actor: PostingActor) -> dict[str, Any]: ...
     def prepare_map(
         self,
         scope: ReportingScope,
@@ -28,6 +29,7 @@ class FinancialReportingRepository(Protocol):
         self, request: OpeningPreparation, *, command_id: str, actor: PostingActor
     ) -> dict[str, Any]: ...
     def get_opening(self, opening_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
+    def list_openings(self, scope: ReportingScope, *, actor: PostingActor) -> list[dict[str, Any]]: ...
     def review_opening(
         self, opening_id: str, *, expected_digest: str, reason: str, command_id: str, actor: PostingActor
     ) -> dict[str, Any]: ...
@@ -51,6 +53,9 @@ class FinancialReportingApplicationService:
 
     def __init__(self, repository: FinancialReportingRepository) -> None:
         self.repository = repository
+
+    def catalog(self, scope: ReportingScope, *, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.catalog(scope, actor=actor)
 
     def prepare_map(
         self,
@@ -81,6 +86,9 @@ class FinancialReportingApplicationService:
 
     def get_opening(self, opening_id: str, *, actor: PostingActor) -> dict[str, Any]:
         return self.repository.get_opening(opening_id, actor=actor)
+
+    def list_openings(self, scope: ReportingScope, *, actor: PostingActor) -> list[dict[str, Any]]:
+        return self.repository.list_openings(scope, actor=actor)
 
     def review_opening(
         self, opening_id: str, *, expected_digest: str, reason: str, command_id: str, actor: PostingActor

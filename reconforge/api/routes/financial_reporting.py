@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request
@@ -12,19 +13,23 @@ from reconforge.api.errors import APIError
 from reconforge.api.routes.finance_posting import _actor
 from reconforge.api.routes.operational_finance import _authority as _source_authority
 from reconforge.api.server_finance_core import (
+    FinanceCoreExecutionScope,
     execute_postgres_finance_core_scoped,
     server_finance_core_enabled,
 )
 from reconforge.api.server_identity import request_execution_scope
-from reconforge.domain.finance_posting import FinancePostingError
+from reconforge.application.financial_reporting import FinancialReportingApplicationService
+from reconforge.auth.models import LocalUser
+from reconforge.domain.finance_posting import FinancePostingError, PostingActor
 from reconforge.domain.financial_reporting import AccountClassification, OpeningLine, OpeningPreparation, ReportingScope
+from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
 
 router = APIRouter(prefix="/financial-reporting", tags=["financial-reporting"])
-Read = Annotated[Any, Depends(require_permission("finance_core.read"))]
-Manage = Annotated[Any, Depends(require_permission("finance_core.manage"))]
-Review = Annotated[Any, Depends(require_permission("finance_core.validate"))]
-Post = Annotated[Any, Depends(require_permission("finance_core.post"))]
+Read = Annotated[LocalUser, Depends(require_permission("finance_core.read"))]
+Manage = Annotated[LocalUser, Depends(require_permission("finance_core.manage"))]
+Review = Annotated[LocalUser, Depends(require_permission("finance_core.validate"))]
+Post = Annotated[LocalUser, Depends(require_permission("finance_core.post"))]
 
 
 class ClassificationRequest(BaseModel):
@@ -99,7 +104,13 @@ def _authority(request: Request, permission: str, value: dict[str, Any] | None =
     )
 
 
-def _execute(request: Request, user: Any, operation: Any) -> dict[str, Any]:
+def _execute(
+    request: Request,
+    user: LocalUser,
+    operation: Callable[
+        [FinancialReportingApplicationService, PostingActor, FinanceCoreExecutionScope], dict[str, Any]
+    ],
+) -> dict[str, Any]:
     if not server_finance_core_enabled(request):
         raise APIError(
             status_code=503,
@@ -108,9 +119,11 @@ def _execute(request: Request, user: Any, operation: Any) -> dict[str, Any]:
         )
     actor = _actor(request, user)
 
-    def run(finance: Any, scope: Any) -> dict[str, Any]:
+    def run(finance: PostgresFinanceCoreRepository, scope: FinanceCoreExecutionScope) -> dict[str, Any]:
         try:
-            repository = PostgresFinancialReportingRepository(finance.connection, scope.tenant_id)
+            repository = FinancialReportingApplicationService(
+                PostgresFinancialReportingRepository(finance.connection, scope.tenant_id)
+            )
             value = operation(repository, actor, scope)
             return {"api_contract_version": "financial-reporting-api-v1", **project(value)}
         except FinancePostingError as exc:
@@ -129,7 +142,7 @@ def _execute(request: Request, user: Any, operation: Any) -> dict[str, Any]:
     return execute_postgres_finance_core_scoped(request, run)
 
 
-def _scope(value: Any) -> ReportingScope:
+def _scope(value: FinanceCoreExecutionScope) -> ReportingScope:
     if not value.organization_id or not value.legal_entity_id:
         raise APIError(
             status_code=403, code="financial_reporting_scope_denied", message="Select an organization and legal entity."
@@ -171,7 +184,9 @@ def openings(request: Request, current_user: Read) -> dict[str, Any]:
 def prepare_map(request: Request, payload: MappingRequest, current_user: Manage) -> dict[str, Any]:
     _authority(request, "finance_core.manage")
 
-    def run(repository: Any, actor: Any, scope: Any) -> dict[str, Any]:
+    def run(
+        repository: FinancialReportingApplicationService, actor: PostingActor, scope: FinanceCoreExecutionScope
+    ) -> dict[str, Any]:
         value = repository.prepare_map(
             _scope(scope),
             name=payload.name,
@@ -189,7 +204,9 @@ def prepare_map(request: Request, payload: MappingRequest, current_user: Manage)
 def review_map(request: Request, map_id: str, payload: PhaseRequest, current_user: Review) -> dict[str, Any]:
     _authority(request, "finance_core.validate")
 
-    def run(repository: Any, actor: Any, scope: Any) -> dict[str, Any]:
+    def run(
+        repository: FinancialReportingApplicationService, actor: PostingActor, scope: FinanceCoreExecutionScope
+    ) -> dict[str, Any]:
         retained = repository.get_map(map_id, actor=actor)
         _authority(request, "finance_core.validate", retained)
         return {"map": repository.review_map(map_id, **payload.model_dump(), actor=actor)}
@@ -201,7 +218,9 @@ def review_map(request: Request, map_id: str, payload: PhaseRequest, current_use
 def prepare_opening(request: Request, payload: OpeningRequest, current_user: Manage) -> dict[str, Any]:
     _authority(request, "finance_core.manage")
 
-    def run(repository: Any, actor: Any, scope: Any) -> dict[str, Any]:
+    def run(
+        repository: FinancialReportingApplicationService, actor: PostingActor, scope: FinanceCoreExecutionScope
+    ) -> dict[str, Any]:
         value = repository.prepare_opening(
             OpeningPreparation(
                 _scope(scope),
@@ -230,7 +249,9 @@ def prepare_opening(request: Request, payload: OpeningRequest, current_user: Man
 def review_opening(request: Request, opening_id: str, payload: PhaseRequest, current_user: Review) -> dict[str, Any]:
     _authority(request, "finance_core.validate")
 
-    def run(repository: Any, actor: Any, scope: Any) -> dict[str, Any]:
+    def run(
+        repository: FinancialReportingApplicationService, actor: PostingActor, scope: FinanceCoreExecutionScope
+    ) -> dict[str, Any]:
         retained = repository.get_opening(opening_id, actor=actor)
         _authority(request, "finance_core.validate", retained)
         return {"opening": repository.review_opening(opening_id, **payload.model_dump(), actor=actor)}
@@ -242,7 +263,9 @@ def review_opening(request: Request, opening_id: str, payload: PhaseRequest, cur
 def post_opening(request: Request, opening_id: str, payload: PhaseRequest, current_user: Post) -> dict[str, Any]:
     _authority(request, "finance_core.post")
 
-    def run(repository: Any, actor: Any, scope: Any) -> dict[str, Any]:
+    def run(
+        repository: FinancialReportingApplicationService, actor: PostingActor, scope: FinanceCoreExecutionScope
+    ) -> dict[str, Any]:
         retained = repository.get_opening(opening_id, actor=actor)
         _authority(request, "finance_core.post", retained)
         return {"opening": repository.post_opening(opening_id, **payload.model_dump(), actor=actor)}
@@ -254,7 +277,9 @@ def post_opening(request: Request, opening_id: str, payload: PhaseRequest, curre
 def statements(request: Request, current_user: Read, map_id: str, period_id: str, as_of_date: str) -> dict[str, Any]:
     _authority(request, "finance_core.read")
 
-    def run(repository: Any, actor: Any, scope: Any) -> dict[str, Any]:
+    def run(
+        repository: FinancialReportingApplicationService, actor: PostingActor, scope: FinanceCoreExecutionScope
+    ) -> dict[str, Any]:
         value = repository.report(
             map_id=map_id,
             period_id=period_id,

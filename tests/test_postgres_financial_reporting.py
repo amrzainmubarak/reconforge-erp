@@ -469,3 +469,86 @@ def test_additive_installer_preserves_populated_sources_and_refuses_destructive_
     with pytest.raises(RaiseException, match="forward recovery"), psycopg.connect(rt.admin_dsn) as admin:
         admin.execute(DOWNGRADE_SQL)
     assert retained_financial_business(rt) == before
+
+
+def test_empty_downgrade_and_reupgrade_restore_scoped_invoker_guards(receipt_database: tuple[str, str]) -> None:
+    import subprocess
+    import sys
+    from pathlib import Path
+    from uuid import uuid4
+
+    import psycopg
+    from psycopg import sql
+
+    database = "reconforge_fr_migration_" + uuid4().hex[:12]
+    original = psycopg.conninfo.conninfo_to_dict(receipt_database[0])
+    control_dsn = psycopg.conninfo.make_conninfo(**{**original, "dbname": "postgres"})
+    admin_dsn = psycopg.conninfo.make_conninfo(**{**original, "dbname": database})
+    app_settings = psycopg.conninfo.conninfo_to_dict(receipt_database[1])
+    app_dsn = psycopg.conninfo.make_conninfo(**{**app_settings, "dbname": database})
+    with psycopg.connect(control_dsn, autocommit=True) as control:
+        control.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database)))
+    try:
+        for verb, target in (
+            ("upgrade", "0112_pg_financial_reporting"),
+            ("downgrade", "0111_pg_procurement_operations"),
+            ("upgrade", "0112_pg_financial_reporting"),
+        ):
+            subprocess.run(
+                [sys.executable, "-m", "alembic", verb, target],
+                cwd=Path(__file__).resolve().parents[1],
+                env={**os.environ, "RECONFORGE_POSTGRES_DSN": admin_dsn},
+                check=True,
+                timeout=180,
+            )
+            with psycopg.connect(admin_dsn) as admin:
+                assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == target
+                installed = admin.execute(
+                    "SELECT to_regclass('reconforge.financial_opening_plans') IS NOT NULL"
+                ).fetchone()[0]
+                assert installed is (verb == "upgrade")
+                if installed:
+                    assert (
+                        admin.execute(
+                            "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='reconforge' AND c.relname=ANY(%s) AND c.relrowsecurity AND c.relforcerowsecurity",
+                            (
+                                [
+                                    "financial_reporting_maps",
+                                    "financial_reporting_map_reviews",
+                                    "financial_opening_plans",
+                                    "financial_opening_reviews",
+                                    "financial_opening_links",
+                                    "financial_reporting_commands",
+                                ],
+                            ),
+                        ).fetchone()[0]
+                        == 6
+                    )
+                    assert (
+                        admin.execute(
+                            "SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='reconforge' AND p.proname LIKE 'fr_%%' AND p.prosecdef"
+                        ).fetchone()[0]
+                        == 0
+                    )
+        with psycopg.connect(admin_dsn) as admin:
+            admin.execute(
+                sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(app_settings["user"]))
+            )
+            admin.execute(
+                sql.SQL("GRANT SELECT ON reconforge.financial_opening_plans TO {}").format(
+                    sql.Identifier(app_settings["user"])
+                )
+            )
+        with psycopg.connect(app_dsn) as application:
+            assert tuple(
+                application.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
+            ) == (False, False)
+            assert tuple(
+                application.execute(
+                    "SELECT has_table_privilege(current_user,'reconforge.financial_opening_plans','SELECT'),has_table_privilege(current_user,'reconforge.financial_opening_plans','INSERT'),has_table_privilege(current_user,'reconforge.financial_opening_plans','UPDATE'),has_table_privilege(current_user,'reconforge.financial_opening_plans','DELETE')"
+                ).fetchone()
+            ) == (True, False, False, False)
+    finally:
+        with psycopg.connect(control_dsn, autocommit=True) as control:
+            control.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(database)))
+            assert control.execute("SELECT 1 FROM pg_database WHERE datname=%s", (database,)).fetchone() is None

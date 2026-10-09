@@ -12,6 +12,8 @@ default_roles: existing explicitly granted finance roles
 migrations: [0112_pg_financial_reporting]
 domain_invariants:
   - Classification is explicit, versioned, independently reviewed and immutable.
+  - New opening preparation and review recheck the captured current native account semantics.
+  - Newly inserted command acknowledgements cannot describe an already superseded owner phase.
   - Every contributing account must have a retained classification.
   - Opening uses exact functional-currency minor units and balanced balance-sheet accounts.
   - Only one initial opening source exists per tenant/workspace/organization/legal entity.
@@ -34,6 +36,7 @@ rollback_plan: populated downgrade refuses removal; native dump/restore and forw
 test_matrix:
   unit: tests/test_financial_reporting.py
   configured_postgresql: tests/test_postgres_financial_reporting.py
+  authenticated_api: tests/test_postgres_financial_reporting_api.py
   react: [apps/web/src/financial-reporting-data.test.ts, apps/web/src/components/FinancialReportingPage.test.tsx]
 limitations:
   - Governed opening/classification source workflows require PostgreSQL; existing Community finance APIs remain available.

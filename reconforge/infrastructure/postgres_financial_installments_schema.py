@@ -2,7 +2,7 @@
 
 UPGRADE_SQL = r"""
 DO $fi$ BEGIN
- IF EXISTS(SELECT 1 FROM reconforge.finance_entries WHERE upper(entry_number) LIKE 'FI1-%') THEN
+ IF EXISTS(SELECT 1 FROM reconforge.finance_entries WHERE upper(entry_number) LIKE 'FI1-%' OR upper(id) LIKE 'FI1-%') THEN
   RAISE EXCEPTION 'FI1 namespace already contains incompatible native entries';
  END IF;
 END $fi$;
@@ -50,11 +50,33 @@ CREATE FUNCTION reconforge.installment_event(t TEXT,p TEXT,a TEXT,b TEXT,actor T
 $fi$;
 CREATE FUNCTION reconforge.installment_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $fi$
 DECLARE p RECORD;e RECORD;r RECORD;l RECORD;f RECORD;a RECORD;h RECORD;s JSONB;header JSONB;lines JSONB;maker TEXT;seal TEXT;
- allocated NUMERIC; c RECORD; request_expected JSONB; effect_kind TEXT; account_kind TEXT;payment_mapping JSONB;account_code TEXT;
+ allocated NUMERIC; c RECORD; account_kind TEXT;payment_mapping JSONB;account_code TEXT;field_name TEXT;native_journal_code TEXT;
 BEGIN
  SELECT * INTO p FROM reconforge.financial_installment_plans WHERE tenant_id=t AND id=i;
  IF p IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='FI1 source owner is required'; END IF;
+ IF jsonb_typeof(p.payload) IS DISTINCT FROM 'object' OR NOT p.payload ?& ARRAY[
+ 'schema_version','id','workspace_id','organization_id','legal_entity_id','organization_code','entity_code','source_kind','source_id',
+ 'journal_code','period_id','posting_date','debit_account_code','credit_account_code','reason','amount_minor','entry_id','invoice_version',
+ 'allocated_before_minor','currency_code','currency_precision','source_snapshot','snapshot','preparer_actor_id','plan_digest','validation_digest']
+ OR p.payload-ARRAY['schema_version','id','workspace_id','organization_id','legal_entity_id','organization_code','entity_code','source_kind','source_id',
+ 'journal_code','period_id','posting_date','debit_account_code','credit_account_code','reason','amount_minor','entry_id','invoice_version',
+ 'allocated_before_minor','currency_code','currency_precision','source_snapshot','snapshot','preparer_actor_id','plan_digest','validation_digest']<>'{}'::jsonb
+ OR p.payload->>'schema_version' IS DISTINCT FROM 'financial-installment-v1' THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment payload requires its exact versioned schema'; END IF;
+ FOREACH field_name IN ARRAY ARRAY['id','workspace_id','organization_id','legal_entity_id','organization_code','entity_code','source_kind','source_id',
+ 'journal_code','period_id','posting_date','debit_account_code','credit_account_code','reason','entry_id','currency_code','preparer_actor_id','plan_digest','validation_digest'] LOOP
+  IF jsonb_typeof(p.payload->field_name) IS DISTINCT FROM 'string' OR btrim(p.payload->>field_name)='' THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment required metadata must be nonempty text'; END IF;
+ END LOOP;
+ FOREACH field_name IN ARRAY ARRAY['amount_minor','invoice_version','allocated_before_minor','currency_precision'] LOOP
+  IF jsonb_typeof(p.payload->field_name) IS DISTINCT FROM 'number' OR (p.payload->>field_name)!~'^(0|[1-9][0-9]*)$' THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment required numbers must be exact nonnegative integers'; END IF;
+ END LOOP;
+ IF (p.payload->>'invoice_version')::numeric<1 OR (p.payload->>'currency_precision')::numeric>18
+ OR jsonb_typeof(p.payload->'snapshot') IS DISTINCT FROM 'object' OR jsonb_typeof(p.payload->'source_snapshot') IS DISTINCT FROM 'object' THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment numeric and snapshot metadata is invalid'; END IF;
  SELECT * INTO e FROM reconforge.finance_entries WHERE tenant_id=t AND id=p.entry_id;
+ SELECT journal_code INTO native_journal_code FROM reconforge.finance_journals WHERE tenant_id=t AND id=e.journal_id;
  SELECT * INTO h FROM reconforge.ap_supplier_invoices WHERE tenant_id=t AND id=p.source_id;
  SELECT * INTO r FROM reconforge.financial_installment_reviews WHERE tenant_id=t AND plan_id=i;
  SELECT * INTO l FROM reconforge.financial_installment_links WHERE tenant_id=t AND plan_id=i;
@@ -75,6 +97,9 @@ BEGIN
  (p.workspace_id,p.organization_id,p.legal_entity_id)
  OR (s->>'workspace_id',s->>'organization_id',s->>'legal_entity_id') IS DISTINCT FROM (p.workspace_id,p.organization_id,p.legal_entity_id)
  OR e.entry_number<>upper(p.id) OR e.source_type<>'Manual' OR e.external_reference<>'AP-PAYMENT:'||p.source_id
+ OR e.posting_date::text IS DISTINCT FROM p.payload->>'posting_date' OR e.period_id IS DISTINCT FROM p.payload->>'period_id'
+ OR native_journal_code IS DISTINCT FROM p.payload->>'journal_code' OR e.description IS DISTINCT FROM p.payload->>'reason'
+ OR e.organization_code IS DISTINCT FROM p.payload->>'organization_code' OR e.entity_code IS DISTINCT FROM p.payload->>'entity_code'
  OR e.preparer_actor_id<>maker OR e.total_debit_minor<>p.amount_minor OR e.total_credit_minor<>p.amount_minor
  OR e.currency_code<>s->>'currency_code' OR e.currency_code<>p.payload->>'currency_code'
  OR e.currency_precision<>(p.payload->>'currency_precision')::integer OR e.reverses_posting_id IS NOT NULL
@@ -191,9 +216,9 @@ BEGIN
    native_number:=CASE WHEN TG_TABLE_NAME='finance_entries' THEN changed->>'entry_number' ELSE NULL END;
    IF native_number IS NULL THEN SELECT entry_number INTO native_number FROM reconforge.finance_entries
     WHERE tenant_id=changed->>'tenant_id' AND id=native_entry; END IF;
-   IF upper(left(COALESCE(native_number,''),4))<>'FI1-' THEN CONTINUE; END IF;
+   IF upper(left(COALESCE(native_number,''),4))<>'FI1-' AND upper(left(COALESCE(native_entry,''),4))<>'FI1-' THEN CONTINUE; END IF;
   END IF;
-  IF TG_TABLE_NAME='finance_entries' AND upper(changed->>'entry_number') LIKE 'FI1-%' THEN
+  IF TG_TABLE_NAME='finance_entries' AND (upper(changed->>'entry_number') LIKE 'FI1-%' OR upper(changed->>'id') LIKE 'FI1-%') THEN
    SELECT * INTO p FROM reconforge.financial_installment_plans WHERE tenant_id=changed->>'tenant_id' AND entry_id=native_entry;
    IF p IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Reserved FI1 entry requires its source'; END IF;
   END IF;

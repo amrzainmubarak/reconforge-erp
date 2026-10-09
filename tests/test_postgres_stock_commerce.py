@@ -260,6 +260,7 @@ def test_real_thousand_line_order_preserves_exact_source_and_partial_native_effe
 @pytest.mark.parametrize("fault", ["source_digest", "command_payload"])
 def test_birth_admission_rejects_forged_application_source_or_command_seal(receipt_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch, fault: str) -> None:
     import psycopg
+
     from reconforge.infrastructure import postgres_stock_commerce as implementation
     runtime = create_stock_runtime(receipt_database)
     with runtime.actor("maker") as (connection, _, actor):
@@ -291,11 +292,40 @@ def test_immutable_birth_seal_rejects_same_transaction_line_append_and_command_d
         ack = owner.create(CommercialOrder("BIRTH-SEALED", "CUSTOMER", "PO", "USD", "2026-10-09",
             (CommercialLine("ITEM", "MAIN", "STOCK", "2", 5000, "Physical source"),)), command_id="sealed-birth", actor=actor)
         # This is deliberately inside the still-open outer birth transaction.
-        with pytest.raises(psycopg.errors.CheckViolation, match="creation seal"), connection.transaction():
+        with pytest.raises(psycopg.errors.CheckViolation) as refused, connection.transaction():
             connection.execute("""INSERT INTO reconforge.stock_commerce_lines
                 (tenant_id,order_id,line_number,item_id,uom_id,location_id,quantity_precision,quantity_scaled,total_minor,source)
                 SELECT tenant_id,order_id,2,item_id,uom_id,location_id,quantity_precision,quantity_scaled,total_minor,source
                 FROM reconforge.stock_commerce_lines WHERE tenant_id=%s AND order_id=%s""", (runtime.tenant, ack["id"]))
+        assert refused.value.diag.constraint_name == "stock_commerce_owner_phase"
         with pytest.raises(psycopg.errors.CheckViolation, match="immutable"), connection.transaction():
             connection.execute("DELETE FROM reconforge.stock_commerce_commands WHERE tenant_id=%s AND order_id=%s AND version=1", (runtime.tenant, ack["id"]))
         assert owner.get(ack["id"], actor=actor)["line_count"] == 1
+
+
+def test_command_permission_comes_from_immutable_operation_not_claimed_session_label(receipt_database: tuple[str, str]) -> None:
+    import psycopg
+
+    from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
+    from reconforge.infrastructure.postgres_stock_sales import READ
+    runtime = create_stock_runtime(receipt_database)
+    with runtime.actor("maker") as (connection, _, actor):
+        identities = PostgresIdentityRepository(connection)
+        identities.create_role(tenant_id=runtime.tenant, role_name="commercial-maker-only")
+        for permission in sorted(READ | {"sales.manage"}):
+            identities.grant_permission(tenant_id=runtime.tenant, role_name="commercial-maker-only", permission_name=permission)
+        identities.create_user(tenant_id=runtime.tenant, user_id="limited", username="limited", password=runtime.password, role_name="commercial-maker-only")
+        owner = repository(connection, runtime)
+        ack = owner.create(CommercialOrder("ROLE-SEALED", "CUSTOMER", "PO", "USD", "2026-10-09",
+            (CommercialLine("ITEM", "MAIN", "STOCK", "2", 5000, "Physical source"),)), command_id="role-sealed", actor=actor)
+        ack = owner.act(ack["id"], "submit", expected_version=1, command_id="role-submit", reason="Submit actual terms", parameters={}, actor=actor)
+    with runtime.actor("limited") as (connection, _, actor):
+        assert "sales.approve" not in actor.permissions
+        owner = repository(connection, runtime)
+        before = owner.get(ack["id"], actor=actor)
+        with pytest.raises(psycopg.errors.CheckViolation) as refused, connection.transaction():
+            owner._authority(actor, "create")
+            connection.execute("UPDATE reconforge.stock_commerce_orders SET status='Approved',approved_by=%s,row_version=3 WHERE tenant_id=%s AND id=%s", (actor.user_id, runtime.tenant, ack["id"]))
+            owner._remember(ack["id"], "forged-approval-label", owner._request(ack["id"], "approve", {"expected_version": 2, "reason": "Wrong permission label"}, actor), "Wrong permission label", actor)
+        assert refused.value.diag.constraint_name == "stock_commerce_owner_phase"
+        assert owner.get(ack["id"], actor=actor) == before

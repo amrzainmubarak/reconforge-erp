@@ -153,7 +153,9 @@ BEGIN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_commerce_owner_phase',MESSAGE='Delivery tranche requires approved current commercial owner.';
   END IF;
  ELSE
+  p:=CASE WHEN NEW.operation IN('approve','approve-tranche','review-issue','review-invoice','review-collection') THEN'sales.approve' ELSE'sales.manage' END;
   IF NEW.actor_id IS DISTINCT FROM a OR NEW.workspace_id IS DISTINCT FROM d.workspace_id OR NEW.version<>d.row_version
+  OR NOT reconforge.sales_revenue_actor(d.tenant_id,NEW.actor_id,p)
   OR octet_length(NEW.request::text)>2097152 OR octet_length(NEW.result::text)>4194304
   OR reconforge.irp_digest(NEW.request) IS DISTINCT FROM NEW.request_digest
   OR reconforge.irp_digest(NEW.result) IS DISTINCT FROM NEW.result_digest
@@ -243,11 +245,11 @@ BEGIN
    END IF;
   END IF;
  END LOOP;
- IF EXISTS(SELECT l.line_number FROM reconforge.stock_commerce_lines l
-   LEFT JOIN reconforge.stock_commerce_tranches x ON x.tenant_id=l.tenant_id AND x.order_id=l.order_id AND x.line_number=l.line_number
+ IF EXISTS(SELECT line_row.line_number FROM reconforge.stock_commerce_lines line_row
+   LEFT JOIN reconforge.stock_commerce_tranches x ON x.tenant_id=line_row.tenant_id AND x.order_id=line_row.order_id AND x.line_number=line_row.line_number
    LEFT JOIN reconforge.stock_sales_orders n ON n.tenant_id=x.tenant_id AND n.id=x.stock_order_id AND n.status<>'Cancelled'
-   WHERE l.tenant_id=t AND l.order_id=target GROUP BY l.line_number,l.quantity_scaled,l.total_minor
-   HAVING coalesce(sum(n.quantity_scaled),0)>l.quantity_scaled OR coalesce(sum(n.total_minor),0)>l.total_minor) THEN
+   WHERE line_row.tenant_id=t AND line_row.order_id=target GROUP BY line_row.line_number,line_row.quantity_scaled,line_row.total_minor
+   HAVING coalesce(sum(n.quantity_scaled),0)>line_row.quantity_scaled OR coalesce(sum(n.total_minor),0)>line_row.total_minor) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_commerce_owner_phase',MESSAGE='Commercial line quantity and value cannot be overcommitted.';
  END IF;
  FOR s IN SELECT n.*,x.line_number,x.created_version FROM reconforge.stock_commerce_tranches x

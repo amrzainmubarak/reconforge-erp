@@ -5,7 +5,11 @@ from typing import Any, Protocol
 
 from reconforge.domain.finance_posting import PostingActor
 from reconforge.domain.procurement_operations import ProcurementPreparation
-from reconforge.domain.procurement_partial import PartialQuantityPreparation
+from reconforge.domain.procurement_partial import (
+    MultilineInvoicePreparation,
+    MultilineProcurementPreparation,
+    PartialQuantityPreparation,
+)
 
 
 class ProcurementPartialRepository(Protocol):
@@ -18,6 +22,14 @@ class ProcurementPartialRepository(Protocol):
                       command_id: str, actor: PostingActor) -> dict[str, Any]: ...
     def get(self, order_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
     def list_orders(self, workspace: str, *, actor: PostingActor) -> list[dict[str, Any]]: ...
+    def create_multiline(self, request: MultilineProcurementPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]: ...
+    def prepare_receipt_line(self, order_id: str, line_id: str, request: PartialQuantityPreparation, *, expected_version: int,
+                             command_id: str, actor: PostingActor) -> dict[str, Any]: ...
+    def match_invoice_lines(self, order_id: str, request: MultilineInvoicePreparation, *, expected_version: int,
+                            command_id: str, actor: PostingActor) -> dict[str, Any]: ...
+    def order_page(self, workspace: str, *, actor: PostingActor, after: str = "", page_size: int = 25) -> dict[str, Any]: ...
+    def document_page(self, order_id: str, *, receipt_after: int = 0, invoice_after: int = 0, actor: PostingActor) -> dict[str, Any]: ...
+    def item_catalog_page(self, workspace: str, organization_id: str, *, actor: PostingActor, after: str = "", search: str = "") -> dict[str, Any]: ...
 
 
 class ProcurementPartialApplicationService:
@@ -45,3 +57,20 @@ class ProcurementPartialApplicationService:
 
     def list_orders(self, workspace: str, *, actor: PostingActor) -> list[dict[str, Any]]:
         return self.repository.list_orders(workspace, actor=actor)
+
+    def create_multiline(self, request: MultilineProcurementPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.create_multiline(request, command_id=command_id, actor=actor)
+
+    def prepare_receipt_line(self, order_id: str, line_id: str, request: PartialQuantityPreparation, *, expected_version: int,
+                             command_id: str, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.prepare_receipt_line(order_id, line_id, request, expected_version=expected_version, command_id=command_id, actor=actor)
+
+    def match_invoice_lines(self, order_id: str, request: MultilineInvoicePreparation, *, expected_version: int,
+                            command_id: str, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.match_invoice_lines(order_id, request, expected_version=expected_version, command_id=command_id, actor=actor)
+
+    def order_page(self, workspace: str, *, actor: PostingActor, after: str = "", page_size: int = 25) -> dict[str, Any]:
+        return self.repository.order_page(workspace, actor=actor, after=after, page_size=page_size)
+
+    def document_page(self, order_id: str, *, receipt_after: int = 0, invoice_after: int = 0, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.document_page(order_id, actor=actor, receipt_after=receipt_after, invoice_after=invoice_after)

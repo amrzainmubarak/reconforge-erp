@@ -121,7 +121,20 @@ def test_capture_birth_seal_refuses_nested_temp_trigger_extension_before_summary
 
     rt = snapshot_runtime
     mapping = map_cycle(rt)
-    with rt.actor("poster") as (connection, _, actor):
+    with rt.actor("maker") as (connection, _, actor):
+        entry = PostgresFinanceCoreRepository(connection, rt.tenant).create_entry(
+            entry_number="AFTER-CAPTURE", organization_code="ORG", entity_code="ENTITY", period_id="period",
+            journal_code="STOCK", posting_date="2026-10-09", description="Real source published after report birth",
+            lines=[{"account_code": "CASH", "debit": "1.23", "credit": "0"}, {"account_code": "REVENUE", "debit": "0", "credit": "1.23"}],
+            workspace="work", actor_label=actor.username,
+        )
+    with rt.actor("checker") as (connection, _, actor):
+        PostgresFinanceCoreRepository(connection, rt.tenant).validate_entry(entry["id"], reason="Independent source review", actor_label=actor.username)
+        seal = PostgresFinancePostingRepository(connection, rt.tenant).preview(entry["id"], actor=actor)["current_content_digest"]
+    # Capture and posting use distinct identities. Authentication updates their
+    # own persisted row, so a second connection must not reauthenticate the
+    # reader whose report transaction is deliberately still open.
+    with rt.actor("checker") as (connection, _, actor):
         assert connection.execute("SELECT has_column_privilege(current_user,'reconforge.financial_report_captures','membership_sealed','UPDATE')").fetchone()[0]
         assert not connection.execute("SELECT has_column_privilege(current_user,'reconforge.financial_report_captures','source_snapshot','UPDATE')").fetchone()[0]
         request = {"actor_id": actor.user_id, "map_id": mapping["id"], "period_id": "period", "as_of_date": "2026-10-31"}
@@ -134,7 +147,11 @@ def test_capture_birth_seal_refuses_nested_temp_trigger_extension_before_summary
             assert connection.execute("SELECT count(*) FROM reconforge.financial_report_snapshots WHERE tenant_id=%s", (rt.tenant,)).fetchone()[0] == 0
             # A real independently reviewed posting commits after the source
             # cursor ended. The application role's TEMP capability stays enabled.
-            manual(rt, "AFTER-CAPTURE", "CASH", "REVENUE", 123, "2026-10-09")
+            with rt.actor("poster") as (posting_connection, _, poster):
+                PostgresFinancePostingRepository(posting_connection, rt.tenant).post(
+                    entry["id"], command_id="AFTER-CAPTURE-POST", expected_validation_digest=seal,
+                    reason="Independent publication after capture source selection", actor=poster,
+                )
             connection.execute("CREATE TEMP TABLE capture_depth_probe(value integer)")
             connection.execute("""CREATE FUNCTION pg_temp.capture_depth_probe() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $probe$
                 BEGIN

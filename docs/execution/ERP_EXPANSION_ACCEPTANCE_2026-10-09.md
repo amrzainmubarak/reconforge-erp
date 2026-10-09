@@ -53,7 +53,7 @@ the new owners enforce the stronger three-person policy.
 | Populated native dump/restore |Both compare214 tables and197 function definitions, catalog/ACL/policies/constraints/indexes; three tamper refusals each|
 | Standard browser / separate actual HTTPS hosting |19 passed +9 existing external prerequisites; separate HTTPS1 passed with zero skips|
 | Ruff / Mypy / Bandit / pinned Gitleaks |Passed;651 Mypy source files; zero Bandit findings; history and tracked tree scanned|
-| wheel/sdist and installed origins |Real build/offline install/doctor;651 runtime modules,115 migrations,984 sdist members and166 Studio members verified|
+| wheel/sdist and installed origins |Real build/offline install/doctor;651 runtime modules,115 migrations,984 required source members and166 Studio members verified; the required subset is not the total sdist file count|
 | Fresh Docker image |Build,651 runtime/115 migration byte checks, UID10001, no-network/read-only/cap-drop doctor and sample validation passed|
 | Image SBOM/Grype/policy |0 Critical/High/Unknown;9 Medium and1 Negligible; zero exceptions|
 | Bounded recovery/capacity |1000 in-memory HTTP requests and1000 synthetic SQLite queued jobs; zero errors,29ms p95,1ms aggregate query, backlog recovery passed|

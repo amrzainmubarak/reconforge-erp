@@ -279,9 +279,9 @@ DO $fi$ DECLARE n TEXT; BEGIN
  'domain_audit_events','outbox_events'] LOOP
  EXECUTE format('DROP TRIGGER installment_owner_closure ON reconforge.%I',n); END LOOP;
 END $fi$;
+DROP TABLE reconforge.financial_installment_commands,reconforge.financial_installment_links,reconforge.financial_installment_reviews,reconforge.financial_installment_plans;
 DROP FUNCTION reconforge.installment_reverse_close();
 DROP FUNCTION reconforge.installment_protect();
 DROP FUNCTION reconforge.installment_close(TEXT,TEXT);
 DROP FUNCTION reconforge.installment_event(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,JSONB);
-DROP TABLE reconforge.financial_installment_commands,reconforge.financial_installment_links,reconforge.financial_installment_reviews,reconforge.financial_installment_plans;
 """

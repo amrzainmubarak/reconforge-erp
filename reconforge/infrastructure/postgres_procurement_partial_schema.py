@@ -8,7 +8,7 @@ DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND 
  RAISE EXCEPTION 'Partial procurement migration requires bypass of forced row security.'; END IF; END $$;
 """
 
-UPGRADE_SQL = _AUTHORITY_SQL + r"""
+_UPGRADE_BODY_SQL = r"""
 CREATE TABLE reconforge.procurement_partial_orders (
  tenant_id TEXT NOT NULL,id TEXT NOT NULL,workspace_id TEXT NOT NULL,organization_id TEXT NOT NULL,legal_entity_id TEXT NOT NULL,
  number TEXT NOT NULL CHECK(length(number) BETWEEN 1 AND 40),request_json JSONB NOT NULL CHECK(octet_length(request_json::text)<=16384),
@@ -363,7 +363,9 @@ CREATE CONSTRAINT TRIGGER partial_order_outbox_closure AFTER UPDATE OR DELETE ON
  FOR EACH ROW WHEN(OLD.aggregate_type='procurement_partial_order') EXECUTE FUNCTION reconforge.pp_source_closure();
 """
 
-DOWNGRADE_SQL = _AUTHORITY_SQL + r"""
+UPGRADE_SQL = "".join((_AUTHORITY_SQL, _UPGRADE_BODY_SQL))
+
+_DOWNGRADE_BODY_SQL = r"""
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.procurement_partial_orders) THEN
  RAISE EXCEPTION 'Retained partial procurements prohibit downgrade; restore a verified pre-upgrade backup.'; END IF; END $$;
 DO $$ DECLARE t TEXT; BEGIN
@@ -385,6 +387,8 @@ DROP TABLE reconforge.procurement_partial_receipts;
 DROP TABLE reconforge.procurement_partial_orders;
 DROP FUNCTION reconforge.pp_guard();
 """
+
+DOWNGRADE_SQL = "".join((_AUTHORITY_SQL, _DOWNGRADE_BODY_SQL))
 
 
 def install_postgres_procurement_partial(connection: Any) -> None:

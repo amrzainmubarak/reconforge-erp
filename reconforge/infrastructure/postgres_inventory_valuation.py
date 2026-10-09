@@ -882,13 +882,29 @@ class PostgresInventoryValuationRepository:
                 if self._reversal_schema_available()
                 else """SELECT e.movement_number FROM reconforge.inventory_movements c JOIN reconforge.inventory_movements e ON e.tenant_id=c.tenant_id AND e.workspace_id=c.workspace_id AND e.organization_id=c.organization_id AND e.legal_entity_id=c.legal_entity_id AND e.status='Posted' AND e.movement_type<>'Transfer' AND (e.movement_date<c.movement_date OR (e.movement_date=c.movement_date AND e.movement_number<c.movement_number)) WHERE c.tenant_id=%s AND c.id=%s AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents d WHERE d.tenant_id=e.tenant_id AND d.movement_id=e.id AND d.status='Approved') ORDER BY e.movement_date,e.movement_number LIMIT 1"""
             )
+            # Chronology follows the same entity/item/lot pool as the FIFO locks;
+            # another warehouse shares that pool, an unrelated item does not.
+            earlier_sql = earlier_sql.replace("ORDER BY e.movement_date", """AND EXISTS(
+                SELECT 1 FROM reconforge.inventory_movement_lines current_line
+                JOIN reconforge.inventory_movement_lines candidate_line
+                  ON candidate_line.tenant_id=current_line.tenant_id
+                 AND candidate_line.item_id=current_line.item_id
+                 AND candidate_line.inventory_lot_id IS NOT DISTINCT FROM current_line.inventory_lot_id
+                WHERE current_line.tenant_id=c.tenant_id AND current_line.movement_id=c.id
+                  AND candidate_line.movement_id=e.id) ORDER BY e.movement_date""")
             earlier = self.connection.execute(earlier_sql, (self.tenant_id, movement["id"])).fetchone()
             if earlier is not None:
                 raise PlatformError(
                     f"FIFO approval requires earlier Posted movement {earlier['movement_number']} to be valued first."
                 )
             later = self.connection.execute(
-                """SELECT d.valuation_number FROM reconforge.inventory_movements c JOIN reconforge.inventory_movements l ON l.tenant_id=c.tenant_id AND l.workspace_id=c.workspace_id AND l.organization_id=c.organization_id AND l.legal_entity_id=c.legal_entity_id AND (l.movement_date>c.movement_date OR (l.movement_date=c.movement_date AND l.movement_number>c.movement_number)) JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=l.tenant_id AND d.movement_id=l.id AND d.status='Approved' WHERE c.tenant_id=%s AND c.id=%s ORDER BY l.movement_date,l.movement_number LIMIT 1""",
+                """SELECT d.valuation_number FROM reconforge.inventory_movements c JOIN reconforge.inventory_movements l ON l.tenant_id=c.tenant_id AND l.workspace_id=c.workspace_id AND l.organization_id=c.organization_id AND l.legal_entity_id=c.legal_entity_id AND (l.movement_date>c.movement_date OR (l.movement_date=c.movement_date AND l.movement_number>c.movement_number)) JOIN reconforge.inventory_valuation_documents d ON d.tenant_id=l.tenant_id AND d.movement_id=l.id AND d.status='Approved' WHERE c.tenant_id=%s AND c.id=%s
+                AND EXISTS(SELECT 1 FROM reconforge.inventory_movement_lines current_line
+                  JOIN reconforge.inventory_movement_lines candidate_line ON candidate_line.tenant_id=current_line.tenant_id
+                  AND candidate_line.item_id=current_line.item_id
+                  AND candidate_line.inventory_lot_id IS NOT DISTINCT FROM current_line.inventory_lot_id
+                  WHERE current_line.tenant_id=c.tenant_id AND current_line.movement_id=c.id AND candidate_line.movement_id=l.id)
+                ORDER BY l.movement_date,l.movement_number LIMIT 1""",
                 (self.tenant_id, movement["id"]),
             ).fetchone()
             if later is not None:

@@ -496,16 +496,18 @@ class PostgresInventoryReceiptPostingRepository:
         scope, source = plan["scope"], plan["source"]
         if self.connection.execute("""SELECT 1 FROM reconforge.inventory_movements m WHERE m.tenant_id=%s
           AND m.workspace_id=%s AND m.organization_id=%s AND m.legal_entity_id=%s AND m.status='Posted' AND m.movement_type<>'Transfer'
+          AND EXISTS(SELECT 1 FROM reconforge.inventory_movement_lines l WHERE l.tenant_id=m.tenant_id AND l.movement_id=m.id AND l.item_id=%s)
           AND (m.movement_date,m.movement_number)<(%s::date,%s)
           AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_documents v WHERE v.tenant_id=m.tenant_id AND v.movement_id=m.id AND v.status='Approved')
           AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_reversals r WHERE r.tenant_id=m.tenant_id AND r.reversal_movement_id=m.id AND r.status='Approved') LIMIT 1""",
-          (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], source["posting_date"], plan["artifacts"]["movement_number"])).fetchone():
+          (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], source["item_id"], source["posting_date"], plan["artifacts"]["movement_number"])).fetchone():
             fail("FIFO posting requires earlier physical movements to be valued first.")
         if self.connection.execute("""SELECT 1 FROM reconforge.inventory_movements m JOIN reconforge.inventory_valuation_documents v
           ON v.tenant_id=m.tenant_id AND v.movement_id=m.id WHERE m.tenant_id=%s AND m.workspace_id=%s
           AND m.organization_id=%s AND m.legal_entity_id=%s AND v.status='Approved'
+          AND EXISTS(SELECT 1 FROM reconforge.inventory_movement_lines l WHERE l.tenant_id=m.tenant_id AND l.movement_id=m.id AND l.item_id=%s)
           AND (m.movement_date,m.movement_number)>(%s::date,%s) LIMIT 1""",
-          (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], source["posting_date"], plan["artifacts"]["movement_number"])).fetchone():
+          (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], source["item_id"], source["posting_date"], plan["artifacts"]["movement_number"])).fetchone():
             fail("Backdated receipt posting conflicts with a later Approved valuation.")
 
     def _unused(self, original: ReceiptPlan, *, inverse_movement: str | None = None) -> None:

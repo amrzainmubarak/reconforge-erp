@@ -137,3 +137,58 @@ def test_changed_command_amount_cannot_replay_financial_ack(installment_runtime:
     with runtime.actor(MAKER) as (connection, _, actor), pytest.raises(FinancePostingError, match="another"):
         PostgresFinancialInstallmentsRepository(connection, runtime.tenant).prepare(replace(preparation(invoice_id, 1500), amount_minor=1501),
             command_id="prepare-first", actor=actor)
+
+
+@pytest.mark.parametrize("fault", ["native_account", "native_date", "missing_precision"])
+def test_native_sql_closure_refuses_capture_faults_without_retained_effects(installment_runtime: tuple[ReceiptRuntime, str], fault: str) -> None:
+    import psycopg
+    from reconforge.domain.finance_posting import digest_payload
+
+    runtime, invoice_id = installment_runtime
+    with runtime.actor(MAKER) as (connection, _, _):
+        before = connection.execute("SELECT count(*) AS n FROM reconforge.finance_entries WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"]
+    with pytest.raises(psycopg.errors.CheckViolation), runtime.actor(MAKER) as (connection, _, actor):
+        repository = PostgresFinancialInstallmentsRepository(connection, runtime.tenant)
+        create = repository.owner.finance.create_entry
+        event = repository.owner._event
+        if fault in {"native_account", "native_date"}:
+            def capture(**arguments: Any) -> Any:
+                if fault == "native_account":
+                    arguments["lines"][0]["account_code"] = "CLEARING"
+                else:
+                    arguments["posting_date"] = "2026-10-07"
+                return create(**arguments)
+            repository.owner.finance.create_entry = capture  # type: ignore[method-assign]
+        else:
+            def capture_event(plan: Any, action: str, event_actor: Any, metadata: Any) -> Any:
+                if action == "financial_installment_prepared":
+                    del plan["currency_precision"]
+                    plan["plan_digest"] = digest_payload({key: value for key, value in plan.items() if key not in {"plan_digest", "validation_digest"}})
+                    metadata["plan_digest"] = plan["plan_digest"]
+                return event(plan, action, event_actor, metadata)
+            repository.owner._event = capture_event  # type: ignore[method-assign]
+        repository.prepare(preparation(invoice_id,1500),command_id="capture-fault",actor=actor)
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    with runtime.actor(MAKER) as (connection, _, _):
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.finance_entries WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == before
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.financial_installment_plans WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+
+
+def test_late_installment_ack_failure_rolls_back_gl_allocation_and_source_phase(installment_runtime: tuple[ReceiptRuntime, str]) -> None:
+    runtime, invoice_id = installment_runtime
+    plan = review(runtime, prepare(runtime, invoice_id,1500))
+    with runtime.actor(POSTER) as (connection, _, _):
+        effects_before = connection.execute("SELECT count(*) AS n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"]
+    with pytest.raises(RuntimeError,match="Synthetic late acknowledgement failure"), runtime.actor(POSTER) as (connection, _, actor):
+        repository = PostgresFinancialInstallmentsRepository(connection, runtime.tenant)
+        remember = repository._remember
+        def fail_ack(*args: Any, **kwargs: Any) -> Any:
+            remember(*args, **kwargs)
+            raise RuntimeError("Synthetic late acknowledgement failure")
+        repository._remember = fail_ack  # type: ignore[method-assign]
+        repository.post(plan["id"],expected_plan_digest=plan["plan_digest"],command_id="post-fault",reason="Safe atomic failure",actor=actor)
+    with runtime.actor(POSTER) as (connection, _, actor):
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == effects_before
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.ap_payment_links WHERE tenant_id=%s AND supplier_invoice_id=%s", (runtime.tenant,invoice_id)).fetchone()["n"] == 0
+        assert PostgresFinancialInstallmentsRepository(connection,runtime.tenant).get(plan["id"],actor=actor)["phase"] == 1
+    assert post(runtime,plan)["phase"] == 2

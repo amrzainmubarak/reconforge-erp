@@ -51,6 +51,7 @@ $fi$;
 CREATE FUNCTION reconforge.installment_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $fi$
 DECLARE p RECORD;e RECORD;r RECORD;l RECORD;f RECORD;a RECORD;h RECORD;s JSONB;header JSONB;lines JSONB;maker TEXT;seal TEXT;
  allocated NUMERIC; c RECORD; account_kind TEXT;payment_mapping JSONB;account_code TEXT;field_name TEXT;native_journal_code TEXT;
+ source_ap_account TEXT;source_cash_account TEXT;
 BEGIN
  SELECT * INTO p FROM reconforge.financial_installment_plans WHERE tenant_id=t AND id=i;
  IF p IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='FI1 source owner is required'; END IF;
@@ -83,6 +84,14 @@ BEGIN
  SELECT parent.request_json INTO payment_mapping FROM reconforge.procurement_partial_invoices invoice
  JOIN reconforge.procurement_partial_orders parent ON parent.tenant_id=invoice.tenant_id AND parent.id=invoice.order_id
  WHERE invoice.tenant_id=t AND invoice.native_invoice_id=p.source_id AND invoice.stage=4;
+ SELECT fa.id INTO source_ap_account FROM reconforge.finance_accounts fa JOIN reconforge.finance_journals journal
+ ON journal.tenant_id=fa.tenant_id AND journal.chart_id=fa.chart_id WHERE fa.tenant_id=t AND fa.workspace_id=p.workspace_id
+ AND fa.account_code=payment_mapping->>'ap_account_code' AND journal.workspace_id=p.workspace_id
+ AND journal.organization_code=p.payload->>'organization_code' AND journal.journal_code=payment_mapping->>'journal_code';
+ SELECT fa.id INTO source_cash_account FROM reconforge.finance_accounts fa JOIN reconforge.finance_journals journal
+ ON journal.tenant_id=fa.tenant_id AND journal.chart_id=fa.chart_id WHERE fa.tenant_id=t AND fa.workspace_id=p.workspace_id
+ AND fa.account_code=payment_mapping->>'cash_account_code' AND journal.workspace_id=p.workspace_id
+ AND journal.organization_code=p.payload->>'organization_code' AND journal.journal_code=payment_mapping->>'journal_code';
  maker:=p.payload->>'preparer_actor_id';seal:=p.payload->>'plan_digest';s:=reconforge.ops_source(t,'APPayment',p.source_id);
  IF e IS NULL OR h IS NULL OR s IS NULL OR payment_mapping IS NULL OR h.status NOT IN ('Approved','Paid')
  OR p.payload->>'debit_account_code' IS DISTINCT FROM payment_mapping->>'ap_account_code'
@@ -120,6 +129,8 @@ BEGIN
  FROM reconforge.finance_entry_line_dimensions d WHERE d.tenant_id=t AND d.entry_line_id=x.id),'{}'::jsonb)) ORDER BY x.line_number)
  INTO lines FROM reconforge.finance_entry_lines x WHERE x.tenant_id=t AND x.entry_id=e.id;
  IF p.payload->'snapshot' IS DISTINCT FROM jsonb_build_object('schema_version','finance-entry-review-v1','entry',header,'lines',lines)
+ OR source_ap_account IS NULL OR source_cash_account IS NULL
+ OR (lines->0->>'account_id',lines->1->>'account_id') IS DISTINCT FROM (source_ap_account,source_cash_account)
  OR reconforge.irp_digest(p.payload->'snapshot') IS DISTINCT FROM p.payload->>'validation_digest'
  OR jsonb_array_length(lines)<>2 OR (lines->0->>'debit_minor')::bigint<>p.amount_minor OR (lines->0->>'credit_minor')::bigint<>0
  OR (lines->1->>'credit_minor')::bigint<>p.amount_minor OR (lines->1->>'debit_minor')::bigint<>0 THEN

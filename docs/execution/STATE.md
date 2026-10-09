@@ -1,5 +1,11 @@
 # Execution State
 
+## Active ERP expansion sprint (2026-10-09; ADR0842)
+
+Work starts at PR125 exact `f24d48363817f36991239c436ae616f59d391918`, retaining PR124 ancestry, on `amr/global-erp-expansion-20261009`; main remains `b61ea56bb9c135fda12546e173795af3c243e4fb`. Three independent managed worktrees own Stock Sales, Partial Procurement, and classified Financial Reporting. Shared installment ownership, API contracts, Studio navigation and final gates are integrated centrally. New migrations form the linear0112–0115 chain; four typed application ports reuse native FIFO, Finance Posting, AR/AP, scoped identity, audit and outbox engines.
+
+Implemented bounded cycles are stock reservation → reviewed FIFO/COGS delivery → invoicing → full AR collection; repeated reviewed purchase receipts → exact3-way invoice tranches → accrued AP → independently reviewed partial cash payments; reviewed account classification → first-history opening balances → business-date TB/BS/IS/cash movements with financial-effect drilldown. Existing local and historical workflows remain separate. Each cycle has genuine scoped nonowner PostgreSQL milestone evidence, with original failures preserved. Current merged source still requires stable full native, real HTTPS browser, populated recovery, package, performance, security and hosted CI acceptance; no production readiness or unrestricted ERP completeness is asserted. Returns, partial sales fulfillment/invoicing/collections, tax/FX posting and statutory cash-flow classification remain outside this bounded slice.
+
 ## Current hosted ERP gate repair (2026-10-09)
 
 Current-source CI37837201370 on `88d2fe20740b` failed its receivables and parity

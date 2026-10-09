@@ -74,7 +74,7 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
             )
             grant_native_owner_reads(admin, app_user, (
-                "operational_finance_plans", "financial_opening_plans",
+                "finance_posting_effects", "operational_finance_plans", "financial_opening_plans",
                 "stock_sales_orders", "stock_sales_issue_claims",
             ))
             admin.execute(

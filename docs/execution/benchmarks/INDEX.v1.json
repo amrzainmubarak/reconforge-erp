@@ -201,6 +201,49 @@
       "profile_id": "native-enterprise-finance/1000-three-human-v1",
       "status": "verified",
       "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-pr127-34b9-2026-10-10.json",
+      "artifact_sha256": "336424ddee3853dc17fe06bb1f3a1326f1964eb794fd75494aa8596702fa6374",
+      "claim_boundary": "One local single-entity USD profile: 1000 native three-human cash/equity postings, four workers, and warmed alternating reads of the same effects. Repository latency includes synthetic authentication. Not HTTP TPS, mixed ERP capacity, production sizing, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/1000-three-human-v1@pr127-34b9e7a5",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-current-6272889d-2026-10-10.json",
+      "artifact_sha256": "d4fe00ed682780db48f7fb7d269b0a1d3a8488a8996a482a1198d513fb84943c",
+      "claim_boundary": "One local single-entity USD profile: 1000 native three-human cash/equity postings, four workers, and warmed alternating reads of the same effects. Repository latency includes synthetic authentication. Not HTTP TPS, mixed ERP capacity, production sizing, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/1000-three-human-v1@global-6272889d",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/commercial-collection-projection-two-runs-2026-10-10.json",
+      "artifact_sha256": "3671766fe0fb7a064add56ff319b46aa02c5a8dcf3e3045a0be91398394c1f32",
+      "claim_boundary": "Two local one-line/one-tranche invoice projection observations, each with one actual reviewed partial receipt and 25 alternating SQL executions per pathway; three allocation scans reduced to one with identical projection. Not 1000-line throughput, HTTP latency, financial posting throughput or competitor comparison.",
+      "digest_fields": [
+        "first_original_report_sha256",
+        "second_original_report_sha256",
+        "first_projection_sha256",
+        "second_projection_sha256"
+      ],
+      "engine": "postgresql17-native-commercial-projection",
+      "profile_id": "commercial-collection-projection/one-line-reviewed-partial-receipt-two-runs-v1",
+      "status": "verified",
+      "workload_family": "commercial_projection"
     }
   ],
   "index_id": "benchmark-evidence-index-v1",

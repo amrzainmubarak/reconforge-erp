@@ -1,0 +1,371 @@
+{
+  "schema_version": 1,
+  "profile_id": "native-enterprise-finance/1000-three-human-v1@pr127-34b9e7a5",
+  "source_sha256": "6bd8978481a91491a635042f9d2603f32051976640213944f63562de106d5d57",
+  "financial_effects_digest": "a2bad512657a23d184bf9ed5ed6dbbbce1d833ea8cb59f9a5deaced90d510e5b",
+  "original_report_sha256": "b051654acdae6c9878ca355a26b681519e37cd3ec59994583f317e514c71079f",
+  "claim_boundary": "One local single-entity USD profile: 1000 native three-human cash/equity postings, four workers, and warmed alternating reads of the same effects. Repository latency includes synthetic authentication. Not HTTP TPS, mixed ERP capacity, production sizing, SLO, failover or competitor comparison.",
+  "original_report_location": "output/enterprise-erp-program-20261009/benchmark-final-34b9-100-1000/result.json",
+  "original_report_serialization": {
+    "encoding": "utf-8",
+    "indent": 2,
+    "ensure_ascii": false,
+    "final_newline": true,
+    "line_endings": "CRLF"
+  },
+  "measurement": {
+    "schema_version": 1,
+    "started_at": "2026-10-09T19:11:57.932255+00:00",
+    "status": "passed",
+    "source_commit": "34b9e7a5b2a7c4d8ae49b641a36de030a878d507",
+    "source_sha256": "6bd8978481a91491a635042f9d2603f32051976640213944f63562de106d5d57",
+    "profile": "native-three-human-cash-equity-v1",
+    "seed": "enterprise-native-v1",
+    "counts": [
+      100,
+      1000
+    ],
+    "workers": 4,
+    "repetitions": 3,
+    "max_seconds": 1800,
+    "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+    "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "logical_cpus": 16,
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "architecture": "AMD64",
+    "docker_version": "29.8.2",
+    "limits": [
+      "single entity and USD",
+      "native repository latency includes synthetic identity authentication",
+      "not HTTP latency",
+      "no comparable competitor measurement",
+      "no cost per transaction without a supplied resource cost model"
+    ],
+    "cost_per_transaction": null,
+    "docker_engine_resources": {
+      "OperatingSystem": "Docker Desktop (containerized)",
+      "OSType": "linux",
+      "Architecture": "x86_64",
+      "KernelVersion": "6.18.40.1-microsoft-standard-WSL2",
+      "NCPU": 16,
+      "MemTotal": 10266177536,
+      "Driver": "overlayfs"
+    },
+    "postgres_version": "17.10",
+    "revision": "0119_pg_receipt_fifo_chronology",
+    "postgres_configuration": {
+      "fsync": "on",
+      "full_page_writes": "on",
+      "max_connections": "100",
+      "shared_buffers": "16384",
+      "synchronous_commit": "on",
+      "wal_level": "replica",
+      "work_mem": "4096"
+    },
+    "runtime_role_flags": [
+      false,
+      false
+    ],
+    "posting": {
+      "completed_cycles": 1000,
+      "concurrency": 4,
+      "seconds": 670.269042699998,
+      "native_postings_per_second": 1.4919382162896409,
+      "error_count": 0,
+      "cycle_latency_seconds": {
+        "p50": 2.56264459999511,
+        "p95": 3.3521717000039644,
+        "p99": 4.595276799998828
+      },
+      "expected": {
+        "debit_minor": "493671004",
+        "credit_minor": "493671004",
+        "cash_minor": "493671004",
+        "equity_minor": "493671004"
+      }
+    },
+    "verified_reads": [
+      {
+        "count": 100,
+        "expected": {
+          "debit_minor": "46669102",
+          "credit_minor": "46669102",
+          "cash_minor": "46669102",
+          "equity_minor": "46669102"
+        },
+        "measurement_scope": "authenticated native verified effect reads; no HTTP or database-internal query count",
+        "dataset_effect_ids_sha256": "2349a6d122b08606398f4cad3430dfcec548d2837c403ade50f1dbba1d612428",
+        "cache_policy": "both warmed; alternating modes",
+        "samples": {
+          "per_effect_baseline": [
+            {
+              "repetition": 0,
+              "effects": 100,
+              "seconds": 0.8768779000020004,
+              "verified_effects_per_second": 114.04096282934246,
+              "client_execute_calls": 300,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.007900100004917476,
+                "p95": 0.014524500002153218,
+                "p99": 0.01580159999866737
+              },
+              "peak_python_allocated_bytes": 27823,
+              "client_process_cpu_seconds": 0.234375,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "26b33a18d831be0b59fa497c7dc7a018fb5e7e0bc10489a745dc5788c6302b8e",
+              "error_count": 0
+            },
+            {
+              "repetition": 1,
+              "effects": 100,
+              "seconds": 0.7156641999972635,
+              "verified_effects_per_second": 139.73033721734632,
+              "client_execute_calls": 300,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006780700001399964,
+                "p95": 0.008693800002220087,
+                "p99": 0.009639800002332777
+              },
+              "peak_python_allocated_bytes": 24374,
+              "client_process_cpu_seconds": 0.203125,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "26b33a18d831be0b59fa497c7dc7a018fb5e7e0bc10489a745dc5788c6302b8e",
+              "error_count": 0
+            },
+            {
+              "repetition": 2,
+              "effects": 100,
+              "seconds": 0.6911261000059312,
+              "verified_effects_per_second": 144.69139567893876,
+              "client_execute_calls": 300,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006589800002984703,
+                "p95": 0.007985700001881924,
+                "p99": 0.008482400000502821
+              },
+              "peak_python_allocated_bytes": 23126,
+              "client_process_cpu_seconds": 0.140625,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "26b33a18d831be0b59fa497c7dc7a018fb5e7e0bc10489a745dc5788c6302b8e",
+              "error_count": 0
+            }
+          ],
+          "bounded_batch": [
+            {
+              "repetition": 0,
+              "effects": 100,
+              "seconds": 0.05849820000003092,
+              "verified_effects_per_second": 1709.454307994898,
+              "client_execute_calls": 2,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.04518559999996796,
+                "p95": 0.04518559999996796,
+                "p99": 0.04518559999996796
+              },
+              "peak_python_allocated_bytes": 713251,
+              "client_process_cpu_seconds": 0.03125,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "26b33a18d831be0b59fa497c7dc7a018fb5e7e0bc10489a745dc5788c6302b8e",
+              "error_count": 0
+            },
+            {
+              "repetition": 1,
+              "effects": 100,
+              "seconds": 0.058871799999906216,
+              "verified_effects_per_second": 1698.6061238175034,
+              "client_execute_calls": 2,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.04811340000014752,
+                "p95": 0.04811340000014752,
+                "p99": 0.04811340000014752
+              },
+              "peak_python_allocated_bytes": 726315,
+              "client_process_cpu_seconds": 0.03125,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "26b33a18d831be0b59fa497c7dc7a018fb5e7e0bc10489a745dc5788c6302b8e",
+              "error_count": 0
+            },
+            {
+              "repetition": 2,
+              "effects": 100,
+              "seconds": 0.051923200000601355,
+              "verified_effects_per_second": 1925.9213607566915,
+              "client_execute_calls": 2,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.04197800000110874,
+                "p95": 0.04197800000110874,
+                "p99": 0.04197800000110874
+              },
+              "peak_python_allocated_bytes": 713379,
+              "client_process_cpu_seconds": 0.03125,
+              "debit_minor": "46669102",
+              "credit_minor": "46669102",
+              "effects_digest": "26b33a18d831be0b59fa497c7dc7a018fb5e7e0bc10489a745dc5788c6302b8e",
+              "error_count": 0
+            }
+          ]
+        },
+        "median_seconds_baseline": 0.7156641999972635,
+        "median_seconds_optimized": 0.05849820000003092,
+        "measured_speedup": 12.233952497630444,
+        "financial_effects_digest": "26b33a18d831be0b59fa497c7dc7a018fb5e7e0bc10489a745dc5788c6302b8e"
+      },
+      {
+        "count": 1000,
+        "expected": {
+          "debit_minor": "493671004",
+          "credit_minor": "493671004",
+          "cash_minor": "493671004",
+          "equity_minor": "493671004"
+        },
+        "measurement_scope": "authenticated native verified effect reads; no HTTP or database-internal query count",
+        "dataset_effect_ids_sha256": "8e281fce3ffc9b7b01096225b99ab3f9acbfbbbceb46f50fc160e7e424b8de71",
+        "cache_policy": "both warmed; alternating modes",
+        "samples": {
+          "per_effect_baseline": [
+            {
+              "repetition": 0,
+              "effects": 1000,
+              "seconds": 6.957987699999649,
+              "verified_effects_per_second": 143.71971367527001,
+              "client_execute_calls": 3000,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006629800001974218,
+                "p95": 0.008033400001295377,
+                "p99": 0.010636799997882918
+              },
+              "peak_python_allocated_bytes": 55551,
+              "client_process_cpu_seconds": 1.90625,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "a2bad512657a23d184bf9ed5ed6dbbbce1d833ea8cb59f9a5deaced90d510e5b",
+              "error_count": 0
+            },
+            {
+              "repetition": 1,
+              "effects": 1000,
+              "seconds": 6.992384099998162,
+              "verified_effects_per_second": 143.0127386738184,
+              "client_execute_calls": 3000,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006656800003838725,
+                "p95": 0.008338999999978114,
+                "p99": 0.00961240000469843
+              },
+              "peak_python_allocated_bytes": 53694,
+              "client_process_cpu_seconds": 2.0,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "a2bad512657a23d184bf9ed5ed6dbbbce1d833ea8cb59f9a5deaced90d510e5b",
+              "error_count": 0
+            },
+            {
+              "repetition": 2,
+              "effects": 1000,
+              "seconds": 6.8889484999963315,
+              "verified_effects_per_second": 145.16003422010377,
+              "client_execute_calls": 3000,
+              "request_unit": "one_effect",
+              "request_latency_seconds": {
+                "p50": 0.006602900000871159,
+                "p95": 0.007976499997312203,
+                "p99": 0.008687500005180482
+              },
+              "peak_python_allocated_bytes": 52614,
+              "client_process_cpu_seconds": 1.640625,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "a2bad512657a23d184bf9ed5ed6dbbbce1d833ea8cb59f9a5deaced90d510e5b",
+              "error_count": 0
+            }
+          ],
+          "bounded_batch": [
+            {
+              "repetition": 0,
+              "effects": 1000,
+              "seconds": 0.5323560999968322,
+              "verified_effects_per_second": 1878.4418925714394,
+              "client_execute_calls": 20,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.04241069999989122,
+                "p95": 0.04636480000044685,
+                "p99": 0.04636480000044685
+              },
+              "peak_python_allocated_bytes": 1357688,
+              "client_process_cpu_seconds": 0.390625,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "a2bad512657a23d184bf9ed5ed6dbbbce1d833ea8cb59f9a5deaced90d510e5b",
+              "error_count": 0
+            },
+            {
+              "repetition": 1,
+              "effects": 1000,
+              "seconds": 0.4740968999976758,
+              "verified_effects_per_second": 2109.2734417898587,
+              "client_execute_calls": 20,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.036760299997695256,
+                "p95": 0.037791799994010944,
+                "p99": 0.037791799994010944
+              },
+              "peak_python_allocated_bytes": 1344905,
+              "client_process_cpu_seconds": 0.46875,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "a2bad512657a23d184bf9ed5ed6dbbbce1d833ea8cb59f9a5deaced90d510e5b",
+              "error_count": 0
+            },
+            {
+              "repetition": 2,
+              "effects": 1000,
+              "seconds": 0.46089399999618763,
+              "verified_effects_per_second": 2169.6962859318446,
+              "client_execute_calls": 20,
+              "request_unit": "up_to_100_effects",
+              "request_latency_seconds": {
+                "p50": 0.035922800001571886,
+                "p95": 0.037643399999069516,
+                "p99": 0.037643399999069516
+              },
+              "peak_python_allocated_bytes": 1348921,
+              "client_process_cpu_seconds": 0.3125,
+              "debit_minor": "493671004",
+              "credit_minor": "493671004",
+              "effects_digest": "a2bad512657a23d184bf9ed5ed6dbbbce1d833ea8cb59f9a5deaced90d510e5b",
+              "error_count": 0
+            }
+          ]
+        },
+        "median_seconds_baseline": 6.957987699999649,
+        "median_seconds_optimized": 0.4740968999976758,
+        "measured_speedup": 14.67629866390976,
+        "financial_effects_digest": "a2bad512657a23d184bf9ed5ed6dbbbce1d833ea8cb59f9a5deaced90d510e5b"
+      }
+    ],
+    "database_bytes": 34297523,
+    "container_resources_final_sample": "{\"BlockIO\":\"0B / 210MB\",\"CPUPerc\":\"0.00%\",\"Container\":\"358c59fbd87dfb635dcb0df0297d9929da658c24d4d78ab8e5347b5f8badc171\",\"ID\":\"358c59fbd87d\",\"MemPerc\":\"0.67%\",\"MemUsage\":\"65.31MiB / 9.561GiB\",\"Name\":\"reconforge-enterprise-finance-5c21468e6159\",\"NetIO\":\"108MB / 277MB\",\"PIDs\":\"6\"}",
+    "source_commit_after": "34b9e7a5b2a7c4d8ae49b641a36de030a878d507",
+    "source_sha256_after": "6bd8978481a91491a635042f9d2603f32051976640213944f63562de106d5d57",
+    "source_unchanged": true,
+    "owned_container_removed": true,
+    "finished_at": "2026-10-09T19:23:47.958359+00:00",
+    "wall_seconds": 709.2810000000027
+  }
+}

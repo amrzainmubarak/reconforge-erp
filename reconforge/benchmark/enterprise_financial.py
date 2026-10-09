@@ -103,6 +103,7 @@ def measure_verified_reads(connection: Any, tenant_id: str, effect_ids: Sequence
             results[mode].append({"repetition": repetition, "effects": len(effect_ids), "seconds": elapsed,
                 "verified_effects_per_second": len(effect_ids) / elapsed, "client_execute_calls": measured.execute_calls,
                 "request_unit": "one_effect" if mode == "per_effect_baseline" else f"up_to_{batch_size}_effects",
+                "raw_request_latency_seconds": latencies,
                 "request_latency_seconds": {"p50": percentile(latencies, .5), "p95": percentile(latencies, .95), "p99": percentile(latencies, .99)},
                 "peak_python_allocated_bytes": peak, "client_process_cpu_seconds": cpu_elapsed,
                 "debit_minor": str(debit), "credit_minor": str(credit),

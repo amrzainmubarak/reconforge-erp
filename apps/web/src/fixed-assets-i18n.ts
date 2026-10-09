@@ -1,0 +1,23 @@
+import type { Locale } from "./types";
+const en = {
+  title: "Fixed assets", intro: "Acquire assets, recognize cumulative straight-line depreciation and dispose of them through independently reviewed native postings.",
+  signIn: "Sign in", signOut: "Sign out", tenant: "Tenant", username: "Username", password: "Password", stepUp: "Reauthenticate", apply: "Apply scope",
+  workspace: "Workspace", organization: "Organization", entity: "Legal entity", assets: "Asset register", acquire: "Prepare acquisition", depreciation: "Prepare depreciation", dispose: "Prepare disposal",
+  asset_number: "Asset number", name: "Asset name", cost: "Acquisition cost", salvage: "Salvage value", useful_life_months: "Useful life in months", in_service_date: "In-service date",
+  journal_code: "Journal", period_id: "Open fiscal period", posting_date: "Posting date", reason: "Reason", through_month: "Completed service month", proceeds: "Disposal proceeds",
+  asset_account_code: "Historical cost account", accumulated_account_code: "Accumulated depreciation account", expense_account_code: "Depreciation expense account", cash_account_code: "Cash account", gain_account_code: "Disposal gain account", loss_account_code: "Disposal loss account",
+  accumulated: "Accumulated depreciation", carrying: "Carrying amount", months: "Recognized service months", history: "Financial evidence", review: "Review operation", post: "Post operation", effect: "Native posting effect", digest: "Retained plan digest", debit: "Debit", credit: "Credit", account: "Account",
+  Prepared: "Prepared", Reviewed: "Reviewed", Posted: "Posted", Active: "Active", Disposed: "Disposed", PendingAcquisition: "Pending acquisition", depreciate: "Depreciation", refresh: "Refresh", next: "Next assets", previousHistory: "Earlier financial evidence", retry: "Retry the retained command", unknown: "The result is unknown. Retry this same command before making another change.", denied: "Current authority does not permit this operation.", conflict: "The asset or its accounting period changed. Refresh the retained state.", unavailable: "Unable to load or complete the operation.", invalid: "Enter exact valid amounts and dates.", empty: "No assets in this scope.", lifecycle: "Asset operations", permission: "Independent preparation, review and posting require three authorized humans.",
+};
+const ar: Record<keyof typeof en, string> = {
+  title: "الأصول الثابتة", intro: "اقتناء الأصول وإثبات الإهلاك التراكمي بالقسط الثابت واستبعادها عبر قيود أصلية بمراجعة مستقلة.",
+  signIn: "تسجيل الدخول", signOut: "تسجيل الخروج", tenant: "المستأجر", username: "اسم المستخدم", password: "كلمة المرور", stepUp: "إعادة المصادقة", apply: "تطبيق النطاق",
+  workspace: "مساحة العمل", organization: "المؤسسة", entity: "الكيان القانوني", assets: "سجل الأصول", acquire: "إعداد الاقتناء", depreciation: "إعداد الإهلاك", dispose: "إعداد الاستبعاد",
+  asset_number: "رقم الأصل", name: "اسم الأصل", cost: "تكلفة الاقتناء", salvage: "القيمة التخريدية", useful_life_months: "العمر الإنتاجي بالأشهر", in_service_date: "تاريخ بدء الخدمة",
+  journal_code: "دفتر اليومية", period_id: "الفترة المالية المفتوحة", posting_date: "تاريخ القيد", reason: "السبب", through_month: "شهر الخدمة المكتمل", proceeds: "متحصلات الاستبعاد",
+  asset_account_code: "حساب التكلفة التاريخية", accumulated_account_code: "حساب مجمع الإهلاك", expense_account_code: "حساب مصروف الإهلاك", cash_account_code: "حساب النقدية", gain_account_code: "حساب أرباح الاستبعاد", loss_account_code: "حساب خسائر الاستبعاد",
+  accumulated: "مجمع الإهلاك", carrying: "القيمة الدفترية", months: "أشهر الخدمة المعترف بها", history: "الأدلة المالية", review: "مراجعة العملية", post: "ترحيل العملية", effect: "أثر القيد الأصلي", digest: "بصمة الخطة المحفوظة", debit: "مدين", credit: "دائن", account: "الحساب",
+  Prepared: "مُعد", Reviewed: "مُراجع", Posted: "مُرحل", Active: "نشط", Disposed: "مستبعد", PendingAcquisition: "بانتظار الاقتناء", depreciate: "الإهلاك", refresh: "تحديث", next: "الأصول التالية", previousHistory: "الأدلة المالية الأقدم", retry: "إعادة إرسال الأمر المحفوظ", unknown: "نتيجة الأمر غير معلومة. أعد إرسال الأمر نفسه قبل إجراء تغيير آخر.", denied: "الصلاحيات الحالية لا تسمح بهذه العملية.", conflict: "تغير الأصل أو فترته المالية. حدّث الحالة المحفوظة.", unavailable: "تعذر تحميل العملية أو إكمالها.", invalid: "أدخل مبالغ وتواريخ صحيحة ودقيقة.", empty: "لا توجد أصول في هذا النطاق.", lifecycle: "عمليات الأصل", permission: "يتطلب الإعداد والمراجعة والترحيل ثلاثة مستخدمين مستقلين مخولين.",
+};
+export type AssetMessage = keyof typeof en;
+export const assetTranslate = (locale: Locale, key: AssetMessage) => (locale === "ar" ? ar : en)[key];

@@ -1,0 +1,44 @@
+id: fixed-assets
+name: Source-owned native fixed asset accounting
+version: 1.0.0
+maturity: experimental
+owner: Amr
+dependencies: [finance-core, finance-operational-posting, identity, master-data, outbox]
+incompatible_versions: []
+data_classification: confidential_financial
+retention_policy: immutable_financial_history
+permissions: [finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
+default_roles: [independent_preparer, independent_reviewer, independent_poster]
+migrations: [0122_pg_fixed_assets]
+domain_invariants:
+  - Exact bounded integer minor units with retained native currency policy
+  - Cumulative straight-line ROUND_HALF_UP entitlement without monthly rounding drift
+  - Acquisition before depreciation or disposal; no operations after disposal
+  - Ordered completed service months and non-regressing posting dates
+  - Original historical cost and policy immutable
+  - Native double-entry GL effect and source lifecycle close atomically
+  - Three distinct current authorized humans for every financial operation
+  - Identical command retry retains actor payload digest and acknowledgement
+  - Direct SQL cannot detach source phases, native entries, effects, audit or outbox
+domain_events: [fixed_asset_prepared, fixed_asset_reviewed, fixed_asset_posted]
+api_routes: [/api/v1/fixed-assets/assets, /api/v1/fixed-assets/assets/{asset_id}, /api/v1/fixed-assets/assets/{asset_id}/operations, /api/v1/fixed-assets/plans/{plan_id}, /api/v1/fixed-assets/plans/{plan_id}/review, /api/v1/fixed-assets/plans/{plan_id}/post]
+cli_commands: []
+ui_routes: [/fixed-assets]
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/fixed_assets_browser_seed.py, tests/test_postgres_fixed_assets.py]
+threat_model: docs/architecture/FIXED_ASSETS_NATIVE_OWNER.md
+benchmarks: []
+rollback_plan: Empty additive tables can downgrade; populated financial evidence refuses destructive downgrade and requires restore.
+test_matrix:
+  exact_domain: tests/test_fixed_assets.py
+  native_database: tests/test_postgres_fixed_assets.py
+  browser: apps/web/live/fixed-assets-cycles.spec.ts
+  response_contract: apps/web/src/fixed-assets-data.test.ts
+limitations:
+  - PostgreSQL-native functional currency and cash-funded acquisition; no foreign-currency or tax calculation
+  - Completed calendar service months, cumulative straight-line only; no day proration or declining-balance methods
+  - No AP invoice capitalization, impairment, transfer, reclassification or source-owned cancellation yet
+  - Disposal proceeds are ledger cash recognition, not an external bank transfer
+  - Existing Community local accounting modes remain separate and unchanged
+  - No statutory compliance or production-readiness claim

@@ -2,10 +2,17 @@
 
 from dataclasses import asdict, dataclass
 from datetime import date
+from typing import TypedDict
 
 from reconforge.domain.finance_posting import FinancePostingError, text
 
 MAX_MINOR = 9_000_000_000_000_000_000
+
+
+class AccountingLine(TypedDict):
+    account_code: str
+    debit_minor: int
+    credit_minor: int
 
 
 def exact_minor(value: object, field: str, *, zero: bool = False) -> int:
@@ -82,23 +89,23 @@ class AssetAcquisition:
 
 
 def accounting_lines(asset: dict[str, object], kind: str, *, accumulated: int = 0,
-                     depreciation: int = 0, proceeds: int = 0) -> list[dict[str, object]]:
+                     depreciation: int = 0, proceeds: int = 0) -> list[AccountingLine]:
     cost = exact_minor(asset["cost_minor"], "cost")
     exact_minor(accumulated, "accumulated", zero=True)
     if accumulated > cost:
         raise FinancePostingError("asset_state_invalid", "Accumulated depreciation exceeds historical cost.")
-    lines: list[dict[str, object]] = []
+    lines: list[AccountingLine] = []
 
     def add(account: str, debit: int = 0, credit: int = 0) -> None:
         if debit or credit:
-            lines.append({"account_code": asset[account + "_account_code"], "debit_minor": debit, "credit_minor": credit})
+            lines.append({"account_code": text(asset[account + "_account_code"], "account_code"), "debit_minor": debit, "credit_minor": credit})
 
     if kind == "acquire":
         add("asset", debit=cost)
         add("cash", credit=cost)
     elif kind == "depreciate":
         exact_minor(depreciation, "depreciation")
-        if accumulated + depreciation > cost - int(asset["salvage_minor"]):
+        if accumulated + depreciation > cost - exact_minor(asset["salvage_minor"], "salvage", zero=True):
             raise FinancePostingError("asset_state_invalid", "Depreciation exceeds the retained depreciable basis.")
         add("expense", debit=depreciation)
         add("accumulated", credit=depreciation)
@@ -112,6 +119,6 @@ def accounting_lines(asset: dict[str, object], kind: str, *, accumulated: int = 
         add("gain", credit=max(proceeds - carrying, 0))
     else:
         raise FinancePostingError("asset_request_invalid", "Unsupported asset accounting operation.")
-    if sum(int(row["debit_minor"]) for row in lines) > MAX_MINOR:
+    if sum(row["debit_minor"] for row in lines) > MAX_MINOR:
         raise FinancePostingError("asset_request_invalid", "Disposal turnover exceeds supported native GL bounds.")
     return lines

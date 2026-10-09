@@ -55,6 +55,12 @@ class PostgresFixedAssetsRepository:
             raise FinancePostingError("asset_not_found", "Asset plan is absent or outside current scope.")
         return {**rows[0]["payload"], "phase": rows[0]["phase"]}
 
+    def _authorize_plan(self, actor: PostingActor, permission: str, plan: Mapping[str, Any], *, mutation: bool = True) -> None:
+        # Fully depreciated disposals have zero carrying value and positive native
+        # turnover. ABAC evaluates the complete retained debit, not that zero basis.
+        turnover = sum(row["debit_minor"] for row in plan["snapshot"]["lines"])
+        self.owner._actor(actor, permission, {**plan, "amount_minor": turnover}, mutation=mutation)
+
     def _state(self, asset: Mapping[str, Any]) -> dict[str, Any]:
         rows = records(self.connection.execute(
             """SELECT sequence,kind,payload FROM reconforge.fixed_asset_plans
@@ -214,7 +220,7 @@ class PostgresFixedAssetsRepository:
         request = {"plan_id": plan_id, "expected_plan_digest": expected_plan_digest, "reason": text(reason, "reason", maximum=500)}
         with self.owner._transaction():
             plan = self._plan(plan_id)
-            self.owner._actor(actor, "finance_core.validate", plan)
+            self._authorize_plan(actor, "finance_core.validate", plan)
             digest, replay = self._command(plan, "review", command_id, actor, request)
             if replay is not None:
                 return replay
@@ -234,7 +240,7 @@ class PostgresFixedAssetsRepository:
         request = {"plan_id": plan_id, "expected_plan_digest": expected_plan_digest, "reason": text(reason, "reason", maximum=500)}
         with self.owner._transaction():
             plan = self._plan(plan_id)
-            self.owner._actor(actor, "finance_core.post", plan)
+            self._authorize_plan(actor, "finance_core.post", plan)
             digest, replay = self._command(plan, "post", command_id, actor, request)
             if replay is not None:
                 return replay
@@ -276,7 +282,7 @@ class PostgresFixedAssetsRepository:
     def get_plan(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.owner._transaction():
             plan = self._plan(plan_id)
-            self.owner._actor(actor, "finance_core.read", plan, mutation=False)
+            self._authorize_plan(actor, "finance_core.read", plan, mutation=False)
             self.connection.execute("SELECT reconforge.asset_close(%s,%s)", (self.tenant_id, plan_id))
             return self._view_plan(plan_id)
 

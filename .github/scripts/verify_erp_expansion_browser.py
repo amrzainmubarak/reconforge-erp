@@ -112,7 +112,7 @@ def main() -> int:
         configuration = "apps/web/live/financial-snapshots.playwright.config.ts"
         extension_tables = EXPANSION_TABLES + ("financial_report_captures", "financial_report_members", "financial_report_snapshots")
         tamper_statements = (
-            "UPDATE reconforge.financial_report_captures SET as_of=as_of+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.financial_report_captures SET as_of_date=as_of_date+1 WHERE tenant_id=%s",
             "DELETE FROM reconforge.financial_report_members WHERE tenant_id=%s",
             "UPDATE reconforge.financial_report_snapshots SET report_digest=repeat('0',64) WHERE tenant_id=%s",
         )

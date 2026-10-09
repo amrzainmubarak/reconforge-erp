@@ -1,3 +1,4 @@
+import type { PendingCollection } from "./commercial-collections-data";
 import { salesRequest, type SalesScope } from "./sales-revenue-data";
 import { stockStages, type StockStage } from "./stock-sales-data";
 import { prepareScopedCommand, type ScopedJsonValue } from "./scoped-command";
@@ -13,6 +14,7 @@ export interface CommerceTranche {
   created_by: string; issue_preparer_id: string | null; issue_reviewer_id: string | null;
   invoice_preparer_id: string | null; invoice_reviewer_id: string | null;
   collection_preparer_id: string | null; collection_reviewer_id: string | null;
+  invoice_status?: string | null; collected_minor?: string; outstanding_minor?: string; receivable_account_code?: string | null; pending_collection?: PendingCollection | null;
   invoice_id: string | null; receipt_id: string | null; movement_id: string | null; cogs_effect_id: string | null;
 }
 export interface CommerceLine {
@@ -62,7 +64,10 @@ export function parseCommerceOrder(value: unknown, scope: SalesScope): CommerceO
       if (tranche.status !== "Cancelled") committed += q;
       if (stage >= 6 && stage < 13) delivered += q;
       if (stage >= 9 && stage < 13) invoiced += v;
-      if (tranche.status === "Paid") collected += v;
+      const cash = tranche.collected_minor === undefined ? (tranche.status === "Paid" ? v : 0n) : exact(tranche.collected_minor);
+      if (cash > v || (tranche.outstanding_minor !== undefined && exact(tranche.outstanding_minor) !== v - cash) || (cash > 0n && !tranche.invoice_id)) invalid();
+      if (tranche.pending_collection) { const plan = tranche.pending_collection; text(plan.id); text(plan.preparer_actor_id); exact(plan.amount_minor); if (![0, 1].includes(plan.phase) || !/^[a-f0-9]{64}$/.test(plan.plan_digest) || exact(plan.amount_minor) > v - cash) invalid(); }
+      collected += cash;
       for (const key of ["issue_preparer_id", "issue_reviewer_id", "invoice_preparer_id", "invoice_reviewer_id", "collection_preparer_id", "collection_reviewer_id", "invoice_id", "receipt_id", "movement_id", "cogs_effect_id"] as const) if (tranche[key] !== null) text(tranche[key]);
     });
     if (committed > quantity || delivered > committed || collected > invoiced || invoiced > value ||

@@ -1338,3 +1338,7 @@ include tests/erp_expansion_browser_seed.py
 include tests/erp_expansion_browser_restore.py
 include tests/test_postgres_financial_reporting_api.py
 include .github/scripts/verify_erp_expansion_browser.py
+include docs/adr/0842-stock-sales-partial-procurement-and-classified-finance.md
+include docs/operator/financial-reporting.md
+include docs/operator/stock-sales.md
+include docs/operator/procurement-partial.md

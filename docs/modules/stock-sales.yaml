@@ -84,8 +84,12 @@ test_matrix:
   - tests/test_postgres_stock_sales.py actual stock-to-cash, independent review, detached native rollback and six concurrent reservations
   - tests/test_stock_commerce.py thousand-line exact aggregate and malformed quantity contracts
   - tests/test_postgres_stock_commerce.py actual partial native cycles concurrent parent CAS replay and SQL closure
+  - tests/test_postgres_stock_commerce.py real thousand-line parent and partial native cycle; distinct-parent concurrent reservation and cancellation recovery
+  - tests/test_postgres_stock_commerce_api.py real persisted human HTTP partial delivery invoice and cash cycle
+  - tests/test_postgres_stock_commerce_migrations.py actual empty downgrade reupgrade and populated history refusal
   - apps/web/src/stock-commerce-data.test.ts independent BigInt line and tranche conservation
   - apps/web/src/components/StockCommercePanel.test.tsx distinct posting actor and Arabic RTL contracts
+  - apps/web/live/stock-commerce-cycles.spec.ts real HTTPS four partial cycles lost acknowledgement replay bilingual mobile accessibility
 runtime_acceptance: bounded local PostgreSQL API Studio and populated restore accepted on6ec9; see docs/execution/ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 hosted checks
 scope_limits:
   - PostgreSQL only; existing local workflows remain available

@@ -195,3 +195,63 @@ def test_delivery_participants_roll_back_after_late_parent_acknowledgement_failu
             reason="Actual delivery with injected final fault", parameters={"tranche_id": tranche}, actor=actor)
         assert ack["row_version"] == result["row_version"] + 1
         assert owner.get(result["id"], actor=actor)["lines"][0]["delivered_quantity_scaled"] == "4"
+
+
+def test_undelivered_cancellation_releases_native_reservation_and_commercial_capacity(receipt_database: tuple[str, str]) -> None:
+    runtime = create_stock_runtime(receipt_database)
+    result = commercial_order(runtime, "RECOVERY")
+    result = act(runtime, result, "open-tranche", "maker", {"line_number": 1, "quantity": "10"})
+    first = result["lines"][0]["tranches"][0]["id"]
+    result = act(runtime, result, "approve-tranche", "checker", {"tranche_id": first})
+    result = act(runtime, result, "cancel", "maker", {"tranche_id": first})
+    line = result["lines"][0]
+    assert line["committed_quantity_scaled"] == line["delivered_quantity_scaled"] == line["invoiced_minor"] == line["collected_minor"] == "0"
+    assert line["tranches"][0]["status"] == "Cancelled"
+    result = act(runtime, result, "open-tranche", "maker", {"line_number": 1, "quantity": "10"})
+    second = result["lines"][0]["tranches"][-1]["id"]
+    result = act(runtime, result, "approve-tranche", "checker", {"tranche_id": second})
+    assert first != second and result["lines"][0]["committed_quantity_scaled"] == "10"
+    with runtime.actor("maker") as (connection, _, _actor):
+        states = connection.execute("SELECT state,quantity_scaled FROM reconforge.stock_sales_reservations WHERE tenant_id=%s ORDER BY state", (runtime.tenant,)).fetchall()
+        assert [dict(row) for row in states] == [{"state": "Active", "quantity_scaled": 10}, {"state": "Released", "quantity_scaled": 10}]
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+
+
+def test_distinct_commercial_parents_cannot_concurrently_oversell_shared_location(receipt_database: tuple[str, str]) -> None:
+    import psycopg
+    runtime = create_stock_runtime(receipt_database)
+    parents = [commercial_order(runtime, f"SHARED-{index}") for index in range(2)]
+    drafts = [act(runtime, parent, "open-tranche", "maker", {"line_number": 1, "quantity": "6"}) for parent in parents]
+    def reserve(parent: dict[str, Any]) -> dict[str, Any] | str:
+        try:
+            return act(runtime, parent, "approve-tranche", "checker", {"tranche_id": parent["lines"][0]["tranches"][0]["id"]})
+        except psycopg.errors.CheckViolation as refusal:
+            return refusal.diag.constraint_name or refusal.sqlstate
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        answers = list(executor.map(reserve, drafts))
+    assert sum(isinstance(answer, dict) for answer in answers) == 1
+    assert sum(isinstance(answer, str) for answer in answers) == 1
+    with runtime.actor("checker") as (connection, _, actor):
+        current = [repository(connection, runtime).get(parent["id"], actor=actor) for parent in drafts]
+        assert sorted(parent["row_version"] for parent in current) == [4, 5]
+        assert sorted(parent["lines"][0]["tranches"][0]["status"] for parent in current) == ["Reserved", "Submitted"]
+        assert connection.execute("SELECT sum(quantity_scaled) n FROM reconforge.stock_sales_reservations WHERE tenant_id=%s AND state='Active'", (runtime.tenant,)).fetchone()["n"] == 6
+
+
+def test_real_thousand_line_order_preserves_exact_source_and_partial_native_effects(receipt_database: tuple[str, str]) -> None:
+    runtime = create_stock_runtime(receipt_database)
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = repository(connection, runtime)
+        ack = owner.create(CommercialOrder("THOUSAND", "CUSTOMER", "DISTRIBUTOR-1000", "USD", "2026-10-09",
+            tuple(CommercialLine("ITEM", "MAIN", "STOCK", "1", 5000, f"Product allocation {index}", 1000) for index in range(1000))),
+            command_id="thousand-create", actor=actor)
+        result = owner.get(ack["id"], actor=actor)
+    result = act(runtime, result, "submit", "maker")
+    result = act(runtime, result, "approve", "checker")
+    result = complete_tranche(runtime, result, "1", "THOUSAND-LAST", 1000)
+    assert result["line_count"] == 1000 and result["total_minor"] == "4500000"
+    assert result["lines"][-1]["delivered_quantity_scaled"] == "1" and result["lines"][-1]["collected_minor"] == "4500"
+    assert all(line["committed_quantity_scaled"] == line["delivered_quantity_scaled"] == line["invoiced_minor"] == line["collected_minor"] == "0" for line in result["lines"][:-1])
+    with runtime.actor("maker") as (connection, _, _actor):
+        assert connection.execute("SELECT count(*) n FROM reconforge.stock_commerce_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1000
+        assert connection.execute("SELECT max(octet_length(result::text)) n FROM reconforge.stock_commerce_commands WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] < 2048

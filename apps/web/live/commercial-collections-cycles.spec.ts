@@ -28,9 +28,9 @@ async function inspect(page: Page, trancheId?: string) {
   const refreshed = opened ? page.waitForResponse(reply => /\/commerce\/orders\/[^/?]+(?:\?|$)/.test(reply.url()) && reply.request().method() === "GET") : null;
   const listing = page.waitForResponse(reply => /\/commerce\/orders(?:\?|$)/.test(reply.url()) && reply.request().method() === "GET");
   await area.getByRole("button", { name: "Refresh commercial orders", exact: true }).click();
-  expect((await listing).status()).toBe(200);
-  if (refreshed) expect((await refreshed).status()).toBe(200);
-  else await area.getByRole("button", { name: "Open", exact: true }).click();
+  const replies = await Promise.all(refreshed ? [listing, refreshed] : [listing]);
+  for (const reply of replies) expect(reply.status()).toBe(200);
+  if (!refreshed) await area.getByRole("button", { name: "Open", exact: true }).click();
   await expect(article.getByRole("heading", { name: /^BROWSER-COMMERCE/ })).toBeVisible();
   await article.getByLabel("Reason", { exact: true }).fill("Actual independently governed browser cycle");
   if (trancheId) await article.getByRole("combobox", { name: "Delivery tranche", exact: true }).selectOption(trancheId);
@@ -52,8 +52,16 @@ test("wire Studio collects twelve reviewed installments inside four native invoi
   test.setTimeout(600_000);
   expect(base && tenant && password, "Owned real HTTPS runtime is required").toBeTruthy();
   const contexts = await Promise.all(["maker", "checker", "poster"].map(() => browser.newContext({ ignoreHTTPSErrors: true })));
+  const network: unknown[] = [];
   try {
     const [maker, checker, poster] = await Promise.all(contexts.map(context => context.newPage()));
+    for (const [index, page] of [maker, checker, poster].entries()) {
+      page.on("response", reply => {
+        if (reply.url().includes("/api/v1/")) network.push({ actor: index, method: reply.request().method(), path: new URL(reply.url()).pathname,
+          status: reply.status(), timing: reply.request().timing() });
+      });
+      page.on("requestfailed", request => network.push({ actor: index, method: request.method(), path: new URL(request.url()).pathname, failure: request.failure()?.errorText }));
+    }
     for (const [page, username] of [[maker, "browser-maker"], [checker, "browser-checker"], [poster, "browser-poster"]] as const) await signIn(page, username);
     await panel(maker).locator("summary").filter({ hasText: /^Create commercial order$/ }).click();
     const form = panel(maker).getByRole("form", { name: "Create commercial order", exact: true });
@@ -144,5 +152,8 @@ test("wire Studio collects twelve reviewed installments inside four native invoi
     expect(await panel(poster).evaluate(node => node.scrollWidth <= node.clientWidth + 1), "RTL commercial controls must fit their viewport").toBe(true);
     expect((await new AxeBuilder({ page: poster }).include(".stock-commerce").analyze()).violations).toEqual([]);
     await panel(poster).screenshot({ path: test.info().outputPath("collections-ar-mobile.png") });
-  } finally { for (const context of contexts) await context.close(); }
+  } finally {
+    await test.info().attach("wire-request-timings", { body: JSON.stringify(network, null, 2), contentType: "application/json" });
+    await Promise.allSettled(contexts.map(context => context.close()));
+  }
 });

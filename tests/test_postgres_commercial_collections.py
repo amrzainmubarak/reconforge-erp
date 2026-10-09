@@ -120,6 +120,55 @@ def test_parallel_lost_ack_post_has_one_receipt_and_effect(receipt_database: tup
         assert connection.execute("SELECT count(*) n FROM reconforge.ar_receipts WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
 
 
+def test_distinct_concurrent_commands_claim_only_one_invoice_residual(receipt_database: tuple[str, str]) -> None:
+    runtime = create_stock_runtime(receipt_database)
+    _, invoice_id = invoiced(runtime)
+
+    def claim(suffix: str) -> dict[str, Any] | str:
+        try:
+            return prepare(runtime, invoice_id, 30000, suffix)
+        except FinancePostingError as failure:
+            assert failure.code == "collection_state_conflict"
+            return failure.code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(claim, ("CONCURRENT-A", "CONCURRENT-B")))
+    plans = [result for result in results if isinstance(result, dict)]
+    assert len(plans) == 1 and results.count("collection_state_conflict") == 1
+    complete(runtime, plans[0], "CONCURRENT")
+    with runtime.actor("maker") as (connection, _, _actor):
+        assert connection.execute("SELECT count(*) n FROM reconforge.commercial_collection_plans WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+        assert connection.execute("SELECT sum(amount_minor) n FROM reconforge.ar_receipt_allocations WHERE tenant_id=%s AND invoice_id=%s", (runtime.tenant, invoice_id)).fetchone()["n"] == 30000
+
+
+def test_cached_permission_revocation_and_raw_sql_birth_phase_fail_closed(receipt_database: tuple[str, str]) -> None:
+    import psycopg
+
+    runtime = create_stock_runtime(receipt_database)
+    _, invoice_id = invoiced(runtime)
+    plan = prepare(runtime, invoice_id, 10000)
+    # The principal retains its authenticated permission snapshot. The command
+    # must still read the current persisted grant inside its transaction.
+    with pytest.raises(FinancePostingError, match="authorization denied"), runtime.actor("checker") as (connection, _, actor):
+        assert "receivables.manage" in actor.permissions
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=false WHERE tenant_id=%s AND permission_name='receivables.manage'", (runtime.tenant,))
+        PostgresCommercialCollectionsRepository(connection, runtime.tenant).review(plan["id"], expected_plan_digest=plan["plan_digest"],
+            command_id="REVOKED", reason="Cached actor must not bypass revocation", actor=actor)
+    with pytest.raises(psycopg.errors.CheckViolation, match="born Prepared"), runtime.actor("maker") as (connection, _, _actor):
+        connection.execute("""INSERT INTO reconforge.commercial_collection_plans
+            (tenant_id,id,workspace_id,organization_id,legal_entity_id,source_id,entry_id,amount_minor,phase,payload,audit_event_id,outbox_event_id)
+            SELECT tenant_id,'CA1-SQL-ILLEGAL-BIRTH',workspace_id,organization_id,legal_entity_id,source_id,entry_id,amount_minor,2,payload,audit_event_id,outbox_event_id
+            FROM reconforge.commercial_collection_plans WHERE tenant_id=%s AND id=%s""", (runtime.tenant, plan["id"]))
+    with pytest.raises(psycopg.errors.CheckViolation, match="current persisted"), runtime.actor("maker") as (connection, _, _actor):
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=false WHERE tenant_id=%s AND permission_name='receivables.manage'", (runtime.tenant,))
+        connection.execute("""INSERT INTO reconforge.commercial_collection_commands
+            SELECT tenant_id,workspace_id,organization_id,legal_entity_id,plan_id,operation,'SQL-REVOKED',actor_id,request_digest,request_json,response_json
+            FROM reconforge.commercial_collection_commands WHERE tenant_id=%s AND plan_id=%s AND operation='prepare'""", (runtime.tenant, plan["id"]))
+    with runtime.actor("maker") as (connection, _, actor):
+        assert PostgresCommercialCollectionsRepository(connection, runtime.tenant).get(plan["id"], actor=actor) == plan
+        assert connection.execute("SELECT count(*) n FROM reconforge.ar_receipts WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+
+
 def test_sql_unowned_receipt_allocation_and_plan_mutation_are_rejected(receipt_database: tuple[str, str]) -> None:
     import psycopg
 

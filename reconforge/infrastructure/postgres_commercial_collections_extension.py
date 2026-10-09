@@ -27,7 +27,7 @@ BEGIN
  IF p IS NULL OR NOT reconforge.irp_scope(p.tenant_id,p.workspace_id,p.organization_id,p.legal_entity_id)
  OR NOT reconforge.sales_revenue_actor(p.tenant_id,NEW.actor_id,permission)
  OR NOT reconforge.sales_revenue_actor(p.tenant_id,NEW.actor_id,CASE NEW.operation WHEN'prepare' THEN'finance_core.manage' WHEN'review' THEN'finance_core.validate' ELSE'finance_core.post' END)
- OR(NEW.operation='post' AND NOT reconforge.sales_revenue_actor(p.tenant_id,NEW.actor_id,'receivables.manage')) THEN
+ OR NOT reconforge.sales_revenue_actor(p.tenant_id,NEW.actor_id,'receivables.manage') THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='commercial_collection_owner_phase',MESSAGE='Collection command requires current persisted scoped human authority'; END IF;
  RETURN NEW;
 END $ca$;

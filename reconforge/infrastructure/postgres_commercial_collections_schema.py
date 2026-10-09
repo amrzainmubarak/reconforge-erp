@@ -41,9 +41,16 @@ CREATE TABLE reconforge.commercial_collection_commands (
 );
 CREATE FUNCTION reconforge.collection_protect() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fi$
 BEGIN
+ IF TG_TABLE_NAME='commercial_collection_plans' AND TG_OP='INSERT' THEN
+  IF NEW.phase<>0 THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='commercial_collection_owner_phase',MESSAGE='Collections are born Prepared';
+  END IF;
+  RETURN NEW;
+ END IF;
  IF TG_TABLE_NAME='commercial_collection_plans' AND TG_OP='UPDATE' THEN
   IF NEW.phase=OLD.phase+1 AND (to_jsonb(NEW)-'phase')=(to_jsonb(OLD)-'phase') THEN RETURN NEW; END IF;
  END IF;
+ IF TG_OP='INSERT' THEN RETURN NEW; END IF;
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='commercial_collection_owner_phase',MESSAGE='Retained installment evidence is immutable';
 END $fi$;
 CREATE FUNCTION reconforge.collection_event(t TEXT,p TEXT,a TEXT,b TEXT,actor TEXT,action TEXT,metadata JSONB) RETURNS BOOLEAN
@@ -264,7 +271,7 @@ DO $fi$ DECLARE n TEXT; BEGIN
   ELSE
    EXECUTE format('CREATE POLICY scope ON reconforge.%I USING(EXISTS(SELECT 1 FROM reconforge.commercial_collection_plans p WHERE p.tenant_id=%I.tenant_id AND p.id=%I.plan_id)) WITH CHECK(EXISTS(SELECT 1 FROM reconforge.commercial_collection_plans p WHERE p.tenant_id=%I.tenant_id AND p.id=%I.plan_id))',n,n,n,n,n);
   END IF;
-  EXECUTE format('CREATE TRIGGER immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.collection_protect()',n);
+  EXECUTE format('CREATE TRIGGER immutable BEFORE INSERT OR UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.collection_protect()',n);
  END LOOP;
  FOREACH n IN ARRAY ARRAY['commercial_collection_plans','commercial_collection_reviews','commercial_collection_links','commercial_collection_commands',
  'finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','ar_invoices','ar_receipts','ar_receipt_allocations',

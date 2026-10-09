@@ -132,6 +132,9 @@ class PostgresFixedAssetsRepository:
         identifier = "FA1-" + uuid4().hex
         lines = accounting_lines(dict(asset), kind, accumulated=accumulated,
                                  depreciation=amount if kind == "depreciate" else 0, proceeds=int(request["proceeds_minor"]))
+        self.owner._actor(actor, "finance_core.manage", {
+            **asset, "amount_minor": sum(row["debit_minor"] for row in lines),
+        })
         entry = self.owner.finance.create_entry(entry_number=identifier.upper(), organization_code=str(asset["organization_code"]),
             entity_code=str(asset["entity_code"]), period_id=str(request["period_id"]), journal_code=str(asset["journal_code"]),
             posting_date=str(request["posting_date"]), description=str(request["reason"]), workspace=str(asset["workspace_id"]),
@@ -160,10 +163,6 @@ class PostgresFixedAssetsRepository:
     def acquire(self, request: AssetAcquisition, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         args = request.payload()
         with self.owner._transaction():
-            self.owner._actor(actor, "finance_core.manage", args)
-            digest, replay = self._command(args, "prepare", command_id, actor, {"kind": "acquire", **args})
-            if replay is not None:
-                return replay
             scope = records(self.connection.execute(
                 """SELECT c.code AS currency_code,c.minor_units AS currency_precision FROM reconforge.legal_entities e
                 JOIN reconforge.currencies c ON c.tenant_id=e.tenant_id AND c.code=e.currency_code AND c.active
@@ -171,6 +170,11 @@ class PostgresFixedAssetsRepository:
                 (self.tenant_id, request.legal_entity_id, request.organization_id)))
             if not scope:
                 raise FinancePostingError("asset_scope_denied", "Current functional currency and asset hierarchy are required.")
+            self.owner._actor(actor, "finance_core.manage", {**args, **scope[0], "amount_minor": request.cost_minor})
+            digest, replay = self._command(args, "prepare", command_id, actor, {"kind": "acquire", **args})
+            if replay is not None:
+                self._authorize_plan(actor, "finance_core.manage", replay)
+                return replay
             asset = {"schema_version": "fixed-asset-v1", "id": "FA-" + uuid4().hex, **args, **scope[0], "preparer_actor_id": actor.user_id}
             asset["asset_digest"] = digest_payload(asset)
             self.owner._actor(actor, "finance_core.manage", {**asset, "amount_minor": asset["cost_minor"]})
@@ -201,9 +205,9 @@ class PostgresFixedAssetsRepository:
             raise FinancePostingError("asset_request_invalid", "Only operation-specific values may be supplied.")
         with self.owner._transaction():
             asset = self._asset(asset_id)
-            self.owner._actor(actor, "finance_core.manage", asset)
             digest, replay = self._command(asset, "prepare", command_id, actor, request)
             if replay is not None:
+                self._authorize_plan(actor, "finance_core.manage", replay)
                 return replay
             return self._prepare(asset, request, self._state(asset), actor, digest, command_id)
 

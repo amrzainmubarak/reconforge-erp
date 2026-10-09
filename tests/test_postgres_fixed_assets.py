@@ -202,3 +202,67 @@ def test_closed_period_and_changed_acquisition_retry_are_refused(asset_runtime: 
         connection.execute("UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='nov'", (runtime.tenant,))
     with pytest.raises(Exception, match="Open|open"):
         operation(runtime, first["asset_id"], kind="depreciate", date="2026-11-01", period="nov", month="2026-10")
+
+
+def test_current_amount_policy_is_applied_before_acquisition_and_retained_ack(asset_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch) -> None:
+    from decimal import Decimal
+
+    import reconforge.infrastructure.postgres_operational_finance as authority
+    from reconforge.auth.policy import evaluate_principal_access
+    runtime = asset_runtime
+    ceiling = Decimal("100.00")
+    observed: list[Decimal | None] = []
+
+    def governed_policy(principal: Any, **context: Any) -> Any:
+        observed.append(context.get("amount"))
+        return evaluate_principal_access(principal, maximum_amount=ceiling, **context)
+
+    monkeypatch.setattr(authority, "evaluate_principal_access", governed_policy)
+    with runtime.actor("maker") as (connection, _, actor):
+        repository = PostgresFixedAssetsRepository(connection, runtime.tenant)
+        with pytest.raises(FinancePostingError, match="authorization"):
+            repository.acquire(acquisition(), command_id="amount-acquire", actor=actor)
+        assert connection.execute("SELECT count(*) n FROM reconforge.fixed_assets WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_entries WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+        ceiling = Decimal("200.00")
+        plan = repository.acquire(acquisition(), command_id="amount-acquire", actor=actor)
+        ceiling = Decimal("100.00")
+        with pytest.raises(FinancePostingError, match="authorization"):
+            repository.acquire(acquisition(), command_id="amount-acquire", actor=actor)
+        ceiling = Decimal("200.00")
+        assert repository.acquire(acquisition(), command_id="amount-acquire", actor=actor) == plan
+    assert observed and set(observed) == {Decimal("101.01")}
+
+
+def test_disposal_policy_uses_full_turnover_on_prepare_and_replay(asset_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch) -> None:
+    from decimal import Decimal
+
+    import reconforge.infrastructure.postgres_operational_finance as authority
+    from reconforge.auth.policy import evaluate_principal_access
+    runtime = asset_runtime
+    initial = finish(runtime, acquire(runtime, replace(acquisition(), cost_minor=101, salvage_minor=0, useful_life_months=1)))
+    finish(runtime, operation(runtime, initial["asset_id"], kind="depreciate", date="2026-11-01", period="nov", month="2026-10"))
+    ceiling = Decimal("100.00")
+    observed: list[Decimal | None] = []
+
+    def governed_policy(principal: Any, **context: Any) -> Any:
+        observed.append(context.get("amount"))
+        return evaluate_principal_access(principal, maximum_amount=ceiling, **context)
+
+    monkeypatch.setattr(authority, "evaluate_principal_access", governed_policy)
+    with runtime.actor("maker") as (connection, _, actor):
+        repository = PostgresFixedAssetsRepository(connection, runtime.tenant)
+        args = dict(kind="dispose", period_id="nov", posting_date="2026-11-02", reason="Governed high proceeds zero book disposal", command_id="amount-disposal", actor=actor, proceeds_minor=20000)
+        with pytest.raises(FinancePostingError, match="authorization"):
+            repository.prepare(initial["asset_id"], **args)
+        assert connection.execute("SELECT count(*) n FROM reconforge.fixed_asset_plans WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 2
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_entries WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 2
+        ceiling = Decimal("300.00")
+        plan = repository.prepare(initial["asset_id"], **args)
+        assert plan["amount_minor"] == 0
+        ceiling = Decimal("100.00")
+        with pytest.raises(FinancePostingError, match="authorization"):
+            repository.prepare(initial["asset_id"], **args)
+        ceiling = Decimal("300.00")
+        assert repository.prepare(initial["asset_id"], **args) == plan
+    assert observed and set(observed) == {Decimal("201.01")}

@@ -78,3 +78,6 @@ class ProcurementPartialApplicationService:
 
     def payment_page(self, order_id: str, invoice_id: str, *, after: str = "", actor: PostingActor) -> dict[str, Any]:
         return self.repository.payment_page(order_id, invoice_id, after=after, actor=actor)
+
+    def item_catalog_page(self, workspace: str, organization_id: str, *, actor: PostingActor, after: str = "", search: str = "") -> dict[str, Any]:
+        return self.repository.item_catalog_page(workspace, organization_id, actor=actor, after=after, search=search)

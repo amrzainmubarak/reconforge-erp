@@ -4,6 +4,7 @@ from decimal import localcontext
 
 import pytest
 
+from reconforge.domain.procurement_operations import ProcurementError
 from reconforge.domain.procurement_partial import (
     MultilineInvoicePreparation,
     MultilineProcurementPreparation,
@@ -16,7 +17,7 @@ from reconforge.domain.procurement_partial import (
 
 
 def enterprise_request(number: str = "MULTI-1") -> MultilineProcurementPreparation:
-    return MultilineProcurementPreparation(number=number, supplier_code="SUPPLIER", currency_code="USD",
+    return MultilineProcurementPreparation(number=number, supplier_code="SUP", currency_code="USD",
         posting_date="2026-10-03", period_id="period", journal_code="STOCK", ap_account_code="AP", cash_account_code="CASH",
         organization_code="ORG", entity_code="ENTITY", workspace="work", lines=(
             ProcurementOrderLine(item_code="ITEM", quantity="10", unit_price_minor=1200, location_code="MAIN/STOCK", policy_code="FIFO"),
@@ -54,5 +55,5 @@ def test_invoice_rejects_duplicate_line_even_if_quantities_differ() -> None:
 
 def test_integer_minor_cost_rejects_fractional_line_total_before_native_write() -> None:
     line = replace(enterprise_request().lines[0], quantity="0.000001", unit_price_minor=1200)
-    with pytest.raises(ProcurementPartialError.__bases__[0], match="exact supported"):
+    with pytest.raises(ProcurementError, match="exact supported"):
         normalize_multiline(replace(enterprise_request(), lines=(line,)))

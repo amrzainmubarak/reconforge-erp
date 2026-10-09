@@ -24,7 +24,6 @@ from tests.test_postgres_procurement_partial import (
     CHECKER,
     MAKER,
     POSTER,
-    action,
     create_procurement_partial_runtime,
     partial_publication_digest,
     pytestmark,
@@ -80,6 +79,18 @@ def create_order(runtime: ReceiptRuntime, number: str = "MULTI-1") -> dict[str, 
         view = repository.create_multiline(request, command_id="create-" + number, actor=actor)
         assert repository.create_multiline(request, command_id="create-" + number, actor=actor) == view
     return action(runtime, action(runtime, view, "submit-order", MAKER), "approve-order", CHECKER)
+
+
+def action(runtime: ReceiptRuntime, view: dict[str, Any], operation: str, actor_name: str,
+           document_id: str | None = None) -> dict[str, Any]:
+    with runtime.actor(actor_name) as (connection, _, actor):
+        repository = PostgresProcurementPartialRepository(connection, runtime.tenant)
+        arguments = {"expected_version": view["order"]["row_version"],
+            "command_id": view["order"]["number"] + "-phase-" + str(view["order"]["row_version"]),
+            "reason": "Independent retained operational review", "document_id": document_id, "actor": actor}
+        result = repository.act(view["order"]["id"], operation, **arguments)
+        assert repository.act(view["order"]["id"], operation, **arguments) == result
+        return result
 
 
 def prepare_line(runtime: ReceiptRuntime, view: dict[str, Any], line: int, quantity: str, date: str = "2026-10-03",
@@ -288,3 +299,24 @@ def test_initial_typed_location_mismatch_is_rejected_after_actual_source_writes(
         PostgresProcurementPartialRepository(connection, runtime.tenant).create_multiline(enterprise_request("BAD-LOCATION"), command_id="bad-typed-location", actor=actor)
     with runtime.actor(MAKER) as (connection, _, _):
         assert enterprise_digest(connection, runtime.tenant) == before
+
+
+def test_128_retained_native_purchase_lines_remain_distinct_and_tenant_isolated(receipt_database: tuple[str, str]) -> None:
+    from reconforge.domain.procurement_partial import ProcurementOrderLine
+    runtime = create_multiline_runtime(receipt_database)
+    request = replace(enterprise_request("BOUND-128"), lines=tuple(ProcurementOrderLine(
+        item_code="ITEM", quantity="1", unit_price_minor=1200, location_code="MAIN/STOCK", policy_code="FIFO") for _ in range(128)))
+    with runtime.actor(MAKER) as (connection, _, actor):
+        repository = PostgresProcurementPartialRepository(connection, runtime.tenant)
+        view = repository.create_multiline(request, command_id="bounded128-native", actor=actor)
+        assert len(view["lines"]) == 128 and len({line["id"] for line in view["lines"]}) == 128
+        assert view["order"]["total_minor"] == "153600"
+        assert connection.execute("SELECT count(*) FROM reconforge.ap_purchase_order_lines WHERE tenant_id=%s AND purchase_order_id=%s",
+            (runtime.tenant, view["order"]["purchase_order_id"])).fetchone()[0] == 128
+    foreign = create_multiline_runtime(receipt_database)
+    with foreign.actor(MAKER) as (connection, _, actor):
+        repository = PostgresProcurementPartialRepository(connection, foreign.tenant)
+        assert repository.order_page("work", actor=actor)["records"] == []
+        assert connection.execute("SELECT count(*) FROM reconforge.procurement_partial_order_lines").fetchone()[0] == 0
+        with pytest.raises(ProcurementPartialError, match="absent or outside"):
+            repository.get(view["order"]["id"], actor=actor)

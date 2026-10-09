@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import json
 import os
 import secrets
@@ -58,6 +59,8 @@ def main() -> int:
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
     args = parser.parse_args()
     runtime_root = args.runtime_root.resolve()
+    if runtime_root != ROOT.resolve():
+        raise ValueError("Run the expansion harness from its exact integrated runtime checkout.")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     if not (args.web_root / "index.html").is_file():
@@ -76,6 +79,18 @@ def main() -> int:
         "tracked_clean_before": not subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=runtime_root),
         "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     }
+    module_origins = {}
+    for module_name in (
+        "reconforge.api.app", "reconforge.infrastructure.postgres_stock_sales",
+        "reconforge.infrastructure.postgres_procurement_partial", "reconforge.infrastructure.postgres_financial_installments",
+        "reconforge.infrastructure.postgres_financial_reporting", "tests.erp_expansion_browser_seed",
+        "tests.erp_expansion_browser_restore",
+    ):
+        origin = Path(importlib.import_module(module_name).__file__).resolve()
+        if not origin.is_relative_to(runtime_root):
+            raise ValueError("Expansion module origin is outside the integrated runtime checkout.")
+        module_origins[module_name] = {"path": str(origin), "sha256": hashlib.sha256(origin.read_bytes()).hexdigest()}
+    report["module_origins"] = module_origins
     started = time.monotonic()
     def run(argv: list[str], *, environment: dict[str, str] | None = None, check: bool = True, directory: Path = ROOT) -> subprocess.CompletedProcess[str]:
         result = subprocess.run(argv, cwd=directory, env=environment, capture_output=True, text=True, timeout=600)  # nosec B603
@@ -175,7 +190,7 @@ def main() -> int:
         report["source_commit_after"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip()
         report["tracked_clean_after"] = not subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=runtime_root)
         report["source_unchanged"] = report["source_unchanged"] and report["source_commit_after"] == report["source_commit"]
-        report["status"] = "passed" if browser.returncode == 0 and report["source_unchanged"] and report["built_web_unchanged"] else "failed"
+        report["status"] = "passed" if browser.returncode == 0 and report["source_unchanged"] and report["built_web_unchanged"] and report["tracked_clean_before"] and report["tracked_clean_after"] else "failed"
     except Exception as exc:
         diagnostic = str(exc)
         for value in secret_values:

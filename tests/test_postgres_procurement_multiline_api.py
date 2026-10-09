@@ -88,8 +88,8 @@ def test_multiline_http_receiving_late_failure_has_no_partial_source_or_effect(
         with runtime.actor(MAKER) as (connection, _, _):
             before = enterprise_digest(connection, runtime.tenant, include_audit=False)
             audit_before = PostgresAuditEventRepository(connection, runtime.tenant).list()
-            outbox_before = connection.execute("SELECT to_jsonb(t) AS payload FROM reconforge.outbox_events t WHERE tenant_id=%s ORDER BY to_jsonb(t)::text",
-                (runtime.tenant,)).fetchall()
+            outbox_before = [row["payload"] for row in connection.execute("SELECT to_jsonb(t) AS payload FROM reconforge.outbox_events t WHERE tenant_id=%s ORDER BY to_jsonb(t)::text",
+                (runtime.tenant,)).fetchall()]
         monkeypatch.setattr(PostgresProcurementPartialRepository, "_remember", fail_after_ack)
         failed = client[0].post(ROOT + "/orders/" + view["order"]["id"] + "/commands/receive", headers=client[1],
             json={"command_id": "api-" + str(view["order"]["row_version"]), "expected_version": view["order"]["row_version"],
@@ -99,8 +99,8 @@ def test_multiline_http_receiving_late_failure_has_no_partial_source_or_effect(
         monkeypatch.setattr(PostgresProcurementPartialRepository, "_remember", original)
         with runtime.actor(MAKER) as (connection, _, _):
             assert enterprise_digest(connection, runtime.tenant, include_audit=False) == before
-            assert connection.execute("SELECT to_jsonb(t) AS payload FROM reconforge.outbox_events t WHERE tenant_id=%s ORDER BY to_jsonb(t)::text",
-                (runtime.tenant,)).fetchall() == outbox_before
+            assert [row["payload"] for row in connection.execute("SELECT to_jsonb(t) AS payload FROM reconforge.outbox_events t WHERE tenant_id=%s ORDER BY to_jsonb(t)::text",
+                (runtime.tenant,)).fetchall()] == outbox_before
             audit = PostgresAuditEventRepository(connection, runtime.tenant)
             events = audit.list()
             assert events[:len(audit_before)] == audit_before

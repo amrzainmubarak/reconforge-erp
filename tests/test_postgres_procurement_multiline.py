@@ -97,7 +97,7 @@ def prepare_line(runtime: ReceiptRuntime, view: dict[str, Any], line: int, quant
                  command: str | None = None) -> dict[str, Any]:
     with runtime.actor(MAKER) as (connection, _, actor):
         repository = PostgresProcurementPartialRepository(connection, runtime.tenant)
-        arguments = {"expected_version": view["order"]["row_version"], "command_id": command or "receive-" + str(view["order"]["row_version"]), "actor": actor}
+        arguments = {"expected_version": view["order"]["row_version"], "command_id": command or view["order"]["number"] + "-receive-" + str(view["order"]["row_version"]), "actor": actor}
         request = PartialQuantityPreparation(quantity=quantity, posting_date=date, period_id="period", reason="Independent multiwarehouse shipment")
         result = repository.prepare_receipt_line(view["order"]["id"], view["lines"][line]["id"], request, **arguments)
         assert repository.prepare_receipt_line(view["order"]["id"], view["lines"][line]["id"], request, **arguments) == result
@@ -116,7 +116,7 @@ def invoice_lines(runtime: ReceiptRuntime, view: dict[str, Any], quantities: tup
         repository = PostgresProcurementPartialRepository(connection, runtime.tenant)
         request = MultilineInvoicePreparation(lines=tuple(ProcurementLineQuantity(line_id=view["lines"][index]["id"], quantity=quantity) for index, quantity in quantities),
             posting_date=date, period_id="period", reason="Exact per-line three-way invoice matching")
-        arguments = {"expected_version": view["order"]["row_version"], "command_id": "invoice-" + str(view["order"]["row_version"]), "actor": actor}
+        arguments = {"expected_version": view["order"]["row_version"], "command_id": view["order"]["number"] + "-invoice-" + str(view["order"]["row_version"]), "actor": actor}
         result = repository.match_invoice_lines(view["order"]["id"], request, **arguments)
         assert repository.match_invoice_lines(view["order"]["id"], request, **arguments) == result
         return result
@@ -274,6 +274,7 @@ def test_new_lines_are_immutable_and_parent_keyset_has_no_duplicate_pages(multil
     import psycopg
     runtime = multiline_runtime
     created = [create_order(runtime, "PAGE-" + str(index)) for index in range(3)]
+    created = [prepare_line(runtime, view, 0, "4") for view in created]
     with runtime.actor(MAKER) as (connection, _, actor):
         repository = PostgresProcurementPartialRepository(connection, runtime.tenant)
         before = enterprise_digest(connection, runtime.tenant)
@@ -281,6 +282,8 @@ def test_new_lines_are_immutable_and_parent_keyset_has_no_duplicate_pages(multil
         second = repository.order_page("work", actor=actor, after=first["next_after"], page_size=2)
         assert len(first["records"]) == 2 and len(second["records"]) == 1 and second["next_after"] is None
         assert {item["id"] for item in first["records"] + second["records"]} == {view["order"]["id"] for view in created}
+        assert connection.execute("SELECT count(*) FROM reconforge.inventory_receipt_plans WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 3
+        assert all(view["lines"][0]["reserved_receipt_quantity"] == "4" for view in created)
         with pytest.raises(psycopg.errors.CheckViolation), connection.transaction():
             connection.execute("UPDATE reconforge.procurement_partial_order_lines SET quantity=quantity+1 WHERE tenant_id=%s AND id=%s", (runtime.tenant, created[0]["lines"][0]["id"]))
         assert enterprise_digest(connection, runtime.tenant) == before

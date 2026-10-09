@@ -126,6 +126,108 @@ def complete_partial_accrual_cycle(runtime: ReceiptRuntime, number: str = "PARTI
     return accrue_partial_invoice(runtime, receive_partial(runtime, view, "6", "2026-10-04"), "7")
 
 
+def reviewed_partial_publication(runtime: ReceiptRuntime, phase: str) -> tuple[dict[str, Any], str, str]:
+    view = create_partial(runtime)
+    if phase == "receipt":
+        view = prepare_partial_receipt(runtime, view, "4")
+        identifier = view["receipts"][0]["id"]
+        return action(runtime, view, "review-receipt", CHECKER, identifier), "receive", identifier
+    view = match_partial_invoice(runtime, receive_partial(runtime, view, "4"), "3")
+    identifier = view["invoices"][0]["id"]
+    for operation, actor in (("approve-invoice", CHECKER), ("prepare-accrual", MAKER), ("review-accrual", CHECKER)):
+        view = action(runtime, view, operation, actor, identifier)
+    return view, "post-accrual", identifier
+
+
+def partial_publication_digest(connection: Any, tenant: str, *, include_audit: bool = True) -> str:
+    from psycopg import sql
+
+    from reconforge.domain.finance_posting import digest_payload
+
+    captured: dict[str, Any] = {"native": procurement_phase_digest(connection, tenant, include_audit=include_audit)}
+    for table in ("procurement_partial_orders", "procurement_partial_receipts", "procurement_partial_invoices", "procurement_partial_commands"):
+        rows = connection.execute(sql.SQL("SELECT to_jsonb(t) AS payload FROM reconforge.{} t WHERE tenant_id=%s ORDER BY to_jsonb(t)::text")
+                                  .format(sql.Identifier(table)), (tenant,)).fetchall()
+        captured[table] = [row["payload"] for row in rows]
+    return digest_payload(captured)
+
+
+@pytest.mark.parametrize("phase", ["receipt", "accrual"])
+def test_partial_reviewer_cannot_publish_and_third_poster_can_continue(partial_runtime: ReceiptRuntime, phase: str) -> None:
+    runtime = partial_runtime
+    view, operation, identifier = reviewed_partial_publication(runtime, phase)
+    with runtime.actor(CHECKER) as (connection, _, _):
+        before = partial_publication_digest(connection, runtime.tenant)
+    with pytest.raises(ProcurementPartialError, match="three distinct"):
+        action(runtime, view, operation, CHECKER, identifier)
+    with runtime.actor(CHECKER) as (connection, _, actor):
+        assert partial_publication_digest(connection, runtime.tenant) == before
+        assert PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor) == view
+    posted = action(runtime, view, operation, POSTER, identifier)
+    assert posted["order"]["row_version"] == view["order"]["row_version"] + 1
+    assert posted["receipts" if phase == "receipt" else "invoices"][0]["stage"] == ("Posted" if phase == "receipt" else "Accrued")
+    part = posted["receipts" if phase == "receipt" else "invoices"][0]
+    prefix = "" if phase == "receipt" else "accrual_"
+    assert [part[prefix + name + "_actor_id"] for name in ("preparer", "reviewer", "posted")] == ["id-" + name for name in (MAKER, CHECKER, POSTER)]
+
+
+@pytest.mark.parametrize("phase", ["receipt", "accrual"])
+def test_partial_raw_publication_closure_rejects_reviewer_and_rolls_back_real_effects(
+    partial_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch, phase: str,
+) -> None:
+    import psycopg
+
+    runtime = partial_runtime
+    view, operation, identifier = reviewed_partial_publication(runtime, phase)
+    with runtime.actor(CHECKER) as (connection, _, _):
+        before = partial_publication_digest(connection, runtime.tenant)
+        effect_count = connection.execute("SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0]
+    # Bypass ONLY the owner Python check to exercise the legacy two-human native
+    # engine and real source writes. The deferred database policy stays enabled.
+    with monkeypatch.context() as patch:
+        patch.setattr("reconforge.infrastructure.postgres_procurement_partial.require_third_poster", lambda *_: None)
+        with pytest.raises(psycopg.errors.CheckViolation, match="three distinct") as refused, runtime.actor(CHECKER) as (connection, _, actor):
+            assert tuple(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()) == (False, False)
+            result = PostgresProcurementPartialRepository(connection, runtime.tenant).act(view["order"]["id"], operation,
+                expected_version=view["order"]["row_version"], command_id="raw-reviewer-publication", reason="Exercise source-owner SQL closure",
+                document_id=identifier, actor=actor)
+            assert result["order"]["row_version"] == view["order"]["row_version"] + 1
+            assert connection.execute("SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == effect_count + 1
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        assert refused.value.diag.constraint_name == "procurement_partial_owner_phase"
+    with runtime.actor(CHECKER) as (connection, _, actor):
+        assert partial_publication_digest(connection, runtime.tenant) == before
+        assert PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor) == view
+    assert action(runtime, view, operation, POSTER, identifier)["order"]["row_version"] == view["order"]["row_version"] + 1
+
+
+@pytest.mark.parametrize("phase", ["receipt", "accrual"])
+def test_unowned_native_participant_preserves_legacy_reviewer_posting_policy(receipt_database: tuple[str, str], phase: str) -> None:
+    if phase == "receipt":
+        from tests.test_postgres_inventory_receipt_posting import prepare_and_review
+
+        runtime = create_receipt_runtime(receipt_database)
+        plan, review = prepare_and_review(runtime)
+        with runtime.actor("checker") as (connection, receipts, actor):
+            effect = receipts.commit(plan["plan_id"], command_id="legacy-checker-post", expected_review_digest=review["review_digest"],
+                                     reason="Unowned receipt retains its native policy", actor=actor)
+            assert effect["posted_actor_id"] == actor.user_id == review["reviewer"]["user_id"]
+            assert connection.execute("SELECT count(*) FROM reconforge.procurement_partial_orders WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 0
+    else:
+        from tests.test_postgres_operational_finance import prepare_review
+        from tests.test_postgres_operational_finance import runtime as native_runtime
+
+        source = native_runtime.__wrapped__(receipt_database)
+        runtime = source[0]
+        plan = prepare_review(source)
+        with runtime.actor("checker") as (connection, _, actor):
+            posted = PostgresOperationalFinanceRepository(connection, runtime.tenant).post(plan["id"], expected_plan_digest=plan["plan_digest"],
+                command_id="legacy-checker-post", reason="Unowned operational accrual retains its native policy", actor=actor)
+            assert posted["status"] == "Posted" and plan["reviewer_actor_id"] == actor.user_id
+            assert connection.execute("SELECT posted_actor_id FROM reconforge.operational_finance_links WHERE tenant_id=%s AND plan_id=%s", (runtime.tenant, plan["id"])).fetchone()[0] == actor.user_id
+            assert connection.execute("SELECT count(*) FROM reconforge.procurement_partial_orders WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 0
+
+
 def test_partial_four_and_six_receipts_three_and_seven_invoices_reconcile_fifo_ap_gl(partial_runtime: ReceiptRuntime) -> None:
     runtime = partial_runtime
     view = complete_partial_accrual_cycle(runtime)

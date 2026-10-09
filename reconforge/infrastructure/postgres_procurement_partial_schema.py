@@ -199,7 +199,8 @@ BEGIN
  ELSIF clearing<>r.receipt_clearing_account_id THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial receipts must retain one exact clearing mapping.'; END IF;
  IF d.stage>=1 AND NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_reviews x WHERE x.tenant_id=t AND x.plan_id=r.id
- AND x.reviewer_actor_id=reconforge.pp_command(t,c.id,d.reviewed_version,'review-receipt',d.id)) THEN
+ AND x.reviewer_actor_id=reconforge.pp_command(t,c.id,d.reviewed_version,'review-receipt',d.id)
+ AND x.reviewer_actor_id<>r.preparer_actor_id) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial receipt needs its owner independent review.'; END IF;
  IF d.stage=2 THEN
  SELECT * INTO g FROM reconforge.ap_goods_receipts WHERE tenant_id=t AND id=d.goods_receipt_id;
@@ -207,8 +208,9 @@ BEGIN
  OR g.workspace_id<>c.workspace_id OR (SELECT count(*) FROM reconforge.ap_goods_receipt_lines WHERE tenant_id=t AND receipt_id=g.id)<>1
  OR NOT EXISTS(SELECT 1 FROM reconforge.ap_goods_receipt_lines WHERE tenant_id=t AND receipt_id=g.id AND purchase_order_line_id=l.id AND received_quantity=d.quantity)
  OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_links x WHERE x.tenant_id=t AND x.plan_id=r.id
- AND x.posted_actor_id=reconforge.pp_command(t,c.id,d.posted_version,'receive',d.id)) THEN
- RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial receiving requires exact FIFO, stock GL and native AP receipt together.'; END IF;
+ AND x.posted_actor_id=reconforge.pp_command(t,c.id,d.posted_version,'receive',d.id)
+ AND x.posted_actor_id NOT IN (r.preparer_actor_id,reconforge.pp_command(t,c.id,d.reviewed_version,'review-receipt',d.id))) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial receiving requires three distinct human identities and exact FIFO, stock GL and native AP receipt together.'; END IF;
  PERFORM reconforge.irp_assert_complete(t,r.id);
  END IF;
  END LOOP;
@@ -261,11 +263,13 @@ BEGIN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial accrual exact money, mapping or owner phase differs.'; END IF;
  PERFORM reconforge.ops_close_plan(t,a.id);
  IF i.stage>=3 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews x WHERE x.tenant_id=t AND x.plan_id=a.id
- AND x.reviewer_actor_id=reconforge.pp_command(t,c.id,i.reviewed_version,'review-accrual',i.id)) THEN
+ AND x.reviewer_actor_id=reconforge.pp_command(t,c.id,i.reviewed_version,'review-accrual',i.id)
+ AND x.reviewer_actor_id<>a.preparer_actor_id) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial accrual needs its independent owner review.'; END IF;
  IF i.stage=4 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links x WHERE x.tenant_id=t AND x.plan_id=a.id
- AND x.posting_effect_id=i.accrual_effect_id AND x.posted_actor_id=reconforge.pp_command(t,c.id,i.posted_version,'post-accrual',i.id)) THEN
- RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial accrual GL and native payable must close together.'; END IF;
+ AND x.posting_effect_id=i.accrual_effect_id AND x.posted_actor_id=reconforge.pp_command(t,c.id,i.posted_version,'post-accrual',i.id)
+ AND x.posted_actor_id NOT IN (a.preparer_actor_id,reconforge.pp_command(t,c.id,i.reviewed_version,'review-accrual',i.id))) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial accrual requires three distinct human identities and GL and native payable must close together.'; END IF;
  END IF;
  SELECT COALESCE(sum(x.amount_minor),0) INTO paid FROM reconforge.ap_payment_links x WHERE x.tenant_id=t AND x.supplier_invoice_id=h.id;
  IF (paid>0 AND i.stage<>4) OR paid>i.total_minor OR (h.status='Paid') IS DISTINCT FROM (paid=i.total_minor)

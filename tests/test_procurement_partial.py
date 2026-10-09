@@ -9,6 +9,7 @@ from reconforge.domain.procurement_partial import (
     ProcurementPartialError,
     normalize_order,
     normalize_part,
+    require_third_poster,
     reserve_quantity,
 )
 from tests.test_postgres_procurement_operations import request
@@ -34,3 +35,15 @@ def test_order_document_namespace_and_capacity_are_bounded() -> None:
         normalize_order(replace(request(), number="A" * 41))
     with pytest.raises(ProcurementPartialError, match="capacity"):
         reserve_quantity("2", "10", ("6", "3"))
+
+
+@pytest.mark.parametrize("actors", [("maker", "checker", "checker"), ("maker", "checker", "maker"),
+                                   ("maker", "maker", "poster"), ("maker", None, "poster"), ("", "checker", "poster")])
+def test_partial_publication_requires_three_retained_canonical_ids(actors: tuple[str, str | None, str]) -> None:
+    with pytest.raises(ProcurementPartialError, match="three distinct") as denied:
+        require_third_poster(*actors)
+    assert denied.value.code == "procurement_partial_duties_conflict"
+
+
+def test_partial_publication_accepts_a_distinct_poster_without_alias_comparison() -> None:
+    require_third_poster("id-maker", "id-checker", "id-poster")

@@ -3,7 +3,11 @@ name: Partial stock procurement and exact payable tranches
 version: 0.1.0
 maturity: experimental
 owner: finance-operations
-dependencies: [payables, inventory-receipt-posting, operational-finance, financial-installments, finance-core, postgres-identity]
+dependencies: [payables, inventory-receipt-posting, operational-finance, finance-core, postgres-identity]
+settlement_extension:
+  module: financial-installments
+  migration: 0115_pg_financial_installments
+  requires: Installed extension and its reviewed payment contract for Studio/AP partial settlement
 incompatible_versions: []
 data_classification: confidential-financial
 retention_policy: immutable source documents and append-only command acknowledgements; populated downgrade refuses history loss
@@ -16,6 +20,7 @@ domain_invariants:
   - Each reviewed receipt posts actual FIFO, stock movement, inventory GL and native AP goods receipt in one outer transaction
   - Matched invoice quantities reserve posted receipt capacity before approval; exact unit price and monetary total
   - Independent approval and reviewed clearing-to-AP accrual for each partial supplier invoice
+  - Each receipt and accrual publication requires three distinct canonical human identities for preparation, review and posting
   - Shared reviewed installments settle real accrued native AP invoices; each payment has existing immutable AP payment-link and GL evidence
   - Canonical historical actor identities and current persisted authority, scope, amount policy and step-up on writes and retries
   - Each parent version has exactly one exact actor-bound command with frozen acknowledgement, audit and outbox evidence
@@ -31,6 +36,7 @@ threat_model:
   - Four forced-RLS tables join the canonical tenant/workspace/organization/entity boundary including entity aliases
   - Row locks serialize same-order capacity reservation; exact command advisory locks fence replay
   - Phase-specific command versions bind source preparer, approver, reviewer and poster to canonical retained identities
+  - Owner-only publication checks and bidirectional deferred closure reject reviewer posting without changing legacy unowned kernel policy
   - Reserved PPR receipt and PPI invoice numbers cannot be captured outside their atomic source owner
   - Public generic participants cannot commit an owner phase independently; database closure remains authoritative
   - Supplier return, receipt reversal and payment reversal require separate completed contracts and are refused for this owner
@@ -40,7 +46,7 @@ test_matrix:
   domain: tests/test_procurement_partial.py
   postgres: tests/test_postgres_procurement_partial.py
   api: tests/test_postgres_procurement_partial_api.py
-  web: apps/web/src/procurement-partial-data.test.ts
+  web: [apps/web/src/procurement-partial-data.test.ts, apps/web/src/components/ProcurementPartialPage.test.tsx]
   browser: Lead integration gate on normal authenticated Studio and actual PostgreSQL
 adapter_matrix:
   postgres: implemented; acceptance requires the current integration gate
@@ -48,6 +54,6 @@ adapter_matrix:
 limitations:
   - One stock line per order, at most 32 receipts and 32 invoices
   - Functional currency, untracked stock, exact minor-unit costs and zero tax
-  - Shared installment contract has its own migration and acceptance gates
+  - Studio/AP partial settlement requires the optional financial-installments extension installed after this module at full migration head 0115 and its own acceptance gates
   - No PR/RFQ, supplier quotation selection, supplier returns, debit notes, tax, FX, live bank transfers or tracked-stock claim
   - Reference catalogs are configured through existing engines and are bounded to their current authorized 200 records

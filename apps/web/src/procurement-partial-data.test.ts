@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { installmentCommand, parseInstallmentPlan, parsePartialDetail, partialCommand, partialRoot, scaledQuantity } from "./procurement-partial-data";
+import { distinctPartialPoster, installmentCommand, parseInstallmentPlan, parsePartialDetail, partialCommand, partialRoot, scaledQuantity } from "./procurement-partial-data";
 import type { ProcurementScope } from "./procurement-data";
 import { prepareScopedCommand } from "./scoped-command";
 import type { BrowserAdminSession } from "./types";
@@ -27,6 +27,20 @@ describe("partial procurement exact source contract", () => {
     expect(parseInstallmentPlan(plan(), scope, "invoice").phase).toBe(0);
     expect(() => parseInstallmentPlan(plan(), scope, "other")).toThrow("contract_invalid");
     expect(() => parseInstallmentPlan({ ...plan(), phase: 2, status: "Posted", reviewer_actor_id: "reviewer" }, scope, "invoice")).toThrow("contract_invalid");
+    expect(() => parseInstallmentPlan({ ...plan(), phase: 1, status: "Reviewed", reviewer_actor_id: "maker" }, scope, "invoice")).toThrow("contract_invalid");
+  });
+  it("compares canonical actor IDs and fails closed without both retained identities", () => {
+    expect(distinctPartialPoster("id-maker", "id-checker", "id-poster")).toBe(true);
+    for (const poster of [null, "", "id-maker", "id-checker"]) expect(distinctPartialPoster("id-maker", "id-checker", poster)).toBe(false);
+    expect(distinctPartialPoster("id-maker", null, "id-poster")).toBe(false);
+  });
+  it("requires phase-consistent retained receipt provenance and rejects a reviewer-posted receipt", () => {
+    const base = draft();
+    const receipt = { id: "part", order_id: "partial-order", number: "PPR-ORDER-1-1", sequence: 1, quantity_text: "4", total_minor: "4800", posting_date: "2026-10-03", period_id: "period", receipt_plan_id: "native-plan", goods_receipt_id: "native-receipt", stage: "Posted", created_version: 4, reviewed_version: 5, posted_version: 6, preparer_actor_id: "id-maker", reviewer_actor_id: "id-checker", posted_actor_id: "id-poster" };
+    const detail = { ...base, order: { ...base.order, stage: "Approved", row_version: 6 }, receipts: [receipt], totals: { ...base.totals, reserved_receipt_quantity: "4", received_quantity: "4", received_minor: "4800" } };
+    expect(parsePartialDetail(detail, scope).receipts[0].posted_actor_id).toBe("id-poster");
+    expect(() => parsePartialDetail({ ...detail, receipts: [{ ...receipt, posted_actor_id: "id-checker" }] }, scope)).toThrow("contract_invalid");
+    expect(() => parsePartialDetail({ ...detail, receipts: [{ ...receipt, reviewer_actor_id: null }] }, scope)).toThrow("contract_invalid");
   });
   it("binds cookies, CSRF, entity scope and exact frozen command through a lost acknowledgement retry", async () => {
     const command = prepareScopedCommand(partialRoot + "/orders", { number: "ORDER-1", quantity: "10", unit_price_minor: "1200" });

@@ -21,6 +21,7 @@ from reconforge.domain.procurement_partial import (
     ProcurementPartialError,
     normalize_order,
     normalize_part,
+    require_third_poster,
     reserve_quantity,
 )
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
@@ -271,6 +272,7 @@ class PostgresProcurementPartialRepository:
             review = view["review"]
             if review is None:
                 raise ProcurementPartialError("procurement_partial_review_required", "Receiving requires independent retained review.")
+            require_third_poster(view["plan"]["preparer"]["user_id"], review["reviewer"]["user_id"], actor.user_id)
             self.receipts.commit(part["receipt_plan_id"], expected_review_digest=review["review_digest"], command_id=command, reason=reason, actor=actor)
             native_receipt = self.payables.post_receipt(receipt_number=part["number"], purchase_order_id=native_order["id"],
                 receipt_date=part["posting_date"].isoformat(), quantities={native_order["lines"][0]["id"]: part["quantity_text"]},
@@ -310,6 +312,7 @@ class PostgresProcurementPartialRepository:
                 if operation == "review-accrual":
                     finance.review(plan["id"], expected_plan_digest=plan["plan_digest"], command_id=command, reason=reason, actor=actor)
                 else:
+                    require_third_poster(plan["preparer_actor_id"], plan["reviewer_actor_id"], actor.user_id)
                     effect_id = finance.post(plan["id"], expected_plan_digest=plan["plan_digest"], command_id=command, reason=reason, actor=actor)["posting_effect_id"]
         query = {
             "approve-invoice": "UPDATE reconforge.procurement_partial_invoices SET stage=stage+1,approved_version=%s WHERE tenant_id=%s AND id=%s",
@@ -333,9 +336,24 @@ class PostgresProcurementPartialRepository:
         for part in receipts:
             part["stage"] = RECEIPT_STAGES[part["stage"]]
             part["total_minor"] = str(part["total_minor"])
+            actors = self._one("""SELECT p.preparer_actor_id,r.reviewer_actor_id,l.posted_actor_id
+                FROM reconforge.inventory_receipt_plans p
+                LEFT JOIN reconforge.inventory_receipt_reviews r ON r.tenant_id=p.tenant_id AND r.plan_id=p.id
+                LEFT JOIN reconforge.inventory_receipt_links l ON l.tenant_id=p.tenant_id AND l.plan_id=p.id
+                WHERE p.tenant_id=%s AND p.id=%s""", (self.tenant_id, part["receipt_plan_id"]))
+            part.update(dict(actors))
         for part in invoices:
             part["stage"] = INVOICE_STAGES[part["stage"]]
             part["total_minor"] = str(part["total_minor"])
+            part.update(accrual_preparer_actor_id=None, accrual_reviewer_actor_id=None, accrual_posted_actor_id=None)
+            if part["accrual_plan_id"] is not None:
+                actors = self._one("""SELECT p.preparer_actor_id AS accrual_preparer_actor_id,
+                    r.reviewer_actor_id AS accrual_reviewer_actor_id,l.posted_actor_id AS accrual_posted_actor_id
+                    FROM reconforge.operational_finance_plans p
+                    LEFT JOIN reconforge.operational_finance_reviews r ON r.tenant_id=p.tenant_id AND r.plan_id=p.id
+                    LEFT JOIN reconforge.operational_finance_links l ON l.tenant_id=p.tenant_id AND l.plan_id=p.id
+                    WHERE p.tenant_id=%s AND p.id=%s""", (self.tenant_id, part["accrual_plan_id"]))
+                part.update(dict(actors))
             native = self._one("SELECT status,row_version FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s",
                                (self.tenant_id, part["native_invoice_id"]))
             links = self.connection.execute("SELECT id,finance_effect_id,amount_minor,created_at FROM reconforge.ap_payment_links WHERE tenant_id=%s AND supplier_invoice_id=%s ORDER BY created_at,id",

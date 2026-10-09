@@ -18,6 +18,16 @@ class ProcurementPartialError(ProcurementError):
     """Safe exact quantity, authority or optimistic command failure."""
 
 
+def require_third_poster(preparer_id: str, reviewer_id: str | None, poster_id: str) -> None:
+    """Compare canonical retained identities after current human authority checks."""
+    actors = (preparer_id, reviewer_id, poster_id)
+    if any(not isinstance(identifier, str) or not identifier for identifier in actors) or len(set(actors)) != 3:
+        raise ProcurementPartialError(
+            "procurement_partial_duties_conflict",
+            "Partial receipt and accrual publication require three distinct human identities: preparer, reviewer and poster.",
+        )
+
+
 @dataclass(frozen=True, kw_only=True)
 class PartialQuantityPreparation:
     quantity: str

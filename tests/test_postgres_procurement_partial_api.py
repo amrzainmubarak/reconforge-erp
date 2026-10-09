@@ -23,11 +23,13 @@ from tests.test_postgres_procurement_partial import (
     POSTER,
     accrue_partial_invoice,
     create_partial,
+    partial_publication_digest,
     partial_runtime,
     prepare_partial_receipt,
     pytestmark,
     receipt_database,
     receive_partial,
+    reviewed_partial_publication,
 )
 
 __all__ = ["partial_runtime", "pytestmark", "receipt_database"]
@@ -134,6 +136,35 @@ def test_authenticated_partial_procure_to_pay_has_two_exact_installments(
         with runtime.actor(POSTER) as (connection, _, _):
             assert connection.execute("SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 6
             assert tuple(connection.execute("SELECT sum(debit_minor),sum(credit_minor) FROM reconforge.finance_entry_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()) == (27600, 27600)
+
+
+@pytest.mark.parametrize("phase", ["receipt", "accrual"])
+def test_authenticated_partial_reviewer_publication_is_refused_before_third_poster_continues(
+    receipt_database: tuple[str, str], partial_runtime: ReceiptRuntime, tmp_path: Path, phase: str,
+) -> None:
+    runtime = partial_runtime
+    view, operation, identifier = reviewed_partial_publication(runtime, phase)
+    with ExitStack() as stack:
+        checker, poster = [stack.enter_context(partial_client(runtime, receipt_database, tmp_path / actor, actor)) for actor in (CHECKER, POSTER)]
+        with runtime.actor(CHECKER) as (connection, _, _):
+            before = partial_publication_digest(connection, runtime.tenant, include_audit=False)
+        payload = {"command_id": "api-third-human-publication", "expected_version": view["order"]["row_version"],
+                   "document_id": identifier, "reason": "Publication must be independent of the retained reviewer"}
+        path = ROOT + "/orders/" + view["order"]["id"] + "/commands/" + operation
+        for _ in range(2):
+            denied = checker[0].post(path, headers=checker[1], json=payload)
+            assert denied.status_code == 409 and denied.json()["error"]["code"] == "procurement_partial_duties_conflict", denied.text
+        read = checker[0].get(ROOT + "/orders/" + view["order"]["id"], headers=checker[1])
+        assert read.status_code == 200 and read.json() == view, read.text
+        with runtime.actor(CHECKER) as (connection, _, _):
+            assert partial_publication_digest(connection, runtime.tenant, include_audit=False) == before
+        published = post(poster, path, payload)
+        document = published["receipts" if phase == "receipt" else "invoices"][0]
+        prefix = "" if phase == "receipt" else "accrual_"
+        assert document[prefix + "preparer_actor_id"] == "id-" + MAKER
+        assert document[prefix + "reviewer_actor_id"] == "id-" + CHECKER
+        assert document[prefix + "posted_actor_id"] == "id-" + POSTER
+        assert document["stage"] == ("Posted" if phase == "receipt" else "Accrued")
 
 
 @pytest.mark.parametrize("participant", ["receipt-prepare", "receipt", "accrual"])

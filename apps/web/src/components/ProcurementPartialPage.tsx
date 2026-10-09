@@ -4,7 +4,7 @@ import { AdminApiError, beginBrowserAdminSession, endBrowserAdminSession, stepUp
 import { loadExceptionReviewIdentity, type ExceptionReviewIdentity } from "../exception-review-data";
 import { procurementOptions, procurementScopes, type ProcurementOption, type ProcurementOptions, type ProcurementScope } from "../procurement-data";
 import { procurementTranslate, type ProcurementMessage } from "../procurement-i18n";
-import { installmentCommand, partialCommand, partialGet, partialList, partialRoot, type InstallmentPlan, type PartialDetail } from "../procurement-partial-data";
+import { distinctPartialPoster, installmentCommand, partialCommand, partialGet, partialList, partialRoot, type InstallmentPlan, type PartialDetail, type PartialInvoice, type PartialReceipt } from "../procurement-partial-data";
 import { partialTranslate, type PartialMessage } from "../procurement-partial-i18n";
 import { prepareScopedCommand, type PreparedScopedCommand } from "../scoped-command";
 import type { Locale } from "../types";
@@ -99,6 +99,14 @@ function PartialSession({ locale }: { locale: Locale }) {
   }
   function act(operation: string, documentId?: string) {
     if (!detail || locked || !reason.trim()) return;
+    if (operation === "receive" || operation === "review-receipt") {
+      const receipt = detail.receipts.find((item) => item.id === documentId);
+      if (!receipt || !receiptEligible(receipt)) return;
+    }
+    if (["review-accrual", "post-accrual"].includes(operation)) {
+      const invoice = detail.invoices.find((item) => item.id === documentId);
+      if (!invoice || !accrualEligible(invoice)) return;
+    }
     void send(prepareScopedCommand(`${partialRoot}/orders/${encodeURIComponent(detail.order.id)}/commands/${operation}`, { expected_version: detail.order.row_version, reason, ...(documentId ? { document_id: documentId } : {}) }));
   }
   function preparePart(operation: "prepare-receipt" | "match-invoice") {
@@ -114,11 +122,26 @@ function PartialSession({ locale }: { locale: Locale }) {
       credit_account_code: detail.order.request.cash_account_code, reason }), invoice.id);
   }
   function paymentPhase(plan: InstallmentPlan, invoiceId: string) {
-    if (locked || !reason.trim() || plan.phase === 2) return;
+    if (locked || !reason.trim() || plan.phase === 2 || !paymentEligible(plan)) return;
     void send(prepareScopedCommand(`/api/v1/financial-installments/plans/${encodeURIComponent(plan.id)}/${plan.phase === 0 ? "review" : "post"}`,
       { expected_plan_digest: plan.plan_digest, reason }), invoiceId);
   }
   const permitted = (permission: string) => Boolean(identity?.human && identity.permissions.includes(permission) && auth.stepUpExpiresAt);
+  const actorId = identity?.id ?? null;
+  function receiptEligible(item: PartialReceipt) {
+    const permissions = item.stage === "Prepared" ? ["payables.approve", "inventory.post", "inventory.valuation.approve", "finance_core.validate"] : ["payables.manage", "inventory.post", "inventory.valuation.approve", "finance_core.post"];
+    return permissions.every(permitted) && (item.stage === "Prepared" ? actorId !== item.preparer_actor_id : distinctPartialPoster(item.preparer_actor_id, item.reviewer_actor_id, actorId));
+  }
+  function accrualEligible(item: PartialInvoice) {
+    if (item.stage === "Matched") return permitted("payables.approve");
+    if (item.stage === "Approved") return permitted("payables.manage") && permitted("finance_core.manage");
+    if (item.stage === "AccrualPrepared") return permitted("payables.approve") && permitted("finance_core.validate") && actorId !== item.accrual_preparer_actor_id;
+    return permitted("payables.approve") && permitted("finance_core.post") && distinctPartialPoster(item.accrual_preparer_actor_id, item.accrual_reviewer_actor_id, actorId);
+  }
+  function paymentEligible(plan: InstallmentPlan) {
+    return permitted("payables.settle") && permitted(plan.phase === 0 ? "finance_core.validate" : "finance_core.post") &&
+      (plan.phase === 0 ? actorId !== plan.preparer_actor_id : distinctPartialPoster(plan.preparer_actor_id, plan.reviewer_actor_id, actorId));
+  }
   const input = (label: string, value: string, change: (value: string) => void, type = "text") => <label>{label}<input required type={type} maxLength={500} disabled={locked} value={value} onChange={(event) => change(event.target.value)} /></label>;
   const choose = (label: ProcurementMessage, field: string, values: ProcurementOption[]) => <label>{t(label)}<select required disabled={locked} value={draft[field]} onChange={(event) => setDraft({ ...draft, [field]: event.target.value })}><option value="">—</option>{values.map((item) => <option key={item.code} value={item.code}>{item.code} · {item.name ?? item.currency_code ?? ""}</option>)}</select></label>;
   const chart = options?.journals.find((item) => item.code === draft.journal_code)?.chart_code;
@@ -143,10 +166,10 @@ function PartialSession({ locale }: { locale: Locale }) {
           {input(t("reason"), reason, setReason)}
           {detail.order.stage !== "Approved" && <button disabled={locked || !auth.stepUpExpiresAt || !reason.trim()} onClick={() => act(detail.order.stage === "Draft" ? "submit-order" : "approve-order")}>{t(detail.order.stage === "Draft" ? "submit-order" : "approve-order")}</button>}
           {detail.order.stage === "Approved" && options && permitted("payables.manage") && <fieldset disabled={locked}><legend>{p("newPart")}</legend>{input(t("quantity"), part.quantity, (value) => setPart({ ...part, quantity: value }))}{input(t("date"), part.posting_date, (value) => setPart({ ...part, posting_date: value }), "date")}<label>{t("period")}<select value={part.period_id} onChange={(event) => setPart({ ...part, period_id: event.target.value })}><option value="">—</option>{options.periods.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><button disabled={!reason.trim()} onClick={() => preparePart("prepare-receipt")}>{p("prepareReceipt")}</button><button disabled={!reason.trim()} onClick={() => preparePart("match-invoice")}>{p("matchInvoice")}</button></fieldset>}
-          <h3>{p("receipts")}</h3><ul className="partial-document-list">{detail.receipts.map((item) => <li key={item.id}><h4>{item.number}</h4><p>{stageName(item.stage)} · {t("quantity")}: {item.quantity_text} · {t("amount")}: {item.total_minor} {detail.order.request.currency_code}</p><code>{item.receipt_plan_id}</code>{item.goods_receipt_id && <code>{item.goods_receipt_id}</code>}{item.stage !== "Posted" && <button disabled={locked || !auth.stepUpExpiresAt || !reason.trim()} onClick={() => act(item.stage === "Prepared" ? "review-receipt" : "receive", item.id)}>{t(item.stage === "Prepared" ? "review-receipt" : "receive")}</button>}</li>)}</ul>
-          <h3>{p("invoices")}</h3><ul className="partial-document-list">{detail.invoices.map((item) => <li key={item.id}><h4>{item.number}</h4><p>{stageName(item.stage)} · {t("quantity")}: {item.quantity_text} · {t("amount")}: {item.total_minor} {detail.order.request.currency_code}</p><p>{p("paid")}: {item.paid_minor} · {p("outstanding")}: {item.outstanding_minor}</p><code>{item.native_invoice_id}</code>{item.accrual_effect_id && <code>{item.accrual_effect_id}</code>}{item.stage !== "Accrued" && <button disabled={locked || !auth.stepUpExpiresAt || !reason.trim()} onClick={() => act({ Matched: "approve-invoice", Approved: "prepare-accrual", AccrualPrepared: "review-accrual", AccrualReviewed: "post-accrual", Accrued: "" }[item.stage], item.id)}>{t({ Matched: "approve-invoice", Approved: "prepare-accrual", AccrualPrepared: "review-accrual", AccrualReviewed: "post-accrual", Accrued: "" }[item.stage] as ProcurementMessage)}</button>}{item.payment_links.map((link) => <p key={link.id}><code>{link.id}</code> · {p("paid")}: {link.amount_minor} · <code>{link.finance_effect_id}</code></p>)}</li>)}</ul>
+          <h3>{p("receipts")}</h3><ul className="partial-document-list">{detail.receipts.map((item) => <li key={item.id}><h4>{item.number}</h4><p>{stageName(item.stage)} · {t("quantity")}: {item.quantity_text} · {t("amount")}: {item.total_minor} {detail.order.request.currency_code}</p><code>{item.receipt_plan_id}</code>{item.goods_receipt_id && <code>{item.goods_receipt_id}</code>}<p>{p("preparer")}: <bdi>{item.preparer_actor_id}</bdi> · {p("reviewer")}: <bdi>{item.reviewer_actor_id ?? "—"}</bdi> · {p("poster")}: <bdi>{item.posted_actor_id ?? "—"}</bdi></p>{item.stage === "Reviewed" && <p>{p("threePeople")}</p>}{item.stage !== "Posted" && <button disabled={locked || !receiptEligible(item) || !reason.trim()} onClick={() => act(item.stage === "Prepared" ? "review-receipt" : "receive", item.id)}>{t(item.stage === "Prepared" ? "review-receipt" : "receive")}</button>}</li>)}</ul>
+          <h3>{p("invoices")}</h3><ul className="partial-document-list">{detail.invoices.map((item) => <li key={item.id}><h4>{item.number}</h4><p>{stageName(item.stage)} · {t("quantity")}: {item.quantity_text} · {t("amount")}: {item.total_minor} {detail.order.request.currency_code}</p><p>{p("paid")}: {item.paid_minor} · {p("outstanding")}: {item.outstanding_minor}</p><code>{item.native_invoice_id}</code>{item.accrual_effect_id && <code>{item.accrual_effect_id}</code>}<p>{p("preparer")}: <bdi>{item.accrual_preparer_actor_id ?? "—"}</bdi> · {p("reviewer")}: <bdi>{item.accrual_reviewer_actor_id ?? "—"}</bdi> · {p("poster")}: <bdi>{item.accrual_posted_actor_id ?? "—"}</bdi></p>{item.stage === "AccrualReviewed" && <p>{p("threePeople")}</p>}{item.stage !== "Accrued" && <button disabled={locked || !accrualEligible(item) || !reason.trim()} onClick={() => act({ Matched: "approve-invoice", Approved: "prepare-accrual", AccrualPrepared: "review-accrual", AccrualReviewed: "post-accrual", Accrued: "" }[item.stage], item.id)}>{t({ Matched: "approve-invoice", Approved: "prepare-accrual", AccrualPrepared: "review-accrual", AccrualReviewed: "post-accrual", Accrued: "" }[item.stage] as ProcurementMessage)}</button>}{item.payment_links.map((link) => <p key={link.id}><code>{link.id}</code> · {p("paid")}: {link.amount_minor} · <code>{link.finance_effect_id}</code></p>)}</li>)}</ul>
           <h3>{p("payments")}</h3>
-          <ul className="partial-document-list">{detail.invoices.flatMap((invoice) => invoice.installment_plans.filter((plan) => plan.phase < 2).map((plan) => <li key={plan.id}><h4>{invoice.number}</h4><p>{p(plan.status)} · {p("amount")}: {plan.amount_minor} {plan.currency_code}</p><code>{plan.id}</code><button disabled={locked || !permitted("payables.settle") || !reason.trim()} onClick={() => paymentPhase(plan, invoice.id)}>{p(plan.phase === 0 ? "reviewPayment" : "postPayment")}</button></li>))}</ul>
+          <ul className="partial-document-list">{detail.invoices.flatMap((invoice) => invoice.installment_plans.filter((plan) => plan.phase < 2).map((plan) => <li key={plan.id}><h4>{invoice.number}</h4><p>{p(plan.status)} · {p("amount")}: {plan.amount_minor} {plan.currency_code}</p><code>{plan.id}</code><p>{p("preparer")}: <bdi>{plan.preparer_actor_id}</bdi> · {p("reviewer")}: <bdi>{plan.reviewer_actor_id ?? "—"}</bdi></p>{plan.phase === 1 && <p>{p("threePeople")}</p>}<button disabled={locked || !paymentEligible(plan) || !reason.trim()} onClick={() => paymentPhase(plan, invoice.id)}>{p(plan.phase === 0 ? "reviewPayment" : "postPayment")}</button></li>))}</ul>
           {options && permitted("payables.settle") && <form onSubmit={preparePayment} aria-label={p("preparePayment")}><fieldset disabled={locked}><legend>{p("preparePayment")}</legend><label>{t("invoice")}<select required value={paymentInvoice} onChange={(event) => setPaymentInvoice(event.target.value)}><option value="">—</option>{detail.invoices.filter((invoice) => invoice.stage === "Accrued" && invoice.outstanding_minor !== "0" && !invoice.installment_plans.some((plan) => plan.phase < 2)).map((invoice) => <option key={invoice.id} value={invoice.id}>{invoice.number} · {invoice.outstanding_minor} {detail.order.request.currency_code}</option>)}</select></label>{input(p("amount"), paymentAmount, setPaymentAmount)}{input(t("date"), part.posting_date, (value) => setPart({ ...part, posting_date: value }), "date")}<label>{t("period")}<select required value={part.period_id} onChange={(event) => setPart({ ...part, period_id: event.target.value })}><option value="">—</option>{options.periods.map((period) => <option key={period.id} value={period.id}>{period.name}</option>)}</select></label><button disabled={!reason.trim()}>{p("preparePayment")}</button></fieldset></form>}
         </section>}
       </>}

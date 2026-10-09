@@ -118,6 +118,8 @@ BEGIN
  OR e.preparer_actor_id<>maker OR e.total_debit_minor<>p.amount_minor OR e.total_credit_minor<>p.amount_minor
  OR e.currency_code<>s->>'currency_code' OR e.currency_code<>p.payload->>'currency_code'
  OR e.currency_precision<>(p.payload->>'currency_precision')::integer OR e.reverses_posting_id IS NOT NULL
+ OR (e.currency_precision,e.currency_rounding_policy,e.currency_registry_version,e.currency_registry_digest) IS DISTINCT FROM
+ (h.currency_precision,h.currency_rounding_policy,h.currency_registry_version,h.currency_registry_digest)
  OR (p.payload->>'allocated_before_minor')::numeric<0
  OR (p.payload->>'allocated_before_minor')::numeric+p.amount_minor>h.total_minor
  OR (SELECT count(*) FROM reconforge.commercial_collection_plans q WHERE q.tenant_id=t AND q.source_id=p.source_id)>200 THEN
@@ -169,8 +171,8 @@ BEGIN
  OR a.receipt_number IS DISTINCT FROM p.payload->>'receipt_number' OR a.receipt_date<>e.posting_date::date
  OR (a.workspace_id,a.organization_id,a.legal_entity_id,a.customer_id,a.currency_code) IS DISTINCT FROM
  (h.workspace_id,h.organization_id,h.legal_entity_id,h.customer_id,h.currency_code)
- OR NOT reconforge.sales_revenue_policy_matches(t,p.payload->'source_snapshot',a.currency_code,a.currency_precision,
-  a.currency_rounding_policy,a.currency_registry_version,a.currency_registry_digest)
+ OR (a.currency_precision,a.currency_rounding_policy,a.currency_registry_version,a.currency_registry_digest) IS DISTINCT FROM
+ (h.currency_precision,h.currency_rounding_policy,h.currency_registry_version,h.currency_registry_digest)
  OR (SELECT count(*) FROM reconforge.ar_receipt_allocations z WHERE z.tenant_id=t AND z.receipt_id=a.id)<>1
  OR NOT EXISTS(SELECT 1 FROM reconforge.ar_receipt_allocations z WHERE z.tenant_id=t AND z.receipt_id=a.id AND z.invoice_id=p.source_id AND z.amount_minor=p.amount_minor)
  OR h.row_version<(p.payload->>'invoice_version')::integer+1

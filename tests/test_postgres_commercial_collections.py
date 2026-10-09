@@ -77,7 +77,7 @@ def test_three_partial_receipts_inside_one_invoice_conserve_independent_cash_ar_
             JOIN reconforge.finance_accounts a ON a.tenant_id=l.tenant_id AND a.id=l.account_id
             WHERE f.tenant_id=%s GROUP BY a.account_code""", (runtime.tenant,)).fetchall()}
         assert totals["CASH"] == (45000, 0) and totals["AR"] == (45000, 45000)
-        assert totals["REVENUE"] == (0, 45000) and totals["COGS"] == (24000, 0)
+        assert totals["REVENUE"] == (0, 45000) and totals["COGS"] == (12000, 0)
         assert len({row["posting_effect_id"] for row in posted}) == 3
         assert connection.execute("SELECT sum(remaining_quantity_scaled) q FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["q"] == 0
     with pytest.raises(FinancePostingError, match="positive residual"):

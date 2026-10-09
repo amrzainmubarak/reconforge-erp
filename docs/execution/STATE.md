@@ -9,9 +9,12 @@ independent managed commercial/supply/finance worktrees.
 
 CA1 individual-invoice AR collections, LC1 prepaid landed-cost receiving and FA1
 acquisition/depreciation/disposal kernels are integrated with native posting,
-reviewed routes and ordered revisions0120–0122. Actual native gates are underway;
-these capabilities are not accepted from source presence or initial domain tests.
-The first migration syntax failure is retained, followed by a narrow repair.
+reviewed routes and ordered revisions0120–0122. Separate native milestones pass:
+CA1 seven cases, LC1 fourteen business/API cases plus three authority/COGS cases,
+FA1 ten cases. Commercial and asset HTTPS/restore milestones also pass on their
+own committed sources; LC1 browser and final integrated acceptance remain pending.
+Cross-review strengthened monetary ABAC admission before retained retries and
+current database permission/phase admission. Development failure packets remain.
 
 Benchmark instrumentation at3dabe93e passed10 genuine native cycles on revision0119
 in22.672s, retaining10 raw cycle observations,11 raw read observations and two
@@ -20,7 +23,7 @@ it does not accept new business owners or establish a performance improvement.
 Final integrated native/UI/restore/regression/security/benchmark gates and a new
 Draft PR remain pending. No production, banking or competitor superiority claim.
 
-## Active enterprise engineering program (2026-10-09; ADR0843)
+## Accepted prior enterprise engineering program (2026-10-09; ADR0843, PR127)
 
 Starts at PR126 exact `21b4b8a23a4bf9c3e5562b51392fad896f39ef7d`, retaining PR125
 and PR124, on `amr/enterprise-erp-program-20261009`. Main remains `b61ea56b`.

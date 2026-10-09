@@ -174,9 +174,19 @@ BEGIN
  END IF;
  FOR c IN SELECT * FROM reconforge.financial_installment_commands WHERE tenant_id=t AND plan_id=i LOOP
  IF (c.workspace_id,c.organization_id,c.legal_entity_id) IS DISTINCT FROM (p.workspace_id,p.organization_id,p.legal_entity_id)
- OR reconforge.irp_digest(c.request_json)<>c.request_digest OR c.request_json->>'operation'<>c.operation OR c.request_json->>'actor_id'<>c.actor_id
+ OR reconforge.irp_digest(c.request_json) IS DISTINCT FROM c.request_digest
+ OR c.request_json IS DISTINCT FROM jsonb_build_object('operation',c.operation,'actor_id',c.actor_id,'request',
+ CASE WHEN c.operation='prepare' THEN p.payload-ARRAY[
+ 'schema_version','id','entry_id','invoice_version','allocated_before_minor','currency_code','currency_precision','source_snapshot',
+ 'snapshot','preparer_actor_id','plan_digest','validation_digest'] ELSE
+ jsonb_build_object('plan_id',i,'expected_plan_digest',seal,'reason',CASE c.operation WHEN 'review' THEN r.reason ELSE l.reason END) END)
  OR (c.response_json-ARRAY['phase','status','reviewer_actor_id','posting_effect_id','payment_link_id']) IS DISTINCT FROM p.payload
- OR (c.response_json->>'phase')::integer<>(CASE c.operation WHEN 'prepare' THEN 0 WHEN 'review' THEN 1 ELSE 2 END)
+ OR c.response_json IS DISTINCT FROM p.payload||jsonb_build_object(
+ 'phase',CASE c.operation WHEN 'prepare' THEN 0 WHEN 'review' THEN 1 ELSE 2 END,
+ 'status',CASE c.operation WHEN 'prepare' THEN 'Prepared' WHEN 'review' THEN 'Reviewed' ELSE 'Posted' END,
+ 'reviewer_actor_id',CASE WHEN c.operation='prepare' THEN NULL ELSE r.reviewer_actor_id END,
+ 'posting_effect_id',CASE WHEN c.operation='post' THEN l.posting_effect_id ELSE NULL END,
+ 'payment_link_id',CASE WHEN c.operation='post' THEN l.payment_link_id ELSE NULL END)
  OR c.response_json->>'status' IS DISTINCT FROM (CASE c.operation WHEN 'prepare' THEN 'Prepared' WHEN 'review' THEN 'Reviewed' ELSE 'Posted' END)
  OR c.response_json->>'reviewer_actor_id' IS DISTINCT FROM (CASE WHEN c.operation='prepare' THEN NULL ELSE r.reviewer_actor_id END)
  OR c.response_json->>'posting_effect_id' IS DISTINCT FROM (CASE WHEN c.operation='post' THEN l.posting_effect_id ELSE NULL END)

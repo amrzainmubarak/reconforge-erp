@@ -32,9 +32,10 @@ def test_empty_multiline_schema_roundtrip_and_populated_history_refusal(receipt_
     view = create_order(runtime, "HISTORY-PRESERVED")
     with runtime.actor(MAKER) as (connection, _, _):
         before = enterprise_digest(connection, runtime.tenant)
-    with psycopg.connect(receipt_database[0]) as admin:
-        with pytest.raises(psycopg.errors.RaiseException, match="Retained multiline procurements prohibit downgrade"), admin.transaction():
-            admin.execute(DOWNGRADE_SQL)
+    with psycopg.connect(receipt_database[0]) as admin, pytest.raises(
+        psycopg.errors.RaiseException, match="Retained multiline procurements prohibit downgrade"
+    ), admin.transaction():
+        admin.execute(DOWNGRADE_SQL)
     with runtime.actor(MAKER) as (connection, _, actor):
         from reconforge.infrastructure.postgres_procurement_partial import PostgresProcurementPartialRepository
         assert enterprise_digest(connection, runtime.tenant) == before

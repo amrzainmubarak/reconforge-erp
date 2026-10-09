@@ -110,6 +110,9 @@ test("wire HTTPS retained financial capture, lost acknowledgement, complete page
       if (layout.width > layout.viewport) await info.attach(`snapshot-mobile-overflow-${arabic ? "ar" : "en"}`, { body: JSON.stringify(layout), contentType: "application/json" });
       expect(layout.width <= layout.viewport).toBe(true);
       expect((await new AxeBuilder({ page: poster }).include(".financial-reporting").analyze()).violations).toEqual([]);
+      await info.attach(`captured-statements-${arabic ? "ar-rtl" : "en"}-390px`, {
+        body: await poster.screenshot({ fullPage: true }), contentType: "image/png",
+      });
     }
     await info.attach("native-financial-snapshot-oracle", { body: JSON.stringify({ report, oracle, evidence }), contentType: "application/json" });
   } finally { await Promise.all(contexts.map(context => context.close())); }

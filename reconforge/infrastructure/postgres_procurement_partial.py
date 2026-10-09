@@ -636,6 +636,31 @@ class PostgresProcurementPartialRepository:
         self.receipt_after, self.invoice_after = receipt_after, invoice_after
         return self.get(order_id, actor=actor)
 
+    def payment_page(self, order_id: str, invoice_id: str, *, after: str = "", actor: PostingActor) -> dict[str, Any]:
+        from reconforge.infrastructure.postgres_financial_installments import PostgresFinancialInstallmentsRepository
+        if len(after) > 160:
+            raise ProcurementPartialError("procurement_partial_cursor_invalid", "A bounded payment plan keyset cursor is required.")
+        with self.connection.transaction():
+            ensure_repository_tenant_scope(self.connection, self.tenant_id)
+            row = self._order(order_id)
+            self.shared._authorize(row, actor, "read")
+            self.connection.execute("SELECT reconforge.pp_verify_order(%s,%s)", (self.tenant_id, order_id))
+            invoice = self._document(order_id, invoice_id, "invoice")
+            identifiers = self.connection.execute("""SELECT id FROM reconforge.financial_installment_plans
+                WHERE tenant_id=%s AND source_kind='APPayment' AND source_id=%s AND id>%s ORDER BY id LIMIT 26""",
+                (self.tenant_id, invoice["native_invoice_id"], after)).fetchall()
+            finance = PostgresFinancialInstallmentsRepository(self.connection, self.tenant_id)
+            keys = ("id", "workspace_id", "organization_id", "legal_entity_id", "source_id", "source_kind", "entry_id", "period_id",
+                    "posting_date", "currency_code", "currency_precision", "status", "phase", "plan_digest", "validation_digest",
+                    "preparer_actor_id", "reviewer_actor_id", "posting_effect_id", "payment_link_id", "invoice_version")
+            records = []
+            for identifier in identifiers[:25]:
+                plan = finance.get(identifier["id"], actor=actor)
+                records.append({**{key: plan[key] for key in keys}, "amount_minor": str(plan["amount_minor"]),
+                                "allocated_before_minor": str(plan["allocated_before_minor"])})
+            return {"order_id": order_id, "invoice_id": invoice_id, "native_invoice_id": invoice["native_invoice_id"],
+                    "records": records, "next_after": records[-1]["id"] if len(identifiers) > 25 else None}
+
     def order_page(self, workspace: str, *, actor: PostingActor, after: str = "", page_size: int = 25) -> dict[str, Any]:
         if type(page_size) is not int or not 1 <= page_size <= 50 or len(after) > 160:
             raise ProcurementPartialError("procurement_partial_cursor_invalid", "A bounded keyset cursor and page size are required.")

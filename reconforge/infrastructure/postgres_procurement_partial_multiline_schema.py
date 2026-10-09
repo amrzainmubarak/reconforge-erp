@@ -115,6 +115,13 @@ BEGIN
  ON u.tenant_id=stock.tenant_id AND u.id=stock.uom_id WHERE stock.tenant_id=t AND stock.id=ol.item_id
  AND stock.workspace_id=c.workspace_id AND stock.item_code=ol.item_code AND stock.uom_id=ol.uom_id
  AND u.decimal_places=ol.quantity_precision AND ol.quantity*power(10::numeric,ol.quantity_precision)=trunc(ol.quantity*power(10::numeric,ol.quantity_precision)))
+ OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_locations loc JOIN reconforge.inventory_warehouses w ON w.tenant_id=loc.tenant_id AND w.id=loc.warehouse_id
+ WHERE loc.tenant_id=t AND loc.id=ol.location_id AND w.warehouse_code||'/'||loc.location_code=ol.location_code
+ AND w.workspace_id=c.workspace_id AND w.organization_id=c.organization_id AND (w.legal_entity_id IS NULL OR w.legal_entity_id=c.legal_entity_id)
+ AND loc.location_type='Internal' AND NOT loc.allow_negative)
+ OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_valuation_policies policy WHERE policy.tenant_id=t AND policy.id=ol.policy_id
+ AND policy.policy_code=ol.policy_code AND (policy.workspace_id,policy.organization_id,policy.legal_entity_id)=(c.workspace_id,c.organization_id,c.legal_entity_id)
+ AND policy.currency_code=p.currency_code AND policy.costing_method='FIFO')
  OR ol.sequence>c.line_count THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Multiline purchase line and retained item, unit, price or native source differs.'; END IF;
  SELECT COALESCE(sum(quantity),0) INTO received FROM reconforge.procurement_partial_receipts WHERE tenant_id=t AND order_id=c.id AND order_line_id=ol.id;
@@ -153,6 +160,7 @@ BEGIN
  IF r IS NULL OR r.operation<>'Receipt' OR r.source_number<>d.number OR d.number<>'PPR-'||c.number||'-'||d.sequence
  OR d.quantity*l.unit_price_minor<>d.total_minor OR r.total_value_minor<>d.total_minor OR r.quantity_scaled<>d.quantity*power(10::numeric,r.quantity_precision)
  OR r.currency_code<>p.currency_code OR r.posting_date<>d.posting_date OR r.period_id<>d.period_id OR d.posting_date<p.order_date
+ OR (r.item_id,r.uom_id,r.location_id,r.policy_id,r.quantity_precision) IS DISTINCT FROM (ol.item_id,ol.uom_id,ol.location_id,ol.policy_id,ol.quantity_precision)
  OR (r.workspace_id,r.organization_id,r.legal_entity_id) IS DISTINCT FROM (c.workspace_id,c.organization_id,c.legal_entity_id)
  OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_items x WHERE x.tenant_id=t AND x.id=r.item_id AND x.item_code=l.item_code)
  OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_locations x JOIN reconforge.inventory_warehouses w ON w.tenant_id=x.tenant_id AND w.id=x.warehouse_id
@@ -201,12 +209,13 @@ BEGIN
  OR reconforge.procurement_actor_id(t,h.created_by)<>reconforge.pp_command(t,c.id,i.created_version,'match-invoice-lines')
  OR (SELECT count(*) FROM reconforge.ap_supplier_invoice_lines WHERE tenant_id=t AND supplier_invoice_id=h.id)<>
  (SELECT count(*) FROM reconforge.procurement_partial_invoice_lines WHERE tenant_id=t AND invoice_id=i.id)
+ OR (SELECT count(*) FROM reconforge.procurement_partial_invoice_lines WHERE tenant_id=t AND invoice_id=i.id) NOT BETWEEN 1 AND 128
  OR NOT EXISTS(SELECT 1 FROM reconforge.ap_three_way_matches x WHERE x.tenant_id=t AND x.supplier_invoice_id=h.id AND x.purchase_order_id=p.id AND x.status='Passed' AND x.price_variance_minor=0 AND x.total_variance_minor=0)
  OR NOT EXISTS(SELECT 1 FROM reconforge.procurement_partial_commands x WHERE x.tenant_id=t AND x.order_id=c.id AND x.order_version=i.created_version
  AND x.request_json->>'posting_date'=i.posting_date::text AND x.request_json->>'period_id'=i.period_id
  AND x.request_json->'lines'=(SELECT jsonb_agg(jsonb_build_object('line_id',order_line_id,'quantity',quantity_text) ORDER BY sequence)
  FROM reconforge.procurement_partial_invoice_lines WHERE tenant_id=t AND invoice_id=i.id))
- OR i.total_minor<>(SELECT sum(total_minor) FROM reconforge.procurement_partial_invoice_lines WHERE tenant_id=t AND invoice_id=i.id)
+ OR i.total_minor::numeric IS DISTINCT FROM (SELECT sum(total_minor) FROM reconforge.procurement_partial_invoice_lines WHERE tenant_id=t AND invoice_id=i.id)
  OR (i.stage<1 AND i.approved_version IS NOT NULL) OR (i.stage<2 AND (i.prepared_version IS NOT NULL OR i.accrual_plan_id IS NOT NULL))
  OR (i.stage<3 AND i.reviewed_version IS NOT NULL) OR (i.stage<4 AND (i.posted_version IS NOT NULL OR i.accrual_effect_id IS NOT NULL)) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_partial_owner_phase',MESSAGE='Partial invoice native source, match or owner stage differs.'; END IF;

@@ -168,6 +168,13 @@ def document_page(request: Request, order_id: str, user: Read, receipt_after: in
         repository.document_page(order_id, receipt_after=receipt_after, invoice_after=invoice_after, actor=actor))
 
 
+@router.get("/orders/{order_id}/invoices/{invoice_id}/payments")
+def payment_page(request: Request, order_id: str, invoice_id: str, user: Read,
+                 after: str = Query(default="", max_length=160)) -> dict[str, Any]:
+    return _execute(request, user, READ, lambda repository, actor, scope:
+        repository.payment_page(order_id, invoice_id, after=after, actor=actor))
+
+
 @router.post("/orders/{order_id}/commands/prepare-receipt-line")
 def prepare_receipt_line(request: Request, order_id: str, payload: LineReceiptRequest,
                          user: LocalUser = Depends(required(READ | PERMISSIONS["prepare-receipt"]))) -> dict[str, Any]:

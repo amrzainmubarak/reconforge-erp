@@ -38,12 +38,12 @@ def verify_stock_commerce_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
         headers = connection.execute("SELECT id FROM reconforge.stock_commerce_orders WHERE tenant_id=%s", (runtime.tenant,)).fetchall()
         require(len(headers) == 1, "Browser commercial order was lost or duplicated.")
         result = owner.get(headers[0]["id"], actor=actor)
-        require(result["number"] == "BROWSER-COMMERCE" and result["row_version"] == 47 and result["total_minor"] == "69000", "Commercial source or command conservation differs.")
+        require(result["number"] == "BROWSER-COMMERCE" and result["row_version"] == 50 and result["total_minor"] == "69000", "Commercial source or command conservation differs.")
         require([line["delivered_quantity_scaled"] for line in result["lines"]] == ["10", "8"], "Actual warehouse deliveries differ from expected quantities.")
         require([line["collected_minor"] for line in result["lines"]] == ["45000", "24000"], "Actual partial commercial collection differs from frozen prices.")
         tranches = [tranche for line in result["lines"] for tranche in line["tranches"]]
-        require(len(tranches) == 4 and all(tranche["status"] == "Paid" for tranche in tranches), "Four separately reviewed delivery/invoice/cash cycles must finish.")
-        for tranche in tranches:
+        require(len(tranches) == 5 and sum(tranche["status"] == "Paid" for tranche in tranches) == 4 and sum(tranche["status"] == "Cancelled" for tranche in tranches) == 1, "Four reviewed delivery/invoice/cash cycles and one released cancellation must finish.")
+        for tranche in (row for row in tranches if row["status"] == "Paid"):
             for kind in ("issue", "invoice", "collection"):
                 require(tranche[kind + "_preparer_id"] == "erp-maker" and tranche[kind + "_reviewer_id"] == "erp-checker", "Browser source review provenance changed.")
         residual = connection.execute("SELECT sum(remaining_quantity_scaled) q,sum(remaining_value_minor) v FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()
@@ -56,5 +56,5 @@ def verify_stock_commerce_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
             JOIN reconforge.finance_accounts a ON a.tenant_id=l.tenant_id AND a.id=l.account_id WHERE l.tenant_id=%s GROUP BY a.account_code""", (runtime.tenant,)).fetchall()
         balances = {row["account_code"]: row["n"] for row in totals}
         require(balances["CASH"] == 69000 and balances["AR"] == 0 and balances["INVENTORY"] == 0 and balances["REVENUE"] == -69000 and balances["COGS"] == 28000, "Native account balances disagree with independent product cost and price arithmetic.")
-        return {"commercial_order_id": result["id"], "parent_version": 47, "lines": 2, "warehouses": 2, "delivery_invoice_collection_tranches": 4, "posting_effects": 14,
+        return {"commercial_order_id": result["id"], "parent_version": 50, "lines": 2, "warehouses": 2, "delivery_invoice_collection_tranches": 4, "cancelled_undelivered_tranches": 1, "posting_effects": 14,
                 "revenue_minor": "69000", "cash_minor": "69000", "cogs_minor": "28000", "fifo_residual_quantity": "0", "fifo_residual_minor": "0", "gl_turnover_minor": "194000"}

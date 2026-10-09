@@ -74,6 +74,12 @@ test("wire Studio conserves two products and warehouses across four partial cycl
     await expect((await inspect(maker)).getByRole("button", { name: "Approve commercial terms", exact: true })).toBeDisabled();
     await command(checker, "Approve commercial terms", "approve");
 
+    await command(maker, "Create partial delivery tranche", "open-tranche", undefined, { Quantity: "10" }, { Line: "1" });
+    const reservation = await inspect(maker);
+    const cancelledId = (await reservation.getByRole("combobox", { name: "Delivery tranche", exact: true }).locator("option").last().getAttribute("value"))!;
+    await command(checker, "Approve and reserve tranche", "approve-tranche", cancelledId);
+    await command(maker, "Cancel undelivered tranche and release reservation", "cancel", cancelledId);
+
     for (const [index, line, quantity] of [[1, "1", "3"], [2, "2", "5"], [3, "1", "7"], [4, "2", "3"]] as const) {
       await command(maker, "Create partial delivery tranche", "open-tranche", undefined, { Quantity: quantity }, { Line: line });
       const view = await inspect(maker);
@@ -110,9 +116,11 @@ test("wire Studio conserves two products and warehouses across four partial cycl
     await expect(rows.nth(0)).toContainText("45000"); await expect(rows.nth(1)).toContainText("24000");
     await poster.setViewportSize({ width: 390, height: 844 });
     expect((await new AxeBuilder({ page: poster }).include(".stock-commerce").analyze()).violations).toEqual([]);
+    await panel(poster).screenshot({ path: test.info().outputPath("commerce-en-mobile.png") });
     await poster.getByTestId("locale-toggle").click();
     await expect(panel(poster).getByRole("heading", { name: "أوامر المبيعات التجارية", exact: true })).toBeVisible();
     expect(await panel(poster).getAttribute("dir")).toBe("rtl");
     expect((await new AxeBuilder({ page: poster }).include(".stock-commerce").analyze()).violations).toEqual([]);
+    await panel(poster).screenshot({ path: test.info().outputPath("commerce-ar-mobile.png") });
   } finally { for (const context of contexts) await context.close(); }
 });

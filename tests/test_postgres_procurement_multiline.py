@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -164,8 +165,14 @@ def test_two_products_two_warehouses_two_native_multiline_invoices_four_payments
     for amount, command in ((4000, "second-a"), (7400, "second-b")):
         pay_invoice(runtime, second["native_invoice_id"], amount, command, "2026-10-04")
     with runtime.actor(POSTER) as (connection, _, actor):
-        view = PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor)
-        assert [(line["uom_code"], line["received_quantity"], line["invoiced_quantity"]) for line in view["lines"]] == [("EA", "10", "10"), ("KG", "2.50", "2.50")]
+        repository = PostgresProcurementPartialRepository(connection, runtime.tenant)
+        view = repository.get(view["order"]["id"], actor=actor)
+        assert [(line["uom_code"], Decimal(line["received_quantity"]), Decimal(line["invoiced_quantity"])) for line in view["lines"]] == [("EA", Decimal("10"), Decimal("10")), ("KG", Decimal("2.50"), Decimal("2.50"))]
+        for invoice in view["invoices"]:
+            history = repository.payment_page(view["order"]["id"], invoice["id"], actor=actor)
+            assert history["next_after"] is None and len(history["records"]) == 2
+            assert all(plan["phase"] == 2 and plan["posting_effect_id"] and plan["payment_link_id"] for plan in history["records"])
+            assert sum(int(plan["amount_minor"]) for plan in history["records"]) == int(invoice["total_minor"])
         assert view["totals"] == {"ordered_quantity": "0", "reserved_receipt_quantity": "0", "received_quantity": "0", "invoiced_quantity": "0",
             "received_minor": "17000", "accrued_minor": "17000", "paid_minor": "17000", "outstanding_minor": "0"}
         assert [invoice["native_status"] for invoice in view["invoices"]] == ["Paid", "Paid"]

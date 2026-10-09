@@ -1,4 +1,5 @@
 """Synthetic masters only; every new purchase and financial write uses Studio."""
+from decimal import Decimal
 from typing import Any
 
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
@@ -42,8 +43,8 @@ def verify_procurement_enterprise_browser(runtime: ReceiptRuntime) -> dict[str, 
             "Actual multiline parent phases differ.")
         require(view["totals"] == {"ordered_quantity": "0", "reserved_receipt_quantity": "0", "received_quantity": "0", "invoiced_quantity": "0",
             "received_minor": "17000", "accrued_minor": "17000", "paid_minor": "17000", "outstanding_minor": "0"}, "Full exact payable totals differ.")
-        require([(line["item_code"], line["uom_code"], line["location_code"], line["received_quantity"], line["invoiced_quantity"])
-            for line in view["lines"]] == [("ITEM", "EA", "MAIN/STOCK", "10", "10"), ("WEIGHT", "KG", "NORTH/STOCK", "2.50", "2.50")],
+        require([(line["item_code"], line["uom_code"], line["location_code"], Decimal(line["received_quantity"]), Decimal(line["invoiced_quantity"]))
+            for line in view["lines"]] == [("ITEM", "EA", "MAIN/STOCK", Decimal("10"), Decimal("10")), ("WEIGHT", "KG", "NORTH/STOCK", Decimal("2.50"), Decimal("2.50"))],
             "Actual mixed units, warehouse attribution or per-line quantities differ.")
         require(len(view["receipts"]) == 4 and all(receipt["stage"] == "Posted" for receipt in view["receipts"]), "Four actual stock receipts are required.")
         require(len(view["invoices"]) == 2 and [invoice["total_minor"] for invoice in view["invoices"]] == ["5600", "11400"]

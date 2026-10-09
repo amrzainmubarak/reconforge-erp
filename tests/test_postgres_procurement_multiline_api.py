@@ -55,7 +55,7 @@ def test_authenticated_multiline_receiving_invoice_partial_payment_and_scoped_pa
         for path in ("/orders/page", "/orders/" + view["order"]["id"] + "/documents", "/catalog/items?search=WEIGHT",
                      "/orders/" + view["order"]["id"] + "/invoices/" + invoice["id"] + "/payments"):
             read = maker[0].get(ROOT + path, headers=maker[1])
-            assert read.status_code == 200, read.text
+            assert read.status_code == 200, (path, read.text)
             if path.endswith("/payments"):
                 assert len(read.json()["records"]) == 2 and {record["amount_minor"] for record in read.json()["records"]} == {"2000", "3600"}
             if path.endswith("/documents"):
@@ -84,8 +84,11 @@ def test_multiline_http_receiving_late_failure_has_no_partial_source_or_effect(
         raise RuntimeError("Injected real source and financial acknowledgement failure")
     with partial_client(runtime, receipt_database, tmp_path, POSTER) as client:
         monkeypatch.setattr(PostgresProcurementPartialRepository, "_remember", fail_after_ack)
-        with pytest.raises(RuntimeError, match="real source and financial"):
-            owner_action(client, view, "receive", view["receipts"][0]["id"])
+        failed = client[0].post(ROOT + "/orders/" + view["order"]["id"] + "/commands/receive", headers=client[1],
+            json={"command_id": "api-" + str(view["order"]["row_version"]), "expected_version": view["order"]["row_version"],
+                "document_id": view["receipts"][0]["id"], "reason": "Actual exact source and independent approval"})
+        assert failed.status_code == 503 and failed.json()["error"]["code"] == "finance_core_unavailable", failed.text
+        assert "Injected" not in failed.text and "acknowledgement" not in failed.text
         monkeypatch.setattr(PostgresProcurementPartialRepository, "_remember", original)
         with runtime.actor(MAKER) as (connection, _, _):
             assert enterprise_digest(connection, runtime.tenant) == before

@@ -650,7 +650,7 @@ class PostgresProcurementPartialRepository:
             self.connection.execute("SELECT reconforge.pp_verify_order(%s,%s)", (self.tenant_id, order_id))
             invoice = self._document(order_id, invoice_id, "invoice")
             identifiers = self.connection.execute("""SELECT id FROM reconforge.financial_installment_plans
-                WHERE tenant_id=%s AND source_kind='APPayment' AND source_id=%s AND id>%s ORDER BY id LIMIT 26""",
+                WHERE tenant_id=%s AND payload->>'source_kind'='APPayment' AND source_id=%s AND id>%s ORDER BY id LIMIT 26""",
                 (self.tenant_id, invoice["native_invoice_id"], after)).fetchall()
             finance = PostgresFinancialInstallmentsRepository(self.connection, self.tenant_id)
             keys = ("id", "workspace_id", "organization_id", "legal_entity_id", "source_id", "source_kind", "entry_id", "period_id",

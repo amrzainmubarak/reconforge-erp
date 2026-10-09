@@ -18,6 +18,7 @@ const EnterpriseFinanceWorkspace = lazy(() => import("./components/EnterpriseFin
 const StockSalesPage = lazy(() => import("./components/StockSalesPage").then((module) => ({ default: module.StockSalesPage })));
 const ProcurementPartialPage = lazy(() => import("./components/ProcurementPartialPage").then((module) => ({ default: module.ProcurementPartialPage })));
 const FinancialReportingPage = lazy(() => import("./components/FinancialReportingPage"));
+const FixedAssetsPage = lazy(() => import("./components/FixedAssetsPage"));
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
 const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((module) => ({ default: module.EvidenceBinder })));
@@ -60,6 +61,7 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/stock-sales")) return "stockSales";
   if (normalized.endsWith("/procurement-partial")) return "procurementPartial";
   if (normalized.endsWith("/financial-reporting")) return "financialReporting";
+  if (normalized.endsWith("/fixed-assets")) return "fixedAssets";
   if (normalized.endsWith("/procurement-operations")) return "procurementOperations";
   if (normalized.endsWith("/enterprise-finance") || normalized.endsWith("/erp")) return "enterpriseFinance";
   return "dashboard";
@@ -81,6 +83,7 @@ function pathForPage(page: StudioPage): string {
     stockSales: "stock-sales",
     procurementPartial: "procurement-partial",
     financialReporting: "financial-reporting",
+    fixedAssets: "fixed-assets",
     procurementOperations: "procurement-operations",
     enterpriseFinance: "enterprise-finance",
   };
@@ -215,6 +218,7 @@ function StudioApp() {
         {activePage === "stockSales" ? <Suspense fallback={<LoadingView translate={t} />}><StockSalesPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "procurementPartial" ? <Suspense fallback={<LoadingView translate={t} />}><ProcurementPartialPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "financialReporting" ? <Suspense fallback={<LoadingView translate={t} />}><FinancialReportingPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "fixedAssets" ? <Suspense fallback={<LoadingView translate={t} />}><FixedAssetsPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}
         {activePage === "dashboard" && data ? (

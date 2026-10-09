@@ -260,8 +260,8 @@ for _path, _permission in {"": "finance_core.manage", "/{plan_id}/review": "fina
     _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/financial-installments/plans" + _path)] = _erp_contract(frozenset({"payables.settle"}), _permission)
 
 for _path, _permissions in {
-    "": ("finance_core.manage", "sales.manage"),
-    "/{plan_id}/review": ("finance_core.validate", "sales.approve"),
+    "": ("finance_core.manage", "sales.manage", "receivables.manage"),
+    "/{plan_id}/review": ("finance_core.validate", "sales.approve", "receivables.manage"),
     "/{plan_id}/post": ("finance_core.post", "sales.manage", "receivables.manage"),
 }.items():
     _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/commercial-collections/plans" + _path)] = _erp_contract(

@@ -372,7 +372,8 @@ BEGIN
    AND reconforge.sales_revenue_policy_matches(t,d.source->'monetary_policy',v.currency_code,v.currency_precision,
     v.currency_rounding_policy,v.currency_registry_version,v.currency_registry_digest))
   OR NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects f WHERE f.tenant_id=t AND f.id=d.cogs_effect_id AND f.entry_id=d.cogs_entry_id
-   AND f.posted_actor_id<>entry.preparer_actor_id AND f.validation_digest=entry.validation_digest)
+   AND f.posted_actor_id<>entry.preparer_actor_id AND f.posted_actor_id<>entry.validator_actor_id
+   AND f.validation_digest=entry.validation_digest)
   OR(SELECT count(*) FROM reconforge.inventory_movement_lines WHERE tenant_id=t AND movement_id=d.movement_id)<>1
   OR(SELECT count(*) FROM reconforge.inventory_valuation_lines WHERE tenant_id=t AND valuation_document_id=d.valuation_id)<>1 THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Delivery requires complete native stock, FIFO and posted COGS.';

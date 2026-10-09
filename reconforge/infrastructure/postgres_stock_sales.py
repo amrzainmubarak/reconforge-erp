@@ -226,6 +226,8 @@ class PostgresStockSalesRepository:
         return {"issue_plan": plan, "cogs_entry_id": entry["id"]}
 
     def _deliver(self, row: Mapping[str, Any], actor: PostingActor, command: str, reason: str) -> dict[str, Any]:
+        if actor.user_id in {row["issue_plan"]["preparer_actor_id"], row["issue_reviewer_id"]}:
+            raise FinancePostingError("stock_sales_sod_denied", "Stock delivery posting requires a third human distinct from its preparer and reviewer.")
         self._stock_lock(row)
         self._fifo_lock(row)
         plan = row["issue_plan"]

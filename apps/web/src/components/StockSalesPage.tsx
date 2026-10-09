@@ -105,7 +105,8 @@ function StockSalesSession({ locale }: { locale: Locale }) {
   const journals = options?.journals.filter((row) => !detail || row.currency_code === detail.currency_code).map((row) => ({ value: row.journal_code, label: `${row.name} · ${row.journal_code}` })) || [];
   const accounts = (kind: "Asset" | "Income") => options?.accounts.filter((row) => row.account_type === kind).filter((row, index, all) => all.findIndex((value) => value.account_code === row.account_code) === index).map((row) => ({ value: row.account_code, label: `${row.name} · ${row.account_code}` })) || [];
   const action = detail && nextAction[detail.status];
-  const actionAllowed = action && can(...action.permissions) && !(detail?.status === "Submitted" && detail.created_by === identity?.id) && !(detail?.status === "IssuePrepared" && detail.issue_preparer_id === identity?.id);
+  const deliveryNeedsAnotherHuman = detail?.status === "IssueReviewed" && [detail.issue_preparer_id, detail.issue_reviewer_id].includes(identity?.id || "");
+  const actionAllowed = action && can(...action.permissions) && !(detail?.status === "Submitted" && detail.created_by === identity?.id) && !(detail?.status === "IssuePrepared" && detail.issue_preparer_id === identity?.id) && !deliveryNeedsAnotherHuman;
   function perform(event: FormEvent) {
     event.preventDefault(); if (!action || !detail || !actionAllowed) return;
     transition(action.path, detail.status === "Reserved" ? issue : detail.status === "Delivered" ? invoice : detail.status === "Invoiced" ? collection : {});
@@ -138,6 +139,7 @@ function StockSalesSession({ locale }: { locale: Locale }) {
               <button disabled={!actionAllowed}>{t(action.label)}</button>
             </form>}
             {detail.status === "IssuePrepared" && <p>{t("cancelReview")}</p>}
+            {deliveryNeedsAnotherHuman && <p>{t("thirdHuman")}</p>}
             {["Draft", "Submitted", "Approved", "Reserved", "IssueReviewed"].includes(detail.status) && <button disabled={!can("sales.manage", "finance_core.manage") || !reason.trim()} onClick={() => transition("cancel")}>{t("cancel")}</button>}
             <details><summary>{t("evidence")}</summary><ul>{[detail.movement_id, detail.valuation_id, detail.cogs_entry_id, detail.cogs_effect_id, detail.invoice_id, detail.invoice_plan_id, detail.collection_plan_id, detail.receipt_id].filter(Boolean).map((id) => <li key={id}><code>{id}</code></li>)}</ul></details><h3>{t("events")}</h3><ol>{detail.events.map((event) => <li key={event.version}>{event.reason} · {event.actor_id}<p><code>{event.audit_event_id}</code></p></li>)}</ol>
           </section>}

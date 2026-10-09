@@ -124,6 +124,41 @@ def test_independent_review_and_native_detached_cogs_rollback(stock_runtime: Rec
     assert execute(runtime, result, "deliver", "poster")["status"] == "Delivered"
 
 
+def test_cogs_reviewer_cannot_post_delivery_and_third_human_can(stock_runtime: ReceiptRuntime) -> None:
+    from psycopg import sql
+
+    runtime = stock_runtime
+    result = execute(runtime, create_reserved_order(runtime, "THREE-HUMAN", "5"), "prepare-issue", "maker", {
+        "posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
+    result = execute(runtime, result, "review-issue", "checker")
+
+    def retained_rows() -> dict[str, str]:
+        with runtime.actor("maker") as (connection, _, _actor):
+            return {table: connection.execute(sql.SQL(
+                "SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text),'[]'::jsonb)::text AS rows "
+                "FROM reconforge.{} r WHERE tenant_id=%s").format(sql.Identifier(table)),
+                (runtime.tenant,)).fetchone()["rows"] for table in (
+                    "stock_sales_orders", "stock_sales_reservations", "stock_sales_issue_claims",
+                    "stock_sales_commands", "stock_sales_events", "inventory_movements",
+                    "inventory_movement_lines", "inventory_cost_layers", "inventory_layer_consumptions",
+                    "inventory_valuation_documents", "inventory_valuation_lines", "finance_entries",
+                    "finance_entry_lines", "finance_posting_effects", "domain_audit_events", "outbox_events")}
+
+    before = retained_rows()
+    with pytest.raises(FinancePostingError) as refused:
+        execute(runtime, result, "deliver", "checker")
+    assert refused.value.code == "stock_sales_sod_denied"
+    assert retained_rows() == before
+    with runtime.actor("maker") as (connection, _, actor):
+        assert repository(connection, runtime).get(result["id"], actor=actor) == result
+    delivered = execute(runtime, result, "deliver", "poster")
+    assert delivered["status"] == "Delivered"
+    with runtime.actor("poster") as (connection, _, _actor):
+        effect = connection.execute("SELECT posted_actor_id FROM reconforge.finance_posting_effects WHERE tenant_id=%s AND id=%s",
+                                    (runtime.tenant, delivered["cogs_effect_id"])).fetchone()
+        assert effect["posted_actor_id"] == "poster"
+
+
 def test_six_concurrent_reservations_cannot_overcommit_ten_units(stock_runtime: ReceiptRuntime) -> None:
     runtime = stock_runtime
     def reserve(index: int) -> bool:

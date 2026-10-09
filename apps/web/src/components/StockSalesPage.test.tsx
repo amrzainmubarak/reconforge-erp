@@ -42,6 +42,33 @@ it("locks a lost reservation packet, retries unchanged and retains immediately t
   expect(JSON.parse(writes[0])).toMatchObject({ expected_version: 3, reason: "Reserve exact customer goods" });
 });
 
+it("refuses COGS delivery for its reviewer even with all delivery permissions", async () => {
+  const reserved = document(true);
+  const reviewed = { ...reserved, status: "IssueReviewed", row_version: 6, issue_preparer_id: "maker", issue_reviewer_id: "checker", cogs_minor: "6000", events: [...reserved.events,
+    { version: 5, actor_id: "maker", operation: "prepare-issue", reason: "Frozen FIFO cost", status: "IssuePrepared", audit_event_id: "AUD-4" },
+    { version: 6, actor_id: "checker", operation: "review-issue", reason: "Independent FIFO review", status: "IssueReviewed", audit_event_id: "AUD-5" }] };
+  const reviewer = { ...identity, id: "checker", permissions: [...identity.permissions, "inventory.post", "inventory.valuation.approve", "finance_core.post"] };
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (path: RequestInfo | URL, request?: RequestInit) => {
+    if (String(path).endsWith("/auth/me")) return response(reviewer);
+    if (request?.method === "POST") { writes.push(String(request.body)); return response(reviewed); }
+    if (String(path).endsWith("/options")) return response(options);
+    if (String(path).endsWith("/orders")) return response({ orders: [reviewed] });
+    return response(reviewed);
+  }));
+  render(<BrowserSessionProvider><Begin /><StockSalesPage locale="en" /></BrowserSessionProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Begin fixture" }));
+  await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("work"));
+  fireEvent.click(screen.getByRole("button", { name: "Load selected scope" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Open PRODUCT-1" }));
+  await screen.findByRole("heading", { name: "PRODUCT-1 · FIFO reviewed" });
+  fireEvent.change(screen.getByLabelText("Decision reason"), { target: { value: "Review completed by this human" } });
+  expect(screen.getByRole("button", { name: "Deliver and post COGS" })).toBeDisabled();
+  expect(screen.getByText(/requires a third human distinct/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Deliver and post COGS" }));
+  expect(writes).toHaveLength(0);
+});
+
 it("exposes Arabic RTL and native profile boundaries before authentication", () => {
   render(<BrowserSessionProvider><StockSalesPage locale="ar" /></BrowserSessionProvider>);
   expect(screen.getByRole("main")).toHaveAttribute("dir", "rtl");

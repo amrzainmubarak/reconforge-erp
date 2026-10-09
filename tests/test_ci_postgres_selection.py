@@ -30,10 +30,30 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
     inventory = yaml.safe_load((ROOT / "docs/execution/POSTGRES_PARITY_INVENTORY.yaml").read_text(encoding="utf-8"))
     expected_parity = {
         path for row in inventory["boundaries"]
+        if row.get("ci_shard", "parity") == "parity"
         for path in [row.get("test"), *row.get("additional_tests", [])] if path
     } - {JOBS_MODULE}
     assert set(parity_modules) == expected_parity
     assert "tests/test_postgres_payables_payment_link_reversal.py" in parity_modules
+    delegated = {
+        path: row["ci_shard"] for row in inventory["boundaries"] if "ci_shard" in row
+        for path in [row.get("test"), *row.get("additional_tests", [])] if path
+    }
+    assert delegated == {
+        "tests/test_postgres_stock_sales.py": "erp-expansion",
+        "tests/test_postgres_stock_sales_api.py": "erp-expansion",
+        "tests/test_postgres_procurement_partial.py": "erp-expansion",
+        "tests/test_postgres_procurement_partial_api.py": "erp-expansion",
+        "tests/test_postgres_financial_installments.py": "finance-reporting",
+        "tests/test_postgres_financial_reporting.py": "finance-reporting",
+        "tests/test_postgres_financial_reporting_api.py": "finance-reporting",
+    }
+    # Delegation must name a required native branch and retain complete modules.
+    for path, owner in delegated.items():
+        branch = run.split(f"{owner})\n", 1)[1].split(";;", 1)[0]
+        commands = [shlex.split(line) for line in branch.splitlines() if "pytest " in line]
+        assert sum(path in command for command in commands) == 1
+        assert all("-k" not in command and "--deselect" not in command for command in commands)
 
     command = shlex.split(next(line for line in lines if 'pytest "${parity_tests[@]}"' in line))
     arguments = command[command.index("pytest") + 1:]

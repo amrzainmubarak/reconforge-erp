@@ -57,7 +57,12 @@ jobs:
         run: uv run --no-sync mypy reconforge
 
       - name: Pytest
-        run: uv run --no-sync pytest
+        # These fixture-only modules have no optional skip. Their complete
+        # execution is mandatory in the configured erp-expansion shard below.
+        run: >-
+          uv run --no-sync pytest
+          --ignore=tests/test_postgres_stock_sales.py
+          --ignore=tests/test_postgres_stock_sales_api.py
 
       - name: CLI smoke
         run: |
@@ -478,7 +483,7 @@ jobs:
             'user=postgres' \
             'password=postgres' > "$PGSERVICEFILE"
           chmod 600 "$PGSERVICEFILE"
-          mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(path for item in document['boundaries'] for path in [item.get('test'), *item.get('additional_tests', [])] if path and path != 'tests/test_postgres_durable_jobs.py'), sep='\\n')")
+          mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(path for item in document['boundaries'] if item.get('ci_shard', 'parity') == 'parity' for path in [item.get('test'), *item.get('additional_tests', [])] if path and path != 'tests/test_postgres_durable_jobs.py'), sep='\\n')")
           case "$RECONFORGE_SERVER_BOUNDARY_SHARD" in
             writeback) ;; # Dedicated evidence runners above own this shard.
             native)

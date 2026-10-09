@@ -1,10 +1,10 @@
 schema_version: 1
-updated_at: "2026-10-04"
+updated_at: "2026-10-09"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0111_pg_procurement_operations"
+current_source_migration_head: "0115_pg_financial_installments"
 production_foundation_review:
   executed_at: "2026-10-03"
   evidence: "PRODUCTION_AUDIT_2026-10-03.md"
@@ -345,10 +345,14 @@ boundaries:
   - {file: operational_finance.py, service: OperationalFinanceService, status: live_test_available, adapter: reconforge.infrastructure.postgres_operational_finance.PostgresOperationalFinanceRepository, test: tests/test_postgres_operational_finance.py, risk: reviewed_exact_scoped_operational_financial_effects}
   - {file: sales_revenue.py, service: SalesRevenueApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_sales_revenue.PostgresSalesRevenueRepository, test: tests/test_postgres_sales_revenue.py, risk: reviewed_exact_scoped_operational_financial_effects}
   - {file: procurement_operations.py, service: ProcurementApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_procurement_operations.PostgresProcurementOperationsRepository, test: tests/test_postgres_procurement_operations.py, risk: reviewed_exact_scoped_operational_financial_effects}
+  - {file: financial_installments.py, service: FinancialInstallmentsApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_financial_installments.PostgresFinancialInstallmentsRepository, test: tests/test_postgres_financial_installments.py, ci_shard: finance-reporting, risk: reviewed_exact_partial_ap_settlement_no_external_bank_execution}
+  - {file: financial_reporting.py, service: FinancialReportingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_financial_reporting.PostgresFinancialReportingRepository, test: tests/test_postgres_financial_reporting.py, additional_tests: [tests/test_postgres_financial_reporting_api.py], ci_shard: finance-reporting, risk: first_history_opening_classified_bounded_statements_no_statutory_cashflow}
+  - {file: stock_sales.py, service: StockSalesApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_stock_sales.PostgresStockSalesRepository, test: tests/test_postgres_stock_sales.py, additional_tests: [tests/test_postgres_stock_sales_api.py], ci_shard: erp-expansion, risk: untracked_single_line_functional_currency_full_stock_to_cash}
+  - {file: procurement_partial.py, service: ProcurementPartialApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_procurement_partial.PostgresProcurementPartialRepository, test: tests/test_postgres_procurement_partial.py, additional_tests: [tests/test_postgres_procurement_partial_api.py], ci_shard: erp-expansion, risk: untracked_single_line_zero_tax_partial_receipts_invoices_and_payments}
 summary:
-  total: 55
+  total: 59
   live_verified_current: 20
-  live_test_available: 31
+  live_test_available: 35
   absent: 0
   contract_only: 1
   not_applicable: 3

@@ -102,8 +102,8 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
         matches = [step for step in job["steps"] if script in step.get("run", "")]
         assert len(matches) == 1
         assert matches[0]["if"] == f"matrix.shard == '{owner}'"
-    # The producer and unrestricted general selection remain intact; the existing
-    # collection contract executes this producer and checks every inventory module.
+    # The collection contract executes the producer and proves every inventory
+    # module remains in parity or exactly one required expansion shard.
     assert "mapfile -t parity_tests" in run
     assert len(groups["parity"]) == 1
     assert 'pytest "${parity_tests[@]}"' in groups["parity"][0]
@@ -130,6 +130,24 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
                     for command in entries if filename in shlex.split(command)]
         assert selected == [owner], f"The owner regression requires one mandatory shard: {filename}"
     assert "verify_redis_live.py" in "\n".join(groups["native"])
+
+
+def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> None:
+    workflow = _workflow()
+    unit = next(step for step in workflow["jobs"]["test"]["steps"] if step["name"] == "Pytest")
+    assert "if" not in unit and "continue-on-error" not in unit
+    ignored = {
+        "tests/test_postgres_stock_sales.py", "tests/test_postgres_stock_sales_api.py",
+    }
+    assert shlex.split(unit["run"]) == [
+        "uv", "run", "--no-sync", "pytest", *[f"--ignore={path}" for path in sorted(ignored)],
+    ]
+    native = next(step for step in workflow["jobs"]["server-boundaries"]["steps"]
+                  if step["name"] == "Run live server-boundary tests")
+    groups = _partition(native["run"])
+    for path in ignored:
+        assert [owner for owner, commands in groups.items()
+                for command in commands if path in shlex.split(command)] == ["erp-expansion"]
 
 
 def test_native_services_and_unconditional_report_retention_survive_partition() -> None:

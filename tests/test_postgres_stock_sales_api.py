@@ -6,7 +6,6 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
-from reconforge.api.routes.stock_sales import router
 from reconforge.domain.stock_sales import StockOrder
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receipt_database
 from tests.test_postgres_sales_owner_closure import authenticated_headers
@@ -21,8 +20,7 @@ def test_https_origin_stock_api_completes_native_issue_invoice_and_cash(
     runtime = stock_runtime
     app = create_api_app(tmp_path / "unused.db", tenant_db_root=tmp_path / "tenants", postgres_dsn=receipt_database[1],
                          postgres_require_tls=False, secure_transport=True, policy_cache_enabled=True)
-    if not any(getattr(route, "path", "") == "/api/v1/stock-sales/orders" for route in app.routes):
-        app.include_router(router, prefix="/api/v1")
+    assert any(getattr(route, "path", "") == "/api/v1/stock-sales/orders" for route in app.routes)
     with TestClient(app, base_url="https://testserver") as client:
         headers_by_actor = {name: authenticated_headers(client, runtime, name) for name in ("maker", "checker", "poster")}
         headers = headers_by_actor["maker"]

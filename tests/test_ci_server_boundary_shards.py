@@ -13,7 +13,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 SHARDS = {
     "writeback", "native", "parity", "durable-scale", "matching-runtime",
-    "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion",
+    "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
 }
 PROOF_OWNERS = {
     "verify_postgres_writeback_identity_migration_matrix.py": "writeback",
@@ -94,7 +94,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 37  # Preserve prior36 and add one mandatory bounded ERP expansion gate.
+    assert len(commands) == 38  # Preserve prior36; two bounded ERP expansion gates own every new native module.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -117,9 +117,9 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     for filename, owner in (
         ("tests/test_postgres_sales_owner_closure.py", "inventory-payables"),
         ("tests/test_postgres_operational_finance_api.py", "finance-posting"),
-        ("tests/test_postgres_financial_installments.py", "erp-expansion"),
-        ("tests/test_postgres_financial_reporting.py", "erp-expansion"),
-        ("tests/test_postgres_financial_reporting_api.py", "erp-expansion"),
+        ("tests/test_postgres_financial_installments.py", "finance-reporting"),
+        ("tests/test_postgres_financial_reporting.py", "finance-reporting"),
+        ("tests/test_postgres_financial_reporting_api.py", "finance-reporting"),
         ("tests/test_postgres_stock_sales.py", "erp-expansion"),
         ("tests/test_postgres_stock_sales_api.py", "erp-expansion"),
         ("tests/test_postgres_procurement_partial.py", "erp-expansion"),

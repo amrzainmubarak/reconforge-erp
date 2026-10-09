@@ -282,6 +282,7 @@ jobs:
           - finance-posting
           - inventory-payables
           - erp-expansion
+          - finance-reporting
     services:
       postgres:
         image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
@@ -539,7 +540,10 @@ jobs:
               uv run --no-sync pytest tests/test_api_server_inventory_valuation.py -q
               ;;
             erp-expansion)
-              uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
+              uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
+              ;;
+            finance-reporting)
+              uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q
               ;;
             *) echo "Unknown server-boundary shard" >&2; exit 2 ;;
           esac

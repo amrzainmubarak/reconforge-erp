@@ -159,6 +159,7 @@ test("normal wire HTTPS opening, two stock/AP tranches, four installments and FI
       await part.getByRole("button", { name: "Prepare partial receipt", exact: true }).click();
       expect((await prepared).status()).toBe(200);
       await partialAction(checker, "Review receiving", "review-receipt");
+      await expect(checker.getByRole("button", { name: "Post stock receiving and GL", exact: true })).toBeDisabled();
       await partialAction(poster, "Post stock receiving and GL", "receive");
       region = await inspectPartial(maker);
       await region.getByLabel("Review or posting reason", { exact: true }).fill("Match actual received tranche " + quantity);
@@ -171,6 +172,7 @@ test("normal wire HTTPS opening, two stock/AP tranches, four installments and FI
       await partialAction(checker, "Approve supplier invoice", "approve-invoice");
       await partialAction(maker, "Prepare invoice accrual", "prepare-accrual");
       await partialAction(checker, "Review invoice accrual", "review-accrual");
+      await expect(checker.getByRole("button", { name: "Post invoice accrual", exact: true })).toBeDisabled();
       const accrued = await partialAction(poster, "Post invoice accrual", "post-accrual");
       const invoiceId = accrued.invoices.at(-1).id;
       for (let installment = 0; installment < 2; installment++) {
@@ -215,6 +217,7 @@ test("normal wire HTTPS opening, two stock/AP tranches, four installments and FI
     const issue = await stockAction(maker, "Prepare FIFO issue", "/issue/prepare");
     expect(issue.cogs_minor).toBe("6000");
     await stockAction(checker, "Review FIFO and COGS", "/issue/review");
+    await expect(checker.getByRole("button", { name: "Deliver and post COGS", exact: true })).toBeDisabled();
     await stockAction(poster, "Deliver and post COGS", "/deliver");
     await inspectStock(maker);
     fields = maker.getByRole("group", { name: "Prepare AR invoice", exact: true });
@@ -222,6 +225,7 @@ test("normal wire HTTPS opening, two stock/AP tranches, four installments and FI
     for (const [label, value] of Object.entries({ Journal: "SALES", "Accounting period": "period", "Receivable account": "AR", "Revenue account": "REVENUE" })) await fields.getByRole("combobox", { name: label, exact: true }).selectOption(value);
     await stockAction(maker, "Prepare AR invoice", "/invoice/prepare");
     await stockAction(checker, "Review revenue", "/invoice/review");
+    await expect(checker.getByRole("button", { name: "Post revenue", exact: true })).toBeDisabled();
     await stockAction(poster, "Post revenue", "/invoice/post");
     await inspectStock(maker);
     fields = maker.getByRole("group", { name: "Prepare full collection", exact: true });
@@ -229,6 +233,7 @@ test("normal wire HTTPS opening, two stock/AP tranches, four installments and FI
     for (const [label, value] of Object.entries({ Journal: "CASH", "Accounting period": "period", "Cash account": "CASH" })) await fields.getByRole("combobox", { name: label, exact: true }).selectOption(value);
     await stockAction(maker, "Prepare full collection", "/collection/prepare");
     await stockAction(checker, "Review collection", "/collection/review");
+    await expect(checker.getByRole("button", { name: "Collect and post cash", exact: true })).toBeDisabled();
     await inspectStock(poster);
     await poster.getByLabel("Decision reason", { exact: true }).fill("Actual final collection with lost reply");
     let dropped = false;

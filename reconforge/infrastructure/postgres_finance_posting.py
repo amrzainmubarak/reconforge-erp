@@ -47,6 +47,11 @@ def records(cursor: Any) -> list[dict[str, Any]]:
     return [dict(row) if isinstance(row, Mapping) else dict(zip(names, row, strict=True)) for row in cursor.fetchall()]
 
 
+def retained_effect_snapshot(raw: Any) -> Any:
+    """Use the existing retained native JSON boundary for both read paths."""
+    return raw if isinstance(raw, dict) else json.loads(raw)
+
+
 def posting_entry(connection: Any, tenant_id: str, entry_id: str, *, lock: bool = False) -> dict[str, Any]:
     query = """SELECT e.*,o.id AS organization_id,le.id AS legal_entity_id FROM reconforge.finance_entries e
       JOIN reconforge.organizations o ON o.tenant_id=e.tenant_id AND o.organization_code=e.organization_code
@@ -303,7 +308,7 @@ class PostgresFinancePostingRepository:
         row = rows[0]
         row.pop("tenant_id")
         raw = row.pop("snapshot_json")
-        row["snapshot"] = raw if isinstance(raw, dict) else json.loads(raw)
+        row["snapshot"] = retained_effect_snapshot(raw)
         if validation_digest(row["snapshot"]) != row["validation_digest"]:
             raise FinancePostingError("posting_evidence_invalid", "Retained posting evidence failed verification.")
         evidence = self.connection.execute(
@@ -389,7 +394,7 @@ class PostgresFinancePostingRepository:
                 evidence = row.pop("evidence_verified")
                 row.pop("tenant_id")
                 raw = row.pop("snapshot_json")
-                row["snapshot"] = raw if isinstance(raw, dict) else json.loads(raw)
+                row["snapshot"] = retained_effect_snapshot(raw)
                 if not evidence or validation_digest(row["snapshot"]) != row["validation_digest"]:
                     raise FinancePostingError("posting_evidence_invalid", "Retained posting evidence failed verification.")
                 if row["source_kind"] in {"InventoryReceipt", "InventoryReceiptReversal"}:

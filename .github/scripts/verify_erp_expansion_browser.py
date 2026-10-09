@@ -140,7 +140,7 @@ def main() -> int:
         configuration = "apps/web/live/erp-landed-cost.playwright.config.ts"
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + LANDED_COST_BROWSER_TABLES))
         tamper_statements = (
-            "UPDATE reconforge.landed_cost_plans SET freight_minor=freight_minor+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.landed_cost_plans SET amount_minor=amount_minor+1 WHERE tenant_id=%s",
             "UPDATE reconforge.landed_cost_allocations SET freight_minor=freight_minor+1 WHERE tenant_id=%s",
             "DELETE FROM reconforge.landed_cost_commands WHERE tenant_id=%s",
         )

@@ -40,7 +40,8 @@ test_matrix:
   postgres: tests/test_postgres_landed_cost.py
   api: tests/test_postgres_landed_cost_api.py
   web: apps/web/src/landed-cost-data.test.ts
-  browser: Integrated native authenticated Studio gate pending acceptance evidence
+  browser: apps/web/live/erp-landed-cost.spec.ts
+runtime_acceptance: Source-bound native API Studio and populated restore milestones passed; final integrated source gate remains required
 adapter_matrix:
   postgres: Native receipt, FIFO, source GL and cash are composed without duplicate engines
   sqlite: No implicit operational fallback

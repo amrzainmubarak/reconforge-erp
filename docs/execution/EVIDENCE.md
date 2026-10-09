@@ -1,5 +1,45 @@
 # ReconForge Execution Evidence Log
 
+- GLOBAL-20261010 fixed6272889d native benchmark: PostgreSQL17.10/full122,
+  nonowner/NOBYPASSRLS false,false;1000 three-human cycles/four workers, zero
+  errors, independently expected493671004minor totals. Posting759.610646s,
+  1.316464cycles/s, p50/p95/p99=3.115654/3.296120/3.581297s. Throughput is11.76%
+  lower than accepted PR12734b9; no posting improvement is claimed. Current
+  warmed same-history verified reads7.669656→0.569061s/13.4777x use the already
+  accepted batch path. Raw1000cycle/3333read latencies and79 resource samples
+  survive in the checked-in wrapper, with current source unchanged and owned
+  container removed. Original packet SHA256
+  5ec2b6adfd87a207bd7b55f557f391897cbfe0799616b63e8548b442453cebaf.
+  Projection profiling separately proves aggregation3→1 and shipped6.243→5.941ms
+  median/identical public result on one partial invoice. Full artifacts,
+  exact baseline34b9 and limits: GLOBAL_ENGINEERING_BENCHMARK_2026-10-10.md.
+
+- GLOBAL-20261010 source-bound milestones: CA1 eight unique native cases, LC1
+  twenty native/API cases and FA1 ten native cases pass in cohesive batches,
+  without selected skips. All three normal HTTPS Studio/Arabic/390px/RTL/Axe
+  cycles and populated237-table/schema restores pass on their actual owner
+  commits. Commercial wire retains twelve partial receipts across four invoices,
+  twenty-two native effects and194000minor balanced turnover. Procurement wire
+  capitalizes17000merchandise+1001paid charges into18001inventory, pays four AP
+  installments and retains53002minor balanced turnover. Asset wire retains
+  cost10101, exact depreciation3033+6067, carrying1001/proceeds1500/gain499,
+  with four native effects and zero final carrying value. Each restore refuses
+  three direct SQL mutations. Whole source and built web stay unchanged, and
+  each owned container/process is removed. Exact sources, hashes and bounded
+  results: GLOBAL_OPERATING_MILESTONES_2026-10-10.json. These independent
+  milestones are not reattributed to final integrated hosted acceptance.
+
+- GLOBAL-20261010 funded native cycle: source77701266, full PostgreSQL17.10
+  revision0122, nonowner/NOBYPASSRLS flags false,false; one case passes with
+  zero skips/errors/failures in142.003s pytest/148.515s complete fixture wall.
+  Existing OB1 capital50000 precedes two charged receipts, two supplier invoices,
+  four AP payments, FIFO sale/COGS6353, two AR collections and four asset effects.
+  Independent18-effect oracle proves184156minor debit=credit, final cash45898,
+  inventory11648 and assets57546=capital50000+unclosed profit7546. October and
+  January reports replay identically. XML SHA256
+  f81c7317fd9c2e7a9581474f9b3943dbf5b06e3c93519a81e25482d815b680a1;
+  original failed development packets remain retained and unaccepted.
+
 - ENT-20261009 stable347d3714:1000 real prepare/review/post cycles, three distinct
   humans, four workers, PostgreSQL17.10/full119/nonowner false,false, zero errors.
   Independent493671004minor debit/credit/cash/equity matches. Posting677.693s,

@@ -38,7 +38,7 @@ test_matrix:
   postgres: tests/test_postgres_commercial_collections.py
   client: apps/web/src/components/CommercialCollectionsPanel.test.tsx
   browser: apps/web/live/commercial-collections-cycles.spec.ts
-runtime_acceptance: pending final integrated source gate
+runtime_acceptance: Source-bound native Studio and populated restore milestones passed; final integrated source gate remains required
 limitations:
   - Functional currency, positive zero-tax stock-sale invoices and exact native AR allocation
   - Up to 200 retained installment plans per invoice with one active plan

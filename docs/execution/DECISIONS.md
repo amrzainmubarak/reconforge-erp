@@ -21,6 +21,11 @@
   Docker and process resources. Admission is bounded and partial failures retain
   completed/failed/not-admitted work. Cost remains null without a supplied cost
   model; preserved PR127 measurements are not reattributed to new source.
+- Final cross-review makes configured native pytest reject skipped, xfailed,
+  xpassed and empty selections through an explicit CI-only admission plugin.
+  New LC modules no longer inherit an optional prerequisite marker. Each required
+  expansion browser scenario must execute exactly one successful nonflaky test
+  with no skips before its financial and restore evidence can be accepted.
 
 - ENT-20261009 final integration: self-contained native CI shards run independently
   of Python/web failures; both Python versions disable sibling cancellation.

@@ -35,6 +35,7 @@ test_matrix:
   native_database: tests/test_postgres_fixed_assets.py
   browser: apps/web/live/fixed-assets-cycles.spec.ts
   response_contract: apps/web/src/fixed-assets-data.test.ts
+runtime_acceptance: Source-bound native Studio and populated restore milestones passed; final integrated source gate remains required
 limitations:
   - PostgreSQL-native functional currency and cash-funded acquisition; no foreign-currency or tax calculation
   - Completed calendar service months, cumulative straight-line only; no day proration or declining-balance methods

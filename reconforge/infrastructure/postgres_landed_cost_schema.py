@@ -59,6 +59,25 @@ CREATE TABLE reconforge.landed_cost_commands (
  FOREIGN KEY(tenant_id,plan_id) REFERENCES reconforge.landed_cost_plans(tenant_id,id),
  FOREIGN KEY(tenant_id,actor_id) REFERENCES reconforge.identity_users(tenant_id,id)
 );
+CREATE FUNCTION reconforge.landed_cost_command_admit() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
+DECLARE p RECORD;permission TEXT;required TEXT[];
+BEGIN
+ SELECT * INTO p FROM reconforge.landed_cost_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.plan_id;
+ required:=ARRAY['payables.read','inventory.read','finance_core.read','payables.settle']||CASE NEW.operation
+ WHEN 'prepare' THEN ARRAY['payables.manage','inventory.manage','inventory.valuation.manage','finance_core.manage']
+ WHEN 'review' THEN ARRAY['payables.approve','inventory.post','inventory.valuation.approve','finance_core.validate']
+ WHEN 'post' THEN ARRAY['payables.manage','inventory.post','inventory.valuation.approve','finance_core.post'] ELSE ARRAY[]::TEXT[] END;
+ IF p IS NULL OR NEW.operation NOT IN('prepare','review','post') OR NEW.workspace_id IS DISTINCT FROM p.workspace_id
+ OR NOT reconforge.irp_scope(p.tenant_id,p.workspace_id,p.organization_id,p.legal_entity_id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Landed cost command requires its current retained source scope'; END IF;
+ FOREACH permission IN ARRAY required LOOP
+ IF NOT reconforge.sales_revenue_actor(p.tenant_id,NEW.actor_id,permission) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Landed cost command requires current persisted scoped human authority'; END IF;
+ END LOOP;
+ RETURN NEW;
+END $lc$;
+CREATE TRIGGER landed_cost_command_admission BEFORE INSERT ON reconforge.landed_cost_commands
+ FOR EACH ROW EXECUTE FUNCTION reconforge.landed_cost_command_admit();
 CREATE FUNCTION reconforge.landed_cost_protect() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
 BEGIN
  IF TG_TABLE_NAME='landed_cost_plans' AND TG_OP='INSERT' THEN
@@ -267,6 +286,7 @@ DROP FUNCTION reconforge.landed_cost_ack(TEXT,TEXT,INTEGER);
 DROP FUNCTION reconforge.landed_cost_event(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 DROP TABLE reconforge.landed_cost_commands,reconforge.landed_cost_links,reconforge.landed_cost_reviews,reconforge.landed_cost_allocations,reconforge.landed_cost_plans;
 DROP FUNCTION reconforge.landed_cost_protect();
+DROP FUNCTION reconforge.landed_cost_command_admit();
 """
 
 

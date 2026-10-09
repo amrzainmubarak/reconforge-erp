@@ -1,10 +1,10 @@
 schema_version: 1
-updated_at: "2026-10-09"
+updated_at: "2026-10-10"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0119_pg_receipt_fifo_chronology"
+current_source_migration_head: "0122_pg_fixed_assets"
 production_foundation_review:
   executed_at: "2026-10-03"
   evidence: "PRODUCTION_AUDIT_2026-10-03.md"

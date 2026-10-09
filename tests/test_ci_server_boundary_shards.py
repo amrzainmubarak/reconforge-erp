@@ -95,7 +95,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 40  # Prior38 plus complete commerce/procurement and snapshot native gates.
+    assert len(commands) == 43  # Prior40 plus complete CA1, LC1 and FA1 source-owner gates.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -135,6 +135,10 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
         ("tests/test_postgres_financial_reporting_snapshots.py", "finance-reporting"),
         ("tests/test_postgres_financial_snapshot_recovery.py", "finance-reporting"),
         ("tests/test_postgres_financial_snapshot_migration.py", "finance-reporting"),
+        ("tests/test_postgres_commercial_collections.py", "erp-expansion"),
+        ("tests/test_postgres_landed_cost.py", "erp-expansion"),
+        ("tests/test_postgres_landed_cost_api.py", "erp-expansion"),
+        ("tests/test_postgres_fixed_assets.py", "erp-expansion"),
 
     ):
         selected = [shard for shard, entries in groups.items()
@@ -153,6 +157,8 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
         "tests/test_postgres_stock_commerce_migrations.py",
         "tests/test_postgres_financial_reporting_snapshots.py", "tests/test_postgres_financial_snapshot_recovery.py",
         "tests/test_postgres_financial_snapshot_migration.py",
+        "tests/test_postgres_commercial_collections.py", "tests/test_postgres_landed_cost.py",
+        "tests/test_postgres_landed_cost_api.py", "tests/test_postgres_fixed_assets.py",
     }
     assert shlex.split(unit["run"]) == [
         "uv", "run", "--no-sync", "pytest", *[f"--ignore={path}" for path in sorted(ignored)],

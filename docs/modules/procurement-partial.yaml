@@ -39,6 +39,7 @@ rollback_plan: Empty downgrade only; retained history requires a verified pre-up
 test_matrix:
   domain: tests/test_procurement_partial.py
   postgres: tests/test_postgres_procurement_partial.py
+  api: tests/test_postgres_procurement_partial_api.py
   web: apps/web/src/procurement-partial-data.test.ts
   browser: Lead integration gate on normal authenticated Studio and actual PostgreSQL
 adapter_matrix:

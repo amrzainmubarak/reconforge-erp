@@ -145,7 +145,7 @@ def test_public_generic_review_is_denied_without_mutating_partial_owner(
     if participant == "receipt-prepare":
         plan = None
         path = "/api/v1/inventory-receipt-posting/plans"
-        expected = "inventory_receipt_owner_required"
+        expected = "operational_owner_required"
         payload = {"command_id": "detached-public-prepare", "receipt_number": "PPR-" + view["order"]["number"] + "-1",
                    "posting_date": "2026-10-03", "period_id": "period", "item_code": "ITEM", "location_code": "MAIN/STOCK",
                    "quantity": "4", "total_value_minor": "4800", "policy_code": "FIFO", "organization_code": "ORG",

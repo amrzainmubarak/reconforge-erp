@@ -344,3 +344,39 @@ def test_generic_manual_payment_cannot_bypass_reviewed_installment_owner(partial
         connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
     with runtime.actor(POSTER) as (connection, _, actor):
         assert PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor) == view
+
+
+def test_all_partial_tables_deny_cross_hierarchy_sql_reads_and_writes(partial_runtime: ReceiptRuntime) -> None:
+    import json
+
+    import psycopg
+    from psycopg import sql
+
+    runtime = partial_runtime
+    view = accrue_partial_invoice(runtime, receive_partial(runtime, create_partial(runtime), "4"), "3")
+    tables = ("procurement_partial_orders", "procurement_partial_receipts",
+              "procurement_partial_invoices", "procurement_partial_commands")
+    rows: dict[str, dict[str, Any]] = {}
+    with runtime.actor(POSTER) as (connection, _, _):
+        assert tuple(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()) == (False, False)
+        for table in tables:
+            assert connection.execute("SELECT relrowsecurity,relforcerowsecurity FROM pg_class WHERE oid=%s::regclass",
+                                      ("reconforge." + table,)).fetchone()["relforcerowsecurity"]
+            row = connection.execute(sql.SQL("SELECT * FROM reconforge.{} WHERE tenant_id=%s LIMIT 1").format(sql.Identifier(table)),
+                                     (runtime.tenant,)).fetchone()
+            assert row is not None
+            rows[table] = dict(row)
+    for setting in ("app.tenant_id", "app.workspace_id", "app.organization_id", "app.legal_entity_id", "app.entity_id"):
+        with runtime.actor(POSTER) as (connection, _, _):
+            connection.execute("SELECT set_config(%s,%s,true)", (setting, "outside-partial-authority"))
+            for table in tables:
+                query = sql.SQL("SELECT count(*) AS count FROM reconforge.{} WHERE tenant_id=%s").format(sql.Identifier(table))
+                assert connection.execute(query, (runtime.tenant,)).fetchone()["count"] == 0
+                update = sql.SQL("UPDATE reconforge.{} SET tenant_id=tenant_id WHERE tenant_id=%s RETURNING tenant_id").format(sql.Identifier(table))
+                assert connection.execute(update, (runtime.tenant,)).fetchall() == []
+                insert = sql.SQL("INSERT INTO reconforge.{} SELECT candidate.* FROM jsonb_populate_record(NULL::reconforge.{},%s::jsonb) candidate").format(
+                    sql.Identifier(table), sql.Identifier(table))
+                with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
+                    connection.execute(insert, (json.dumps(rows[table], default=str),))
+    with runtime.actor(POSTER) as (connection, _, actor):
+        assert PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor) == view

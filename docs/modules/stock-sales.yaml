@@ -1,6 +1,6 @@
 id: stock-sales
 name: Governed product sales and stock-to-cash
-version: 0.1.0
+version: 0.2.0
 maturity: experimental
 owner: Amr
 dependencies: [identity, master-data, inventory-core, inventory-valuation, inventory-receipt-posting, finance-posting, receivables, operational-finance]
@@ -9,7 +9,7 @@ data_classification: confidential-financial
 retention_policy: immutable source, command, review and posted financial history
 permissions: [sales.read, sales.manage, sales.approve, inventory.read, inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve, receivables.read, receivables.manage, receivables.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
 default_roles: []
-migrations: [0113_pg_stock_sales]
+migrations: [0113_pg_stock_sales, 0116_pg_stock_commerce]
 domain_invariants:
   - exact existing HALF_EVEN FIFO and integer minor units
   - reservations share native inventory advisory lock and cannot exceed actual stock
@@ -21,6 +21,10 @@ domain_invariants:
   - native stock, FIFO consumption and COGS publish in one PostgreSQL transaction
   - AR and cash source phases and posting evidence close in both directions
   - exact retained actor, scope, payload, version and acknowledgement replay
+  - One immutable commercial parent conserves every product warehouse and price line across partial native delivery invoice and cash tranches
+  - Native commercial child writes require the authoritative parent command and exact progress acknowledgement in the same transaction
+  - Fractional quantities require exact additive minor-unit value so tranche rounding cannot change the agreed line price
+  - Commercial command acknowledgements retain small immutable source and progress digests without copying growing line snapshots
 domain_events: [stock_sales.create, stock_sales.submit, stock_sales.approve, stock_sales.reserve, stock_sales.prepare-issue, stock_sales.review-issue, stock_sales.deliver, stock_sales.prepare-invoice, stock_sales.review-invoice, stock_sales.invoice, stock_sales.prepare-collection, stock_sales.review-collection, stock_sales.collect, stock_sales.cancel]
 api_routes:
   - GET /stock-sales/options
@@ -40,25 +44,52 @@ api_routes:
   - POST /stock-sales/orders/{identifier}/collection/review
   - POST /stock-sales/orders/{identifier}/collection/post
   - POST /stock-sales/orders/{identifier}/cancel
+  - GET /stock-sales/commerce/catalog
+  - GET /stock-sales/commerce/orders
+  - GET /stock-sales/commerce/orders/{identifier}
+  - POST /stock-sales/commerce/orders
+  - POST /stock-sales/commerce/orders/{identifier}/submit
+  - POST /stock-sales/commerce/orders/{identifier}/approve
+  - POST /stock-sales/commerce/orders/{identifier}/open-tranche
+  - POST /stock-sales/commerce/orders/{identifier}/approve-tranche
+  - POST /stock-sales/commerce/orders/{identifier}/prepare-issue
+  - POST /stock-sales/commerce/orders/{identifier}/review-issue
+  - POST /stock-sales/commerce/orders/{identifier}/deliver
+  - POST /stock-sales/commerce/orders/{identifier}/prepare-invoice
+  - POST /stock-sales/commerce/orders/{identifier}/review-invoice
+  - POST /stock-sales/commerce/orders/{identifier}/invoice
+  - POST /stock-sales/commerce/orders/{identifier}/prepare-collection
+  - POST /stock-sales/commerce/orders/{identifier}/review-collection
+  - POST /stock-sales/commerce/orders/{identifier}/collect
+  - POST /stock-sales/commerce/orders/{identifier}/cancel
 cli_commands: []
 ui_routes: [stock-sales]
 import_schemas: []
-export_schemas: [stock-sales-order-v1, stock-sales-issue-v1]
+export_schemas: [stock-sales-order-v1, stock-sales-issue-v1, stock-commerce-v1]
 synthetic_fixtures:
   - tests/test_postgres_stock_sales.py canonical persisted human fixture and actual reviewed inbound FIFO receipt
+  - tests/test_postgres_stock_commerce.py multi-product multi-warehouse partial delivery invoice and collection tranches
 threat_model:
   - stale or forged authority and amount permissions
   - over-reservation and concurrent native stock withdrawal
   - re-costing frozen FIFO or bypassing native source owner
   - detached COGS, revenue or cash posting
   - cross-entity receipt namespace collision
+  - direct SQL native tranche transition outside its parent acknowledgement
+  - partial commercial line quantity or financial value overcommit
 benchmarks: []
 rollback_plan: empty migration downgrade restores exact predecessor receipt namespace functions; retained stock-sale history requires backup restore
 test_matrix:
   - tests/test_stock_sales.py exact discount and existing FIFO interpretation
   - tests/test_postgres_stock_sales.py actual stock-to-cash, independent review, detached native rollback and six concurrent reservations
+  - tests/test_stock_commerce.py thousand-line exact aggregate and malformed quantity contracts
+  - tests/test_postgres_stock_commerce.py actual partial native cycles concurrent parent CAS replay and SQL closure
+  - apps/web/src/stock-commerce-data.test.ts independent BigInt line and tranche conservation
+  - apps/web/src/components/StockCommercePanel.test.tsx distinct posting actor and Arabic RTL contracts
 runtime_acceptance: bounded local PostgreSQL API Studio and populated restore accepted on6ec9; see docs/execution/ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 hosted checks
 scope_limits:
   - PostgreSQL only; existing local workflows remain available
-  - one non-lot item and one full shipment/invoice/settlement in functional currency
-  - explicit zero-tax; no tax calculation, partial delivery, stock return or credit-note inverse
+  - Legacy single-item APIs and immutable history preserve their accepted contracts
+  - Commercial parents support up to 1000 explicit non-lot product-location lines in functional currency with per-line partial native tranches
+  - Each invoice tranche is settled in full; partial settlement of one AR invoice is not claimed
+  - Explicit zero-tax; no tax calculation stock return credit-note inverse credit-limit engine or configurable price-list engine

@@ -17,10 +17,13 @@ from reconforge.api.dependencies import (
 from reconforge.api.errors import APIError
 from reconforge.api.server_finance_core import execute_postgres_finance_core_scoped, server_finance_core_enabled
 from reconforge.api.server_identity import request_execution_scope
+from reconforge.application.stock_commerce import StockCommerceApplicationService
 from reconforge.application.stock_sales import StockSalesApplicationService
 from reconforge.auth.models import LocalUser
 from reconforge.domain.finance_posting import FinancePostingError, PostingActor
+from reconforge.domain.stock_commerce import CommercialLine, CommercialOrder
 from reconforge.domain.stock_sales import StockOrder
+from reconforge.infrastructure.postgres_stock_commerce import COMMERCE_PERMISSIONS, PostgresStockCommerceRepository
 from reconforge.infrastructure.postgres_stock_sales import OPERATION_PERMISSIONS, READ, PostgresStockSalesRepository
 from reconforge.platform.common import current_server_principal
 
@@ -225,3 +228,83 @@ def collect(identifier: str, request: Request, body: TransitionRequest, user: Co
 @router.post("/orders/{identifier}/cancel")
 def cancel(identifier: str, request: Request, body: TransitionRequest, user: Canceller) -> dict[str, Any]:
     return _transition(request, user, identifier, "cancel", body)
+
+
+class CommercialLineRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    item_code: str = Field(min_length=1, max_length=64)
+    warehouse_code: str = Field(min_length=1, max_length=64)
+    location_code: str = Field(min_length=1, max_length=64)
+    quantity: str = Field(min_length=1, max_length=64)
+    unit_price_minor: str = Field(pattern="^[1-9][0-9]{0,18}$")
+    description: str = Field(min_length=1, max_length=500)
+    discount_basis_points: int = Field(default=0, ge=0, lt=10000)
+
+
+class CommercialOrderRequest(Command):
+    number: str = Field(min_length=1, max_length=64)
+    customer_code: str = Field(min_length=1, max_length=64)
+    customer_reference: str = Field(min_length=1, max_length=160)
+    currency_code: str = Field(pattern="^[A-Z]{3}$")
+    order_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    lines: list[CommercialLineRequest] = Field(min_length=1, max_length=1000)
+
+
+class CommercialTransitionRequest(TransitionRequest):
+    tranche_id: str | None = Field(default=None, min_length=1, max_length=160)
+    line_number: int | None = Field(default=None, ge=1, le=1000)
+    quantity: str | None = Field(default=None, min_length=1, max_length=64)
+    parameters: dict[str, str] = Field(default_factory=dict, max_length=8)
+
+
+def _commerce_execute(request: Request, user: LocalUser, operation: str,
+        invoke: Callable[[StockCommerceApplicationService, PostingActor], dict[str, Any]]) -> dict[str, Any]:
+    permissions = COMMERCE_PERMISSIONS.get(operation, READ)
+    def invocation(service: StockSalesApplicationService, actor: PostingActor) -> dict[str, Any]:
+        native = cast(PostgresStockSalesRepository, service.repository)
+        for permission in sorted(permissions):
+            native.authority._actor(actor, permission, mutation=operation != "read")
+        return invoke(StockCommerceApplicationService(PostgresStockCommerceRepository(native.connection, native.tenant_id, **native.scope)), actor)
+    return _execute(request, user, "read" if operation == "read" else "create" if operation == "open-tranche" else "approve" if operation == "approve-tranche" else operation, invocation)
+
+
+@router.get("/commerce/orders")
+def commerce_orders(request: Request, user: Reader, after: str = "", limit: int = 50) -> dict[str, Any]:
+    return _commerce_execute(request, user, "read", lambda service, actor: service.list(after=after, limit=limit, actor=actor))
+
+
+@router.get("/commerce/catalog")
+def commerce_catalog(request: Request, user: Reader, prefix: str = "", after: str = "", limit: int = 50) -> dict[str, Any]:
+    return _commerce_execute(request, user, "read", lambda service, actor: service.catalog(prefix=prefix, after=after, limit=limit, actor=actor))
+
+
+@router.get("/commerce/orders/{identifier}")
+def commerce_order(identifier: str, request: Request, user: Reader) -> dict[str, Any]:
+    return _commerce_execute(request, user, "read", lambda service, actor: service.get(identifier, actor=actor))
+
+
+@router.post("/commerce/orders", status_code=201)
+def commerce_create(request: Request, body: CommercialOrderRequest, user: Creator) -> dict[str, Any]:
+    lines = tuple(CommercialLine(**{**line.model_dump(), "unit_price_minor": int(line.unit_price_minor)}) for line in body.lines)
+    order = CommercialOrder(body.number, body.customer_code, body.customer_reference, body.currency_code, body.order_date, lines)
+    return _commerce_execute(request, user, "create", lambda service, actor: service.create(order, command_id=body.command_id, actor=actor))
+
+
+def _commerce_route(operation: str) -> Callable[..., dict[str, Any]]:
+    def endpoint(identifier: str, request: Request, body: CommercialTransitionRequest,
+            user: LocalUser = Depends(get_current_user)) -> dict[str, Any]:
+        parameters: dict[str, Any] = dict(body.parameters)
+        for key in ("tranche_id", "line_number", "quantity"):
+            value = getattr(body, key)
+            if value is not None:
+                parameters[key] = value
+        return _commerce_execute(request, user, operation, lambda service, actor: service.act(identifier, operation,
+            expected_version=body.expected_version, command_id=body.command_id, reason=body.reason, parameters=parameters, actor=actor))
+    endpoint.__name__ = "commerce_" + operation.replace("-", "_")
+    return endpoint
+
+
+for _operation in ("submit", "approve", "open-tranche", "approve-tranche", "prepare-issue", "review-issue", "deliver",
+        "prepare-invoice", "review-invoice", "invoice", "prepare-collection", "review-collection", "collect", "cancel"):
+    router.add_api_route("/commerce/orders/{identifier}/" + _operation, _commerce_route(_operation), methods=["POST"],
+        dependencies=[Depends(_required(COMMERCE_PERMISSIONS[_operation]))])

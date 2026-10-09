@@ -163,10 +163,10 @@ BEGIN
  FOREACH changed IN ARRAY changes LOOP
   IF TG_TABLE_NAME='ap_payment_links' AND EXISTS(SELECT 1 FROM reconforge.procurement_partial_invoices v
    WHERE v.tenant_id=changed->>'tenant_id' AND v.native_invoice_id=changed->>'supplier_invoice_id') AND NOT EXISTS(
-   SELECT 1 FROM reconforge.financial_installment_links l JOIN reconforge.financial_installment_plans p
-   ON p.tenant_id=l.tenant_id AND p.id=l.plan_id WHERE p.tenant_id=changed->>'tenant_id' AND p.phase=2
-   AND p.source_id=changed->>'supplier_invoice_id' AND l.payment_link_id=changed->>'id'
-   AND l.posting_effect_id=changed->>'finance_effect_id') THEN
+   SELECT 1 FROM reconforge.financial_installment_links owned_link JOIN reconforge.financial_installment_plans owned_plan
+   ON owned_plan.tenant_id=owned_link.tenant_id AND owned_plan.id=owned_link.plan_id WHERE owned_plan.tenant_id=changed->>'tenant_id' AND owned_plan.phase=2
+   AND owned_plan.source_id=changed->>'supplier_invoice_id' AND owned_link.payment_link_id=changed->>'id'
+   AND owned_link.posting_effect_id=changed->>'finance_effect_id') THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Partial source payment requires its reviewed FI1 owner';
   END IF;
   IF TG_TABLE_NAME IN ('domain_audit_events','outbox_events') THEN

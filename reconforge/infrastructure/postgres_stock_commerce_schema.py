@@ -275,6 +275,8 @@ DO $$ BEGIN
  END IF;
 END $$;
 DROP TRIGGER stock_commerce_source_closure ON reconforge.stock_sales_orders;
+DROP TRIGGER stock_commerce_source_closure ON reconforge.stock_commerce_orders;
+DROP TRIGGER stock_commerce_admission ON reconforge.stock_commerce_orders;
 DROP TABLE reconforge.stock_commerce_commands,reconforge.stock_commerce_tranches,reconforge.stock_commerce_lines;
 DROP FUNCTION reconforge.stock_commerce_close_trigger(),reconforge.stock_commerce_close(TEXT,TEXT),reconforge.stock_commerce_admit();
 DROP FUNCTION reconforge.stock_commerce_ack(reconforge.stock_commerce_orders),reconforge.stock_commerce_public(reconforge.stock_commerce_orders);

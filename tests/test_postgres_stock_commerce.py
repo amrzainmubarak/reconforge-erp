@@ -165,3 +165,33 @@ def test_multi_product_multi_warehouse_partial_commerce_and_catalog_keysets(rece
     assert [line["delivered_quantity_scaled"] for line in result["lines"]] == ["10", "8"]
     assert [line["invoiced_minor"] for line in result["lines"]] == ["45000", "24000"]
     assert [line["collected_minor"] for line in result["lines"]] == ["45000", "24000"]
+
+
+def test_delivery_participants_roll_back_after_late_parent_acknowledgement_failure(receipt_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch) -> None:
+    runtime = create_stock_runtime(receipt_database)
+    result = commercial_order(runtime, "FAILURE")
+    result = act(runtime, result, "open-tranche", "maker", {"line_number": 1, "quantity": "4"})
+    tranche = result["lines"][0]["tranches"][0]["id"]
+    result = act(runtime, result, "approve-tranche", "checker", {"tranche_id": tranche})
+    result = act(runtime, result, "prepare-issue", "maker", {"tranche_id": tranche, "posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
+    result = act(runtime, result, "review-issue", "checker", {"tranche_id": tranche})
+    with runtime.actor("poster") as (connection, _, actor):
+        owner = repository(connection, runtime)
+        before = owner.get(result["id"], actor=actor)
+        count_before = connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"]
+        original = owner._remember
+        def fail_after_ack(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            original(*args, **kwargs)
+            raise RuntimeError("Injected lost acknowledgement transaction failure")
+        with monkeypatch.context() as fault:
+            fault.setattr(owner, "_remember", fail_after_ack)
+            with pytest.raises(RuntimeError, match="Injected"):
+                owner.act(result["id"], "deliver", expected_version=result["row_version"], command_id="failure:deliver",
+                    reason="Actual delivery with injected final fault", parameters={"tranche_id": tranche}, actor=actor)
+        assert owner.get(result["id"], actor=actor) == before
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == count_before
+        assert dict(connection.execute("SELECT sum(remaining_quantity_scaled) q,sum(remaining_value_minor) v FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()) == {"q": 10, "v": 12000}
+        ack = owner.act(result["id"], "deliver", expected_version=result["row_version"], command_id="failure:deliver",
+            reason="Actual delivery with injected final fault", parameters={"tranche_id": tranche}, actor=actor)
+        assert ack["row_version"] == result["row_version"] + 1
+        assert owner.get(result["id"], actor=actor)["lines"][0]["delivered_quantity_scaled"] == "4"

@@ -23,8 +23,8 @@ from reconforge.platform.common import PlatformError
 
 router = APIRouter(prefix="/commercial-collections", tags=["commercial-collections"])
 Read = Annotated[LocalUser, Depends(required(frozenset({"finance_core.read", "receivables.read"})))]
-Manage = Annotated[LocalUser, Depends(required(frozenset({"finance_core.manage", "sales.manage"})))]
-Review = Annotated[LocalUser, Depends(required(frozenset({"finance_core.validate", "sales.approve"})))]
+Manage = Annotated[LocalUser, Depends(required(frozenset({"finance_core.manage", "sales.manage", "receivables.manage"})))]
+Review = Annotated[LocalUser, Depends(required(frozenset({"finance_core.validate", "sales.approve", "receivables.manage"})))]
 Post = Annotated[LocalUser, Depends(required(frozenset({"finance_core.post", "sales.manage", "receivables.manage"})))]
 
 

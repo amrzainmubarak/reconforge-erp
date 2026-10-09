@@ -102,7 +102,7 @@ BEGIN
  OR p.payload->>'credit_account_code' IS DISTINCT FROM payment_mapping->>'receivable_account_code'
  OR p.payload->>'debit_account_code'=p.payload->>'credit_account_code'
  OR p.payload->>'receipt_number' !~'^[A-Z0-9][A-Z0-9._-]{0,63}$'
- OR e.posting_date<h.invoice_date
+ OR e.posting_date::date<h.invoice_date
  OR p.payload->'source_snapshot' IS DISTINCT FROM s OR (s->>'tax_minor')::bigint<>0
  OR reconforge.irp_digest(p.payload-'plan_digest'-'validation_digest') IS DISTINCT FROM seal
  OR p.payload->>'id' IS DISTINCT FROM p.id OR p.payload->>'entry_id' IS DISTINCT FROM p.entry_id
@@ -166,7 +166,7 @@ BEGIN
  IF l IS NULL OR f IS NULL OR a IS NULL OR e.status<>'Validated' OR f.entry_id<>p.entry_id OR f.snapshot_json<>p.payload->'snapshot'
  OR f.validation_digest<>p.payload->>'validation_digest' OR f.posted_actor_id<>l.posted_actor_id
  OR l.posted_actor_id IN (maker,r.reviewer_actor_id) OR a.status<>'Posted' OR a.amount_minor<>p.amount_minor
- OR a.receipt_number IS DISTINCT FROM p.payload->>'receipt_number' OR a.receipt_date<>e.posting_date
+ OR a.receipt_number IS DISTINCT FROM p.payload->>'receipt_number' OR a.receipt_date<>e.posting_date::date
  OR (a.workspace_id,a.organization_id,a.legal_entity_id,a.customer_id,a.currency_code) IS DISTINCT FROM
  (h.workspace_id,h.organization_id,h.legal_entity_id,h.customer_id,h.currency_code)
  OR NOT reconforge.sales_revenue_policy_matches(t,p.payload->'source_snapshot',a.currency_code,a.currency_precision,

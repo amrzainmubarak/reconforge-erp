@@ -82,6 +82,7 @@ def main() -> int:
         "profile": "native-three-human-cash-equity-v1", "seed": args.seed, "counts": counts,
         "workers": args.workers, "repetitions": args.repetitions, "max_seconds": args.max_seconds,
         "image": IMAGE, "python": sys.version, "platform": platform.platform(), "logical_cpus": os.cpu_count(),
+        "processor": platform.processor(), "architecture": platform.machine(),
         "docker_version": run(["docker", "version", "--format", "{{.Server.Version}}"]).stdout.strip(),
         "limits": ["single entity and USD", "native repository latency includes synthetic identity authentication",
             "not HTTP latency", "no comparable competitor measurement", "no cost per transaction without a supplied resource cost model"],
@@ -93,6 +94,9 @@ def main() -> int:
     admin_password, app_password = secrets.token_hex(24), secrets.token_hex(24)
     secret_values.extend([admin_password, app_password])
     try:
+        engine = json.loads(run(["docker", "info", "--format", "{{json .}}"] ).stdout)
+        report["docker_engine_resources"] = {name: engine.get(name) for name in (
+            "OperatingSystem", "OSType", "Architecture", "KernelVersion", "NCPU", "MemTotal", "Driver")}
         environment = os.environ.copy()
         environment["POSTGRES_PASSWORD"] = admin_password
         container = run(["docker", "run", "--detach", "--rm", "--name", "reconforge-enterprise-finance-" + uuid4().hex[:12],

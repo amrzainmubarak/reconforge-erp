@@ -7,7 +7,7 @@ from typing import Any
 from uuid import uuid4
 
 from reconforge.domain.finance_posting import PostingActor, canonical_json, digest_payload, validation_digest
-from reconforge.domain.landed_cost import LandedCostPreparation, allocate_minor, normalize
+from reconforge.domain.landed_cost import MAX_MINOR, LandedCostPreparation, allocate_minor, normalize
 from reconforge.domain.operational_finance import exact_minor_text
 from reconforge.domain.procurement_partial import (
     PartialQuantityPreparation,
@@ -131,6 +131,8 @@ class PostgresLandedCostRepository:
                 parts.append((line, part, base))
             weights = tuple((line["id"], base) for line, _, base in parts)
             freight, duties = allocate_minor(request.freight_minor, weights), allocate_minor(request.duty_minor, weights)
+            if any(base + freight[line["id"]] + duties[line["id"]] > MAX_MINOR for line, _, base in parts):
+                raise ProcurementPartialError("landed_cost_amount_invalid", "Capitalized receipt cost exceeds supported exact native bounds.")
             identifier = "LC1-" + uuid4().hex
             initial = self.connection.execute("SELECT COALESCE(max(sequence),0) n FROM reconforge.procurement_partial_receipts WHERE tenant_id=%s AND order_id=%s",
                                                (self.tenant_id, parent["id"])).fetchone()["n"]

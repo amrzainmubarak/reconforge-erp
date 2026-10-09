@@ -232,6 +232,16 @@ BEGIN
  changed:=CASE WHEN TG_OP='INSERT' THEN ARRAY[to_jsonb(NEW)] WHEN TG_OP='DELETE' THEN ARRAY[to_jsonb(OLD)] ELSE ARRAY[to_jsonb(OLD),to_jsonb(NEW)] END;
  FOREACH j IN ARRAY changed LOOP
  native_entry:=NULL;number:=NULL;receipt:=NULL;parent:=NULL;
+ IF TG_TABLE_NAME IN('finance_accounts','finance_journals') THEN
+ FOR p IN SELECT q.* FROM reconforge.landed_cost_plans q JOIN reconforge.finance_entries e
+ ON e.tenant_id=q.tenant_id AND e.id=q.entry_id WHERE q.tenant_id=j->>'tenant_id' AND
+ ((TG_TABLE_NAME='finance_journals' AND e.journal_id=j->>'id') OR
+ (TG_TABLE_NAME='finance_accounts' AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines x
+ WHERE x.tenant_id=q.tenant_id AND x.entry_id=e.id AND x.account_id=j->>'id'))) LOOP
+ PERFORM reconforge.landed_cost_close(p.tenant_id,p.id);
+ END LOOP;
+ CONTINUE;
+ END IF;
  IF TG_TABLE_NAME='finance_entries' THEN native_entry:=j->>'id';number:=j->>'entry_number';
  ELSIF TG_TABLE_NAME IN('finance_entry_lines','finance_posting_effects') THEN native_entry:=j->>'entry_id';
  ELSIF TG_TABLE_NAME='finance_entry_line_dimensions' THEN SELECT entry_id INTO native_entry FROM reconforge.finance_entry_lines WHERE tenant_id=j->>'tenant_id' AND id=j->>'entry_line_id';
@@ -264,7 +274,7 @@ DO $lc$ DECLARE n TEXT; BEGIN
  EXECUTE format('CREATE TRIGGER retained BEFORE INSERT OR UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.landed_cost_protect()',n);
  END LOOP;
  FOREACH n IN ARRAY ARRAY['landed_cost_plans','landed_cost_allocations','landed_cost_reviews','landed_cost_links','landed_cost_commands',
- 'finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','procurement_partial_orders','procurement_partial_receipts','domain_audit_events','outbox_events'] LOOP
+ 'finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','procurement_partial_orders','procurement_partial_receipts','domain_audit_events','outbox_events','finance_accounts','finance_journals'] LOOP
  EXECUTE format('CREATE CONSTRAINT TRIGGER landed_cost_closure AFTER INSERT OR UPDATE OR DELETE ON reconforge.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.landed_cost_reverse_close()',n);
  END LOOP;
 END $lc$;
@@ -275,7 +285,7 @@ DO $lc$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.landed_cost_plans) THEN
  RAISE EXCEPTION 'Retained landed costs prohibit downgrade; restore a verified pre-upgrade backup'; END IF; END $lc$;
 DO $lc$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['landed_cost_plans','landed_cost_allocations','landed_cost_reviews','landed_cost_links','landed_cost_commands',
- 'finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','procurement_partial_orders','procurement_partial_receipts','domain_audit_events','outbox_events'] LOOP
+ 'finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','procurement_partial_orders','procurement_partial_receipts','domain_audit_events','outbox_events','finance_accounts','finance_journals'] LOOP
  EXECUTE format('DROP TRIGGER landed_cost_closure ON reconforge.%I',n); END LOOP;
 END $lc$;
 DROP FUNCTION reconforge.pp_verify_multiline(TEXT,TEXT);

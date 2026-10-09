@@ -37,7 +37,7 @@ export function parseLandedPlan(value: unknown, scope: ProcurementScope, orderId
 }
 
 export async function landedPage(session: BrowserAdminSession, scope: ProcurementScope, orderId: string, after = "", signal?: AbortSignal): Promise<{ records: LandedPlan[]; next_after: string | null }> {
-  const value = await procurementFetch(session, scope.workspace_id, scope, `${landedRoot}/orders/${encodeURIComponent(orderId)}?after=${encodeURIComponent(after)}`, { signal });
+  const value = await procurementFetch(session, scope.workspace_id, scope, `${landedRoot}/orders/${encodeURIComponent(orderId)}`, { query: { after }, signal });
   if (!object(value) || !Array.isArray(value.records) || value.records.length > 4 || !(value.next_after === null || text(value.next_after))) invalid();
   const records = value.records.map((item) => parseLandedPlan(item, scope, orderId));
   if (new Set(records.map((plan) => plan.id)).size !== records.length || records.some((plan, index) => plan.id <= (index ? records[index - 1].id : after)) ||

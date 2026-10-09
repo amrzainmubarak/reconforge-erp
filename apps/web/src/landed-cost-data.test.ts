@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { landedCommand, parseLandedPlan } from "./landed-cost-data";
+import { landedCommand, landedPage, parseLandedPlan } from "./landed-cost-data";
 import type { ProcurementScope } from "./procurement-data";
 import { prepareScopedCommand } from "./scoped-command";
 import type { BrowserAdminSession } from "./types";
@@ -45,4 +45,14 @@ it("refuses a well-formed response for another requested quantity or owner stage
     expected_plan_digest: "a".repeat(64), reason: "Review"
   }))).rejects.toThrow("contract_invalid");
   expect(() => parseLandedPlan({ ...plan(), posting_effect_id: "detached" }, scope, "order")).toThrow("contract_invalid");
+});
+
+
+it("loads scoped bundle evidence through the strict query transport", async () => {
+  const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ records: [plan()], next_after: null }) });
+  vi.stubGlobal("fetch", fetch);
+  const session = { tenantId: "tenant", csrfToken: "synthetic-csrf" } as BrowserAdminSession;
+  expect((await landedPage(session, scope, "order")).records[0].id).toBe("LC1-plan");
+  expect(fetch.mock.calls[0][0]).toBe("/api/v1/landed-cost/orders/order?after=");
+  expect(fetch.mock.calls[0][1]).toMatchObject({ method: "GET", credentials: "same-origin", headers: { "X-ReconForge-Tenant": "tenant", "X-ReconForge-Workspace": "work", "X-ReconForge-Organization": "org", "X-ReconForge-Legal-Entity": "entity" } });
 });

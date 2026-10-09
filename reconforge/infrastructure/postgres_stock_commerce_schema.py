@@ -70,13 +70,24 @@ CREATE FUNCTION reconforge.stock_commerce_public(d reconforge.stock_commerce_ord
  FROM reconforge.stock_commerce_tranches t JOIN reconforge.stock_sales_orders s ON s.tenant_id=t.tenant_id AND s.id=t.stock_order_id
  WHERE t.tenant_id=l.tenant_id AND t.order_id=l.order_id AND t.line_number=l.line_number) a ON TRUE
  WHERE l.tenant_id=d.tenant_id AND l.order_id=d.id),'[]'::jsonb)) $$;
+CREATE FUNCTION reconforge.stock_commerce_progress(d reconforge.stock_commerce_orders) RETURNS JSONB LANGUAGE sql STABLE SET search_path=pg_catalog AS $$
+ -- Source lines and membership are immutable after their admitted command.
+ -- Native Stock Sales changes require a strictly advancing guarded row version.
+ -- Bind those authoritative changing rows without repeatedly copying 1000
+ -- immutable source lines into the command acknowledgement hash.
+ SELECT jsonb_build_array('stock-commerce-progress-v1',d.source_digest,COALESCE((
+  SELECT jsonb_agg(jsonb_build_array(t.line_number,t.created_version,t.id,t.stock_order_id,s.row_version,s.status,
+    s.source_digest,s.quantity_scaled,s.total_minor) ORDER BY t.created_version)
+  FROM reconforge.stock_commerce_tranches t JOIN reconforge.stock_sales_orders s ON s.tenant_id=t.tenant_id AND s.id=t.stock_order_id
+  WHERE t.tenant_id=d.tenant_id AND t.order_id=d.id),'[]'::jsonb)) $$;
 CREATE FUNCTION reconforge.stock_commerce_ack(d reconforge.stock_commerce_orders) RETURNS JSONB LANGUAGE sql STABLE SET search_path=pg_catalog AS $$
  SELECT jsonb_build_object('id',d.id,'number',d.number,'workspace_id',d.workspace_id,'organization_id',d.organization_id,
  'legal_entity_id',d.legal_entity_id,'currency_code',d.currency_code,'total_minor',d.total_minor::text,'line_count',d.line_count,
  'row_version',d.row_version,'status',d.status,'created_by',d.created_by,'approved_by',d.approved_by,'source_digest',d.source_digest,
- 'progress_digest',reconforge.irp_digest(reconforge.stock_commerce_public(d))) $$;
+ 'progress_digest',reconforge.irp_digest(reconforge.stock_commerce_progress(d))) $$;
 CREATE FUNCTION reconforge.stock_commerce_admit() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-DECLARE d RECORD; a TEXT:=current_setting('app.stock_commerce_actor_id',true); p TEXT; q JSONB;
+DECLARE d reconforge.stock_commerce_orders%ROWTYPE; a TEXT:=current_setting('app.stock_commerce_actor_id',true); p TEXT; q JSONB;
+ seal JSONB;inputs JSONB;birth_count BIGINT;birth_total NUMERIC;birth_last INTEGER;
 BEGIN
  IF TG_OP='DELETE' OR(TG_OP='UPDATE' AND TG_TABLE_NAME<>'stock_commerce_orders') THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_commerce_owner_phase',MESSAGE='Commercial source and evidence are immutable.';
@@ -143,8 +154,25 @@ BEGIN
   END IF;
  ELSE
   IF NEW.actor_id IS DISTINCT FROM a OR NEW.workspace_id IS DISTINCT FROM d.workspace_id OR NEW.version<>d.row_version
-  OR octet_length(NEW.request::text)>2097152 OR octet_length(NEW.result::text)>4194304 THEN
+  OR octet_length(NEW.request::text)>2097152 OR octet_length(NEW.result::text)>4194304
+  OR reconforge.irp_digest(NEW.request) IS DISTINCT FROM NEW.request_digest
+  OR reconforge.irp_digest(NEW.result) IS DISTINCT FROM NEW.result_digest
+  OR NEW.result IS DISTINCT FROM reconforge.stock_commerce_ack(d) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_commerce_owner_phase',MESSAGE='Commercial evidence exceeds its exact actor, version or resource contract.';
+  END IF;
+  IF NEW.version=1 THEN
+   -- The immutable first command is the birth seal. Every source line must
+   -- exist and be admitted before it; no line can be appended afterwards,
+   -- even within the same transaction or with immediate deferred constraints.
+   SELECT jsonb_build_object('header',d.source,'lines',jsonb_agg(source ORDER BY line_number)),
+    jsonb_agg(source-ARRAY['quantity_scaled','monetary_policy'] ORDER BY line_number),count(*),sum(total_minor),max(line_number)
+   INTO seal,inputs,birth_count,birth_total,birth_last FROM reconforge.stock_commerce_lines WHERE tenant_id=d.tenant_id AND order_id=d.id;
+   IF NEW.operation IS DISTINCT FROM'create' OR NEW.actor_id IS DISTINCT FROM d.created_by OR d.status<>'Draft'
+   OR reconforge.irp_digest(seal) IS DISTINCT FROM d.source_digest
+   OR birth_count<>d.line_count OR birth_last IS DISTINCT FROM d.line_count OR birth_total IS DISTINCT FROM d.total_minor::numeric
+   OR NEW.request->'payload' IS DISTINCT FROM jsonb_build_object('header',d.source,'lines',inputs) THEN
+    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_commerce_owner_phase',MESSAGE='Commercial birth requires complete independently admitted immutable lines and exact source seal.';
+   END IF;
   END IF;
  END IF;
  RETURN NEW;
@@ -161,16 +189,16 @@ DO $$ DECLARE n TEXT; BEGIN
  END LOOP;
 END $$;
 CREATE FUNCTION reconforge.stock_commerce_close(t TEXT,target TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $$
-DECLARE d reconforge.stock_commerce_orders%ROWTYPE; c RECORD; s RECORD; l RECORD; seal JSONB; actual JSONB; child_id TEXT; child_operation TEXT;
+DECLARE d reconforge.stock_commerce_orders%ROWTYPE; c RECORD; s RECORD; l RECORD; actual JSONB; child_id TEXT; child_operation TEXT;
 BEGIN
  SELECT * INTO d FROM reconforge.stock_commerce_orders WHERE tenant_id=t AND id=target;
  IF d IS NULL OR NOT reconforge.irp_scope(d.tenant_id,d.workspace_id,d.organization_id,d.legal_entity_id) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_commerce_owner_phase',MESSAGE='Commercial source is absent from current scope.';
  END IF;
- SELECT jsonb_build_object('header',d.source,'lines',jsonb_agg(source ORDER BY line_number)) INTO seal
- FROM reconforge.stock_commerce_lines WHERE tenant_id=t AND order_id=target;
- IF reconforge.irp_digest(seal) IS DISTINCT FROM d.source_digest
- OR(d.row_version>=3) IS DISTINCT FROM(d.approved_by IS NOT NULL)
+ -- Immutable command admission validates each exact digest once, including
+ -- the complete birth seal. Continuous closure still validates all phases,
+ -- counts, conserved quantities and native participants at transaction end.
+ IF(d.row_version>=3) IS DISTINCT FROM(d.approved_by IS NOT NULL)
  OR(SELECT count(*) FROM reconforge.stock_commerce_lines WHERE tenant_id=t AND order_id=target)<>d.line_count
  OR(SELECT sum(total_minor) FROM reconforge.stock_commerce_lines WHERE tenant_id=t AND order_id=target) IS DISTINCT FROM d.total_minor::numeric
  OR EXISTS(SELECT 1 FROM reconforge.stock_commerce_lines WHERE tenant_id=t AND order_id=target AND line_number>d.line_count)
@@ -178,15 +206,12 @@ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_commerce_owner_phase',MESSAGE='Commercial lines and commands require complete authoritative seal.';
  END IF;
  FOR c IN SELECT * FROM reconforge.stock_commerce_commands WHERE tenant_id=t AND order_id=target ORDER BY version LOOP
-  IF reconforge.irp_digest(c.request) IS DISTINCT FROM c.request_digest OR reconforge.irp_digest(c.result) IS DISTINCT FROM c.result_digest
-  OR c.request->>'id' IS DISTINCT FROM d.id OR c.request->>'actor_id' IS DISTINCT FROM c.actor_id OR c.request->>'operation' IS DISTINCT FROM c.operation
+  IF c.request->>'id' IS DISTINCT FROM d.id OR c.request->>'actor_id' IS DISTINCT FROM c.actor_id OR c.request->>'operation' IS DISTINCT FROM c.operation
   OR c.request->'scope'->>'workspace_id' IS DISTINCT FROM d.workspace_id OR c.request->'scope'->>'organization_id' IS DISTINCT FROM d.organization_id
   OR c.request->'scope'->>'legal_entity_id' IS DISTINCT FROM d.legal_entity_id OR(c.result->>'row_version')::integer IS DISTINCT FROM c.version
   OR c.result->>'source_digest' IS DISTINCT FROM d.source_digest
   OR(c.version=1 AND(c.operation<>'create' OR c.actor_id<>d.created_by OR c.result->>'status'<>'Draft'
-    OR c.request->'payload'->'header' IS DISTINCT FROM d.source
-    OR c.request->'payload'->'lines' IS DISTINCT FROM(SELECT jsonb_agg(source-ARRAY['quantity_scaled','monetary_policy'] ORDER BY line_number)
-      FROM reconforge.stock_commerce_lines WHERE tenant_id=t AND order_id=target)))
+    OR c.request->'payload'->'header' IS DISTINCT FROM d.source))
   OR(c.version>1 AND(c.request->'payload'->>'expected_version')::integer IS DISTINCT FROM c.version-1)
   OR(c.version=2 AND(c.operation<>'submit' OR c.result->>'status'<>'Submitted'))
   OR(c.version=3 AND(c.operation<>'approve' OR c.actor_id=d.created_by OR c.actor_id IS DISTINCT FROM d.approved_by OR c.result->>'status'<>'Approved'))
@@ -218,16 +243,13 @@ BEGIN
    END IF;
   END IF;
  END LOOP;
- FOR l IN SELECT * FROM reconforge.stock_commerce_lines WHERE tenant_id=t AND order_id=target LOOP
-  IF(SELECT COALESCE(sum(n.quantity_scaled),0) FROM reconforge.stock_commerce_tranches x
-    JOIN reconforge.stock_sales_orders n ON n.tenant_id=x.tenant_id AND n.id=x.stock_order_id
-    WHERE x.tenant_id=t AND x.order_id=target AND x.line_number=l.line_number AND n.status<>'Cancelled')>l.quantity_scaled
-  OR(SELECT COALESCE(sum(n.total_minor),0) FROM reconforge.stock_commerce_tranches x
-    JOIN reconforge.stock_sales_orders n ON n.tenant_id=x.tenant_id AND n.id=x.stock_order_id
-    WHERE x.tenant_id=t AND x.order_id=target AND x.line_number=l.line_number AND n.status<>'Cancelled')>l.total_minor THEN
+ IF EXISTS(SELECT l.line_number FROM reconforge.stock_commerce_lines l
+   LEFT JOIN reconforge.stock_commerce_tranches x ON x.tenant_id=l.tenant_id AND x.order_id=l.order_id AND x.line_number=l.line_number
+   LEFT JOIN reconforge.stock_sales_orders n ON n.tenant_id=x.tenant_id AND n.id=x.stock_order_id AND n.status<>'Cancelled'
+   WHERE l.tenant_id=t AND l.order_id=target GROUP BY l.line_number,l.quantity_scaled,l.total_minor
+   HAVING coalesce(sum(n.quantity_scaled),0)>l.quantity_scaled OR coalesce(sum(n.total_minor),0)>l.total_minor) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_commerce_owner_phase',MESSAGE='Commercial line quantity and value cannot be overcommitted.';
-  END IF;
- END LOOP;
+ END IF;
  FOR s IN SELECT n.*,x.line_number,x.created_version FROM reconforge.stock_commerce_tranches x
    JOIN reconforge.stock_sales_orders n ON n.tenant_id=x.tenant_id AND n.id=x.stock_order_id WHERE x.tenant_id=t AND x.order_id=target LOOP
   SELECT * INTO l FROM reconforge.stock_commerce_lines WHERE tenant_id=t AND order_id=target AND line_number=s.line_number;
@@ -279,6 +301,6 @@ DROP TRIGGER stock_commerce_source_closure ON reconforge.stock_commerce_orders;
 DROP TRIGGER stock_commerce_admission ON reconforge.stock_commerce_orders;
 DROP TABLE reconforge.stock_commerce_commands,reconforge.stock_commerce_tranches,reconforge.stock_commerce_lines;
 DROP FUNCTION reconforge.stock_commerce_close_trigger(),reconforge.stock_commerce_close(TEXT,TEXT),reconforge.stock_commerce_admit();
-DROP FUNCTION reconforge.stock_commerce_ack(reconforge.stock_commerce_orders),reconforge.stock_commerce_public(reconforge.stock_commerce_orders);
+DROP FUNCTION reconforge.stock_commerce_ack(reconforge.stock_commerce_orders),reconforge.stock_commerce_progress(reconforge.stock_commerce_orders),reconforge.stock_commerce_public(reconforge.stock_commerce_orders);
 DROP TABLE reconforge.stock_commerce_orders;
 """

@@ -255,3 +255,47 @@ def test_real_thousand_line_order_preserves_exact_source_and_partial_native_effe
     with runtime.actor("maker") as (connection, _, _actor):
         assert connection.execute("SELECT count(*) n FROM reconforge.stock_commerce_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1000
         assert connection.execute("SELECT max(octet_length(result::text)) n FROM reconforge.stock_commerce_commands WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] < 2048
+
+
+@pytest.mark.parametrize("fault", ["source_digest", "command_payload"])
+def test_birth_admission_rejects_forged_application_source_or_command_seal(receipt_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch, fault: str) -> None:
+    import psycopg
+    from reconforge.infrastructure import postgres_stock_commerce as implementation
+    runtime = create_stock_runtime(receipt_database)
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = repository(connection, runtime)
+        original = owner._remember
+        def altered_request(identifier: str, command_id: str, request: dict[str, Any], reason: str, actor: Any) -> dict[str, Any]:
+            return original(identifier, command_id, {**request, "payload": {**request["payload"], "lines": []}}, reason, actor)
+        real_digest = implementation.digest_payload
+        def forged_digest(value: Any) -> str:
+            return "0" * 64 if isinstance(value, dict) and set(value) == {"header", "lines"} else real_digest(value)
+        with monkeypatch.context() as bypass:
+            if fault == "source_digest":
+                bypass.setattr(implementation, "digest_payload", forged_digest)
+            else:
+                bypass.setattr(owner, "_remember", altered_request)
+            with pytest.raises(psycopg.errors.CheckViolation, match="Commercial birth") as refused:
+                owner.create(CommercialOrder("FORGED-BIRTH", "CUSTOMER", "PO", "USD", "2026-10-09",
+                    (CommercialLine("ITEM", "MAIN", "STOCK", "2", 5000, "Physical source"),)), command_id="forged-birth", actor=actor)
+            assert refused.value.diag.constraint_name == "stock_commerce_owner_phase"
+        assert connection.execute("SELECT count(*) n FROM reconforge.stock_commerce_orders WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+        assert connection.execute("SELECT count(*) n FROM reconforge.stock_commerce_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+
+
+def test_immutable_birth_seal_rejects_same_transaction_line_append_and_command_delete(receipt_database: tuple[str, str]) -> None:
+    import psycopg
+    runtime = create_stock_runtime(receipt_database)
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = repository(connection, runtime)
+        ack = owner.create(CommercialOrder("BIRTH-SEALED", "CUSTOMER", "PO", "USD", "2026-10-09",
+            (CommercialLine("ITEM", "MAIN", "STOCK", "2", 5000, "Physical source"),)), command_id="sealed-birth", actor=actor)
+        # This is deliberately inside the still-open outer birth transaction.
+        with pytest.raises(psycopg.errors.CheckViolation, match="creation seal"), connection.transaction():
+            connection.execute("""INSERT INTO reconforge.stock_commerce_lines
+                (tenant_id,order_id,line_number,item_id,uom_id,location_id,quantity_precision,quantity_scaled,total_minor,source)
+                SELECT tenant_id,order_id,2,item_id,uom_id,location_id,quantity_precision,quantity_scaled,total_minor,source
+                FROM reconforge.stock_commerce_lines WHERE tenant_id=%s AND order_id=%s""", (runtime.tenant, ack["id"]))
+        with pytest.raises(psycopg.errors.CheckViolation, match="immutable"), connection.transaction():
+            connection.execute("DELETE FROM reconforge.stock_commerce_commands WHERE tenant_id=%s AND order_id=%s AND version=1", (runtime.tenant, ack["id"]))
+        assert owner.get(ack["id"], actor=actor)["line_count"] == 1

@@ -10,6 +10,12 @@ from reconforge.domain.financial_reporting import AccountClassification, Opening
 
 
 class FinancialReportingRepository(Protocol):
+    def create_snapshot(self, *, map_id: str, period_id: str, as_of_date: str, organization_code: str,
+                        entity_code: str, command_id: str, actor: PostingActor) -> dict[str, Any]: ...
+    def get_snapshot(self, snapshot_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
+    def list_snapshots(self, scope: ReportingScope, *, actor: PostingActor, after_id: str = "", limit: int = 20) -> list[dict[str, Any]]: ...
+    def snapshot_evidence(self, snapshot_id: str, *, expected_digest: str, actor: PostingActor,
+                          after: int = 0, limit: int = 20) -> dict[str, Any]: ...
     def catalog(self, scope: ReportingScope, *, actor: PostingActor) -> dict[str, Any]: ...
     def prepare_map(
         self,
@@ -53,6 +59,23 @@ class FinancialReportingApplicationService:
 
     def __init__(self, repository: FinancialReportingRepository) -> None:
         self.repository = repository
+
+    def create_snapshot(self, *, map_id: str, period_id: str, as_of_date: str, organization_code: str,
+                        entity_code: str, command_id: str, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.create_snapshot(map_id=map_id, period_id=period_id, as_of_date=as_of_date,
+                                              organization_code=organization_code, entity_code=entity_code,
+                                              command_id=command_id, actor=actor)
+
+    def get_snapshot(self, snapshot_id: str, *, actor: PostingActor) -> dict[str, Any]:
+        return self.repository.get_snapshot(snapshot_id, actor=actor)
+
+    def list_snapshots(self, scope: ReportingScope, *, actor: PostingActor, after_id: str = "", limit: int = 20) -> list[dict[str, Any]]:
+        return self.repository.list_snapshots(scope, actor=actor, after_id=after_id, limit=limit)
+
+    def snapshot_evidence(self, snapshot_id: str, *, expected_digest: str, actor: PostingActor,
+                          after: int = 0, limit: int = 20) -> dict[str, Any]:
+        return self.repository.snapshot_evidence(snapshot_id, expected_digest=expected_digest, actor=actor,
+                                                after=after, limit=limit)
 
     def catalog(self, scope: ReportingScope, *, actor: PostingActor) -> dict[str, Any]:
         return self.repository.catalog(scope, actor=actor)

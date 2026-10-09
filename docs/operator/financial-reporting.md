@@ -17,3 +17,54 @@ Migration `0112_pg_financial_reporting` preflights the reserved OB1 namespace, i
 For historical least-privilege native finance roles, new reverse integrity checks require conditional **SELECT only** on `reconforge.financial_opening_plans`. A role participating in this module also needs the explicitly granted map/review/link/command tables for its permitted phases. Preserve FORCE RLS and deny unnecessary INSERT/UPDATE/DELETE privileges; do not use a definer function to bypass entity isolation. Verify restored roles using actual nonowner/non-BYPASSRLS probes before accepting a recovery profile.
 
 The configured PostgreSQL test module requires the existing real PostgreSQL fixture. Run it with fresh administrator and restricted application DSNs; configured acceptance requires every selected case to execute with zero skips. Default runs without that prerequisite report the same explicit prerequisite behavior as the existing native modules. Static, domain and React checks cannot substitute for the native integration gate or normal authenticated browser workflow.
+# Durable enterprise statement captures
+
+The existing `/statements` response and evidence budgets remain compatible.
+For larger histories use **Captured enterprise statements** in Studio after
+selecting a reviewed classification, fiscal period and cutoff date. The new
+`POST /api/v1/financial-reporting/snapshots` accepts `command_id`, `map_id`,
+`period_id` and `as_of_date`. It requires current `finance_core.read`, selected
+tenant/workspace/organization/entity authority, a human identity and browser
+CSRF for cookie-authenticated requests. It creates report evidence, with no
+financial posting or approval effect.
+
+The database captures the ordered IDs of all visible eligible native effects
+automatically. The application verifies native snapshots and audit/outbox in
+100-effect batches, then folds exact amounts without retaining posting lists
+in memory. A deferred SQL closure independently recomputes account totals,
+statement equations, currency/period affinity, the retained classification and
+the report audit event. A capture, all membership, summary, audit and outbox
+commit together. Any failure rolls the entire capture back; retry its original
+command unchanged. Reusing the command with another actor or request is refused.
+
+`GET /snapshots/{snapshot_id}` returns the compact captured statements.
+`GET /snapshots/{snapshot_id}/evidence?expected_digest=...&after=0&limit=20`
+returns original native posting evidence and chained membership. `next_after`
+is an ordinal keyset cursor. Pages bind the snapshot ID and report digest,
+default to 20 effects, permit at most 200 effects, and stop at 4 MiB of canonical
+evidence. All sources remain retained; a byte boundary reduces the page size
+rather than omitting evidence. Individual native snapshots retain their existing
+2 MiB budget. The UI shows one evidence page, verifies chain links with SHA-256,
+folds account/statement summaries with BigInt, and supports Arabic/English,
+keyboard operation, responsive tables and exact lost-acknowledgement retry.
+
+Later or backdated postings appear only in a **new** capture. Existing snapshots
+and pages remain unchanged, including after vacuum or a full native restore.
+The stored transaction snapshot string is diagnostic metadata, never a source
+selection filter or long-lived `xmin` identity. Fixed native effect IDs and the
+membership evidence chain are the durable source definition.
+
+The three new tables use FORCE RLS. Runtime roles need SELECT/INSERT on
+`financial_report_captures`, `financial_report_members`, and
+`financial_report_snapshots`, plus existing scoped native read/audit/outbox
+permissions. Application INSERT into membership is refused: only the nested
+capture trigger can populate it. UPDATE/DELETE are refused from the moment a
+row is created. Populated migration downgrade refuses evidence loss; use forward
+repair or restore a verified pre-upgrade backup.
+
+This path removes the operational 1000-effect/10000-line ceiling without raising
+the legacy endpoint's limits. The reviewed chart remains capped at 1000 accounts
+and summary JSON at 2 MiB. Large database aggregates can spill according to the
+operator's PostgreSQL resource configuration. Capture is currently synchronous;
+there is no claim of async worker execution, statutory cash-flow classification,
+multi-currency conversion, consolidation or automatic period close.

@@ -706,6 +706,28 @@ class PostgresFinancialReportingRepository:
             self._actor(actor, "finance_core.read", result, mutation=False)
             return result
 
+    def create_snapshot(self, *, map_id: str, period_id: str, as_of_date: str, organization_code: str,
+                        entity_code: str, command_id: str, actor: PostingActor) -> dict[str, Any]:
+        from reconforge.infrastructure.postgres_financial_reporting_snapshots import PostgresFinancialReportSnapshots
+        return PostgresFinancialReportSnapshots(self).create(
+            map_id=map_id, period_id=period_id, as_of_date=as_of_date, organization_code=organization_code,
+            entity_code=entity_code, command_id=command_id, actor=actor,
+        )
+
+    def get_snapshot(self, snapshot_id: str, *, actor: PostingActor) -> dict[str, Any]:
+        from reconforge.infrastructure.postgres_financial_reporting_snapshots import PostgresFinancialReportSnapshots
+        return PostgresFinancialReportSnapshots(self).get(snapshot_id, actor=actor)
+
+    def list_snapshots(self, scope: ReportingScope, *, actor: PostingActor, after_id: str = "", limit: int = 20) -> list[dict[str, Any]]:
+        from reconforge.infrastructure.postgres_financial_reporting_snapshots import PostgresFinancialReportSnapshots
+        return PostgresFinancialReportSnapshots(self).list(scope, actor=actor, after_id=after_id, limit=limit)
+
+    def snapshot_evidence(self, snapshot_id: str, *, expected_digest: str, actor: PostingActor,
+                          after: int = 0, limit: int = 20) -> dict[str, Any]:
+        from reconforge.infrastructure.postgres_financial_reporting_snapshots import PostgresFinancialReportSnapshots
+        return PostgresFinancialReportSnapshots(self).evidence(snapshot_id, expected_digest=expected_digest,
+                                                              actor=actor, after=after, limit=limit)
+
     def list_openings(self, scope: ReportingScope, *, actor: PostingActor) -> list[dict[str, Any]]:
         with self._transaction():
             self._actor(actor, "finance_core.read", scope.payload(), mutation=False)

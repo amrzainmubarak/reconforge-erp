@@ -23,6 +23,15 @@ def financial_snapshot_oracle() -> dict[str, Any]:
 
 def seed_financial_snapshot_browser(admin_dsn: str, app_dsn: str) -> ReceiptRuntime:
     """Isolated synthetic tenant; credentials stay in memory and never enter the oracle."""
+    import psycopg
+    from psycopg import sql
+
+    # Exercise the same finite invoker grant as the configured native fixture.
+    # A broad generic test bootstrap must not conceal a missing seal privilege.
+    runtime_user = psycopg.conninfo.conninfo_to_dict(app_dsn)["user"]
+    with psycopg.connect(admin_dsn) as connection:
+        connection.execute(sql.SQL("REVOKE UPDATE ON reconforge.financial_report_captures FROM {}").format(sql.Identifier(runtime_user)))
+        connection.execute(sql.SQL("GRANT UPDATE(membership_sealed) ON reconforge.financial_report_captures TO {}").format(sql.Identifier(runtime_user)))
     runtime = seed_receipt_browser(admin_dsn, app_dsn)
     seed_erp_browser_principals(runtime)
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work", organization_id="org") as connection:
@@ -60,9 +69,12 @@ def seed_financial_snapshot_browser(admin_dsn: str, app_dsn: str) -> ReceiptRunt
 def verify_financial_snapshot_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
     """Read retained browser writes and verify complete source/evidence without new effects."""
     with runtime.actor("browser-poster") as (connection, _, actor):
-        captured = connection.execute("SELECT id FROM reconforge.financial_report_captures WHERE tenant_id=%s",
+        assert connection.execute("SELECT has_column_privilege(current_user,'reconforge.financial_report_captures','membership_sealed','UPDATE') AS permitted").fetchone()["permitted"]
+        assert not connection.execute("SELECT has_column_privilege(current_user,'reconforge.financial_report_captures','source_snapshot','UPDATE') AS permitted").fetchone()["permitted"]
+        captured = connection.execute("SELECT id,membership_sealed FROM reconforge.financial_report_captures WHERE tenant_id=%s",
                                       (runtime.tenant,)).fetchall()
         assert len(captured) == 1, "Exact browser retry must capture once"
+        assert captured[0]["membership_sealed"] is True
         repo = PostgresFinancialReportingRepository(connection, runtime.tenant)
         report = repo.get_snapshot(captured[0]["id"], actor=actor)
         oracle = financial_snapshot_oracle()

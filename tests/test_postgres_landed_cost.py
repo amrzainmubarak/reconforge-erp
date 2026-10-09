@@ -202,7 +202,7 @@ def test_raw_command_insert_requires_current_persisted_authority(runtime: Receip
         if change == "disabled":
             connection.execute("UPDATE reconforge.identity_users SET disabled=true,disabled_at=clock_timestamp() WHERE tenant_id=%s AND id=%s", (runtime.tenant, actor.user_id))
         else:
-            connection.execute("UPDATE reconforge.identity_role_permissions SET active=false WHERE tenant_id=%s AND permission_name='payables.settle'", (runtime.tenant,))
+            connection.execute("UPDATE reconforge.identity_role_permissions SET active=false,revoked_at=clock_timestamp(),revoked_by='synthetic-reviewer',revocation_reason_code='access_change' WHERE tenant_id=%s AND permission_name='payables.settle'", (runtime.tenant,))
         connection.execute("""INSERT INTO reconforge.landed_cost_commands(tenant_id,workspace_id,plan_id,operation,command_id,actor_id,request_digest,request_json,response_json)
             SELECT tenant_id,workspace_id,plan_id,operation,'direct-revoked-command',actor_id,request_digest,request_json,response_json
             FROM reconforge.landed_cost_commands WHERE tenant_id=%s AND plan_id=%s AND operation='prepare'""", (runtime.tenant,plan["id"]))

@@ -96,6 +96,65 @@ def test_overpayment_pending_claim_and_self_review_are_refused(installment_runti
         prepare(runtime, invoice_id, 2101, "overspend")
 
 
+def test_maker_and_reviewer_post_denial_preserves_history_then_third_human_posts(
+    installment_runtime: tuple[ReceiptRuntime, str],
+) -> None:
+    from psycopg import sql
+
+    runtime, invoice_id = installment_runtime
+    plan = review(runtime, prepare(runtime, invoice_id, 1500))
+    tables = (
+        "financial_installment_plans", "financial_installment_reviews", "financial_installment_links",
+        "financial_installment_commands", "finance_entries", "finance_entry_lines", "finance_entry_line_dimensions",
+        "finance_posting_effects", "finance_posting_commands", "ap_supplier_invoices", "ap_supplier_invoice_lines",
+        "ap_payment_links", "ap_idempotency_keys", "domain_audit_events", "domain_audit_ledger_state", "outbox_events",
+    )
+
+    def retained_history(connection: Any) -> dict[str, list[str]]:
+        return {
+            table: [row["snapshot"] for row in connection.execute(sql.SQL(
+                'SELECT to_jsonb(history)::text AS snapshot FROM reconforge.{} history '
+                'WHERE tenant_id=%s ORDER BY to_jsonb(history)::text COLLATE "C"',
+            ).format(sql.Identifier(table)), (runtime.tenant,)).fetchall()]
+            for table in tables
+        }
+
+    for username in (MAKER, CHECKER):
+        with runtime.actor(username) as (connection, _, actor):
+            assert {"finance_core.post", "payables.settle"}.issubset(actor.permissions)
+            repository = PostgresFinancialInstallmentsRepository(connection, runtime.tenant)
+            before = retained_history(connection)
+            with pytest.raises(FinancePostingError) as refusal:
+                repository.post(plan["id"], expected_plan_digest=plan["plan_digest"],
+                    command_id="denied-post-" + username, reason="Must require a third human", actor=actor)
+            assert refusal.value.code == "installment_posting_denied"
+            assert retained_history(connection) == before
+            assert repository.get(plan["id"], actor=actor) == plan
+        with runtime.actor(POSTER) as (connection, _, _):
+            assert retained_history(connection) == before
+
+    with runtime.actor(POSTER) as (connection, _, _):
+        before = retained_history(connection)
+    posted = post(runtime, plan)
+    assert posted["status"] == "Posted"
+    with runtime.actor(POSTER) as (connection, _, actor):
+        after = retained_history(connection)
+        assert len(after["finance_posting_effects"]) == len(before["finance_posting_effects"]) + 1
+        assert len(after["ap_payment_links"]) == len(before["ap_payment_links"]) + 1
+        link = connection.execute(
+            "SELECT posted_actor_id FROM reconforge.financial_installment_links WHERE tenant_id=%s AND plan_id=%s",
+            (runtime.tenant, plan["id"]),
+        ).fetchone()
+        assert link["posted_actor_id"] == actor.user_id
+        allocation = connection.execute(
+            "SELECT amount_minor,supplier_invoice_id FROM reconforge.ap_payment_links WHERE tenant_id=%s AND id=%s",
+            (runtime.tenant, posted["payment_link_id"]),
+        ).fetchone()
+        assert allocation["amount_minor"] == 1500
+        assert allocation["supplier_invoice_id"] == invoice_id
+        assert PostgresPayablesRepository(connection, runtime.tenant).get_supplier_invoice(invoice_id)["status"] == "Approved"
+
+
 def test_parallel_same_command_has_one_business_effect(installment_runtime: tuple[ReceiptRuntime, str]) -> None:
     runtime, invoice_id = installment_runtime
     plan = review(runtime, prepare(runtime, invoice_id, 1500))

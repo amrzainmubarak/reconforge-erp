@@ -215,6 +215,9 @@ class PostgresFinancialInstallmentsRepository:
                 return replay
             if plan["phase"] != 1 or plan["plan_digest"] != expected_plan_digest:
                 raise FinancePostingError("installment_review_invalid", "A current reviewed installment is required.")
+            if actor.user_id in {plan["preparer_actor_id"], plan["reviewer_actor_id"]}:
+                raise FinancePostingError(
+                    "installment_posting_denied", "Posting requires a third authorized human independent of preparation and review.")
             self._current(plan)
             self._participant = _InstallmentPostingParticipant(self, str(plan["entry_id"]))
             try:

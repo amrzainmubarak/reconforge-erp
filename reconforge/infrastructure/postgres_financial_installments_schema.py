@@ -235,9 +235,7 @@ BEGIN
   END IF;
   FOR p IN SELECT * FROM reconforge.financial_installment_plans WHERE tenant_id=changed->>'tenant_id' AND
    (id=changed->>'id' OR id=changed->>'plan_id' OR entry_id=native_entry OR source_id=changed->>'id'
-    OR source_id=changed->>'supplier_invoice_id'
-    OR entry_id IN (SELECT z.entry_id FROM reconforge.finance_posting_effects z
-     WHERE z.tenant_id=changed->>'tenant_id' AND z.id=changed->>'reverses_effect_id')) LOOP
+    OR source_id=changed->>'supplier_invoice_id') LOOP
    PERFORM reconforge.installment_close(p.tenant_id,p.id);
   END LOOP;
  END LOOP; RETURN NULL;

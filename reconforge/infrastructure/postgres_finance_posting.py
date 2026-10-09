@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
+from itertools import islice
 from typing import Any
 from uuid import uuid4
 
@@ -347,6 +348,69 @@ class PostgresFinancePostingRepository:
         self._read(actor)
         with self._transaction():
             return self._get_effect(text(effect_id, "effect_id"))
+
+    def get_effects_batch(self, effect_ids: Sequence[str], *, actor: PostingActor) -> list[dict[str, Any]]:
+        """Verify a bounded set of retained effects without per-effect evidence reads.
+
+        Membership and business-date selection belong to the calling source owner.
+        Every row retains the same audit/outbox and content verification as
+        ``get_effect``; native inventory receipt verification also remains active.
+        """
+        self._read(actor)
+        if isinstance(effect_ids, (str, bytes)) or not 0 <= len(effect_ids) <= 200:
+            raise FinancePostingError("posting_batch_invalid", "At most 200 effect identifiers are allowed per batch.")
+        identifiers = [text(identifier, "effect_id") for identifier in effect_ids]
+        if len(set(identifiers)) != len(identifiers):
+            raise FinancePostingError("posting_batch_invalid", "A verification batch must not repeat an effect.")
+        if not identifiers:
+            return []
+        with self._transaction():
+            rows = records(self.connection.execute(
+                """SELECT p.*, EXISTS (
+                  SELECT 1 FROM reconforge.domain_audit_events a
+                  JOIN reconforge.outbox_events o ON o.tenant_id=a.tenant_id
+                  WHERE a.tenant_id=p.tenant_id AND a.id=p.audit_event_id AND o.event_id=p.outbox_event_id
+                    AND a.actor_user_id=p.posted_actor_id AND a.object_type='finance_posting'
+                    AND a.object_id=p.id AND a.action='finance_entry_posted'
+                    AND a.metadata_json=jsonb_build_object('entry_id',p.entry_id,'content_digest',p.validation_digest)
+                    AND o.event_type='finance_entry_posted' AND o.aggregate_type='finance_posting'
+                    AND o.aggregate_id=p.id AND o.payload=jsonb_build_object(
+                      'entry_id',p.entry_id,'content_digest',p.validation_digest,'audit_event_id',p.audit_event_id)
+                    AND o.workspace_id=p.workspace_id AND o.organization_id=p.organization_id
+                    AND o.legal_entity_id=p.legal_entity_id
+                ) AS evidence_verified
+                FROM reconforge.finance_posting_effects p WHERE p.tenant_id=%s AND p.id=ANY(%s)""",
+                (self.tenant_id, identifiers),
+            ))
+            if len(rows) != len(identifiers):
+                raise FinancePostingError("posting_effect_not_found", "A posting is absent or outside the authorized scope.")
+            verified: dict[str, dict[str, Any]] = {}
+            for row in rows:
+                evidence = row.pop("evidence_verified")
+                row.pop("tenant_id")
+                raw = row.pop("snapshot_json")
+                row["snapshot"] = raw if isinstance(raw, dict) else json.loads(raw)
+                if not evidence or validation_digest(row["snapshot"]) != row["validation_digest"]:
+                    raise FinancePostingError("posting_evidence_invalid", "Retained posting evidence failed verification.")
+                if row["source_kind"] in {"InventoryReceipt", "InventoryReceiptReversal"}:
+                    from reconforge.infrastructure.postgres_inventory_receipt_posting import (
+                        verify_inventory_receipt_finance_effect,
+                    )
+
+                    verify_inventory_receipt_finance_effect(self.connection, self.tenant_id, row)
+                verified[row["id"]] = row
+            return [verified[identifier] for identifier in identifiers]
+
+    def iter_verified_posting_effects(
+        self, *, effect_ids: Iterable[str], actor: PostingActor, batch_size: int = 100,
+    ) -> Iterator[dict[str, Any]]:
+        """Stream fixed source-owner membership with bounded memory and verification."""
+        if type(batch_size) is not int or not 1 <= batch_size <= 200:
+            raise FinancePostingError("posting_batch_invalid", "Verification batch size must be an integer from 1 to 200.")
+        self._read(actor)
+        identifiers = iter(effect_ids)
+        while batch := list(islice(identifiers, batch_size)):
+            yield from self.get_effects_batch(batch, actor=actor)
 
     def post(
         self,

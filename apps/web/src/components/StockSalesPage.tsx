@@ -6,6 +6,7 @@ import { executeStockCommand, loadStockOrder, loadStockOptions, loadStockOrders,
 import { stockTranslate, type StockMessage } from "../stock-sales-i18n";
 import type { Locale } from "../types";
 import "./StockSalesPage.css";
+import { StockCommercePanel } from "./StockCommercePanel";
 
 const readPermissions = ["sales.read", "inventory.read", "receivables.read", "finance_core.read"];
 const nextAction: Partial<Record<StockStage, { path: string; label: StockMessage; permissions: string[] }>> = {
@@ -34,13 +35,14 @@ function StockSalesSession({ locale }: { locale: Locale }) {
   const [identity, setIdentity] = useState<SalesIdentity | null>(null), [scopeInput, setScopeInput] = useState<SalesScope>({ workspace_id: "", organization_id: "", legal_entity_id: "" }), [scope, setScope] = useState<SalesScope | null>(null);
   const [orders, setOrders] = useState<StockOrder[]>([]), [detail, setDetail] = useState<StockOrder | null>(null), [selected, setSelected] = useState(""), [options, setOptions] = useState<StockOptions | null>(null), [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false), [pending, setPending] = useState<StockCommand | null>(null), [error, setError] = useState<StockMessage | null>(null), [stale, setStale] = useState(false);
+  const [commercePending, setCommercePending] = useState(false);
   const [order, setOrder] = useState({ number: "", customer_code: "", customer_reference: "", item_code: "", warehouse_code: "", location_code: "", quantity: "", unit_price_minor: "", currency_code: "", order_date: "", description: "", discount_basis_points: "0" });
   const [reason, setReason] = useState("");
   const [issue, setIssue] = useState({ posting_date: "", period_id: "", policy_code: "" });
   const [invoice, setInvoice] = useState({ invoice_number: "", invoice_date: "", due_date: "", journal_code: "", period_id: "", receivable_account_code: "", revenue_account_code: "" });
   const [collection, setCollection] = useState({ receipt_number: "", receipt_date: "", journal_code: "", period_id: "", cash_account_code: "" });
   const mounted = useRef(true), lock = useRef(false), alert = useRef<HTMLDivElement>(null), heading = useRef<HTMLHeadingElement>(null);
-  const active = () => mounted.current && auth.isCurrent(auth.revision), locked = busy || Boolean(pending);
+  const active = () => mounted.current && auth.isCurrent(auth.revision), locked = busy || Boolean(pending) || commercePending;
   const has = (...permissions: string[]) => Boolean(identity?.human && permissions.every((permission) => identity.permissions.includes(permission)));
   const read = has(...readPermissions), can = (...permissions: string[]) => Boolean(identity?.stepUp && !stale && !locked && has(...readPermissions, ...permissions));
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -124,6 +126,7 @@ function StockSalesSession({ locale }: { locale: Locale }) {
       {identity && read ? <>
         <form onSubmit={applyScope}><fieldset disabled={locked}><legend>{t("scope")}</legend>{choose("workspace", scopeInput.workspace_id, (value) => { setScopeInput({ ...scopeInput, workspace_id: value }); setScope(null); }, identity.workspaces.map((value) => ({ value, label: value })))}{choose("organization", scopeInput.organization_id, (value) => { setScopeInput({ ...scopeInput, organization_id: value }); setScope(null); }, identity.organizations.map((value) => ({ value, label: value })))}{choose("entity", scopeInput.legal_entity_id, (value) => { setScopeInput({ ...scopeInput, legal_entity_id: value }); setScope(null); }, identity.entities.map((value) => ({ value, label: value })))}<button>{t("load")}</button></fieldset></form>
         {scope && <>
+          <StockCommercePanel key={JSON.stringify(scope)} locale={locale} session={auth.session} scope={scope} identity={identity} options={options} disabled={busy || Boolean(pending)} onPendingChange={setCommercePending} />
           <section><button disabled={locked} onClick={() => { void identify(); setReload((old) => old + 1); }}>{t("refresh")}</button><p>{t("listBound")}</p><ul>{orders.map((row) => <li key={row.id}><strong>{row.number}</strong><span>{t(row.status)}</span><button disabled={locked} onClick={() => { setSelected(row.id); setReason(""); }}>{t("open")} {row.number}</button></li>)}</ul>{orders.length === 0 && <p>{t("empty")}</p>}</section>
           <details open={!detail}><summary>{t("create")}</summary><form onSubmit={(event) => { event.preventDefault(); if (!/^[0-9]{1,4}$/.test(order.discount_basis_points)) { setError("invalid"); return; } submit("/api/v1/stock-sales/orders", { ...order, discount_basis_points: Number(order.discount_basis_points) }); }}><p>{t("nameHint")}</p><fieldset><legend>{t("create")}</legend>
             {input("number", order.number, (value) => setOrder({ ...order, number: value }))}

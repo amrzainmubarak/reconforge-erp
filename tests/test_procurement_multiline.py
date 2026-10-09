@@ -11,6 +11,7 @@ from reconforge.domain.procurement_partial import (
     ProcurementLineQuantity,
     ProcurementOrderLine,
     ProcurementPartialError,
+    document_page_size,
     normalize_invoice_lines,
     normalize_multiline,
 )
@@ -57,3 +58,11 @@ def test_integer_minor_cost_rejects_fractional_line_total_before_native_write() 
     line = replace(enterprise_request().lines[0], quantity="0.000001", unit_price_minor=1200)
     with pytest.raises(ProcurementError, match="exact supported"):
         normalize_multiline(replace(enterprise_request(), lines=(line,)))
+
+
+def test_dense_document_projection_bounds_total_line_payload() -> None:
+    assert document_page_size(2) == 25 and document_page_size(128) == 4
+    assert all(document_page_size(count) * count <= 512 for count in range(1, 129))
+    for value in (0, 129, True):
+        with pytest.raises(ProcurementPartialError):
+            document_page_size(value)

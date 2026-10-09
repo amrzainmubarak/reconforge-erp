@@ -12,6 +12,7 @@ MAX_PARTS = 32
 MAX_ORDER_LINES = 128
 MAX_ENTERPRISE_PARTS = 1024
 DOCUMENT_PAGE_SIZE = 25
+DOCUMENT_PAGE_LINE_BUDGET = 512
 ORDER_STAGES = ("Draft", "Submitted", "Approved")
 RECEIPT_STAGES = ("Prepared", "Reviewed", "Posted")
 INVOICE_STAGES = ("Matched", "Approved", "AccrualPrepared", "AccrualReviewed", "Accrued")
@@ -19,6 +20,13 @@ INVOICE_STAGES = ("Matched", "Approved", "AccrualPrepared", "AccrualReviewed", "
 
 class ProcurementPartialError(ProcurementError):
     """Safe exact quantity, authority or optimistic command failure."""
+
+
+def document_page_size(line_count: int) -> int:
+    """Bound the worst dense invoice projection as well as document count."""
+    if type(line_count) is not int or not 1 <= line_count <= MAX_ORDER_LINES:
+        raise ProcurementPartialError("procurement_partial_lines_invalid", "A retained bounded purchase line count is required.")
+    return min(DOCUMENT_PAGE_SIZE, max(1, DOCUMENT_PAGE_LINE_BUDGET // line_count))
 
 
 def require_third_poster(preparer_id: str, reviewer_id: str | None, poster_id: str) -> None:

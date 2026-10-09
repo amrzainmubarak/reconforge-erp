@@ -56,7 +56,7 @@ adapter_matrix:
   postgres: Original accepted one-line gates retained; multiline current-source native, API, browser and restore acceptance require the lead final integration evidence
   sqlite: no implicit fallback
 limitations:
-  - Legacy orders retain 32 receipts and invoices; enterprise orders allow 128 lines and at most 1024 receipts or invoices projected in pages of 25
+  - Legacy orders retain 32 receipts and invoices; enterprise orders allow 128 lines and at most 1024 receipts or invoices projected in pages of at most 25 with a 512-line projection budget
   - Functional currency, untracked stock, exact minor-unit costs and zero tax
   - Studio/AP partial settlement requires the financial-installments extension and its own accepted reviewed payment contract, bounded to 200 plans per invoice
   - No PR/RFQ, supplier quotation selection, supplier returns, debit notes, tax, FX, live bank transfers or tracked-stock claim

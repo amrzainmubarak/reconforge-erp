@@ -64,13 +64,14 @@ export function parsePartialDetail(value: unknown, scope: ProcurementScope): Par
     });
     if (new Set(lines.map((line) => line.id)).size !== lines.length || lines.reduce((total, line) => total + BigInt(line.total_minor), 0n) !== BigInt(String(order.total_minor))) invalid();
     const raw = value.pages;
-    if (!["receipt_after", "invoice_after", "receipt_count", "invoice_count"].every((key) => Number.isInteger(raw[key]) && Number(raw[key]) >= 0 && Number(raw[key]) <= 1024) || raw.page_size !== 25 ||
+    const pageSize = Math.min(25, Math.max(1, Math.floor(512 / lines.length)));
+    if (!["receipt_after", "invoice_after", "receipt_count", "invoice_count"].every((key) => Number.isInteger(raw[key]) && Number(raw[key]) >= 0 && Number(raw[key]) <= 1024) || raw.page_size !== pageSize ||
       ![raw.next_receipt_after, raw.next_invoice_after].every((cursor) => cursor === null || Number.isInteger(cursor) && Number(cursor) > 0 && Number(cursor) <= 1024) || value.receipts.length > 25 || value.invoices.length > 25) invalid();
     pages = raw as unknown as PartialPages;
     for (const [kind, documents] of [["receipt", value.receipts], ["invoice", value.invoices]] as const) {
       const after = Number(raw[kind + "_after"]), count = Number(raw[kind + "_count"]);
       const next = raw["next_" + kind + "_after"];
-      if (after > count || documents.length !== Math.min(25, count - after) ||
+      if (after > count || documents.length !== Math.min(pageSize, count - after) ||
         next !== (after + documents.length < count ? after + documents.length : null)) invalid();
     }
   } else if (scaledQuantity(request.quantity) * BigInt(request.unit_price_minor) !== BigInt(String(order.total_minor)) * 1000000n) invalid();
@@ -131,7 +132,10 @@ export function parsePartialDetail(value: unknown, scope: ProcurementScope): Par
   const sumQuantity = (parts: (PartialReceipt | PartialInvoice)[]) => parts.reduce((total, part) => total + scaledQuantity(part.quantity_text), 0n);
   const sumMoney = (parts: (PartialReceipt | PartialInvoice)[], field: "total_minor" | "paid_minor" | "outstanding_minor" = "total_minor") => parts.reduce((total, part) => total + BigInt(String((part as unknown as Record<string, unknown>)[field])), 0n);
   if (multiline) {
+    const receivedCost = lines!.reduce((total, line) => total + scaledQuantity(line.received_quantity) * BigInt(line.unit_price_minor), 0n);
+    const invoicedCost = lines!.reduce((total, line) => total + scaledQuantity(line.invoiced_quantity) * BigInt(line.unit_price_minor), 0n);
     if (!["received_minor", "accrued_minor", "paid_minor", "outstanding_minor"].every((key) => money(totals[key])) ||
+      BigInt(String(totals.received_minor)) * 1000000n !== receivedCost || BigInt(String(totals.accrued_minor)) * 1000000n > invoicedCost ||
       !["ordered_quantity", "reserved_receipt_quantity", "received_quantity", "invoiced_quantity"].every((key) => totals[key] === "0") ||
       BigInt(String(totals.paid_minor)) + BigInt(String(totals.outstanding_minor)) !== BigInt(String(totals.accrued_minor)) ||
       sumMoney(receipts.filter((part) => part.stage === "Posted")) > BigInt(String(totals.received_minor)) || sumMoney(invoices.filter((part) => part.stage === "Accrued")) > BigInt(String(totals.accrued_minor)) ||

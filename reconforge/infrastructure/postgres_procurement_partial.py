@@ -13,7 +13,6 @@ from reconforge.domain.operational_finance import OperationalFinancePreparation
 from reconforge.domain.payables_quantities import exact_sum, quantity_text
 from reconforge.domain.procurement_operations import ProcurementPreparation, line_total
 from reconforge.domain.procurement_partial import (
-    DOCUMENT_PAGE_SIZE,
     INVOICE_STAGES,
     MAX_ENTERPRISE_PARTS,
     MAX_PARTS,
@@ -23,6 +22,7 @@ from reconforge.domain.procurement_partial import (
     MultilineProcurementPreparation,
     PartialQuantityPreparation,
     ProcurementPartialError,
+    document_page_size,
     normalize_invoice_lines,
     normalize_multiline,
     normalize_order,
@@ -65,11 +65,12 @@ class PostgresProcurementPartialRepository:
         return self._one(query, (self.tenant_id, exact_text(order_id)))
 
     def _documents(self, order_id: str, kind: str) -> list[dict[str, Any]]:
-        if self._order(order_id).get("multiline", False):
+        row = self._order(order_id)
+        if row.get("multiline", False):
             query = ("SELECT * FROM reconforge.procurement_partial_receipts WHERE tenant_id=%s AND order_id=%s AND sequence>%s ORDER BY sequence LIMIT %s" if kind == "receipt"
                      else "SELECT * FROM reconforge.procurement_partial_invoices WHERE tenant_id=%s AND order_id=%s AND sequence>%s ORDER BY sequence LIMIT %s")
             return [dict(item) for item in self.connection.execute(query,
-                (self.tenant_id, order_id, self.receipt_after if kind == "receipt" else self.invoice_after, DOCUMENT_PAGE_SIZE)).fetchall()]
+                (self.tenant_id, order_id, self.receipt_after if kind == "receipt" else self.invoice_after, document_page_size(row["line_count"]))).fetchall()]
         query = ("SELECT * FROM reconforge.procurement_partial_receipts WHERE tenant_id=%s AND order_id=%s ORDER BY sequence" if kind == "receipt"
                  else "SELECT * FROM reconforge.procurement_partial_invoices WHERE tenant_id=%s AND order_id=%s ORDER BY sequence")
         return [dict(item) for item in self.connection.execute(query, (self.tenant_id, order_id)).fetchall()]
@@ -129,11 +130,11 @@ class PostgresProcurementPartialRepository:
             if "receipt" in operation or operation == "receive":
                 focus = self._one("SELECT sequence FROM reconforge.procurement_partial_receipts WHERE tenant_id=%s AND order_id=%s AND (id=%s OR created_version=%s) ORDER BY sequence DESC LIMIT 1",
                     (self.tenant_id, order_id, payload.get("document_id"), row["row_version"]))
-                self.receipt_after = max(0, focus["sequence"] - DOCUMENT_PAGE_SIZE)
+                self.receipt_after = max(0, focus["sequence"] - document_page_size(row["line_count"]))
             else:
                 focus = self._one("SELECT sequence FROM reconforge.procurement_partial_invoices WHERE tenant_id=%s AND order_id=%s AND (id=%s OR created_version=%s) ORDER BY sequence DESC LIMIT 1",
                     (self.tenant_id, order_id, payload.get("document_id"), row["row_version"]))
-                self.invoice_after = max(0, focus["sequence"] - DOCUMENT_PAGE_SIZE)
+                self.invoice_after = max(0, focus["sequence"] - document_page_size(row["line_count"]))
         response = self._view(row)
         audit = PostgresAuditEventRepository(self.connection, self.tenant_id).append(actor_user_id=actor.user_id,
             actor_label=actor.user_id, object_type="procurement_partial_order", object_id=order_id, action="procurement_partial_" + operation.replace("-", "_"),
@@ -466,7 +467,9 @@ class PostgresProcurementPartialRepository:
             (SELECT count(*) FROM reconforge.procurement_partial_invoices WHERE tenant_id=%s AND order_id=%s) AS invoices""",
             (self.tenant_id, row["id"], self.tenant_id, row["id"]))
         result["lines"] = lines
-        result["pages"] = {"receipt_after": self.receipt_after, "invoice_after": self.invoice_after, "page_size": DOCUMENT_PAGE_SIZE,
+        if self.receipt_after > counts["receipts"] or self.invoice_after > counts["invoices"]:
+            raise ProcurementPartialError("procurement_partial_cursor_invalid", "Document cursors cannot exceed the retained source history.")
+        result["pages"] = {"receipt_after": self.receipt_after, "invoice_after": self.invoice_after, "page_size": document_page_size(row["line_count"]),
             "receipt_count": counts["receipts"], "invoice_count": counts["invoices"],
             "next_receipt_after": result["receipts"][-1]["sequence"] if result["receipts"] and result["receipts"][-1]["sequence"] < counts["receipts"] else None,
             "next_invoice_after": result["invoices"][-1]["sequence"] if result["invoices"] and result["invoices"][-1]["sequence"] < counts["invoices"] else None}

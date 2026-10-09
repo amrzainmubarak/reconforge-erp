@@ -311,6 +311,7 @@ def test_128_retained_native_purchase_lines_remain_distinct_and_tenant_isolated(
         view = repository.create_multiline(request, command_id="bounded128-native", actor=actor)
         assert len(view["lines"]) == 128 and len({line["id"] for line in view["lines"]}) == 128
         assert view["order"]["total_minor"] == "153600"
+        assert view["pages"]["page_size"] == 4
         assert connection.execute("SELECT count(*) FROM reconforge.ap_purchase_order_lines WHERE tenant_id=%s AND purchase_order_id=%s",
             (runtime.tenant, view["order"]["purchase_order_id"])).fetchone()[0] == 128
     foreign = create_multiline_runtime(receipt_database)

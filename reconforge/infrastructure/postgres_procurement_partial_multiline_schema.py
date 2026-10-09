@@ -370,6 +370,7 @@ DROP FUNCTION reconforge.pp_verify_order(TEXT,TEXT);
 DROP FUNCTION reconforge.pp_verify_multiline(TEXT,TEXT);
 ALTER FUNCTION reconforge.pp_verify_order_legacy(TEXT,TEXT) RENAME TO pp_verify_order;
 DROP TABLE reconforge.procurement_partial_invoice_lines;
+DROP INDEX reconforge.procurement_partial_receipt_line_capacity;
 ALTER TABLE reconforge.procurement_partial_receipts DROP CONSTRAINT procurement_partial_receipt_line_scope;
 ALTER TABLE reconforge.procurement_partial_receipts DROP COLUMN order_line_id;
 DROP TABLE reconforge.procurement_partial_order_lines;
@@ -391,7 +392,6 @@ ALTER TABLE reconforge.procurement_partial_receipts DROP CONSTRAINT procurement_
 ALTER TABLE reconforge.procurement_partial_receipts ADD CONSTRAINT procurement_partial_receipts_sequence_check CHECK(sequence BETWEEN 1 AND 32);
 ALTER TABLE reconforge.procurement_partial_invoices DROP CONSTRAINT procurement_partial_invoices_sequence_check;
 ALTER TABLE reconforge.procurement_partial_invoices ADD CONSTRAINT procurement_partial_invoices_sequence_check CHECK(sequence BETWEEN 1 AND 32);
-DROP INDEX reconforge.procurement_partial_receipt_line_capacity;
 DROP INDEX reconforge.procurement_partial_order_keyset;
 """
 

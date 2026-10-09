@@ -45,7 +45,8 @@ preparation on the same invoice; safe retries retain the exact actor-bound
 command. No external bank transfer is performed by this contract.
 
 Order lists use keyset pages of 25. Enterprise receipt and invoice histories
-allow at most 1024 documents each and project 25 at a time. Counts, conserved
+allow at most 1024 documents each and project at most 25 at a time, with a
+512-line projection budget: a 128-line order uses four documents per page. Counts, conserved
 line quantities and financial totals cover the whole owner rather than only
 the visible page. Command acknowledgements focus the acted document and remain
 immutable. A lost or malformed acknowledgement locks subsequent writes until

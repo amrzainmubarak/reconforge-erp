@@ -173,3 +173,30 @@ def test_public_generic_review_is_denied_without_mutating_partial_owner(
         assert denied.status_code == 409 and denied.json()["error"]["code"] == expected, denied.text
         read = client.get(ROOT + "/orders/" + view["order"]["id"], headers=headers)
         assert read.status_code == 200 and read.json() == view, read.text
+
+
+def test_installment_preparation_cannot_reserve_an_unrelated_liability_mapping(
+    receipt_database: tuple[str, str], partial_runtime: ReceiptRuntime, tmp_path: Path,
+) -> None:
+    from psycopg import sql
+
+    runtime = partial_runtime
+    view = accrue_partial_invoice(runtime, receive_partial(runtime, create_partial(runtime), "4"), "3")
+    tables = ("financial_installment_plans", "financial_installment_reviews", "financial_installment_links",
+              "financial_installment_commands", "finance_entries", "finance_entry_lines", "finance_posting_effects", "ap_payment_links")
+    with runtime.actor(MAKER) as (connection, _, _):
+        before = {table: connection.execute(sql.SQL("SELECT count(*) AS count FROM reconforge.{} WHERE tenant_id=%s").format(sql.Identifier(table)),
+                                            (runtime.tenant,)).fetchone()["count"] for table in tables}
+    with partial_client(runtime, receipt_database, tmp_path, MAKER) as (client, headers):
+        denied = client.post(INSTALLMENTS, headers=headers, json={"command_id": "wrong-retained-liability",
+            "source_id": view["invoices"][0]["native_invoice_id"], "source_kind": "APPayment", "amount_minor": "1500",
+            "journal_code": "STOCK", "period_id": "period", "posting_date": "2026-10-04", "debit_account_code": "CLEARING",
+            "credit_account_code": "CASH", "reason": "Existing liability account is unrelated to retained AP mapping"})
+        assert denied.status_code == 400, denied.text
+        assert denied.json()["error"]["code"] == "installment_account_invalid", denied.text
+        read = client.get(ROOT + "/orders/" + view["order"]["id"], headers=headers)
+        assert read.status_code == 200 and read.json() == view, read.text
+    with runtime.actor(MAKER) as (connection, _, _):
+        after = {table: connection.execute(sql.SQL("SELECT count(*) AS count FROM reconforge.{} WHERE tenant_id=%s").format(sql.Identifier(table)),
+                                           (runtime.tenant,)).fetchone()["count"] for table in tables}
+        assert after == before

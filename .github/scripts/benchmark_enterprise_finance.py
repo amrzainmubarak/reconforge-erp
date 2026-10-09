@@ -71,14 +71,17 @@ def main() -> int:
     status = run(["git", "status", "--porcelain", "--untracked-files=no"]).stdout
     if status:
         raise ValueError("Benchmark requires a fixed committed tracked source")
-    names = filter(None, run(["git", "ls-files", "-z"]).stdout.split("\0"))
-    source_digest = hashlib.sha256()
-    for name in sorted(names):
-        source_digest.update(name.encode())
-        source_digest.update(hashlib.sha256((ROOT / name).read_bytes()).digest())
+    def tracked_source_sha256() -> str:
+        names = filter(None, run(["git", "ls-files", "-z"]).stdout.split("\0"))
+        source_digest = hashlib.sha256()
+        for name in sorted(names):
+            source_digest.update(name.encode())
+            source_digest.update(hashlib.sha256((ROOT / name).read_bytes()).digest())
+        return source_digest.hexdigest()
+
     report: dict[str, object] = {
         "schema_version": 1, "started_at": datetime.now(UTC).isoformat(), "status": "failed",
-        "source_commit": run(["git", "rev-parse", "HEAD"]).stdout.strip(), "source_sha256": source_digest.hexdigest(),
+        "source_commit": run(["git", "rev-parse", "HEAD"]).stdout.strip(), "source_sha256": tracked_source_sha256(),
         "profile": "native-three-human-cash-equity-v1", "seed": args.seed, "counts": counts,
         "workers": args.workers, "repetitions": args.repetitions, "max_seconds": args.max_seconds,
         "image": IMAGE, "python": sys.version, "platform": platform.platform(), "logical_cpus": os.cpu_count(),
@@ -94,7 +97,7 @@ def main() -> int:
     admin_password, app_password = secrets.token_hex(24), secrets.token_hex(24)
     secret_values.extend([admin_password, app_password])
     try:
-        engine = json.loads(run(["docker", "info", "--format", "{{json .}}"] ).stdout)
+        engine = json.loads(run(["docker", "info", "--format", "{{json .}}"]).stdout)
         report["docker_engine_resources"] = {name: engine.get(name) for name in (
             "OperatingSystem", "OSType", "Architecture", "KernelVersion", "NCPU", "MemTotal", "Driver")}
         environment = os.environ.copy()
@@ -181,7 +184,11 @@ def main() -> int:
         with psycopg.connect(admin_dsn) as admin:
             report["database_bytes"] = int(admin.execute("SELECT pg_database_size(current_database())").fetchone()[0])
         report["container_resources_final_sample"] = run(["docker", "stats", "--no-stream", "--format", "{{json .}}", container]).stdout.strip()
-        if run(["git", "status", "--porcelain", "--untracked-files=no"]).stdout:
+        report["source_commit_after"] = run(["git", "rev-parse", "HEAD"]).stdout.strip()
+        report["source_sha256_after"] = tracked_source_sha256()
+        report["source_unchanged"] = (report["source_commit"] == report["source_commit_after"]
+            and report["source_sha256"] == report["source_sha256_after"])
+        if run(["git", "status", "--porcelain", "--untracked-files=no"]).stdout or not report["source_unchanged"]:
             raise AssertionError("Tracked source changed during benchmark")
         report["status"] = "passed"
     except Exception as exc:

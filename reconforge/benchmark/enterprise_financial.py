@@ -79,6 +79,7 @@ def measure_verified_reads(connection: Any, tenant_id: str, effect_ids: Sequence
             debit = credit = 0
             tracemalloc.start()
             started = time.perf_counter()
+            cpu_started = time.process_time()
             try:
                 for page in pages:
                     page_started = time.perf_counter()
@@ -90,6 +91,7 @@ def measure_verified_reads(connection: Any, tenant_id: str, effect_ids: Sequence
                             debit += int(line["debit_minor"])
                             credit += int(line["credit_minor"])
                 elapsed = time.perf_counter() - started
+                cpu_elapsed = time.process_time() - cpu_started
                 _, peak = tracemalloc.get_traced_memory()
             finally:
                 tracemalloc.stop()
@@ -102,7 +104,8 @@ def measure_verified_reads(connection: Any, tenant_id: str, effect_ids: Sequence
                 "verified_effects_per_second": len(effect_ids) / elapsed, "client_execute_calls": measured.execute_calls,
                 "request_unit": "one_effect" if mode == "per_effect_baseline" else f"up_to_{batch_size}_effects",
                 "request_latency_seconds": {"p50": percentile(latencies, .5), "p95": percentile(latencies, .95), "p99": percentile(latencies, .99)},
-                "peak_python_allocated_bytes": peak, "debit_minor": str(debit), "credit_minor": str(credit),
+                "peak_python_allocated_bytes": peak, "client_process_cpu_seconds": cpu_elapsed,
+                "debit_minor": str(debit), "credit_minor": str(credit),
                 "effects_digest": actual_digest, "error_count": 0})
     before = sorted(row["seconds"] for row in results["per_effect_baseline"])[repetitions // 2]
     after = sorted(row["seconds"] for row in results["bounded_batch"])[repetitions // 2]

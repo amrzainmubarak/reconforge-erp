@@ -49,6 +49,7 @@ export function StockCommercePanel({ locale, session, scope, identity, options, 
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   useEffect(() => {
     const controller = new AbortController();
+    setStale(true);
     Promise.all([loadCommercePage(session, scope, after, controller.signal), selected ? loadCommerceOrder(session, scope, selected, controller.signal) : Promise.resolve(null)]).then(([next, order]) => {
       if (!controller.signal.aborted && mounted.current) { setPage(next); setDetail(order); setStale(false); setError(null); }
     }).catch(() => { if (!controller.signal.aborted && mounted.current) { setError("failed"); setStale(true); setDetail(null); } });
@@ -61,7 +62,7 @@ export function StockCommercePanel({ locale, session, scope, identity, options, 
   }, [session, scope, prefix, catalogAfter]);
   async function send(command: CommerceCommand) {
     if (lock.current) return; lock.current = true; setBusy(true); setPending(command); onPendingChange(true); setError(null);
-    try { const ack = await executeCommerceCommand(session, command); if (mounted.current) { setPending(null); onPendingChange(false); setSelected(ack.id); setReload((old) => old + 1); setReason(""); setStale(false); } }
+    try { const ack = await executeCommerceCommand(session, command); if (mounted.current) { setPending(null); onPendingChange(false); setSelected(ack.id); setReload((old) => old + 1); setReason(""); setStale(true); } }
     catch (caught) { if (mounted.current) { const unknown = !(caught instanceof AdminApiError) || caught.status >= 500; setError(unknown ? "unknown" : "failed"); setStale(true); if (!unknown) { setPending(null); onPendingChange(false); if (caught.status === 403) { setDetail(null); setPage(null); } } } }
     finally { lock.current = false; if (mounted.current) setBusy(false); }
   }

@@ -176,6 +176,54 @@ def test_reserved_quantity_survives_uncoordinated_native_stock_withdrawal(stock_
                                   (runtime.tenant,)).fetchone()["n"] == 0
 
 
+def test_owner_reference_cannot_publish_a_detached_native_delivery(stock_runtime: ReceiptRuntime) -> None:
+    import psycopg
+    runtime = stock_runtime
+    result = execute(runtime, create_reserved_order(runtime, "FROZEN-REFERENCE", "5"), "prepare-issue", "maker", {
+        "posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
+    result = execute(runtime, result, "review-issue", "checker")
+    with pytest.raises(psycopg.errors.CheckViolation):
+        with runtime.actor("maker") as (connection, _, actor):
+            movement = repository(connection, runtime).inventory.create_movement(movement_number="DETACHED-OWNER-REFERENCE", movement_type="Delivery",
+                organization_code="ORG", entity_code="ENTITY", period_id="period", movement_date="2026-10-09",
+                description="Native movement claiming the frozen source", source_reference=result["id"], workspace="work", actor_label=actor.username,
+                lines=[{"item_code": "ITEM", "quantity": "1", "from_location": "MAIN/STOCK"}])
+        with runtime.actor("poster") as (connection, _, actor):
+            repository(connection, runtime).inventory.post_movement(movement["id"], reason="Uncoordinated owner reference", actor_label=actor.username)
+    with runtime.actor("maker") as (connection, _, actor):
+        assert repository(connection, runtime).get(result["id"], actor=actor)["status"] == "IssueReviewed"
+        assert connection.execute("SELECT count(*) n FROM reconforge.inventory_movements WHERE tenant_id=%s AND movement_number='DETACHED-OWNER-REFERENCE'",
+                                  (runtime.tenant,)).fetchone()["n"] == 0
+    assert execute(runtime, result, "deliver", "poster")["status"] == "Delivered"
+
+
+def test_owner_reference_cannot_publish_an_extra_manual_financial_effect(stock_runtime: ReceiptRuntime) -> None:
+    import psycopg
+    runtime = stock_runtime
+    result = execute(runtime, create_reserved_order(runtime, "FROZEN-FINANCE", "5"), "prepare-issue", "maker", {
+        "posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
+    result = execute(runtime, result, "review-issue", "checker")
+    with pytest.raises(psycopg.errors.CheckViolation):
+        with runtime.actor("maker") as (connection, _, actor):
+            extra = repository(connection, runtime).finance.create_entry(entry_number="EXTRA-MANUAL-STOCK-REF", organization_code="ORG",
+                entity_code="ENTITY", period_id="period", journal_code="STOCK", posting_date="2026-10-09", description="Extra claimed stock cost",
+                external_reference=result["id"], source_type="Manual", workspace="work", actor_label=actor.username,
+                lines=[{"account_code": "COGS", "debit": "1.00", "credit": "0"}, {"account_code": "INVENTORY", "debit": "0", "credit": "1.00"}])
+        with runtime.actor("checker") as (connection, _, actor):
+            repository(connection, runtime).finance.validate_entry(extra["id"], reason="Independent native review", actor_label=actor.username)
+        with runtime.actor("poster") as (connection, _, actor):
+            seal = connection.execute("SELECT validation_digest FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s",
+                                      (runtime.tenant, extra["id"])).fetchone()["validation_digest"]
+            repository(connection, runtime).postings.post(extra["id"], command_id="extra-stock-ref", expected_validation_digest=seal,
+                                                        reason="Uncoordinated owner reference", actor=actor)
+    with runtime.actor("maker") as (connection, _, actor):
+        assert repository(connection, runtime).get(result["id"], actor=actor)["status"] == "IssueReviewed"
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_entries WHERE tenant_id=%s AND entry_number='EXTRA-MANUAL-STOCK-REF'",
+                                  (runtime.tenant,)).fetchone()["n"] == 0
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+    assert execute(runtime, result, "deliver", "poster")["status"] == "Delivered"
+
+
 def test_raw_forged_phase_requires_native_issue_and_auditable_command(stock_runtime: ReceiptRuntime) -> None:
     import psycopg
     runtime = stock_runtime

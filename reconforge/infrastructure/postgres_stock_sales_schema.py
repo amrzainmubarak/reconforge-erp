@@ -222,6 +222,12 @@ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Stock-sale source scope is incomplete.';
  END IF;
  s:=reconforge.stock_sales_stage(d.status);
+ IF EXISTS(SELECT 1 FROM reconforge.inventory_movements m WHERE m.tenant_id=t AND m.source_reference=d.id
+    AND m.id IS DISTINCT FROM d.movement_id)
+ OR EXISTS(SELECT 1 FROM reconforge.finance_entries f WHERE f.tenant_id=t AND f.external_reference=d.id
+    AND f.id IS DISTINCT FROM d.cogs_entry_id) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Stock owner references require their exact retained native movement and financial entry.';
+ END IF;
  IF d.status<>'Cancelled' AND(
   (s>=2) IS DISTINCT FROM(d.approved_by IS NOT NULL)
   OR(s>=4) IS DISTINCT FROM(d.issue_plan IS NOT NULL AND d.cogs_entry_id IS NOT NULL)

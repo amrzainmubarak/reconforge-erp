@@ -1,7 +1,7 @@
 # ADR 0842: Compose stock sales, partial procurement and classified financial reporting
 
 Date: 2026-10-09
-Status: Accepted for implementation; runtime acceptance pending
+Status: Accepted; bounded local runtime acceptance on6ec9; hosted and independent release assurance remain separate
 
 Start at PR125 source f24d4836 and retain its dependency on PR124. Main is
 unchanged. The expansion branch is amr/global-erp-expansion-20261009.
@@ -29,6 +29,12 @@ are independent current humans. Deferred guards close source and financial
 phases in both directions, including direct SQL and generic native routes.
 Exact minor units, bounded quantities, deterministic frozen retry and current
 scope/amount policy are mandatory. Claims remain experimental and bounded.
+
+Local native68/zero-skip, domain/contracts47, React295, normal HTTPS cycles,
+214-table/197-function populated restore, current package/image/security and
+bounded synthetic recovery pass on source6ec9. See the source-bound acceptance
+packet in docs/execution/ERP_EXPANSION_ACCEPTANCE_2026-10-09.json. Current-source
+hosted checks belong to DraftPR126; they are not inferred from local results.
 
 Build in batches; verify actual cycles at integration gates. Freeze the source
 before full Python/PostgreSQL/React/browser/security/concurrency/recovery/build

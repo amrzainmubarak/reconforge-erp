@@ -1,8 +1,8 @@
 schema_version: 2
-updated_at: "2026-10-08"
+updated_at: "2026-10-09"
 phase: "Phase 4 — Global Capability Expansion"
 snapshot:
-  evidence_base_commit: "547b653915873ed010e70c0a96ae9aee4b8cc4b6"
+  evidence_base_commit: "6ec9a70114edfd835386ee3b0f0085e5da1fff15"
   policy_change_commit: "the commit containing this file"
   published: false
 status_values: [planned, in_progress, blocked, deferred, completed]
@@ -13,30 +13,30 @@ tasks:
     priority: P0
     area: stock-sales
     title: Reserved stock delivery FIFO COGS revenue and collection from Studio
-    status: in_progress
+    status: completed
     depends_on: [AMR-ERP-001, AMR-ERP-002]
-    exit_evidence: pending actual source-bound integration and final gates
+    exit_evidence: Bounded full stock-to-Paid cycle, three distinct financial humans, native FIFO/COGS/AR/Cash/GL and actual Studio/restore pass on6ec9. ERP_EXPANSION_ACCEPTANCE_2026-10-09.json; partial sales and inverses deferred.
   - id: AMR-EXP-002
     priority: P0
     area: partial-procurement
     title: Repeated receipt and invoice tranches with reviewed partial AP payments
-    status: in_progress
+    status: completed
     depends_on: [AMR-ERP-003, AMR-EXP-004]
-    exit_evidence: pending actual source-bound integration and final gates
+    exit_evidence: Bounded repeated receiving and invoice tranches, third-person receipt/accrual, four reviewed AP installments, exact three-way matching, native FIFO/AP/GL, actual Studio/restore pass on6ec9. ERP_EXPANSION_ACCEPTANCE_2026-10-09.json.
   - id: AMR-EXP-003
     priority: P0
     area: financial-reporting
     title: Governed opening and classified as-of financial reports
-    status: in_progress
+    status: completed
     depends_on: [AMR-ERP-001]
-    exit_evidence: pending actual source-bound integration and final gates
+    exit_evidence: Bounded first-history opening, reviewed classifications and as-of TB/BS/IS/cash-movement exact client/server fold pass in actual Studio/native restore on6ec9. Statutory cash flow and global finance extensions remain deferred.
   - id: AMR-EXP-004
     priority: P0
     area: financial-installments
     title: Compose exact reviewed installments with native AP allocation
-    status: in_progress
+    status: completed
     depends_on: [AMR-ERP-001]
-    exit_evidence: Domain and static checks only; native source and browser gates pending
+    exit_evidence: Exact reviewed partial AP allocations, three independent humans, current authority, concurrent replay, immutable source closure and late GL/allocation acknowledgement rollback pass on6ec9. No external bank execution or inverse claim.
   - id: AMR-ERP-001
     priority: P0
     area: operational-finance

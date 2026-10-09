@@ -49,7 +49,7 @@ test_matrix:
   web: [apps/web/src/procurement-partial-data.test.ts, apps/web/src/components/ProcurementPartialPage.test.tsx]
   browser: Lead integration gate on normal authenticated Studio and actual PostgreSQL
 adapter_matrix:
-  postgres: implemented; acceptance requires the current integration gate
+  postgres: bounded native API Studio and restore accepted on6ec9; current-source hosted checks remain independently authoritative
   sqlite: no implicit fallback
 limitations:
   - One stock line per order, at most 32 receipts and 32 invoices

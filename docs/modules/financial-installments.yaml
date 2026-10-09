@@ -34,6 +34,7 @@ test_matrix:
   domain: tests/test_financial_installments.py
   postgres: tests/test_postgres_financial_installments.py
   browser: apps/web/live/erp-expansion-cycles.spec.ts
+runtime_acceptance: bounded native source SQL closure three-human API Studio and restore accepted on6ec9; see ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 checks
 limitations:
   - Functional currency, exact zero-tax accrued partial Procurement invoices
   - Native ledger settlement does not execute an external bank transfer

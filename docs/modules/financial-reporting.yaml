@@ -38,6 +38,7 @@ test_matrix:
   configured_postgresql: tests/test_postgres_financial_reporting.py
   authenticated_api: tests/test_postgres_financial_reporting_api.py
   react: [apps/web/src/financial-reporting-data.test.ts, apps/web/src/components/FinancialReportingPage.test.tsx]
+runtime_acceptance: bounded governed opening and classified reports accepted in native API Studio and restore on6ec9; see ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 checks
 limitations:
   - Governed opening/classification source workflows require PostgreSQL; existing Community finance APIs remain available.
   - Statements are currently recorded business-date views, not historical knowledge-time or statutory fiscal-close reports.

@@ -57,7 +57,7 @@ rollback_plan: empty migration downgrade restores exact predecessor receipt name
 test_matrix:
   - tests/test_stock_sales.py exact discount and existing FIFO interpretation
   - tests/test_postgres_stock_sales.py actual stock-to-cash, independent review, detached native rollback and six concurrent reservations
-runtime_acceptance: pending actual PostgreSQL, API and Studio integration gates
+runtime_acceptance: bounded local PostgreSQL API Studio and populated restore accepted on6ec9; see docs/execution/ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 hosted checks
 scope_limits:
   - PostgreSQL only; existing local workflows remain available
   - one non-lot item and one full shipment/invoice/settlement in functional currency

@@ -1,6 +1,6 @@
 # Governed product sales
 
-This experimental PostgreSQL slice owns one non-lot stock item from a commercial order through reservation, independently reviewed FIFO issue and COGS, native receivable/revenue, and one full cash settlement. It uses existing inventory, valuation, finance posting, receivable and operational finance engines. Runtime acceptance is pending the current integrated gates; the backend checkpoint alone does not establish successful operation.
+This experimental PostgreSQL slice owns one non-lot stock item from a commercial order through reservation, independently reviewed FIFO issue and COGS, native receivable/revenue, and one full cash settlement. It uses existing inventory, valuation, finance posting, receivable and operational finance engines. Bounded native/API/Studio and populated restore acceptance passed on6ec9; see the source-bound ERP_EXPANSION_ACCEPTANCE_2026-10-09 packet and independent current-source PR126 checks.
 
 Select the exact workspace, organization and legal entity. Create an order using its active customer, inventory item, warehouse and nonnegative location. Quantity and price use exact text and minor units. The explicit discount policy rounds the discounted unit price HALF_UP to minor units, then the extended quantity value. Tax is explicitly zero. Order and receipt numbers use at most 64 ASCII letters, digits, hyphen, underscore or dot and are retained uppercase.
 
@@ -16,5 +16,4 @@ Install with an administrator through Alembic head. Generic native inventory, fi
 
 An empty downgrade restores the exact predecessor receipt namespace functions and removes only StockSales hooks/tables. Any retained order or StockSales name claim refuses downgrade. Preserve and verify a native backup rather than deleting financial history. Capacity and FIFO claims are database business objects; do not reset them manually.
 
-Current gate subjects are exact commercial/FIFO domain cases and actual nonowner PostgreSQL stock-to-cash, separation of duties, detached posting rollback and concurrent reservations. API/Studio/restore evidence belongs to the final integrated source, not this checkpoint.
-
+Current gate subjects are exact commercial/FIFO domain cases and actual nonowner PostgreSQL stock-to-cash, separation of duties, detached posting rollback and concurrent reservations. The accepted integrated6ec9 packet includes actual API403 reviewer denials, independent SQL refusal, third-poster Paid continuation, identical-packet lost-ack replay and native populated restore. This is bounded workflow evidence, not production or unrestricted sales completeness.

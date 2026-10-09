@@ -1,5 +1,11 @@
 # ReconForge Execution Decisions Log
 
+## D-EXP-20261009-GATES: Bound stronger duties and complete native ownership
+
+New Stock revenue/cash, partial receiving/accrual, installments and opening require distinct preparer/reviewer/poster identities; retained source actors are bound independently by deferred SQL. Existing native and service-sales policies stay compatible. Actual reviewer-publication RED probes are preserved, and third-person continuation plus exact financial rollback is proved by native and normal wire gates. The module dependency order remains reporting→stock→partial-procurement→installments; FI1 is a settlement extension after PP rather than a cyclic prerequisite.
+
+The generic Python profile omits only Stock's two configured-PostgreSQL fixture modules. Both complete modules run in the unconditional mandatory erp-expansion shard; executable ownership tests prevent their loss. All previous nine shards remain, with two bounded expansion shards and fail-closed aggregation. No new skip, -k filter, security exception or weaker invariant repairs a failure. Local accepted code-source6ec9 retains its own identity; documentation-only successors and hosted current-source checks are separately bound. Original failures/interrupted readers remain explicitly unaccepted in ERP_EXPANSION_ACCEPTANCE_2026-10-09.json.
+
 ## D-EXP-20261009: Reuse native effects under bilateral source ownership
 
 ADR0842 adds governed owners around existing FIFO, posting and AR/AP engines. Reserved namespaces SS1/OB1/FI1 and deferred OLD/NEW SQL closures bind exact source, phase, native account IDs, quantities, currency, retained snapshot, audit/outbox and immutable command acknowledgements. AP installments retain the partial order's reviewed AP/cash policy and frozen residual; phase changes require three distinct current humans. Independent source references cannot manufacture Stock movements or Manual COGS effects. Additive migration rollback preserves populated financial evidence; empty rollback is tested separately. Avoid unrelated AP→Finance RLS dependencies by deriving reversal ownership only inside the relevant financial-effect path. Historical roles receive conditional finite owner-index SELECT, with unnecessary DML and BYPASSRLS unchanged.

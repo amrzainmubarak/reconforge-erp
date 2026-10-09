@@ -119,6 +119,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
         ("tests/test_postgres_operational_finance_api.py", "finance-posting"),
         ("tests/test_postgres_financial_installments.py", "finance-posting"),
         ("tests/test_postgres_financial_reporting.py", "finance-posting"),
+        ("tests/test_postgres_financial_reporting_api.py", "finance-posting"),
         ("tests/test_postgres_stock_sales.py", "inventory-payables"),
         ("tests/test_postgres_stock_sales_api.py", "inventory-payables"),
         ("tests/test_postgres_procurement_partial.py", "inventory-payables"),

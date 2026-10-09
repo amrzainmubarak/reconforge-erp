@@ -142,6 +142,7 @@ def test_changed_command_amount_cannot_replay_financial_ack(installment_runtime:
 @pytest.mark.parametrize("fault", ["native_account", "native_date", "missing_precision"])
 def test_native_sql_closure_refuses_capture_faults_without_retained_effects(installment_runtime: tuple[ReceiptRuntime, str], fault: str) -> None:
     import psycopg
+
     from reconforge.domain.finance_posting import digest_payload
 
     runtime, invoice_id = installment_runtime

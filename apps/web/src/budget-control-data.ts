@@ -97,7 +97,7 @@ export function budgetInputMinor(value: string, precision: number): string {
   if (fraction.length > integer(precision, 0, 6)) invalid();
   return minor(BigInt(whole + fraction.padEnd(precision, "0")).toString(), true);
 }
-async function request(session: BrowserAdminSession, path: string, workspace = "", body?: Readonly<Record<string, string | number>>, signal?: AbortSignal, scope?: BudgetScope): Promise<unknown> {
+async function request(session: BrowserAdminSession, path: string, workspace = "", body?: object, signal?: AbortSignal, scope?: BudgetScope): Promise<unknown> {
   if (!session.tenantId || (body && !session.csrfToken)) invalid();
   const response = await fetch(path, { method: body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", signal,
     headers: { Accept: "application/json", "X-ReconForge-Tenant": session.tenantId, ...(workspace ? { "X-ReconForge-Workspace": workspace } : {}), ...(scope ? { "X-ReconForge-Organization": scope.organization_id, "X-ReconForge-Legal-Entity": scope.legal_entity_id } : {}), ...(body ? { "Content-Type": "application/json", "X-ReconForge-CSRF": session.csrfToken } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });

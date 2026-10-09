@@ -13,3 +13,12 @@
 .partial-totals dt { font-weight: 600; }.partial-totals dd { margin-inline-start: 0; font-size: 1.2rem; }
 .procurement-partial-page [role=alert], .procurement-partial-page aside { padding: 1rem; border: 2px solid #ad4a32; margin-block: 1rem; }
 .procurement-partial-page :focus-visible { outline: 3px solid #1769b1; outline-offset: 3px; }
+
+.partial-line-editor { grid-column: 1 / -1; min-width: 0; }
+.partial-mode { display: flex !important; align-items: center; gap: .65rem; grid-column: 1 / -1; }
+.partial-mode input { width: auto; min-width: 1.25rem; min-height: 1.25rem; }
+.partial-lines-scroll { max-width: 100%; overflow-x: auto; margin-block: 1rem; }
+.partial-lines-scroll table { width: 100%; border-collapse: collapse; }
+.partial-lines-scroll th, .partial-lines-scroll td { padding: .7rem; text-align: start; border-bottom: 1px solid var(--border, #c4cbd4); white-space: nowrap; }
+.partial-lines-scroll caption { text-align: start; font-weight: 600; padding-block: .75rem; }
+.partial-document-list li ul { padding-inline-start: 1rem; }

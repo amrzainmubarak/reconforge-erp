@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
@@ -61,6 +62,12 @@ jobs:
         # execution is mandatory in the configured erp-expansion shard below.
         run: >-
           uv run --no-sync pytest
+          --ignore=tests/test_postgres_financial_reporting_snapshots.py
+          --ignore=tests/test_postgres_financial_snapshot_migration.py
+          --ignore=tests/test_postgres_financial_snapshot_recovery.py
+          --ignore=tests/test_postgres_stock_commerce.py
+          --ignore=tests/test_postgres_stock_commerce_api.py
+          --ignore=tests/test_postgres_stock_commerce_migrations.py
           --ignore=tests/test_postgres_stock_sales.py
           --ignore=tests/test_postgres_stock_sales_api.py
 
@@ -156,6 +163,54 @@ jobs:
           path: |
             ${{ runner.temp }}/erp-browser
             ${{ runner.temp }}/erp-expansion-browser
+          if-no-files-found: error
+
+  enterprise-browser-recovery:
+    runs-on: ubuntu-latest
+    needs: [web]
+    name: enterprise-browser-recovery (${{ matrix.scenario }})
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        scenario: [commerce, procurement, snapshots]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: "3.12"
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - name: Install locked server dependencies
+        run: uv sync --locked --all-extras --no-editable --python 3.12
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Build integrated Studio
+        run: |
+          npm --prefix apps/web ci
+          npm --prefix apps/web run build
+          npx --prefix apps/web playwright install --with-deps chromium
+      - name: Execute enterprise HTTPS cycle and populated native recovery
+        run: uv run --no-sync python .github/scripts/verify_erp_expansion_browser.py --scenario "${{ matrix.scenario }}" --verify-native-restore --output "${{ runner.temp }}/enterprise-browser"
+      - name: Retain source-bound enterprise recovery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: enterprise-browser-recovery-${{ matrix.scenario }}
+          path: ${{ runner.temp }}/enterprise-browser
           if-no-files-found: error
 
   engine-parity:
@@ -267,9 +322,9 @@ jobs:
 
   server-boundaries:
     runs-on: ubuntu-latest
-    needs: [test, web]
     name: server-boundaries (${{ matrix.shard }})
     # Independent services per shard bound cumulative live verification time.
+    # No shared test/web artifact is consumed; retain native evidence on their failure.
     # Keep every shard observable after a sibling fails; the aggregate fails closed.
     timeout-minutes: 30
     strategy:
@@ -534,7 +589,7 @@ jobs:
               uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q
               ;;
             finance-posting)
-              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_postgres_operational_finance.py tests/test_postgres_operational_finance_api.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
+              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_batches.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_postgres_operational_finance.py tests/test_postgres_operational_finance_api.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
               ;;
             inventory-payables)
               uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py -q
@@ -546,9 +601,11 @@ jobs:
               ;;
             erp-expansion)
               uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
+              uv run --no-sync pytest tests/test_postgres_stock_commerce.py tests/test_postgres_stock_commerce_api.py tests/test_postgres_stock_commerce_migrations.py tests/test_postgres_procurement_multiline.py tests/test_postgres_procurement_multiline_api.py tests/test_postgres_procurement_multiline_migrations.py -q
               ;;
             finance-reporting)
               uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q
+              uv run --no-sync pytest tests/test_postgres_financial_reporting_snapshots.py tests/test_postgres_financial_snapshot_recovery.py tests/test_postgres_financial_snapshot_migration.py -q
               ;;
             *) echo "Unknown server-boundary shard" >&2; exit 2 ;;
           esac

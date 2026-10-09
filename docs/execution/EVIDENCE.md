@@ -1,5 +1,27 @@
 # ReconForge Execution Evidence Log
 
+- ENT-20261009 stable347d3714:1000 real prepare/review/post cycles, three distinct
+  humans, four workers, PostgreSQL17.10/full119/nonowner false,false, zero errors.
+  Independent493671004minor debit/credit/cash/equity matches. Posting677.693s,
+  1.475595cycles/s including authentication; p50/p95/p99 cycle latency
+  2.621/3.236/4.186s. Same-history warmed verified-read median6.867102→0.464948s,
+  14.769607x, client execute3000→20. Bounded100-row pages use more Python heap;
+  final container sample is not peak resource use. No HTTP TPS, cost model or
+  competitor comparison is inferred. Raw packet SHA256
+  373a9e87acfd75e2c613edb1ddc1d773cd6b569ff7446483456e5863c84e2909;
+  indexed retained report: benchmarks/enterprise-native-finance-1000-2026-10-09.json.
+  First hosted40e9 CI37975239942 and Security37975239785 are retained failures;
+  successor acceptance must independently pass all required jobs.
+
+- ENT-20261009 integration:61bf6d7b native100 genuine three-human posting cycles,
+  four workers, PostgreSQL17.10/head0117/nonowner false,false;91.625s total,
+  1.311posting cycles/s including identity. Independent46669102minor debit/credit/
+  cash/equity matches native effects. Three alternating same-history reads give
+  median0.7502579s→0.0516438s and14.52755x local improvement; client execute300→2,
+  exact identical native effect digests. Packet:
+  output/enterprise-erp-program-20261009/benchmark-integration-100/result.json.
+  Milestone only; final source acceptance and competitor comparisons remain separate.
+
 - ERP-20261009 hosted repair: current88 CI37837201370 fails receivables with
   `ops_close_native` read permission denial on `operational_finance_plans`, and
   parity with exactly two strict tenant permission catalog expectations missing

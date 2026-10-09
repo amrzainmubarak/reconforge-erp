@@ -1,5 +1,27 @@
 # Execution State
 
+## Active enterprise engineering program (2026-10-09; ADR0843)
+
+Starts at PR126 exact `21b4b8a23a4bf9c3e5562b51392fad896f39ef7d`, retaining PR125
+and PR124, on `amr/enterprise-erp-program-20261009`. Main remains `b61ea56b`.
+Three managed worktrees implement conserved multiline stock commerce, native
+multiline partial procurement and frozen scalable financial captures. Lead owns
+shared authority/migration/CI/transport and final integration. Initial Sales12-case
+native gate and shared35-case contracts pass. On61bf6d7b the100-effect benchmark
+matches independent46669102minor totals, verified-read median0.75026→0.05164s,
+client execute300→2 and four-worker three-human posting1.311/s including identity.
+The subsequent1000-effect benchmark on clean347d3714 matches independent
+493671004minor totals with zero errors: four-worker reviewed posting1.476cycles/s,
+verified-read median6.867102→0.464948s, client execute3000→20. The checked-in raw
+profile preserves hardware/configuration, request units and memory tradeoffs.
+Native commerce16-case and procurement17-case gates pass with zero skips;
+three integrated normal HTTPS cycles and populated native restore passed their
+source-bound milestones. DraftPR127 is open above unchangedPR126. The first hosted
+run40e9 retained a parser-inventory failure and legacy scope-loading race; both
+are repaired without weaker controls. All final current-source native/Python/web/
+security/image acceptance remains required. These bounded milestones do not
+complete the broad global ERP program; predecessor acceptance stays historical.
+
 ## Active ERP expansion sprint (2026-10-09; ADR0842)
 
 Work starts at PR125 exact `f24d48363817f36991239c436ae616f59d391918`, retaining PR124 ancestry, on `amr/global-erp-expansion-20261009`; main remains `b61ea56bb9c135fda12546e173795af3c243e4fb`. Three independent managed worktrees own Stock Sales, Partial Procurement, and classified Financial Reporting. Shared installment ownership, API contracts, Studio navigation and final gates are integrated centrally. New migrations form the linear0112–0115 chain; four typed application ports reuse native FIFO, Finance Posting, AR/AP, scoped identity, audit and outbox engines.

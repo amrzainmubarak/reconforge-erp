@@ -28,7 +28,11 @@ from psycopg import sql
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from tests.erp_expansion_browser_restore import verify_expansion_cycles, verify_expansion_native_restore  # noqa: E402
+from tests.erp_expansion_browser_restore import (  # noqa: E402
+    EXPANSION_TABLES,
+    verify_expansion_cycles,
+    verify_expansion_native_restore,
+)
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
 
 IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
@@ -61,10 +65,57 @@ def tracked_status(directory: Path) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
     args = parser.parse_args()
+    seed = seed_expansion_browser
+    verify_cycles = verify_expansion_cycles
+    configuration = "apps/web/live/erp-expansion.playwright.config.ts"
+    extension_tables = EXPANSION_TABLES
+    tamper_statements = (
+        "UPDATE reconforge.stock_sales_orders SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
+        "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+        "UPDATE reconforge.financial_opening_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+    )
+    if args.scenario == "commerce":
+        from tests.stock_commerce_browser_seed import seed_stock_commerce_browser, verify_stock_commerce_browser
+        seed, verify_cycles = seed_stock_commerce_browser, verify_stock_commerce_browser
+        configuration = "apps/web/live/stock-commerce.playwright.config.ts"
+        extension_tables = EXPANSION_TABLES + ("stock_commerce_orders", "stock_commerce_lines", "stock_commerce_tranches", "stock_commerce_commands")
+        tamper_statements = (
+            "UPDATE reconforge.stock_commerce_orders SET total_minor=total_minor+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.stock_commerce_lines SET total_minor=total_minor+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.stock_commerce_tranches SET stock_order_id='forged' WHERE tenant_id=%s",
+        )
+    elif args.scenario == "procurement":
+        from tests.erp_procurement_enterprise_browser import (
+            PROCUREMENT_ENTERPRISE_TABLES,
+            seed_procurement_enterprise_browser,
+            verify_procurement_enterprise_browser,
+        )
+        seed, verify_cycles = seed_procurement_enterprise_browser, verify_procurement_enterprise_browser
+        configuration = "apps/web/live/erp-procurement-enterprise.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PROCUREMENT_ENTERPRISE_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.procurement_partial_orders SET total_minor=total_minor+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.procurement_partial_order_lines SET quantity=quantity+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+        )
+    elif args.scenario == "snapshots":
+        from tests.enterprise_financial_snapshot_browser import (
+            seed_financial_snapshot_browser,
+            verify_financial_snapshot_browser,
+        )
+        seed, verify_cycles = seed_financial_snapshot_browser, verify_financial_snapshot_browser
+        configuration = "apps/web/live/financial-snapshots.playwright.config.ts"
+        extension_tables = EXPANSION_TABLES + ("financial_report_captures", "financial_report_members", "financial_report_snapshots")
+        tamper_statements = (
+            "UPDATE reconforge.financial_report_captures SET membership_sealed=false WHERE tenant_id=%s",
+            "DELETE FROM reconforge.financial_report_members WHERE tenant_id=%s",
+            "UPDATE reconforge.financial_report_snapshots SET report_digest=repeat('0',64) WHERE tenant_id=%s",
+        )
     runtime_root = args.runtime_root.resolve()
     if runtime_root != ROOT.resolve():
         raise ValueError("Run the expansion harness from its exact integrated runtime checkout.")
@@ -86,6 +137,7 @@ def main() -> int:
         "built_web_sha256": built_web_digest(args.web_root.resolve()), "status": "failed",
         "tracked_status_before": status_before,
         "tracked_clean_before": not status_before,
+        "scenario": args.scenario, "configuration": configuration,
         "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     }
     module_origins = {}
@@ -141,7 +193,7 @@ def main() -> int:
             role_flags = list(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone())
             assert role_flags == [False, False]
             report["role_privileges"] = role_flags
-        runtime = seed_expansion_browser(admin_dsn, app_dsn)
+        runtime = seed(admin_dsn, app_dsn)
         secret_values.append(runtime.password)
         # Chromium blocks several OS-assigned low ephemeral ports. Bind an
         # available dynamic/private port without relaxing browser port policy.
@@ -161,6 +213,11 @@ def main() -> int:
             RECONFORGE_ERP_BROWSER_ARTIFACTS=str(output / "playwright-artifacts"),
             RECONFORGE_GFO_APP_DSN=app_dsn, RECONFORGE_GFO_WEB_ROOT=str(args.web_root.resolve()),
             RECONFORGE_GFO_HTTPS_PORT=str(https_port))
+        if args.scenario == "snapshots":
+            from tests.enterprise_financial_snapshot_browser import financial_snapshot_oracle
+            oracle_path = output / "financial-snapshot-oracle.json"
+            oracle_path.write_text(json.dumps(financial_snapshot_oracle(), indent=2) + "\n", encoding="utf-8")
+            environment["RECONFORGE_FINANCIAL_SNAPSHOT_ORACLE"] = str(oracle_path)
 
         with (output / "https-runtime.log").open("w", encoding="utf-8") as log:
             runtime_command = "import sys; sys.path.insert(0, sys.argv[1]); from tests.gfo_browser_runtime import main; main()"
@@ -182,7 +239,7 @@ def main() -> int:
                         raise RuntimeError("Owned HTTPS readiness timeout") from None
                     time.sleep(.2)
             executable = "npx.cmd" if os.name == "nt" else "npx"
-            browser = run([executable, "--prefix", "apps/web", "playwright", "test", "--config", "apps/web/live/erp-expansion.playwright.config.ts"], environment=environment, check=False)
+            browser = run([executable, "--prefix", "apps/web", "playwright", "test", "--config", configuration], environment=environment, check=False)
             (output / "browser.log").write_text(browser.stdout + browser.stderr, encoding="utf-8")
             report["browser_exit_code"] = browser.returncode
         server.terminate()
@@ -191,9 +248,10 @@ def main() -> int:
         if (output / "playwright.json").is_file():
             report["browser_counts"] = json.loads((output / "playwright.json").read_text(encoding="utf-8"))["stats"]
         if browser.returncode == 0:
-            report["persisted_effects"] = verify_expansion_cycles(runtime)
+            report["persisted_effects"] = verify_cycles(runtime)
             if args.verify_native_restore:
-                report["native_restore"] = verify_expansion_native_restore(runtime, container)
+                report["native_restore"] = verify_expansion_native_restore(runtime, container,
+                    verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements)
         report["built_web_unchanged"] = built_web_digest(args.web_root.resolve()) == report["built_web_sha256"]
         report["source_unchanged"] = source_digest(runtime_root) == report["source_sha256"]
         report["source_commit_after"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip()

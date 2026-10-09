@@ -1,6 +1,6 @@
 id: procurement-partial
-name: Partial stock procurement and exact payable tranches
-version: 0.1.0
+name: Conserved multiline stock purchasing and exact payable tranches
+version: 0.2.0
 maturity: experimental
 owner: finance-operations
 dependencies: [payables, inventory-receipt-posting, operational-finance, finance-core, postgres-identity]
@@ -13,9 +13,11 @@ data_classification: confidential-financial
 retention_policy: immutable source documents and append-only command acknowledgements; populated downgrade refuses history loss
 permissions: [payables.read, payables.manage, payables.match, payables.approve, payables.settle, inventory.read, inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
 default_roles: []
-migrations: [0114_pg_procurement_partial]
+migrations: [0114_pg_procurement_partial, 0117_pg_procurement_multiline]
 domain_invariants:
-  - An exact single untracked stock line in the supplier and entity functional currency with zero tax
+  - Legacy one-line history retains its original contract; new orders own 1 to 128 actual native purchase lines
+  - Untracked stock lines retain their own unit precision and warehouse; mixed units never produce an aggregate business quantity
+  - The supplier and entity functional currency, zero tax, exact minor-unit line totals and one receipt-clearing account are required
   - Prepared receipt quantities reserve approved ordered capacity under the parent row lock
   - Each reviewed receipt posts actual FIFO, stock movement, inventory GL and native AP goods receipt in one outer transaction
   - Matched invoice quantities reserve posted receipt capacity before approval; exact unit price and monetary total
@@ -26,14 +28,15 @@ domain_invariants:
   - Each parent version has exactly one exact actor-bound command with frozen acknowledgement, audit and outbox evidence
   - Deferred OLD and NEW reverse source closure rejects detached native approval, stock receipt, accrual and unrelated financial effects
 domain_events: [procurement.partial_changed]
-api_routes: ["/api/v1/procurement-partial/orders", "/api/v1/procurement-partial/orders/{id}", "/api/v1/procurement-partial/orders/{id}/commands/{action}", "/api/v1/procurement-partial/options", "/api/v1/procurement-partial/scopes"]
+api_routes: ["/api/v1/procurement-partial/orders", "/api/v1/procurement-partial/orders/multiline", "/api/v1/procurement-partial/orders/page", "/api/v1/procurement-partial/catalog/items", "/api/v1/procurement-partial/orders/{id}", "/api/v1/procurement-partial/orders/{id}/documents", "/api/v1/procurement-partial/orders/{id}/invoices/{invoice_id}/payments", "/api/v1/procurement-partial/orders/{id}/commands/{action}", "/api/v1/procurement-partial/options", "/api/v1/procurement-partial/scopes"]
 cli_commands: []
 ui_routes: [/procurement-partial]
 import_schemas: []
 export_schemas: []
-synthetic_fixtures: [tests/test_postgres_procurement_partial.py]
+synthetic_fixtures: [tests/test_postgres_procurement_partial.py, tests/test_postgres_procurement_multiline.py]
 threat_model:
-  - Four forced-RLS tables join the canonical tenant/workspace/organization/entity boundary including entity aliases
+  - Six forced-RLS owner tables join the canonical tenant/workspace/organization/entity boundary including entity aliases
+  - Immutable typed line location and policy IDs must match retained codes and actual native receipt coordinates
   - Row locks serialize same-order capacity reservation; exact command advisory locks fence replay
   - Phase-specific command versions bind source preparer, approver, reviewer and poster to canonical retained identities
   - Owner-only publication checks and bidirectional deferred closure reject reviewer posting without changing legacy unowned kernel policy
@@ -43,17 +46,19 @@ threat_model:
 benchmarks: []
 rollback_plan: Empty downgrade only; retained history requires a verified pre-upgrade backup and a forward correction
 test_matrix:
-  domain: tests/test_procurement_partial.py
-  postgres: tests/test_postgres_procurement_partial.py
-  api: tests/test_postgres_procurement_partial_api.py
+  domain: [tests/test_procurement_partial.py, tests/test_procurement_multiline.py]
+  postgres: [tests/test_postgres_procurement_partial.py, tests/test_postgres_procurement_multiline.py]
+  api: [tests/test_postgres_procurement_partial_api.py, tests/test_postgres_procurement_multiline_api.py]
+  migration: tests/test_postgres_procurement_multiline_migrations.py
   web: [apps/web/src/procurement-partial-data.test.ts, apps/web/src/components/ProcurementPartialPage.test.tsx]
   browser: Lead integration gate on normal authenticated Studio and actual PostgreSQL
 adapter_matrix:
-  postgres: bounded native API Studio and restore accepted on6ec9; current-source hosted checks remain independently authoritative
+  postgres: Original accepted one-line gates retained; multiline current-source native, API, browser and restore acceptance require the lead final integration evidence
   sqlite: no implicit fallback
 limitations:
-  - One stock line per order, at most 32 receipts and 32 invoices
+  - Legacy orders retain 32 receipts and invoices; enterprise orders allow 128 lines and at most 1024 receipts or invoices projected in pages of at most 25 with a 512-line projection budget
   - Functional currency, untracked stock, exact minor-unit costs and zero tax
-  - Studio/AP partial settlement requires the optional financial-installments extension installed after this module at full migration head 0115 and its own acceptance gates
+  - Studio/AP partial settlement requires the financial-installments extension and its own accepted reviewed payment contract, bounded to 200 plans per invoice
   - No PR/RFQ, supplier quotation selection, supplier returns, debit notes, tax, FX, live bank transfers or tracked-stock claim
-  - Reference catalogs are configured through existing engines and are bounded to their current authorized 200 records
+  - The item catalog uses literal search and keyset pages of 50; supplier, warehouse and accounting reference pickers retain the existing bounded options contract
+  - Native stock chronology remains mandatory and prevents unsafe backdated valuation publication

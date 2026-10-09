@@ -1,7 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { BrowserSessionProvider, useBrowserSession } from "../browserSession";
 import { ProcurementPartialPage } from "./ProcurementPartialPage";
+import { procurementTranslate } from "../procurement-i18n";
+import { partialTranslate } from "../procurement-partial-i18n";
 
 const scope = { workspace_id: "work", organization_id: "org", legal_entity_id: "entity", organization_code: "ORG", entity_code: "ENTITY", organization_name: "Organization", entity_name: "Entity", currency_code: "USD" };
 const permissions = ["payables.read", "payables.manage", "payables.approve", "payables.settle", "inventory.read", "inventory.manage", "inventory.post", "inventory.valuation.manage", "inventory.valuation.approve", "finance_core.read", "finance_core.manage", "finance_core.validate", "finance_core.post"];
@@ -28,7 +30,7 @@ it.each(["receipt", "accrual", "payment"] as const)("requires a third canonical 
     if (request?.method === "POST") { writes.push(String(request.body)); return response(source); }
     if (String(path).endsWith("/scopes")) return response({ records: [scope] });
     if (String(path).endsWith("/options")) return response(options);
-    if (String(path).endsWith("/orders")) return response({ records: [source] });
+    if (String(path).includes("/orders/page?")) return response({ records: [{ ...source.order, multiline: false, line_count: 1 }], next_after: null, page_size: 25 });
     return response(source);
   }));
   render(<BrowserSessionProvider><Begin actor="checker" /><ProcurementPartialPage locale="en" /></BrowserSessionProvider>);
@@ -52,7 +54,7 @@ it.each(["receipt", "accrual", "payment"] as const)("allows the authorized third
     if (String(path).endsWith("/auth/me")) return response({ id: "id-poster", username: "poster", principal_type: "user", permissions, authorized_scopes: { workspaces: ["work"] } });
     if (String(path).endsWith("/scopes")) return response({ records: [scope] });
     if (String(path).endsWith("/options")) return response(options);
-    if (String(path).endsWith("/orders")) return response({ records: [source] });
+    if (String(path).includes("/orders/page?")) return response({ records: [{ ...source.order, multiline: false, line_count: 1 }], next_after: null, page_size: 25 });
     return response(source);
   }));
   render(<BrowserSessionProvider><Begin actor="poster" /><ProcurementPartialPage locale="en" /></BrowserSessionProvider>);
@@ -64,4 +66,45 @@ it.each(["receipt", "accrual", "payment"] as const)("allows the authorized third
   await screen.findByRole("heading", { name: "ORDER-1" });
   fireEvent.change(screen.getByLabelText("Review or posting reason"), { target: { value: "Third human publication" } });
   await waitFor(() => expect(screen.getByRole("button", { name: { receipt: "Post stock receiving and GL", accrual: "Post invoice accrual", payment: "Post installment" }[phase] })).toBeEnabled());
+});
+
+it.each(["en", "ar"] as const)("writes a real nested multiwarehouse purchase command and retains its exact retry in %s", async (locale) => {
+  const t = (key: Parameters<typeof procurementTranslate>[1]) => procurementTranslate(locale, key);
+  const p = (key: Parameters<typeof partialTranslate>[1]) => partialTranslate(locale, key);
+  const writes: string[] = [];
+  const references = { suppliers: [{ code: "SUP", currency_code: "USD" }], items: [], locations: [{ code: "MAIN/STOCK" }, { code: "NORTH/STOCK" }], policies: [{ code: "FIFO" }], periods: [{ id: "period", name: "October", start_date: "2026-10-01", end_date: "2026-10-31" }], journals: [{ code: "STOCK", chart_code: "CHART" }], accounts: [{ code: "AP", chart_code: "CHART", account_type: "Liability" }, { code: "CASH", chart_code: "CHART", account_type: "Asset" }] };
+  vi.stubGlobal("fetch", vi.fn(async (path: RequestInfo | URL, request?: RequestInit) => {
+    if (String(path).endsWith("/auth/me")) return response({ id: "id-maker", username: "maker", principal_type: "user", permissions, authorized_scopes: { workspaces: ["work"] } });
+    if (request?.method === "POST") { writes.push(String(request.body)); return response({ unverified: true }); }
+    if (String(path).endsWith("/scopes")) return response({ records: [scope] });
+    if (String(path).endsWith("/options")) return response(references);
+    if (String(path).includes("/catalog/items?")) return response({ records: [{ code: "ITEM", name: "Each product", uom_code: "EA", decimal_places: 0 }, { code: "WEIGHT", name: "Weighted product", uom_code: "KG", decimal_places: 2 }], next_after: null });
+    return response({ records: [], next_after: null, page_size: 25 });
+  }));
+  render(<BrowserSessionProvider><Begin actor="maker" /><ProcurementPartialPage locale={locale} /></BrowserSessionProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Begin fixture" }));
+  fireEvent.click(screen.getByRole("button", { name: "Elevate fixture" }));
+  await screen.findByRole("option", { name: "Organization · Entity · USD" });
+  fireEvent.change(screen.getByLabelText(t("scope")), { target: { value: "entity" } });
+  const form = await screen.findByRole("form", { name: t("newOrder") });
+  fireEvent.click(form.closest("details")!.querySelector("summary")!);
+  fireEvent.click(within(form).getByLabelText(p("enterpriseOrder")));
+  await screen.findByRole("option", { name: "WEIGHT · Weighted product" });
+  fireEvent.click(within(form).getByRole("button", { name: p("addLine") }));
+  for (const [label, value] of [[t("number"), "UI-MULTI"], [t("supplier"), "SUP"], [t("date"), "2026-10-03"], [t("period"), "period"], [t("journal"), "STOCK"], [t("ap"), "AP"], [t("cash"), "CASH"],
+    [t("item") + " 1", "ITEM"], [t("quantity") + " 1", "10"], [t("unitPrice") + " 1", "1200"], [t("location") + " 1", "MAIN/STOCK"], [t("policy") + " 1", "FIFO"],
+    [t("item") + " 2", "WEIGHT"], [t("quantity") + " 2", "2.50"], [t("unitPrice") + " 2", "2000"], [t("location") + " 2", "NORTH/STOCK"], [t("policy") + " 2", "FIFO"]]) {
+    fireEvent.change(within(form).getByLabelText(label), { target: { value } });
+  }
+  fireEvent.submit(form);
+  await screen.findByRole("button", { name: t("retry") });
+  expect(writes).toHaveLength(1);
+  const command = JSON.parse(writes[0]);
+  expect(command).toMatchObject({ number: "UI-MULTI", supplier_code: "SUP", organization_code: "ORG", entity_code: "ENTITY", workspace: "work", currency_code: "USD", lines: [{ item_code: "ITEM", quantity: "10", unit_price_minor: "1200", location_code: "MAIN/STOCK", policy_code: "FIFO" }, { item_code: "WEIGHT", quantity: "2.50", unit_price_minor: "2000", location_code: "NORTH/STOCK", policy_code: "FIFO" }] });
+  expect(command.command_id).toEqual(expect.any(String));
+  expect(within(form).getByLabelText(t("quantity") + " 2")).toBeDisabled();
+  expect(screen.getByRole("main")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+  fireEvent.click(screen.getByRole("button", { name: t("retry") }));
+  await waitFor(() => expect(writes).toHaveLength(2));
+  expect(writes[1]).toBe(writes[0]);
 });

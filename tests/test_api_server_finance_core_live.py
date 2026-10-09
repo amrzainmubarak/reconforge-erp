@@ -76,6 +76,7 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             grant_native_owner_reads(admin, app_user, (
                 "finance_posting_effects", "operational_finance_plans", "financial_opening_plans",
                 "stock_sales_orders", "stock_sales_issue_claims",
+                "stock_commerce_orders", "stock_commerce_tranches",
             ))
             admin.execute(
                 "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",

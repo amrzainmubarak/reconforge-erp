@@ -1,0 +1,28 @@
+import { expect, it } from "vitest";
+import { parseCommerceOrder, prepareCommerceCommand } from "./stock-commerce-data";
+import { commerceFixture } from "./stock-commerce-test-fixtures";
+
+const scope = { workspace_id: "work", organization_id: "org", legal_entity_id: "entity" };
+it("recomputes commercial line and tranche progress with exact BigInt money", () => {
+  const document = commerceFixture("Paid");
+  expect(parseCommerceOrder(document, scope).lines[0].collected_minor).toBe("13500");
+  const forged = structuredClone(document); forged.lines[0].collected_minor = "13499";
+  expect(() => parseCommerceOrder(forged, scope)).toThrow("commerce_contract_invalid");
+  const foreign = { ...document, legal_entity_id: "foreign" };
+  expect(() => parseCommerceOrder(foreign, scope)).toThrow("commerce_contract_invalid");
+});
+it("deep freezes commercial line arrays and participant fields for lost acknowledgement retries", () => {
+  const source = { number: "ORDER", lines: [{ item_code: "SKU", quantity: "3" }] };
+  const command = prepareCommerceCommand(scope, "/api/v1/stock-sales/commerce/orders", source);
+  source.lines[0].quantity = "999";
+  expect((command.body.lines as typeof source.lines)[0].quantity).toBe("3");
+  expect(Object.isFrozen(command.body.lines)).toBe(true);
+  expect(Object.isFrozen((command.body.lines as typeof source.lines)[0])).toBe(true);
+  expect(command.body.command_id).toBeTruthy();
+});
+it("refuses additive tranche monetary drift and quantity overcommit", () => {
+  const drift = commerceFixture("Paid"); drift.lines[0].tranches[0].total_minor = "13501";
+  expect(() => parseCommerceOrder(drift, scope)).toThrow("commerce_contract_invalid");
+  const oversold = commerceFixture("Paid"); oversold.lines[0].tranches.push({ ...oversold.lines[0].tranches[0], id: "ANOTHER" });
+  expect(() => parseCommerceOrder(oversold, scope)).toThrow("commerce_contract_invalid");
+});

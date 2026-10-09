@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 384
-EXPECTED_DIGEST = "a7e65ece2f8cbef68ececd4807e383ca3ae78d06395a12f85c41cd8da8a98441"
+EXPECTED_ROUTE_COUNT = 413
+EXPECTED_DIGEST = "93f9cd124ed44f49043f45d8d0a2539e19e3dc5f25ad0efd327ea52e4f8a2ae3"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -49,7 +49,7 @@ HANDLER_BOUNDARY_HELPERS = {
     "operational_finance.py": frozenset({"_authority", "_execute"}),
     "sales_revenue.py": frozenset({"_execute", "_transition"}),
     "procurement_operations.py": frozenset({"execute"}),
-    "stock_sales.py": frozenset({"_execute", "_transition"}),
+    "stock_sales.py": frozenset({"_execute", "_transition", "_commerce_execute"}),
     "procurement_partial.py": frozenset({"_execute"}),
     "financial_reporting.py": frozenset({"_execute"}),
     "financial_installments.py": frozenset({"execute", "_authority"}),

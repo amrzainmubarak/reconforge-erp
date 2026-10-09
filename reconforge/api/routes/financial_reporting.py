@@ -71,6 +71,14 @@ class PhaseRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
 
 
+class SnapshotRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    command_id: str = Field(min_length=1, max_length=140)
+    map_id: str = Field(min_length=1, max_length=160)
+    period_id: str = Field(min_length=1, max_length=160)
+    as_of_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+
+
 def project(value: Any, key: str = "") -> Any:
     """Exact monetary strings at every nested JS boundary; counts remain integers."""
     if isinstance(value, dict):
@@ -292,3 +300,45 @@ def statements(request: Request, current_user: Read, map_id: str, period_id: str
         return {"statements": value}
 
     return _execute(request, current_user, run)
+
+
+@router.post("/snapshots")
+def create_snapshot(request: Request, payload: SnapshotRequest, current_user: Read) -> dict[str, Any]:
+    _authority(request, "finance_core.read")
+
+    def run(repository: FinancialReportingApplicationService, actor: PostingActor,
+            scope: FinanceCoreExecutionScope) -> dict[str, Any]:
+        retained = repository.get_map(payload.map_id, actor=actor)
+        _authority(request, "finance_core.read", retained)
+        value = repository.create_snapshot(**payload.model_dump(), organization_code=scope.organization_code,
+                                           entity_code=scope.entity_code, actor=actor)
+        _authority(request, "finance_core.read", value, audit=False)
+        return {"snapshot": value}
+
+    return _execute(request, current_user, run)
+
+
+@router.get("/snapshots")
+def snapshots(request: Request, current_user: Read, after_id: str = "", limit: int = 20) -> dict[str, Any]:
+    _authority(request, "finance_core.read")
+    return _execute(request, current_user, lambda repository, actor, scope: {
+        "snapshots": repository.list_snapshots(_scope(scope), actor=actor, after_id=after_id, limit=limit),
+    })
+
+
+@router.get("/snapshots/{snapshot_id}")
+def snapshot(request: Request, snapshot_id: str, current_user: Read) -> dict[str, Any]:
+    _authority(request, "finance_core.read")
+    return _execute(request, current_user, lambda repository, actor, scope: {
+        "snapshot": repository.get_snapshot(snapshot_id, actor=actor),
+    })
+
+
+@router.get("/snapshots/{snapshot_id}/evidence")
+def snapshot_evidence(request: Request, snapshot_id: str, current_user: Read, expected_digest: str,
+                      after: int = 0, limit: int = 20) -> dict[str, Any]:
+    _authority(request, "finance_core.read")
+    return _execute(request, current_user, lambda repository, actor, scope: {
+        "evidence": repository.snapshot_evidence(snapshot_id, expected_digest=expected_digest, actor=actor,
+                                                 after=after, limit=limit),
+    })

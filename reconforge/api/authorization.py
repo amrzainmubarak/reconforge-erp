@@ -208,6 +208,11 @@ for _operation, _permissions in {
         _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-partial/orders/{order_id}/commands/" + _operation)] = _erp_contract(_PROCUREMENT_READ, *_permissions)
 
 _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-partial/orders")] = _erp_contract(_PROCUREMENT_READ, "payables.manage")
+_CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-partial/orders/multiline")] = _erp_contract(_PROCUREMENT_READ, "payables.manage")
+_CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-partial/orders/{order_id}/commands/prepare-receipt-line")] = _erp_contract(
+    _PROCUREMENT_READ, "payables.manage", "inventory.manage", "inventory.valuation.manage", "finance_core.manage")
+_CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/procurement-partial/orders/{order_id}/commands/match-invoice-lines")] = _erp_contract(
+    _PROCUREMENT_READ, "payables.manage", "payables.match")
 _STOCK_READ = _SALES_READ | frozenset({"inventory.read"})
 for _path, _permissions in {
     "": ("sales.manage",),
@@ -226,7 +231,24 @@ for _path, _permissions in {
     "/{identifier}/cancel": ("sales.manage", "finance_core.manage"),
 }.items():
     _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/stock-sales/orders" + _path)] = _erp_contract(_STOCK_READ, *_permissions)
+_CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/stock-sales/commerce/orders")] = _erp_contract(_STOCK_READ, "sales.manage")
+for _operation, _permissions in {
+    "submit": ("sales.manage",), "approve": ("sales.approve",),
+    "open-tranche": ("sales.manage",), "approve-tranche": ("sales.approve", "sales.manage", "inventory.manage"),
+    "prepare-issue": ("sales.manage", "inventory.manage", "inventory.valuation.manage", "finance_core.manage"),
+    "review-issue": ("sales.approve", "inventory.valuation.approve", "finance_core.validate"),
+    "deliver": ("sales.manage", "inventory.post", "inventory.valuation.approve", "finance_core.post"),
+    "prepare-invoice": ("sales.manage", "receivables.manage", "finance_core.manage"),
+    "review-invoice": ("sales.approve", "receivables.approve", "finance_core.validate"),
+    "invoice": ("sales.manage", "receivables.approve", "finance_core.post"),
+    "prepare-collection": ("sales.manage", "finance_core.manage"),
+    "review-collection": ("sales.approve", "finance_core.validate"),
+    "collect": ("sales.manage", "receivables.manage", "finance_core.post"),
+    "cancel": ("sales.manage", "finance_core.manage"),
+}.items():
+    _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/stock-sales/commerce/orders/{identifier}/" + _operation)] = _erp_contract(_STOCK_READ, *_permissions)
 for _path, _permission in {
+    "/snapshots": "finance_core.read",
     "/maps": "finance_core.manage",
     "/maps/{map_id}/review": "finance_core.validate",
     "/openings": "finance_core.manage",

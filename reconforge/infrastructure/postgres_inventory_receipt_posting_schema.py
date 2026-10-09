@@ -931,3 +931,6 @@ POSTGRES_INVENTORY_RECEIPT_POSTING_SCHEMA_SQL = _TABLE_SQL + _HELPER_SQL + _PLAN
 def install_postgres_inventory_receipt_posting_schema(connection: Any) -> None:
     """Install the additive current schema inside the caller's transaction."""
     connection.execute(POSTGRES_INVENTORY_RECEIPT_POSTING_SCHEMA_SQL)
+    from reconforge.infrastructure.postgres_receipt_fifo_chronology import install_postgres_receipt_fifo_chronology
+
+    install_postgres_receipt_fifo_chronology(connection)

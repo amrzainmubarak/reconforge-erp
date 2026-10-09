@@ -1,6 +1,6 @@
 id: financial-reporting
 name: Reviewed opening balances and classified financial statements
-version: 1.0.0
+version: 1.1.0
 maturity: experimental
 owner: Finance platform
 dependencies: [finance-core, finance-operational-posting, finance-policy, identity, master-data, audit, outbox]
@@ -9,7 +9,7 @@ data_classification: confidential-financial
 retention_policy: append-only classifications and opening history; forward recovery
 permissions: [finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
 default_roles: existing explicitly granted finance roles
-migrations: [0112_pg_financial_reporting]
+migrations: [0112_pg_financial_reporting, 0118_pg_financial_report_capture]
 domain_invariants:
   - Classification is explicit, versioned, independently reviewed and immutable.
   - New opening preparation and review recheck the captured current native account semantics.
@@ -23,21 +23,31 @@ domain_invariants:
   - Trial balance reuses the verified existing posted-balances-as-of engine.
   - Assets equal liabilities plus equity plus explicitly accumulated unclosed result.
   - Cash opening plus posted movements equals cash closing; internal transfers have zero aggregate delta.
-domain_events: [financial_reporting_map_prepared, financial_reporting_map_reviewed, financial_opening_prepared, financial_opening_reviewed, financial_opening_posted]
-api_routes: [/api/v1/financial-reporting/catalog, /api/v1/financial-reporting/maps, /api/v1/financial-reporting/openings, /api/v1/financial-reporting/statements]
+  - Database-owned report captures retain every visible scoped eligible native effect in a single ordered source query.
+  - Captured membership is immutable from creation and cannot be manually extended even before report completion.
+  - Capture membership is database-sealed before INSERT returns; only the automatic false-to-true transition is admitted, with a finite UPDATE(membership_sealed) runtime grant.
+  - Unrelated nested temporary triggers cannot extend sealed source membership or change retained capture provenance.
+  - Concurrent later or backdated postings cannot change an already captured report or its evidence pages.
+  - Native exact line sums, reviewed classification, period, retained currency, statements and audit closure are rechecked by deferred SQL constraints.
+  - Summary memory depends on the reviewed account set; evidence is retained durably and read using bounded keyset pages.
+  - Exact command replay returns the original captured source set after current permission and scope revalidation.
+domain_events: [financial_reporting_map_prepared, financial_reporting_map_reviewed, financial_opening_prepared, financial_opening_reviewed, financial_opening_posted, financial_report_snapshot_created]
+api_routes: [/api/v1/financial-reporting/catalog, /api/v1/financial-reporting/maps, /api/v1/financial-reporting/openings, /api/v1/financial-reporting/statements, /api/v1/financial-reporting/snapshots, '/api/v1/financial-reporting/snapshots/{snapshot_id}', '/api/v1/financial-reporting/snapshots/{snapshot_id}/evidence']
 cli_commands: []
 ui_routes: [/financial-reporting]
 import_schemas: [financial-reporting-map-v1, financial-opening-v1]
-export_schemas: [financial-reporting-api-v1, financial-reporting-v1]
-synthetic_fixtures: [tests/test_postgres_financial_reporting.py]
+export_schemas: [financial-reporting-api-v1, financial-reporting-v1, financial-reporting-snapshot-v1]
+synthetic_fixtures: [tests/test_postgres_financial_reporting.py, tests/test_postgres_financial_reporting_snapshots.py]
 threat_model: scoped RLS, source/effect phase detachment, stale authority, self-approval, exact retry, partial commit, reserved namespace and report money integrity
-benchmarks: bounded 1000 effects and 10000 contributing lines inherited from verified balance engine; no throughput claim
+benchmarks: legacy full reports retain their 1000 effects and 10000 lines bound; durable snapshots fold uncapped effect history in 100-effect verified batches and expose at most 200 effects and 4 MiB per evidence page; measured throughput belongs to the source-bound sprint benchmark
 rollback_plan: populated downgrade refuses removal; native dump/restore and forward correction preserve financial history
 test_matrix:
   unit: tests/test_financial_reporting.py
-  configured_postgresql: tests/test_postgres_financial_reporting.py
+  stream_invariants: tests/test_financial_reporting_stream.py
+  configured_postgresql: [tests/test_postgres_financial_reporting.py, tests/test_postgres_financial_reporting_snapshots.py, tests/test_postgres_financial_snapshot_recovery.py, tests/test_postgres_financial_snapshot_migration.py]
   authenticated_api: tests/test_postgres_financial_reporting_api.py
-  react: [apps/web/src/financial-reporting-data.test.ts, apps/web/src/components/FinancialReportingPage.test.tsx]
+  snapshot_native_wire: [tests/enterprise_financial_snapshot_browser.py, apps/web/live/financial-snapshots.spec.ts]
+  react: [apps/web/src/financial-reporting-data.test.ts, apps/web/src/components/FinancialReportingPage.test.tsx, apps/web/src/financial-reporting-snapshots.test.ts, apps/web/src/components/FinancialReportSnapshotsPanel.test.tsx]
 runtime_acceptance: bounded governed opening and classified reports accepted in native API Studio and restore on6ec9; see ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 checks
 limitations:
   - Governed opening/classification source workflows require PostgreSQL; existing Community finance APIs remain available.
@@ -45,3 +55,6 @@ limitations:
   - Cash movements are posted cash deltas, not a statutory operating/investing/financing cash-flow classification.
   - The selected reporting map supplies explicit retained semantics; a new version is required for a classification change.
   - No tax, FX conversion, automatic year-end close or consolidation is inferred.
+  - Reviewed chart size remains bounded at 1000 accounts. Snapshot summaries preserve all source effects and lines without raising legacy full-report caps.
+  - Snapshot capture is an atomic synchronous read operation with retained evidence; it does not introduce a second GL or autonomous financial posting.
+  - Captured source_snapshot is transaction diagnostic metadata; durable source membership and its evidence chain define the report, surviving vacuum and restoration.

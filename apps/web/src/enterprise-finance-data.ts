@@ -53,7 +53,7 @@ export function financeMoney(value: string, precision: number): string {
   const negative = value.startsWith("-"); const digits = (negative ? value.slice(1) : value).padStart(precision + 1, "0");
   return `${negative ? "-" : ""}${precision ? `${digits.slice(0, -precision)}.${digits.slice(-precision)}` : digits}`;
 }
-export async function financeRequest(session: BrowserAdminSession, scope: FinanceScope, path: string, body?: Readonly<Record<string, string | number>>, signal?: AbortSignal): Promise<unknown> {
+export async function financeRequest(session: BrowserAdminSession, scope: FinanceScope, path: string, body?: object, signal?: AbortSignal): Promise<unknown> {
   if (!Object.values(scope).every(text) || !path.startsWith("/api/v1/") || (body && !session.csrfToken)) invalid();
   const response = await fetch(path, { credentials: "same-origin", cache: "no-store", signal, method: body ? "POST" : "GET", headers: { Accept: "application/json", "X-ReconForge-Tenant": session.tenantId, "X-ReconForge-Workspace": scope.workspace_id, "X-ReconForge-Organization": scope.organization_id, "X-ReconForge-Legal-Entity": scope.legal_entity_id, ...(body ? { "Content-Type": "application/json", "X-ReconForge-CSRF": session.csrfToken } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
   if (!response.ok) { let code = `http_${response.status}`; try { const error: unknown = await response.json(); if (object(error) && object(error.error) && text(error.error.code)) code = error.error.code; } catch { /* HTTP remains authoritative. */ } throw new AdminApiError(response.status, code); }

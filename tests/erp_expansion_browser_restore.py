@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import subprocess  # nosec B404
+from collections.abc import Callable, Sequence
 from typing import Any
 from uuid import uuid4
 
@@ -52,9 +53,16 @@ def verify_expansion_cycles(runtime: ReceiptRuntime) -> dict[str, Any]:
                 "payment_installments": 4, "posting_effects": 12, "fifo_residual_quantity": "5", "fifo_residual_minor": "6000", "statements": report}
 
 
-def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str) -> dict[str, Any]:
-    effects = verify_expansion_cycles(runtime)
-    protected = FINANCIAL_TABLES + EXPANSION_TABLES
+def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str, *,
+        verify_cycles: Callable[[ReceiptRuntime], dict[str, Any]] = verify_expansion_cycles,
+        extension_tables: tuple[str, ...] = EXPANSION_TABLES,
+        tamper_statements: Sequence[str] = (
+            "UPDATE reconforge.stock_sales_orders SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+            "UPDATE reconforge.financial_opening_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+        )) -> dict[str, Any]:
+    effects = verify_cycles(runtime)
+    protected = FINANCIAL_TABLES + extension_tables
     before = database_snapshot(runtime.admin_dsn, financial_tables=protected)
     require(before["head"] == POSTGRES_MIGRATION_REVISIONS[-1], "Expansion restore is not current migration head.")
     dump = subprocess.run(["docker", "exec", container, "pg_dump", "--username=postgres", "--dbname=postgres", "--format=custom"], capture_output=True, check=True, timeout=120)  # nosec B603 B607
@@ -69,29 +77,26 @@ def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str) -> 
         after = database_snapshot(admin_dsn, financial_tables=protected)
         require(before == after, "Full populated rows/catalog/ACL/RLS changed during native restore.")
         restored = ReceiptRuntime(PostgresConnectionFactory(PostgresSettings(dsn=app_dsn, require_tls=False)), admin_dsn, runtime.tenant, runtime.password)
-        require(effects == verify_expansion_cycles(restored), "Restored expansion effects differ.")
+        require(effects == verify_cycles(restored), "Restored source and financial effects differ.")
         with psycopg.connect(app_dsn) as connection:
             flags = connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
-            rows = connection.execute("SELECT count(*) FROM reconforge.stock_sales_orders").fetchone()
             require(flags is not None and list(flags) == [False, False], "Restore role bypasses isolation.")
-            require(rows is not None and rows[0] == 0, "Unbound native read leaked.")
+            for table in extension_tables:
+                rows = connection.execute(sql.SQL("SELECT count(*) FROM reconforge.{}").format(sql.Identifier(table))).fetchone()
+                require(rows is not None and rows[0] == 0, "Unbound native read leaked.")
         with PostgresTenantBoundary(restored.factory).transaction(runtime.tenant, workspace_id="foreign", organization_id="org", legal_entity_id="entity") as connection:
-            for table in EXPANSION_TABLES:
+            for table in extension_tables:
                 require(connection.execute(sql.SQL("SELECT count(*) n FROM reconforge.{}").format(sql.Identifier(table))).fetchone()["n"] == 0, "Sibling workspace leaked after restore.")
         refused = 0
         with restored.actor("browser-poster") as (connection, _, _actor):
             checkpoint = database_snapshot(admin_dsn, financial_tables=protected)
-            for statement in (
-                "UPDATE reconforge.stock_sales_orders SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
-                "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
-                "UPDATE reconforge.financial_opening_links SET posted_actor_id='maker' WHERE tenant_id=%s",
-            ):
+            for statement in tamper_statements:
                 try:
                     with connection.transaction():
                         connection.execute(statement, (runtime.tenant,))
                 except psycopg.errors.CheckViolation:
                     refused += 1
-        require(refused == 3 and checkpoint == database_snapshot(admin_dsn, financial_tables=protected), "Restored immutable guards or exact rollback are absent.")
+        require(refused == len(tamper_statements) and checkpoint == database_snapshot(admin_dsn, financial_tables=protected), "Restored immutable guards or exact rollback are absent.")
         return {"status": "passed", "dump_sha256": hashlib.sha256(dump.stdout).hexdigest(), "snapshot": after,
                 "probe_checkpoint": checkpoint, "verified_effects": effects, "tamper_refusals": refused}
     finally:

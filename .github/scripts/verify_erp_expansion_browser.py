@@ -51,6 +51,13 @@ def built_web_digest(directory: Path) -> str:
     return digest.hexdigest()
 
 
+def tracked_status(directory: Path) -> str:
+    """Retain dirty paths as evidence without exporting their file contents."""
+    return subprocess.check_output(  # nosec B603 B607
+        ["git", "status", "--porcelain", "--untracked-files=no"], cwd=directory, text=True,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
@@ -70,13 +77,15 @@ def main() -> int:
     secret_values = [admin_password, app_password]
     container = ""
     server = None
+    status_before = tracked_status(runtime_root)
     report: dict[str, object] = {
         "started_at": datetime.now(UTC).isoformat(), "image": IMAGE,
         "source_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip(),  # nosec B603 B607
         "source_sha256": source_digest(runtime_root), "runtime_root": str(runtime_root),
         "tooling_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "built_web_sha256": built_web_digest(args.web_root.resolve()), "status": "failed",
-        "tracked_clean_before": not subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=runtime_root),
+        "tracked_status_before": status_before,
+        "tracked_clean_before": not status_before,
         "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     }
     module_origins = {}
@@ -188,9 +197,13 @@ def main() -> int:
         report["built_web_unchanged"] = built_web_digest(args.web_root.resolve()) == report["built_web_sha256"]
         report["source_unchanged"] = source_digest(runtime_root) == report["source_sha256"]
         report["source_commit_after"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip()
-        report["tracked_clean_after"] = not subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=runtime_root)
+        status_after = tracked_status(runtime_root)
+        report["tracked_status_after"] = status_after
+        report["tracked_clean_after"] = not status_after
         report["source_unchanged"] = report["source_unchanged"] and report["source_commit_after"] == report["source_commit"]
         report["status"] = "passed" if browser.returncode == 0 and report["source_unchanged"] and report["built_web_unchanged"] and report["tracked_clean_before"] and report["tracked_clean_after"] else "failed"
+        if status_before or status_after:
+            report["error"] = "Tracked checkout is dirty; inspect tracked_status_before and tracked_status_after."
     except Exception as exc:
         diagnostic = str(exc)
         for value in secret_values:

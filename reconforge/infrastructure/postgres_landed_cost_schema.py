@@ -80,17 +80,17 @@ CREATE FUNCTION reconforge.landed_cost_event(t TEXT,i TEXT,a TEXT,b TEXT,actor T
  AND y.payload=jsonb_build_object('plan_digest',seal,'audit_event_id',a)
  AND (y.workspace_id,y.organization_id,y.legal_entity_id)=(p.workspace_id,p.organization_id,p.legal_entity_id))
 $lc$;
-CREATE FUNCTION reconforge.landed_cost_ack(t TEXT,i TEXT,stage INTEGER) RETURNS JSONB
+CREATE FUNCTION reconforge.landed_cost_ack(t TEXT,i TEXT,ack_stage INTEGER) RETURNS JSONB
  LANGUAGE sql STABLE SET search_path=pg_catalog AS $lc$
  SELECT jsonb_build_object('id',p.id,'order_id',p.order_id,'number',p.payload#>>'{request,number}',
  'workspace_id',p.workspace_id,'organization_id',p.organization_id,'legal_entity_id',p.legal_entity_id,
- 'phase',stage,'status',CASE stage WHEN 0 THEN 'Prepared' WHEN 1 THEN 'Reviewed' ELSE 'Posted' END,
+ 'phase',ack_stage,'status',CASE ack_stage WHEN 0 THEN 'Prepared' WHEN 1 THEN 'Reviewed' ELSE 'Posted' END,
  'plan_digest',p.plan_digest,'freight_minor',p.payload#>>'{request,freight_minor}','duty_minor',p.payload#>>'{request,duty_minor}',
  'amount_minor',p.amount_minor::text,'currency_code',p.payload#>>'{snapshot,entry,currency_code}','entry_id',p.entry_id,
- 'preparer_actor_id',p.payload->>'preparer_actor_id','reviewer_actor_id',CASE WHEN stage>=1 THEN r.reviewer_actor_id ELSE NULL END,
- 'posted_actor_id',CASE WHEN stage=2 THEN l.posted_actor_id ELSE NULL END,'posting_effect_id',CASE WHEN stage=2 THEN l.posting_effect_id ELSE NULL END,
+ 'preparer_actor_id',p.payload->>'preparer_actor_id','reviewer_actor_id',CASE WHEN ack_stage>=1 THEN r.reviewer_actor_id ELSE NULL END,
+ 'posted_actor_id',CASE WHEN ack_stage=2 THEN l.posted_actor_id ELSE NULL END,'posting_effect_id',CASE WHEN ack_stage=2 THEN l.posting_effect_id ELSE NULL END,
  'allocations',(SELECT jsonb_agg((to_jsonb(a)-ARRAY['tenant_id','plan_id','order_id'])||jsonb_build_object(
- 'base_minor',a.base_minor::text,'freight_minor',a.freight_minor::text,'duty_minor',a.duty_minor::text,'receipt_plan_id',d.receipt_plan_id,'stage',stage)
+ 'base_minor',a.base_minor::text,'freight_minor',a.freight_minor::text,'duty_minor',a.duty_minor::text,'receipt_plan_id',d.receipt_plan_id,'stage',ack_stage)
  ORDER BY a.sequence) FROM reconforge.landed_cost_allocations a JOIN reconforge.procurement_partial_receipts d
  ON d.tenant_id=a.tenant_id AND d.id=a.receipt_id WHERE a.tenant_id=t AND a.plan_id=i))
  FROM reconforge.landed_cost_plans p LEFT JOIN reconforge.landed_cost_reviews r ON r.tenant_id=p.tenant_id AND r.plan_id=p.id

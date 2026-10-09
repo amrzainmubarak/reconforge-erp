@@ -1,5 +1,18 @@
 # Execution State
 
+## Active enterprise engineering program (2026-10-09; ADR0843)
+
+Starts at PR126 exact `21b4b8a23a4bf9c3e5562b51392fad896f39ef7d`, retaining PR125
+and PR124, on `amr/enterprise-erp-program-20261009`. Main remains `b61ea56b`.
+Three managed worktrees implement conserved multiline stock commerce, native
+multiline partial procurement and frozen scalable financial captures. Lead owns
+shared authority/migration/CI/transport and final integration. Initial Sales12-case
+native gate and shared35-case contracts pass. On61bf6d7b the100-effect benchmark
+matches independent46669102minor totals, verified-read median0.75026→0.05164s,
+client execute300→2 and four-worker three-human posting1.311/s including identity.
+These are milestones. Final fixed-source regression, populated restore, larger
+benchmarks and new Draft PR remain pending; predecessor acceptance stays historical.
+
 ## Active ERP expansion sprint (2026-10-09; ADR0842)
 
 Work starts at PR125 exact `f24d48363817f36991239c436ae616f59d391918`, retaining PR124 ancestry, on `amr/global-erp-expansion-20261009`; main remains `b61ea56bb9c135fda12546e173795af3c243e4fb`. Three independent managed worktrees own Stock Sales, Partial Procurement, and classified Financial Reporting. Shared installment ownership, API contracts, Studio navigation and final gates are integrated centrally. New migrations form the linear0112–0115 chain; four typed application ports reuse native FIFO, Finance Posting, AR/AP, scoped identity, audit and outbox engines.

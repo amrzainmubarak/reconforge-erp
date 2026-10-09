@@ -1,5 +1,14 @@
 # ReconForge Execution Evidence Log
 
+- ENT-20261009 integration:61bf6d7b native100 genuine three-human posting cycles,
+  four workers, PostgreSQL17.10/head0117/nonowner false,false;91.625s total,
+  1.311posting cycles/s including identity. Independent46669102minor debit/credit/
+  cash/equity matches native effects. Three alternating same-history reads give
+  median0.7502579s→0.0516438s and14.52755x local improvement; client execute300→2,
+  exact identical native effect digests. Packet:
+  output/enterprise-erp-program-20261009/benchmark-integration-100/result.json.
+  Milestone only; final source acceptance and competitor comparisons remain separate.
+
 - ERP-20261009 hosted repair: current88 CI37837201370 fails receivables with
   `ops_close_native` read permission denial on `operational_finance_plans`, and
   parity with exactly two strict tenant permission catalog expectations missing

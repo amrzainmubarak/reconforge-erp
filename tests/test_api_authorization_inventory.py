@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 409
-EXPECTED_DIGEST = "5719254cab1bbb0aed2ba737c6ba6419df2e2ce735d85b594616953bc18a060f"
+EXPECTED_ROUTE_COUNT = 413
+EXPECTED_DIGEST = "93f9cd124ed44f49043f45d8d0a2539e19e3dc5f25ad0efd327ea52e4f8a2ae3"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {

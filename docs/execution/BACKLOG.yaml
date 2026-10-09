@@ -9,6 +9,34 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-ENT-001
+    priority: P0
+    area: enterprise-stock-commerce
+    title: Conserved multiline commercial order and partial native stock-to-cash
+    status: in_progress
+    depends_on: [AMR-EXP-001]
+    exit_evidence: Actual multiline multiwarehouse cycle, concurrency, HTTPS, SQL closure, Studio, migration and restore on fixed integrated source.
+  - id: AMR-ENT-002
+    priority: P0
+    area: enterprise-procurement
+    title: Native multiline PO and mixed-unit supplier invoice with partial receiving and FI1 settlement
+    status: in_progress
+    depends_on: [AMR-EXP-002]
+    exit_evidence: Complete mixed-unit multiwarehouse purchase cycle, exact matching, partial payment, concurrent rollback and SQL evidence.
+  - id: AMR-ENT-003
+    priority: P0
+    area: scalable-financial-reporting
+    title: Complete frozen statements with authorized paginated native evidence
+    status: in_progress
+    depends_on: [AMR-EXP-001, AMR-EXP-002]
+    exit_evidence: More than1000 actual effects, independent totals, full evidence fold, backdated concurrency, SQL immutability and Studio.
+  - id: AMR-ENT-004
+    priority: P0
+    area: native-enterprise-performance
+    title: Reproducible genuine financial and operating benchmark on fixed source
+    status: in_progress
+    depends_on: [AMR-ENT-001, AMR-ENT-002, AMR-ENT-003]
+    exit_evidence: Independent oracle, baseline and optimized same-history measurements, latency, throughput, resources and preserved failures.
   - id: AMR-EXP-001
     priority: P0
     area: stock-sales

@@ -248,6 +248,7 @@ for _operation, _permissions in {
 }.items():
     _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/stock-sales/commerce/orders/{identifier}/" + _operation)] = _erp_contract(_STOCK_READ, *_permissions)
 for _path, _permission in {
+    "/snapshots": "finance_core.read",
     "/maps": "finance_core.manage",
     "/maps/{map_id}/review": "finance_core.validate",
     "/openings": "finance_core.manage",

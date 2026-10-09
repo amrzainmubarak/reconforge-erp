@@ -5,7 +5,7 @@ from alembic import op
 from reconforge.infrastructure.postgres_receipt_fifo_chronology import DOWNGRADE_SQL, UPGRADE_SQL
 
 revision = "0119_pg_receipt_fifo_chronology"
-down_revision = "0118_pg_financial_reporting_snapshots"
+down_revision = "0118_pg_financial_report_capture"
 branch_labels = None
 depends_on = None
 

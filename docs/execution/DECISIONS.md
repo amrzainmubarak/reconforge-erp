@@ -1,5 +1,10 @@
 # ReconForge Execution Decisions Log
 
+- ADR0843 retains a conserved commercial parent over native stock tranches,
+  authoritative multiline PO/invoice allocations, durable report membership,
+  bounded verified effects and deeply captured Studio retries. No parallel GL
+  engine or new dependency; original failure evidence and migrations stay retained.
+
 ## D-EXP-20261009-GATES: Bound stronger duties and complete native ownership
 
 New Stock revenue/cash, partial receiving/accrual, installments and opening require distinct preparer/reviewer/poster identities; retained source actors are bound independently by deferred SQL. Existing native and service-sales policies stay compatible. Actual reviewer-publication RED probes are preserved, and third-person continuation plus exact financial rollback is proved by native and normal wire gates. The module dependency order remains reporting→stock→partial-procurement→installments; FI1 is a settlement extension after PP rather than a cyclic prerequisite.

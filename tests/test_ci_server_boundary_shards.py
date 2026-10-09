@@ -94,7 +94,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 38  # Preserve prior36; two bounded ERP expansion gates own every new native module.
+    assert len(commands) == 40  # Prior38 plus complete commerce/procurement and snapshot native gates.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -124,6 +124,16 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
         ("tests/test_postgres_stock_sales_api.py", "erp-expansion"),
         ("tests/test_postgres_procurement_partial.py", "erp-expansion"),
         ("tests/test_postgres_procurement_partial_api.py", "erp-expansion"),
+        ("tests/test_postgres_stock_commerce.py", "erp-expansion"),
+        ("tests/test_postgres_stock_commerce_api.py", "erp-expansion"),
+        ("tests/test_postgres_stock_commerce_migrations.py", "erp-expansion"),
+        ("tests/test_postgres_procurement_multiline.py", "erp-expansion"),
+        ("tests/test_postgres_finance_posting_batches.py", "finance-posting"),
+        ("tests/test_postgres_procurement_multiline_api.py", "erp-expansion"),
+        ("tests/test_postgres_procurement_multiline_migrations.py", "erp-expansion"),
+        ("tests/test_postgres_financial_reporting_snapshots.py", "finance-reporting"),
+        ("tests/test_postgres_financial_snapshot_recovery.py", "finance-reporting"),
+        ("tests/test_postgres_financial_snapshot_migration.py", "finance-reporting"),
 
     ):
         selected = [shard for shard, entries in groups.items()
@@ -138,6 +148,10 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     assert "if" not in unit and "continue-on-error" not in unit
     ignored = {
         "tests/test_postgres_stock_sales.py", "tests/test_postgres_stock_sales_api.py",
+        "tests/test_postgres_stock_commerce.py", "tests/test_postgres_stock_commerce_api.py",
+        "tests/test_postgres_stock_commerce_migrations.py",
+        "tests/test_postgres_financial_reporting_snapshots.py", "tests/test_postgres_financial_snapshot_recovery.py",
+        "tests/test_postgres_financial_snapshot_migration.py",
     }
     assert shlex.split(unit["run"]) == [
         "uv", "run", "--no-sync", "pytest", *[f"--ignore={path}" for path in sorted(ignored)],
@@ -147,7 +161,8 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
     groups = _partition(native["run"])
     for path in ignored:
         assert [owner for owner, commands in groups.items()
-                for command in commands if path in shlex.split(command)] == ["erp-expansion"]
+                for command in commands if path in shlex.split(command)] == [
+                    "finance-reporting" if "financial_" in path else "erp-expansion"]
 
 
 def test_native_services_and_unconditional_report_retention_survive_partition() -> None:

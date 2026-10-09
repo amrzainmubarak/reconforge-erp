@@ -46,3 +46,15 @@ across warehouses; generic valuation intersects item and lot. Same-item date and
 reserved-number ordering, consumed-layer history and all original guards remain.
 Historical0100/0108 SQL stays frozen.0118 uses the31-character revision
 `0118_pg_financial_report_capture`, within the existing Alembic version column.
+
+The first integrated hosted run retained two concrete failures: an additional
+JSON decoder outside the approved parser inventory, and scope inputs accepting
+edits before asynchronous identity defaults arrived. Reuse the existing retained
+snapshot decoder and disable those inputs until identity is ready. Constant SQL
+assembly is made explicit without changing emitted SQL or suppressing Bandit.
+
+Each native CI shard installs its own locked runtime and PostgreSQL/Redis services
+and consumes no Python/web job artifact. Remove that unnecessary dependency so
+all eleven shards remain observable after a Python failure. Both Python versions
+also complete independently. All forty native commands, the four-worker matrix
+ceiling, fail-closed aggregate and separate required Python/web checks remain.

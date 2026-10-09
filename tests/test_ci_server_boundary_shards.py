@@ -62,7 +62,8 @@ def _partition(run: str) -> dict[str, list[str]]:
 def test_live_shards_remain_bounded_independent_and_observable() -> None:
     job = _workflow()["jobs"]["server-boundaries"]
     assert job["name"] == "server-boundaries (${{ matrix.shard }})"
-    assert job["needs"] == ["test", "web"]
+    assert "needs" not in job  # Self-contained services must run after a pure-Python failure.
+    assert _workflow()["jobs"]["test"]["strategy"]["fail-fast"] is False
     assert job["timeout-minutes"] == 30
     assert job["strategy"]["fail-fast"] is False
     assert job["strategy"]["max-parallel"] == 4

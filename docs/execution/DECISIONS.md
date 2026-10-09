@@ -1,5 +1,12 @@
 # ReconForge Execution Decisions Log
 
+- ENT-20261009 final integration: self-contained native CI shards run independently
+  of Python/web failures; both Python versions disable sibling cancellation.
+  No required command, guard, role constraint or aggregate acceptance is removed.
+  Restore the approved shared JSON decoder, gate scope editing on identity and
+  retain byte-identical constant SQL with explicit assembly. Original failed
+  CI37975239942/Security37975239785 remain failed evidence.
+
 - ADR0843 retains a conserved commercial parent over native stock tranches,
   authoritative multiline PO/invoice allocations, durable report membership,
   bounded verified effects and deeply captured Studio retries. No parallel GL

@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
@@ -321,9 +322,9 @@ jobs:
 
   server-boundaries:
     runs-on: ubuntu-latest
-    needs: [test, web]
     name: server-boundaries (${{ matrix.shard }})
     # Independent services per shard bound cumulative live verification time.
+    # No shared test/web artifact is consumed; retain native evidence on their failure.
     # Keep every shard observable after a sibling fails; the aggregate fails closed.
     timeout-minutes: 30
     strategy:

@@ -10,8 +10,17 @@ shared authority/migration/CI/transport and final integration. Initial Sales12-c
 native gate and shared35-case contracts pass. On61bf6d7b the100-effect benchmark
 matches independent46669102minor totals, verified-read median0.75026→0.05164s,
 client execute300→2 and four-worker three-human posting1.311/s including identity.
-These are milestones. Final fixed-source regression, populated restore, larger
-benchmarks and new Draft PR remain pending; predecessor acceptance stays historical.
+The subsequent1000-effect benchmark on clean347d3714 matches independent
+493671004minor totals with zero errors: four-worker reviewed posting1.476cycles/s,
+verified-read median6.867102→0.464948s, client execute3000→20. The checked-in raw
+profile preserves hardware/configuration, request units and memory tradeoffs.
+Native commerce16-case and procurement17-case gates pass with zero skips;
+three integrated normal HTTPS cycles and populated native restore passed their
+source-bound milestones. DraftPR127 is open above unchangedPR126. The first hosted
+run40e9 retained a parser-inventory failure and legacy scope-loading race; both
+are repaired without weaker controls. All final current-source native/Python/web/
+security/image acceptance remains required. These bounded milestones do not
+complete the broad global ERP program; predecessor acceptance stays historical.
 
 ## Active ERP expansion sprint (2026-10-09; ADR0842)
 

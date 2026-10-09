@@ -360,6 +360,7 @@ def test_raw_reserved_owner_and_immutable_phase_acknowledgements_are_refused(rep
         with pytest.raises(CheckViolation, match="actual current owner phase"), connection.transaction():
             connection.execute(
                 """INSERT INTO reconforge.financial_reporting_commands
+                (tenant_id,workspace_id,command_id,operation,actor_id,request_digest,request_json,object_id,result_json)
                 SELECT tenant_id,workspace_id,'RAW-LATE-PREPARE',operation,actor_id,request_digest,request_json,object_id,result_json
                 FROM reconforge.financial_reporting_commands WHERE tenant_id=%s AND operation='prepare_opening'""",
                 (rt.tenant,),
@@ -367,6 +368,7 @@ def test_raw_reserved_owner_and_immutable_phase_acknowledgements_are_refused(rep
         with pytest.raises(CheckViolation, match="acknowledged phase"), connection.transaction():
             connection.execute(
                 """INSERT INTO reconforge.financial_reporting_commands
+                (tenant_id,workspace_id,command_id,operation,actor_id,request_digest,request_json,object_id,result_json)
                 SELECT tenant_id,workspace_id,'RAW-FORGED-RESULT',operation,actor_id,request_digest,request_json,object_id,result_json||'{"amount_minor":10001}'::jsonb
                 FROM reconforge.financial_reporting_commands WHERE tenant_id=%s AND operation='post_opening'""",
                 (rt.tenant,),

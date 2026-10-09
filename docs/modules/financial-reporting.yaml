@@ -25,6 +25,8 @@ domain_invariants:
   - Cash opening plus posted movements equals cash closing; internal transfers have zero aggregate delta.
   - Database-owned report captures retain every visible scoped eligible native effect in a single ordered source query.
   - Captured membership is immutable from creation and cannot be manually extended even before report completion.
+  - Capture membership is database-sealed before INSERT returns; only the automatic false-to-true transition is admitted, with a finite UPDATE(membership_sealed) runtime grant.
+  - Unrelated nested temporary triggers cannot extend sealed source membership or change retained capture provenance.
   - Concurrent later or backdated postings cannot change an already captured report or its evidence pages.
   - Native exact line sums, reviewed classification, period, retained currency, statements and audit closure are rechecked by deferred SQL constraints.
   - Summary memory depends on the reviewed account set; evidence is retained durably and read using bounded keyset pages.

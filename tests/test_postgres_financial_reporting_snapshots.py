@@ -33,6 +33,8 @@ def snapshot_runtime(reporting_runtime: ReceiptRuntime) -> ReceiptRuntime:
         user = psycopg.conninfo.conninfo_to_dict(rt.factory.settings.dsn)["user"]
         for table in ("financial_report_captures", "financial_report_members", "financial_report_snapshots"):
             connection.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(user)))
+        connection.execute(sql.SQL("REVOKE UPDATE ON reconforge.financial_report_captures FROM {}").format(sql.Identifier(user)))
+        connection.execute(sql.SQL("GRANT UPDATE(membership_sealed) ON reconforge.financial_report_captures TO {}").format(sql.Identifier(user)))
     return rt
 
 

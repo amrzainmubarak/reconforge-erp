@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS reconforge.financial_report_captures (
  tenant_id TEXT NOT NULL,id TEXT NOT NULL,workspace_id TEXT NOT NULL,organization_id TEXT NOT NULL,legal_entity_id TEXT NOT NULL,
  map_id TEXT NOT NULL,period_id TEXT NOT NULL,as_of_date DATE NOT NULL,actor_id TEXT NOT NULL,command_id TEXT NOT NULL,
  request_digest TEXT NOT NULL CHECK(request_digest ~ '^[0-9a-f]{64}$'),request_json JSONB NOT NULL,
- source_snapshot TEXT NOT NULL,created_at TEXT NOT NULL,
+ source_snapshot TEXT NOT NULL,created_at TEXT NOT NULL,membership_sealed BOOLEAN NOT NULL DEFAULT false,
  PRIMARY KEY(tenant_id,id),UNIQUE(tenant_id,workspace_id,command_id),
  FOREIGN KEY(tenant_id,map_id,workspace_id,organization_id,legal_entity_id) REFERENCES reconforge.financial_reporting_maps(tenant_id,id,workspace_id,organization_id,legal_entity_id),
  FOREIGN KEY(tenant_id,actor_id) REFERENCES reconforge.identity_users(tenant_id,id),
@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS reconforge.financial_report_snapshots (
  FOREIGN KEY(tenant_id,audit_event_id) REFERENCES reconforge.domain_audit_events(tenant_id,id),
  FOREIGN KEY(tenant_id,outbox_event_id) REFERENCES reconforge.outbox_events(tenant_id,event_id)
 );
+-- Existing complete captures from a pre-seal installation are already immutable.
+ALTER TABLE reconforge.financial_report_captures ADD COLUMN IF NOT EXISTS membership_sealed BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE reconforge.financial_report_captures ALTER COLUMN membership_sealed SET DEFAULT false;
 CREATE INDEX IF NOT EXISTS financial_report_captures_list ON reconforge.financial_report_captures(tenant_id,workspace_id,organization_id,legal_entity_id,created_at DESC,id);
 CREATE OR REPLACE FUNCTION reconforge.frs_amounts(d NUMERIC,c NUMERIC) RETURNS JSONB LANGUAGE sql IMMUTABLE SET search_path=pg_catalog AS $frs$
  SELECT jsonb_build_object('debit_minor',d,'credit_minor',c,'balance_minor',d-c,'debit_balance_minor',greatest(d-c,0),'credit_balance_minor',greatest(c-d,0))
@@ -44,11 +47,12 @@ BEGIN
  OR NOT EXISTS(SELECT 1 FROM reconforge.fiscal_periods WHERE tenant_id=NEW.tenant_id AND id=NEW.period_id AND application_workspace_id=NEW.workspace_id AND NEW.as_of_date BETWEEN start_date AND end_date) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_report_snapshot_closure',MESSAGE='Report capture requires a current human, reviewed map and exact scoped request.'; END IF;
  NEW.source_snapshot:=pg_current_snapshot()::text;
+ NEW.membership_sealed:=false;
  RETURN NEW;
  END IF;
  SELECT * INTO p FROM reconforge.financial_report_captures WHERE tenant_id=NEW.tenant_id AND id=NEW.capture_id;
- IF pg_trigger_depth()<>2 OR p IS NULL OR EXISTS(SELECT 1 FROM reconforge.financial_report_snapshots WHERE tenant_id=NEW.tenant_id AND capture_id=NEW.capture_id) THEN
- RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_report_snapshot_closure',MESSAGE='Final report membership cannot be extended or detached.'; END IF;
+ IF pg_trigger_depth()<>2 OR p IS NULL OR p.membership_sealed OR EXISTS(SELECT 1 FROM reconforge.financial_report_snapshots WHERE tenant_id=NEW.tenant_id AND capture_id=NEW.capture_id) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_report_snapshot_closure',MESSAGE='Sealed report membership cannot be extended or detached.'; END IF;
  SELECT * INTO e FROM reconforge.finance_posting_effects WHERE tenant_id=NEW.tenant_id AND id=NEW.effect_id;
  IF e IS NULL OR (e.workspace_id,e.organization_id,e.legal_entity_id) IS DISTINCT FROM (p.workspace_id,p.organization_id,p.legal_entity_id)
  OR e.validation_digest IS DISTINCT FROM NEW.validation_digest OR reconforge.irp_digest(e.snapshot_json) IS DISTINCT FROM e.validation_digest
@@ -79,7 +83,19 @@ BEGIN
  INSERT INTO reconforge.financial_report_members(tenant_id,capture_id,ordinal,effect_id,validation_digest,previous_digest,chain_digest)
  VALUES(NEW.tenant_id,NEW.id,ordinal,e.id,e.validation_digest,previous,chain);previous:=chain;
  END LOOP;
+ UPDATE reconforge.financial_report_captures SET membership_sealed=true WHERE tenant_id=NEW.tenant_id AND id=NEW.id;
  RETURN NEW;
+END $frs$;
+CREATE OR REPLACE FUNCTION reconforge.frs_capture_immutable() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $frs$
+BEGIN
+ -- The false state exists only while the parent's synchronous AFTER INSERT
+ -- trigger is still running. Once INSERT returns, even a nested unrelated
+ -- trigger cannot reopen membership or substitute captured provenance.
+ IF TG_OP='UPDATE' THEN
+ IF pg_trigger_depth()=2 AND NOT OLD.membership_sealed AND NEW.membership_sealed
+ AND to_jsonb(OLD)-'membership_sealed'=to_jsonb(NEW)-'membership_sealed' THEN RETURN NEW; END IF;
+ END IF;
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_report_snapshot_closure',MESSAGE='Report capture provenance and completed membership seal are immutable.';
 END $frs$;
 CREATE OR REPLACE FUNCTION reconforge.frs_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $frs$
 DECLARE p RECORD;s RECORD;m RECORD;section_value JSONB;phase TEXT;section TEXT;expected JSONB;accounts JSONB;sections JSONB:='{}'::jsonb;
@@ -91,7 +107,7 @@ BEGIN
  SELECT * INTO s FROM reconforge.financial_report_snapshots WHERE tenant_id=p.tenant_id AND capture_id=p.id;
  SELECT * INTO m FROM reconforge.financial_reporting_maps WHERE tenant_id=p.tenant_id AND id=p.map_id;
  SELECT * INTO period FROM reconforge.fiscal_periods WHERE tenant_id=p.tenant_id AND id=p.period_id;
- IF s IS NULL OR reconforge.irp_digest(s.payload-'report_digest') IS DISTINCT FROM s.report_digest OR s.payload->>'report_digest' IS DISTINCT FROM s.report_digest
+ IF NOT p.membership_sealed OR s IS NULL OR reconforge.irp_digest(s.payload-'report_digest') IS DISTINCT FROM s.report_digest OR s.payload->>'report_digest' IS DISTINCT FROM s.report_digest
  OR NOT reconforge.fr_event(p.tenant_id,p.id,p.workspace_id,p.organization_id,p.legal_entity_id,s.audit_event_id,s.outbox_event_id,p.actor_id,'financial_report_snapshot_created',jsonb_build_object('report_digest',s.report_digest,'evidence_digest',s.payload->>'evidence_digest')) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_report_snapshot_closure',MESSAGE='Report capture requires complete immutable summary and audit closure.'; END IF;
  SELECT count(*),coalesce(sum(jsonb_array_length(e.snapshot_json->'lines')),0),count(*) FILTER(WHERE (e.snapshot_json->'entry'->>'posting_date')::date<period.start_date)
@@ -152,7 +168,9 @@ DO $install$ DECLARE n TEXT; BEGIN
  EXECUTE format('CREATE POLICY report_snapshot_scope ON reconforge.%I USING(reconforge.irp_scope(tenant_id,workspace_id,organization_id,legal_entity_id)) WITH CHECK(reconforge.irp_scope(tenant_id,workspace_id,organization_id,legal_entity_id))',n);
  ELSE EXECUTE format('CREATE POLICY report_snapshot_scope ON reconforge.%I USING(EXISTS(SELECT 1 FROM reconforge.financial_report_captures p WHERE p.tenant_id=%I.tenant_id AND p.id=%I.capture_id))',n,n,n); END IF;
  EXECUTE format('DROP TRIGGER IF EXISTS report_snapshot_immutable ON reconforge.%I',n);
- EXECUTE format('CREATE TRIGGER report_snapshot_immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.fr_immutable()',n);
+ IF n='financial_report_captures' THEN
+ EXECUTE format('CREATE TRIGGER report_snapshot_immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.frs_capture_immutable()',n);
+ ELSE EXECUTE format('CREATE TRIGGER report_snapshot_immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.fr_immutable()',n); END IF;
  IF n<>'financial_report_snapshots' THEN
  EXECUTE format('DROP TRIGGER IF EXISTS report_snapshot_admission ON reconforge.%I',n);
  EXECUTE format('CREATE TRIGGER report_snapshot_admission BEFORE INSERT ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.frs_admit()',n); END IF;
@@ -166,7 +184,7 @@ END $install$;
 DOWNGRADE_SQL = r'''
 DO $guard$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.financial_report_captures) THEN RAISE EXCEPTION 'Immutable financial report snapshots require forward recovery.'; END IF; END $guard$;
 DROP TABLE reconforge.financial_report_snapshots,reconforge.financial_report_members,reconforge.financial_report_captures;
-DROP FUNCTION reconforge.frs_close(),reconforge.frs_capture_members(),reconforge.frs_admit(),reconforge.frs_amounts(NUMERIC,NUMERIC);
+DROP FUNCTION reconforge.frs_close(),reconforge.frs_capture_members(),reconforge.frs_admit(),reconforge.frs_capture_immutable(),reconforge.frs_amounts(NUMERIC,NUMERIC);
 '''
 
 

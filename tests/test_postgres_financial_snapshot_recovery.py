@@ -6,11 +6,14 @@ from typing import Any
 
 import pytest
 
+from reconforge.domain.finance_posting import canonical_json, digest_payload
+from reconforge.domain.financial_reporting_stream import EVIDENCE_CHAIN_SEED
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
 from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
 from reconforge.infrastructure.postgres_financial_reporting_snapshot_schema import DOWNGRADE_SQL
 from reconforge.infrastructure.postgres_financial_reporting_snapshots import PostgresFinancialReportSnapshots
+from reconforge.utils.time import utc_now_text
 from tests.test_postgres_financial_reporting import manual, map_cycle, receipt_database, reporting_runtime
 from tests.test_postgres_financial_reporting_snapshots import capture, snapshot_runtime
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
@@ -110,3 +113,44 @@ def test_late_audit_failure_rolls_back_capture_membership_and_exact_command_can_
         assert result["effect_count"] == 1 and result["balance_sheet"]["assets_minor"] == 101
         assert repo.create_snapshot(**arguments) == result
         assert counts() == [value + 1 for value in before]
+
+
+def test_capture_birth_seal_refuses_nested_temp_trigger_extension_before_summary(snapshot_runtime: ReceiptRuntime) -> None:
+    import psycopg
+    from psycopg import sql
+
+    rt = snapshot_runtime
+    mapping = map_cycle(rt)
+    with rt.actor("poster") as (connection, _, actor):
+        assert connection.execute("SELECT has_column_privilege(current_user,'reconforge.financial_report_captures','membership_sealed','UPDATE')").fetchone()[0]
+        assert not connection.execute("SELECT has_column_privilege(current_user,'reconforge.financial_report_captures','source_snapshot','UPDATE')").fetchone()[0]
+        request = {"actor_id": actor.user_id, "map_id": mapping["id"], "period_id": "period", "as_of_date": "2026-10-31"}
+        with pytest.raises(psycopg.errors.CheckViolation, match="Sealed report membership"), connection.transaction():
+            connection.execute("""INSERT INTO reconforge.financial_report_captures(tenant_id,id,workspace_id,organization_id,legal_entity_id,map_id,period_id,as_of_date,actor_id,command_id,request_digest,request_json,source_snapshot,created_at)
+                VALUES(%s,'RAW-PREFINAL','work','org','entity',%s,'period','2026-10-31',%s,'raw-prefinal',%s,%s::jsonb,'',%s)""",
+                (rt.tenant, mapping["id"], actor.user_id, digest_payload(request), canonical_json(request), utc_now_text()))
+            row = connection.execute("SELECT membership_sealed FROM reconforge.financial_report_captures WHERE tenant_id=%s AND id='RAW-PREFINAL'", (rt.tenant,)).fetchone()
+            assert row[0] is True
+            assert connection.execute("SELECT count(*) FROM reconforge.financial_report_snapshots WHERE tenant_id=%s", (rt.tenant,)).fetchone()[0] == 0
+            # A real independently reviewed posting commits after the source
+            # cursor ended. The application role's TEMP capability stays enabled.
+            manual(rt, "AFTER-CAPTURE", "CASH", "REVENUE", 123, "2026-10-09")
+            connection.execute("CREATE TEMP TABLE capture_depth_probe(value integer)")
+            connection.execute("""CREATE FUNCTION pg_temp.capture_depth_probe() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $probe$
+                BEGIN
+                IF pg_trigger_depth()<>1 THEN RAISE EXCEPTION 'fixture trigger depth differs'; END IF;
+                INSERT INTO reconforge.financial_report_members(tenant_id,capture_id,ordinal,effect_id,validation_digest,previous_digest,chain_digest)
+                SELECT tenant_id,TG_ARGV[1],1,id,validation_digest,TG_ARGV[2],reconforge.irp_digest(jsonb_build_array(TG_ARGV[2],1,id,validation_digest))
+                FROM reconforge.finance_posting_effects WHERE tenant_id=TG_ARGV[0];
+                RETURN NEW; END $probe$""")
+            connection.execute(sql.SQL("CREATE TRIGGER capture_depth_probe BEFORE INSERT ON capture_depth_probe FOR EACH ROW EXECUTE FUNCTION pg_temp.capture_depth_probe({},{},{})")
+                               .format(sql.Literal(rt.tenant), sql.Literal("RAW-PREFINAL"), sql.Literal(EVIDENCE_CHAIN_SEED)))
+            connection.execute("INSERT INTO capture_depth_probe VALUES(1)")
+        assert connection.execute("SELECT count(*) FROM reconforge.financial_report_captures WHERE tenant_id=%s", (rt.tenant,)).fetchone()[0] == 0
+    retained = capture(rt, mapping)
+    assert retained["effect_count"] == 1 and retained["balance_sheet"]["assets_minor"] == 123
+    with rt.actor("poster") as (connection, _, _actor):
+        for statement in ("UPDATE reconforge.financial_report_captures SET membership_sealed=false WHERE tenant_id=%s",
+                          "UPDATE reconforge.financial_report_captures SET membership_sealed=true WHERE tenant_id=%s"):
+            with pytest.raises(psycopg.errors.CheckViolation, match="provenance"), connection.transaction():
+                connection.execute(statement, (rt.tenant,))

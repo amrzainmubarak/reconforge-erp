@@ -29,7 +29,12 @@ CSRF for cookie-authenticated requests. It creates report evidence, with no
 financial posting or approval effect.
 
 The database captures the ordered IDs of all visible eligible native effects
-automatically. The application verifies native snapshots and audit/outbox in
+automatically, then seals that membership before the capture INSERT returns.
+The initially false seal changes to true only inside the database-owned capture
+trigger; sealed membership cannot be reopened or extended, including before the
+summary exists and through unrelated nested triggers. Trigger depth alone does
+not establish that the automatic source capture is still running.
+The application verifies native snapshots and audit/outbox in
 100-effect batches, then folds exact amounts without retaining posting lists
 in memory. A deferred SQL closure independently recomputes account totals,
 statement equations, currency/period affinity, the retained classification and
@@ -57,10 +62,17 @@ membership evidence chain are the durable source definition.
 The three new tables use FORCE RLS. Runtime roles need SELECT/INSERT on
 `financial_report_captures`, `financial_report_members`, and
 `financial_report_snapshots`, plus existing scoped native read/audit/outbox
-permissions. Application INSERT into membership is refused: only the nested
-capture trigger can populate it. UPDATE/DELETE are refused from the moment a
-row is created. Populated migration downgrade refuses evidence loss; use forward
-repair or restore a verified pre-upgrade backup.
+permissions. The invoker capture trigger additionally needs the finite grant
+`GRANT UPDATE(membership_sealed) ON reconforge.financial_report_captures TO <runtime_role>`.
+Do not grant table-wide UPDATE for that transition. All financial provenance
+stays immutable; the trigger admits only the automated false-to-true seal
+transition while leaving every other capture column identical. It refuses any
+later update, including a no-op seal assignment. Application INSERT into
+membership is refused after capture birth, and membership/summary UPDATE or
+DELETE always fails. The regression fixture retains PostgreSQL TEMP privilege
+and proves that an unrelated nested temporary trigger cannot append a newly
+committed native effect. Populated migration downgrade refuses evidence loss;
+use forward repair or restore a verified pre-upgrade backup.
 
 This path removes the operational 1000-effect/10000-line ceiling without raising
 the legacy endpoint's limits. The reviewed chart remains capped at 1000 accounts

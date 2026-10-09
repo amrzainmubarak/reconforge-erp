@@ -34,9 +34,19 @@ export function parseProcurementCycle(value: unknown, scope: ProcurementScope): 
 }
 
 export async function procurementFetch(session: BrowserAdminSession, workspace: string, scope: ProcurementScope | null, path: string,
-  options: { body?: object; signal?: AbortSignal } = {}): Promise<unknown> {
+  options: { body?: object; signal?: AbortSignal; query?: Record<string, string | number> } = {}): Promise<unknown> {
   if (!path.startsWith("/api/v1/") || path.includes("?")) invalid();
-  const response = await fetch(path, { method: options.body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", signal: options.signal,
+  const query = new URLSearchParams();
+  if (options.query) {
+    const entries = Object.entries(options.query);
+    if (options.body || entries.length > 50) invalid();
+    for (const [key, value] of entries) {
+      if (!/^[a-z][a-z0-9_]{0,99}$/i.test(key) || (typeof value !== "string" && !Number.isSafeInteger(value)) || String(value).length > 2000) invalid();
+      query.set(key, String(value));
+    }
+  }
+  const target = query.size ? `${path}?${query.toString()}` : path;
+  const response = await fetch(target, { method: options.body ? "POST" : "GET", credentials: "same-origin", cache: "no-store", signal: options.signal,
     headers: { Accept: "application/json", "X-ReconForge-Tenant": session.tenantId, "X-ReconForge-Workspace": workspace,
       ...(scope ? { "X-ReconForge-Organization": scope.organization_id, "X-ReconForge-Legal-Entity": scope.legal_entity_id } : {}),
       ...(options.body ? { "Content-Type": "application/json", "X-ReconForge-CSRF": session.csrfToken } : {}) },

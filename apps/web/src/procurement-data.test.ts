@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseProcurementAcknowledgement, parseProcurementCycle, parseProcurementOptions, procurementSaveSupplier, procurementActions, procurementStages, type ProcurementScope } from "./procurement-data";
+import { parseProcurementAcknowledgement, parseProcurementCycle, parseProcurementOptions, procurementSaveSupplier, procurementFetch, procurementActions, procurementStages, type ProcurementScope } from "./procurement-data";
 import type { BrowserAdminSession } from "./types";
 
 const scope: ProcurementScope = { workspace_id: "work", organization_id: "org", legal_entity_id: "entity", organization_code: "ORG", entity_code: "ENTITY", organization_name: "Synthetic", entity_name: "Synthetic", currency_code: "USD" };
@@ -7,6 +7,19 @@ const cycle = { id: "cycle", ...scope, number: "PO-1", row_version: 1, stage: "D
 
 describe("procurement financial response contracts", () => {
   afterEach(() => vi.unstubAllGlobals());
+  it("encodes paginated catalog queries separately from scoped paths", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 })); vi.stubGlobal("fetch", fetchMock);
+    const session = { tenantId: "tenant", csrfToken: "synthetic-csrf" } as BrowserAdminSession;
+    await procurementFetch(session, scope.workspace_id, scope, "/api/v1/procurement-partial/catalog/items", { query: { search: "صنف & bolt", after: "ITEM/1", limit: 25 } });
+    const [url, options] = fetchMock.mock.calls[0];
+    const parsed = new URL(url, "https://localhost");
+    expect(parsed.searchParams.get("search")).toBe("صنف & bolt");
+    expect(parsed.searchParams.get("after")).toBe("ITEM/1");
+    expect(options).toMatchObject({ method: "GET", credentials: "same-origin", headers: { "X-ReconForge-Legal-Entity": "entity" } });
+    await expect(procurementFetch(session, "work", scope, "/api/v1/test?limit=25")).rejects.toThrow("procurement_contract_invalid");
+    await expect(procurementFetch(session, "work", scope, "/api/v1/test", { query: { limit: NaN } })).rejects.toThrow("procurement_contract_invalid");
+    await expect(procurementFetch(session, "work", scope, "/api/v1/test", { query: { limit: 25 }, body: {} })).rejects.toThrow("procurement_contract_invalid");
+  });
   it("retains money greater than JavaScript safe integer as exact text", () => { expect(parseProcurementCycle(cycle, scope).total_minor).toBe("9000000000000000000"); });
   it("rejects numeric money and an action inconsistent with its actual stage", () => {
     expect(() => parseProcurementCycle({ ...cycle, total_minor: 9000000000000000000 }, scope)).toThrow("procurement_contract_invalid");

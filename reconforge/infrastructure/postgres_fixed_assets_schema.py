@@ -74,7 +74,7 @@ END $fa$;
 CREATE TRIGGER fixed_asset_current_actor BEFORE INSERT ON reconforge.fixed_asset_commands FOR EACH ROW EXECUTE FUNCTION reconforge.asset_command_actor();
 CREATE FUNCTION reconforge.asset_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $fa$
 DECLARE p RECORD;a RECORD;e RECORD;r RECORD;l RECORD;f RECORD;c RECORD;prior RECORD;native_journal RECORD;
- field_name TEXT;account_kind TEXT;account_code TEXT;account_id TEXT;expected_kind TEXT;idx INTEGER;
+ field_name TEXT;account_kind TEXT;selected_code TEXT;account_id TEXT;expected_kind TEXT;idx INTEGER;
  asset JSONB;v JSONB;header JSONB;lines JSONB;expected JSONB:='[]'::jsonb;item JSONB;request JSONB;
  cost NUMERIC;salvage NUMERIC;life INTEGER;accumulated NUMERIC:=0;months INTEGER:=0;after_months INTEGER;amount NUMERIC;
  proceeds NUMERIC;carrying NUMERIC;last_date DATE;through_date DATE;expected_id TEXT;expected_debit NUMERIC;expected_credit NUMERIC;
@@ -209,8 +209,8 @@ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Asset GL requires its complete retained snapshot'; END IF;
  idx:=0;
  FOR item IN SELECT value FROM jsonb_array_elements(expected) LOOP
-  SELECT id INTO expected_id FROM reconforge.finance_accounts WHERE tenant_id=t AND chart_id=native_journal.chart_id
-   AND workspace_id=a.workspace_id AND account_code=item->>'code';
+  SELECT account.id INTO expected_id FROM reconforge.finance_accounts account WHERE account.tenant_id=t AND account.chart_id=native_journal.chart_id
+   AND account.workspace_id=a.workspace_id AND account.account_code=item->>'code';
   IF expected_id IS NULL OR lines->idx->>'account_id' IS DISTINCT FROM expected_id
    OR (lines->idx->>'debit_minor')::numeric IS DISTINCT FROM (item->>'debit')::numeric
    OR (lines->idx->>'credit_minor')::numeric IS DISTINCT FROM (item->>'credit')::numeric
@@ -219,10 +219,10 @@ BEGIN
   idx:=idx+1;
  END LOOP;
  FOREACH field_name IN ARRAY ARRAY['asset','accumulated','expense','cash','gain','loss'] LOOP
-  account_code:=asset->>(field_name||'_account_code');
+  selected_code:=asset->>(field_name||'_account_code');
   expected_kind:=CASE WHEN field_name IN ('expense','loss') THEN 'Expense' WHEN field_name='gain' THEN 'Income' ELSE 'Asset' END;
   SELECT fa.account_type,fa.id INTO account_kind,account_id FROM reconforge.finance_accounts fa
-   WHERE fa.tenant_id=t AND fa.chart_id=native_journal.chart_id AND fa.workspace_id=a.workspace_id AND fa.account_code=account_code;
+   WHERE fa.tenant_id=t AND fa.chart_id=native_journal.chart_id AND fa.workspace_id=a.workspace_id AND fa.account_code=selected_code;
   IF account_kind IS DISTINCT FROM expected_kind OR account_id IS NULL THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Asset accounts require their retained financial classifications'; END IF;
  END LOOP;
@@ -232,7 +232,7 @@ BEGIN
  IF p.phase=0 AND (e.status<>'Draft' OR r IS NOT NULL OR l IS NOT NULL) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Prepared asset phase differs from its native entry'; END IF;
  IF p.phase<2 AND NOT EXISTS(SELECT 1 FROM reconforge.fiscal_periods period WHERE period.tenant_id=t AND period.id=e.period_id
-  AND period.status='Open' AND e.posting_date BETWEEN period.start_date AND period.end_date) THEN
+  AND period.status='Open' AND e.posting_date::date BETWEEN period.start_date AND period.end_date) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Pending asset accounting requires its open original period'; END IF;
  IF p.phase>=1 AND (r IS NULL OR r.reviewer_actor_id=e.preparer_actor_id OR e.validator_actor_id<>r.reviewer_actor_id
  OR e.validation_digest<>v->>'validation_digest' OR e.status<>'Validated'
@@ -267,12 +267,12 @@ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Every retained asset phase requires its immutable command'; END IF;
 END $fa$;
 CREATE FUNCTION reconforge.asset_reverse_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fa$
-DECLARE changed JSONB;changes JSONB[];p RECORD;native_entry TEXT;native_number TEXT;owner_id TEXT;asset_id TEXT;
+DECLARE changed JSONB;changes JSONB[];p RECORD;native_entry TEXT;native_number TEXT;owner_id TEXT;selected_asset TEXT;
 BEGIN
  IF TG_OP='INSERT' THEN changes:=ARRAY[to_jsonb(NEW)]; ELSIF TG_OP='DELETE' THEN changes:=ARRAY[to_jsonb(OLD)];
  ELSE changes:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)]; END IF;
  FOREACH changed IN ARRAY changes LOOP
-  native_entry:=NULL;native_number:=NULL;asset_id:=NULL;
+  native_entry:=NULL;native_number:=NULL;selected_asset:=NULL;
   IF TG_TABLE_NAME IN ('domain_audit_events','outbox_events') THEN
    owner_id:=CASE WHEN TG_TABLE_NAME='domain_audit_events' THEN changed->>'object_id' ELSE changed->>'aggregate_id' END;
    IF upper(left(COALESCE(owner_id,''),4))<>'FA1-' THEN CONTINUE; END IF;
@@ -293,10 +293,10 @@ BEGIN
    CONTINUE;
   END IF;
   IF TG_TABLE_NAME='fixed_assets' THEN
-   asset_id:=changed->>'id';
-   IF NOT EXISTS(SELECT 1 FROM reconforge.fixed_asset_plans q WHERE q.tenant_id=changed->>'tenant_id' AND q.asset_id=asset_id AND q.sequence=0 AND q.kind='acquire') THEN
+   selected_asset:=changed->>'id';
+   IF NOT EXISTS(SELECT 1 FROM reconforge.fixed_asset_plans q WHERE q.tenant_id=changed->>'tenant_id' AND q.asset_id=selected_asset AND q.sequence=0 AND q.kind='acquire') THEN
     RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Asset registration requires its atomic native acquisition plan'; END IF;
-  ELSIF TG_TABLE_NAME='fixed_asset_plans' THEN asset_id:=changed->>'asset_id';
+  ELSIF TG_TABLE_NAME='fixed_asset_plans' THEN selected_asset:=changed->>'asset_id';
   END IF;
   IF TG_TABLE_NAME IN ('finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects') THEN
    native_entry:=CASE WHEN TG_TABLE_NAME='finance_entries' THEN changed->>'id' ELSE changed->>'entry_id' END;
@@ -312,7 +312,7 @@ BEGIN
     RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Reserved FA1 native entry requires its source'; END IF;
   END IF;
   FOR p IN SELECT q.* FROM reconforge.fixed_asset_plans q WHERE q.tenant_id=changed->>'tenant_id' AND
-   (q.id=changed->>'plan_id' OR q.id=changed->>'id' OR q.entry_id=native_entry OR q.asset_id=asset_id) LOOP
+   (q.id=changed->>'plan_id' OR q.id=changed->>'id' OR q.entry_id=native_entry OR q.asset_id=selected_asset) LOOP
    PERFORM reconforge.asset_close(p.tenant_id,p.id);
   END LOOP;
  END LOOP;RETURN NULL;

@@ -22,7 +22,7 @@ __all__ = ["pytestmark", "receipt_database"]
 
 
 def seed_asset_masters(runtime: ReceiptRuntime) -> ReceiptRuntime:
-    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work", organization_id="org") as connection:
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         finance = PostgresFinanceCoreRepository(connection, runtime.tenant)
         for code, kind in (("FIXED", "Asset"), ("ACCUM", "Asset"), ("DEPRECIATION", "Expense"), ("CASH", "Asset"), ("GAIN", "Income"), ("LOSS", "Expense")):
             finance.upsert_account(account_code=code, name=code, account_type=kind, chart_code="DEFAULT", workspace="work")
@@ -192,12 +192,13 @@ def test_parallel_same_command_produces_one_asset_and_one_native_effect(asset_ru
 
 
 def test_closed_period_and_changed_acquisition_retry_are_refused(asset_runtime: ReceiptRuntime) -> None:
+    import psycopg
     runtime = asset_runtime
     first = acquire(runtime)
     with runtime.actor("maker") as (connection, _, actor), pytest.raises(FinancePostingError, match="another"):
         PostgresFixedAssetsRepository(connection, runtime.tenant).acquire(replace(acquisition(), cost_minor=10102), command_id="acquire-MACHINE-1", actor=actor)
     finish(runtime, first)
-    with runtime.actor("maker") as (connection, _, _):
+    with psycopg.connect(runtime.admin_dsn) as connection:
         connection.execute("UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='nov'", (runtime.tenant,))
     with pytest.raises(Exception, match="Open|open"):
         operation(runtime, first["asset_id"], kind="depreciate", date="2026-11-01", period="nov", month="2026-10")

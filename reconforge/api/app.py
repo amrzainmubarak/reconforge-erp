@@ -44,6 +44,7 @@ from reconforge.api.routes import (
     bank_statement,
     budget_control,
     close,
+    commercial_collections,
     connectors,
     consolidation_close,
     consolidation_deferred_tax,
@@ -60,6 +61,7 @@ from reconforge.api.routes import (
     finance_posting,
     financial_installments,
     financial_reporting,
+    fixed_assets,
     health,
     identity_administration,
     individual_cashflow,
@@ -68,6 +70,7 @@ from reconforge.api.routes import (
     inventory_receipt_posting,
     inventory_valuation,
     inventory_valuation_reversal,
+    landed_cost,
     manufacturing_cost_control,
     master_data,
     metrics,
@@ -431,6 +434,9 @@ def create_api_app(
     app.include_router(stock_sales.router, prefix="/api/v1")
     app.include_router(procurement_partial.router, prefix="/api/v1")
     app.include_router(financial_installments.router, prefix="/api/v1")
+    app.include_router(commercial_collections.router, prefix="/api/v1")
+    app.include_router(landed_cost.router, prefix="/api/v1")
+    app.include_router(fixed_assets.router, prefix="/api/v1")
     app.include_router(inventory_core.router, prefix="/api/v1")
     app.include_router(inventory_planning.router, prefix="/api/v1")
     app.include_router(inventory_receipt_posting.router, prefix="/api/v1")
@@ -490,6 +496,9 @@ def create_api_app(
         stock_sales.router,
         procurement_partial.router,
         financial_installments.router,
+        commercial_collections.router,
+        landed_cost.router,
+        fixed_assets.router,
         inventory_core.router,
         inventory_planning.router,
         inventory_receipt_posting.router,

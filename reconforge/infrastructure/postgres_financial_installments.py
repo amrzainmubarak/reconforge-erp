@@ -124,6 +124,15 @@ class PostgresFinancialInstallmentsRepository:
             if replay is not None:
                 return replay
             source, version, allocated = self._source(request.source_id)
+            policies = records(self.connection.execute(
+                """SELECT parent.request_json FROM reconforge.procurement_partial_invoices invoice
+                JOIN reconforge.procurement_partial_orders parent ON parent.tenant_id=invoice.tenant_id AND parent.id=invoice.order_id
+                WHERE invoice.tenant_id=%s AND invoice.native_invoice_id=%s AND invoice.stage=4""",
+                (self.tenant_id, request.source_id)))
+            if not policies or (request.debit_account_code, request.credit_account_code) != (
+                policies[0]["request_json"]["ap_account_code"], policies[0]["request_json"]["cash_account_code"]
+            ):
+                raise FinancePostingError("installment_account_invalid", "Use the payable and cash accounts retained by the source order.")
             if self.connection.execute(
                 "SELECT 1 FROM reconforge.financial_installment_plans WHERE tenant_id=%s AND source_id=%s AND phase<2",
                 (self.tenant_id, request.source_id)).fetchone() is not None:

@@ -50,7 +50,7 @@ CREATE FUNCTION reconforge.installment_event(t TEXT,p TEXT,a TEXT,b TEXT,actor T
 $fi$;
 CREATE FUNCTION reconforge.installment_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $fi$
 DECLARE p RECORD;e RECORD;r RECORD;l RECORD;f RECORD;a RECORD;h RECORD;s JSONB;header JSONB;lines JSONB;maker TEXT;seal TEXT;
- allocated NUMERIC; c RECORD; request_expected JSONB; effect_kind TEXT; account_kind TEXT;
+ allocated NUMERIC; c RECORD; request_expected JSONB; effect_kind TEXT; account_kind TEXT;payment_mapping JSONB;account_code TEXT;
 BEGIN
  SELECT * INTO p FROM reconforge.financial_installment_plans WHERE tenant_id=t AND id=i;
  IF p IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='FI1 source owner is required'; END IF;
@@ -58,8 +58,13 @@ BEGIN
  SELECT * INTO h FROM reconforge.ap_supplier_invoices WHERE tenant_id=t AND id=p.source_id;
  SELECT * INTO r FROM reconforge.financial_installment_reviews WHERE tenant_id=t AND plan_id=i;
  SELECT * INTO l FROM reconforge.financial_installment_links WHERE tenant_id=t AND plan_id=i;
+ SELECT parent.request_json INTO payment_mapping FROM reconforge.procurement_partial_invoices invoice
+ JOIN reconforge.procurement_partial_orders parent ON parent.tenant_id=invoice.tenant_id AND parent.id=invoice.order_id
+ WHERE invoice.tenant_id=t AND invoice.native_invoice_id=p.source_id AND invoice.stage=4;
  maker:=p.payload->>'preparer_actor_id';seal:=p.payload->>'plan_digest';s:=reconforge.ops_source(t,'APPayment',p.source_id);
- IF e IS NULL OR h IS NULL OR s IS NULL OR h.status NOT IN ('Approved','Paid')
+ IF e IS NULL OR h IS NULL OR s IS NULL OR payment_mapping IS NULL OR h.status NOT IN ('Approved','Paid')
+ OR p.payload->>'debit_account_code' IS DISTINCT FROM payment_mapping->>'ap_account_code'
+ OR p.payload->>'credit_account_code' IS DISTINCT FROM payment_mapping->>'cash_account_code'
  OR NOT EXISTS(SELECT 1 FROM reconforge.procurement_partial_invoices v WHERE v.tenant_id=t AND v.native_invoice_id=p.source_id AND v.stage=4)
  OR p.payload->'source_snapshot' IS DISTINCT FROM s OR (s->>'tax_minor')::bigint<>0
  OR reconforge.irp_digest(p.payload-'plan_digest'-'validation_digest') IS DISTINCT FROM seal
@@ -94,10 +99,10 @@ BEGIN
  OR jsonb_array_length(lines)<>2 OR (lines->0->>'debit_minor')::bigint<>p.amount_minor OR (lines->0->>'credit_minor')::bigint<>0
  OR (lines->1->>'credit_minor')::bigint<>p.amount_minor OR (lines->1->>'debit_minor')::bigint<>0 THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment GL snapshot is incomplete'; END IF;
- SELECT account_type INTO account_kind FROM reconforge.finance_accounts WHERE tenant_id=t AND id=lines->0->>'account_id';
- IF account_kind<>'Liability' THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='AP debit requires a liability account'; END IF;
- SELECT account_type INTO account_kind FROM reconforge.finance_accounts WHERE tenant_id=t AND id=lines->1->>'account_id';
- IF account_kind<>'Asset' THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Cash credit requires an asset account'; END IF;
+ SELECT account_type,fa.account_code INTO account_kind,account_code FROM reconforge.finance_accounts fa WHERE fa.tenant_id=t AND fa.id=lines->0->>'account_id';
+ IF account_kind IS DISTINCT FROM 'Liability' OR account_code IS DISTINCT FROM payment_mapping->>'ap_account_code' THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='AP debit requires the source liability account'; END IF;
+ SELECT account_type,fa.account_code INTO account_kind,account_code FROM reconforge.finance_accounts fa WHERE fa.tenant_id=t AND fa.id=lines->1->>'account_id';
+ IF account_kind IS DISTINCT FROM 'Asset' OR account_code IS DISTINCT FROM payment_mapping->>'cash_account_code' THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Cash credit requires the source asset account'; END IF;
  IF NOT reconforge.installment_event(t,i,p.audit_event_id,p.outbox_event_id,maker,'financial_installment_prepared',jsonb_build_object('plan_digest',seal)) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Installment preparation evidence is incomplete'; END IF;
  IF p.phase=0 AND (e.status<>'Draft' OR r IS NOT NULL OR l IS NOT NULL) THEN

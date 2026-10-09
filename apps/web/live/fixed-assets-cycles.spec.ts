@@ -41,9 +41,9 @@ test("real acquisition cumulative depreciation disposal immutable retry and bili
   await login(page, "browser-maker"); await enter(page);
   const acquisition = page.getByRole("form", { name: "Prepare acquisition", exact: true });
   for (const [label, value] of Object.entries({ "Asset number": "BROWSER-ASSET", "Asset name": "Browser production equipment", "Acquisition cost": "101.01", "Salvage value": "10.01", "Useful life in months": "3", "Posting date": "2026-10-01", "In-service date": "2026-10-01", Reason: "Actual browser production equipment acquisition" })) await acquisition.getByLabel(label, { exact: true }).fill(value);
-  await acquisition.getByLabel("Open fiscal period", { exact: true }).selectOption("period");
-  await acquisition.getByLabel("Journal", { exact: true }).selectOption("STOCK");
-  for (const [label, value] of Object.entries({ "Historical cost account": "FIXED", "Accumulated depreciation account": "ACCUM", "Depreciation expense account": "DEPRECIATION", "Cash account": "CASH", "Disposal gain account": "GAIN", "Disposal loss account": "LOSS" })) await acquisition.getByLabel(label, { exact: true }).selectOption(value);
+  await acquisition.getByRole("combobox", { name: "Open fiscal period", exact: true }).selectOption("period");
+  await acquisition.getByRole("combobox", { name: "Journal", exact: true }).selectOption("STOCK");
+  for (const [label, value] of Object.entries({ "Historical cost account": "FIXED", "Accumulated depreciation account": "ACCUM", "Depreciation expense account": "DEPRECIATION", "Cash account": "CASH", "Disposal gain account": "GAIN", "Disposal loss account": "LOSS" })) await acquisition.getByRole("combobox", { name: label, exact: true }).selectOption(value);
   let lost: Record<string, unknown> | null = null, commandId = "";
   await page.route("**/api/v1/fixed-assets/assets", async route => {
     if (route.request().method() !== "POST") { await route.continue(); return; }
@@ -66,7 +66,7 @@ test("real acquisition cumulative depreciation disposal immutable retry and bili
     if (stage === 3) break;
     await login(page, "browser-maker"); await enter(page, assetId);
     const operation = page.getByRole("region", { name: "Asset operations", exact: true });
-    await operation.getByLabel("Open fiscal period", { exact: true }).selectOption(stage === 0 ? "nov" : "jan");
+    await operation.getByRole("combobox", { name: "Open fiscal period", exact: true }).selectOption(stage === 0 ? "nov" : "jan");
     await operation.getByLabel("Posting date", { exact: true }).fill(stage === 0 ? "2026-11-01" : stage === 1 ? "2027-01-01" : "2027-01-02");
     await operation.getByLabel("Reason", { exact: true }).fill("Actual browser retained asset accounting");
     if (stage < 2) await operation.getByLabel("Completed service month", { exact: true }).fill(stage === 0 ? "2026-10" : "2026-12");
@@ -80,7 +80,7 @@ test("real acquisition cumulative depreciation disposal immutable retry and bili
   await page.setViewportSize({ width: 390, height: 844 });
   expect((await new AxeBuilder({ page }).include("#main-content").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   await page.screenshot({ path: `${process.env.RECONFORGE_ERP_BROWSER_ARTIFACTS}/fixed-assets-en-390.png`, fullPage: true });
-  await page.getByRole("button", { name: "العربية", exact: true }).click();
+  await page.getByRole("button", { name: "Switch language", exact: true }).click();
   await expect(page.getByRole("heading", { name: "الأصول الثابتة", exact: true })).toBeVisible();
   const scope = page.getByRole("form", { name: "تطبيق النطاق", exact: true });
   await scope.getByRole("button", { name: "تطبيق النطاق", exact: true }).click();

@@ -147,7 +147,7 @@ def test_live_postgres_receivables_lifecycle_credit_allocation_aging_and_rls() -
             assert tuple(
                 admin.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=%s", (app_user,)).fetchone()
             ) == (False, False)
-            for dependency in ("operational_finance_plans", "operational_finance_links", "sales_revenue_documents"):
+            for dependency in ("operational_finance_plans", "operational_finance_links", "sales_revenue_documents", "stock_sales_orders", "stock_sales_issue_claims"):
                 qualified = f"reconforge.{dependency}"
                 if admin.execute("SELECT to_regclass(%s)", (qualified,)).fetchone()[0] is None:
                     continue

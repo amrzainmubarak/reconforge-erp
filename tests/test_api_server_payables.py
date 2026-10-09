@@ -67,7 +67,9 @@ def test_live_server_payables_http_lifecycle_is_scoped_exact_and_human_governed(
                 "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=%s", (app_user,)
             ).fetchone()) == (False, False)
             for dependency in (
-                "operational_finance_plans", "operational_finance_links", "procurement_cycles"
+                "operational_finance_plans", "operational_finance_links", "procurement_cycles",
+                "procurement_partial_orders", "procurement_partial_receipts", "procurement_partial_invoices",
+                "financial_installment_plans",
             ):
                 qualified = f"reconforge.{dependency}"
                 if admin.execute("SELECT to_regclass(%s)", (qualified,)).fetchone()[0] is None:

@@ -1,0 +1,17 @@
+.stock-sales { max-width: 80rem; margin: 0 auto; padding: 1.25rem; }
+.stock-sales header { margin-bottom: 1.5rem; }
+.stock-sales form, .stock-sales fieldset, .stock-sales section { display: grid; gap: .8rem; margin-block: 1rem; }
+.stock-sales fieldset { grid-template-columns: repeat(auto-fit,minmax(13rem,1fr)); border: 1px solid var(--border-color,#8793a1); border-radius: .5rem; padding: 1rem; }
+.stock-sales label { display: grid; gap: .35rem; }
+.stock-sales input, .stock-sales select, .stock-sales button { font: inherit; min-height: 2.75rem; padding: .55rem .75rem; border-radius: .35rem; }
+.stock-sales button { cursor: pointer; }
+.stock-sales button:disabled { cursor: default; opacity: .65; }
+.stock-sales :focus-visible { outline: 3px solid #126abf; outline-offset: 3px; }
+.stock-sales [role=alert], .stock-sales aside { padding: 1rem; border: 2px solid #a13520; border-radius: .4rem; }
+.stock-sales ul { display: grid; gap: .6rem; padding: 0; list-style: none; }
+.stock-sales ul li, .stock-sales-toolbar { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.stock-sales dl { display: grid; grid-template-columns: minmax(7rem,1fr) minmax(0,2fr); gap: .4rem; }
+.stock-sales code { overflow-wrap: anywhere; }
+.stock-sales dd { margin: 0; }
+.stock-sales-boundary { border-inline-start: 4px solid #126abf; padding-inline-start: .9rem; }
+@media(max-width: 40rem) { .stock-sales { padding: .75rem; } .stock-sales fieldset, .stock-sales dl { grid-template-columns: 1fr; } .stock-sales button { width: 100%; } }

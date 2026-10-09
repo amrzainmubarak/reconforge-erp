@@ -1,0 +1,15 @@
+.procurement-partial-page { max-width: 1200px; margin-inline: auto; padding: clamp(1rem, 3vw, 2rem); }
+.procurement-partial-page section, .procurement-partial-page details { margin-block: 1.25rem; padding: 1rem; border: 1px solid var(--border, #c4cbd4); border-radius: .5rem; }
+.procurement-partial-page label { display: grid; gap: .35rem; min-width: 0; }
+.procurement-partial-page fieldset, .partial-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 1rem; margin-block: 1rem; }
+.procurement-partial-page input, .procurement-partial-page select { width: 100%; box-sizing: border-box; padding: .65rem; font: inherit; }
+.procurement-partial-page button { min-height: 44px; padding: .6rem 1rem; font: inherit; cursor: pointer; }
+.partial-toolbar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-block: 1rem; }
+.partial-order-list, .partial-document-list { list-style: none; padding: 0; display: grid; gap: 1rem; }
+.partial-order-list li { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.partial-document-list { grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
+.partial-document-list li { border: 1px solid var(--border, #c4cbd4); padding: 1rem; border-radius: .4rem; }
+.procurement-partial-page code { display: block; overflow-wrap: anywhere; white-space: normal; direction: ltr; text-align: start; }
+.partial-totals dt { font-weight: 600; }.partial-totals dd { margin-inline-start: 0; font-size: 1.2rem; }
+.procurement-partial-page [role=alert], .procurement-partial-page aside { padding: 1rem; border: 2px solid #ad4a32; margin-block: 1rem; }
+.procurement-partial-page :focus-visible { outline: 3px solid #1769b1; outline-offset: 3px; }

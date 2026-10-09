@@ -58,6 +58,8 @@ from reconforge.api.routes import (
     exceptions,
     finance_core,
     finance_posting,
+    financial_installments,
+    financial_reporting,
     health,
     identity_administration,
     individual_cashflow,
@@ -74,6 +76,7 @@ from reconforge.api.routes import (
     operations,
     payables,
     procurement_operations,
+    procurement_partial,
     professional_invoice_payment,
     receivables,
     reconciliation,
@@ -85,6 +88,7 @@ from reconforge.api.routes import (
     scoped_exports,
     security_center,
     security_governance,
+    stock_sales,
     users,
     webauthn,
     workflow,
@@ -423,6 +427,10 @@ def create_api_app(
     app.include_router(operational_finance.router, prefix="/api/v1")
     app.include_router(sales_revenue.router, prefix="/api/v1")
     app.include_router(procurement_operations.router, prefix="/api/v1")
+    app.include_router(financial_reporting.router, prefix="/api/v1")
+    app.include_router(stock_sales.router, prefix="/api/v1")
+    app.include_router(procurement_partial.router, prefix="/api/v1")
+    app.include_router(financial_installments.router, prefix="/api/v1")
     app.include_router(inventory_core.router, prefix="/api/v1")
     app.include_router(inventory_planning.router, prefix="/api/v1")
     app.include_router(inventory_receipt_posting.router, prefix="/api/v1")
@@ -478,6 +486,10 @@ def create_api_app(
         operational_finance.router,
         sales_revenue.router,
         procurement_operations.router,
+        financial_reporting.router,
+        stock_sales.router,
+        procurement_partial.router,
+        financial_installments.router,
         inventory_core.router,
         inventory_planning.router,
         inventory_receipt_posting.router,

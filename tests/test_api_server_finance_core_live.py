@@ -28,6 +28,7 @@ from reconforge.infrastructure.postgres_master_data import (
     PostgresMasterDataRepository,
 )
 from reconforge.infrastructure.postgres_master_data_application import POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL
+from tests.postgres_test_hygiene import grant_native_owner_reads
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -72,6 +73,10 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
             )
+            grant_native_owner_reads(admin, app_user, (
+                "finance_posting_effects", "operational_finance_plans", "financial_opening_plans",
+                "stock_sales_orders", "stock_sales_issue_claims",
+            ))
             admin.execute(
                 "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
                 (tenant_a, tenant_a, tenant_b, tenant_b),

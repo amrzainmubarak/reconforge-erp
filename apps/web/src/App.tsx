@@ -15,6 +15,9 @@ const themes: ThemePreference[] = ["system", "light", "dark"];
 const SalesRevenueWorkspace = lazy(() => import("./components/SalesRevenueWorkspace").then((module) => ({ default: module.SalesRevenueWorkspace })));
 const ProcurementWorkspace = lazy(() => import("./components/ProcurementWorkspace").then((module) => ({ default: module.ProcurementWorkspace })));
 const EnterpriseFinanceWorkspace = lazy(() => import("./components/EnterpriseFinanceWorkspace"));
+const StockSalesPage = lazy(() => import("./components/StockSalesPage").then((module) => ({ default: module.StockSalesPage })));
+const ProcurementPartialPage = lazy(() => import("./components/ProcurementPartialPage").then((module) => ({ default: module.ProcurementPartialPage })));
+const FinancialReportingPage = lazy(() => import("./components/FinancialReportingPage"));
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
 const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((module) => ({ default: module.EvidenceBinder })));
@@ -54,6 +57,9 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/inventory-receipts")) return "inventoryReceipt";
   if (normalized.endsWith("/jobs")) return "durableJobs";
   if (normalized.endsWith("/sales-revenue")) return "salesRevenue";
+  if (normalized.endsWith("/stock-sales")) return "stockSales";
+  if (normalized.endsWith("/procurement-partial")) return "procurementPartial";
+  if (normalized.endsWith("/financial-reporting")) return "financialReporting";
   if (normalized.endsWith("/procurement-operations")) return "procurementOperations";
   if (normalized.endsWith("/enterprise-finance") || normalized.endsWith("/erp")) return "enterpriseFinance";
   return "dashboard";
@@ -72,6 +78,9 @@ function pathForPage(page: StudioPage): string {
     inventoryReceipt: "inventory-receipts",
     durableJobs: "jobs",
     salesRevenue: "sales-revenue",
+    stockSales: "stock-sales",
+    procurementPartial: "procurement-partial",
+    financialReporting: "financial-reporting",
     procurementOperations: "procurement-operations",
     enterpriseFinance: "enterprise-finance",
   };
@@ -203,6 +212,9 @@ function StudioApp() {
         {openPanel === "quick" && !liveOperationalPage ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
         {openPanel === "profile" && !liveOperationalPage ? <ProfilePanel translate={t} /> : null}
 
+        {activePage === "stockSales" ? <Suspense fallback={<LoadingView translate={t} />}><StockSalesPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "procurementPartial" ? <Suspense fallback={<LoadingView translate={t} />}><ProcurementPartialPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "financialReporting" ? <Suspense fallback={<LoadingView translate={t} />}><FinancialReportingPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}
         {activePage === "dashboard" && data ? (

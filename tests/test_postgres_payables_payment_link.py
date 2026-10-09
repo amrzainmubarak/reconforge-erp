@@ -31,7 +31,7 @@ from reconforge.infrastructure.postgres_payables_payment_link import (
 )
 from reconforge.platform.common import PlatformError, ServerPrincipal, server_principal_context
 from reconforge.platform.payables import PurchaseOrderLineInput, SupplierInvoiceLineInput
-from tests.postgres_test_hygiene import PAYABLES_TENANT_CLEANUP_PLAN
+from tests.postgres_test_hygiene import PAYABLES_TENANT_CLEANUP_PLAN, grant_native_owner_reads
 
 pytest_plugins = ("tests.test_postgres_finance_scope",)
 
@@ -312,6 +312,9 @@ def payment_link_database(finance_database: dict[str, Any]) -> dict[str, Any]:
         raise AssertionError("the nonowner PostgreSQL application DSN must identify its role")
     with psycopg.connect(finance_database["admin"], autocommit=True) as admin:
         identifier = psycopg.sql.Identifier(role)
+        grant_native_owner_reads(admin, role, (
+            "operational_finance_links", "financial_installment_plans", "financial_installment_links",
+        ))
         admin.execute(
             psycopg.sql.SQL(
                 "GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.ap_payment_links,"

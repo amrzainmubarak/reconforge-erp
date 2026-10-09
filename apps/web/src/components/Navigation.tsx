@@ -49,6 +49,9 @@ export const navigationGroups: NavigationGroup[] = [
     label: "erpNavigation",
     items: [
       { key: "enterprise-finance", label: "enterpriseFinance", icon: Landmark, page: "enterpriseFinance" },
+      { key: "financial-reporting", label: "financialReporting", icon: FileChartColumn, page: "financialReporting" },
+      { key: "stock-sales", label: "stockSales", icon: Boxes, page: "stockSales" },
+      { key: "procurement-partial", label: "procurementPartial", icon: Boxes, page: "procurementPartial" },
       { key: "sales-revenue", label: "salesRevenue", icon: FileChartColumn, page: "salesRevenue" },
       { key: "procurement-operations", label: "procurementOperations", icon: Boxes, page: "procurementOperations" },
     ],

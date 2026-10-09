@@ -19,6 +19,38 @@ _IDENTIFIER = re.compile(r"[a-z][a-z0-9_]*\Z")
 _TENANT_COLUMN = re.compile(r"(?:id|tenant_id)\Z")
 
 
+def grant_native_owner_reads(connection: Any, role_name: str, dependencies: Iterable[str]) -> None:
+    """Provision only invoker owner-index reads, retaining RLS and existing DML."""
+    from psycopg import sql
+
+    assert tuple(connection.execute(
+        "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=%s", (role_name,),
+    ).fetchone()) == (False, False)
+    for dependency in dependencies:
+        if not _IDENTIFIER.fullmatch(dependency):
+            raise ValueError("Unsafe native owner dependency identifier")
+        qualified = f"reconforge.{dependency}"
+        if connection.execute("SELECT to_regclass(%s)", (qualified,)).fetchone()[0] is None:
+            continue
+        previous_dml = tuple(connection.execute(
+            "SELECT has_table_privilege(%s,%s,'INSERT'),has_table_privilege(%s,%s,'UPDATE'),"
+            "has_table_privilege(%s,%s,'DELETE')",
+            (role_name, qualified, role_name, qualified, role_name, qualified),
+        ).fetchone())
+        connection.execute(sql.SQL("GRANT SELECT ON {}.{} TO {}").format(
+            sql.Identifier("reconforge"), sql.Identifier(dependency), sql.Identifier(role_name),
+        ))
+        assert tuple(connection.execute(
+            "SELECT has_table_privilege(%s,%s,'SELECT'),has_table_privilege(%s,%s,'INSERT'),"
+            "has_table_privilege(%s,%s,'UPDATE'),has_table_privilege(%s,%s,'DELETE')",
+            (role_name, qualified, role_name, qualified, role_name, qualified, role_name, qualified),
+        ).fetchone()) == (True, *previous_dml)
+        assert tuple(connection.execute(
+            "SELECT pg_get_userbyid(relowner)<>%s,relrowsecurity,relforcerowsecurity "
+            "FROM pg_class WHERE oid=to_regclass(%s)", (role_name, qualified),
+        ).fetchone()) == (True, True, True)
+
+
 @dataclass(frozen=True)
 class TenantScopedTable:
     """One known test table and its tenant discriminator column."""

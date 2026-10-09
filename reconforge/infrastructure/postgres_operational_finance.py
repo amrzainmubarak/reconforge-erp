@@ -404,6 +404,21 @@ class PostgresOperationalFinanceRepository:
                             parameters,
                         )
                     )[0]["owned"]
+            if not owned:
+                extension_queries = (
+                    ("reconforge.stock_sales_orders", """SELECT EXISTS(SELECT 1 FROM reconforge.stock_sales_orders
+                        WHERE tenant_id=%s AND invoice_id=%s AND workspace_id=%s
+                        AND organization_id=%s AND legal_entity_id=%s) AS owned"""),
+                    ("reconforge.procurement_partial_invoices", """SELECT EXISTS(SELECT 1 FROM reconforge.procurement_partial_invoices i
+                        JOIN reconforge.procurement_partial_orders o ON o.tenant_id=i.tenant_id AND o.id=i.order_id
+                        WHERE i.tenant_id=%s AND i.native_invoice_id=%s AND o.workspace_id=%s
+                        AND o.organization_id=%s AND o.legal_entity_id=%s) AS owned"""),
+                )
+                for relation, statement in extension_queries:
+                    installed = records(self.connection.execute("SELECT to_regclass(%s) AS installed", (relation,)))[0]["installed"]
+                    if installed is not None and records(self.connection.execute(statement, parameters))[0]["owned"]:
+                        owned = True
+                        break
             if owned:
                 _fail(
                     "Complete this approval or posting in the owning Sales or Procurement workspace.",

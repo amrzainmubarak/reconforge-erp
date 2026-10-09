@@ -1322,3 +1322,25 @@ include apps/web/playwright.config.ts
 include apps/web/tsconfig.json
 include apps/web/tsconfig.app.json
 include apps/web/tsconfig.node.json
+
+# Source-bound ERP expansion cycles and populated recovery helpers.
+include tests/test_financial_installments.py
+include tests/test_postgres_financial_installments.py
+include tests/test_financial_reporting.py
+include tests/test_postgres_financial_reporting.py
+include tests/test_stock_sales.py
+include tests/test_postgres_stock_sales.py
+include tests/test_postgres_stock_sales_api.py
+include tests/test_procurement_partial.py
+include tests/test_postgres_procurement_partial.py
+include tests/test_postgres_procurement_partial_api.py
+include tests/erp_expansion_browser_seed.py
+include tests/erp_expansion_browser_restore.py
+include tests/test_postgres_financial_reporting_api.py
+include .github/scripts/verify_erp_expansion_browser.py
+include docs/adr/0842-stock-sales-partial-procurement-and-classified-finance.md
+include docs/execution/ERP_EXPANSION_ACCEPTANCE_2026-10-09.md
+include docs/execution/ERP_EXPANSION_ACCEPTANCE_2026-10-09.json
+include docs/operator/financial-reporting.md
+include docs/operator/stock-sales.md
+include docs/operator/procurement-partial.md

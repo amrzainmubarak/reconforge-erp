@@ -20,7 +20,7 @@ domain_invariants:
   - Native full AR allocation or AP payment link required at outer commit
   - Same actor and exact content replay only; stored acknowledgements verified against actual phases
 domain_events: [operational_finance_prepared, operational_finance_reviewed, operational_finance_posted]
-api_routes: [/api/v1/operational-finance/plans, /api/v1/operational-finance/plans/{plan_id}, /api/v1/operational-finance/plans/{plan_id}/review, /api/v1/operational-finance/plans/{plan_id}/post]
+api_routes: [/api/v1/operational-finance/plans, '/api/v1/operational-finance/plans/{plan_id}', '/api/v1/operational-finance/plans/{plan_id}/review', '/api/v1/operational-finance/plans/{plan_id}/post']
 cli_commands: []
 ui_routes: [/enterprise-finance]
 import_schemas: [operational-finance-v1]

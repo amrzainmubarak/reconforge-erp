@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "status": "passed-bounded-local-acceptance",
+  "generated_at": "2026-10-09T03:05:18.281561+00:00",
+  "implementation_source_commit": "6ec9a70114edfd835386ee3b0f0085e5da1fff15",
+  "base_pr": 125,
+  "base_commit": "f24d48363817f36991239c436ae616f59d391918",
+  "preserved_dependency_pr": 124,
+  "draft_pr": "https://github.com/amrzainmubarak/reconforge-erp/pull/126",
+  "main_unchanged": "b61ea56bb9c135fda12546e173795af3c243e4fb",
+  "native_profiles": [
+    {
+      "name": "operating",
+      "status": "passed",
+      "execution_source_commit": "6ec9a70114edfd835386ee3b0f0085e5da1fff15",
+      "counts": {
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 43
+      },
+      "envelope": {
+        "path": "output/erp-expansion-20261009/final-integration/operating-final-6ec9a701.json",
+        "sha256": "23a76fc287d80890a1b19cf5ead2699f95097cbe2c852ea214908996ac742dc8",
+        "bytes": 1249
+      },
+      "native_report": {
+        "path": "output/erp-expansion-20261009/operating-final-6ec9a701.json",
+        "sha256": "1056bce884e1d39b86624733078a204bece880de4e1654bcbda7aefac13fbd56",
+        "bytes": 1165
+      },
+      "junit": {
+        "path": "output/erp-expansion-20261009/operating-final-6ec9a701.xml",
+        "sha256": "45bc37d758d33173756c1f8307f27962c2523d74707a4cf6f9837baba8c1a017",
+        "bytes": 6911
+      },
+      "log": {
+        "path": "output/erp-expansion-20261009/operating-final-6ec9a701.log",
+        "sha256": "9756466c40053b3664afeec739f26bd6442ee9a1cc6ee3c28697f348f4ca5356",
+        "bytes": 79634
+      },
+      "postgres_version": "17.10",
+      "application_role_privileges": [
+        false,
+        false
+      ],
+      "duration_seconds": 739.363,
+      "owned_container_removed": true
+    },
+    {
+      "name": "finance",
+      "status": "passed",
+      "execution_source_commit": "6ec9a70114edfd835386ee3b0f0085e5da1fff15",
+      "counts": {
+        "tests": 25,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 25
+      },
+      "envelope": {
+        "path": "output/erp-expansion-20261009/final-integration/finance-final-6ec9a701.json",
+        "sha256": "13aa1d18347a6326b92ea644e1f3f16b89d33b1cee4dd4174452686f60086aef",
+        "bytes": 1209
+      },
+      "native_report": {
+        "path": "output/erp-expansion-20261009/finance-final-6ec9a701.json",
+        "sha256": "e500f51fd0e2033b5498e43e6ad5463462458e62dbee65c3cc283b1df0a623d2",
+        "bytes": 1121
+      },
+      "junit": {
+        "path": "output/erp-expansion-20261009/finance-final-6ec9a701.xml",
+        "sha256": "d578406dee463fcf6645d55b4735e52827d7c679e4ab05550d471e779bbcb15f",
+        "bytes": 4223
+      },
+      "log": {
+        "path": "output/erp-expansion-20261009/finance-final-6ec9a701.log",
+        "sha256": "a8c5f136148dcff175d31c5a86565019464b159f34ba68999ef0390d8a53745f",
+        "bytes": 79764
+      },
+      "postgres_version": "17.10",
+      "application_role_privileges": [
+        false,
+        false
+      ],
+      "duration_seconds": 893.504,
+      "owned_container_removed": true
+    }
+  ],
+  "domain_contract_gate": {
+    "status": "passed",
+    "counts": {
+      "tests": 47,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 47
+    },
+    "report": {
+      "path": "output/erp-expansion-20261009/final-integration/domains-contracts-final-6ec9a701-corrected-path.json",
+      "sha256": "fbbd30266f8a977e42857270a83e1a997f73fe611153b09b9354f6dbe22282d6",
+      "bytes": 1516
+    }
+  },
+  "web_wire_restore": {
+    "status": "passed",
+    "react_passed": 295,
+    "react_files": 42,
+    "wire_cases_passed": 2,
+    "wire_skipped": 0,
+    "populated_tables_compared_per_gate": 214,
+    "function_definitions_compared_per_gate": 197,
+    "tamper_refusals_per_gate": 3,
+    "checker_financial_stages_disabled": 7,
+    "index": {
+      "path": "output/erp-expansion-20261009/browser-final-6ec9a701/web-wire-native-root-acceptance.json",
+      "sha256": "e0798af3d06dad85ddcd85657bf679d6acb1e3db8298016b0a6631cd23c60573",
+      "bytes": 12141
+    }
+  },
+  "standard_web_https": {
+    "standard_passed": 19,
+    "standard_existing_prerequisite_skips": 9,
+    "configured_https_passed": 1,
+    "configured_https_skipped": 0,
+    "index": {
+      "path": "output/erp-expansion-20261009/final-6ec9a701/standard-web-final-6ec9a701-acceptance.json",
+      "sha256": "81cba6f0b9a78858f27fdf2e87812fbbff2151db1e8ea8498f4f397ec4613717",
+      "bytes": 11916
+    }
+  },
+  "financial_cycle": {
+    "posting_effects": 12,
+    "debit_minor": "187000",
+    "credit_minor": "187000",
+    "functional_currency": "USD",
+    "partial_receipts": 2,
+    "supplier_invoices": 2,
+    "ap_installments": 4,
+    "stock_sales_paid": true,
+    "fifo_remaining_quantity": "5",
+    "fifo_remaining_minor": "6000",
+    "balance_sheet_assets_minor": "116500",
+    "liabilities_minor": "0",
+    "equity_minor": "100000",
+    "unclosed_result_minor": "16500",
+    "cash_closing_minor": "110500"
+  },
+  "security_package_container": {
+    "status": "passed",
+    "index": {
+      "path": "output/erp-expansion-20261009/security-package-final-6ec9a701/FINAL_SECURITY_PACKAGE_INDEX.json",
+      "sha256": "336d4337b14d4d6de7e3c05e4a87e964d656ead85189fd97fff613e640f92253",
+      "bytes": 266617
+    },
+    "executed_commands": 36,
+    "scanner_policy_counts": {
+      "critical": 0,
+      "high": 0,
+      "low": 0,
+      "medium": 9,
+      "negligible": 1,
+      "unknown": 0
+    },
+    "active_exceptions": 0,
+    "python_npm_audit_execution_source": "68cc38489996aa99f2200e89931484bee2af84d8",
+    "audit_binding_is_fresh_lookup": false,
+    "audit_binding": {
+      "path": "output/erp-expansion-20261009/security-package-final-6ec9a701/unchanged-locked-audit-binding.json",
+      "sha256": "55fe1f86d002be6dde40713a8f0954c71bdbcc9eeefb97b56af50740bd6fea27",
+      "bytes": 4320
+    }
+  },
+  "bounded_capacity": {
+    "status": "passed",
+    "execution_source_commit": "6ec9a70114edfd835386ee3b0f0085e5da1fff15",
+    "measurements": {
+      "api_error_basis_points": 0,
+      "api_p95_milliseconds": 29,
+      "api_wall_milliseconds": 22594,
+      "job_aggregate_query_milliseconds": 1,
+      "process_memory_mebibytes": 169,
+      "queued_jobs": 1000,
+      "requests": 1000
+    },
+    "limits": [
+      "single_process_in_memory_http_transport",
+      "synthetic_local_sqlite_data",
+      "single_run_not_production_slo",
+      "no_soak_or_distributed_capacity_claim"
+    ],
+    "report": {
+      "path": "output/erp-expansion-20261009/final-integration/capacity-native-final-6ec9a701.json",
+      "sha256": "90b5c9e8131ba0a3111008e2d1747e9a47aee0fe1c4bbfc60cfe5947922200c4",
+      "bytes": 960
+    }
+  },
+  "quorum_fencing_simulation": {
+    "status": "passed",
+    "report": {
+      "path": "output/erp-expansion-20261009/final-integration/quorum-native-final-6ec9a701.json",
+      "sha256": "f8f80d3c079515fc824fd070a2ed6f12286318d4adb01c1a040c4bf017e365a4",
+      "bytes": 3198
+    },
+    "limit": "Simulation is distinct from physical multi-site recovery or a production RPO/RTO."
+  },
+  "hosted_verification": {
+    "authoritative_current_source_checks": "https://github.com/amrzainmubarak/reconforge-erp/pull/126/checks",
+    "separate_from_local_acceptance": true,
+    "required_native_shards": 11,
+    "previous_failed_run": 37868853452,
+    "required_supported_python_versions": [
+      "3.11",
+      "3.12"
+    ],
+    "unit_profile_ignores": [
+      "tests/test_postgres_stock_sales.py",
+      "tests/test_postgres_stock_sales_api.py"
+    ],
+    "ignored_modules_mandatory_owner": "erp-expansion",
+    "ownership_asserted_by_domain_contract_gate": true
+  },
+  "preserved_nonacceptance": [
+    {
+      "reason": "First merged full hosted CI; generic native routing and parity inventory failed, old wire scope identity race",
+      "packet": {
+        "path": "output/erp-expansion-20261009/ci-first-68cc3848/watch-summary.json",
+        "sha256": "82115ae37ba87fc6567e86b88780ee5ecc9da04a4097592d4ec7ea9e602302f7",
+        "bytes": 10119
+      },
+      "acceptance": false
+    },
+    {
+      "reason": "First full local Python failed; retained original source and prerequisite configuration",
+      "packet": {
+        "path": "output/erp-expansion-20261009/final-68cc3848/full-python.json",
+        "sha256": "0a9201fa9ebbbfffa7da1ccc9623cf5cb39d6c2ba3c8387ca877717bfcb4ea9f",
+        "bytes": 882
+      },
+      "acceptance": false
+    },
+    {
+      "reason": "Interrupted native installment reader has no completion artifact; not accepted",
+      "packet": {
+        "path": "output/erp-expansion-20261009/finance-affected-c80d1e4e-interruption.json",
+        "sha256": "87bbeb52c275329d71c2e51c584a138bf7737d945fa36f7c435c89406f5b407c",
+        "bytes": 603
+      },
+      "acceptance": false
+    },
+    {
+      "reason": "Interrupted security/Docker aggregate; completed subgates remain separately attributed",
+      "packet": {
+        "path": "output/erp-expansion-20261009/security-package-final-c80d1e4e/INTERRUPTED_STATUS.json",
+        "sha256": "c4bc6fd7972e6599eda1adba2f5abe95f4f65d3a6e4236deeea944a94edcfd9b",
+        "bytes": 127932
+      },
+      "acceptance": false
+    },
+    {
+      "reason": "Wrong targeted test path; no tests executed",
+      "packet": {
+        "path": "output/erp-expansion-20261009/final-integration/domains-contracts-final-6ec9a701.json",
+        "sha256": "c73de31585487a03017c0fdbb7aa008a3b279fe3f45d4f69f52bf86b65d19814",
+        "bytes": 1489
+      },
+      "acceptance": false
+    },
+    {
+      "reason": "Standard browser could not bind Windows port4175; corrected with an available loopback port",
+      "packet": {
+        "path": "output/erp-expansion-20261009/final-6ec9a701/e2e-final-6ec9a701.json",
+        "sha256": "8b334f0d5c1bd43c56a62fb7a7e37319a10283560098fc62aa6231b8ff6a5fe6",
+        "bytes": 887756
+      },
+      "acceptance": false
+    }
+  ],
+  "limits": [
+    "New owners are experimental PostgreSQL-only bounded workflows; existing Community and legacy native behavior remain.",
+    "Stock sales use one untracked line in functional currency with full delivery, invoice and collection; partial sales, customer returns/refunds/credits are deferred.",
+    "Purchasing uses one untracked zero-tax line, up to32 receipts and32 invoices; PR/RFQ, supplier quotes/returns/debit notes and tax/FX accounting are deferred.",
+    "Installments use retained AP/cash accounts, up to200 plans per invoice and one pending; they do not execute bank transfers or provide a reversal contract.",
+    "Opening precedes all posted entity history. Reports are business-date views bounded to1000 effects/10000 lines, with explicit classifications and unclosed earnings.",
+    "Cash movements are not statutory operating/investing/financing cash-flow classifications. No new treasury/FX/assets/intercompany/consolidation claim.",
+    "Native same-date lexical FIFO ordering is preserved and can refuse later receipt sequences.",
+    "Nine standard browser prerequisite skips are separate from mandatory native/real-wire/HTTPS zero-skip gates; no new skip or weakened financial/security rule was added to bypass failure.",
+    "Image policy accepts nine Medium and one Negligible finding; this is not zero-vulnerability or independent security/production certification.",
+    "Local code-source6ec9 evidence remains attributed to6ec9. Documentation-only descendants require byte-identity binding and separate current-source hosted checks."
+  ]
+}

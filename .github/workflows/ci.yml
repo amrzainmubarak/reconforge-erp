@@ -57,7 +57,12 @@ jobs:
         run: uv run --no-sync mypy reconforge
 
       - name: Pytest
-        run: uv run --no-sync pytest
+        # These fixture-only modules have no optional skip. Their complete
+        # execution is mandatory in the configured erp-expansion shard below.
+        run: >-
+          uv run --no-sync pytest
+          --ignore=tests/test_postgres_stock_sales.py
+          --ignore=tests/test_postgres_stock_sales_api.py
 
       - name: CLI smoke
         run: |
@@ -141,12 +146,16 @@ jobs:
           npx --prefix apps/web playwright install --with-deps chromium
       - name: Execute real HTTPS ERP cycles and populated PostgreSQL recovery
         run: uv run --no-sync python .github/scripts/verify_erp_browser.py --verify-native-restore --output "${{ runner.temp }}/erp-browser"
+      - name: Execute real HTTPS ERP expansion cycles and populated recovery
+        run: uv run --no-sync python .github/scripts/verify_erp_expansion_browser.py --verify-native-restore --output "${{ runner.temp }}/erp-expansion-browser"
       - name: Retain source-bound ERP recovery evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: erp-browser-recovery
-          path: ${{ runner.temp }}/erp-browser
+          path: |
+            ${{ runner.temp }}/erp-browser
+            ${{ runner.temp }}/erp-expansion-browser
           if-no-files-found: error
 
   engine-parity:
@@ -277,6 +286,8 @@ jobs:
           - receivables
           - finance-posting
           - inventory-payables
+          - erp-expansion
+          - finance-reporting
     services:
       postgres:
         image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
@@ -472,7 +483,7 @@ jobs:
             'user=postgres' \
             'password=postgres' > "$PGSERVICEFILE"
           chmod 600 "$PGSERVICEFILE"
-          mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(path for item in document['boundaries'] for path in [item.get('test'), *item.get('additional_tests', [])] if path and path != 'tests/test_postgres_durable_jobs.py'), sep='\\n')")
+          mapfile -t parity_tests < <(uv run --no-sync python -c "import yaml; document = yaml.safe_load(open('docs/execution/POSTGRES_PARITY_INVENTORY.yaml', encoding='utf-8')); print(*dict.fromkeys(path for item in document['boundaries'] if item.get('ci_shard', 'parity') == 'parity' for path in [item.get('test'), *item.get('additional_tests', [])] if path and path != 'tests/test_postgres_durable_jobs.py'), sep='\\n')")
           case "$RECONFORGE_SERVER_BOUNDARY_SHARD" in
             writeback) ;; # Dedicated evidence runners above own this shard.
             native)
@@ -532,6 +543,12 @@ jobs:
               uv run --no-sync pytest tests/test_api_server_local_boundaries.py -q
               uv run --no-sync pytest tests/test_api_server_inventory_planning.py -q
               uv run --no-sync pytest tests/test_api_server_inventory_valuation.py -q
+              ;;
+            erp-expansion)
+              uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
+              ;;
+            finance-reporting)
+              uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q
               ;;
             *) echo "Unknown server-boundary shard" >&2; exit 2 ;;
           esac

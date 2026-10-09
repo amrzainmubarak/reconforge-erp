@@ -1,0 +1,47 @@
+id: financial-reporting
+name: Reviewed opening balances and classified financial statements
+version: 1.0.0
+maturity: experimental
+owner: Finance platform
+dependencies: [finance-core, finance-operational-posting, finance-policy, identity, master-data, audit, outbox]
+incompatible_versions: []
+data_classification: confidential-financial
+retention_policy: append-only classifications and opening history; forward recovery
+permissions: [finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
+default_roles: existing explicitly granted finance roles
+migrations: [0112_pg_financial_reporting]
+domain_invariants:
+  - Classification is explicit, versioned, independently reviewed and immutable.
+  - New opening preparation and review recheck the captured current native account semantics.
+  - Newly inserted command acknowledgements cannot describe an already superseded owner phase.
+  - Every contributing account must have a retained classification.
+  - Opening uses exact functional-currency minor units and balanced balance-sheet accounts.
+  - Only one initial opening source exists per tenant/workspace/organization/legal entity.
+  - Opening precedes all other retained entity effects and later backdating before it is refused.
+  - Maker, checker and opening poster are three distinct current authorized humans.
+  - Reserved OB1 entries require their complete native posting/source/review/command/evidence closure.
+  - Trial balance reuses the verified existing posted-balances-as-of engine.
+  - Assets equal liabilities plus equity plus explicitly accumulated unclosed result.
+  - Cash opening plus posted movements equals cash closing; internal transfers have zero aggregate delta.
+domain_events: [financial_reporting_map_prepared, financial_reporting_map_reviewed, financial_opening_prepared, financial_opening_reviewed, financial_opening_posted]
+api_routes: [/api/v1/financial-reporting/catalog, /api/v1/financial-reporting/maps, /api/v1/financial-reporting/openings, /api/v1/financial-reporting/statements]
+cli_commands: []
+ui_routes: [/financial-reporting]
+import_schemas: [financial-reporting-map-v1, financial-opening-v1]
+export_schemas: [financial-reporting-api-v1, financial-reporting-v1]
+synthetic_fixtures: [tests/test_postgres_financial_reporting.py]
+threat_model: scoped RLS, source/effect phase detachment, stale authority, self-approval, exact retry, partial commit, reserved namespace and report money integrity
+benchmarks: bounded 1000 effects and 10000 contributing lines inherited from verified balance engine; no throughput claim
+rollback_plan: populated downgrade refuses removal; native dump/restore and forward correction preserve financial history
+test_matrix:
+  unit: tests/test_financial_reporting.py
+  configured_postgresql: tests/test_postgres_financial_reporting.py
+  authenticated_api: tests/test_postgres_financial_reporting_api.py
+  react: [apps/web/src/financial-reporting-data.test.ts, apps/web/src/components/FinancialReportingPage.test.tsx]
+runtime_acceptance: bounded governed opening and classified reports accepted in native API Studio and restore on6ec9; see ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 checks
+limitations:
+  - Governed opening/classification source workflows require PostgreSQL; existing Community finance APIs remain available.
+  - Statements are currently recorded business-date views, not historical knowledge-time or statutory fiscal-close reports.
+  - Cash movements are posted cash deltas, not a statutory operating/investing/financing cash-flow classification.
+  - The selected reporting map supplies explicit retained semantics; a new version is required for a classification change.
+  - No tax, FX conversion, automatic year-end close or consolidation is inferred.

@@ -86,6 +86,8 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     job = _workflow()["jobs"]["server-boundaries"]
     live = next(step for step in job["steps"] if step["name"] == "Run live server-boundary tests")
     assert live["env"]["RECONFORGE_SERVER_BOUNDARY_SHARD"] == "${{ matrix.shard }}"
+    assert live["env"]["PYTHONPATH"] == "${{ github.workspace }}"
+    assert live["env"]["PYTEST_ADDOPTS"] == "-p tests.mandatory_native_gate"
     assert "if" not in live
     run = live["run"]
     assert run.startswith("set -euo pipefail\n")

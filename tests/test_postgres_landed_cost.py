@@ -23,11 +23,10 @@ from tests.test_postgres_procurement_multiline import (
     create_order,
     enterprise_digest,
     pay_invoice,
-    pytestmark,
     receipt_database,
 )
 
-__all__ = ["pytestmark", "receipt_database"]
+__all__ = ["receipt_database"]
 
 
 @pytest.fixture

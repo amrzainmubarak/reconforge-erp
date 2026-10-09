@@ -515,6 +515,8 @@ jobs:
 
       - name: Run live server-boundary tests
         env:
+          PYTHONPATH: ${{ github.workspace }}
+          PYTEST_ADDOPTS: -p tests.mandatory_native_gate
           RECONFORGE_SERVER_BOUNDARY_SHARD: ${{ matrix.shard }}
           RECONFORGE_POSTGRES_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres

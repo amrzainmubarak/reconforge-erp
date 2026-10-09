@@ -9,13 +9,12 @@ from tests.test_postgres_procurement_multiline import (
     MAKER,
     POSTER,
     create_multiline_runtime,
-    pytestmark,
     receipt_database,
 )
 from tests.test_postgres_procurement_partial_api import ROOT, owner_action, partial_client, post
 from tests.test_procurement_multiline import enterprise_request
 
-__all__ = ["pytestmark", "receipt_database"]
+__all__ = ["receipt_database"]
 LANDED = "/api/v1/landed-cost"
 
 

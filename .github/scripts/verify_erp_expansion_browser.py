@@ -62,6 +62,15 @@ def tracked_status(directory: Path) -> str:
     )
 
 
+def require_browser_acceptance(stats: object) -> None:
+    """An exit-zero process cannot replace execution of the required wire cycle."""
+    if not isinstance(stats, dict):
+        raise RuntimeError("Required browser execution statistics are missing")
+    for name, required in (("expected", 1), ("skipped", 0), ("unexpected", 0), ("flaky", 0)):
+        if type(stats.get(name)) is not int or stats[name] != required:
+            raise RuntimeError(f"Required browser outcome count refused: {name}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
@@ -292,6 +301,7 @@ def main() -> int:
         if (output / "playwright.json").is_file():
             report["browser_counts"] = json.loads((output / "playwright.json").read_text(encoding="utf-8"))["stats"]
         if browser.returncode == 0:
+            require_browser_acceptance(report.get("browser_counts"))
             report["persisted_effects"] = verify_cycles(runtime)
             if args.verify_native_restore:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,

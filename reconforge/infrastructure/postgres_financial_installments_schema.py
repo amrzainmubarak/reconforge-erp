@@ -36,8 +36,9 @@ CREATE TABLE reconforge.financial_installment_commands (
 );
 CREATE FUNCTION reconforge.installment_protect() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fi$
 BEGIN
- IF TG_TABLE_NAME='financial_installment_plans' AND TG_OP='UPDATE' AND NEW.phase=OLD.phase+1
- AND (to_jsonb(NEW)-'phase')=(to_jsonb(OLD)-'phase') THEN RETURN NEW; END IF;
+ IF TG_TABLE_NAME='financial_installment_plans' AND TG_OP='UPDATE' THEN
+  IF NEW.phase=OLD.phase+1 AND (to_jsonb(NEW)-'phase')=(to_jsonb(OLD)-'phase') THEN RETURN NEW; END IF;
+ END IF;
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='financial_installment_owner_phase',MESSAGE='Retained installment evidence is immutable';
 END $fi$;
 CREATE FUNCTION reconforge.installment_event(t TEXT,p TEXT,a TEXT,b TEXT,actor TEXT,action TEXT,metadata JSONB) RETURNS BOOLEAN

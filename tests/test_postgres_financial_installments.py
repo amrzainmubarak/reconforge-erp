@@ -139,6 +139,51 @@ def test_changed_command_amount_cannot_replay_financial_ack(installment_runtime:
             command_id="prepare-first", actor=actor)
 
 
+def test_posted_installment_history_refuses_update_and_delete_with_exact_owner_constraint(
+    installment_runtime: tuple[ReceiptRuntime, str],
+) -> None:
+    import psycopg
+    from psycopg import sql
+
+    runtime, invoice_id = installment_runtime
+    posted = post(runtime, review(runtime, prepare(runtime, invoice_id, 3600)))
+    tables = (
+        "financial_installment_plans", "financial_installment_reviews", "financial_installment_links",
+        "financial_installment_commands", "finance_entries", "finance_entry_lines", "finance_entry_line_dimensions",
+        "finance_posting_effects", "finance_posting_commands", "ap_supplier_invoices", "ap_supplier_invoice_lines",
+        "ap_payment_links", "ap_idempotency_keys", "domain_audit_events", "domain_audit_ledger_state", "outbox_events",
+    )
+    with runtime.actor(POSTER) as (connection, _, actor):
+        def retained_history() -> dict[str, list[str]]:
+            return {
+                table: [row["snapshot"] for row in connection.execute(sql.SQL(
+                    'SELECT to_jsonb(history)::text AS snapshot FROM reconforge.{} history '
+                    'WHERE tenant_id=%s ORDER BY to_jsonb(history)::text COLLATE "C"',
+                ).format(sql.Identifier(table)), (runtime.tenant,)).fetchall()]
+                for table in tables
+            }
+
+        assert PostgresPayablesRepository(connection, runtime.tenant).get_supplier_invoice(invoice_id)["status"] == "Paid"
+        before = retained_history()
+        assert len(before["financial_installment_reviews"]) == 1
+        assert len(before["financial_installment_links"]) == 1
+        assert len(before["financial_installment_commands"]) == 3
+        for statement in (
+            "UPDATE reconforge.financial_installment_reviews SET reason=reason || ' tamper' WHERE tenant_id=%s",
+            "DELETE FROM reconforge.financial_installment_reviews WHERE tenant_id=%s",
+            "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+            "DELETE FROM reconforge.financial_installment_links WHERE tenant_id=%s",
+            "UPDATE reconforge.financial_installment_commands SET response_json='{}'::jsonb WHERE tenant_id=%s",
+            "DELETE FROM reconforge.financial_installment_commands WHERE tenant_id=%s",
+        ):
+            with pytest.raises(psycopg.errors.CheckViolation) as refusal, connection.transaction():
+                connection.execute(statement, (runtime.tenant,))
+            assert refusal.value.sqlstate == "23514"
+            assert refusal.value.diag.constraint_name == "financial_installment_owner_phase"
+            assert retained_history() == before
+        assert PostgresFinancialInstallmentsRepository(connection, runtime.tenant).get(posted["id"], actor=actor) == posted
+
+
 @pytest.mark.parametrize("fault", ["native_account", "native_date", "missing_precision"])
 def test_native_sql_closure_refuses_capture_faults_without_retained_effects(installment_runtime: tuple[ReceiptRuntime, str], fault: str) -> None:
     import psycopg

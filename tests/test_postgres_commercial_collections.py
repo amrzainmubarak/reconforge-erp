@@ -151,7 +151,7 @@ def test_cached_permission_revocation_and_raw_sql_birth_phase_fail_closed(receip
     # must still read the current persisted grant inside its transaction.
     with pytest.raises(FinancePostingError, match="authorization denied"), runtime.actor("checker") as (connection, _, actor):
         assert "receivables.manage" in actor.permissions
-        connection.execute("UPDATE reconforge.identity_role_permissions SET active=false WHERE tenant_id=%s AND permission_name='receivables.manage'", (runtime.tenant,))
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=false,lifecycle_version=lifecycle_version+1,revoked_at=now(),revoked_by='maker',revocation_reason_code='access_change' WHERE tenant_id=%s AND permission_name='receivables.manage'", (runtime.tenant,))
         PostgresCommercialCollectionsRepository(connection, runtime.tenant).review(plan["id"], expected_plan_digest=plan["plan_digest"],
             command_id="REVOKED", reason="Cached actor must not bypass revocation", actor=actor)
     with pytest.raises(psycopg.errors.CheckViolation, match="born Prepared"), runtime.actor("maker") as (connection, _, _actor):
@@ -160,13 +160,28 @@ def test_cached_permission_revocation_and_raw_sql_birth_phase_fail_closed(receip
             SELECT tenant_id,'CA1-SQL-ILLEGAL-BIRTH',workspace_id,organization_id,legal_entity_id,source_id,entry_id,amount_minor,2,payload,audit_event_id,outbox_event_id
             FROM reconforge.commercial_collection_plans WHERE tenant_id=%s AND id=%s""", (runtime.tenant, plan["id"]))
     with pytest.raises(psycopg.errors.CheckViolation, match="current persisted"), runtime.actor("maker") as (connection, _, _actor):
-        connection.execute("UPDATE reconforge.identity_role_permissions SET active=false WHERE tenant_id=%s AND permission_name='receivables.manage'", (runtime.tenant,))
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=false,lifecycle_version=lifecycle_version+1,revoked_at=now(),revoked_by='maker',revocation_reason_code='access_change' WHERE tenant_id=%s AND permission_name='receivables.manage'", (runtime.tenant,))
         connection.execute("""INSERT INTO reconforge.commercial_collection_commands
             SELECT tenant_id,workspace_id,organization_id,legal_entity_id,plan_id,operation,'SQL-REVOKED',actor_id,request_digest,request_json,response_json
             FROM reconforge.commercial_collection_commands WHERE tenant_id=%s AND plan_id=%s AND operation='prepare'""", (runtime.tenant, plan["id"]))
     with runtime.actor("maker") as (connection, _, actor):
         assert PostgresCommercialCollectionsRepository(connection, runtime.tenant).get(plan["id"], actor=actor) == plan
         assert connection.execute("SELECT count(*) n FROM reconforge.ar_receipts WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+
+
+def test_prepare_ack_after_full_settlement_requires_current_sales_authority(receipt_database: tuple[str, str]) -> None:
+    runtime = create_stock_runtime(receipt_database)
+    _, invoice_id = invoiced(runtime)
+    plan = prepare(runtime, invoice_id, 45000)
+    complete(runtime, plan, "FULL")
+    request = CommercialCollectionPreparation(**{key: plan[key] for key in CommercialCollectionPreparation.__dataclass_fields__})
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = PostgresCommercialCollectionsRepository(connection, runtime.tenant)
+        assert owner.prepare(request, command_id="prepare-FIRST", actor=actor) == plan
+    with pytest.raises(FinancePostingError, match="authorization denied"), runtime.actor("maker") as (connection, _, actor):
+        assert "sales.manage" in actor.permissions
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=false,lifecycle_version=lifecycle_version+1,revoked_at=now(),revoked_by='maker',revocation_reason_code='access_change' WHERE tenant_id=%s AND permission_name='sales.manage'", (runtime.tenant,))
+        PostgresCommercialCollectionsRepository(connection, runtime.tenant).prepare(request, command_id="prepare-FIRST", actor=actor)
 
 
 def test_sql_unowned_receipt_allocation_and_plan_mutation_are_rejected(receipt_database: tuple[str, str]) -> None:

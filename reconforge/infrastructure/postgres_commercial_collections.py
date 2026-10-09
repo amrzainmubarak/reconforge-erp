@@ -119,6 +119,17 @@ class PostgresCommercialCollectionsRepository:
         args = request.payload()
         with self.owner._transaction():
             self.owner._actor(actor, "finance_core.manage", args, source=True)
+            retained_currency = records(self.connection.execute(
+                "SELECT currency_precision FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s",
+                (self.tenant_id, request.source_id)))
+            if not retained_currency:
+                raise FinancePostingError("collection_source_invalid", "The scoped native receivable is absent.")
+            precision = retained_currency[0]["currency_precision"]
+            governed = {**args, "currency_precision": precision}
+            # Replays preserve their old acknowledgement but require today's
+            # complete authority over the same exact original currency amount.
+            self.owner._actor(actor, "finance_core.manage", governed, source=True)
+            self.owner._actor(actor, "sales.manage", governed, source=True)
             digest, replay = self._command(args, "prepare", command_id, actor, args)
             if replay is not None:
                 return replay
@@ -128,7 +139,6 @@ class PostgresCommercialCollectionsRepository:
                 (self.tenant_id, request.source_id)))[0]["invoice_parameters"]
             if request.credit_account_code != policy["receivable_account_code"] or request.debit_account_code == request.credit_account_code:
                 raise FinancePostingError("collection_account_invalid", "Credit the source receivable and debit a distinct cash asset.")
-            self.owner._actor(actor, "sales.manage", args, source=True)
             if self.connection.execute("SELECT 1 FROM reconforge.ar_idempotency_keys WHERE tenant_id=%s AND workspace_id=%s AND scope=%s AND idempotency_key=%s",
                 (self.tenant_id, request.workspace_id, "sales_receipt_name_v1:" + request.workspace_id, request.receipt_number)).fetchone():
                 raise FinancePostingError("collection_receipt_conflict", "Receipt number is already reserved by another native command.")
@@ -145,10 +155,6 @@ class PostgresCommercialCollectionsRepository:
                 raise FinancePostingError("collection_scope_denied", "Source is outside selected hierarchy.")
             if request.amount_minor > source["amount_minor"] - allocated:
                 raise FinancePostingError("collection_amount_invalid", "Installment exceeds the current receivable residual.")
-            precision = records(self.connection.execute(
-                "SELECT minor_units FROM reconforge.currencies WHERE tenant_id=%s AND code=%s AND active FOR SHARE",
-                (self.tenant_id, source["currency_code"])))[0]["minor_units"]
-            self.owner._actor(actor, "finance_core.manage", {**args, "currency_precision": precision}, source=True)
             identifier = "CA1-" + uuid4().hex
             amount = exact_minor_text(request.amount_minor, precision)
             entry = self.owner.finance.create_entry(entry_number=identifier.upper(), organization_code=request.organization_code,
@@ -158,7 +164,8 @@ class PostgresCommercialCollectionsRepository:
                 lines=[{"account_code": request.debit_account_code, "debit": amount, "credit": "0", "description": request.reason},
                        {"account_code": request.credit_account_code, "debit": "0", "credit": amount, "description": request.reason}])
             snapshot = posting_snapshot(self.connection, self.tenant_id, posting_entry(self.connection, self.tenant_id, entry["id"]))
-            if snapshot["entry"]["currency_code"] != source["currency_code"]:
+            if (snapshot["entry"]["currency_code"] != source["currency_code"]
+                    or snapshot["entry"]["currency_precision"] != precision):
                 raise FinancePostingError("collection_currency_invalid", "Native receivable and GL must share functional currency.")
             payload = {"schema_version": "commercial-collection-v1", "id": identifier, **args,
                 "entry_id": entry["id"], "invoice_version": version, "allocated_before_minor": allocated,

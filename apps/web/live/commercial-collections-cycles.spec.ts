@@ -123,7 +123,9 @@ test("wire Studio collects twelve reviewed installments inside four native invoi
         if (index === 4 && installment === 2) {
           let original = "", replay = "";
           await poster.route("**/commercial-collections/plans/*/post", async route => { original = route.request().postData() || ""; expect((await route.fetch()).status()).toBe(200); await route.abort("failed"); }, { times: 1 });
+          const lostAcknowledgement = poster.waitForEvent("requestfailed", { predicate: request => /commercial-collections\/plans\/[^/]+\/post$/.test(request.url()) });
           await posterArea.getByRole("button", { name: "Post invoice installment", exact: true }).click();
+          expect((await lostAcknowledgement).failure()?.errorText).toBe("net::ERR_FAILED");
           await expect(posterArea.getByRole("button", { name: "Retry retained collection command", exact: true })).toBeVisible();
           await expect(poster.getByRole("combobox", { name: "Workspace", exact: true })).toBeDisabled();
           response = poster.waitForResponse(reply => /commercial-collections\/plans\/[^/]+\/post$/.test(reply.url()) && reply.request().method() === "POST");

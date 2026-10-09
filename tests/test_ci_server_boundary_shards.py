@@ -13,7 +13,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 SHARDS = {
     "writeback", "native", "parity", "durable-scale", "matching-runtime",
-    "industry-close", "receivables", "finance-posting", "inventory-payables",
+    "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion",
 }
 PROOF_OWNERS = {
     "verify_postgres_writeback_identity_migration_matrix.py": "writeback",
@@ -94,7 +94,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 36  # Prior 35 plus reviewed inventory receipt acceptance.
+    assert len(commands) == 37  # Preserve prior36 and add one mandatory bounded ERP expansion gate.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -112,18 +112,18 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert ar_api in groups["receivables"]
     recovery = "uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q"
     assert recovery in groups["receivables"]
-    receipt = "uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q"
+    receipt = "uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py -q"
     assert receipt in groups["inventory-payables"]
     for filename, owner in (
         ("tests/test_postgres_sales_owner_closure.py", "inventory-payables"),
         ("tests/test_postgres_operational_finance_api.py", "finance-posting"),
-        ("tests/test_postgres_financial_installments.py", "finance-posting"),
-        ("tests/test_postgres_financial_reporting.py", "finance-posting"),
-        ("tests/test_postgres_financial_reporting_api.py", "finance-posting"),
-        ("tests/test_postgres_stock_sales.py", "inventory-payables"),
-        ("tests/test_postgres_stock_sales_api.py", "inventory-payables"),
-        ("tests/test_postgres_procurement_partial.py", "inventory-payables"),
-        ("tests/test_postgres_procurement_partial_api.py", "inventory-payables"),
+        ("tests/test_postgres_financial_installments.py", "erp-expansion"),
+        ("tests/test_postgres_financial_reporting.py", "erp-expansion"),
+        ("tests/test_postgres_financial_reporting_api.py", "erp-expansion"),
+        ("tests/test_postgres_stock_sales.py", "erp-expansion"),
+        ("tests/test_postgres_stock_sales_api.py", "erp-expansion"),
+        ("tests/test_postgres_procurement_partial.py", "erp-expansion"),
+        ("tests/test_postgres_procurement_partial_api.py", "erp-expansion"),
 
     ):
         selected = [shard for shard, entries in groups.items()

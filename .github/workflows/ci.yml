@@ -281,6 +281,7 @@ jobs:
           - receivables
           - finance-posting
           - inventory-payables
+          - erp-expansion
     services:
       postgres:
         image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
@@ -527,15 +528,18 @@ jobs:
               uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q
               ;;
             finance-posting)
-              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_postgres_operational_finance.py tests/test_postgres_operational_finance_api.py tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
+              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_postgres_operational_finance.py tests/test_postgres_operational_finance_api.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
               ;;
             inventory-payables)
-              uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
+              uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py -q
               uv run --no-sync pytest tests/test_api_server_inventory_core.py -q
               uv run --no-sync pytest tests/test_api_server_payables.py tests/test_postgres_payables_replay.py tests/test_postgres_exact_trade_primitives.py -q
               uv run --no-sync pytest tests/test_api_server_local_boundaries.py -q
               uv run --no-sync pytest tests/test_api_server_inventory_planning.py -q
               uv run --no-sync pytest tests/test_api_server_inventory_valuation.py -q
+              ;;
+            erp-expansion)
+              uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
               ;;
             *) echo "Unknown server-boundary shard" >&2; exit 2 ;;
           esac

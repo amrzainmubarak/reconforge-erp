@@ -184,6 +184,60 @@ def test_prepare_ack_after_full_settlement_requires_current_sales_authority(rece
         PostgresCommercialCollectionsRepository(connection, runtime.tenant).prepare(request, command_id="prepare-FIRST", actor=actor)
 
 
+def test_known_native_receipt_conflict_preserves_every_scoped_row_and_prepare_replay(receipt_database: tuple[str, str]) -> None:
+    from psycopg import sql
+
+    from reconforge.domain.finance_posting import digest_payload
+    from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+
+    runtime = create_stock_runtime(receipt_database)
+    _, invoice_id = invoiced(runtime)
+    with runtime.actor("poster") as (connection, _, actor):
+        native = PostgresReceivablesRepository(connection, runtime.tenant).post_receipt(
+            receipt_number="PARTIAL-CASH-COLLISION", customer_code="CUSTOMER", receipt_date="2026-10-10",
+            currency_code="USD", amount_minor=1000, workspace="work", organization_code="ORG", entity_code="ENTITY",
+            actor_label=actor.username)
+        assert native["allocated_minor"] == 0
+
+    def retained(connection: Any) -> str:
+        # Compare every visible tenant row, including drafts, source versions,
+        # native receipts, owner commands, audit chain and outbox evidence.
+        tables = connection.execute("""SELECT c.table_name FROM information_schema.columns c
+            JOIN information_schema.tables t ON (t.table_schema,t.table_name)=(c.table_schema,c.table_name)
+            WHERE c.table_schema='reconforge' AND c.column_name='tenant_id' AND t.table_type='BASE TABLE'
+            ORDER BY c.table_name""").fetchall()
+        snapshot = {}
+        for table in tables:
+            rows = connection.execute(sql.SQL("SELECT to_jsonb(r) value FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text")
+                .format(sql.Identifier(table["table_name"])), (runtime.tenant,)).fetchall()
+            snapshot[table["table_name"]] = [row["value"] for row in rows]
+        return digest_payload(snapshot)
+
+    def refused_without_effect(number: str, command: str) -> None:
+        request = CommercialCollectionPreparation(workspace_id="work", organization_id="org", legal_entity_id="entity",
+            organization_code="ORG", entity_code="ENTITY", source_id=invoice_id, journal_code="CASH", period_id="period",
+            posting_date="2026-10-10", debit_account_code="CASH", credit_account_code="AR", reason="Known receipt conflict",
+            amount_minor=10000, receipt_number=number)
+        with runtime.actor("maker") as (connection, _, actor):
+            before = retained(connection)
+            with pytest.raises(FinancePostingError) as refusal:
+                PostgresCommercialCollectionsRepository(connection, runtime.tenant).prepare(request, command_id=command, actor=actor)
+            assert refusal.value.code == "collection_receipt_conflict"  # Native API maps this exact code to HTTP 409.
+            assert retained(connection) == before
+
+    refused_without_effect("PARTIAL-CASH-COLLISION", "known-native-conflict")
+    plan = prepare(runtime, invoice_id, 10000, "REPLAY-FIRST")
+    refused_without_effect(plan["receipt_number"], "known-prepared-name-conflict")
+    complete(runtime, plan, "REPLAY-FIRST")
+    request = CommercialCollectionPreparation(**{key: plan[key] for key in CommercialCollectionPreparation.__dataclass_fields__})
+    with runtime.actor("maker") as (connection, _, actor):
+        before = retained(connection)
+        assert PostgresCommercialCollectionsRepository(connection, runtime.tenant).prepare(
+            request, command_id="prepare-REPLAY-FIRST", actor=actor) == plan
+        assert retained(connection) == before
+    refused_without_effect(plan["receipt_number"], "known-posted-name-conflict")
+
+
 def test_sql_unowned_receipt_allocation_and_plan_mutation_are_rejected(receipt_database: tuple[str, str]) -> None:
     import psycopg
 

@@ -44,4 +44,5 @@ limitations:
   - Up to 200 retained installment plans per invoice with one active plan
   - Stock delivery remains Invoiced; the separate native invoice state and collected residual identify settlement
   - No external banking transfer execution, refunds, returns, allocation reversal or FX settlement
-  - Receipt namespace conflicts are refused atomically; a pending conflicting collection requires operator resolution
+  - Visible retained receipt namespace and prepared-plan conflicts are refused before creating financial drafts
+  - Preparation does not reserve the native receipt name through posting; later competing native commands or RLS-hidden plan names can still block a pending plan and require operator resolution; governed cancellation remains future work

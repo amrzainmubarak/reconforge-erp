@@ -115,6 +115,23 @@ class PostgresCommercialCollectionsRepository:
             self.connection.execute("SELECT reconforge.collection_close(%s,%s)", (self.tenant_id, plan_id))
             return self._view(plan_id)
 
+    def _receipt_available(self, workspace_id: str, receipt_number: str) -> None:
+        # Inspect the existing native namespace and exact workspace uniqueness
+        # contract without claiming ownership before an actual receipt exists.
+        # RLS remains authoritative; no other workspace's identifiers escape.
+        # A later concurrent claim remains subject to atomic SQL admission.
+        conflict = self.connection.execute("""SELECT 1 FROM reconforge.ar_receipts
+            WHERE tenant_id=%s AND workspace_id=%s AND receipt_number=%s
+            UNION ALL SELECT 1 FROM reconforge.ar_idempotency_keys
+            WHERE tenant_id=%s AND workspace_id=%s AND scope=%s AND idempotency_key=%s
+            UNION ALL SELECT 1 FROM reconforge.commercial_collection_plans
+            WHERE tenant_id=%s AND workspace_id=%s AND payload->>'receipt_number'=%s
+            LIMIT 1""", (self.tenant_id, workspace_id, receipt_number,
+                self.tenant_id, workspace_id, "sales_receipt_name_v1:" + workspace_id, receipt_number,
+                self.tenant_id, workspace_id, receipt_number)).fetchone()
+        if conflict is not None:
+            raise FinancePostingError("collection_receipt_conflict", "Receipt number is already retained in the selected workspace.")
+
     def prepare(self, request: CommercialCollectionPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         args = request.payload()
         with self.owner._transaction():
@@ -139,9 +156,7 @@ class PostgresCommercialCollectionsRepository:
                 (self.tenant_id, request.source_id)))[0]["invoice_parameters"]
             if request.credit_account_code != policy["receivable_account_code"] or request.debit_account_code == request.credit_account_code:
                 raise FinancePostingError("collection_account_invalid", "Credit the source receivable and debit a distinct cash asset.")
-            if self.connection.execute("SELECT 1 FROM reconforge.ar_idempotency_keys WHERE tenant_id=%s AND workspace_id=%s AND scope=%s AND idempotency_key=%s",
-                (self.tenant_id, request.workspace_id, "sales_receipt_name_v1:" + request.workspace_id, request.receipt_number)).fetchone():
-                raise FinancePostingError("collection_receipt_conflict", "Receipt number is already reserved by another native command.")
+            self._receipt_available(request.workspace_id, request.receipt_number)
             if self.connection.execute(
                 "SELECT 1 FROM reconforge.commercial_collection_plans WHERE tenant_id=%s AND source_id=%s AND phase<2",
                 (self.tenant_id, request.source_id)).fetchone() is not None:

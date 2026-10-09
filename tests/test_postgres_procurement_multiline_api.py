@@ -76,13 +76,15 @@ def test_multiline_http_receiving_late_failure_has_no_partial_source_or_effect(
     runtime = create_multiline_runtime(receipt_database)
     view = prepare_line(runtime, create_order(runtime, "HTTP-ROLLBACK"), 0, "4")
     view = action(runtime, view, "review-receipt", CHECKER, view["receipts"][0]["id"])
-    with runtime.actor(MAKER) as (connection, _, _):
-        before = enterprise_digest(connection, runtime.tenant)
     original = PostgresProcurementPartialRepository._remember
     def fail_after_ack(self: PostgresProcurementPartialRepository, *args: object, **kwargs: object) -> None:
         original(self, *args, **kwargs)
         raise RuntimeError("Injected real source and financial acknowledgement failure")
     with partial_client(runtime, receipt_database, tmp_path, POSTER) as client:
+        # Login, scope grants and step-up legitimately append identity audit.
+        # Capture the financial/owner/audit baseline after those independent writes.
+        with runtime.actor(MAKER) as (connection, _, _):
+            before = enterprise_digest(connection, runtime.tenant)
         monkeypatch.setattr(PostgresProcurementPartialRepository, "_remember", fail_after_ack)
         failed = client[0].post(ROOT + "/orders/" + view["order"]["id"] + "/commands/receive", headers=client[1],
             json={"command_id": "api-" + str(view["order"]["row_version"]), "expected_version": view["order"]["row_version"],

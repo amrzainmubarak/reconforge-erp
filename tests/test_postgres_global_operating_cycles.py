@@ -4,13 +4,16 @@ from __future__ import annotations
 from fractions import Fraction
 from typing import Any
 
-from reconforge.domain.financial_reporting import AccountClassification, ReportingScope
+from reconforge.domain.financial_reporting import AccountClassification, OpeningLine, OpeningPreparation, ReportingScope
+from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
 from reconforge.infrastructure.postgres_fixed_assets import PostgresFixedAssetsRepository
 from reconforge.infrastructure.postgres_landed_cost import PostgresLandedCostRepository
 from reconforge.infrastructure.postgres_procurement_partial import PostgresProcurementPartialRepository
 from tests.test_postgres_commercial_collections import complete as collect
 from tests.test_postgres_commercial_collections import prepare as prepare_collection
+from tests.test_postgres_financial_reporting import post_opening
 from tests.test_postgres_fixed_assets import acquire, finish, operation, seed_asset_masters
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 from tests.test_postgres_landed_cost import phase as landed_phase
@@ -45,7 +48,7 @@ def reviewed_reporting_map(runtime: ReceiptRuntime) -> dict[str, Any]:
         "INVENTORY": "CurrentAsset", "CASH": "CurrentAsset", "AR": "CurrentAsset",
         "FIXED": "NonCurrentAsset", "ACCUM": "NonCurrentAsset", "CLEARING": "CurrentLiability",
         "AP": "CurrentLiability", "COGS": "Expense", "DEPRECIATION": "Expense",
-        "REVENUE": "Income", "GAIN": "Income",
+        "REVENUE": "Income", "GAIN": "Income", "EQUITY": "Equity",
     }
     with runtime.actor("maker") as (connection, _, actor):
         prepared = PostgresFinancialReportingRepository(connection, runtime.tenant).prepare_map(
@@ -62,6 +65,22 @@ def test_paid_landed_stock_partial_ar_assets_and_native_statements_share_one_fin
     runtime = create_multiline_runtime(receipt_database)
     runtime = create_stock_runtime(receipt_database, base_runtime=runtime, seed_stock=False)
     seed_asset_masters(runtime)
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+        PostgresFinanceCoreRepository(connection, runtime.tenant).upsert_account(
+            account_code="EQUITY", name="Opening paid capital", account_type="Equity", normal_balance="Credit",
+            chart_code="DEFAULT", workspace="work")
+    mapping = reviewed_reporting_map(runtime)
+    with runtime.actor("maker") as (connection, _, actor):
+        funding = PostgresFinancialReportingRepository(connection, runtime.tenant).prepare_opening(
+            OpeningPreparation(ReportingScope("work", "org", "entity"), mapping["id"], "ORG", "ENTITY", "period", "STOCK",
+                "2026-10-01", "Governed paid opening capital before purchasing",
+                (OpeningLine("CASH", 50000, 0), OpeningLine("EQUITY", 0, 50000))),
+            command_id="global-funding-prepare", actor=actor)
+    with runtime.actor("checker") as (connection, _, actor):
+        funding = PostgresFinancialReportingRepository(connection, runtime.tenant).review_opening(
+            funding["id"], expected_digest=funding["plan_digest"], reason="Independent opening funding review",
+            command_id="global-funding-review", actor=actor)
+    assert post_opening(runtime, funding)["status"] == "Posted"
     purchase = create_order(runtime, "GLOBAL-SUPPLY")
     landed = landed_phase(runtime, landed_phase(runtime, prepare_landed(runtime, purchase), "review", CHECKER), "post", POSTER)
     freight = independent_allocation(777, (12000, 5000))
@@ -101,9 +120,8 @@ def test_paid_landed_stock_partial_ar_assets_and_native_statements_share_one_fin
     depreciation_rest = finish(runtime, operation(runtime, asset["asset_id"], kind="depreciate", date="2027-01-01", period="jan", month="2026-12"))
     disposed = finish(runtime, operation(runtime, asset["asset_id"], kind="dispose", date="2027-01-02", period="jan", proceeds=1500))
     assert (depreciation_first["amount_minor"], depreciation_rest["amount_minor"], disposed["amount_minor"]) == (3033, 6067, 1001)
-    mapping = reviewed_reporting_map(runtime)
     expected = {"AP": 0, "CLEARING": 0, "INVENTORY": item_value - cogs + weighted_value,
-        "CASH": revenue - (12000 + 5000 + 777 + 224) - 10101 + 1500, "AR": 0,
+        "CASH": 50000 + revenue - (12000 + 5000 + 777 + 224) - 10101 + 1500, "AR": 0, "EQUITY": -50000,
         "COGS": cogs, "REVENUE": -revenue, "FIXED": 0, "ACCUM": 0, "DEPRECIATION": 9100, "GAIN": -499}
     assert sum(expected.values()) == 0
     with runtime.actor("poster") as (connection, _, actor):
@@ -115,8 +133,8 @@ def test_paid_landed_stock_partial_ar_assets_and_native_statements_share_one_fin
         assert {row["account_code"]: int(row["amount"]) for row in actual} == expected
         turnover = connection.execute("""SELECT sum((x->>'debit_minor')::bigint) debit,sum((x->>'credit_minor')::bigint) credit
             FROM reconforge.finance_posting_effects f CROSS JOIN LATERAL jsonb_array_elements(f.snapshot_json->'lines') x WHERE f.tenant_id=%s""", (runtime.tenant,)).fetchone()
-        assert tuple(turnover) == (134156, 134156)
-        assert connection.execute("SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 17
+        assert tuple(turnover) == (184156, 184156)
+        assert connection.execute("SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 18
         layers = connection.execute("""SELECT i.item_code,l.remaining_quantity_scaled,l.remaining_value_minor FROM reconforge.inventory_cost_layers l
             JOIN reconforge.inventory_items i ON i.tenant_id=l.tenant_id AND i.id=l.item_id WHERE l.tenant_id=%s ORDER BY i.item_code""", (runtime.tenant,)).fetchall()
         assert [tuple(row) for row in layers] == [("ITEM", 5, 6353), ("WEIGHT", 250, 5295)]
@@ -128,10 +146,10 @@ def test_paid_landed_stock_partial_ar_assets_and_native_statements_share_one_fin
         october = reporting.report(map_id=mapping["id"], period_id="period", as_of_date="2026-10-31", organization_code="ORG", entity_code="ENTITY", actor=actor)
         january = reporting.report(map_id=mapping["id"], period_id="jan", as_of_date="2027-01-02", organization_code="ORG", entity_code="ENTITY", actor=actor)
         assert october["income_statement"] == {"income_minor": 22500, "expense_minor": 6353, "result_minor": 16147}
-        assert october["balance_sheet"] == {"assets_minor": 16147, "liabilities_minor": 0, "equity_minor": 0, "accumulated_unclosed_result_minor": 16147, "balanced": True}
+        assert october["balance_sheet"] == {"assets_minor": 66147, "liabilities_minor": 0, "equity_minor": 50000, "accumulated_unclosed_result_minor": 16147, "balanced": True}
         assert january["income_statement"] == {"income_minor": 499, "expense_minor": 6067, "result_minor": -5568}
-        assert january["balance_sheet"] == {"assets_minor": 7546, "liabilities_minor": 0, "equity_minor": 0, "accumulated_unclosed_result_minor": 7546, "balanced": True}
-        assert january["cash_movements"]["opening_minor"] == -5602
+        assert january["balance_sheet"] == {"assets_minor": 57546, "liabilities_minor": 0, "equity_minor": 50000, "accumulated_unclosed_result_minor": 7546, "balanced": True}
+        assert january["cash_movements"]["opening_minor"] == 44398
         assert january["cash_movements"]["activity_minor"] == 1500
-        assert january["cash_movements"]["closing_minor"] == -4102
+        assert january["cash_movements"]["closing_minor"] == 45898
         assert january == reporting.report(map_id=mapping["id"], period_id="jan", as_of_date="2027-01-02", organization_code="ORG", entity_code="ENTITY", actor=actor)

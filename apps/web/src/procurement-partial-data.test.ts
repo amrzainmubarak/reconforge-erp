@@ -10,7 +10,7 @@ function draft() { return { order: { id: "partial-order", number: "ORDER-1", pur
 function plan() { return { id: "FI1-plan", source_kind: "APPayment", source_id: "invoice", workspace_id: "work", organization_id: "org", legal_entity_id: "entity", entry_id: "native-entry", posting_date: "2026-10-03", period_id: "period", currency_code: "USD", currency_precision: 2, status: "Prepared", phase: 0, plan_digest: "a".repeat(64), validation_digest: "b".repeat(64), preparer_actor_id: "maker", reviewer_actor_id: null, posting_effect_id: null, payment_link_id: null, amount_minor: "1000", allocated_before_minor: "0", invoice_version: 5 }; }
 function multilineDraft() {
   const source = draft();
-  return { ...source, order: { ...source.order, multiline: true, line_count: 2, total_minor: "17000" },
+  return { ...source, order: { ...source.order, multiline: true, line_count: 2, total_minor: "17000", request: { ...source.order.request, item_code: "ITEM", location_code: "MAIN/STOCK", policy_code: "FIFO", supplier_code: "SUP", journal_code: "STOCK", ap_account_code: "AP", cash_account_code: "CASH", posting_date: "2026-10-03", period_id: "period", workspace: "work" } },
     lines: [
       { id: "line-each", sequence: 1, item_code: "ITEM", uom_id: "unit-each", uom_code: "EA", quantity_precision: 0, location_code: "MAIN/STOCK", policy_code: "FIFO", quantity_text: "10", unit_price_minor: "1200", total_minor: "12000", reserved_receipt_quantity: "0", received_quantity: "0", invoiced_quantity: "0" },
       { id: "line-weight", sequence: 2, item_code: "WEIGHT", uom_id: "unit-kg", uom_code: "KG", quantity_precision: 2, location_code: "NORTH/STOCK", policy_code: "FIFO", quantity_text: "2.50", unit_price_minor: "2000", total_minor: "5000", reserved_receipt_quantity: "0", received_quantity: "0", invoiced_quantity: "0" },
@@ -93,7 +93,7 @@ describe("partial procurement exact source contract", () => {
   });
   it("retains nested exact purchase lines across an unverified acknowledgement retry", async () => {
     const lines = multilineDraft().lines.map((line) => ({ item_code: line.item_code, location_code: line.location_code, policy_code: line.policy_code, quantity: line.quantity_text, unit_price_minor: line.unit_price_minor }));
-    const command = prepareScopedCommand(partialRoot + "/orders/multiline", { number: "ORDER-1", lines });
+    const command = prepareScopedCommand(partialRoot + "/orders/multiline", { ...multilineDraft().order.request, lines });
     lines[1].quantity = "999";
     const fetch = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ unrelated: true }) }).mockResolvedValueOnce({ ok: true, json: async () => multilineDraft() });
     vi.stubGlobal("fetch", fetch);
@@ -111,5 +111,22 @@ describe("partial procurement exact source contract", () => {
     await partialItemCatalog(session, scope, "x&after=foreign", "ITEM/1");
     expect(fetch.mock.calls.map((call) => call[0])).toEqual([partialRoot + "/orders/page?after=parent%2Fone", partialRoot + "/orders/partial-order/documents?receipt_after=0&invoice_after=0", partialRoot + "/catalog/items?search=x%26after%3Dforeign&after=ITEM%2F1"]);
     expect(fetch.mock.calls.every((call) => call[1].method === "GET" && call[1].body === undefined)).toBe(true);
+  });
+  it("bounds dense 128-line projections and binds the retained first-line compatibility header", () => {
+    const base = multilineDraft();
+    const lines = Array.from({ length: 128 }, (_, index) => ({ ...base.lines[0], id: "line-" + index, sequence: index + 1, quantity_text: "1", total_minor: "1200" }));
+    const source = { ...base, lines, order: { ...base.order, line_count: 128, total_minor: "153600", request: { ...base.order.request, quantity: "1" } }, pages: { ...base.pages, page_size: 4 } };
+    expect(parsePartialDetail(source, scope).pages?.page_size).toBe(4);
+    expect(() => parsePartialDetail({ ...source, pages: { ...source.pages, page_size: 25 } }, scope)).toThrow("contract_invalid");
+    expect(() => parsePartialDetail({ ...source, order: { ...source.order, request: { ...source.order.request, location_code: "NORTH/STOCK" } } }, scope)).toThrow("contract_invalid");
+  });
+  it("rejects a valid multiline acknowledgement with a different supplier or posting date", async () => {
+    const source = multilineDraft();
+    const lines = source.lines.map((line) => ({ item_code: line.item_code, location_code: line.location_code, policy_code: line.policy_code, quantity: line.quantity_text, unit_price_minor: line.unit_price_minor }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => source }));
+    for (const fields of [{ supplier_code: "FOREIGN" }, { posting_date: "2026-10-04" }]) {
+      const command = prepareScopedCommand(partialRoot + "/orders/multiline", { ...source.order.request, ...fields, lines });
+      await expect(partialCommand(session, scope, command)).rejects.toThrow("contract_invalid");
+    }
   });
 });

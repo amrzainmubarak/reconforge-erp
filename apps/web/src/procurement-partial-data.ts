@@ -63,6 +63,9 @@ export function parsePartialDetail(value: unknown, scope: ProcurementScope): Par
       return line as unknown as EnterprisePurchaseLine;
     });
     if (new Set(lines.map((line) => line.id)).size !== lines.length || lines.reduce((total, line) => total + BigInt(line.total_minor), 0n) !== BigInt(String(order.total_minor))) invalid();
+    const first = lines[0];
+    if (request.item_code !== first.item_code || request.location_code !== first.location_code || request.policy_code !== first.policy_code ||
+      scaledQuantity(request.quantity) !== scaledQuantity(first.quantity_text) || request.unit_price_minor !== first.unit_price_minor) invalid();
     const raw = value.pages;
     const pageSize = Math.min(25, Math.max(1, Math.floor(512 / lines.length)));
     if (!["receipt_after", "invoice_after", "receipt_count", "invoice_count"].every((key) => Number.isInteger(raw[key]) && Number(raw[key]) >= 0 && Number(raw[key]) <= 1024) || raw.page_size !== pageSize ||
@@ -220,6 +223,8 @@ export async function partialCommand(session: BrowserAdminSession, scope: Procur
   const value = parsePartialDetail(await procurementFetch(session, scope.workspace_id, scope, command.path, { body: command.body }), scope);
   if (command.path === partialRoot + "/orders/multiline") {
     if (!value.order.multiline || value.order.row_version !== 1 || value.order.stage !== "Draft" || value.order.number !== String(command.body.number).trim().toUpperCase() || !Array.isArray(command.body.lines) || value.lines?.length !== command.body.lines.length) invalid();
+    if (!["supplier_code", "currency_code", "journal_code", "ap_account_code", "cash_account_code", "organization_code", "entity_code"].every((key) =>
+      value.order.request[key] === String(command.body[key]).trim().toUpperCase()) || !["posting_date", "period_id", "workspace"].every((key) => value.order.request[key] === String(command.body[key]).trim())) invalid();
     for (const [index, raw] of command.body.lines.entries()) {
       const line = value.lines[index];
       if (!object(raw) || line.item_code !== String(raw.item_code).trim().toUpperCase() || line.location_code !== String(raw.location_code).trim() || line.policy_code !== String(raw.policy_code).trim().toUpperCase() ||

@@ -1,5 +1,25 @@
 # Execution State
 
+## Active global operating platform program (2026-10-09; ADR0844)
+
+Verified base: PR127 `34b9e7a5b2a7c4d8ae49b641a36de030a878d507`, preserving
+PR126/125/124. CI37978382128 succeeded on that exact accepted head. Main remains
+untouched; implementation uses `amr/global-operating-platform-20261009` and three
+independent managed commercial/supply/finance worktrees.
+
+CA1 individual-invoice AR collections, LC1 prepaid landed-cost receiving and FA1
+acquisition/depreciation/disposal kernels are integrated with native posting,
+reviewed routes and ordered revisions0120–0122. Actual native gates are underway;
+these capabilities are not accepted from source presence or initial domain tests.
+The first migration syntax failure is retained, followed by a narrow repair.
+
+Benchmark instrumentation at3dabe93e passed10 genuine native cycles on revision0119
+in22.672s, retaining10 raw cycle observations,11 raw read observations and two
+resource samples. It verifies nonowner/NOBYPASSRLS execution and unchanged source;
+it does not accept new business owners or establish a performance improvement.
+Final integrated native/UI/restore/regression/security/benchmark gates and a new
+Draft PR remain pending. No production, banking or competitor superiority claim.
+
 ## Active enterprise engineering program (2026-10-09; ADR0843)
 
 Starts at PR126 exact `21b4b8a23a4bf9c3e5562b51392fad896f39ef7d`, retaining PR125

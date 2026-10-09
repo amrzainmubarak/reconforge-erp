@@ -1,17 +1,40 @@
 """Real selected-scope HTTP product operations with persisted native humans."""
 
+import json
 from dataclasses import asdict
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
+from reconforge.auth.policy import verify_policy_decision_evidence
 from reconforge.domain.stock_sales import StockOrder
+from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime, receipt_database
 from tests.test_postgres_sales_owner_closure import authenticated_headers
-from tests.test_postgres_stock_sales import stock_runtime
+from tests.test_postgres_stock_sales import retained_stock_financial_rows, stock_runtime
 
 _ = receipt_database, stock_runtime
+
+
+def assert_http_refusal_retains_business(runtime: ReceiptRuntime, before: dict[str, str]) -> None:
+    after = retained_stock_financial_rows(runtime)
+    for table in before.keys() - {"domain_audit_events", "domain_audit_ledger_state"}:
+        assert after[table] == before[table], table
+    old_events = {row["id"]: row for row in json.loads(before["domain_audit_events"])}
+    events = {row["id"]: row for row in json.loads(after["domain_audit_events"])}
+    assert old_events.keys() < events.keys()
+    assert all(events[identifier] == row for identifier, row in old_events.items())
+    appended = sorted((events[identifier] for identifier in events.keys() - old_events.keys()), key=lambda row: row["sequence"])
+    for event in appended:
+        assert (event["object_type"], event["action"], event["actor_user_id"]) == ("authorization.policy_decision", "evaluated", "checker")
+        verify_policy_decision_evidence(event["metadata_json"]["policy_decision_evidence"])
+    old_state = json.loads(before["domain_audit_ledger_state"])[0]
+    assert json.loads(after["domain_audit_ledger_state"]) == [{**old_state,
+        "last_sequence": old_state["last_sequence"] + len(appended),
+        "last_event_hash": appended[-1]["event_hash"], "updated_at": appended[-1]["created_at"]}]
+    with runtime.actor("checker") as (connection, _, _actor):
+        assert PostgresAuditEventRepository(connection, runtime.tenant).verify().ok
 
 
 def test_https_origin_stock_api_completes_native_issue_invoice_and_cash(
@@ -20,7 +43,7 @@ def test_https_origin_stock_api_completes_native_issue_invoice_and_cash(
     runtime = stock_runtime
     app = create_api_app(tmp_path / "unused.db", tenant_db_root=tmp_path / "tenants", postgres_dsn=receipt_database[1],
                          postgres_require_tls=False, secure_transport=True, policy_cache_enabled=True)
-    assert any(getattr(route, "path", "") == "/api/v1/stock-sales/orders" for route in app.routes)
+    assert {"get", "post"}.issubset(app.openapi()["paths"]["/api/v1/stock-sales/orders"])
     with TestClient(app, base_url="https://testserver") as client:
         headers_by_actor = {name: authenticated_headers(client, runtime, name) for name in ("maker", "checker", "poster")}
         headers = headers_by_actor["maker"]
@@ -47,6 +70,13 @@ def test_https_origin_stock_api_completes_native_issue_invoice_and_cash(
         ]
         for path, name, parameters in actions:
             headers = headers_by_actor[name]
+            if path in {"invoice/post", "collection/post"}:
+                before = retained_stock_financial_rows(runtime)
+                denied = client.post("/api/v1/stock-sales/orders/" + order["id"] + "/" + path, headers=headers_by_actor["checker"],
+                    json={"command_id": "http:refused:" + path, "expected_version": order["row_version"], "reason": "Reviewer cannot publish own financial review"})
+                assert denied.status_code == 403, denied.text
+                assert denied.json()["error"]["code"] == "stock_sales_sod_denied"
+                assert_http_refusal_retains_business(runtime, before)
             response = client.post("/api/v1/stock-sales/orders/" + order["id"] + "/" + path, headers=headers,
                 json={"command_id": "http:" + path, "expected_version": order["row_version"], "reason": "Actual HTTP " + path, **parameters})
             assert response.status_code == 200, response.text

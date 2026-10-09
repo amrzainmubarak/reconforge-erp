@@ -20,6 +20,11 @@ STOCK_OPERATIONS = (
 )
 
 
+def require_stock_posting_duties(poster_id: str, preparer_id: str | None, reviewer_id: str | None) -> None:
+    if not poster_id or not preparer_id or not reviewer_id or len({poster_id, preparer_id, reviewer_id}) != 3:
+        raise FinancePostingError("stock_sales_sod_denied", "Financial posting requires a third human distinct from its preparer and reviewer.")
+
+
 def stock_code(value: object, label: str) -> str:
     result = text(value, label, maximum=64).upper()
     if len(result) > 64 or not result.isascii() or not result[0].isalnum() or any(not (c.isalnum() or c in "-_.") for c in result):

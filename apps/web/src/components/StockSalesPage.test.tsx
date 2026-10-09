@@ -76,3 +76,34 @@ it("exposes Arabic RTL and native profile boundaries before authentication", () 
   expect(screen.getByLabelText("كلمة المرور")).toHaveAttribute("type", "password");
   expect(screen.getByText(/الضريبة صفر صراحةً/)).toBeInTheDocument();
 });
+
+it.each([
+  ["InvoiceReviewed", 9, "Post revenue"],
+  ["CollectionReviewed", 12, "Collect and post cash"],
+])("refuses %s publication for its reviewer with full posting authority", async (status, version, label) => {
+  const statuses = ["Draft", "Submitted", "Approved", "Reserved", "IssuePrepared", "IssueReviewed", "Delivered", "InvoicePrepared", "InvoiceReviewed", "Invoiced", "CollectionPrepared", "CollectionReviewed"];
+  const operations = ["create", "submit", "approve", "reserve", "prepare-issue", "review-issue", "deliver", "prepare-invoice", "review-invoice", "invoice", "prepare-collection", "review-collection"];
+  const actors = ["maker", "maker", "checker", "maker", "maker", "checker", "poster", "maker", "checker", "poster", "maker", "checker"];
+  const reviewed = { ...document(), status, row_version: version, cogs_minor: "6000", cogs_entry_id: "COGS-1", cogs_effect_id: "POST-1", movement_id: "MOV-1", valuation_id: "VAL-1", invoice_id: "AR-1", invoice_plan_id: "OPS-1", collection_plan_id: status === "CollectionReviewed" ? "OPS-2" : null,
+    events: statuses.slice(0, Number(version)).map((state, index) => ({ version: index + 1, actor_id: actors[index], operation: operations[index], status: state, reason: "Retained native decision", audit_event_id: "AUD-" + index })) };
+  const reviewer = { ...identity, id: "checker", permissions: [...identity.permissions, "receivables.approve", "receivables.manage", "finance_core.post"] };
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (path: RequestInfo | URL, request?: RequestInit) => {
+    if (String(path).endsWith("/auth/me")) return response(reviewer);
+    if (request?.method === "POST") { writes.push(String(request.body)); return response(reviewed); }
+    if (String(path).endsWith("/options")) return response(options);
+    if (String(path).endsWith("/orders")) return response({ orders: [reviewed] });
+    return response(reviewed);
+  }));
+  render(<BrowserSessionProvider><Begin /><StockSalesPage locale="en" /></BrowserSessionProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Begin fixture" }));
+  await waitFor(() => expect(screen.getByLabelText("Workspace")).toHaveValue("work"));
+  fireEvent.click(screen.getByRole("button", { name: "Load selected scope" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Open PRODUCT-1" }));
+  await screen.findByRole("heading", { name: status === "InvoiceReviewed" ? "PRODUCT-1 · Revenue reviewed" : "PRODUCT-1 · Collection reviewed" });
+  fireEvent.change(screen.getByLabelText("Decision reason"), { target: { value: "Own review cannot authorize publication" } });
+  expect(screen.getByRole("button", { name: label })).toBeDisabled();
+  expect(screen.getByText(/requires a third human distinct/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: label }));
+  expect(writes).toHaveLength(0);
+});

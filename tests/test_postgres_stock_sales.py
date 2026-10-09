@@ -89,6 +89,69 @@ def complete_stock_sale(runtime: ReceiptRuntime) -> dict[str, Any]:
     return execute(runtime, result, "collect", "poster")
 
 
+def retained_stock_financial_rows(runtime: ReceiptRuntime) -> dict[str, str]:
+    from psycopg import sql
+
+    with runtime.actor("maker") as (connection, _, _actor):
+        return {table: connection.execute(sql.SQL(
+            "SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text),'[]'::jsonb)::text AS rows "
+            "FROM reconforge.{} r WHERE tenant_id=%s").format(sql.Identifier(table)),
+            (runtime.tenant,)).fetchone()["rows"] for table in (
+                "stock_sales_orders", "stock_sales_reservations", "stock_sales_issue_claims", "stock_sales_commands", "stock_sales_events",
+                "inventory_movements", "inventory_movement_lines", "inventory_cost_layers", "inventory_layer_consumptions",
+                "inventory_valuation_documents", "inventory_valuation_lines", "finance_entries", "finance_entry_lines",
+                "finance_posting_effects", "finance_posting_commands", "operational_finance_plans", "operational_finance_reviews",
+                "operational_finance_links", "operational_finance_commands", "ar_invoices", "ar_invoice_lines", "ar_receipts",
+                "ar_receipt_allocations", "ar_idempotency_keys", "domain_audit_events", "domain_audit_ledger_state", "outbox_events")}
+
+
+def test_invoice_and_collection_require_three_humans_in_owner_and_native_sql(
+    stock_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import psycopg
+
+    runtime = stock_runtime
+    result = execute(runtime, create_reserved_order(runtime), "prepare-issue", "maker", {
+        "posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
+    result = execute(runtime, result, "review-issue", "checker")
+    result = execute(runtime, result, "deliver", "poster")
+    invoice = SalesInvoicePreparation("THREE-HUMAN-INVOICE", "2026-10-09", "2026-10-31", "SALES", "period",
+                                      "AR", "REVENUE", "Actual separately posted invoice").payload()
+    invoice.pop("reason")
+    for kind, operation, parameters in (
+        ("invoice", "invoice", invoice),
+        ("collection", "collect", {"receipt_number": "THREE-HUMAN-CASH", "receipt_date": "2026-10-10",
+            "journal_code": "CASH", "period_id": "period", "cash_account_code": "CASH"}),
+    ):
+        result = execute(runtime, result, "prepare-" + kind, "maker", parameters)
+        result = execute(runtime, result, "review-" + kind, "checker")
+        before = retained_stock_financial_rows(runtime)
+        for forbidden_actor in ("maker", "checker"):
+            with pytest.raises(FinancePostingError) as refusal:
+                execute(runtime, result, operation, forbidden_actor)
+            assert refusal.value.code == "stock_sales_sod_denied"
+            assert retained_stock_financial_rows(runtime) == before
+        # Fault injection bypasses only the new Python duty admission. Every
+        # native financial participant remains real, exercising SQL closure.
+        with monkeypatch.context() as bypass:
+            bypass.setattr("reconforge.infrastructure.postgres_stock_sales.require_stock_posting_duties", lambda *_: None)
+            with pytest.raises(psycopg.errors.CheckViolation) as native_refusal:
+                execute(runtime, result, operation, "checker")
+        assert native_refusal.value.sqlstate == "23514"
+        assert native_refusal.value.diag.constraint_name == "stock_sales_owner_phase"
+        assert retained_stock_financial_rows(runtime) == before
+        result = execute(runtime, result, operation, "poster")
+        with runtime.actor("poster") as (connection, _, _actor):
+            plan_id = result["invoice_plan_id" if kind == "invoice" else "collection_plan_id"]
+            actors = connection.execute("""SELECT p.preparer_actor_id,r.reviewer_actor_id,l.posted_actor_id
+                FROM reconforge.operational_finance_plans p JOIN reconforge.operational_finance_reviews r
+                ON r.tenant_id=p.tenant_id AND r.plan_id=p.id JOIN reconforge.operational_finance_links l
+                ON l.tenant_id=p.tenant_id AND l.plan_id=p.id WHERE p.tenant_id=%s AND p.id=%s""",
+                (runtime.tenant, plan_id)).fetchone()
+            assert dict(actors) == {"preparer_actor_id": "maker", "reviewer_actor_id": "checker", "posted_actor_id": "poster"}
+    assert result["status"] == "Paid"
+
+
 def test_actual_stock_to_cash_has_exact_fifo_cogs_revenue_cash_and_lost_ack(stock_runtime: ReceiptRuntime) -> None:
     runtime = stock_runtime
     result = complete_stock_sale(runtime)

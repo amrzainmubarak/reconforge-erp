@@ -1,6 +1,6 @@
 import type { Locale } from "./types";
 const en = {
-  thirdHuman: "Delivery and COGS posting requires a third human distinct from the FIFO preparer and reviewer.",
+  thirdHuman: "Financial posting requires a third human distinct from its preparer and reviewer.",
   title: "Product sales", intro: "Reserve physical stock, review exact FIFO cost, deliver and collect through the financial ledger.", cancelReview: "Review the retained COGS draft independently before cancelling its unposted financial plan.",
   boundary: "One non-lot item, full delivery and full collection in functional currency. Tax is explicitly zero; partial shipments, returns and credit notes are outside this cycle.",
   tenant: "Tenant", username: "Username", password: "Password", signIn: "Sign in", signOut: "Sign out", stepUp: "Verify for financial actions", stepRequired: "Verify your password before financial changes.",
@@ -11,7 +11,7 @@ const en = {
   Draft: "Draft", Submitted: "Submitted", Approved: "Approved", Reserved: "Reserved", IssuePrepared: "FIFO prepared", IssueReviewed: "FIFO reviewed", Delivered: "Delivered", InvoicePrepared: "Invoice prepared", InvoiceReviewed: "Revenue reviewed", Invoiced: "Invoiced", CollectionPrepared: "Collection prepared", CollectionReviewed: "Collection reviewed", Paid: "Paid", Cancelled: "Cancelled",
 } as const;
 const ar: Record<keyof typeof en, string> = {
-  thirdHuman: "يتطلب التسليم وترحيل التكلفة مستخدمًا ثالثًا مستقلًا عن مُعدّ صرف FIFO ومراجعه.",
+  thirdHuman: "يتطلب الترحيل المالي مستخدمًا ثالثًا مستقلًا عن مُعدّ العملية ومراجعها.",
   title: "مبيعات المنتجات", intro: "احجز المخزون الفعلي وراجع تكلفة FIFO الدقيقة ثم سلّم وحصّل مع الأثر المالي في دفتر الأستاذ.", cancelReview: "راجع مسودة التكلفة بشكل مستقل قبل إلغاء خطتها المالية غير المرحلة.",
   boundary: "صنف واحد دون تتبع دفعات، وتسليم وتحصيل كامل بالعملة الوظيفية. الضريبة صفر صراحةً؛ الشحنات الجزئية والمرتجعات والإشعارات الدائنة خارج هذه الدورة.",
   tenant: "المستأجر", username: "اسم المستخدم", password: "كلمة المرور", signIn: "تسجيل الدخول", signOut: "تسجيل الخروج", stepUp: "التحقق لتنفيذ العمليات المالية", stepRequired: "تحقق من كلمة المرور قبل التغييرات المالية.",

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { executeStockCommand, parseStockOrder, prepareStockCommand } from "./stock-sales-data";
+import { executeStockCommand, parseStockOrder, prepareStockCommand, stockFinancialDuties } from "./stock-sales-data";
 
 const scope = { workspace_id: "work", organization_id: "org", legal_entity_id: "entity" };
 function document() {
@@ -33,6 +33,16 @@ describe("stock sales exact transport and evidence", () => {
   it("refuses alternate routes and caller supplied idempotency keys", () => {
     expect(() => prepareStockCommand(scope, "/api/v1/finance-core/entries", {})).toThrow();
     expect(() => prepareStockCommand(scope, "/api/v1/stock-sales/orders", { command_id: "spoof" })).toThrow();
+  });
+  it("derives native-bound duties from immutable stage lineage and refuses same-human publication", () => {
+    const statuses = ["Draft", "Submitted", "Approved", "Reserved", "IssuePrepared", "IssueReviewed", "Delivered", "InvoicePrepared", "InvoiceReviewed", "Invoiced"];
+    const operations = ["create", "submit", "approve", "reserve", "prepare-issue", "review-issue", "deliver", "prepare-invoice", "review-invoice", "invoice"];
+    const actors = ["maker", "maker", "checker", "maker", "maker", "checker", "poster", "maker", "checker", "poster"];
+    const events = statuses.map((status, index) => ({ version: index + 1, actor_id: actors[index], operation: operations[index], status, reason: "Verified source", audit_event_id: "AUD-" + index }));
+    const posted = { ...document(), status: "Invoiced", row_version: 10, events, cogs_minor: "1", movement_id: "M-1", valuation_id: "V-1", cogs_entry_id: "C-1", cogs_effect_id: "F-1" };
+    expect(stockFinancialDuties(parseStockOrder(posted, scope), "invoice")).toEqual({ preparerId: "maker", reviewerId: "checker" });
+    expect(() => parseStockOrder({ ...posted, events: events.map((event, index) => index === 9 ? { ...event, actor_id: "checker" } : event) }, scope)).toThrow();
+    expect(() => parseStockOrder({ ...posted, events: events.map((event, index) => index === 8 ? { ...event, operation: "review-collection" } : event) }, scope)).toThrow();
   });
 });
 

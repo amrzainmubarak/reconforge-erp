@@ -21,6 +21,12 @@ export interface StockOptions extends SalesOptions {
   policies: { policy_code: string; name: string; journal_code: string }[];
 }
 export interface StockCommand extends PreparedScopedCommand { readonly scope: Readonly<SalesScope> }
+export function stockFinancialDuties(order: StockOrder, kind: "issue" | "invoice" | "collection") {
+  return {
+    preparerId: order.events.find((event) => event.operation === `prepare-${kind}`)?.actor_id,
+    reviewerId: order.events.find((event) => event.operation === `review-${kind}`)?.actor_id,
+  };
+}
 function invalid(): never { throw new Error("stock_sales_contract_invalid"); }
 function object(value: unknown): Record<string, unknown> { if (!value || typeof value !== "object" || Array.isArray(value)) invalid(); return value as Record<string, unknown>; }
 function text(value: unknown): string { if (typeof value !== "string" || !value || value.length > 500 || /[\u0000-\u001f\u007f]/.test(value)) invalid(); return value; }
@@ -36,7 +42,18 @@ export function parseStockOrder(value: unknown, scope: SalesScope, identifier?: 
   integer(row.row_version, 1, 13); integer(row.quantity_precision, 0, 6); integer(row.discount_basis_points, 0, 9999); integer(policy.precision, 0, 8);
   if (row.cogs_minor !== null) minor(row.cogs_minor);
   for (const key of ["approved_by", "issue_preparer_id", "issue_reviewer_id", "movement_id", "valuation_id", "cogs_entry_id", "cogs_effect_id", "invoice_id", "invoice_plan_id", "collection_plan_id", "receipt_id"]) if (row[key] !== null) text(row[key]);
-  row.events.forEach((value, index) => { const event = object(value); if (integer(event.version, 1, 13) !== index + 1 || !stockStages.includes(event.status as StockStage)) invalid(); for (const key of ["actor_id", "operation", "reason", "audit_event_id"]) text(event[key]); });
+  const events = row.events;
+  const operations = ["create", "submit", "approve", "reserve", "prepare-issue", "review-issue", "deliver", "prepare-invoice", "review-invoice", "invoice", "prepare-collection", "review-collection", "collect"];
+  row.events.forEach((value, index) => {
+    const event = object(value);
+    if (integer(event.version, 1, 13) !== index + 1 || !stockStages.includes(event.status as StockStage)) invalid();
+    for (const key of ["actor_id", "operation", "reason", "audit_event_id"]) text(event[key]);
+    if (event.operation === "cancel") {
+      if (event.status !== "Cancelled" || ![1, 2, 3, 4, 6].includes(index) || index !== events.length - 1) invalid();
+    } else if (event.operation !== operations[index] || event.status !== stockStages[index]) invalid();
+    if ([5, 8, 11].includes(index) && event.operation !== "cancel" && event.actor_id === object(events[index - 1]).actor_id) invalid();
+    if ([6, 9, 12].includes(index) && event.operation !== "cancel" && [object(events[index - 1]).actor_id, object(events[index - 2]).actor_id].includes(event.actor_id)) invalid();
+  });
   if (row.events.length !== row.row_version || object(row.events.at(-1)).status !== row.status) invalid();
   const stage = stockStages.indexOf(row.status as StockStage);
   if (stage >= 6 && stage < 13 && ["movement_id", "valuation_id", "cogs_entry_id", "cogs_effect_id"].some((key) => !row[key])) invalid();

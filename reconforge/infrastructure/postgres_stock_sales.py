@@ -15,6 +15,7 @@ from reconforge.domain.stock_sales import (
     StockIssuePreparation,
     StockOrder,
     freeze_fifo,
+    require_stock_posting_duties,
     stock_code,
 )
 from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
@@ -226,8 +227,7 @@ class PostgresStockSalesRepository:
         return {"issue_plan": plan, "cogs_entry_id": entry["id"]}
 
     def _deliver(self, row: Mapping[str, Any], actor: PostingActor, command: str, reason: str) -> dict[str, Any]:
-        if actor.user_id in {row["issue_plan"]["preparer_actor_id"], row["issue_reviewer_id"]}:
-            raise FinancePostingError("stock_sales_sod_denied", "Stock delivery posting requires a third human distinct from its preparer and reviewer.")
+        require_stock_posting_duties(actor.user_id, row["issue_plan"]["preparer_actor_id"], row["issue_reviewer_id"])
         self._stock_lock(row)
         self._fifo_lock(row)
         plan = row["issue_plan"]
@@ -393,6 +393,7 @@ class PostgresStockSalesRepository:
                 self.ar.approve_invoice(invoice["id"], expected_version=invoice["row_version"], actor_label=actor.username)
             self.ops.review(plan["id"], expected_plan_digest=plan["plan_digest"], command_id="stock-review:" + command, reason=reason, actor=actor)
             return {}
+        require_stock_posting_duties(actor.user_id, plan["preparer_actor_id"], plan.get("reviewer_actor_id"))
         if operation == "invoice":
             self.ops.post(plan["id"], expected_plan_digest=plan["plan_digest"], command_id="stock-revenue:" + command, reason=reason, actor=actor)
             return {}

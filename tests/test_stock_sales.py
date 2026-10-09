@@ -3,7 +3,7 @@
 import pytest
 
 from reconforge.domain.finance_posting import FinancePostingError
-from reconforge.domain.stock_sales import StockOrder, freeze_fifo, stock_code
+from reconforge.domain.stock_sales import StockOrder, freeze_fifo, require_stock_posting_duties, stock_code
 
 
 def test_stock_discount_and_fractional_quantity_reproduce_exact_minor_units() -> None:
@@ -40,3 +40,12 @@ def test_retained_native_number_replays_without_case_or_length_changes() -> None
     for invalid in ("ß" * 64, "name with spaces", "a" * 65):
         with pytest.raises(FinancePostingError):
             stock_code(invalid, "number")
+
+
+def test_each_financial_post_requires_three_distinct_retained_humans() -> None:
+    require_stock_posting_duties("poster", "maker", "checker")
+    for actor, preparer, reviewer in (("maker", "maker", "checker"), ("checker", "maker", "checker"),
+                                      ("poster", "maker", "maker"), ("poster", "maker", None), ("", "maker", "checker")):
+        with pytest.raises(FinancePostingError) as refusal:
+            require_stock_posting_duties(actor, preparer, reviewer)
+        assert refusal.value.code == "stock_sales_sod_denied"

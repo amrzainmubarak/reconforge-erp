@@ -399,6 +399,16 @@ BEGIN
   OR invoice.invoice_date::text IS DISTINCT FROM d.invoice_parameters->>'invoice_date'
   OR invoice.due_date::text IS DISTINCT FROM d.invoice_parameters->>'due_date'
   OR reviewed IS DISTINCT FROM(s>=8) OR posted IS DISTINCT FROM(s>=9)
+  OR NOT EXISTS(SELECT 1 FROM reconforge.stock_sales_events ev WHERE ev.tenant_id=t AND ev.order_id=d.id
+    AND ev.operation='prepare-invoice' AND ev.actor_id=p.preparer_actor_id)
+  OR(s>=8 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews rv
+    JOIN reconforge.stock_sales_events ev ON ev.tenant_id=rv.tenant_id AND ev.order_id=d.id AND ev.operation='review-invoice'
+    AND ev.actor_id=rv.reviewer_actor_id WHERE rv.tenant_id=t AND rv.plan_id=p.id AND rv.reviewer_actor_id<>p.preparer_actor_id))
+  OR(s>=9 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links lk
+    JOIN reconforge.operational_finance_reviews rv ON rv.tenant_id=lk.tenant_id AND rv.plan_id=lk.plan_id
+    JOIN reconforge.stock_sales_events ev ON ev.tenant_id=lk.tenant_id AND ev.order_id=d.id AND ev.operation='invoice'
+    AND ev.actor_id=lk.posted_actor_id WHERE lk.tenant_id=t AND lk.plan_id=p.id
+    AND lk.posted_actor_id<>p.preparer_actor_id AND lk.posted_actor_id<>rv.reviewer_actor_id))
   OR NOT reconforge.sales_revenue_policy_matches(t,d.source->'monetary_policy',invoice.currency_code,invoice.currency_precision,
     invoice.currency_rounding_policy,invoice.currency_registry_version,invoice.currency_registry_digest)
   OR EXISTS(SELECT 1 FROM reconforge.ar_receipt_allocations WHERE tenant_id=t AND invoice_id=d.invoice_id AND s<>12)
@@ -417,6 +427,16 @@ BEGIN
   posted:=EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=t AND plan_id=p.id);
   IF p IS NULL OR(p.source_kind,p.source_id,p.amount_minor,p.currency_code) IS DISTINCT FROM('ARReceipt'::text,d.invoice_id,d.total_minor,d.currency_code)
   OR reviewed IS DISTINCT FROM(s>=11) OR posted IS DISTINCT FROM(s=12)
+  OR NOT EXISTS(SELECT 1 FROM reconforge.stock_sales_events ev WHERE ev.tenant_id=t AND ev.order_id=d.id
+    AND ev.operation='prepare-collection' AND ev.actor_id=p.preparer_actor_id)
+  OR(s>=11 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_reviews rv
+    JOIN reconforge.stock_sales_events ev ON ev.tenant_id=rv.tenant_id AND ev.order_id=d.id AND ev.operation='review-collection'
+    AND ev.actor_id=rv.reviewer_actor_id WHERE rv.tenant_id=t AND rv.plan_id=p.id AND rv.reviewer_actor_id<>p.preparer_actor_id))
+  OR(s=12 AND NOT EXISTS(SELECT 1 FROM reconforge.operational_finance_links lk
+    JOIN reconforge.operational_finance_reviews rv ON rv.tenant_id=lk.tenant_id AND rv.plan_id=lk.plan_id
+    JOIN reconforge.stock_sales_events ev ON ev.tenant_id=lk.tenant_id AND ev.order_id=d.id AND ev.operation='collect'
+    AND ev.actor_id=lk.posted_actor_id WHERE lk.tenant_id=t AND lk.plan_id=p.id
+    AND lk.posted_actor_id<>p.preparer_actor_id AND lk.posted_actor_id<>rv.reviewer_actor_id))
   OR d.collection_parameters->>'receipt_number' !~'^[A-Z0-9][A-Z0-9._-]{0,63}$' THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Cash preparation/review differs from native owner phase.';
   END IF;

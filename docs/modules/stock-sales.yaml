@@ -16,6 +16,8 @@ domain_invariants:
   - one frozen issue owner per scoped FIFO item
   - independent human order and finance approval
   - COGS poster differs from both the FIFO preparer and reviewer
+  - Revenue and cash posters differ from both their retained Operational Finance preparer and reviewer
+  - Immutable Stock stage actors match the native financial preparation, review and posting actors
   - native stock, FIFO consumption and COGS publish in one PostgreSQL transaction
   - AR and cash source phases and posting evidence close in both directions
   - exact retained actor, scope, payload, version and acknowledgement replay

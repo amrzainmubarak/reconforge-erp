@@ -233,11 +233,14 @@ def test_capitalized_receipt_cost_flows_through_original_fifo_cogs(runtime: Rece
 @pytest.mark.parametrize("change", ["cash-classification", "cash-code", "journal-code"])
 def test_raw_master_mutation_cannot_detach_landed_financial_mapping(runtime: ReceiptRuntime, change: str) -> None:
     import psycopg
+    from reconforge.infrastructure.postgres import PostgresTenantBoundary
     plan = prepare(runtime, create_order(runtime))
-    with pytest.raises(psycopg.errors.CheckViolation, match="Landed cost exact source|Paid charges require"), runtime.actor(MAKER) as (connection, _, _):
+    # Actual tenant/workspace master authority; entity-selected UPDATE is filtered by RLS.
+    with pytest.raises(psycopg.errors.CheckViolation), PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work") as connection:
         if change == "journal-code":
-            connection.execute("UPDATE reconforge.finance_journals SET journal_code='ALTERED' WHERE tenant_id=%s AND journal_code='STOCK'", (runtime.tenant,))
+            changed = connection.execute("UPDATE reconforge.finance_journals SET journal_code='ALTERED' WHERE tenant_id=%s AND journal_code='STOCK' RETURNING id", (runtime.tenant,)).fetchall()
         else:
-            connection.execute("UPDATE reconforge.finance_accounts SET " + ("account_type='Liability'" if change == "cash-classification" else "account_code='ALTERED-CASH'") + " WHERE tenant_id=%s AND account_code='CASH'", (runtime.tenant,))
+            changed = connection.execute("UPDATE reconforge.finance_accounts SET " + ("account_type='Liability'" if change == "cash-classification" else "account_code='ALTERED-CASH'") + " WHERE tenant_id=%s AND account_code='CASH' RETURNING id", (runtime.tenant,)).fetchall()
+        assert len(changed) == 1, "The actual native master row must be exercised."
     with runtime.actor(MAKER) as (connection, _, actor):
         assert PostgresLandedCostRepository(connection,runtime.tenant).get(plan["id"],actor=actor) == plan

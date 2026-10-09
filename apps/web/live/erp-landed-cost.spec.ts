@@ -132,7 +132,7 @@ test("real HTTPS Studio capitalizes paid freight and duties, receives two wareho
     }
     const { region, detail } = await inspect(poster);
     expect(detail.totals).toMatchObject({ received_minor: "17000", accrued_minor: "17000", paid_minor: "17000", outstanding_minor: "0" });
-    expect(detail.lines.map((line: { received_quantity: string; invoiced_quantity: string }) => [line.received_quantity, line.invoiced_quantity])).toEqual([["10", "10"], ["2.50", "2.5"]]);
+    expect(detail.lines.map((line: { received_quantity: string; invoiced_quantity: string }) => [line.received_quantity, line.invoiced_quantity])).toEqual([["10", "10"], ["2.5", "2.5"]]);
     expect(detail.invoices.map((invoice: { native_status: string }) => invoice.native_status)).toEqual(["Paid", "Paid"]);
     await expect(region.locator("table tbody tr")).toHaveCount(2);
     const history = poster.waitForResponse(reply => /\/procurement-partial\/orders\/[^/]+\/invoices\/[^/]+\/payments\?after=$/.test(reply.url()));

@@ -578,16 +578,16 @@ _stock_close = _original_close.replace(
   PERFORM reconforge.stock_sales_close(t,d.id);
  ELSIF retained->>'owner_kind'='Sales' THEN""", 1,
 )
-POSTGRES_STOCK_SALES_SCHEMA_SQL += _stock_admit + "\n" + _stock_close
+POSTGRES_STOCK_SALES_SCHEMA_SQL = "\n".join((POSTGRES_STOCK_SALES_SCHEMA_SQL.removesuffix("\n"), _stock_admit, _stock_close))
 
-DOWNGRADE_STOCK_SALES_SQL = r"""
+DOWNGRADE_STOCK_SALES_SQL = "\n".join((r"""
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.stock_sales_orders)
  OR EXISTS(SELECT 1 FROM reconforge.ar_idempotency_keys WHERE response_json->>'owner_kind'='StockSales') THEN
   RAISE EXCEPTION USING ERRCODE='23514',MESSAGE='StockSales history exists; restore the preserved backup instead of removing immutable financial history.';
  END IF;
 END $$;
-""" + _original_admit + "\n" + _original_close + r"""
+""".removesuffix("\n"), _original_admit, _original_close, r"""
 DO $$ DECLARE n TEXT; BEGIN FOREACH n IN ARRAY ARRAY['inventory_movements','inventory_movement_lines','inventory_valuation_documents','inventory_valuation_lines',
  'inventory_cost_layers','inventory_layer_consumptions','finance_entries','finance_entry_lines','finance_posting_effects',
  'ar_invoices','ar_invoice_lines','ar_receipts','ar_receipt_allocations','operational_finance_plans','operational_finance_reviews','operational_finance_links','operational_finance_commands'] LOOP
@@ -602,4 +602,4 @@ DROP TABLE reconforge.stock_sales_orders;
 DROP FUNCTION reconforge.stock_sales_native_close(),reconforge.stock_sales_native_lock(),reconforge.stock_sales_close_trigger(),
  reconforge.stock_sales_close(TEXT,TEXT),reconforge.stock_sales_admit(),reconforge.stock_sales_capacity(TEXT,TEXT,TEXT,TEXT,TEXT),
  reconforge.stock_sales_protect(),reconforge.stock_sales_fifo_value(BIGINT,BIGINT,BIGINT),reconforge.stock_sales_stage(TEXT);
-"""
+""".removeprefix("\n")))

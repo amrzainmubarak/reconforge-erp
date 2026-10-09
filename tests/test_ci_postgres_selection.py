@@ -74,6 +74,7 @@ def test_live_ci_general_gate_collects_every_advertised_contract() -> None:
     assert {
         "tests/test_postgres_foundation.py::test_live_postgres_rls_hides_other_tenants",
         "tests/test_postgres_finance_core.py::test_live_postgres_finance_core_lifecycle_exactness_and_rls",
+        "tests/test_api_server_finance_core_live.py::test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_exact",
         "tests/test_postgres_inventory_core.py::test_live_postgres_inventory_lifecycle_stock_controls_and_rls",
         "tests/test_alembic_postgres.py::test_alembic_upgrade_command_is_available_when_server_extra_is_installed",
     } <= nodes

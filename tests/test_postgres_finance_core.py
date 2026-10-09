@@ -29,6 +29,7 @@ from reconforge.infrastructure.postgres_master_data import (
     POSTGRES_MASTER_DATA_SCHEMA_SQL,
 )
 from reconforge.platform.common import PlatformError
+from tests.postgres_test_hygiene import grant_native_owner_reads
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -289,6 +290,10 @@ def test_live_postgres_finance_core_lifecycle_exactness_and_rls() -> None:
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
             )
+            grant_native_owner_reads(admin, app_user, (
+                "operational_finance_plans", "financial_opening_plans",
+                "stock_sales_orders", "stock_sales_issue_claims",
+            ))
             admin.execute(
                 "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
                 (tenant_a, tenant_a, tenant_b, tenant_b),

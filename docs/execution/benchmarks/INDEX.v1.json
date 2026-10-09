@@ -187,6 +187,20 @@
       "profile_id": "postgres-durable-job-load/backpressure-tier-v1 + postgres-durable-job-soak/repeated-small-tier-v1",
       "status": "verified",
       "workload_family": "durable_jobs"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-1000-2026-10-09.json",
+      "artifact_sha256": "4c417d6a3a587d469959b12f7b8eabb3ac50765e432c184bf68106814ad296bc",
+      "claim_boundary": "One local single-entity USD profile with 1000 real three-human postings and four workers; warmed alternating same-history native read comparison, not HTTP TPS, all-ERP capacity, million-effect reporting, SLO, or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/1000-three-human-v1",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
     }
   ],
   "index_id": "benchmark-evidence-index-v1",

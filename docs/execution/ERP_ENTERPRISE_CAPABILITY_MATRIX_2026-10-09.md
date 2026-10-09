@@ -62,6 +62,15 @@ limit or acceptance of the later integrated source. The separately measured
 and must retain its own baseline and digest. Final measurements require a
 clean fixed integrated commit and a fresh evidence directory.
 
+The clean `347d3714` 100/1,000-entry run completed in716.203s. Its1,000
+genuine cycles produced independently expected493,671,004minor units with
+zero errors,1.475595cycles/s and2.621/3.236/4.186s p50/p95/p99 cycle latency.
+On that same immutable1,000-effect history, three alternating warmed read
+repetitions measured median6.867102s→0.464948s,14.769607x, with3,000→20
+client execute calls. The indexed raw packet records the larger bounded-page
+Python heap, database settings and final resource sample; no peak-memory,
+million-effect, equivalent-vendor or production sizing claim follows.
+
 Next work is ordered by a measurable complete cycle: individual AR partial
 receipts and return-credit/refund closure; configurable procurement variance
 and landed-cost approval; same-day high-volume FIFO scalability with stable

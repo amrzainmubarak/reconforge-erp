@@ -133,7 +133,10 @@ def main() -> int:
             report["revision"] = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
             report["postgres_configuration"] = dict(admin.execute(
                 "SELECT name,setting FROM pg_settings WHERE name=ANY(%s)",
-                (["shared_buffers", "work_mem", "max_connections", "fsync", "synchronous_commit", "full_page_writes", "wal_level"],)).fetchall())
+                (["shared_buffers", "work_mem", "max_connections", "fsync", "synchronous_commit", "full_page_writes", "wal_level", "track_io_timing"],)).fetchall())
+            report["postgres_io_timing_interpretation"] = (
+                "blk_read_time_ms/blk_write_time_ms are cumulative pg_stat_database counters; "
+                "zero milliseconds with track_io_timing=off do not prove zero I/O latency; no I/O peak is measured")
         with psycopg.connect(app_dsn) as connection:
             flags = list(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone())
             if flags != [False, False]:
@@ -226,16 +229,23 @@ def main() -> int:
         report["posting"]["ordered_effect_ids"] = [row[0] for row in posted]
         if failures:
             raise RuntimeError("Native posting profile failed; retained successful and failed admissions are not acceptance")
-        profiles = []
+        profiles: list[dict[str, object]] = []
+        report["verified_reads"] = profiles
         for count in counts:
             if time.monotonic() >= deadline:
                 raise TimeoutError("Explicit native benchmark resource budget exhausted")
-            with runtime.actor("browser-checker") as (connection, _, actor):
-                measured = measure_verified_reads(connection, runtime.tenant, [row[0] for row in posted[:count]], actor, repetitions=args.repetitions)
-            if measured["samples"]["bounded_batch"][0]["debit_minor"] != expected_totals(args.seed, count)["debit_minor"]:
-                raise AssertionError("Measured retained history differs from independent profile total")
-            profiles.append({"count": count, "expected": expected_totals(args.seed, count), **measured})
-        report["verified_reads"] = profiles
+            profile = {"count": count, "expected": expected_totals(args.seed, count), "status": "running"}
+            profiles.append(profile)
+            try:
+                with runtime.actor("browser-checker") as (connection, _, actor):
+                    measured = measure_verified_reads(connection, runtime.tenant, [row[0] for row in posted[:count]], actor,
+                        repetitions=args.repetitions, evidence_sink=profile)
+                if measured["samples"]["bounded_batch"][0]["debit_minor"] != expected_totals(args.seed, count)["debit_minor"]:
+                    raise AssertionError("Measured retained history differs from independent profile total")
+                profile["status"] = "passed"
+            except Exception as exc:
+                profile.update(status="failed", failure={"exception_type": type(exc).__name__})
+                raise
         with psycopg.connect(admin_dsn) as admin:
             report["database_bytes"] = int(admin.execute("SELECT pg_database_size(current_database())").fetchone()[0])
         report["container_resources_final_sample"] = run(["docker", "stats", "--no-stream", "--format", "{{json .}}", container]).stdout.strip()

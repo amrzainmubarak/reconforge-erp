@@ -2,7 +2,7 @@
 
 UPGRADE_SQL = r"""
 CREATE FUNCTION reconforge.collection_invoice_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $ca$
-DECLARE h RECORD; p RECORD; allocated NUMERIC; paid NUMERIC;
+DECLARE h RECORD; retained_plan RECORD; allocated NUMERIC; paid NUMERIC;
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM reconforge.commercial_collection_plans WHERE tenant_id=t AND source_id=i) THEN RETURN; END IF;
  SELECT * INTO h FROM reconforge.ar_invoices WHERE tenant_id=t AND id=i;
@@ -15,8 +15,8 @@ BEGIN
   WHERE p.tenant_id=t AND p.source_id=i AND p.phase=2 AND l.receipt_id=a.receipt_id AND p.amount_minor=a.amount_minor)) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='commercial_collection_owner_phase',MESSAGE='Invoice status, native allocations and reviewed cash effects must agree';
  END IF;
- FOR p IN SELECT id FROM reconforge.commercial_collection_plans WHERE tenant_id=t AND source_id=i LOOP
-  PERFORM reconforge.collection_close(t,p.id);
+ FOR retained_plan IN SELECT id FROM reconforge.commercial_collection_plans WHERE tenant_id=t AND source_id=i LOOP
+  PERFORM reconforge.collection_close(t,retained_plan.id);
  END LOOP;
 END $ca$;
 CREATE FUNCTION reconforge.collection_command_admit() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $ca$

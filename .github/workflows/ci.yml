@@ -63,6 +63,9 @@ jobs:
           uv run --no-sync pytest
           --ignore=tests/test_postgres_stock_sales.py
           --ignore=tests/test_postgres_stock_sales_api.py
+          --ignore=tests/test_postgres_stock_commerce.py
+          --ignore=tests/test_postgres_stock_commerce_api.py
+          --ignore=tests/test_postgres_stock_commerce_migrations.py
 
       - name: CLI smoke
         run: |
@@ -534,7 +537,7 @@ jobs:
               uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q
               ;;
             finance-posting)
-              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_postgres_operational_finance.py tests/test_postgres_operational_finance_api.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
+              uv run --no-sync pytest tests/test_postgres_finance_posting.py tests/test_postgres_finance_posting_batches.py tests/test_postgres_finance_posting_concurrency.py tests/test_postgres_finance_posting_api.py tests/test_postgres_finance_posting_restore.py tests/test_postgres_finance_balances.py tests/test_postgres_operational_finance.py tests/test_postgres_operational_finance_api.py tests/test_receivables_cash_contract.py tests/test_receivables_cash_policy.py -q
               ;;
             inventory-payables)
               uv run --no-sync pytest tests/test_postgres_inventory_receipt_posting.py tests/test_postgres_inventory_receipt_api.py tests/test_postgres_inventory_receipt_migration.py tests/test_postgres_sales_revenue.py tests/test_postgres_sales_owner_closure.py tests/test_postgres_procurement_operations.py -q
@@ -546,6 +549,7 @@ jobs:
               ;;
             erp-expansion)
               uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
+              uv run --no-sync pytest tests/test_postgres_stock_commerce.py tests/test_postgres_stock_commerce_api.py tests/test_postgres_stock_commerce_migrations.py tests/test_postgres_procurement_multiline.py -q
               ;;
             finance-reporting)
               uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q

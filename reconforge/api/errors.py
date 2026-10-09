@@ -34,7 +34,8 @@ def financial_owner_phase_conflict(exc: Exception) -> bool:
         if getattr(current, "sqlstate", None) == "23514" and getattr(
             getattr(current, "diag", None), "constraint_name", None
         ) in {"sales_revenue_owner_phase", "procurement_owner_phase", "stock_sales_owner_phase",
-              "procurement_partial_owner_phase", "financial_reporting_owner_phase", "financial_installment_owner_phase"}:
+              "procurement_partial_owner_phase", "financial_reporting_owner_phase", "financial_installment_owner_phase",
+              "stock_commerce_owner_phase"}:
             return True
         if not isinstance(current, PostgresReceivablesError) or current.__cause__ is None:
             return False

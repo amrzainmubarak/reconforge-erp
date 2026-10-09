@@ -271,9 +271,13 @@ application_services:
     service: ProcurementPartialApplicationService
     status: backend_neutral
     adapter: reconforge.infrastructure.postgres_procurement_partial.PostgresProcurementPartialRepository
+  - file: stock_commerce.py
+    service: StockCommerceApplicationService
+    status: backend_neutral
+    adapter: reconforge.infrastructure.postgres_stock_commerce.PostgresStockCommerceRepository
 summary:
   platform_total: 21
   direct_sqlite: 0
   partial_repository: 0
   compatibility_adapter: 21
-  backend_neutral_application: 59
+  backend_neutral_application: 60

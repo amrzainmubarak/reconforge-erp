@@ -293,6 +293,7 @@ def test_live_postgres_finance_core_lifecycle_exactness_and_rls() -> None:
             grant_native_owner_reads(admin, app_user, (
                 "operational_finance_plans", "financial_opening_plans",
                 "stock_sales_orders", "stock_sales_issue_claims",
+                "stock_commerce_orders", "stock_commerce_tranches",
             ))
             admin.execute(
                 "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",

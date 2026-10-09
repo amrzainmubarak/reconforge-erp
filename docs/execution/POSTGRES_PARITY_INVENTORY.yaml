@@ -4,7 +4,7 @@ claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0115_pg_financial_installments"
+current_source_migration_head: "0117_pg_procurement_multiline"
 production_foundation_review:
   executed_at: "2026-10-03"
   evidence: "PRODUCTION_AUDIT_2026-10-03.md"
@@ -349,10 +349,11 @@ boundaries:
   - {file: financial_reporting.py, service: FinancialReportingApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_financial_reporting.PostgresFinancialReportingRepository, test: tests/test_postgres_financial_reporting.py, additional_tests: [tests/test_postgres_financial_reporting_api.py], ci_shard: finance-reporting, risk: first_history_opening_classified_bounded_statements_no_statutory_cashflow}
   - {file: stock_sales.py, service: StockSalesApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_stock_sales.PostgresStockSalesRepository, test: tests/test_postgres_stock_sales.py, additional_tests: [tests/test_postgres_stock_sales_api.py], ci_shard: erp-expansion, risk: untracked_single_line_functional_currency_full_stock_to_cash}
   - {file: procurement_partial.py, service: ProcurementPartialApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_procurement_partial.PostgresProcurementPartialRepository, test: tests/test_postgres_procurement_partial.py, additional_tests: [tests/test_postgres_procurement_partial_api.py], ci_shard: erp-expansion, risk: untracked_single_line_zero_tax_partial_receipts_invoices_and_payments}
+  - {file: stock_commerce.py, service: StockCommerceApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_stock_commerce.PostgresStockCommerceRepository, test: tests/test_postgres_stock_commerce.py, additional_tests: [tests/test_postgres_stock_commerce_api.py, tests/test_postgres_stock_commerce_migrations.py], ci_shard: erp-expansion, risk: functional_currency_untracked_products_full_payment_per_tranche_no_customer_return}
 summary:
-  total: 59
+  total: 60
   live_verified_current: 20
-  live_test_available: 35
+  live_test_available: 36
   absent: 0
   contract_only: 1
   not_applicable: 3

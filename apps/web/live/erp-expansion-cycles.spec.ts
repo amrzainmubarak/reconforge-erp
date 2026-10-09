@@ -132,6 +132,7 @@ test("normal wire HTTPS opening, two stock/AP tranches, four installments and FI
     const openingReviewed = checker.waitForResponse(reply => /\/financial-reporting\/openings\/[^/]+\/review$/.test(reply.url()));
     await checker.getByRole("button", { name: "Review opening balances", exact: true }).click();
     expect((await openingReviewed).status()).toBe(200);
+    await expect(checker.getByRole("button", { name: "Post opening balances", exact: true })).toBeDisabled();
     await reporting(poster);
     await poster.getByLabel("Recorded reason", { exact: true }).fill("Publish actual opening balances");
     const openingPosted = poster.waitForResponse(reply => /\/financial-reporting\/openings\/[^/]+\/post$/.test(reply.url()));
@@ -191,6 +192,7 @@ test("normal wire HTTPS opening, two stock/AP tranches, four installments and FI
         const paymentReviewed = checker.waitForResponse(reply => /\/financial-installments\/plans\/[^/]+\/review$/.test(reply.url()));
         await region.getByRole("button", { name: "Review installment", exact: true }).click();
         expect((await paymentReviewed).status()).toBe(200);
+        await expect(region.getByRole("button", { name: "Post installment", exact: true })).toBeDisabled();
         region = await inspectPartial(poster);
         await region.getByLabel("Review or posting reason", { exact: true }).fill("Publish exact installment");
         const paymentPosted = poster.waitForResponse(reply => /\/financial-installments\/plans\/[^/]+\/post$/.test(reply.url()));

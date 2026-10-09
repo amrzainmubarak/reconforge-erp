@@ -1,0 +1,13 @@
+"""Connection-free contract for reviewed paid landed-cost receiving."""
+from typing import Any, Protocol
+
+from reconforge.domain.finance_posting import PostingActor
+from reconforge.domain.landed_cost import LandedCostPreparation
+
+
+class LandedCostRepository(Protocol):
+    def prepare(self, request: LandedCostPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]: ...
+    def get(self, identifier: str, *, actor: PostingActor) -> dict[str, Any]: ...
+    def list_for_order(self, order_id: str, *, actor: PostingActor, after: str = "") -> dict[str, Any]: ...
+    def act(self, identifier: str, operation: str, *, expected_plan_digest: str, command_id: str,
+            reason: str, actor: PostingActor) -> dict[str, Any]: ...

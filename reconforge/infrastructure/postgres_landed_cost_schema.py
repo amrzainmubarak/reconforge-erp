@@ -1,4 +1,5 @@
 """Immutable landed cost allocations and bidirectional native effect closure."""
+from collections.abc import Mapping
 from typing import Any
 
 UPGRADE_SQL = r"""
@@ -64,8 +65,9 @@ BEGIN
   IF NEW.phase<>0 THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Landed costs are born Prepared'; END IF;
   RETURN NEW;
  END IF;
- IF TG_TABLE_NAME='landed_cost_plans' AND TG_OP='UPDATE' AND NEW.phase=OLD.phase+1
- AND (to_jsonb(NEW)-'phase')=(to_jsonb(OLD)-'phase') THEN RETURN NEW; END IF;
+ IF TG_TABLE_NAME='landed_cost_plans' AND TG_OP='UPDATE' THEN
+  IF NEW.phase=OLD.phase+1 AND (to_jsonb(NEW)-'phase')=(to_jsonb(OLD)-'phase') THEN RETURN NEW; END IF;
+ END IF;
  IF TG_OP='INSERT' THEN RETURN NEW; END IF;
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Landed cost history is immutable';
 END $lc$;
@@ -77,6 +79,22 @@ CREATE FUNCTION reconforge.landed_cost_event(t TEXT,i TEXT,a TEXT,b TEXT,actor T
  AND x.metadata_json=jsonb_build_object('plan_digest',seal) AND y.event_type=$6 AND y.aggregate_type='landed_cost' AND y.aggregate_id=i
  AND y.payload=jsonb_build_object('plan_digest',seal,'audit_event_id',a)
  AND (y.workspace_id,y.organization_id,y.legal_entity_id)=(p.workspace_id,p.organization_id,p.legal_entity_id))
+$lc$;
+CREATE FUNCTION reconforge.landed_cost_ack(t TEXT,i TEXT,stage INTEGER) RETURNS JSONB
+ LANGUAGE sql STABLE SET search_path=pg_catalog AS $lc$
+ SELECT jsonb_build_object('id',p.id,'order_id',p.order_id,'number',p.payload#>>'{request,number}',
+ 'workspace_id',p.workspace_id,'organization_id',p.organization_id,'legal_entity_id',p.legal_entity_id,
+ 'phase',stage,'status',CASE stage WHEN 0 THEN 'Prepared' WHEN 1 THEN 'Reviewed' ELSE 'Posted' END,
+ 'plan_digest',p.plan_digest,'freight_minor',p.payload#>>'{request,freight_minor}','duty_minor',p.payload#>>'{request,duty_minor}',
+ 'amount_minor',p.amount_minor::text,'currency_code',p.payload#>>'{snapshot,entry,currency_code}','entry_id',p.entry_id,
+ 'preparer_actor_id',p.payload->>'preparer_actor_id','reviewer_actor_id',CASE WHEN stage>=1 THEN r.reviewer_actor_id ELSE NULL END,
+ 'posted_actor_id',CASE WHEN stage=2 THEN l.posted_actor_id ELSE NULL END,'posting_effect_id',CASE WHEN stage=2 THEN l.posting_effect_id ELSE NULL END,
+ 'allocations',(SELECT jsonb_agg((to_jsonb(a)-ARRAY['tenant_id','plan_id','order_id'])||jsonb_build_object(
+ 'base_minor',a.base_minor::text,'freight_minor',a.freight_minor::text,'duty_minor',a.duty_minor::text,'receipt_plan_id',d.receipt_plan_id,'stage',stage)
+ ORDER BY a.sequence) FROM reconforge.landed_cost_allocations a JOIN reconforge.procurement_partial_receipts d
+ ON d.tenant_id=a.tenant_id AND d.id=a.receipt_id WHERE a.tenant_id=t AND a.plan_id=i))
+ FROM reconforge.landed_cost_plans p LEFT JOIN reconforge.landed_cost_reviews r ON r.tenant_id=p.tenant_id AND r.plan_id=p.id
+ LEFT JOIN reconforge.landed_cost_links l ON l.tenant_id=p.tenant_id AND l.plan_id=p.id WHERE p.tenant_id=t AND p.id=i
 $lc$;
 CREATE FUNCTION reconforge.landed_cost_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
 DECLARE p RECORD;o RECORD;e RECORD;r RECORD;l RECORD;f RECORD;a RECORD;d RECORD;n RECORD;c RECORD;header JSONB;lines JSONB;allocations JSONB;
@@ -173,8 +191,9 @@ BEGIN
  OR c.request_json IS DISTINCT FROM jsonb_build_object('operation',c.operation,'actor_id',c.actor_id,'request',expected_request)
  OR reconforge.irp_digest(c.request_json) IS DISTINCT FROM c.request_digest
  OR c.response_json->>'id' IS DISTINCT FROM i OR c.response_json->>'plan_digest' IS DISTINCT FROM p.plan_digest
- OR (c.response_json->>'phase')::integer<>CASE c.operation WHEN 'prepare' THEN 0 WHEN 'review' THEN 1 ELSE 2 END
- OR c.response_json->>'status'<>CASE c.operation WHEN 'prepare' THEN 'Prepared' WHEN 'review' THEN 'Reviewed' ELSE 'Posted' END THEN
+ OR c.response_json IS DISTINCT FROM reconforge.landed_cost_ack(t,i,CASE c.operation WHEN 'prepare' THEN 0 WHEN 'review' THEN 1 ELSE 2 END)
+ OR (c.response_json->>'phase')::integer<>(CASE c.operation WHEN 'prepare' THEN 0 WHEN 'review' THEN 1 ELSE 2 END)
+ OR c.response_json->>'status'<>(CASE c.operation WHEN 'prepare' THEN 'Prepared' WHEN 'review' THEN 'Reviewed' ELSE 'Posted' END) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Retry acknowledgement requires its exact source, actor and phase'; END IF;
  END LOOP;
  IF (SELECT count(*) FROM reconforge.landed_cost_commands WHERE tenant_id=t AND plan_id=i)<>p.phase+1 THEN
@@ -244,6 +263,7 @@ DROP FUNCTION reconforge.pp_verify_multiline(TEXT,TEXT);
 ALTER FUNCTION reconforge.pp_verify_multiline_pre_landed(TEXT,TEXT) RENAME TO pp_verify_multiline;
 DROP FUNCTION reconforge.landed_cost_reverse_close();
 DROP FUNCTION reconforge.landed_cost_close(TEXT,TEXT);
+DROP FUNCTION reconforge.landed_cost_ack(TEXT,TEXT,INTEGER);
 DROP FUNCTION reconforge.landed_cost_event(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 DROP TABLE reconforge.landed_cost_commands,reconforge.landed_cost_links,reconforge.landed_cost_reviews,reconforge.landed_cost_allocations,reconforge.landed_cost_plans;
 DROP FUNCTION reconforge.landed_cost_protect();
@@ -251,7 +271,8 @@ DROP FUNCTION reconforge.landed_cost_protect();
 
 
 def install_postgres_landed_cost(connection: Any) -> None:
-    if connection.execute("SELECT to_regclass('reconforge.landed_cost_plans')").fetchone()[0] is not None:
+    row = connection.execute("SELECT to_regclass('reconforge.landed_cost_plans') AS installed").fetchone()
+    if (row["installed"] if isinstance(row, Mapping) else row[0]) is not None:
         return
     with connection.transaction():
         connection.execute(UPGRADE_SQL)

@@ -170,10 +170,10 @@ class PostgresLandedCostRepository:
                 VALUES(%s,%s,%s,%s,%s,%s,%s,%s,0,%s::jsonb,%s,%s,%s)""",
                 (self.tenant_id, identifier, parent["id"], parent["workspace_id"], parent["organization_id"], parent["legal_entity_id"],
                  entry["id"], amount, canonical_json(payload), seal, audit, outbox))
-            for allocation in retained:
+            for captured in retained:
                 self.connection.execute("""INSERT INTO reconforge.landed_cost_allocations(tenant_id,plan_id,order_id,sequence,order_line_id,
                     quantity_text,base_minor,freight_minor,duty_minor,receipt_id) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                    (self.tenant_id, identifier, parent["id"], *allocation.values()))
+                    (self.tenant_id, identifier, parent["id"], *captured.values()))
             for index, (line, part, _) in enumerate(parts, start=1):
                 current = self.purchase._order(parent["id"])
                 self.purchase.prepare_receipt_line(parent["id"], line["id"], part, expected_version=current["row_version"],

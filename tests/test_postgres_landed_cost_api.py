@@ -33,6 +33,10 @@ def test_real_api_landed_bundle_posts_stock_cost_and_cash_atomically(receipt_dat
         assert plan["amount_minor"] == "1001" and len(plan["allocations"]) == 2
         invalid = maker[0].post(LANDED + "/plans", headers=maker[1], json={**payload, "freight_minor": 777.0})
         assert invalid.status_code == 422
+        current = maker[0].get(ROOT + "/orders/" + view["order"]["id"], headers=maker[1]).json()
+        duplicate = maker[0].post(LANDED + "/plans", headers=maker[1], json={**payload,
+            "command_id": "different-command-same-number", "expected_version": current["order"]["row_version"]})
+        assert duplicate.status_code == 409 and duplicate.json()["error"]["code"] == "landed_cost_number_conflict"
         for operation, client in (("review", checker), ("post", poster)):
             plan = post(client, LANDED + "/plans/" + plan["id"] + "/" + operation,
                 {"command_id": "http-lc-" + operation, "expected_plan_digest": plan["plan_digest"], "reason": "Independent paid charge and receiving evidence"})

@@ -233,6 +233,7 @@ def test_capitalized_receipt_cost_flows_through_original_fifo_cogs(runtime: Rece
 @pytest.mark.parametrize("change", ["cash-classification", "cash-code", "journal-code"])
 def test_raw_master_mutation_cannot_detach_landed_financial_mapping(runtime: ReceiptRuntime, change: str) -> None:
     import psycopg
+
     from reconforge.infrastructure.postgres import PostgresTenantBoundary
     plan = prepare(runtime, create_order(runtime))
     # Actual tenant/workspace master authority; entity-selected UPDATE is filtered by RLS.

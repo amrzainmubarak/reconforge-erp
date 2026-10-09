@@ -122,6 +122,9 @@ class PostgresLandedCostRepository:
             if self.connection.execute("SELECT count(*) n FROM reconforge.landed_cost_plans WHERE tenant_id=%s AND order_id=%s",
                                        (self.tenant_id, request.order_id)).fetchone()["n"] >= 200:
                 raise ProcurementPartialError("landed_cost_limit", "The order exceeds its 200-bundle evidence budget.")
+            if self.connection.execute("SELECT 1 FROM reconforge.landed_cost_plans WHERE tenant_id=%s AND order_id=%s AND payload#>>'{request,number}'=%s",
+                                       (self.tenant_id, request.order_id, request.number)).fetchone() is not None:
+                raise ProcurementPartialError("landed_cost_number_conflict", "This paid-charge number already belongs to retained evidence for the purchase.")
             parts = []
             for allocation in sorted(request.lines, key=lambda value: value.line_id):
                 line = self.purchase._one("SELECT * FROM reconforge.procurement_partial_order_lines WHERE tenant_id=%s AND order_id=%s AND id=%s",

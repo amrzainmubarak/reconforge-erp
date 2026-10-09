@@ -140,9 +140,9 @@ def pay_invoice(runtime: ReceiptRuntime, invoice_id: str, amount: int, command: 
     return post(runtime, review(runtime, plan, command), command)
 
 
-def enterprise_digest(connection: Any, tenant: str) -> str:
+def enterprise_digest(connection: Any, tenant: str, *, include_audit: bool = True) -> str:
     from psycopg import sql
-    captured = {"native": partial_publication_digest(connection, tenant)}
+    captured = {"native": partial_publication_digest(connection, tenant, include_audit=include_audit)}
     for table in ("procurement_partial_order_lines", "procurement_partial_invoice_lines"):
         captured[table] = [row["payload"] for row in connection.execute(sql.SQL("SELECT to_jsonb(t) AS payload FROM reconforge.{} t WHERE tenant_id=%s ORDER BY to_jsonb(t)::text")
             .format(sql.Identifier(table)), (tenant,)).fetchall()]

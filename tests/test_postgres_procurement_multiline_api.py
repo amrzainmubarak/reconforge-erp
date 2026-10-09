@@ -71,6 +71,7 @@ def test_authenticated_multiline_receiving_invoice_partial_payment_and_scoped_pa
 def test_multiline_http_receiving_late_failure_has_no_partial_source_or_effect(
     receipt_database: tuple[str, str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
     from reconforge.infrastructure.postgres_procurement_partial import PostgresProcurementPartialRepository
     from tests.test_postgres_procurement_multiline import action, create_order, prepare_line
     runtime = create_multiline_runtime(receipt_database)
@@ -81,10 +82,14 @@ def test_multiline_http_receiving_late_failure_has_no_partial_source_or_effect(
         original(self, *args, **kwargs)
         raise RuntimeError("Injected real source and financial acknowledgement failure")
     with partial_client(runtime, receipt_database, tmp_path, POSTER) as client:
-        # Login, scope grants and step-up legitimately append identity audit.
-        # Capture the financial/owner/audit baseline after those independent writes.
+        # Central permission decisions intentionally survive failed business writes
+        # in their own audited authorization transaction. Prove their exact append,
+        # the unchanged prior audit prefix, all business rows, and all outbox rows.
         with runtime.actor(MAKER) as (connection, _, _):
-            before = enterprise_digest(connection, runtime.tenant)
+            before = enterprise_digest(connection, runtime.tenant, include_audit=False)
+            audit_before = PostgresAuditEventRepository(connection, runtime.tenant).list()
+            outbox_before = connection.execute("SELECT to_jsonb(t) AS payload FROM reconforge.outbox_events t WHERE tenant_id=%s ORDER BY id",
+                (runtime.tenant,)).fetchall()
         monkeypatch.setattr(PostgresProcurementPartialRepository, "_remember", fail_after_ack)
         failed = client[0].post(ROOT + "/orders/" + view["order"]["id"] + "/commands/receive", headers=client[1],
             json={"command_id": "api-" + str(view["order"]["row_version"]), "expected_version": view["order"]["row_version"],
@@ -93,6 +98,15 @@ def test_multiline_http_receiving_late_failure_has_no_partial_source_or_effect(
         assert "Injected" not in failed.text and "acknowledgement" not in failed.text
         monkeypatch.setattr(PostgresProcurementPartialRepository, "_remember", original)
         with runtime.actor(MAKER) as (connection, _, _):
-            assert enterprise_digest(connection, runtime.tenant) == before
+            assert enterprise_digest(connection, runtime.tenant, include_audit=False) == before
+            assert connection.execute("SELECT to_jsonb(t) AS payload FROM reconforge.outbox_events t WHERE tenant_id=%s ORDER BY id",
+                (runtime.tenant,)).fetchall() == outbox_before
+            audit = PostgresAuditEventRepository(connection, runtime.tenant)
+            events = audit.list()
+            assert events[:len(audit_before)] == audit_before
+            appended = events[len(audit_before):]
+            assert appended and all(event.object_type == "authorization.policy_decision" and event.actor_user_id == "id-" + POSTER
+                and event.action == "evaluated" for event in appended)
+            assert audit.verify().ok
         result = owner_action(client, view, "receive", view["receipts"][0]["id"])
         assert result["receipts"][0]["stage"] == "Posted" and result["totals"]["received_minor"] == "4800"

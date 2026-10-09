@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BrowserSessionProvider, useBrowserSession } from "../browserSession";
 import { budgetIdentity, budgetResponse, budgetScope, budgetSession } from "../budget-control-test-fixtures";
@@ -14,6 +14,22 @@ afterEach(() => vi.unstubAllGlobals());
 describe("enterprise financial workspace", () => {
   it("starts with real identity authentication and no unverified balances", () => { render(<BrowserSessionProvider><EnterpriseFinanceWorkspace locale="en" /></BrowserSessionProvider>); expect(screen.getByRole("heading", { name: "Enterprise finance" })).toBeInTheDocument(); expect(screen.getByRole("form", { name: "Sign in" })).toBeInTheDocument(); expect(screen.getByLabelText("Password")).toHaveAttribute("type", "password"); expect(screen.queryByRole("table")).not.toBeInTheDocument(); });
   it("uses Arabic labels and RTL for the actual financial path", () => { const { container } = render(<BrowserSessionProvider><EnterpriseFinanceWorkspace locale="ar" /></BrowserSessionProvider>); expect(screen.getByRole("heading", { name: "المالية المؤسسية" })).toBeInTheDocument(); expect(container.querySelector("main")).toHaveAttribute("dir", "rtl"); expect(screen.getByLabelText("كلمة المرور")).toHaveAttribute("type", "password"); });
+  it("keeps scope input disabled until the authenticated identity prefill commits", async () => {
+    let resolveIdentity!: (value: Response) => void;
+    const fetchIdentity = vi.fn(() => new Promise<Response>(resolve => { resolveIdentity = resolve; }));
+    vi.stubGlobal("fetch", fetchIdentity);
+    render(<BrowserSessionProvider><Controls /><EnterpriseFinanceWorkspace locale="en" /></BrowserSessionProvider>);
+    fireEvent.click(screen.getByText("Begin fixture"));
+    await waitFor(() => expect(fetchIdentity).toHaveBeenCalledOnce());
+    for (const label of ["Workspace", "Organization", "Legal entity"]) expect(screen.getByLabelText(label)).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Apply scope" })).toBeDisabled();
+    await act(async () => resolveIdentity(budgetResponse(budgetIdentity)));
+    for (const [label, value] of [["Workspace", budgetScope.workspace_id], ["Organization", budgetScope.organization_id], ["Legal entity", budgetScope.legal_entity_id]]) {
+      expect(screen.getByLabelText(label)).toBeEnabled();
+      expect(screen.getByLabelText(label)).toHaveValue(value);
+    }
+    expect(screen.getByRole("button", { name: "Apply scope" })).toBeEnabled();
+  });
   it.each(["en", "ar"] as const)("%s owner refusal explains where to approve without offering an unsafe retry", async locale => {
     const t = (key: Parameters<typeof financeTranslate>[1]) => financeTranslate(locale, key);
     const plan = { api_contract_version: "operational-finance-api-v1", id: "OPS1-source", entry_id: "entry", source_kind: "ARInvoice", source_id: "invoice", status: "Draft", amount_minor: "12000", currency_code: "USD", currency_precision: 2, preparer_actor_id: "maker", reviewer_actor_id: null, review_digest: null, posting_effect_id: null, source_effect_id: null, plan_digest: "a".repeat(64), validation_digest: "b".repeat(64), ...budgetScope, organization_code: "ORG", entity_code: "ENTITY", period_id: "period", posting_date: "2026-10-08", reason: "Actual source", lines: [{ account_id: "ar", debit_minor: "12000", credit_minor: "0" }, { account_id: "revenue", debit_minor: "0", credit_minor: "12000" }], source_json: "{}", snapshot_json: "{}" };
@@ -33,7 +49,7 @@ describe("enterprise financial workspace", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(t("ownerRequired"));
     expect(alert).not.toHaveTextContent(t("conflict"));
-    expect(alert).toHaveFocus();
+    await waitFor(() => expect(alert).toHaveFocus());
     expect(screen.queryByRole("button", { name: t("retry") })).not.toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(writes).toHaveLength(1);

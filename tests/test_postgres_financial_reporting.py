@@ -475,6 +475,7 @@ def test_empty_downgrade_and_reupgrade_restore_scoped_invoker_guards(receipt_dat
     import subprocess
     import sys
     from pathlib import Path
+    from urllib.parse import urlsplit, urlunsplit
     from uuid import uuid4
 
     import psycopg
@@ -484,6 +485,7 @@ def test_empty_downgrade_and_reupgrade_restore_scoped_invoker_guards(receipt_dat
     original = psycopg.conninfo.conninfo_to_dict(receipt_database[0])
     control_dsn = psycopg.conninfo.make_conninfo(**{**original, "dbname": "postgres"})
     admin_dsn = psycopg.conninfo.make_conninfo(**{**original, "dbname": database})
+    migration_url = urlunsplit(urlsplit(receipt_database[0])._replace(path="/" + database))
     app_settings = psycopg.conninfo.conninfo_to_dict(receipt_database[1])
     app_dsn = psycopg.conninfo.make_conninfo(**{**app_settings, "dbname": database})
     with psycopg.connect(control_dsn, autocommit=True) as control:
@@ -497,7 +499,7 @@ def test_empty_downgrade_and_reupgrade_restore_scoped_invoker_guards(receipt_dat
             subprocess.run(
                 [sys.executable, "-m", "alembic", verb, target],
                 cwd=Path(__file__).resolve().parents[1],
-                env={**os.environ, "RECONFORGE_POSTGRES_DSN": admin_dsn},
+                env={**os.environ, "RECONFORGE_POSTGRES_DSN": migration_url},
                 check=True,
                 timeout=180,
             )

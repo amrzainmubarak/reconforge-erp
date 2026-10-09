@@ -28,7 +28,11 @@ from psycopg import sql
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from tests.erp_expansion_browser_restore import EXPANSION_TABLES, verify_expansion_cycles, verify_expansion_native_restore  # noqa: E402
+from tests.erp_expansion_browser_restore import (  # noqa: E402
+    EXPANSION_TABLES,
+    verify_expansion_cycles,
+    verify_expansion_native_restore,
+)
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
 
 IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
@@ -96,11 +100,14 @@ def main() -> int:
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PROCUREMENT_ENTERPRISE_TABLES))
         tamper_statements = (
             "UPDATE reconforge.procurement_partial_orders SET total_minor=total_minor+1 WHERE tenant_id=%s",
-            "UPDATE reconforge.procurement_partial_order_lines SET quantity_scaled=quantity_scaled+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.procurement_partial_order_lines SET quantity=quantity+1 WHERE tenant_id=%s",
             "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
         )
     elif args.scenario == "snapshots":
-        from tests.enterprise_financial_snapshot_browser import seed_financial_snapshot_browser, verify_financial_snapshot_browser
+        from tests.enterprise_financial_snapshot_browser import (
+            seed_financial_snapshot_browser,
+            verify_financial_snapshot_browser,
+        )
         seed, verify_cycles = seed_financial_snapshot_browser, verify_financial_snapshot_browser
         configuration = "apps/web/live/financial-snapshots.playwright.config.ts"
         extension_tables = EXPANSION_TABLES + ("financial_report_captures", "financial_report_members", "financial_report_snapshots")

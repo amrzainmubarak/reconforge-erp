@@ -9,7 +9,7 @@ data_classification: confidential-financial
 retention_policy: append-only classifications and opening history; forward recovery
 permissions: [finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
 default_roles: existing explicitly granted finance roles
-migrations: [0112_pg_financial_reporting, 0118_pg_financial_reporting_snapshots]
+migrations: [0112_pg_financial_reporting, 0118_pg_financial_report_capture]
 domain_invariants:
   - Classification is explicit, versioned, independently reviewed and immutable.
   - New opening preparation and review recheck the captured current native account semantics.

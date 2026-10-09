@@ -22855,3 +22855,8 @@ No skip, retry-until-green, wildcard exemption, or weakened assertion was added.
 ## Final October8 bounded acceptance
 
 Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.
+
+
+## ERP expansion milestones before final acceptance (2026-10-09)
+
+PR125 source f24d4836 remains the exact base, preserving PR124. Owned native gates use pinned PostgreSQL17.10, actual migrations and nonowner/NOBYPASSRLS roles. Stock-to-Paid, repeated partial receipt/accrual, partial supplier settlement and classified opening/reporting run against the real kernels; earlier failed packets are preserved in the ignored sprint output directories with original source/log/XML hashes. ROOT6cdd43a7 strict installment gate passes5/5, zero skips: two cumulative payments, native account/date/missing-precision capture refusal and late command-acknowledgement rollback of GL/allocation followed by safe retry. Original source or response tampering is rejected; no scanner rule or financial constraint is relaxed. Pure constant migration SQL assembly changes preserve emitted UTF-8 SQL hashes while removing Bandit B608 false positives. Full stable-source verification and normal wire HTTPS/populated recovery are still pending; individual milestones do not claim final acceptance.

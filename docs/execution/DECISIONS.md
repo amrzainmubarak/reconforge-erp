@@ -1,5 +1,11 @@
 # ReconForge Execution Decisions Log
 
+## D-EXP-20261009: Reuse native effects under bilateral source ownership
+
+ADR0842 adds governed owners around existing FIFO, posting and AR/AP engines. Reserved namespaces SS1/OB1/FI1 and deferred OLD/NEW SQL closures bind exact source, phase, native account IDs, quantities, currency, retained snapshot, audit/outbox and immutable command acknowledgements. AP installments retain the partial order's reviewed AP/cash policy and frozen residual; phase changes require three distinct current humans. Independent source references cannot manufacture Stock movements or Manual COGS effects. Additive migration rollback preserves populated financial evidence; empty rollback is tested separately. Avoid unrelated AP→Finance RLS dependencies by deriving reversal ownership only inside the relevant financial-effect path. Historical roles receive conditional finite owner-index SELECT, with unnecessary DML and BYPASSRLS unchanged.
+
+Keep every existing mandatory CI shard and add separate operating and financial expansion gates to bound runtime without dropping cases. Real HTTPS Studio and populated native recovery remain mandatory. The module manifests retain experimental scope: no partial stock sales, returns/credits, PR/RFQ, tax/FX postings, statutory cash-flow classification or external bank execution is inferred from these connected cycles.
+
 ## D-ERP-20261009: Prove additive owner reads on fresh restricted roles
 
 Repair finite native AR/AP fixture read dependencies rather than weakening

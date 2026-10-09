@@ -1337,3 +1337,4 @@ include tests/test_postgres_procurement_partial_api.py
 include tests/erp_expansion_browser_seed.py
 include tests/erp_expansion_browser_restore.py
 include tests/test_postgres_financial_reporting_api.py
+include .github/scripts/verify_erp_expansion_browser.py

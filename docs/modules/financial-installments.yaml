@@ -32,8 +32,8 @@ benchmarks: []
 rollback_plan: refuse populated downgrade; retain additive schemas and evidence on application rollback
 test_matrix:
   domain: tests/test_financial_installments.py
-  postgres: pending integration gate
-  browser: pending integration gate
+  postgres: tests/test_postgres_financial_installments.py
+  browser: apps/web/live/erp-expansion-cycles.spec.ts
 limitations:
   - Functional currency, exact zero-tax accrued partial Procurement invoices
   - Native ledger settlement does not execute an external bank transfer

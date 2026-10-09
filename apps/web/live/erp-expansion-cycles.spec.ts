@@ -29,7 +29,7 @@ async function reporting(page: Page) {
   await navigate(page, "Financial statements");
   const scope = page.getByRole("form", { name: "Authorized scope", exact: true });
   for (const [label, value] of Object.entries({ Workspace: "work", Organization: "org", "Legal entity": "entity" })) await scope.getByLabel(label, { exact: true }).fill(value);
-  const response = page.waitForResponse(reply => reply.url().includes("/financial-reporting/catalog?"));
+  const response = page.waitForResponse(reply => reply.url().endsWith("/financial-reporting/catalog") && reply.request().method() === "GET");
   await scope.getByRole("button", { name: "Apply scope", exact: true }).click();
   expect((await response).status()).toBe(200);
   await expect(page.getByLabel("Classification version name", { exact: true })).toBeVisible();

@@ -44,6 +44,7 @@ test_matrix:
   stream_invariants: tests/test_financial_reporting_stream.py
   configured_postgresql: [tests/test_postgres_financial_reporting.py, tests/test_postgres_financial_reporting_snapshots.py, tests/test_postgres_financial_snapshot_recovery.py, tests/test_postgres_financial_snapshot_migration.py]
   authenticated_api: tests/test_postgres_financial_reporting_api.py
+  snapshot_native_wire: [tests/enterprise_financial_snapshot_browser.py, apps/web/live/financial-snapshots.spec.ts]
   react: [apps/web/src/financial-reporting-data.test.ts, apps/web/src/components/FinancialReportingPage.test.tsx, apps/web/src/financial-reporting-snapshots.test.ts, apps/web/src/components/FinancialReportSnapshotsPanel.test.tsx]
 runtime_acceptance: bounded governed opening and classified reports accepted in native API Studio and restore on6ec9; see ERP_EXPANSION_ACCEPTANCE_2026-10-09.json and current-source PR126 checks
 limitations:

@@ -53,7 +53,7 @@ test("real HTTPS Studio posts a mixed-unit multiwarehouse order, four receipts, 
     for (const [page, user] of [[maker, "browser-maker"], [checker, "browser-checker"], [poster, "browser-poster"]] as const) await login(page, user);
     await maker.locator("summary").filter({ hasText: /^New stock purchase$/ }).click();
     const order = maker.getByRole("form", { name: "New stock purchase", exact: true });
-    await order.getByLabel("Enterprise multi-line order", { exact: true }).check();
+    await order.getByLabel("Enterprise order with multiple lines", { exact: true }).check();
     await order.getByRole("button", { name: "Add purchase line", exact: true }).click();
     for (const [label, value] of Object.entries({ "Purchase number": number, "Posting date": "2026-10-12", "Quantity 1": "10", "Unit price in minor units 1": "1200", "Quantity 2": "2.50", "Unit price in minor units 2": "2000" })) await order.getByLabel(label, { exact: true }).fill(value);
     for (const [label, value] of Object.entries({ Supplier: "SUP", "Open fiscal period": "period", "Accrual and payment journal": "STOCK", "Accounts payable": "AP", "Cash account": "CASH", "Item 1": "ITEM", "Receiving location 1": "MAIN/STOCK", "FIFO valuation policy 1": "FIFO", "Item 2": "WEIGHT", "Receiving location 2": "NORTH/STOCK", "FIFO valuation policy 2": "FIFO" })) await order.getByRole("combobox", { name: label, exact: true }).selectOption(value);
@@ -68,7 +68,7 @@ test("real HTTPS Studio posts a mixed-unit multiwarehouse order, four receipts, 
       for (const [line, quantity] of [[0, batch === 0 ? "4" : "6"], [1, "1.25"]] as const) {
         const { region } = await inspect(maker);
         const part = region.getByRole("group", { name: "Quantity for this document", exact: true });
-        await part.getByRole("combobox", { name: "Purchase line to receive", exact: true }).selectOption(source.lines[line].id);
+        await part.getByRole("combobox", { name: "Purchase line for receiving", exact: true }).selectOption(source.lines[line].id);
         await part.getByLabel("Quantity", { exact: true }).fill(quantity);
         await part.getByLabel("Posting date", { exact: true }).fill(date);
         await part.getByRole("combobox", { name: "Open fiscal period", exact: true }).selectOption("period");

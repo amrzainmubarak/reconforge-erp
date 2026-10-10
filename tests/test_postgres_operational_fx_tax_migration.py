@@ -45,8 +45,11 @@ def test_empty_schema_rollback_reupgrade_and_populated_evidence_refusal(receipt_
     runtime = seed_fx_runtime(receipt_database)
     posted = finish_fx(runtime, prepare_fx(runtime))
     with psycopg.connect(receipt_database[0]) as admin:
+        version_before = admin.execute("SELECT version_num FROM alembic_version ORDER BY version_num").fetchall()
+        assert version_before
         with pytest.raises(psycopg.errors.RaiseException, match="refuses to discard"), admin.transaction():
             admin.execute(DOWNGRADE_SQL)
+        assert admin.execute("SELECT version_num FROM alembic_version ORDER BY version_num").fetchall() == version_before
         assert admin.execute("SELECT count(*) FROM reconforge.operational_fx_sources WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 1
         assert admin.execute("SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 1
     with runtime.actor("poster") as (connection, _, actor):

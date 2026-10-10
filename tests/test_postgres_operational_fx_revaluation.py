@@ -153,8 +153,12 @@ def test_concurrent_valuation_prepare_and_populated_revaluation_rollback_refusal
         first, second = list(executor.map(lambda _: revalue_fx(runtime, initial["source_id"]), range(2)))
     assert first == second
     finish_fx(runtime, first)
-    with psycopg.connect(runtime.admin_dsn) as admin, pytest.raises(psycopg.errors.RaiseException, match="refuses to discard"), admin.transaction():
-        admin.execute(DOWNGRADE_SQL)
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        version_before = admin.execute("SELECT version_num FROM alembic_version ORDER BY version_num").fetchall()
+        assert version_before
+        with pytest.raises(psycopg.errors.RaiseException, match="refuses to discard"), admin.transaction():
+            admin.execute(DOWNGRADE_SQL)
+        assert admin.execute("SELECT version_num FROM alembic_version ORDER BY version_num").fetchall() == version_before
     with runtime.actor("poster") as (connection, _, actor):
         assert PostgresOperationalFxTaxRepository(connection, runtime.tenant).get(initial["source_id"], actor=actor)["active_revaluation_plan_id"] == first["id"]
 

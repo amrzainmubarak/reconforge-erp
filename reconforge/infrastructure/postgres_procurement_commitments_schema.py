@@ -43,8 +43,8 @@ CREATE POLICY scope ON reconforge.procurement_commitment_commands USING(EXISTS(S
  WITH CHECK(EXISTS(SELECT 1 FROM reconforge.procurement_commitment_plans p WHERE p.tenant_id=procurement_commitment_commands.tenant_id AND p.order_id=procurement_commitment_commands.order_id));
 CREATE FUNCTION reconforge.pc_protect() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $pc$
 BEGIN
- IF TG_TABLE_NAME='procurement_commitment_commands' AND TG_OP='UPDATE' AND OLD.response_json='{}'::jsonb
- AND NEW.response_json<>'{}'::jsonb AND (to_jsonb(OLD)-'response_json')=(to_jsonb(NEW)-'response_json') THEN RETURN NEW; END IF;
+ IF TG_TABLE_NAME='procurement_commitment_commands' AND TG_OP='UPDATE' AND to_jsonb(OLD)->'response_json'='{}'::jsonb
+ AND to_jsonb(NEW)->'response_json'<>'{}'::jsonb AND (to_jsonb(OLD)-'response_json')=(to_jsonb(NEW)-'response_json') THEN RETURN NEW; END IF;
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='procurement_commitment_owner',MESSAGE='Procurement commitment evidence is immutable';
 END $pc$;
 CREATE TRIGGER retained BEFORE UPDATE OR DELETE ON reconforge.procurement_commitment_plans FOR EACH ROW EXECUTE FUNCTION reconforge.pc_protect();

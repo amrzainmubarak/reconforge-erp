@@ -93,6 +93,9 @@ def reviewed_invoice(runtime: ReceiptRuntime, purchase: dict[str, Any]) -> tuple
 def test_actual_partial_ap_consumption_terminal_release_and_exact_retry(budget_runtime: tuple[ReceiptRuntime, dict[str, Any]]) -> None:
     runtime, budget = budget_runtime
     owner, purchase = create(runtime, budget)
+    import psycopg
+    with runtime.actor(MAKER) as (connection, _, _), pytest.raises(psycopg.errors.CheckViolation, match="commitment evidence is immutable"), connection.transaction():
+        connection.execute("UPDATE reconforge.procurement_commitment_plans SET payload=payload||'{\"restored_attack\":true}'::jsonb WHERE tenant_id=%s AND order_id=%s", (runtime.tenant, owner["order_id"]))
     purchase, invoice_id = reviewed_invoice(runtime, purchase)
     with runtime.actor(POSTER) as (connection, _, actor):
         repo = PostgresProcurementCommitmentRepository(connection, runtime.tenant)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import re
@@ -65,6 +66,9 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         "docs/security/supply-chain-exceptions.v1.json",
         "docs/security/supply-chain-policy.v1.json",
         "docs/security/container-runtime.openvex.json",
+        "docs/security/gitleaks-public-source-digests-wave4.v1.json",
+        "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+        "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
         "pyproject.toml",
         "uv.lock",
     )
@@ -125,6 +129,58 @@ def test_repository_policy_closes_resolution_and_exception_inputs() -> None:
     assert python_packages == 128
     assert npm_packages == 211
     assert npm_gap == 0
+
+
+def test_reviewed_public_digest_ignores_bind_exact_history_and_current_population() -> None:
+    registry = _json(ROOT / POLICY_MODULE._GITLEAKS_REVIEW_REGISTRY)
+    assert registry["finding_count"] == 260
+    assert registry["distinct_public_sources"] == 111
+    assert {report["finding_count"] for report in registry["reports"]} == {130}
+    records = registry["records"]
+    assert len({record["current_fingerprint"] for record in records}) == 260
+    assert len({record["history_fingerprint"] for record in records}) == 260
+    POLICY_MODULE._validate_gitleaks_config(ROOT)
+
+
+@pytest.mark.parametrize("mutation", ["same_line_digest", "same_line_member", "missing_report", "registry", "missing_ignore", "extra_ignore"])
+def test_reviewed_public_digest_ignores_reject_substitution_and_inventory_drift(
+    tmp_path: Path, mutation: str
+) -> None:
+    root = _copy_policy_project(tmp_path)
+    registry_path = root / POLICY_MODULE._GITLEAKS_REVIEW_REGISTRY
+    registry = _json(registry_path)
+    record = registry["records"][0]
+    report_path = root / record["path"]
+    if mutation in {"same_line_digest", "same_line_member"}:
+        raw = report_path.read_bytes()
+        lines = raw.decode("utf-8").splitlines(keepends=True)
+        index = record["line"] - 1
+        original = lines[index]
+        if mutation == "same_line_digest":
+            # A new high-entropy literal at the exact ignored path and line.
+            replacement = hashlib.sha256(b"unreviewed synthetic credential at same ignored line").hexdigest()
+            lines[index] = re.sub(r'"[a-f0-9]{64}"', '"' + replacement + '"', original)
+        else:
+            lines[index] = original.replace(record["public_source_path"], "reconforge/api/substituted_member.py")
+        assert lines[index] != original
+        report_path.write_bytes("".join(lines).encode("utf-8"))
+    elif mutation == "missing_report":
+        report_path.rename(report_path.with_suffix(".renamed"))
+    elif mutation == "registry":
+        registry["records"][0]["expected_value_sha256"] = "a" * 64
+        _write_json(registry_path, registry)
+    else:
+        ignore = root / ".gitleaksignore"
+        value = ignore.read_text(encoding="utf-8")
+        if mutation == "missing_ignore":
+            value = "\n".join(
+                line for line in value.splitlines() if line != record["current_fingerprint"]
+            ) + "\n"
+        else:
+            value += record["path"] + ":generic-api-key:99999\n"
+        ignore.write_text(value, encoding="utf-8")
+    with pytest.raises(SupplyChainPolicyError, match="reviewed|required policy"):
+        POLICY_MODULE._validate_gitleaks_config(root)
 
 
 def _mutate_pyproject(root: Path) -> None:

@@ -27,6 +27,13 @@ _ISSUE_URL = re.compile(r"^https://github\.com/amrzainmubarak/reconforge-erp/iss
 _GITLEAKS_FINGERPRINT = re.compile(
     r"^(?:[0-9a-f]{40}:)?[A-Za-z0-9_.\-/]+:[a-z0-9-]+:[1-9][0-9]*$"
 )
+_GITLEAKS_REVIEW_REGISTRY = "docs/security/gitleaks-public-source-digests-wave4.v1.json"
+_GITLEAKS_REVIEW_SHA256 = "7249b31b34b7fccfb420d455e9134b2e827c00877c4c01652382e41c11b5827e"
+_GITLEAKS_REVIEW_REPORTS = {
+    "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+    "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+}
+_PUBLIC_DIGEST_LINE = re.compile(r'\s*"([^"\n]+)": "([a-f0-9]{64})",?\s*')
 _RELEASE_ACTION_REFERENCE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}$")
 _RELEASE_ACTION_USE = re.compile(r"(?m)^[ \t]*uses:[ \t]*([^\s#]+)")
 _RELEASE_STEP = re.compile(r"(?m)^[ \t]*-[ \t]+name:[ \t]*([^\r\n#]+?)[ \t]*$")
@@ -596,6 +603,68 @@ def _validate_dependabot(root: Path, policy: dict[str, Any]) -> None:
             raise SupplyChainPolicyError("Dependabot schema version must be 2")
 
 
+def _validate_reviewed_gitleaks_hashes(root: Path, ignore_lines: list[str]) -> None:
+    """Bind precise ignores to independently reviewed public source digests.
+
+    The immutable historical fingerprints cover the introduced Git commit.
+    Current-tree fingerprints additionally require exact complete report bytes;
+    a replacement secret at the same ignored path/line must fail before scanning.
+    The registry itself is pinned independently here, not by a self-checksum.
+    """
+    registry_path = _required_path(root, _GITLEAKS_REVIEW_REGISTRY)
+    if hashlib.sha256(registry_path.read_bytes()).hexdigest() != _GITLEAKS_REVIEW_SHA256:
+        raise SupplyChainPolicyError("reviewed Gitleaks registry bytes drifted")
+    registry = _load_json(registry_path)
+    records = registry["records"]
+    if len(records) != 260 or registry["finding_count"] != 260:
+        raise SupplyChainPolicyError("reviewed Gitleaks population drifted")
+    report_lines: dict[str, list[str]] = {}
+    for report in registry["reports"]:
+        path = report["path"]
+        if path not in _GITLEAKS_REVIEW_REPORTS:
+            raise SupplyChainPolicyError("reviewed Gitleaks report path drifted")
+        raw = _required_path(root, path).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != report["sha256"]:
+            raise SupplyChainPolicyError("reviewed Gitleaks report bytes drifted")
+        report_lines[path] = raw.decode("utf-8").splitlines()
+    if set(report_lines) != _GITLEAKS_REVIEW_REPORTS:
+        raise SupplyChainPolicyError("reviewed Gitleaks report inventory drifted")
+    expected: set[str] = set()
+    for record in records:
+        path = record["path"]
+        number = record["line"]
+        lines = report_lines[path]
+        if type(number) is not int or not 1 <= number <= len(lines):
+            raise SupplyChainPolicyError("reviewed Gitleaks line is invalid")
+        line = lines[number - 1]
+        match = _PUBLIC_DIGEST_LINE.fullmatch(line)
+        if (
+            match is None
+            or match.group(1) != record["public_source_path"]
+            or hashlib.sha256(match.group(2).encode("utf-8")).hexdigest()
+            != record["expected_value_sha256"]
+            or hashlib.sha256(line.encode("utf-8")).hexdigest()
+            != record["source_line_sha256"]
+        ):
+            raise SupplyChainPolicyError("reviewed Gitleaks source member or digest drifted")
+        current = f"{path}:generic-api-key:{number}"
+        historical = f"{registry['introduced_commit']}:{current}"
+        if (
+            record["rule_id"] != "generic-api-key"
+            or record["current_fingerprint"] != current
+            or record["history_fingerprint"] != historical
+        ):
+            raise SupplyChainPolicyError("reviewed Gitleaks fingerprint identity drifted")
+        expected.update((current, historical))
+    actual = {
+        fingerprint
+        for fingerprint in ignore_lines
+        if any(f"{path}:" in fingerprint for path in _GITLEAKS_REVIEW_REPORTS)
+    }
+    if len(expected) != 520 or actual != expected:
+        raise SupplyChainPolicyError("reviewed Gitleaks ignores must match the exact 520 fingerprints")
+
+
 def _validate_gitleaks_config(root: Path) -> None:
     text = _required_path(root, ".gitleaks.toml").read_text(encoding="utf-8")
     if text.count("useDefault = true") != 1:
@@ -614,6 +683,7 @@ def _validate_gitleaks_config(root: Path) -> None:
         raise SupplyChainPolicyError("Gitleaks ignore fingerprints must be non-empty and unique")
     if any(_GITLEAKS_FINGERPRINT.fullmatch(line) is None for line in ignore_lines):
         raise SupplyChainPolicyError("Gitleaks ignores must be exact commit/path/rule/line fingerprints")
+    _validate_reviewed_gitleaks_hashes(root, ignore_lines)
 
 
 def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:

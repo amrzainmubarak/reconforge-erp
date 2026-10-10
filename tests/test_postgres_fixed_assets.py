@@ -266,3 +266,103 @@ def test_disposal_policy_uses_full_turnover_on_prepare_and_replay(asset_runtime:
         ceiling = Decimal("300.00")
         assert repository.prepare(initial["asset_id"], **args) == plan
     assert observed and set(observed) == {Decimal("201.01")}
+
+
+def test_unrelated_worker_audit_and_outbox_delivery_need_no_asset_table_privileges(
+    asset_runtime: ReceiptRuntime,
+) -> None:
+    """Commit under a real restricted role with no access to any asset owner."""
+    from contextlib import contextmanager
+    from uuid import uuid4
+
+    import psycopg
+    from psycopg import sql
+
+    from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+    from reconforge.infrastructure.postgres_outbox import PostgresOutboxRepository
+
+    runtime = asset_runtime
+    role = "fa_unrelated_worker_" + uuid4().hex[:12]
+    app_user = psycopg.conninfo.conninfo_to_dict(runtime.factory.settings.dsn)["user"]
+    event_id = "unrelated-" + uuid4().hex
+    owned_event_id = "reserved-" + uuid4().hex
+    missing_plan = "FA1-" + uuid4().hex
+    boundary = PostgresTenantBoundary(runtime.factory)
+
+    @contextmanager
+    def worker() -> Any:
+        with boundary.transaction(
+            runtime.tenant, workspace_id="work", organization_id="org", legal_entity_id="entity",
+        ) as connection:
+            connection.execute(sql.SQL("SET LOCAL ROLE {}").format(sql.Identifier(role)))
+            yield connection
+
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        admin.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(sql.Identifier(role)))
+        admin.execute(sql.SQL("GRANT {} TO {}").format(sql.Identifier(role), sql.Identifier(app_user)))
+        admin.execute(sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(role)))
+        for privileges, tables in (
+            ("SELECT", "tenants"),
+            ("SELECT,INSERT,UPDATE", "domain_audit_ledger_state"),
+            ("SELECT,INSERT", "domain_audit_events,outbox_events,outbox_delivery_evidence"),
+        ):
+            admin.execute(sql.SQL("GRANT {} ON {} TO {}").format(
+                sql.SQL(privileges),
+                sql.SQL(",").join(sql.Identifier("reconforge", name) for name in tables.split(",")),
+                sql.Identifier(role),
+            ))
+        admin.execute(sql.SQL("""GRANT UPDATE(status,attempt_count,available_at,claimed_at,
+            claimed_by,published_at,last_error,dead_lettered_at,lease_generation)
+            ON reconforge.outbox_events TO {}""").format(sql.Identifier(role)))
+    try:
+        with worker() as connection:
+            flags = connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
+            assert dict(flags) == {"rolsuper": False, "rolbypassrls": False}
+            for table in ("fixed_assets", "fixed_asset_plans", "fixed_asset_reviews", "fixed_asset_links", "fixed_asset_commands"):
+                assert connection.execute(
+                    "SELECT has_table_privilege(current_user,%s,'SELECT') allowed", ("reconforge." + table,),
+                ).fetchone()["allowed"] is False
+            audit = PostgresAuditEventRepository(connection, runtime.tenant).append(
+                actor_label="restricted-reconciliation-worker", object_type="reconciliation_run",
+                object_id="unrelated-run", action="reconciliation_completed", metadata={"synthetic": True},
+            )
+            connection.execute("""INSERT INTO reconforge.outbox_events
+                (tenant_id,event_id,event_type,aggregate_type,aggregate_id,payload)
+                VALUES(%s,%s,'reconciliation_completed','reconciliation_run','unrelated-run',%s::jsonb)""",
+                (runtime.tenant, event_id, '{"audit_event_id":"' + audit.id + '"}'))
+        # Both claim and ACK commit their deferred owner triggers as the worker.
+        with worker() as connection:
+            claimed = PostgresOutboxRepository(connection).claim_pending(
+                tenant_id=runtime.tenant, worker_id="restricted-worker", limit=10, lease_seconds=60,
+            )
+            assert [event.id for event in claimed] == [event_id]
+        with worker() as connection:
+            PostgresOutboxRepository(connection).mark_published(
+                tenant_id=runtime.tenant, event_id=event_id, worker_id="restricted-worker",
+                lease_generation=claimed[0].lease_generation,
+            )
+        with worker() as connection:
+            assert connection.execute(
+                "SELECT status FROM reconforge.outbox_events WHERE tenant_id=%s AND event_id=%s",
+                (runtime.tenant, event_id),
+            ).fetchone()["status"] == "Published"
+            delivery_rows = connection.execute(
+                "SELECT action FROM reconforge.outbox_delivery_evidence WHERE tenant_id=%s AND event_id=%s ORDER BY occurred_at",
+                (runtime.tenant, event_id),
+            ).fetchall()
+            assert [row["action"] for row in delivery_rows] == ["claimed", "published"]
+        with pytest.raises(psycopg.errors.InsufficientPrivilege, match="fixed_asset_plans"), worker() as connection:
+            connection.execute("""INSERT INTO reconforge.outbox_events
+                (tenant_id,event_id,event_type,aggregate_type,aggregate_id,payload)
+                VALUES(%s,%s,'fixed_asset_prepared','operational_finance',%s,'{}'::jsonb)""",
+                (runtime.tenant, owned_event_id, missing_plan))
+        # The same reserved event fails its owner equation with normal module access.
+        with pytest.raises(psycopg.errors.CheckViolation, match="retained asset owner"), runtime.actor("maker") as (connection, _, _):
+            connection.execute("""INSERT INTO reconforge.outbox_events
+                (tenant_id,event_id,event_type,aggregate_type,aggregate_id,payload)
+                VALUES(%s,%s,'fixed_asset_prepared','operational_finance',%s,'{}'::jsonb)""",
+                (runtime.tenant, owned_event_id, missing_plan))
+    finally:
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            admin.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(role)))
+            admin.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))

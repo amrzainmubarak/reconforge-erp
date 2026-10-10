@@ -18,6 +18,7 @@ from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[2]
 IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+PYTEST_TIMEOUT_SECONDS = 1800
 
 
 def require_native_acceptance(document: str | None) -> dict[str, int]:
@@ -92,10 +93,18 @@ def main() -> int:
             print(diagnostic[-10000:])
             return migration.returncode
         groups = sys.argv[1:] or ["tests/test_postgres_commercial_collections.py", "tests/test_postgres_stock_commerce.py", "tests/test_postgres_stock_sales.py"]
-        result = subprocess.run([sys.executable, "-m", "pytest", "-q", "--tb=short", *groups,
-            "--junitxml=" + str(output / "native-gate.xml")], cwd=ROOT, env=environment,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-            check=False, timeout=900)  # nosec B603
+        command = [sys.executable, "-m", "pytest", "-q", "--tb=short", *groups,
+                   "--junitxml=" + str(output / "native-gate.xml")]
+        timed_out = False
+        try:
+            result = subprocess.run(command, cwd=ROOT, env=environment,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                check=False, timeout=PYTEST_TIMEOUT_SECONDS)  # nosec B603
+        except subprocess.TimeoutExpired as exc:
+            timed_out = True
+            captured = exc.stdout or ""
+            diagnostic = captured.decode("utf-8", errors="replace") if isinstance(captured, bytes) else captured
+            result = subprocess.CompletedProcess(command, 124, diagnostic + "\nBounded native gate timed out.\n")
         diagnostic = result.stdout
         xml_path = output / "native-gate.xml"
         xml = xml_path.read_text(encoding="utf-8") if xml_path.exists() else None
@@ -126,6 +135,7 @@ def main() -> int:
                   "source_unchanged": unchanged, "tracked_status_before": status_before, "tracked_status_after": status_after,
                   "started_at": started_at, "duration_seconds": time.perf_counter() - started,
                   "python_version": sys.version, "postgres_image": IMAGE, "targets": groups,
+                  "pytest_timeout_seconds": PYTEST_TIMEOUT_SECONDS, "timed_out": timed_out,
                   "pytest_exit_code": result.returncode, "counts": counts, "native_cases_passed": cases_passed,
                   "accepted": accepted, "acceptance_error_type": acceptance_error}
         (output / "native-gate.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

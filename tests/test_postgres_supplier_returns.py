@@ -76,10 +76,10 @@ def prepare(runtime: ReceiptRuntime, purchase: dict[str, Any]) -> dict[str, Any]
         return plan
 
 
-def phase(runtime: ReceiptRuntime, plan: dict[str, Any], operation: str, actor_name: str) -> dict[str, Any]:
+def phase(runtime: ReceiptRuntime, plan: dict[str, Any], operation: str, actor_name: str, *, command_id: str | None = None) -> dict[str, Any]:
     with runtime.actor(actor_name) as (connection, _, actor):
         repo = PostgresSupplierReturnsRepository(connection, runtime.tenant)
-        args = dict(expected_plan_digest=plan["plan_digest"], command_id="sr-" + operation, reason="Independent original supplier debit " + operation, actor=actor)
+        args = dict(expected_plan_digest=plan["plan_digest"], command_id=command_id or "sr-" + operation, reason="Independent original supplier debit " + operation, actor=actor)
         result = getattr(repo, operation)(plan["id"], **args)
         assert getattr(repo, operation)(plan["id"], **args) == result
         return result
@@ -176,7 +176,8 @@ def test_reviewed_cancellation_releases_same_original_source_for_one_fresh_poste
         assert replacement["id"] != cancelled["id"] and replacement["receipt_id"] == cancelled["receipt_id"]
         assert owner.get(cancelled["id"], actor=actor) == cancelled
         assert owner.prepare(preparation(purchase), command_id="sr-prepare", actor=actor) == prepared
-    posted = phase(runtime, phase(runtime, replacement, "review", CHECKER), "post", POSTER)
+    reviewed = phase(runtime, replacement, "review", CHECKER, command_id="replacement-review")
+    posted = phase(runtime, reviewed, "post", POSTER, command_id="replacement-post")
     with runtime.actor(MAKER) as (connection, _, actor):
         owner = PostgresSupplierReturnsRepository(connection, runtime.tenant)
         assert owner.get(cancelled["id"], actor=actor) == cancelled and owner.get(posted["id"], actor=actor) == posted

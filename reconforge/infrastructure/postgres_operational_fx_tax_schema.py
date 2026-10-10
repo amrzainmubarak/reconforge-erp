@@ -110,7 +110,7 @@ DECLARE p RECORD;s RECORD;e RECORD;r RECORD;l RECORD;f RECORD;c RECORD;inv RECOR
  last_day TEXT;field TEXT;account_id TEXT;account_kind TEXT;
 BEGIN
  SELECT * INTO p FROM reconforge.operational_fx_plans WHERE tenant_id=t AND id=i;
- PERFORM reconforge.fx_assert(p IS NOT NULL,'FX1 native entry requires its complete retained owner');
+ PERFORM reconforge.fx_assert(p.id IS NOT NULL,'FX1 native entry requires its complete retained owner');
  SELECT * INTO s FROM reconforge.operational_fx_sources WHERE tenant_id=t AND id=p.source_id;
  SELECT * INTO e FROM reconforge.finance_entries WHERE tenant_id=t AND id=p.entry_id;
  SELECT * INTO r FROM reconforge.operational_fx_reviews WHERE tenant_id=t AND plan_id=i;
@@ -118,7 +118,7 @@ BEGIN
  SELECT * INTO inv FROM reconforge.ar_invoices WHERE tenant_id=t AND id=s.invoice_id;
  SELECT * INTO customer FROM reconforge.ar_customers WHERE tenant_id=t AND id=inv.customer_id;
  a:=s.payload;v:=p.payload;q:=a->'request';
- PERFORM reconforge.fx_assert(s IS NOT NULL AND e IS NOT NULL AND inv IS NOT NULL AND customer IS NOT NULL
+ PERFORM reconforge.fx_assert(s.id IS NOT NULL AND e.id IS NOT NULL AND inv.id IS NOT NULL AND customer.id IS NOT NULL
  AND reconforge.fx_object(a,ARRAY['schema_version','id','workspace_id','organization_id','legal_entity_id','request','foreign_policy','functional_policy',
  'foreign_net_minor','foreign_tax_minor','foreign_gross_minor','functional_net_minor','functional_gross_minor','tax_components','functional_allocation_policy','lines','preparer_actor_id','invoice_id','source_digest'])
  AND reconforge.fx_object(v,ARRAY['schema_version','id','source_id','workspace_id','organization_id','legal_entity_id','kind','sequence','period_id','posting_date','reason',
@@ -189,7 +189,7 @@ BEGIN
  AND EXISTS(SELECT 1 FROM reconforge.ar_invoice_lines x WHERE x.tenant_id=t AND x.invoice_id=inv.id AND x.line_number=1
  AND x.quantity=1 AND x.quantity_text='1' AND x.unit_price_minor=net AND x.line_total_minor=net AND x.tax_minor=fg-net AND x.description=q->>'reason'), 'FX original native AR invoice and retained source differ');
  last_day:=q->>'posting_date';
- FOR prior IN SELECT * FROM reconforge.operational_fx_plans WHERE tenant_id=t AND source_id=s.id AND sequence<p.sequence ORDER BY sequence LOOP
+ FOR prior IN SELECT z.* FROM reconforge.operational_fx_plans z WHERE z.tenant_id=t AND z.source_id=s.id AND z.sequence<p.sequence ORDER BY z.sequence LOOP
   PERFORM reconforge.fx_assert(prior.sequence=sequence AND prior.phase=2 AND (sequence=0)=(prior.kind='recognize'),'FX history requires contiguous posted recognition and settlements');
   sequence:=sequence+1;last_day:=prior.payload->>'posting_date';
   IF prior.kind='settle' THEN foreign_paid:=foreign_paid+(prior.payload->'equation'->>'foreign_minor')::numeric;
@@ -224,7 +224,7 @@ BEGIN
  AND turnover BETWEEN 1 AND 9000000000000000000 AND v->>'currency_code'=a->'functional_policy'->>'currency_code'
  AND (v->>'currency_precision')::integer=lp,'FX proposal differs from the independent settlement equation or exact debit turnover');
  SELECT * INTO jn FROM reconforge.finance_journals WHERE tenant_id=t AND id=e.journal_id;
- PERFORM reconforge.fx_assert(jn IS NOT NULL AND jn.journal_code=q->>'journal_code' AND e.entry_number=upper(p.id)
+ PERFORM reconforge.fx_assert(jn.id IS NOT NULL AND jn.journal_code=q->>'journal_code' AND e.entry_number=upper(p.id)
  AND e.source_type='Manual' AND e.external_reference='FX:'||s.id||':'||p.kind AND e.period_id=v->>'period_id'
  AND e.posting_date::text=v->>'posting_date' AND e.description=v->>'reason' AND e.preparer_actor_id=v->>'preparer_actor_id'
  AND e.reverses_posting_id IS NULL AND e.currency_code=a->'functional_policy'->>'currency_code' AND e.currency_precision=lp
@@ -260,19 +260,19 @@ BEGIN
  PERFORM reconforge.fx_assert(reconforge.fx_event(t,i,p.audit_event_id,p.outbox_event_id,e.preparer_actor_id,'operational_fx_prepared',jsonb_build_object('plan_digest',v->>'plan_digest')),'FX preparation requires complete native audit and outbox evidence');
  IF p.phase<2 THEN PERFORM reconforge.fx_assert(EXISTS(SELECT 1 FROM reconforge.fiscal_periods z WHERE z.tenant_id=t AND z.id=e.period_id AND z.status='Open' AND e.posting_date::date BETWEEN z.start_date AND z.end_date),'Pending FX plan requires its original open period'); END IF;
  IF p.phase=0 THEN PERFORM reconforge.fx_assert(e.status='Draft' AND r IS NULL AND l IS NULL,'Prepared FX phase differs from native GL'); END IF;
- IF p.phase>=1 THEN PERFORM reconforge.fx_assert(r IS NOT NULL AND r.reviewer_actor_id<>e.preparer_actor_id AND e.validator_actor_id=r.reviewer_actor_id
+ IF p.phase>=1 THEN PERFORM reconforge.fx_assert(r.plan_id IS NOT NULL AND r.reviewer_actor_id<>e.preparer_actor_id AND e.validator_actor_id=r.reviewer_actor_id
  AND e.validation_digest=v->>'validation_digest' AND e.status='Validated'
  AND reconforge.fx_event(t,i,r.audit_event_id,r.outbox_event_id,r.reviewer_actor_id,'operational_fx_reviewed',jsonb_build_object('plan_digest',v->>'plan_digest')),'FX independent native review differs from retained owner'); END IF;
  IF p.phase<2 THEN PERFORM reconforge.fx_assert(l IS NULL AND NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects z WHERE z.tenant_id=t AND z.entry_id=p.entry_id),'FX native effect requires atomic owner publication'); END IF;
  IF p.phase=2 THEN
   SELECT * INTO f FROM reconforge.finance_posting_effects WHERE tenant_id=t AND id=l.posting_effect_id;
-  PERFORM reconforge.fx_assert(l IS NOT NULL AND f IS NOT NULL AND f.entry_id=p.entry_id AND f.snapshot_json=v->'snapshot' AND f.validation_digest=v->>'validation_digest'
+  PERFORM reconforge.fx_assert(l.plan_id IS NOT NULL AND f.id IS NOT NULL AND f.entry_id=p.entry_id AND f.snapshot_json=v->'snapshot' AND f.validation_digest=v->>'validation_digest'
   AND f.posted_actor_id=l.posted_actor_id AND l.posted_actor_id NOT IN (e.preparer_actor_id,r.reviewer_actor_id)
   AND NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects z WHERE z.tenant_id=t AND z.reverses_effect_id=f.id)
   AND reconforge.fx_event(t,i,l.audit_event_id,l.outbox_event_id,l.posted_actor_id,'operational_fx_posted',jsonb_build_object('plan_digest',v->>'plan_digest','posting_effect_id',f.id)), 'FX publication requires three distinct humans and exact unreversed native effect');
   IF p.kind='settle' THEN
    SELECT * INTO receipt FROM reconforge.ar_receipts WHERE tenant_id=t AND id=l.receipt_id;
-   PERFORM reconforge.fx_assert(receipt IS NOT NULL AND receipt.receipt_number=p.id AND receipt.receipt_date::text=v->>'posting_date'
+   PERFORM reconforge.fx_assert(receipt.id IS NOT NULL AND receipt.receipt_number=p.id AND receipt.receipt_date::text=v->>'posting_date'
    AND receipt.currency_code=inv.currency_code AND receipt.amount_minor=(equation->>'foreign_minor')::numeric AND receipt.status='Posted'
    AND (receipt.workspace_id,receipt.organization_id,receipt.legal_entity_id,receipt.customer_id)=(inv.workspace_id,inv.organization_id,inv.legal_entity_id,inv.customer_id)
    AND receipt.currency_precision=fp AND to_jsonb(receipt)->>'currency_registry_digest'=a->'foreign_policy'->>'currency_registry_digest'

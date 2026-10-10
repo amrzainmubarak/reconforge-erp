@@ -41,6 +41,11 @@ the full retained parent credit turnover. An installment amount cannot admit
 the original credit or prior refund amounts that its source evidence exposes.
 Original stock-sale revenue inverses are bound to the original OPS posting
 effect in SQL, including Generated drafts with unrelated entry numbers.
+Cancelled source claims do not constrain later collection cash accounts.
+Pending mutations require live account admission; posted historical evidence
+retains its structural source checks when accounts are later disabled. Native
+AR and commercial projections verify the complete CR1 closure before emitting
+credited balances, including after an administrator-damaged restore.
 
 Bounds are one complete native stock tranche, at most 1,000 original FIFO
 consumptions, exact integer amounts/turnover at most 9e18, 200 retained refund

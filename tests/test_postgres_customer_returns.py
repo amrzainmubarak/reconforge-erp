@@ -366,7 +366,7 @@ def test_ordinary_stock_invoice_and_collections_do_not_require_cr1_select_but_cl
             assert projection["outstanding_minor"] == 35000 and projection["allocated_minor"] == 10000
         assert collection["phase"] == 2
         permission("grant")
-        source_id = order["lines"][0]["tranches"][0]["id"]
+        source_id = order["lines"][0]["tranches"][0]["stock_order_id"]
         credited = phase(runtime, phase(runtime, prepare_return(runtime, source_id), "review", "checker"), "post", "poster")
         assert credited["phase"] == 2
         permission("revoke")
@@ -390,7 +390,7 @@ def test_charge_backed_original_fifo_return_preserves_landed_cost_and_restitutes
     configure_runtime(runtime)
     original, invoice = invoiced(runtime)
     complete(runtime, prepare(runtime, invoice, 10000), "CHARGED")
-    source_id = original["lines"][0]["tranches"][0]["id"]
+    source_id = original["lines"][0]["tranches"][0]["stock_order_id"]
     plan = prepare_return(runtime, source_id)
     # Independent Hamilton integer/Fraction oracle for each retained charge.
     freight_item = Fraction(777 * 12000, 17000)
@@ -413,3 +413,57 @@ def test_charge_backed_original_fifo_return_preserves_landed_cost_and_restitutes
         assert connection.execute("SELECT count(*) n FROM reconforge.inventory_valuation_reversal_effects WHERE tenant_id=%s AND effect_type='Restore'", (runtime.tenant,)).fetchone()["n"] == 1
     result = balances(runtime)
     assert result["COGS"] == result["REVENUE"] == result["AR"] == result["REFUND"] == 0
+
+
+def test_cancelled_source_releases_future_cash_admission_and_posted_history_survives_inactive_accounts(
+    receipt_database: tuple[str, str],
+) -> None:
+    from dataclasses import replace
+
+    import psycopg
+
+    from reconforge.domain.commercial_collections import CommercialCollectionPreparation
+    from reconforge.infrastructure.postgres_commercial_collections import PostgresCommercialCollectionsRepository
+    from reconforge.infrastructure.postgres_receivables import PostgresReceivablesError
+
+    runtime, source, invoice = create_runtime(receipt_database, 0)
+    retained = prepare_return(runtime, source)
+    cancelled = phase(runtime, phase(runtime, retained, "review", "checker"), "cancel", "poster")
+    with runtime.actor("maker") as (connection, _, actor):
+        PostgresFinanceCoreRepository(connection, runtime.tenant).upsert_account(account_code="CASH2", name="Second collected cash",
+            account_type="Asset", normal_balance="Debit", workspace="work")
+        args = CommercialCollectionPreparation("work", "org", "entity", "ORG", "ENTITY", invoice, "CASH", "period", "2026-10-10",
+            "CASH2", "AR", "Different native cash after original claim release", 1000, "RELEASED-CASH2")
+        collection = PostgresCommercialCollectionsRepository(connection, runtime.tenant).prepare(args, command_id="released-cash-prepare", actor=actor)
+    complete(runtime, collection, "RELEASED-CASH2")
+    assert prepare_return(runtime, source) == retained
+    with runtime.actor("maker") as (connection, _, actor):
+        owner = PostgresCustomerReturnsRepository(connection, runtime.tenant)
+        assert owner.get(cancelled["id"], actor=actor) == cancelled
+        replacement = owner.prepare(replace(request(source), cash_account_code="CASH2"), command_id="historical-replacement", actor=actor)
+    parent = phase(runtime, phase(runtime, replacement, "review", "checker"), "post", "poster")
+    installment = refund(runtime, parent, 1000, "historical-refund")
+    phase(runtime, phase(runtime, installment, "review", "checker"), "post", "poster")
+    with runtime.actor("maker") as (connection, _, actor):
+        connection.execute("UPDATE reconforge.finance_accounts SET active=FALSE,allow_posting=FALSE WHERE tenant_id=%s AND account_code IN('CASH2','REFUND')", (runtime.tenant,))
+        owner = PostgresCustomerReturnsRepository(connection, runtime.tenant)
+        assert owner.get(parent["id"], actor=actor) == parent
+        assert PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(invoice)["refund_due_minor"] == 0
+    # Restored administrator-damaged source must not turn native projection into
+    # an unchecked credit. The invoker still rejects it before returning AR0.
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        original = admin.execute("SELECT payload FROM reconforge.customer_return_plans WHERE tenant_id=%s AND id=%s", (runtime.tenant, parent["id"])).fetchone()[0]
+        admin.execute("SET LOCAL session_replication_role='replica'")
+        admin.execute("UPDATE reconforge.customer_return_plans SET payload=jsonb_set(payload,'{credit_minor}','1') WHERE tenant_id=%s AND id=%s", (runtime.tenant, parent["id"]))
+    try:
+        with pytest.raises(PostgresReceivablesError), runtime.actor("maker") as (connection, _, _actor):
+            PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(invoice)
+        with pytest.raises(psycopg.errors.CheckViolation, match="exact source and preparation evidence"), runtime.actor("maker") as (connection, _, _actor):
+            connection.execute("SELECT reconforge.customer_return_projection(%s,%s)", (runtime.tenant, invoice))
+    finally:
+        from reconforge.domain.finance_posting import canonical_json
+
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            admin.execute("SET LOCAL session_replication_role='replica'")
+            admin.execute("UPDATE reconforge.customer_return_plans SET payload=%s::jsonb WHERE tenant_id=%s AND id=%s", (canonical_json(original), runtime.tenant, parent["id"]))
+    assert prepare_return(runtime, source) == retained

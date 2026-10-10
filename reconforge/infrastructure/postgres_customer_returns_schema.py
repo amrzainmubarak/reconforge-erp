@@ -59,7 +59,7 @@ BEGIN
  OR EXISTS(SELECT 1 FROM reconforge.inventory_valuation_reversals WHERE tenant_id=t AND original_valuation_document_id=s.valuation_id AND status<>'Cancelled') THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_return_owner',MESSAGE='Return requires one complete uncredited original zero-tax functional-currency delivery and no pending collection'; END IF;
 END $cr$;
-CREATE FUNCTION reconforge.customer_return_accounts(t TEXT,i TEXT,j TEXT,l TEXT,c TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $cr$
+CREATE FUNCTION reconforge.customer_return_accounts(t TEXT,i TEXT,j TEXT,l TEXT,c TEXT,live BOOLEAN DEFAULT TRUE) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $cr$
 DECLARE s RECORD;journal RECORD;liability RECORD;cash RECORD;source_cash TEXT;
 BEGIN
  SELECT * INTO s FROM reconforge.stock_sales_orders WHERE tenant_id=t AND id=i;
@@ -69,9 +69,10 @@ BEGIN
   WHERE fj.tenant_id=t AND fj.workspace_id=s.workspace_id AND o.id=s.organization_id AND fj.journal_code=j; END IF;
  SELECT * INTO liability FROM reconforge.finance_accounts WHERE tenant_id=t AND chart_id=journal.chart_id AND account_code=l;
  SELECT * INTO cash FROM reconforge.finance_accounts WHERE tenant_id=t AND chart_id=journal.chart_id AND account_code=c;
- IF journal IS NULL OR NOT journal.active OR journal.currency_code<>s.currency_code OR liability IS NULL OR cash IS NULL
- OR liability.account_type<>'Liability' OR liability.normal_balance<>'Credit' OR cash.account_type<>'Asset' OR cash.normal_balance<>'Debit' OR NOT liability.active OR NOT cash.active
- OR NOT liability.allow_posting OR NOT cash.allow_posting OR liability.id=cash.id OR c=s.invoice_parameters->>'receivable_account_code' THEN
+ IF journal IS NULL OR(live AND NOT journal.active) OR journal.currency_code<>s.currency_code OR liability IS NULL OR cash IS NULL
+ OR liability.account_type<>'Liability' OR liability.normal_balance<>'Credit' OR cash.account_type<>'Asset' OR cash.normal_balance<>'Debit'
+ OR(live AND(NOT liability.active OR NOT cash.active OR NOT liability.allow_posting OR NOT cash.allow_posting))
+ OR liability.id=cash.id OR c=s.invoice_parameters->>'receivable_account_code' THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_return_owner',MESSAGE='Refund requires distinct active native liability and cash accounts in the functional journal'; END IF;
  FOR source_cash IN SELECT DISTINCT p.payload->>'debit_account_code' FROM reconforge.commercial_collection_plans p WHERE p.tenant_id=t AND p.source_id=s.invoice_id AND p.phase=2 LOOP
   IF source_cash IS DISTINCT FROM c THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_return_owner',MESSAGE='Refund must use the original collected cash account'; END IF;
@@ -196,7 +197,7 @@ BEGIN
   OR(p.phase=2 AND(h.customer_return_owner_id IS DISTINCT FROM i OR h.status<>'Cancelled' OR h.cancel_reason IS DISTINCT FROM i OR h.cancelled_at IS NULL OR h.row_version<>(original->>'invoice_version')::integer+1))
   OR(p.phase=3 AND h.customer_return_owner_id=i) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='customer_return_owner',MESSAGE='Whole source credit must conserve original invoice, collections and FIFO cost'; END IF;
-  PERFORM reconforge.customer_return_accounts(t,p.source_order_id,p.payload->>'journal_code',p.payload->>'refund_liability_account_code',p.payload->>'cash_account_code');
+  IF p.phase<>3 THEN PERFORM reconforge.customer_return_accounts(t,p.source_order_id,p.payload->>'journal_code',p.payload->>'refund_liability_account_code',p.payload->>'cash_account_code',p.phase IN(0,1)); END IF;
   IF p.phase=2 THEN
    SELECT * INTO v FROM reconforge.inventory_valuation_reversals WHERE tenant_id=t AND id=p.payload->>'valuation_reversal_id';
    IF v IS NULL OR v.status<>'Approved' OR v.original_valuation_document_id IS DISTINCT FROM source->'stock'->>'valuation_id'
@@ -366,6 +367,7 @@ DECLARE marker TEXT;p RECORD;
 BEGIN
  SELECT customer_return_owner_id INTO marker FROM reconforge.ar_invoices WHERE tenant_id=t AND id=i;
  IF marker IS NULL THEN RETURN '{}'::jsonb; END IF;
+ PERFORM reconforge.customer_return_close(t,marker);
  SELECT * INTO p FROM reconforge.customer_return_plans WHERE tenant_id=t AND id=marker AND invoice_id=i AND operation='Return';
  IF p.id IS NULL THEN RAISE EXCEPTION 'Native credited invoice requires retained CR1 source evidence'; END IF;
  IF p.phase=2 THEN RETURN jsonb_build_object('credit_memo_id',p.id,'credited_minor',p.payload->>'credit_minor',
@@ -408,12 +410,12 @@ BEGIN
  anchor:='posted:=EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=t AND plan_id=p.id);';
  IF position(anchor IN definition)=0 THEN RAISE EXCEPTION 'Retained StockSales invoice posting guard differs'; END IF;
  definition:=replace(definition,anchor,anchor||$inverse$
-  IF EXISTS(SELECT 1 FROM reconforge.finance_entries e JOIN reconforge.operational_finance_links l
-   ON l.tenant_id=e.tenant_id AND l.posting_effect_id=e.reverses_posting_id WHERE l.tenant_id=t AND l.plan_id=d.invoice_plan_id
-   AND NOT reconforge.customer_return_inverse_entry(t,d.id,e.id))
-  OR EXISTS(SELECT 1 FROM reconforge.finance_posting_effects f JOIN reconforge.operational_finance_links l
-   ON l.tenant_id=f.tenant_id AND l.posting_effect_id=f.reverses_effect_id WHERE l.tenant_id=t AND l.plan_id=d.invoice_plan_id
-   AND NOT reconforge.customer_return_inverse_entry(t,d.id,f.entry_id)) THEN
+  IF EXISTS(SELECT 1 FROM reconforge.finance_entries inverse_entry JOIN reconforge.operational_finance_links original_link
+   ON original_link.tenant_id=inverse_entry.tenant_id AND original_link.posting_effect_id=inverse_entry.reverses_posting_id WHERE original_link.tenant_id=t AND original_link.plan_id=d.invoice_plan_id
+   AND NOT reconforge.customer_return_inverse_entry(t,d.id,inverse_entry.id))
+  OR EXISTS(SELECT 1 FROM reconforge.finance_posting_effects inverse_effect JOIN reconforge.operational_finance_links original_link
+   ON original_link.tenant_id=inverse_effect.tenant_id AND original_link.posting_effect_id=inverse_effect.reverses_effect_id WHERE original_link.tenant_id=t AND original_link.plan_id=d.invoice_plan_id
+   AND NOT reconforge.customer_return_inverse_entry(t,d.id,inverse_effect.entry_id)) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Original StockSales revenue inverse requires complete original-source credit';
   END IF;
 $inverse$);
@@ -466,12 +468,12 @@ DO $cr$ DECLARE n TEXT;definition TEXT;BEGIN
   definition:=replace(definition,' AND NOT reconforge.customer_return_inverse_entry(t,d.id,id)','');
   definition:=replace(definition,' AND NOT reconforge.customer_return_inverse_entry(t,d.id,entry_id)','');
   definition:=replace(definition,$inverse$
-  IF EXISTS(SELECT 1 FROM reconforge.finance_entries e JOIN reconforge.operational_finance_links l
-   ON l.tenant_id=e.tenant_id AND l.posting_effect_id=e.reverses_posting_id WHERE l.tenant_id=t AND l.plan_id=d.invoice_plan_id
-   AND NOT reconforge.customer_return_inverse_entry(t,d.id,e.id))
-  OR EXISTS(SELECT 1 FROM reconforge.finance_posting_effects f JOIN reconforge.operational_finance_links l
-   ON l.tenant_id=f.tenant_id AND l.posting_effect_id=f.reverses_effect_id WHERE l.tenant_id=t AND l.plan_id=d.invoice_plan_id
-   AND NOT reconforge.customer_return_inverse_entry(t,d.id,f.entry_id)) THEN
+  IF EXISTS(SELECT 1 FROM reconforge.finance_entries inverse_entry JOIN reconforge.operational_finance_links original_link
+   ON original_link.tenant_id=inverse_entry.tenant_id AND original_link.posting_effect_id=inverse_entry.reverses_posting_id WHERE original_link.tenant_id=t AND original_link.plan_id=d.invoice_plan_id
+   AND NOT reconforge.customer_return_inverse_entry(t,d.id,inverse_entry.id))
+  OR EXISTS(SELECT 1 FROM reconforge.finance_posting_effects inverse_effect JOIN reconforge.operational_finance_links original_link
+   ON original_link.tenant_id=inverse_effect.tenant_id AND original_link.posting_effect_id=inverse_effect.reverses_effect_id WHERE original_link.tenant_id=t AND original_link.plan_id=d.invoice_plan_id
+   AND NOT reconforge.customer_return_inverse_entry(t,d.id,inverse_effect.entry_id)) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Original StockSales revenue inverse requires complete original-source credit';
   END IF;
 $inverse$,'');
@@ -499,7 +501,7 @@ DROP FUNCTION reconforge.customer_return_protect();DROP FUNCTION reconforge.cust
 DROP FUNCTION reconforge.customer_return_credited(TEXT,TEXT);DROP FUNCTION reconforge.customer_return_inverse_entry(TEXT,TEXT,TEXT);
 DROP FUNCTION reconforge.customer_return_projection(TEXT,TEXT);
 DROP FUNCTION reconforge.customer_return_refund_due(TEXT,TEXT);DROP FUNCTION reconforge.customer_return_refund_available(TEXT,TEXT);
-DROP FUNCTION reconforge.customer_return_source_available(TEXT,TEXT);DROP FUNCTION reconforge.customer_return_accounts(TEXT,TEXT,TEXT,TEXT,TEXT);
+DROP FUNCTION reconforge.customer_return_source_available(TEXT,TEXT);DROP FUNCTION reconforge.customer_return_accounts(TEXT,TEXT,TEXT,TEXT,TEXT,BOOLEAN);
 DROP FUNCTION reconforge.customer_return_source(TEXT,TEXT);
 DROP TABLE reconforge.customer_return_commands,reconforge.customer_return_events,reconforge.customer_return_plans;
 ALTER TABLE reconforge.ar_invoices DROP COLUMN customer_return_owner_id;

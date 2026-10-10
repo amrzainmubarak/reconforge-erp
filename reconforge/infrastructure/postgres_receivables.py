@@ -635,6 +635,8 @@ class PostgresReceivablesRepository:
         # An ordinary legacy invoice never requires access to source-owner tables.
         # Native SQL closes this reserved marker against its full posted inverse.
         if result["status"] == "Cancelled" and str(result["cancel_reason"]).startswith("CR1-"):
+            self.connection.execute("SELECT reconforge.customer_return_close(%s,%s)",
+                                    (self.tenant_id, result["cancel_reason"]))
             credit = self.connection.execute("""SELECT id,payload->>'credit_minor' AS credited_minor,
                 reconforge.customer_return_refund_due(tenant_id,id) AS refund_due_minor
                 FROM reconforge.customer_return_plans WHERE tenant_id=%s AND id=%s AND invoice_id=%s

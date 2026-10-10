@@ -1,5 +1,19 @@
 ﻿# Claims Evidence Matrix
 
+## Governed operating integrity (2026-10-10 publication snapshot)
+
+| Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |
+| --- | --- | --- | --- | --- | --- |
+| Unposted source claim release | CA1/LC1 cancellation owners,0124/0125 and Studio ACK merge | Complete19 commercial/49 supply native cases; SQL/race/replay/permission/rollback coverage | Actual HTTPS cancellation/replacement and populated239-table restore | Experimental bounded workflow | Releases tested unposted invoice/receiving capacity with original evidence retained; no posted return/refund inverse |
+| Authorized verifiable asset lineage | Existing FA1/native posting, three canonical seals and asset-before-plan locks | Complete19 final asset/evidence/mixed cases; exact integer/ABAC/blocker regression | Actual acquisition/depreciation/disposal proof/download and native restore | Experimental bounded evidence read | Verifies source-to-native-effect content in the tested scope; no signature, legal audit certification or universal SQL deadlock guarantee |
+| Operational/financial conservation | Original AP/AR/FIFO/cash/GL/audit owners | Independent rational/FIFO/18-effect oracle in normal and cancel/replacement branches |184156debit=credit,cash45898,inventory11648,January57546=50000+7546 | Local synthetic integrated acceptance | Conserves the specified funded single-entity functional-currency cycle |
+| Native snapshot efficiency | Scoped joined line/dimension aggregation |1000-line RLS/digest parity and six alternating samples |1002→2calls,median10.7045965→0.1671239s | One measured warmed local fixture |64.0519x for this journal snapshot read; no posting or competitor throughput implication |
+| Native posting measurements | Original three-human native posting plus redacted opt-in profiler | Two complete1000-cycle fresh populations; independent493671004oracle | Complete raw pair,3333 read requests/source and10s resources in index22 | One sequential paired observation | Reports observed native-repository latency/TPS and sampling boundaries; no HTTP/mixed million/RPO/RTO/cost or statistical superiority |
+
+All source bindings and unsuccessful attempts remain in
+[GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.json](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.json).
+The successor Draft PR required checks establish hosted acceptance at its actual head.
+
 ## Integrated operational workflows (2026-10-08)
 
 | Claim | Code evidence | Test evidence | Runtime evidence | Maturity | Allowed wording |

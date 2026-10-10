@@ -1,5 +1,19 @@
 # Repository Inventory
 
+## Source-bound successor refresh (2026-10-10)
+
+The [Wave3 acceptance packet and limits](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md)
+record the actual clean4bb/70d sources, native owner and lock-regression gates,
+real HTTPS/populated restore, matched806/70d measurements and retained failures.
+Additive0124/0125 bring the central registry to125. Ruff/Mypy/Bandit pass at70d;
+360 Studio tests pass at4bb with identical web source at70d. Python dependency
+audit at6eb has no known finding with the local package explicitly excluded;
+dependency locks/MIT are unchanged. The local general900-second timeout is not
+acceptance; full final-head hosted gates are authoritative separately.
+Coverage source/transport corrections, archived proof closure and the
+[dependency-first roadmap](GLOBAL_NEXT_PHASE_2026-10-10.md) supersede current
+summary wording only for these named scopes; older measured snapshots remain.
+
 ## Source-bound refresh (2026-10-08)
 
 Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).

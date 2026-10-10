@@ -46,7 +46,7 @@ test_matrix:
   web: apps/web/src/landed-cost-data.test.ts
   web_lifecycle: apps/web/src/components/LandedCostPanel.test.tsx
   browser: apps/web/live/erp-landed-cost.spec.ts
-runtime_acceptance: Source-bound native API Studio and populated restore milestones passed; final integrated source gate remains required
+runtime_acceptance: "Supply native/wire4bb4d1f9; exact charged receiving/cancellation and populated restore; GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.json retains actual sources. Final hosted status belongs to successor Draft PR exact-head checks; operator docs/operator/landed-cost.md"
 adapter_matrix:
   postgres: Native receipt, FIFO, source GL and cash are composed without duplicate engines
   sqlite: No implicit operational fallback

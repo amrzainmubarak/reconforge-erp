@@ -1,5 +1,15 @@
 # ReconForge Execution Evidence Log
 
+## Wave3 source-bound publication (2026-10-10)
+
+[Acceptance narrative](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md) and
+[raw packet](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.json) preserve actual4bb/70d
+sources,91 owner executions and overlapping19 asset executions, exact JUnit,
+three HTTPS/populated restores, quality reports and six unsuccessful attempts.
+The benchmark index retains all20 predecessor entries and adds the complete
+fresh806/70d1000-cycle raw pair. Later evidence publication does not reattribute
+measurements. Full hosted status is the new Draft PR's exact-head required checks.
+
 - WAVE3-20261010 intermediate integration `fed54dbc`: pinned PostgreSQL17.10,
   source unchanged/clean,6 tests passed, zero failures/errors/skips. Normal and
   abandoned/replaced reviewed LC1/CA1 branches retain the independent18-effect

@@ -42,7 +42,7 @@ test_matrix:
   cancellation: tests/test_postgres_commercial_collection_cancellation.py
   client: apps/web/src/components/CommercialCollectionsPanel.test.tsx
   browser: apps/web/live/commercial-collections-cycles.spec.ts
-runtime_acceptance: Source-bound native Studio and populated restore milestones passed; final integrated source gate remains required
+runtime_acceptance: "Commercial native/wire4bb4d1f9; independent unposted cancellation and populated restore; GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.json retains actual sources. Final hosted status belongs to successor Draft PR exact-head checks; operator docs/operator/commercial-collections.md"
 limitations:
   - Functional currency, positive zero-tax stock-sale invoices and exact native AR allocation
   - Up to 200 retained installment plans per invoice with one active plan

@@ -87,6 +87,11 @@ permit, with 2/4/8/16 submitting workers and distinct current posting identities
 Record successful business effects, refusals/retries, p50/p95/p99, CPU/RAM/I/O/WAL,
 locks/deadlocks, raw timings, seed, versions, hashes and resource cost assumptions.
 Compare baseline → profile → cause → optimization → identical-workload retest.
+The current quiet806/70d pair's client CPU sample-window delta rises36.45% and
+bounded-batch read median rises2.75%, despite posting throughput rising6.78%.
+Profile authentication, native SQL, canonicalization and observer work separately,
+then repeat unprofiled counterbalanced equal-workload trials. Preserve current
+human approval, password policy, durability and closure while investigating.
 
 ## Testable differentiation, without novelty claims
 

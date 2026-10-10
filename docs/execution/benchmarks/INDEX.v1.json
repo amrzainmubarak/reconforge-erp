@@ -273,6 +273,34 @@
       "profile_id": "native-dimensional-snapshot/1000-alternating-v1@13191719",
       "status": "verified",
       "workload_family": "native_snapshot"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json",
+      "artifact_sha256": "8da15c682f85f584f70601dfc2855348a9bdd7601b20a9be9a0e69611fff5917",
+      "claim_boundary": "One sequential observation per source on the same local host, pinned PostgreSQL17.10, 1000 native single-entity USD three-human cash/equity postings, four workers, and 100/1000-effect warmed reads. Not HTTP TPS, mixed ERP capacity, production sizing, causal or statistical superiority, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/quiet-wave3-1000-v1@806a05db",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json",
+      "artifact_sha256": "7ba3ed14fc63f00e67b2162f1190abfcd1c6d82c293ffefb574387a6d13c02d6",
+      "claim_boundary": "One sequential observation per source on the same local host, pinned PostgreSQL17.10, 1000 native single-entity USD three-human cash/equity postings, four workers, and 100/1000-effect warmed reads. Not HTTP TPS, mixed ERP capacity, production sizing, causal or statistical superiority, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/quiet-wave3-1000-v1@70dffef7",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
     }
   ],
   "index_id": "benchmark-evidence-index-v1",

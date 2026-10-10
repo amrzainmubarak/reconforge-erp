@@ -40,7 +40,7 @@ test_matrix:
   response_contract: apps/web/src/fixed-assets-data.test.ts
   exact_browser_proof: apps/web/src/fixed-asset-evidence.test.ts
   evidence_panel: apps/web/src/components/FixedAssetEvidencePanel.test.tsx
-runtime_acceptance: Source-bound native Studio and populated restore milestones passed; final integrated source gate remains required
+runtime_acceptance: "Finance native/wire70dffef7; consistent owner locks, evidence and populated restore; GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.json retains actual sources. Final hosted status belongs to successor Draft PR exact-head checks; operator docs/operator/fixed-assets.md"
 limitations:
   - PostgreSQL-native functional currency and cash-funded acquisition; no foreign-currency or tax calculation
   - Completed calendar service months, cumulative straight-line only; no day proration or declining-balance methods

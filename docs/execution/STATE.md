@@ -1,5 +1,24 @@
 # Execution State
 
+## Successor publication snapshot: locally verified operating integrity (2026-10-10)
+
+Branch `amr/global-integrity-wave3-20261010` remains above PR128699→PR12734b9→
+PR126/125/124. Main remainsb61ea56b; primary's two pre-existing schema edits are
+protected. Three Amr-owned worktrees completed mutual review.0124/0125 and the
+125-revision registry compose the existing owners; no duplicate financial engine.
+Local owner gates91/0skip at4bb and overlapping asset-lock19/0skip at70d pass;
+three real HTTPS/populated239-table restores and360 Studio component tests pass.
+The fresh matched1000-cycle pair and independent financial oracles pass. Posting
+change+6.78% vs806; the warmed1000-line snapshot alone measures64.0519x.
+Raw source-specific evidence and retained unsuccessful attempts are in
+[GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md).
+Sample-window client CPU regresses36.45%; bounded-batch read median regresses2.75%.
+These retained adverse outcomes prevent a blanket resource/reporting speed claim.
+This is the pre-hosted publication snapshot. The successor Draft PR's exact-head
+required checks establish final hosted status; local general900s exhaustion is
+unaccepted. Broad platform expansion remains active under the
+[next phase](GLOBAL_NEXT_PHASE_2026-10-10.md), not a completed worldwide ERP claim.
+
 ## Current successor: governed abandonment and verified evidence (2026-10-10; ADR0845/0846)
 
 Active branch: `amr/global-integrity-wave3-20261010`, clean integration worktree

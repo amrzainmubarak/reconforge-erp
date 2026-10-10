@@ -1,5 +1,19 @@
 # ReconForge Execution Decisions Log
 
+## Wave3 final integration decisions (2026-10-10)
+
+Retain original unposted claim evidence and immutable acknowledgements;
+confirmed current terminal state wins over delayed historical ACKs in Studio.
+Lock immutable source asset before its plan throughout supported detail/proof/
+review/post paths. The overlap regression observes real PostgreSQL blockers;
+arbitrary callers taking opposing SQL locks can still cause an abort.
+Extend the central migration registry through125 rather than weakening restore
+diagnostics. Ship every indexed benchmark artifact and native/browser proof
+dependency; verify extracted source imports and raw bytes after building.
+Publish separate source-specific oracles and raw failed attempts; never add91+19
+overlapping executions as unique cases. Keep narrow snapshot improvements distinct
+from native posting throughput,1,000-line admission and full business settlement.
+
 - WAVE3-20261010 / ADR0845/0846: retain original preparations, reviews, native
   unposted entries and exact acknowledgements when abandoning a CA1/LC1 claim.
   Release only unposted/unreceived business capacity; preserve audit/outbox and

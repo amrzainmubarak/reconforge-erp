@@ -1,0 +1,1377 @@
+{
+  "schema_version": "retained-hosted-failure-packet-v1",
+  "accepted": false,
+  "captured_at_utc": "2026-10-10T19:48:50Z",
+  "head_sha": "2ca3b97595f5b0c37ed2c9dada513a4b500726dd",
+  "main_run_id": 38078535222,
+  "snapshot_terminal": true,
+  "source_binding": {
+    "original": {
+      "file": "source-binding-local-git-head.json",
+      "bytes": 1353,
+      "sha256": "af45f54c978c02b41f165d4a975023108d845f6d2dac61079f66842461bd7b08"
+    },
+    "measurement": {
+      "head_sha": "2ca3b97595f5b0c37ed2c9dada513a4b500726dd",
+      "base_sha": "e07bff2a2e8197b052d53454ea85c727f7c7518e",
+      "merge_sha": "037ec9f6c19156d6a5694c411ba509528091083c",
+      "merge_parents": [
+        "e07bff2a2e8197b052d53454ea85c727f7c7518e",
+        "2ca3b97595f5b0c37ed2c9dada513a4b500726dd"
+      ],
+      "identical_git_tree_sha": "07e421231ee44eedd98953df2f617894f1a6542a",
+      "binding_kind": "Exact GitHub PR head + retained GitHub merge API + locally rehashed immutable Git commit object",
+      "published_pr_api": {
+        "file": "pr130-20261010T191313Z.json",
+        "bytes": 22042,
+        "sha256": "6d304238ea3d671b9b20fc84137f5ab7345f596ada8dffae17ad7865d94f50e3"
+      },
+      "merge_commit_api": {
+        "file": "merge037-20261010T193245Z.json",
+        "bytes": 2712,
+        "sha256": "fc1a9fb5a6042aa2002f69eaf2b584211598b25d428a580f5f4ef2798287b84d"
+      },
+      "head_git_object": {
+        "file": "commit-2ca3b97595f5b0c37ed2c9dada513a4b500726dd.git-object",
+        "bytes": 336,
+        "sha256": "c7ad1690be07115599fee1e27ee65eebb60067fc17d1d47baeb5c47ea44951f5"
+      },
+      "checkout_log": {
+        "file": "job-114290474997.log",
+        "bytes": 63490,
+        "sha256": "dc1edecd34cca39eaa8d60930d6cd824d829feaa45471f624d6778dfa240e9dd"
+      },
+      "head_commit_api_retrieval": "Not requested; source bound by independently rehashed local immutable Git commit object"
+    }
+  },
+  "raw_main_jobs": {
+    "file": "jobs-main-20261010T194829Z.json",
+    "bytes": 130084,
+    "sha256": "3f9a2c55ed4583217ce34fbd6a8159f65ec2742c8e9404f3721f6ee414dd3b1b"
+  },
+  "main_job_counts": {
+    "success": 25,
+    "failure": 1,
+    "skipped": 3
+  },
+  "all_main_jobs": [
+    {
+      "id": 114290474941,
+      "name": "postgres-ha-dr",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290474941",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114290474997,
+      "name": "web",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290474997",
+      "original_log": {
+        "file": "job-114290474997.log",
+        "bytes": 63490,
+        "sha256": "dc1edecd34cca39eaa8d60930d6cd824d829feaa45471f624d6778dfa240e9dd"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290474997/logs",
+      "failed_steps": [
+        "Run web component tests"
+      ]
+    },
+    {
+      "id": 114290475011,
+      "name": "engine-parity (3.12, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475011",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114290475022,
+      "name": "server-boundaries (industry-close)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475022",
+      "original_log": {
+        "file": "job-114290475022.log",
+        "bytes": 126748,
+        "sha256": "5771e6f1c38a0496b0ed8b541fd8b6560113527dcc812561206167189fc8e601"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475022/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475052,
+      "name": "test (3.11)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475052",
+      "original_log": {
+        "file": "job-114290475052.log",
+        "bytes": 754150,
+        "sha256": "ac309529f725403cb8c33bc9dc154d13e06de37fa8e63304ab2bcef8db3ae910"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475052/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475058,
+      "name": "server-boundaries (durable-scale)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475058",
+      "original_log": {
+        "file": "job-114290475058.log",
+        "bytes": 110878,
+        "sha256": "a8688901b496558322510d4548e92a1f45b9f1e9aed00365700fdde6b891b958"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475058/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475060,
+      "name": "server-boundaries (finance-posting)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475060",
+      "original_log": {
+        "file": "job-114290475060.log",
+        "bytes": 234283,
+        "sha256": "c4be15f350a1cf2b0197af756cbb248e1e77e9fad8cf686ff9bbd2eceedf3343"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475060/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475065,
+      "name": "test (3.12)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475065",
+      "original_log": {
+        "file": "job-114290475065.log",
+        "bytes": 754837,
+        "sha256": "f92024fcf8199af9f7b8eaa6c61bdc5d64308e6b8104ac5cc56dcc166bf9eb1a"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475065/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475083,
+      "name": "engine-parity (3.12, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475083",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114290475084,
+      "name": "server-boundaries (inventory-payables)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475084",
+      "original_log": {
+        "file": "job-114290475084.log",
+        "bytes": 595158,
+        "sha256": "0c48d4f09c484f998d57021ba6ded44b58a685e1e0b8a52dc83718abce1297f3"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475084/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475086,
+      "name": "server-boundaries (receivables)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475086",
+      "original_log": {
+        "file": "job-114290475086.log",
+        "bytes": 268352,
+        "sha256": "5b152658c514023886201fe6dbb90de22b9161c6e33ec998cba6b9729f9b20f9"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475086/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475091,
+      "name": "engine-parity (3.11, lower-bounds, 1.26.4, 2.2.0, 1.0.0)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475091",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114290475092,
+      "name": "engine-parity (3.11, current-compatible-2026-07-25, 2.4.3, 3.0.5, 1.5.5)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475092",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114290475099,
+      "name": "object-storage",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475099",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114290475106,
+      "name": "server-boundaries (commercial-integrity)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475106",
+      "original_log": {
+        "file": "job-114290475106.log",
+        "bytes": 299152,
+        "sha256": "5665fb635faa96351be0c33d8ed87c7cd059b66b47d440c1a80380c73ae060b4"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475106/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475169,
+      "name": "server-boundaries (fx-revaluation)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475169",
+      "original_log": {
+        "file": "job-114290475169.log",
+        "bytes": 203720,
+        "sha256": "bac696d2f14b25b1ddae6a74edfa1dd278de50ce6b0c07235840b96ba7789490"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475169/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475187,
+      "name": "server-boundaries (matching-runtime)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475187",
+      "original_log": {
+        "file": "job-114290475187.log",
+        "bytes": 113155,
+        "sha256": "70ade82a9b1feaa6afde876c1eeca2c553929beef1dbd1a7709169fc2cc0b308"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475187/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475188,
+      "name": "server-boundaries (writeback)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475188",
+      "original_log": {
+        "file": "job-114290475188.log",
+        "bytes": 235253,
+        "sha256": "46903d7a011309204927fc5af83239997b3057f8eda4f7feaf61cdb7a58c720c"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475188/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475195,
+      "name": "server-boundaries (parity)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475195",
+      "original_log": {
+        "file": "job-114290475195.log",
+        "bytes": 438502,
+        "sha256": "ec4c3f64f9ea2713a9d18a9da76260920a3b7b7d7669d8a08f4ea7d93a7a97df"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475195/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475228,
+      "name": "server-boundaries (finance-integrity)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475228",
+      "original_log": {
+        "file": "job-114290475228.log",
+        "bytes": 378888,
+        "sha256": "bcbc57baac4ebd4013fe381ca8e5f96af7dcfbe1439178331349e7110520b4c8"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475228/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475234,
+      "name": "server-boundaries (native)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475234",
+      "original_log": {
+        "file": "job-114290475234.log",
+        "bytes": 117374,
+        "sha256": "c858590d94a73cf1ed185ed8b58e609feb75fccd0b20a3da3b48a7a78dcecf88"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475234/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475238,
+      "name": "server-boundaries (supplier-returns)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475238",
+      "original_log": {
+        "file": "job-114290475238.log",
+        "bytes": 209307,
+        "sha256": "9747decd9b261595d736daef500204b8702a85936f3c0ea74e1378056a5be3dc"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475238/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475244,
+      "name": "server-boundaries (supply-integrity)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475244",
+      "original_log": {
+        "file": "job-114290475244.log",
+        "bytes": 341090,
+        "sha256": "e9d459c0509e1817c113bb295da5bc4f7f04a412b9e4d917dae47763b314545f"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475244/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475892,
+      "name": "server-boundaries (erp-expansion)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475892",
+      "original_log": {
+        "file": "job-114290475892.log",
+        "bytes": 442861,
+        "sha256": "d1167f27b1b44b44b9286e57be4148de77ae5f66656668ee3ed9175d7f213353"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475892/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290475955,
+      "name": "server-boundaries (finance-reporting)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475955",
+      "original_log": {
+        "file": "job-114290475955.log",
+        "bytes": 316533,
+        "sha256": "729183c3d0f2f160e11ef2829037bab16d295ca359fa4b5cccc24f1c2380cb02"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475955/logs",
+      "failed_steps": []
+    },
+    {
+      "id": 114290622002,
+      "name": "erp-browser-recovery",
+      "status": "completed",
+      "conclusion": "skipped",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290622002",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114290622127,
+      "name": "enterprise-browser-recovery (${{ matrix.scenario }})",
+      "status": "completed",
+      "conclusion": "skipped",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290622127",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114293677276,
+      "name": "docker-parity",
+      "status": "completed",
+      "conclusion": "skipped",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114293677276",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114298339581,
+      "name": "server-boundaries",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114298339581",
+      "original_log": {
+        "file": "job-114298339581.log",
+        "bytes": 2326,
+        "sha256": "a66a48a7c6944a9e70048bb09492171d5aba0a4dcfe9a9d25e1496797c59fbaa"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114298339581/logs",
+      "failed_steps": []
+    }
+  ],
+  "raw_workflows": {
+    "file": "workflow-runs-20261010T194841Z.json",
+    "bytes": 84767,
+    "sha256": "827d4d70e45cd3230284700fbaa55899b410f9b6e16a86893a9d54a6f574beb6"
+  },
+  "workflow_statuses": [
+    {
+      "id": 38078535242,
+      "name": "CodeQL",
+      "head_sha": "2ca3b97595f5b0c37ed2c9dada513a4b500726dd",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535242",
+      "updated_at": "2026-10-10T19:10:24Z",
+      "run_attempt": 1
+    },
+    {
+      "id": 38078535226,
+      "name": "Branch name safety gate",
+      "head_sha": "2ca3b97595f5b0c37ed2c9dada513a4b500726dd",
+      "status": "completed",
+      "conclusion": "skipped",
+      "html_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535226",
+      "updated_at": "2026-10-10T19:07:23Z",
+      "run_attempt": 1
+    },
+    {
+      "id": 38078535229,
+      "name": "Docker",
+      "head_sha": "2ca3b97595f5b0c37ed2c9dada513a4b500726dd",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535229",
+      "updated_at": "2026-10-10T19:07:56Z",
+      "run_attempt": 1
+    },
+    {
+      "id": 38078535230,
+      "name": "Security",
+      "head_sha": "2ca3b97595f5b0c37ed2c9dada513a4b500726dd",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535230",
+      "updated_at": "2026-10-10T19:08:10Z",
+      "run_attempt": 1
+    },
+    {
+      "id": 38078535222,
+      "name": "CI",
+      "head_sha": "2ca3b97595f5b0c37ed2c9dada513a4b500726dd",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222",
+      "updated_at": "2026-10-10T19:47:53Z",
+      "run_attempt": 1
+    },
+    {
+      "id": 38078532378,
+      "name": "Branch name safety gate",
+      "head_sha": "2ca3b97595f5b0c37ed2c9dada513a4b500726dd",
+      "status": "completed",
+      "conclusion": "skipped",
+      "html_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078532378",
+      "updated_at": "2026-10-10T19:07:21Z",
+      "run_attempt": 1
+    }
+  ],
+  "raw_security_checks": {
+    "file": "checks-security-20261010T191408Z.json",
+    "bytes": 25958,
+    "sha256": "67cadbff75b8d72ffd6c33c8dd30d50bb54b4102439e574ddf8d070c289be921"
+  },
+  "security_check_counts": {
+    "success": 2,
+    "failure": 2,
+    "skipped": 1
+  },
+  "all_security_checks": [
+    {
+      "id": 114290474628,
+      "name": "Locked Python audit (3.11)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535230/job/114290474628",
+      "original_log": null
+    },
+    {
+      "id": 114290474725,
+      "name": "Secret and npm policy gates",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535230/job/114290474725",
+      "original_log": {
+        "file": "security-job-114290474725.log",
+        "bytes": 35667,
+        "sha256": "3401967f149ee21e3fd939bf83aa45a31d74e3110dc54128fa7cda582d8765b5"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290474725/logs"
+    },
+    {
+      "id": 114290474788,
+      "name": "Locked Python audit (3.12)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535230/job/114290474788",
+      "original_log": null
+    },
+    {
+      "id": 114290475406,
+      "name": "Exact-image SBOM, vulnerability, and license gate",
+      "status": "completed",
+      "conclusion": "skipped",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535230/job/114290475406",
+      "original_log": null
+    },
+    {
+      "id": 114290603564,
+      "name": "python-security",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535230/job/114290603564",
+      "original_log": {
+        "file": "security-job-114290603564.log",
+        "bytes": 2537,
+        "sha256": "641bd23299bb96b49b3cb6eec070edf2294460e60f4bb9ba618250c226c8dcc0"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290603564/logs"
+    }
+  ],
+  "failed_checks": [
+    {
+      "id": 114290474997,
+      "name": "web",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290474997",
+      "original_log": {
+        "file": "job-114290474997.log",
+        "bytes": 63490,
+        "sha256": "dc1edecd34cca39eaa8d60930d6cd824d829feaa45471f624d6778dfa240e9dd"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290474997/logs",
+      "failed_steps": [
+        "Run web component tests"
+      ]
+    },
+    {
+      "id": 114290474725,
+      "name": "Secret and npm policy gates",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535230/job/114290474725",
+      "original_log": {
+        "file": "security-job-114290474725.log",
+        "bytes": 35667,
+        "sha256": "3401967f149ee21e3fd939bf83aa45a31d74e3110dc54128fa7cda582d8765b5"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290474725/logs"
+    },
+    {
+      "id": 114290603564,
+      "name": "python-security",
+      "status": "completed",
+      "conclusion": "failure",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535230/job/114290603564",
+      "original_log": {
+        "file": "security-job-114290603564.log",
+        "bytes": 2537,
+        "sha256": "641bd23299bb96b49b3cb6eec070edf2294460e60f4bb9ba618250c226c8dcc0"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290603564/logs"
+    }
+  ],
+  "failure_diagnosis": [
+    {
+      "job_id": 114290474725,
+      "reason": "Pinned Gitleaks 8.30.1 scanned 1496 Git commits and 56.79 MB; reported 260 findings and exit 1 before npm. Original stdout has no individual finding list.",
+      "repair_owner": "finance",
+      "original_failure_retained": true
+    },
+    {
+      "job_id": 114290603564,
+      "reason": "python-security aggregate failed because Secret and npm policy gates failed. It is not an independent Bandit or pip-audit source failure.",
+      "original_failure_retained": true
+    },
+    {
+      "job_id": 114290474997,
+      "reason": "Web component suite: 407 passed, 1 failed. EN OperationalFxTaxPage test line38 could not find role=status after asynchronous evidence verification.",
+      "repair_owner": "supply",
+      "original_failure_retained": true
+    }
+  ],
+  "dependency_skipped_jobs": [
+    {
+      "id": 114290622002,
+      "name": "erp-browser-recovery",
+      "status": "completed",
+      "conclusion": "skipped",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290622002",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114290622127,
+      "name": "enterprise-browser-recovery (${{ matrix.scenario }})",
+      "status": "completed",
+      "conclusion": "skipped",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290622127",
+      "original_log": null,
+      "failed_steps": []
+    },
+    {
+      "id": 114293677276,
+      "name": "docker-parity",
+      "status": "completed",
+      "conclusion": "skipped",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114293677276",
+      "original_log": null,
+      "failed_steps": []
+    }
+  ],
+  "dependency_skip_boundary": "Unexpanded enterprise browser matrix is one skipped job record; no actual current-head HTTPS or restore execution is inferred, and no 11-browser pass claim is made. docker-parity is also a failed-dependency skip.",
+  "remaining_main_jobs": [],
+  "general_python": [
+    {
+      "id": 114290475052,
+      "name": "test (3.11)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475052",
+      "original_log": {
+        "file": "job-114290475052.log",
+        "bytes": 754150,
+        "sha256": "ac309529f725403cb8c33bc9dc154d13e06de37fa8e63304ab2bcef8db3ae910"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475052/logs",
+      "failed_steps": [],
+      "pytest": {
+        "passed": 4938,
+        "skipped": 663,
+        "warnings": 10,
+        "seconds": "917.05"
+      },
+      "skip_scope": "Existing general optional/live-prerequisite skips; separate mandatory native jobs remain explicit"
+    },
+    {
+      "id": 114290475065,
+      "name": "test (3.12)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475065",
+      "original_log": {
+        "file": "job-114290475065.log",
+        "bytes": 754837,
+        "sha256": "f92024fcf8199af9f7b8eaa6c61bdc5d64308e6b8104ac5cc56dcc166bf9eb1a"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475065/logs",
+      "failed_steps": [],
+      "pytest": {
+        "passed": 4938,
+        "skipped": 663,
+        "warnings": 26,
+        "seconds": "771.68"
+      },
+      "skip_scope": "Existing general optional/live-prerequisite skips; separate mandatory native jobs remain explicit"
+    }
+  ],
+  "native_families": [
+    {
+      "id": 114290475022,
+      "name": "server-boundaries (industry-close)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475022",
+      "original_log": {
+        "file": "job-114290475022.log",
+        "bytes": 126748,
+        "sha256": "5771e6f1c38a0496b0ed8b541fd8b6560113527dcc812561206167189fc8e601"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475022/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 4,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 4,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475058,
+      "name": "server-boundaries (durable-scale)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475058",
+      "original_log": {
+        "file": "job-114290475058.log",
+        "bytes": 110878,
+        "sha256": "a8688901b496558322510d4548e92a1f45b9f1e9aed00365700fdde6b891b958"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475058/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 4,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475060,
+      "name": "server-boundaries (finance-posting)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475060",
+      "original_log": {
+        "file": "job-114290475060.log",
+        "bytes": 234283,
+        "sha256": "c4be15f350a1cf2b0197af756cbb248e1e77e9fad8cf686ff9bbd2eceedf3343"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475060/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 54,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475084,
+      "name": "server-boundaries (inventory-payables)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475084",
+      "original_log": {
+        "file": "job-114290475084.log",
+        "bytes": 595158,
+        "sha256": "0c48d4f09c484f998d57021ba6ded44b58a685e1e0b8a52dc83718abce1297f3"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475084/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 119,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 30,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475086,
+      "name": "server-boundaries (receivables)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475086",
+      "original_log": {
+        "file": "job-114290475086.log",
+        "bytes": 268352,
+        "sha256": "5b152658c514023886201fe6dbb90de22b9161c6e33ec998cba6b9729f9b20f9"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475086/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 87,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 72,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 77,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475106,
+      "name": "server-boundaries (commercial-integrity)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475106",
+      "original_log": {
+        "file": "job-114290475106.log",
+        "bytes": 299152,
+        "sha256": "5665fb635faa96351be0c33d8ed87c7cd059b66b47d440c1a80380c73ae060b4"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475106/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 19,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 15,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475169,
+      "name": "server-boundaries (fx-revaluation)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475169",
+      "original_log": {
+        "file": "job-114290475169.log",
+        "bytes": 203720,
+        "sha256": "bac696d2f14b25b1ddae6a74edfa1dd278de50ce6b0c07235840b96ba7789490"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475169/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 7,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475187,
+      "name": "server-boundaries (matching-runtime)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475187",
+      "original_log": {
+        "file": "job-114290475187.log",
+        "bytes": 113155,
+        "sha256": "70ade82a9b1feaa6afde876c1eeca2c553929beef1dbd1a7709169fc2cc0b308"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475187/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 5,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475188,
+      "name": "server-boundaries (writeback)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475188",
+      "original_log": {
+        "file": "job-114290475188.log",
+        "bytes": 235253,
+        "sha256": "46903d7a011309204927fc5af83239997b3057f8eda4f7feaf61cdb7a58c720c"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475188/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [],
+      "dedicated_evidence_runner_passes": [
+        "postgres_writeback_identity_migration_matrix",
+        "writeback_receiver_idempotency",
+        "postgres_writeback_receiver_idempotency_matrix",
+        "postgres_writeback_receiver_failover_matrix",
+        "postgres_writeback_recovery_compensation_matrix"
+      ]
+    },
+    {
+      "id": 114290475195,
+      "name": "server-boundaries (parity)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475195",
+      "original_log": {
+        "file": "job-114290475195.log",
+        "bytes": 438502,
+        "sha256": "ec4c3f64f9ea2713a9d18a9da76260920a3b7b7d7669d8a08f4ea7d93a7a97df"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475195/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 659,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475228,
+      "name": "server-boundaries (finance-integrity)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475228",
+      "original_log": {
+        "file": "job-114290475228.log",
+        "bytes": 378888,
+        "sha256": "bcbc57baac4ebd4013fe381ca8e5f96af7dcfbe1439178331349e7110520b4c8"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475228/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 17,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 7,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 4,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 21,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475234,
+      "name": "server-boundaries (native)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475234",
+      "original_log": {
+        "file": "job-114290475234.log",
+        "bytes": 117374,
+        "sha256": "c858590d94a73cf1ed185ed8b58e609feb75fccd0b20a3da3b48a7a78dcecf88"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475234/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475238,
+      "name": "server-boundaries (supplier-returns)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475238",
+      "original_log": {
+        "file": "job-114290475238.log",
+        "bytes": 209307,
+        "sha256": "9747decd9b261595d736daef500204b8702a85936f3c0ea74e1378056a5be3dc"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475238/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 28,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475244,
+      "name": "server-boundaries (supply-integrity)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475244",
+      "original_log": {
+        "file": "job-114290475244.log",
+        "bytes": 341090,
+        "sha256": "e9d459c0509e1817c113bb295da5bc4f7f04a412b9e4d917dae47763b314545f"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475244/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 49,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 24,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475892,
+      "name": "server-boundaries (erp-expansion)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475892",
+      "original_log": {
+        "file": "job-114290475892.log",
+        "bytes": 442861,
+        "sha256": "d1167f27b1b44b44b9286e57be4148de77ae5f66656668ee3ed9175d7f213353"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475892/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 43,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 29,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    },
+    {
+      "id": 114290475955,
+      "name": "server-boundaries (finance-reporting)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38078535222/job/114290475955",
+      "original_log": {
+        "file": "job-114290475955.log",
+        "bytes": 316533,
+        "sha256": "729183c3d0f2f160e11ef2829037bab16d295ca359fa4b5cccc24f1c2380cb02"
+      },
+      "log_api_origin": "repos/amrzainmubarak/reconforge-erp/actions/jobs/114290475955/logs",
+      "failed_steps": [],
+      "executed_pytest_gate_populations": [
+        {
+          "collected": 25,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 7,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_evidence_runner_passes": []
+    }
+  ],
+  "native_count_boundary": "Per-command collected populations; overlapping native runs are not summed as distinct cases. Missing logs remain null and are not inferred as tested counts.",
+  "hosted_archive_reports": [
+    {
+      "python": "3.11",
+      "original_report": {
+        "file": "publication-source-closure-3.11-artifact/publication-source-closure-3.11.json",
+        "bytes": 677288,
+        "sha256": "37af194d0fc4ebedc0acd3c20ef3634900731eba0b84f2cb1cf68dcfa628239d"
+      },
+      "status": "passed",
+      "source_commit": "037ec9f6c19156d6a5694c411ba509528091083c",
+      "source_sha256_before": "adf9576c356b679fafc6fdb8412c872e2b4d1d2209a732b68a5cb4be1ab941de",
+      "source_sha256_after": "adf9576c356b679fafc6fdb8412c872e2b4d1d2209a732b68a5cb4be1ab941de",
+      "source_unchanged": true,
+      "tracked_clean_before": true,
+      "tracked_clean_after": true,
+      "temporary_extraction_removed": true,
+      "migrations": {
+        "count": 132,
+        "head": "0132_pg_stock_inverse_dispatch",
+        "oldest": "0001_postgres_tenant_boundary",
+        "complete_linear_chain": true
+      },
+      "sdist_sha256": "cbaefc6874fd0fcefd739e6213a2d3b248a49d35c04f5114eef0fac7cfbe0b3b",
+      "wheel_sha256": "b6eb7eb31030fe6d468b716a5e1f15f67ecc5bd9b73bc971dd907342fa69ff08"
+    },
+    {
+      "python": "3.12",
+      "original_report": {
+        "file": "publication-source-closure-3.12-artifact/publication-source-closure-3.12.json",
+        "bytes": 677288,
+        "sha256": "705d659755e95580dc966cb894505c906af1560a9abb39292e29702b77158e92"
+      },
+      "status": "passed",
+      "source_commit": "037ec9f6c19156d6a5694c411ba509528091083c",
+      "source_sha256_before": "adf9576c356b679fafc6fdb8412c872e2b4d1d2209a732b68a5cb4be1ab941de",
+      "source_sha256_after": "adf9576c356b679fafc6fdb8412c872e2b4d1d2209a732b68a5cb4be1ab941de",
+      "source_unchanged": true,
+      "tracked_clean_before": true,
+      "tracked_clean_after": true,
+      "temporary_extraction_removed": true,
+      "migrations": {
+        "count": 132,
+        "head": "0132_pg_stock_inverse_dispatch",
+        "oldest": "0001_postgres_tenant_boundary",
+        "complete_linear_chain": true
+      },
+      "sdist_sha256": "6a81e2bade36545227e97c115f6ce5e4f12478833cdd69a03b2ff29d6d3a86cf",
+      "wheel_sha256": "538daa7a534ee1ee47f00b088f3a0c1221d15f92120039824627d60950a6efe1"
+    }
+  ],
+  "claims_boundary": "Successful partial jobs and retained prior packaged business evidence do not establish current-head full CI acceptance; all original failures and dependency skips remain explicit. Repair requires a new source-bound CI run."
+}

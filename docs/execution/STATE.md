@@ -1,5 +1,96 @@
 # Execution State
 
+## Wave4 active integration (2026-10-10)
+
+Actual start is DraftPR129 e07bff2a2e8197b052d53454ea85c727f7c7518e.
+DraftPR130 on amr/global-enterprise-wave4-20261010 stacks above129→128→127→126→125→124.
+Main b61ea56b and both pre-existing primary schema edits are protected; all new
+commits are authored/committed by Amr. Three independent commercial/supply/finance
+worktrees implement CR1/CRF1, BPC1, FX1 and SR1 with reciprocal source review;
+root owns contracts, ordered migrations,
+API/Studio integration, CI/package closure and performance profiling.
+
+The linear chain reaches 0132, including exact original revenue inverse closure
+and ordinary-role dispatch compatibility. [Hosted CI run38059696904](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904)
+had all38 jobs observed successful at15:07:32UTC on
+b6e9dcf608df2885b61a2846a4edc8df783db72d; its completed/success check-suite
+updated_at is15:04:54UTC. Complete native/API owner gates, actual HTTPS/populated
+restore scenarios and package gates passed there. Separately, four applicable
+Security checks succeeded; conditional exact-image SBOM/vulnerability/license
+checks were skipped and are not executed evidence.
+The later 0b5987927391f2e46a91813f8ccee71763b4140a source also has all 38 jobs
+successful in [run38067389520](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520),
+including both Python archive checks and eleven actual HTTPS/populated restores.
+The assembled final source requires its own archive and hosted checks. Exact
+head/run-bound results are retained in the final handoff output and
+[DraftPR130 checks](https://github.com/amrzainmubarak/reconforge-erp/pull/130/checks),
+so recording a run does not mutate the source that run accepted. Source acceptance
+does not complete the worldwide ERP program. Original evidence-head2ca failures
+are retained; its all16native shards/both archives passed but its Web/secret gates
+refused full acceptance. Repairs explicitly await real FX cryptographic completion
+and bind reviewed public hash fingerprints to immutable values before scanning.
+
+Scoped completed cycles are whole zero-tax functional-currency CR1 credit/FIFO
+restoration and CRF1 original-cash refund installments; BPC1 merchandise reserve,
+partial receipt/AP consumption and unreceived release; taxed foreign AR/partial
+functional settlement, closing FX and its exact inverse; and SR1 whole unissued
+receipt with a matching single-line unpaid zero-tax functional-currency AP credit,
+with paid landed charges disposed to approved expense. BPC1 refuses paid charges;
+SR1 does not restore replacement receiving capacity or reinstate BPC1 budgets.
+Hosted gates include CR15, collections19, BPC24, LC49, SR28 and corrective0132's
+four cases, with zero skips/xfails/xpasses. Earlier CR/BPC9c4bea54, BPC7f72c770,
+FX1e73267e and SR92230f4a packets retain their original source scope. The original
+FX19 unique cases and closing6/retained-position1 follow-ups are not additive totals.
+Partial/taxed/foreign stock returns, paid/partial/issued supplier returns, BPC1
+budget reinstatement, PR/RFQ and charge appropriation remain gaps. Manufacturing
+cost controls do not post production inventory/WIP/GL; native BOM/MRP remains missing.
+Broad country tax, intercompany and the other global operational suites remain gaps.
+API inventory remains 459 routes with the accepted 429/432 predecessors preserved.
+The earlier current-live22 inventory and historical benchmark index stay source-bound.
+
+Six fresh1K posting runs compare b7df9271 with07452da8 in BC/CB/BC order, four
+workers and20 warmup cycles per run, retaining durability settings and raw bytes.
+Static configuration and seven instrumentation files match, but dynamic power
+changed:248 observed AC samples and263 battery samples. B1/C1 were AC at median
+2197MHz; C2 switched AC→battery; B2/B3/C3 were battery at median2811MHz.
+Independent normal and optimized-Python oracles pass under trusted manifest
+c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc.
+Descriptive median throughput rises1.340057→1.822781 successful cycles/sec (+36.02%);
+combined client/database CPU per success falls2.524217→1.929894sec (−23.54%). These
+observations do not establish a causal gain or a dynamically matched comparison;
+performance_comparison_accepted is false. The separate stable-power repeat is complete. Resource
+acceptance is false: client CPU rises641.218750→785.265625sec (+22.46%) and bounded
+batch read rises0.567914→0.626310sec (+10.28%). Six raw reports and both oracles are
+staged under wave4-evidence/posting-1k; publication closure is separate. Fresh10K
+scale completed afterward with10000 genuine measured effects and20warmups. Its
+independent integer oracle5028151631minor units passed, source07452 stayed unchanged
+and the owned lab was removed. The pinned original3.55MBreport is under
+wave4-evidence/scale-10k; this is single-candidate capacity with changing power,
+not a matched10Kbaseline or improvement comparison.
+
+Separate stable-AC three pairs pass financial/environment verification, bound to
+manifest1e67d483a994e68392fd7d5a35413e7c535d8d2b78a25d1ae975cf587b3f2a7c.
+They retain 371 AC/0 battery/0 unavailable samples and matching before/after
+Balanced scheme GUID. Observed median throughput improves42.585%, combined CPU
+per success falls27.130%, and bounded batch read falls1.337%; p50/p95/p99 fall
+31.549%/23.187%/25.958%. Client CPU rises2.825% and remains an unresolved adverse
+result. Overall performance/resource acceptance is false; task004 stays in_progress.
+Sparse observations do not prove continuous power, overlay mode, scheduling or
+thermal equivalence, and CPU attribution is unresolved. These are four-worker
+two-line USD cash/equity journal cycles measured at b7df9271/07452da8, not final
+publication-head measurements. Later UI/observer changes do not rewrite these bytes.
+100K/1M remain unrun. Mixed full1,000-line business cycles, monetary cost and HA/DR
+RPO/RTO remain unaccepted. No cross-vendor superiority is established.
+
+See [baseline and protected provenance](WAVE4_BASELINE_2026-10-10.md),
+[current functional gaps](GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md) and
+[read-policy design](../adr/0850-invoker-financial-read-policy-planning.md).
+[Source-bound acceptance](WAVE4_ACCEPTANCE_2026-10-10.md) retains 44 byte-exact
+original JSON reports and 23 unsuccessful attempts. Portable FX proof files and
+the original trusted manifest are under wave4-evidence/fx-1e73267e; the independent
+stdlib Fraction verifier requires the separately retained manifest SHA256.
+Historical accepted snapshots below retain their original source scope.
+
 ## Successor publication snapshot: locally verified operating integrity (2026-10-10)
 
 Branch `amr/global-integrity-wave3-20261010` remains above PR128699→PR12734b9→

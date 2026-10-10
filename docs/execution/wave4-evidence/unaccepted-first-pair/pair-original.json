@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "status": "running",
+  "pairs": 3,
+  "count": 1000,
+  "commits": {
+    "baseline": "bc294c787e11622cbf199775cb64b7683ac4d0d1",
+    "candidate": "92230f4a68d9ea3674dff088d3821635dcaa7d94"
+  },
+  "runs": [
+    {
+      "repetition": 1,
+      "variant": "baseline",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-wave4-performance-baseline\\reconforge-erp\\.github\\scripts\\benchmark_enterprise_finance.py",
+        "--counts",
+        "100",
+        "1000",
+        "--workers",
+        "4",
+        "--repetitions",
+        "3",
+        "--posting-warmup",
+        "20",
+        "--max-seconds",
+        "1800",
+        "--output",
+        "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-paired-1000-bc294-92230f4a\\1-baseline"
+      ],
+      "report": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-paired-1000-bc294-92230f4a\\1-baseline\\result.json",
+      "report_sha256": "58028bc7145108acb0b80e22037e74c85c1ab30df3bca55af6d18345ad7b2834",
+      "child_exit_code": 0,
+      "verified": {
+        "count": 1000,
+        "oracle_total_minor": "493671004",
+        "posting_seconds": 626.6715484000015,
+        "throughput": 1.5957322500968318,
+        "p50": 2.477957700000843,
+        "p95": 2.663157599999977,
+        "p99": 3.112564700000803,
+        "client_cpu_seconds": 517.40625,
+        "container_cpu_seconds": 1593.252391,
+        "total_cpu_seconds_per_success": 2.110658641,
+        "container_lifetime_peak_memory_bytes": 329441280,
+        "client_lifetime_peak_memory_bytes": 124456960,
+        "resource_sample_window": {
+          "sample_count": 70,
+          "interval_seconds": 10,
+          "first_elapsed_seconds": 0.0,
+          "last_elapsed_seconds": 690.4379999999983,
+          "client_cpu_seconds_sample_window_delta": 533.21875,
+          "sampled_client_rss_peak_bytes": 121610240,
+          "client_lifetime_peak_rss_bytes_at_last_sample": 124456960,
+          "sampled_docker_cpu_peak_percent": 264.19,
+          "sampled_docker_ram_peak_bytes": 201536307,
+          "sampled_lock_waiting_sessions_peak": 1,
+          "deadlock_counter_first": 0,
+          "deadlock_counter_last": 0,
+          "database_counter_sample_window_deltas": {
+            "xact_commit": 12844,
+            "xact_rollback": 0,
+            "blks_read": 82,
+            "blks_hit": 23386533,
+            "tup_returned": 16487973,
+            "tup_fetched": 16363432,
+            "tup_inserted": 11919,
+            "tup_updated": 9495,
+            "tup_deleted": 466,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "wal_bytes_sample_window_delta": 20386825,
+          "docker_raw_counters_first": {
+            "CPUPerc": "53.91%",
+            "MemUsage": "56.86MiB / 9.561GiB",
+            "MemPerc": "0.58%",
+            "NetIO": "1.66MB / 587kB",
+            "BlockIO": "32.8kB / 72.7MB",
+            "PIDs": "7"
+          },
+          "docker_raw_counters_last": {
+            "CPUPerc": "28.64%",
+            "MemUsage": "71.96MiB / 9.561GiB",
+            "MemPerc": "0.74%",
+            "NetIO": "109MB / 278MB",
+            "BlockIO": "32.8kB / 215MB",
+            "PIDs": "7"
+          }
+        },
+        "bounded_batch_read_seconds": 0.4909454000007827,
+        "cost_per_success_currency": null,
+        "limits": [
+          "CPU counter boundaries include cgroup exec/observer overhead",
+          "memory peaks include startup and warmup",
+          "single entity USD cash/equity native repositories including current identity checks; no HTTP/mixed ERP equivalence",
+          "no supplied monetary resource cost model; no cross-vendor ranking"
+        ]
+      }
+    },
+    {
+      "repetition": 1,
+      "variant": "candidate",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-wave4-performance-candidate\\reconforge-erp\\.github\\scripts\\benchmark_enterprise_finance.py",
+        "--counts",
+        "100",
+        "1000",
+        "--workers",
+        "4",
+        "--repetitions",
+        "3",
+        "--posting-warmup",
+        "20",
+        "--max-seconds",
+        "1800",
+        "--output",
+        "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-paired-1000-bc294-92230f4a\\1-candidate"
+      ],
+      "report": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-paired-1000-bc294-92230f4a\\1-candidate\\result.json",
+      "report_sha256": "97769e636413eca5c34604639bf5cc9bdfe93f86a9503fc2ade816c7f75ce574",
+      "child_exit_code": 0,
+      "verified": {
+        "count": 1000,
+        "oracle_total_minor": "493671004",
+        "posting_seconds": 798.3689279000027,
+        "throughput": 1.2525537568581977,
+        "p50": 3.2521003000001656,
+        "p95": 3.438544800003001,
+        "p99": 3.558294399997976,
+        "client_cpu_seconds": 1206.5625,
+        "container_cpu_seconds": 1719.462263,
+        "total_cpu_seconds_per_success": 2.926024763,
+        "container_lifetime_peak_memory_bytes": 218939392,
+        "client_lifetime_peak_memory_bytes": 124141568,
+        "resource_sample_window": {
+          "sample_count": 89,
+          "interval_seconds": 10,
+          "first_elapsed_seconds": 0.0,
+          "last_elapsed_seconds": 880.75,
+          "client_cpu_seconds_sample_window_delta": 1234.953125,
+          "sampled_client_rss_peak_bytes": 122802176,
+          "client_lifetime_peak_rss_bytes_at_last_sample": 124141568,
+          "sampled_docker_cpu_peak_percent": 232.83,
+          "sampled_docker_ram_peak_bytes": 110100480,
+          "sampled_lock_waiting_sessions_peak": 1,
+          "deadlock_counter_first": 0,
+          "deadlock_counter_last": 0,
+          "database_counter_sample_window_deltas": {
+            "xact_commit": 12978,
+            "xact_rollback": 0,
+            "blks_read": 84,
+            "blks_hit": 24761758,
+            "tup_returned": 17688611,
+            "tup_fetched": 17544152,
+            "tup_inserted": 11970,
+            "tup_updated": 9692,
+            "tup_deleted": 517,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "wal_bytes_sample_window_delta": 20195123,
+          "docker_raw_counters_first": {
+            "CPUPerc": "56.23%",
+            "MemUsage": "66.73MiB / 9.561GiB",
+            "MemPerc": "0.68%",
+            "NetIO": "1.91MB / 731kB",
+            "BlockIO": "0B / 73.9MB",
+            "PIDs": "7"
+          },
+          "docker_raw_counters_last": {
+            "CPUPerc": "0.00%",
+            "MemUsage": "67.38MiB / 9.561GiB",
+            "MemPerc": "0.69%",
+            "NetIO": "109MB / 281MB",
+            "BlockIO": "0B / 216MB",
+            "PIDs": "6"
+          }
+        },
+        "bounded_batch_read_seconds": 1.0967118999978993,
+        "cost_per_success_currency": null,
+        "limits": [
+          "CPU counter boundaries include cgroup exec/observer overhead",
+          "memory peaks include startup and warmup",
+          "single entity USD cash/equity native repositories including current identity checks; no HTTP/mixed ERP equivalence",
+          "no supplied monetary resource cost model; no cross-vendor ranking"
+        ]
+      }
+    }
+  ],
+  "order": "BC,CB,BC alternating; each run fresh server and financial population"
+}

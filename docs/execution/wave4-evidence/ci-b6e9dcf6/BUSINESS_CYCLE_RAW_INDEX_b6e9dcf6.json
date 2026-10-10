@@ -1,0 +1,747 @@
+{
+  "schema_version": "wave4-hosted-business-cycle-raw-index-v1",
+  "captured_at_utc": "2026-10-10T16:06:49Z",
+  "head_sha": "b6e9dcf608df2885b61a2846a4edc8df783db72d",
+  "ci_run_id": 38059696904,
+  "ci_run_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904",
+  "ci_jobs": {
+    "success": 38,
+    "failure": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "native_shards": 16,
+    "all_https_restore_jobs": 11
+  },
+  "ci_terminal_observation_at_utc": "2026-10-10T15:07:32Z",
+  "ci_suite_updated_at_utc": "2026-10-10T15:04:54Z",
+  "ci_original_api": {
+    "file": "ci-jobs-gh-20261010T150730Z.json",
+    "bytes": 165408,
+    "sha256": "dd7ed17cf46e25050e7819882659abdb0bfa9b593a6f638b8c91f7968fe45c0b"
+  },
+  "ci_terminal_check_suite": {
+    "file": "terminal-ci-check-suite-20261010T151741Z.json",
+    "bytes": 8630,
+    "sha256": "2d197cf376bef5eb1c811484726df477cadd061afcbd37c048fa663d4d27aab6"
+  },
+  "source_binding": {
+    "head_sha": "b6e9dcf608df2885b61a2846a4edc8df783db72d",
+    "base_sha": "e07bff2a2e8197b052d53454ea85c727f7c7518e",
+    "merge_sha": "3aa0419574fe886f2863d84b2eab0a353878ae71",
+    "merge_parents": [
+      "e07bff2a2e8197b052d53454ea85c727f7c7518e",
+      "b6e9dcf608df2885b61a2846a4edc8df783db72d"
+    ],
+    "identical_git_tree_sha": "6e5c642fb18e8e6f0e6c8abd47847d3a1bcd1db3",
+    "binding_kind": "Exact GitHub PR head + retained GitHub merge API + locally rehashed immutable Git commit object",
+    "published_pr_api": {
+      "file": "pr130-20261010T143307Z.json",
+      "bytes": 22041,
+      "sha256": "e7ade0fae6f6790ff7f2f097efda4bdd63d089f097ac937e66a432cae20b46d4"
+    },
+    "merge_commit_api": {
+      "file": "commit-3aa0419574fe886f2863d84b2eab0a353878ae71.json",
+      "bytes": 2712,
+      "sha256": "6c4a52418eafd21dd302587dac44687a740945baf80cb134c83cf9e1ef2dc1e8"
+    },
+    "head_git_object": {
+      "file": "commit-b6e9dcf608df2885b61a2846a4edc8df783db72d.git-object",
+      "bytes": 318,
+      "sha256": "34850f000ba460950af72cb9c6c34605dc56c2956daf547cd7b55b8f1b0b704f"
+    },
+    "checkout_log": {
+      "file": "job-114235782283.log",
+      "bytes": 66940,
+      "sha256": "22951675c363a25138d58964b44b8b0e31b79ba7cf271d856564a0bcff34b183"
+    },
+    "head_commit_api_retrieval": "Bounded TLS timeouts; not claimed as downloaded"
+  },
+  "source_scope": "Current hostedb6 only; CI executes virtual merge3aa with parents[e07,b6] and identical b6 Git tree. Newer amended source/evidence publication requires its own CI.",
+  "business_capability_cycle_count": 5,
+  "distinct_business_browser_journeys": 4,
+  "cycles": [
+    {
+      "id": "CR1-CRF1",
+      "capability": "Original customer credit and partial cash refunds",
+      "native_command": "customer_returns",
+      "supporting_commands": [
+        "collections",
+        "corrective_0132"
+      ],
+      "browser_journey": "customer-returns",
+      "scope": "Whole delivered original zero-tax functional-currency source; original FIFO/COGS/revenue inverse and governed installments of retained collected cash.",
+      "gaps": [
+        "Partial returned quantity",
+        "Taxed/foreign stock-source returns",
+        "Arbitrary credits"
+      ]
+    },
+    {
+      "id": "BPC1",
+      "capability": "Native purchase appropriation, partial receipt/AP consumption and release",
+      "native_command": "procurement_commitments",
+      "supporting_commands": [
+        "landed_cost"
+      ],
+      "browser_journey": "procurement-commitments",
+      "scope": "Approved original merchandise budget binds native multi-line PO, actual partial receipt/AP consume and unreceived residual release.",
+      "gaps": [
+        "PR/RFQ/contracts",
+        "Paid charge appropriation",
+        "Supplier-return budget reinstatement"
+      ]
+    },
+    {
+      "id": "SR1",
+      "capability": "Original supplier return with unpaid AP credit and paid-charge expense",
+      "native_command": "supplier_returns",
+      "supporting_commands": [
+        "landed_cost"
+      ],
+      "browser_journey": "supplier-returns",
+      "scope": "Whole original unissued receipt and exact unpaid single-line AP source; governed expense disposition of paid capitalized charges; reviewed cancel and replacement.",
+      "gaps": [
+        "Partial/issued/adjusted receipt returns",
+        "Paid merchandise refunds",
+        "Taxed/foreign returns",
+        "BPC1 sources"
+      ]
+    },
+    {
+      "id": "FX1",
+      "capability": "Foreign taxed AR recognition and partial settlement with realized FX",
+      "native_command": "fx_and_read_plans",
+      "native_count_limit": "The current21-case command includes financial-read-plan tests;21 is a complete command population, not an asserted standalone unique FX case total. Historical original FX19 unique cases remain separately bound.",
+      "browser_journey": "operational-fx-tax",
+      "proof_stage_indices": [
+        0,
+        1,
+        4
+      ],
+      "scope": "Retained0/2/3 precision, configured dated tax/rates, exact native foreign AR and functional cash/AR/realized FX.",
+      "gaps": [
+        "Foreign AP/stock flows",
+        "Complete country tax determination",
+        "Inclusive/withholding tax suite"
+      ]
+    },
+    {
+      "id": "FX-CLOSE1",
+      "capability": "Closing outstanding FX valuation and exact original inverse",
+      "native_command": "fx_closing",
+      "browser_journey": "operational-fx-tax",
+      "proof_stage_indices": [
+        2,
+        3
+      ],
+      "shared_journey_limit": "Closing/inverse stages are within the same one expected five-stage FX browser scenario; this is not a fifth independent browser job.",
+      "scope": "Retained historical and valued outstanding source positions, governed unrealized FX delta, exact original native inverse before final settlement.",
+      "gaps": [
+        "Foreign AP/stock exposure",
+        "Group translation/consolidation revaluation"
+      ]
+    }
+  ],
+  "native_commands": {
+    "collections": {
+      "job_id": 114235260808,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260808",
+      "files": [
+        "tests/test_postgres_commercial_collections.py",
+        "tests/test_postgres_commercial_collection_cancellation.py"
+      ],
+      "collected_and_passed": 19,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260808.log",
+        "bytes": 299073,
+        "sha256": "5a7b92ed1e27ac7f1365bcbbfa1d8856f9002d9f38a92bc3f8495f382874687c"
+      }
+    },
+    "customer_returns": {
+      "job_id": 114235260808,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260808",
+      "files": [
+        "tests/test_postgres_customer_returns.py"
+      ],
+      "collected_and_passed": 15,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260808.log",
+        "bytes": 299073,
+        "sha256": "5a7b92ed1e27ac7f1365bcbbfa1d8856f9002d9f38a92bc3f8495f382874687c"
+      }
+    },
+    "landed_cost": {
+      "job_id": 114235260816,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260816",
+      "files": [
+        "tests/test_postgres_landed_cost.py",
+        "tests/test_postgres_landed_cost_api.py",
+        "tests/test_postgres_landed_cost_cancellation.py"
+      ],
+      "collected_and_passed": 49,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260816.log",
+        "bytes": 341276,
+        "sha256": "87cfdac366d64ccf654909fd430f83bd30b194f5a467811793ac2774fa97e42c"
+      }
+    },
+    "procurement_commitments": {
+      "job_id": 114235260816,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260816",
+      "files": [
+        "tests/test_postgres_procurement_commitments.py",
+        "tests/test_postgres_procurement_commitments_api.py"
+      ],
+      "collected_and_passed": 24,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260816.log",
+        "bytes": 341276,
+        "sha256": "87cfdac366d64ccf654909fd430f83bd30b194f5a467811793ac2774fa97e42c"
+      }
+    },
+    "supplier_returns": {
+      "job_id": 114235260774,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260774",
+      "files": [
+        "tests/test_postgres_supplier_returns.py",
+        "tests/test_postgres_supplier_returns_api.py"
+      ],
+      "collected_and_passed": 28,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260774.log",
+        "bytes": 209304,
+        "sha256": "05f00992b11c3781fd1d68cdf916b8e27ff4bddb9c894a5a7cb0c24bbaa59337"
+      }
+    },
+    "fixed_assets": {
+      "job_id": 114235260631,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260631",
+      "files": [
+        "tests/test_postgres_fixed_assets.py",
+        "tests/test_postgres_fixed_assets_evidence.py"
+      ],
+      "collected_and_passed": 17,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260631.log",
+        "bytes": 378840,
+        "sha256": "91b0b810412f9e44e25e55417632fa04ef1864d8b3d555724b7a25971182a8f1"
+      }
+    },
+    "global_cycles": {
+      "job_id": 114235260631,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260631",
+      "files": [
+        "tests/test_postgres_global_operating_cycles.py"
+      ],
+      "collected_and_passed": 2,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260631.log",
+        "bytes": 378840,
+        "sha256": "91b0b810412f9e44e25e55417632fa04ef1864d8b3d555724b7a25971182a8f1"
+      }
+    },
+    "event_dispatch": {
+      "job_id": 114235260631,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260631",
+      "files": [
+        "tests/test_postgres_native_event_dispatch_migration.py"
+      ],
+      "collected_and_passed": 1,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260631.log",
+        "bytes": 378840,
+        "sha256": "91b0b810412f9e44e25e55417632fa04ef1864d8b3d555724b7a25971182a8f1"
+      }
+    },
+    "posting_snapshot": {
+      "job_id": 114235260631,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260631",
+      "files": [
+        "tests/test_postgres_posting_snapshot_profile.py"
+      ],
+      "collected_and_passed": 7,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260631.log",
+        "bytes": 378840,
+        "sha256": "91b0b810412f9e44e25e55417632fa04ef1864d8b3d555724b7a25971182a8f1"
+      }
+    },
+    "corrective_0132": {
+      "job_id": 114235260631,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260631",
+      "files": [
+        "tests/test_postgres_stock_sales_reversal_dispatch.py"
+      ],
+      "collected_and_passed": 4,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260631.log",
+        "bytes": 378840,
+        "sha256": "91b0b810412f9e44e25e55417632fa04ef1864d8b3d555724b7a25971182a8f1"
+      }
+    },
+    "fx_and_read_plans": {
+      "job_id": 114235260631,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260631",
+      "files": [
+        "tests/test_postgres_operational_fx_tax.py",
+        "tests/test_postgres_operational_fx_tax_api.py",
+        "tests/test_postgres_operational_fx_tax_migration.py",
+        "tests/test_postgres_financial_read_plans.py"
+      ],
+      "collected_and_passed": 21,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260631.log",
+        "bytes": 378840,
+        "sha256": "91b0b810412f9e44e25e55417632fa04ef1864d8b3d555724b7a25971182a8f1"
+      }
+    },
+    "fx_closing": {
+      "job_id": 114235260728,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235260728",
+      "files": [
+        "tests/test_postgres_operational_fx_revaluation.py",
+        "tests/test_postgres_operational_fx_revaluation_migration.py"
+      ],
+      "collected_and_passed": 7,
+      "skipped": 0,
+      "xfailed": 0,
+      "xpassed": 0,
+      "stats_available": 1,
+      "original_log": {
+        "file": "job-114235260728.log",
+        "bytes": 203656,
+        "sha256": "e8f0fc5e57e2e05dd85dfd8eb48291e3c773886a3f8420ae1bfabaee6c992cd3"
+      }
+    }
+  },
+  "browser_reports": {
+    "customer-returns": {
+      "job_id": 114235782283,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235782283",
+      "artifact_id": 11672881672,
+      "original_zip": {
+        "file": "artifact-11672881672.zip",
+        "bytes": 72889,
+        "sha256": "9673db7779c351ab6b8988bbad602446595213aff065615485a514ff507ecd8d"
+      },
+      "original_report": {
+        "file": "customer-returns-artifact/report.json",
+        "bytes": 87484,
+        "sha256": "feb6b75e3fe0f6aa9ce9d2d862a8388e54bc7eeb232112ce82f86d0fc4560a9e"
+      },
+      "status": "passed",
+      "source_commit": "3aa0419574fe886f2863d84b2eab0a353878ae71",
+      "source_sha256": "7d1604e14a6a6db3bc340e3f8b2d342606dd68b1b502902decfe38b0a0a4a018",
+      "built_web_sha256": "89d7744ee75a352c9ad1b6ff5c6066177a9a840b97657c80b36fac1ff97717ff",
+      "revision": "0132_pg_stock_inverse_dispatch",
+      "wall_seconds": 84.35,
+      "browser_counts": {
+        "startTime": "2026-10-10T14:38:20.396Z",
+        "duration": 39302.799,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "credit_memo_id": "CR1-39cc4c57942d42bbaceed565b54f3fed",
+        "retained_customer_return_plans": 4,
+        "posted_whole_credits": 1,
+        "cancelled_reviewed_credits": 1,
+        "posted_partial_refunds": 2,
+        "original_receipts_retained": 1,
+        "posting_effects": 9,
+        "credit_minor": "45000",
+        "original_collected_minor": "10000",
+        "original_receivable_released_minor": "35000",
+        "refund_total_minor": "10000",
+        "refund_due_minor": "0",
+        "restored_original_fifo_quantity": "10",
+        "restored_original_fifo_minor": "12000",
+        "retained_original_consumptions": 1,
+        "native_fifo_restitutions": 1,
+        "gl_turnover_minor": "156000"
+      },
+      "restore": {
+        "status": "passed",
+        "head": "0132_pg_stock_inverse_dispatch",
+        "tables": 253,
+        "populated_tables": 72,
+        "rows": 760,
+        "forced_rls_financial_tables_in_owner_scope": 55,
+        "tamper_refusals": 3,
+        "restored_financial_effects_equal": true,
+        "dump_sha256": "8dc7c0d1498a6eda162303c6cf32ae5481de7a934f8a2d8096bcf6ad69439d7b"
+      },
+      "guards": {
+        "tracked_clean_before": true,
+        "tracked_clean_after": true,
+        "source_unchanged": true,
+        "built_web_unchanged": true,
+        "owned_https_process_stopped": true,
+        "owned_container_removed": true
+      }
+    },
+    "procurement-commitments": {
+      "job_id": 114235782279,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235782279",
+      "artifact_id": 11673191136,
+      "original_zip": {
+        "file": "artifact-11673191136.zip",
+        "bytes": 607988,
+        "sha256": "2d00b89266c983527c16244ffb684c06f39ab8228d7f25fb8b5211b0e0fc77cd"
+      },
+      "original_report": {
+        "file": "procurement-commitments-artifact/report.json",
+        "bytes": 87062,
+        "sha256": "0e39bdc0486f69c6757d476700c756fc6f1f5688d9fbc91137962087abd46b66"
+      },
+      "status": "passed",
+      "source_commit": "3aa0419574fe886f2863d84b2eab0a353878ae71",
+      "source_sha256": "7d1604e14a6a6db3bc340e3f8b2d342606dd68b1b502902decfe38b0a0a4a018",
+      "built_web_sha256": "89d7744ee75a352c9ad1b6ff5c6066177a9a840b97657c80b36fac1ff97717ff",
+      "revision": "0132_pg_stock_inverse_dispatch",
+      "wall_seconds": 81.727,
+      "browser_counts": {
+        "startTime": "2026-10-10T14:37:29.708Z",
+        "duration": 46036.579999999994,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "order_id": "PPORDER-03d7c12ea4eaeacd",
+        "budget_id": "BGT-8585438b94ce4ce581caee92e3a06f9e",
+        "original_minor": "17000",
+        "consumed_minor": "7400",
+        "released_minor": "9600",
+        "available_minor": "12600",
+        "line_count": 2,
+        "stock_receipts": 2,
+        "supplier_invoices": 1,
+        "payment_installments": 2,
+        "posting_effects": 5,
+        "expected_turnover_minor": "22200",
+        "remaining_inventory_minor": "7400"
+      },
+      "restore": {
+        "status": "passed",
+        "head": "0132_pg_stock_inverse_dispatch",
+        "tables": 253,
+        "populated_tables": 74,
+        "rows": 1524,
+        "forced_rls_financial_tables_in_owner_scope": 59,
+        "tamper_refusals": 3,
+        "restored_financial_effects_equal": true,
+        "dump_sha256": "f66053c4ab5e1301538faa2338b9efd3117e78de995ac8aab899ce8f9eb66de3"
+      },
+      "guards": {
+        "tracked_clean_before": true,
+        "tracked_clean_after": true,
+        "source_unchanged": true,
+        "built_web_unchanged": true,
+        "owned_https_process_stopped": true,
+        "owned_container_removed": true
+      }
+    },
+    "supplier-returns": {
+      "job_id": 114235782224,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235782224",
+      "artifact_id": 11672449016,
+      "original_zip": {
+        "file": "artifact-11672449016.zip",
+        "bytes": 1127001,
+        "sha256": "cbfb27a5ee84b97370accc3fd7e21d4fa4ed8f717b0c4527b3537b12104d92a2"
+      },
+      "original_report": {
+        "file": "supplier-returns-artifact/report.json",
+        "bytes": 87285,
+        "sha256": "1c754eaa81931fbe07c999ee689c3c9aef8f28eb91092871ffa4bfb59ccc54c5"
+      },
+      "status": "passed",
+      "source_commit": "3aa0419574fe886f2863d84b2eab0a353878ae71",
+      "source_sha256": "7d1604e14a6a6db3bc340e3f8b2d342606dd68b1b502902decfe38b0a0a4a018",
+      "built_web_sha256": "89d7744ee75a352c9ad1b6ff5c6066177a9a840b97657c80b36fac1ff97717ff",
+      "revision": "0132_pg_stock_inverse_dispatch",
+      "wall_seconds": 147.597,
+      "browser_counts": {
+        "startTime": "2026-10-10T14:38:39.818Z",
+        "duration": 104896.886,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "order_id": "PPORDER-5581762cf5153545",
+        "supplier_return_id": "SR1-7c25e9828a1140d8a9e30fdbdbed41e4",
+        "cancelled_supplier_return_id": "SR1-f23ef28193094028954feaaf51f83f1a",
+        "reviewed_cancellations": 1,
+        "supplier_credit_minor": "12000",
+        "removed_fifo_minor": "12706",
+        "charge_expense_minor": "706",
+        "stock_receipts": 2,
+        "supplier_invoices": 2,
+        "payment_installments": 2,
+        "posting_effects": 10,
+        "expected_turnover_minor": "66414",
+        "remaining_inventory_minor": "5295",
+        "cash_change_minor": "-6001"
+      },
+      "restore": {
+        "status": "passed",
+        "head": "0132_pg_stock_inverse_dispatch",
+        "tables": 253,
+        "populated_tables": 80,
+        "rows": 2076,
+        "forced_rls_financial_tables_in_owner_scope": 64,
+        "tamper_refusals": 3,
+        "restored_financial_effects_equal": true,
+        "dump_sha256": "749d09fe962ae89ce8b2fd003f8690f8b70877f54f196477060d35099df3bf7d"
+      },
+      "guards": {
+        "tracked_clean_before": true,
+        "tracked_clean_after": true,
+        "source_unchanged": true,
+        "built_web_unchanged": true,
+        "owned_https_process_stopped": true,
+        "owned_container_removed": true
+      }
+    },
+    "operational-fx-tax": {
+      "job_id": 114235782285,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904/job/114235782285",
+      "artifact_id": 11673051413,
+      "original_zip": {
+        "file": "artifact-11673051413.zip",
+        "bytes": 572949,
+        "sha256": "be20686861697cc460f36623ca7b4a12e098cbcb6ea6f0346fd726035cf73fdc"
+      },
+      "original_report": {
+        "file": "operational-fx-tax-artifact/report.json",
+        "bytes": 87773,
+        "sha256": "10c2f707a49aefacdce510dde9b1e3fbfdf619d1a13bd835b6780738946cdd83"
+      },
+      "status": "passed",
+      "source_commit": "3aa0419574fe886f2863d84b2eab0a353878ae71",
+      "source_sha256": "7d1604e14a6a6db3bc340e3f8b2d342606dd68b1b502902decfe38b0a0a4a018",
+      "built_web_sha256": "89d7744ee75a352c9ad1b6ff5c6066177a9a840b97657c80b36fac1ff97717ff",
+      "revision": "0132_pg_stock_inverse_dispatch",
+      "wall_seconds": 83.966,
+      "browser_counts": {
+        "startTime": "2026-10-10T14:39:45.367Z",
+        "duration": 46537.774,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "source_id": "FX-a404bc98c4e24bc58d907920e8d3a8da",
+        "invoice_id": "ARINV-d1b861c4a946b19c",
+        "native_invoice_status": "Paid",
+        "source_plans": 5,
+        "native_posting_effects": 5,
+        "unrealized_fx_minor": [
+          "740",
+          "-740"
+        ],
+        "foreign_currency": "EUR",
+        "functional_currency": "USD",
+        "foreign_gross_minor": "11401",
+        "functional_gross_minor": "14251",
+        "foreign_receipts_minor": [
+          "4000",
+          "7401"
+        ],
+        "historical_releases_minor": [
+          "5000",
+          "9251"
+        ],
+        "realized_fx_minor": [
+          "200",
+          "-370"
+        ],
+        "account_balances_minor": {
+          "AR": "0",
+          "REVENUE": "-12501",
+          "TAX": "-1750",
+          "CASH": "14081",
+          "GAIN": "-200",
+          "LOSS": "370",
+          "UGAIN": "0"
+        }
+      },
+      "restore": {
+        "status": "passed",
+        "head": "0132_pg_stock_inverse_dispatch",
+        "tables": 253,
+        "populated_tables": 44,
+        "rows": 608,
+        "forced_rls_financial_tables_in_owner_scope": 45,
+        "tamper_refusals": 3,
+        "restored_financial_effects_equal": true,
+        "dump_sha256": "e80378b24dfd147cce6b745c7820256dcf33134dbe51c5b7062e2e0dee328219"
+      },
+      "guards": {
+        "tracked_clean_before": true,
+        "tracked_clean_after": true,
+        "source_unchanged": true,
+        "built_web_unchanged": true,
+        "owned_https_process_stopped": true,
+        "owned_container_removed": true
+      }
+    }
+  },
+  "fx_current_browser_proofs": [
+    {
+      "stage_index": 0,
+      "original_proof": {
+        "file": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-0.json",
+        "bytes": 17419,
+        "sha256": "4fc77d0ec30d1db5944b1f494daeb57099248f66f45e2e69fe2354bbabbff35a"
+      },
+      "kind": "recognize"
+    },
+    {
+      "stage_index": 1,
+      "original_proof": {
+        "file": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-1.json",
+        "bytes": 16487,
+        "sha256": "b91008403ec105f7d347b14906a4a834d1edc110280329f490a841d6f76c3aa1"
+      },
+      "kind": "settle"
+    },
+    {
+      "stage_index": 2,
+      "original_proof": {
+        "file": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-2.json",
+        "bytes": 15897,
+        "sha256": "fd3b3e92957031c8aaab163d514d34738ce058910cdb9395497129c1d0946091"
+      },
+      "kind": "revalue"
+    },
+    {
+      "stage_index": 3,
+      "original_proof": {
+        "file": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-3.json",
+        "bytes": 15594,
+        "sha256": "443a567f9a4a486af67d349167c8e064bee2f7170c82e6bb077a64caa2d0daff"
+      },
+      "kind": "reverse_revaluation"
+    },
+    {
+      "stage_index": 4,
+      "original_proof": {
+        "file": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-4.json",
+        "bytes": 16505,
+        "sha256": "569c857e0b12fe993a9a8777891c32e38b0783b22942738d5f610e8e481767b8"
+      },
+      "kind": "settle"
+    }
+  ],
+  "original_artifact_api": {
+    "file": "artifacts-cycle-20261010T155608Z.json",
+    "bytes": 17648,
+    "sha256": "e5304c46d0cfb800f4ab3b88416a0e5ff7ea09c0fd7d2212290556fe404e3872"
+  },
+  "general_python": {
+    "3.11": {
+      "job_id": 114235260761,
+      "original_log": {
+        "file": "job-114235260761.log",
+        "bytes": 738048,
+        "sha256": "23b37d2ab51caabd073f87c1eb9f3d7cdab02de1e2e0cab5c7f4a71c4839a879"
+      },
+      "passed": 4895,
+      "existing_prerequisite_skips": 663,
+      "warnings": 10,
+      "pytest_wall_seconds": 918.6,
+      "mypy_source_files": 709
+    },
+    "3.12": {
+      "job_id": 114235260584,
+      "original_log": {
+        "file": "job-114235260584.log",
+        "bytes": 738719,
+        "sha256": "a701a0170181121395806cca37e76d2d5264ed56e18da355e59bac58dac7ee72"
+      },
+      "passed": 4895,
+      "existing_prerequisite_skips": 663,
+      "warnings": 26,
+      "pytest_wall_seconds": 942.63,
+      "mypy_source_files": 709
+    }
+  },
+  "source_archive_311": {
+    "original_report": {
+      "file": "publication-source-closure-3.11.json",
+      "bytes": 488287,
+      "sha256": "b992a5c8b1799c9438a0bb35adb0f6ce25d40452e0b46441ef8858529c6585b6"
+    },
+    "original_zip": {
+      "file": "artifact-11672464176.zip",
+      "bytes": 182402,
+      "sha256": "cf2b68cfa8f21c80eb5768c7c5327f9cd913707b3ba5aa50f9d24607a4831561"
+    },
+    "status": "passed",
+    "complete_migrations": 132,
+    "head": "0132_pg_stock_inverse_dispatch",
+    "source_commit": "3aa0419574fe886f2863d84b2eab0a353878ae71"
+  },
+  "security_scope": "Four applicable Security checks succeeded; exact-image SBOM/vulnerability/license job was conditionally skipped. No universal vulnerability-free claim.",
+  "limits": [
+    "Raw index summarizes retained original records; it does not rerun native databases or create a new financial oracle.",
+    "Native command populations and shared browser stages are not summed into invented unique coverage totals.",
+    "Current b6 FX proof bytes are distinct from the separately anchored historical1e independent Fraction packet.",
+    "Per-owner FORCE RLS table counts differ by the financial owner scope; they are not a global catalog count.",
+    "Later authentication probe checkpoints may update identity metadata; no whole checkpoint equality beyond runner restore assertions is claimed.",
+    "No performance acceptance, monetary cost, competitor superiority, full ERP completeness, new10K acceptance or final amended-head CI is asserted."
+  ],
+  "local_activity": "Read-only hosted REST/log/ZIP recovery and ignored index serialization; no tests/build/native database/browser/benchmark/ROOT writes."
+}

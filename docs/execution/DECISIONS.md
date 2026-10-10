@@ -1,5 +1,49 @@
 # ReconForge Execution Decisions Log
 
+## Wave4 native ownership and measured planning (2026-10-10)
+
+Retain e07bff2a and the accepted PR chain without changing main or the primary's
+uncommitted schema files. CR1/CRF1 owns original whole delivered stock return and
+governed partial refund; BPC1 reuses budget reserve/consume/release against native
+purchase/AP state; FX1 reuses original registry/AR/GL for historical foreign invoice
+and partial realized settlement. No alternate ledger, currency engine or permission
+system. Root orders0126→0127→0128→0129→0130→0131; SR1 and closing FX
+retain exact native original inverses and their private source namespaces.
+
+Every source namespace is admitted only through its private participant and native
+database closure. Ordinary namespaces must exit before querying unrelated owner
+tables, even if SELECT was revoked. Historical ACK replay still requires current
+whole-source authority after waiting on a lock. Retained precision defines prior
+turnover; incompatible current policy must not reinterpret history.
+
+ADR0850 reduces read-policy planning using actual scoped IDs and invoker parent
+helpers, while retaining write checks/FORCE RLS. Do not reduce password hashing,
+durability, audit evidence or current authorization to gain throughput. Measure
+three genuine warm fresh populations per variant, alternating order, with process
+CPU confined to posting and Linux cgroup CPU counters at matching boundaries.
+The independently implemented verifier imports no ReconForge financial logic.
+New capabilities remain candidates until native/API/actual HTTPS/restore and
+integrated exact-source gates pass; retain initial failures without added skips.
+
+Four locally accepted actual business/restore cycles remain bound to their distinct
+9c4bea54/1e73267e/92230f4a commits. Do not combine those historical packets into
+final-head native/general/CI acceptance. Whole zero-tax functional-currency customer
+return and whole unissued/unpaid supplier return are explicit contracts; partial,
+taxed/foreign stock, paid merchandise, issued/adjusted receipt and BPC1 supplier
+appropriation reinstatement require new accounting/source contracts. Closing FX
+captures the original historical and valued outstanding position; current ABAC
+admits the full emitted position at original precision, including inverse and retry.
+
+Publication preserves original JSON bytes, including CRLF, rather than reserializing
+trusted evidence. The portable FX oracle independently recomputes integer/Fraction
+tax, historical release, cash and realized/unrealized FX, and binds each proof and
+report byte hash plus native effect/entry/plan membership to the previously retained
+manifest. Its SHA256 is supplied separately; a self-computed hash is not an external
+attestation. Archive closure must re-run the stdlib oracle from extracted source in
+normal and optimized Python, while preserving the old benchmark index and 125-prefix
+migration proof. Final CI, three matched performance pairs and larger scale remain
+pending; the interrupted general run is never promoted by later targeted passes.
+
 ## Wave3 final integration decisions (2026-10-10)
 
 Retain original unposted claim evidence and immutable acknowledgements;
@@ -13309,3 +13353,28 @@ governed operational APIs and real Studio workflows. The new user request
 authorizes receipt API/UI completion. Three isolated implementation branches
 have exclusive leaf ownership; the lead owns central integration and final
 gates. Main and unrelated cancellation-projection work remain separate.
+
+
+## 2026-10-10 — separate financial evidence, dynamic power and performance acceptance
+
+Keep the original six mixed-power runs byte-exact, with their c5 trust anchor and
+false performance acceptance. The user confirmed fixed electricity and power
+mode; an external stdlib controller repeats BC,CB,BC using unchanged frozen
+children, with read-only active-scheme observations before/after each child and
+retained AC/saver sample validation. A sidecar proof must bind actual original
+reports and their hashes; missing/battery/saver-on or changed-scheme evidence
+fails closed. No power parameters, credentials, KDF iterations, native posting
+controls or permission freshness are changed. An active scheme GUID does not
+identify a Windows overlay mode, continuous power or per-core scheduling.
+
+A successful independent financial/environment proof never erases client CPU,
+batch-read or memory regressions. Preserve each resource window and state its
+scope. The genuine10Kcapacity packet receives its own pinned normal/-O archive
+oracle; it establishes neither a matched10Kspeedup nor cross-vendor superiority.
+The monetary resource cost remains null without an actual cost model. Keep the
+historic22-entry index and accepted source reports immutable.
+
+
+### Wave4 completed stable-power evidence closure — 2026-10-10
+
+Stable six financial/environment proof passed; paircd8c404d/manifest1e67d483 pin original reports/12power sidecars. All371observed samples AC,0battery/unavailable; original6120effects/six fresh servers. Median throughput+42.5851%, combinedCPU/success-27.1300%, p95-23.1873%, batchread-1.3370%, adverse clientCPU+2.8250% and lifetime memory+0.2254%; overall resource/performance acceptance remainsfalse, no post-hoc threshold. Independent normal/optimized proofs byte-identicalac3abc9e;73targeted cases passed with0skips. Previous mixed/failed results remain immutable. 10Kcapacity independently passed5028151631minor;100K/1M unrun; no equivalent competitor comparison. Final source archive/hosted gates are required after evidence integration.

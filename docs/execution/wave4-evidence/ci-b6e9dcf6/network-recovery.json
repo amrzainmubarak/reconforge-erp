@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-10-10T15:40:55Z",
+  "head_sha": "b6e9dcf608df2885b61a2846a4edc8df783db72d",
+  "ci_run_id": 38059696904,
+  "extends": {
+    "file": "TERMINAL_CI_SUPPLEMENT_b6e9dcf6-v2.json",
+    "sha256": "292c002638c8f297c816d023eab88368e36955729e72199e76de29a461454ed8"
+  },
+  "recovery_origin": "Finance sibling bounded hosted REST recovery; copied exactly and independently matched original job/artifact pins. No local build/archive execution is claimed.",
+  "copied_originals": [
+    {
+      "original_file": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave4-exec\\reconforge-erp\\output\\hosted-pr130-b6e9dcf6-network-assist\\python-3.12-job-114235260584.log",
+      "retained_file": "job-114235260584.log",
+      "bytes": 738719,
+      "sha256": "a701a0170181121395806cca37e76d2d5264ed56e18da355e59bac58dac7ee72"
+    },
+    {
+      "original_file": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave4-exec\\reconforge-erp\\output\\hosted-pr130-b6e9dcf6-network-assist\\python-3.11-source-archive-11672464176.zip",
+      "retained_file": "artifact-11672464176.zip",
+      "bytes": 182402,
+      "sha256": "cf2b68cfa8f21c80eb5768c7c5327f9cd913707b3ba5aa50f9d24607a4831561"
+    },
+    {
+      "original_file": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave4-exec\\reconforge-erp\\output\\hosted-pr130-b6e9dcf6-network-assist\\publication-source-closure-3.11.json",
+      "retained_file": "publication-source-closure-3.11.json",
+      "bytes": 488287,
+      "sha256": "b992a5c8b1799c9438a0bb35adb0f6ce25d40452e0b46441ef8858529c6585b6"
+    }
+  ],
+  "python_312": {
+    "job_id": 114235260584,
+    "passed": 4895,
+    "existing_prerequisite_skips": 663,
+    "warnings": 26,
+    "pytest_wall_seconds": 942.63,
+    "mypy_source_files": 709
+  },
+  "archive_311": {
+    "status": "passed",
+    "source_commit": "3aa0419574fe886f2863d84b2eab0a353878ae71",
+    "source_sha256": "7d1604e14a6a6db3bc340e3f8b2d342606dd68b1b502902decfe38b0a0a4a018",
+    "source_unchanged": true,
+    "tracked_clean_before": true,
+    "tracked_clean_after": true,
+    "temporary_extraction_removed": true,
+    "migrations": {
+      "count": 132,
+      "head": "0132_pg_stock_inverse_dispatch",
+      "oldest": "0001_postgres_tenant_boundary",
+      "complete_linear_chain": true
+    },
+    "sdist_sha256": "f5b3ecbbb98d728ad8527bd57995a9933a2ceff0e7f5f4beb41698f1f044f61f",
+    "wheel_sha256": "010acf5dec63052edf835b910597fb7d2eca14df8e0bdbdce83463df6a9b661a",
+    "embedded_original_reports": 44,
+    "actual_cycle_count": 4,
+    "final_program_acceptance": false
+  },
+  "source_binding": {
+    "file": "source-binding-local-git-head.json",
+    "scope": "CI merge3aa is distinct from published b6; retained exact parents[e07,b6] and identical Git tree bind it to b6."
+  },
+  "original_packet_unchanged": true,
+  "local_activity": "Ignored evidence byte copy/hash/JSON inspection only; no tracked edits, ROOT writes, tests, build, Docker, browser or benchmark."
+}

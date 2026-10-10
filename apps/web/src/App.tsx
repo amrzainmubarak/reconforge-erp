@@ -19,6 +19,8 @@ const StockSalesPage = lazy(() => import("./components/StockSalesPage").then((mo
 const ProcurementPartialPage = lazy(() => import("./components/ProcurementPartialPage").then((module) => ({ default: module.ProcurementPartialPage })));
 const FinancialReportingPage = lazy(() => import("./components/FinancialReportingPage"));
 const FixedAssetsPage = lazy(() => import("./components/FixedAssetsPage"));
+const CustomerReturnsPage = lazy(() => import("./components/CustomerReturnsPage"));
+const OperationalFxTaxPage = lazy(() => import("./components/OperationalFxTaxPage"));
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
 const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((module) => ({ default: module.EvidenceBinder })));
@@ -62,6 +64,8 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/procurement-partial")) return "procurementPartial";
   if (normalized.endsWith("/financial-reporting")) return "financialReporting";
   if (normalized.endsWith("/fixed-assets")) return "fixedAssets";
+  if (normalized.endsWith("/customer-returns")) return "customerReturns";
+  if (normalized.endsWith("/operational-fx-tax")) return "operationalFxTax";
   if (normalized.endsWith("/procurement-operations")) return "procurementOperations";
   if (normalized.endsWith("/enterprise-finance") || normalized.endsWith("/erp")) return "enterpriseFinance";
   return "dashboard";
@@ -84,6 +88,8 @@ function pathForPage(page: StudioPage): string {
     procurementPartial: "procurement-partial",
     financialReporting: "financial-reporting",
     fixedAssets: "fixed-assets",
+    customerReturns: "customer-returns",
+    operationalFxTax: "operational-fx-tax",
     procurementOperations: "procurement-operations",
     enterpriseFinance: "enterprise-finance",
   };
@@ -219,6 +225,8 @@ function StudioApp() {
         {activePage === "procurementPartial" ? <Suspense fallback={<LoadingView translate={t} />}><ProcurementPartialPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "financialReporting" ? <Suspense fallback={<LoadingView translate={t} />}><FinancialReportingPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "fixedAssets" ? <Suspense fallback={<LoadingView translate={t} />}><FixedAssetsPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "customerReturns" ? <Suspense fallback={<LoadingView translate={t} />}><CustomerReturnsPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "operationalFxTax" ? <Suspense fallback={<LoadingView translate={t} />}><OperationalFxTaxPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}
         {activePage === "dashboard" && data ? (

@@ -32,7 +32,8 @@ def test_accepted_native_profile_retains_its_independent_integer_oracle() -> Non
     assert percentile([4, 1, 2, 3], .95) == 4
 
 
-def test_posting_phase_profile_preserves_failure_boundaries_without_collecting_secrets() -> None:
+@pytest.mark.parametrize("profile_cpu", [False, True])
+def test_posting_phase_profile_preserves_failure_boundaries_without_collecting_secrets(profile_cpu: bool) -> None:
     from contextlib import contextmanager
 
     from reconforge.benchmark.enterprise_posting_profile import PostingProfile
@@ -49,7 +50,7 @@ def test_posting_phase_profile_preserves_failure_boundaries_without_collecting_s
             yield Connection(), "secret-auth", "secret-actor"
             raise RuntimeError("secret-commit-error")
 
-    profile = PostingProfile()
+    profile = PostingProfile(profile_cpu=profile_cpu)
     with pytest.raises(RuntimeError, match="secret-commit"), profile.actor(Runtime(), "secret-user", 3, "post") as (connection, _, _actor):
         assert connection.execute("SELECT private-column", ("secret-parameter",)) == "secret-parameter"
         with pytest.raises(ValueError):
@@ -60,6 +61,54 @@ def test_posting_phase_profile_preserves_failure_boundaries_without_collecting_s
     assert sum(row["calls"] for row in report["statement_templates"]) == 2
     assert sum(row["failures"] for row in report["statement_templates"]) == 1
     assert "secret-" not in str(report) and "private-" not in str(report)
+    assert report["function_profile"]["enabled"] is profile_cpu
+    assert bool(report["function_profile"]["functions"]) is profile_cpu
+    assert all(row["thread_cpu_seconds"] >= 0 for row in report["raw_phase_observations"])
+
+
+def test_function_discovery_ceiling_preserves_business_work_without_profiling_later_cycles() -> None:
+    from contextlib import contextmanager
+
+    from reconforge.benchmark.enterprise_posting_profile import PostingProfile
+
+    class Runtime:
+        @contextmanager
+        def actor(self, username: str):
+            yield object(), object(), object()
+
+    profile = PostingProfile(profile_cpu=True)
+    with profile.actor(Runtime(), "human", 32, "post"):
+        assert sum(range(1000)) == 499500
+    report = profile.report()
+    assert len(report["raw_phase_observations"]) == 3
+    assert report["function_profile"]["functions"] == []
+
+
+def test_concurrent_phase_observation_cannot_start_conflicting_process_profilers() -> None:
+    from concurrent.futures import ThreadPoolExecutor
+    from contextlib import contextmanager
+    from threading import Barrier
+
+    from reconforge.benchmark.enterprise_posting_profile import PostingProfile
+
+    barrier = Barrier(4)
+
+    class Runtime:
+        @contextmanager
+        def actor(self, username: str):
+            barrier.wait(timeout=5)
+            yield object(), object(), object()
+
+    profile = PostingProfile(profile_cpu=True)
+
+    def work(index: int) -> int:
+        with profile.actor(Runtime(), "human", index, "post"):
+            return sum(range(1000))
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        assert list(executor.map(work, range(4))) == [499500] * 4
+    assert len(profile.report()["raw_phase_observations"]) == 12
+    assert profile.report()["function_profile"]["functions"]
 
 
 def test_snapshot_comparison_keeps_failed_raw_samples_without_false_acceptance(monkeypatch: pytest.MonkeyPatch) -> None:

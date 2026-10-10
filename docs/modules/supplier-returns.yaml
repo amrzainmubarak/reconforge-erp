@@ -1,0 +1,60 @@
+id: supplier-returns
+name: Original unissued receipt return and unpaid supplier debit
+version: 0.1.0
+maturity: experimental
+owner: supply-operations
+dependencies: [procurement-partial, inventory-receipt-posting, payables, operational-finance, finance-core, landed-cost, postgres-identity]
+incompatible_versions: []
+data_classification: confidential-financial
+retention_policy: Immutable original source, inverse, supplier credit, lifecycle commands, responses, audit and outbox
+permissions: [payables.read, inventory.read, finance_core.read, payables.manage, payables.approve, inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve, inventory.valuation.reverse.manage, inventory.valuation.reverse.approve, finance_core.manage, finance_core.reverse, finance_core.validate, finance_core.post]
+default_roles: []
+migrations: [0130_pg_supplier_returns]
+domain_invariants:
+  - One complete unissued original receipt equals one complete accrued unpaid native AP line
+  - Original capitalized FIFO Remove, original AP inverse and paid-charge expense commit together
+  - Original merchandise equals immutable supplier credit plus paid plus outstanding native AP
+  - Financial burden equals twice original capitalized cost; current authority covers the larger of this burden and the entire retained original purchase total at original precision
+  - Original paid landed charges remain in cash history and their returned portion becomes expense
+  - Three distinct current persisted humans prepare, review and post
+  - Independent unposted cancellation preserves inverse drafts and command evidence
+  - Original native AP effect reversal dispatch refuses detached Generated journal publication
+  - Ordinary native namespace admission precedes protected owner table reads
+domain_events: [supplier_return_prepared, supplier_return_review, supplier_return_post, supplier_return_cancel]
+api_routes:
+  - /api/v1/supplier-returns/plans
+  - /api/v1/supplier-returns/plans/{plan_id}
+  - /api/v1/supplier-returns/orders/{order_id}
+  - /api/v1/supplier-returns/plans/{plan_id}/review
+  - /api/v1/supplier-returns/plans/{plan_id}/post
+  - /api/v1/supplier-returns/plans/{plan_id}/cancel
+cli_commands: []
+ui_routes: [/procurement-partial]
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/test_postgres_supplier_returns.py, tests/erp_supplier_returns_browser.py]
+threat_model:
+  - Four forced-RLS invoker tables bind canonical tenant and existing source scope
+  - Deferred native source, FIFO, AP, GL and evidence closure rejects split financial effects
+  - Corrective period then purchase and supplier/AP locks precede canonical binding and FIFO
+  - Current grants and permissions are rechecked after waits and on retained response retries
+benchmarks: []
+rollback_plan: Empty rollback only; retained owners require forward correction or verified pre-upgrade restore
+test_matrix:
+  domain: tests/test_supplier_returns.py
+  postgres: tests/test_postgres_supplier_returns.py
+  api: tests/test_postgres_supplier_returns_api.py
+  web: apps/web/src/supplier-return-data.test.ts
+  web_lifecycle: apps/web/src/components/SupplierReturnPanel.test.tsx
+  browser: apps/web/live/erp-supplier-returns.spec.ts
+adapter_matrix:
+  postgres: Composes existing native receipt reversal, supplier AP, posting, landed cost and identity engines
+  sqlite: No supplier return fallback or SQLite posting claim
+runtime_acceptance: Bind final native, actual HTTPS and populated restore reports to the integration commit
+limitations:
+  - Complete unissued receipt and one matching single-line accrued unpaid zero-tax invoice
+  - No BPC1 return, budget reinstatement, paid invoice refund, partial return, FX or tax correction
+  - Existing purchase ceiling 128 lines and 1024 receipts/invoices; original purchase quantity stays historical
+  - Newest 25 owners per order; direct native ID inspection for older retained owners
+  - Capitalized source cost at most 4500000000000000000 minor units; financial burden at most 9000000000000000000
+  - No manufacturing, throughput superiority or 1000-line operational acceptance claim

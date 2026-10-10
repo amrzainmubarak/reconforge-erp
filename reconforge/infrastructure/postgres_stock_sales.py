@@ -68,9 +68,16 @@ class PostgresStockSalesRepository:
         return dict(row)
 
     def _actor(self, actor: PostingActor, operation: str, row: Mapping[str, Any] | None = None) -> None:
+        source = (row.get("source") or row) if row else {}
+        retained = source.get("monetary_policy")
         for permission in sorted(OPERATION_PERMISSIONS.get(operation, READ)):
             self.authority._actor(actor, permission, mutation=operation != "read",
-                amount=row["total_minor"] if row else None, currency=row["currency_code"] if row else None)
+                amount=row["total_minor"] if row and not retained else None,
+                currency=row["currency_code"] if row and not retained else None)
+            if row and retained:
+                amount = max(row["total_minor"], source["total_minor"], (row.get("issue_plan") or {}).get("total_cost_minor", 0))
+                self.ops._actor(actor, permission, {**self.scope, "amount_minor": amount,
+                    "currency_precision": retained["precision"]}, mutation=operation != "read")
         if operation != "read":
             self.connection.execute("SELECT set_config('app.stock_sales_actor_id',%s,true)", (actor.user_id,))
 
@@ -133,6 +140,7 @@ class PostgresStockSalesRepository:
             command = self._request(identifier, "create", payload, actor)
             replay = self._replay(command_id, command)
             if replay is not None:
+                self._actor(actor, "create", payload)
                 return replay
             masters = self._one("""SELECT i.id item_id,i.uom_id,u.decimal_places quantity_precision,l.id location_id,
                 w.warehouse_code,c.id customer_id,e.currency_code
@@ -295,8 +303,28 @@ class PostgresStockSalesRepository:
             request = self._request(identifier, operation, {"expected_version": expected_version, "reason": reason, **dict(parameters)}, actor)
             replay = self._replay(command_id, request)
             if replay is not None:
+                self._actor(actor, operation, self._order(identifier))
                 return replay
+            context: Mapping[str, Any] = {}
+            if operation in {"prepare-issue", "prepare-invoice", "prepare-collection"}:
+                context = parameters
+            elif operation in {"review-issue", "deliver", "cancel"} and row["issue_plan"]:
+                context = row["issue_plan"]["request"]
+            elif operation in {"review-invoice", "invoice"}:
+                context = row["invoice_parameters"] or {}
+            elif operation in {"review-collection", "collect"}:
+                context = row["collection_parameters"] or {}
+            if context:
+                date_field = "invoice_date" if operation in {"prepare-invoice", "review-invoice", "invoice"} else (
+                    "receipt_date" if operation in {"prepare-collection", "review-collection", "collect"} else "posting_date")
+                self.postings._period(text(context.get("period_id"), "period_id"), row["workspace_id"],
+                                      text(context.get(date_field), date_field))
+            if context or operation == "cancel":
+                # Source returns admit the same binding before their stock/FIFO
+                # locks. Native AR captures must also precede these row locks.
+                FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(row["workspace_id"])
             row = self._order(identifier, lock=True)
+            self._actor(actor, operation, row)
             if row["row_version"] != expected_version or row["status"] not in STOCK_STAGES:
                 raise FinancePostingError("stock_sales_version_conflict", "Order changed; reload before proceeding.")
             stage = STOCK_STAGES.index(row["status"])

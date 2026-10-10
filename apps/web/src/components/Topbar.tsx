@@ -27,6 +27,8 @@ const pageLabels: Record<StudioPage, MessageKey> = {
   procurementPartial: "procurementPartial",
   financialReporting: "financialReporting",
   fixedAssets: "fixedAssets",
+  customerReturns: "customerReturns",
+  operationalFxTax: "operationalFxTax",
   exceptions: "exceptions",
   evidence: "evidence",
   inventory: "inventory",

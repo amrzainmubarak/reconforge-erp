@@ -64,6 +64,18 @@ jobs:
           uv run --no-sync pytest
           --ignore=tests/test_postgres_commercial_collections.py
           --ignore=tests/test_postgres_commercial_collection_cancellation.py
+          --ignore=tests/test_postgres_customer_returns.py
+          --ignore=tests/test_postgres_stock_sales_reversal_dispatch.py
+          --ignore=tests/test_postgres_supplier_returns.py
+          --ignore=tests/test_postgres_supplier_returns_api.py
+          --ignore=tests/test_postgres_procurement_commitments.py
+          --ignore=tests/test_postgres_procurement_commitments_api.py
+          --ignore=tests/test_postgres_operational_fx_tax.py
+          --ignore=tests/test_postgres_operational_fx_tax_api.py
+          --ignore=tests/test_postgres_operational_fx_tax_migration.py
+          --ignore=tests/test_postgres_operational_fx_revaluation.py
+          --ignore=tests/test_postgres_operational_fx_revaluation_migration.py
+          --ignore=tests/test_postgres_financial_read_plans.py
           --ignore=tests/test_postgres_financial_reporting_snapshots.py
           --ignore=tests/test_postgres_financial_snapshot_migration.py
           --ignore=tests/test_postgres_financial_snapshot_recovery.py
@@ -200,7 +212,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets]
+        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax]
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -362,6 +374,8 @@ jobs:
           - commercial-integrity
           - supply-integrity
           - finance-integrity
+          - supplier-returns
+          - fx-revaluation
           - writeback
           - native
           - parity
@@ -637,15 +651,25 @@ jobs:
               ;;
             commercial-integrity)
               uv run --no-sync pytest tests/test_postgres_commercial_collections.py tests/test_postgres_commercial_collection_cancellation.py -q
+              uv run --no-sync pytest tests/test_postgres_customer_returns.py -q
               ;;
             supply-integrity)
               uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py tests/test_postgres_landed_cost_cancellation.py -q
+              uv run --no-sync pytest tests/test_postgres_procurement_commitments.py tests/test_postgres_procurement_commitments_api.py -q
               ;;
             finance-integrity)
               uv run --no-sync pytest tests/test_postgres_fixed_assets.py tests/test_postgres_fixed_assets_evidence.py -q
               uv run --no-sync pytest tests/test_postgres_global_operating_cycles.py -q
               uv run --no-sync pytest tests/test_postgres_native_event_dispatch_migration.py -q
               uv run --no-sync pytest tests/test_postgres_posting_snapshot_profile.py -q
+              uv run --no-sync pytest tests/test_postgres_stock_sales_reversal_dispatch.py -q
+              uv run --no-sync pytest tests/test_postgres_operational_fx_tax.py tests/test_postgres_operational_fx_tax_api.py tests/test_postgres_operational_fx_tax_migration.py tests/test_postgres_financial_read_plans.py -q
+              ;;
+            supplier-returns)
+              uv run --no-sync pytest tests/test_postgres_supplier_returns.py tests/test_postgres_supplier_returns_api.py -q
+              ;;
+            fx-revaluation)
+              uv run --no-sync pytest tests/test_postgres_operational_fx_revaluation.py tests/test_postgres_operational_fx_revaluation_migration.py -q
               ;;
             finance-reporting)
               uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q

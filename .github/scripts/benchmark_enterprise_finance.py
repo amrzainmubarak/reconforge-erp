@@ -27,6 +27,7 @@ from psycopg import sql
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+from reconforge.benchmark.container_resource_counters import PATHS, parse_counters  # noqa: E402
 from reconforge.benchmark.enterprise_financial import (  # noqa: E402
     amount_minor,
     expected_totals,
@@ -36,6 +37,7 @@ from reconforge.benchmark.enterprise_financial import (  # noqa: E402
 from reconforge.benchmark.enterprise_posting_profile import PostingProfile  # noqa: E402
 from reconforge.benchmark.enterprise_snapshot import measure_snapshot_reads  # noqa: E402
 from reconforge.benchmark.resource_sampling import ResourceSampler  # noqa: E402
+from reconforge.benchmark.server_query_profile import query_profile  # noqa: E402
 from reconforge.infrastructure.postgres import PostgresTenantBoundary  # noqa: E402
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository  # noqa: E402
 from reconforge.infrastructure.postgres_finance_posting import (  # noqa: E402
@@ -54,15 +56,25 @@ def main() -> int:
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--max-seconds", type=int, default=1200)
     parser.add_argument("--seed", default="enterprise-native-v1")
+    parser.add_argument("--posting-warmup", type=int, default=0, help="Genuine three-human extra cycles outside measured population (0..100)")
     parser.add_argument("--profile-stages", action="store_true", help="Retain redacted client phase and SQL-template timings")
+    parser.add_argument("--profile-cpu", action="store_true", help="Opt-in bounded per-worker function discovery; not quiet performance acceptance")
+    parser.add_argument("--profile-database", action="store_true", help="Owned synthetic PostgreSQL statement/JIT/I/O discovery; no SQL text retained")
+    parser.add_argument("--join-collapse-limit", type=int, choices=range(1, 9), default=8,
+                        help="Owned planner experiment only; current PostgreSQL default is 8")
+    parser.add_argument("--from-collapse-limit", type=int, choices=range(1, 9), default=8,
+                        help="Owned subquery planner experiment only; current PostgreSQL default is 8")
     parser.add_argument("--snapshot-lines", type=int, default=0, help="Optional separate balanced 2..1000-line dimensional snapshot profile")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if args.profile_cpu and args.workers != 1:
+        parser.error("Function discovery requires --workers 1; use --profile-stages for concurrent phase CPU measurements")
     counts = sorted(set(args.counts))
-    if (not counts or counts[0] < 1 or counts[-1] > 10000 or not 1 <= args.workers <= 16
+    if (not counts or counts[0] < 1 or counts[-1] > 1000000 or not 1 <= args.workers <= 16
             or not 1 <= args.repetitions <= 10 or not 30 <= args.max_seconds <= 7200
+            or not 0 <= args.posting_warmup <= 100
             or args.snapshot_lines != 0 and (not 2 <= args.snapshot_lines <= 1000 or args.snapshot_lines % 2)):
-        parser.error("Use counts 1..10000, workers 1..16, repetitions 1..10 and a bounded 30..7200 second budget")
+        parser.error("Use counts 1..1000000, workers 1..16, repetitions 1..10, warmup 0..100 and a bounded 30..7200 second budget")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     if (output / "result.json").exists():
@@ -94,6 +106,9 @@ def main() -> int:
         "source_commit": run(["git", "rev-parse", "HEAD"]).stdout.strip(), "source_sha256": tracked_source_sha256(),
         "profile": "native-three-human-cash-equity-v1", "seed": args.seed, "counts": counts,
         "workers": args.workers, "repetitions": args.repetitions, "max_seconds": args.max_seconds,
+        "posting_warmup_cycles": args.posting_warmup,
+        "planner_experiment": {"join_collapse_limit": args.join_collapse_limit,
+                               "from_collapse_limit": args.from_collapse_limit},
         "snapshot_lines": args.snapshot_lines,
         "image": IMAGE, "python": sys.version, "platform": platform.platform(), "logical_cpus": os.cpu_count(),
         "processor": platform.processor(), "architecture": platform.machine(),
@@ -110,7 +125,7 @@ def main() -> int:
     deadline = started + args.max_seconds
     container = ""
     sampler: ResourceSampler | None = None
-    posting_profile = PostingProfile(args.profile_stages)
+    posting_profile = PostingProfile(args.profile_stages or args.profile_cpu, profile_cpu=args.profile_cpu)
     admin_password, app_password = secrets.token_hex(24), secrets.token_hex(24)
     secret_values.extend([admin_password, app_password])
     try:
@@ -119,8 +134,13 @@ def main() -> int:
             "OperatingSystem", "OSType", "Architecture", "KernelVersion", "NCPU", "MemTotal", "Driver")}
         environment = os.environ.copy()
         environment["POSTGRES_PASSWORD"] = admin_password
+        server_options = (["-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.track=all",
+                           "-c", "pg_stat_statements.track_planning=on", "-c", "track_io_timing=on"] if args.profile_database else [])
+        server_options.extend(["-c", f"join_collapse_limit={args.join_collapse_limit}",
+                               "-c", f"from_collapse_limit={args.from_collapse_limit}"])
         container = run(["docker", "run", "--detach", "--rm", "--name", "reconforge-enterprise-finance-" + uuid4().hex[:12],
-            "--label", "reconforge.owner=enterprise-finance-benchmark", "-e", "POSTGRES_PASSWORD", "-p", "127.0.0.1::5432", IMAGE], environment=environment).stdout.strip()
+            "--label", "reconforge.owner=enterprise-finance-benchmark", "-e", "POSTGRES_PASSWORD", "-p", "127.0.0.1::5432", IMAGE,
+            *server_options], environment=environment).stdout.strip()
         port = run(["docker", "port", container, "5432/tcp"]).stdout.strip().rsplit(":", 1)[1]
         admin_dsn = f"postgresql://postgres:{admin_password}@127.0.0.1:{port}/postgres?connect_timeout=5"
         app_dsn = f"postgresql://enterprise_benchmark:{app_password}@127.0.0.1:{port}/postgres?connect_timeout=5"
@@ -128,6 +148,8 @@ def main() -> int:
             try:
                 with psycopg.connect(admin_dsn, autocommit=True) as admin:
                     admin.execute(sql.SQL("CREATE ROLE enterprise_benchmark LOGIN PASSWORD {}").format(sql.Literal(app_password)))
+                    if args.profile_database:
+                        admin.execute("CREATE EXTENSION pg_stat_statements")
                     report["postgres_version"] = admin.execute("SHOW server_version").fetchone()[0]
                 break
             except psycopg.OperationalError:
@@ -144,7 +166,9 @@ def main() -> int:
             report["revision"] = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
             report["postgres_configuration"] = dict(admin.execute(
                 "SELECT name,setting FROM pg_settings WHERE name=ANY(%s)",
-                (["shared_buffers", "work_mem", "max_connections", "fsync", "synchronous_commit", "full_page_writes", "wal_level", "track_io_timing"],)).fetchall())
+                (["shared_buffers", "work_mem", "max_connections", "fsync", "synchronous_commit", "full_page_writes", "wal_level", "track_io_timing",
+                  "jit", "jit_above_cost", "jit_inline_above_cost", "jit_optimize_above_cost",
+                  "join_collapse_limit", "from_collapse_limit"],)).fetchall())
             report["postgres_io_timing_interpretation"] = (
                 "blk_read_time_ms/blk_write_time_ms are cumulative pg_stat_database counters; "
                 "zero milliseconds with track_io_timing=off do not prove zero I/O latency; no I/O peak is measured")
@@ -207,7 +231,25 @@ def main() -> int:
                     raise AssertionError("Actual native posting differs from independent financial oracle")
             return str(effect["id"]), time.perf_counter() - begin
 
+        def kernel_counters(*, after: bool = False) -> dict[str, object]:
+            # Counter collection lies outside client posting wall/CPU timers.
+            # Read CPU last before admission and first after completion.
+            names = list(PATHS) if after else [name for name in PATHS if name != "cpu"] + ["cpu"]
+            raw = {name: run(["docker", "exec", container, "cat", PATHS[name]]).stdout for name in names}
+            return {"raw": raw, "parsed": parse_counters(raw)}
+
+        warm_started = time.perf_counter()
+        warm_rows = [post(counts[-1] + index) for index in range(args.posting_warmup)]
+        report["posting_warmup"] = {"status": "passed", "completed_cycles": len(warm_rows),
+            "outside_measured_population": True, "seconds": time.perf_counter() - warm_started,
+            "indices": list(range(counts[-1], counts[-1] + args.posting_warmup)),
+            "raw_cycle_latency_seconds": [row[1] for row in warm_rows], "effect_ids": [row[0] for row in warm_rows]}
+        if args.profile_database:
+            with psycopg.connect(admin_dsn, autocommit=True) as diagnostic:
+                diagnostic.execute("SELECT pg_stat_statements_reset()")
+        report["posting_container_counters_before"] = kernel_counters()
         posting_started = time.perf_counter()
+        posting_cpu_started = time.process_time()
         completed: dict[int, tuple[str, float]] = {}
         failures: list[dict[str, object]] = []
         admitted = 0
@@ -229,6 +271,8 @@ def main() -> int:
                         failures.append({"index": index, "exception_type": type(exc).__name__})
         posted = [completed[index] for index in sorted(completed)]
         posting_seconds = time.perf_counter() - posting_started
+        posting_cpu_seconds = time.process_time() - posting_cpu_started
+        report["posting_container_counters_after"] = kernel_counters(after=True)
         report["posting"] = {"completed_cycles": len(posted), "concurrency": args.workers, "seconds": posting_seconds,
             "native_postings_per_second": len(posted) / posting_seconds, "error_count": 0,
             "requested_cycles": counts[-1], "admitted_cycles": admitted, "failed_cycles": failures,
@@ -238,6 +282,11 @@ def main() -> int:
         report["posting"]["error_count"] = len(failures)
         report["posting"]["raw_cycle_latency_seconds"] = [row[1] for row in posted]
         report["posting"]["ordered_effect_ids"] = [row[0] for row in posted]
+        report["posting"]["client_process_cpu_seconds"] = posting_cpu_seconds
+        report["posting"]["client_cpu_seconds_per_completed_cycle"] = posting_cpu_seconds / len(posted) if posted else None
+        if args.profile_database:
+            with psycopg.connect(admin_dsn, autocommit=True) as diagnostic:
+                report["posting_database_profile"] = query_profile(diagnostic, "enterprise_benchmark")
         if failures:
             raise RuntimeError("Native posting profile failed; retained successful and failed admissions are not acceptance")
         profiles: list[dict[str, object]] = []

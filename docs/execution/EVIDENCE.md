@@ -1,5 +1,89 @@
 # ReconForge Execution Evidence Log
 
+## Wave4 source-bound runtime and portable proof publication (2026-10-10)
+
+[Incremental acceptance](WAVE4_ACCEPTANCE_2026-10-10.md) and its
+[byte-exact packet](WAVE4_ACCEPTANCE_2026-10-10.json) retain four successful
+actual HTTPS/populated restore cycles, seven native owner packets, seven completed
+static/package gates, 23 unsuccessful attempts and the interrupted general Python
+run. All 44 embedded original JSON serializations reconstruct their recorded SHA256.
+Final hosted CI, complete final-source native/general gates, new archive inspection
+and three comparable performance pairs remain pending. This is not final acceptance.
+
+| Actual cycle | Frozen source | Seconds | Restored tables | Original report SHA256 |
+|---|---|---:|---:|---|
+| Whole customer credit and two refunds | 9c4bea54 | 165.156 | 249 | `b5be76a4e655c0ecfb11a7cc42cf008947d6df08fd158d260cd28f16fc214f44` |
+| Multi-line purchase appropriation, AP and installments | 9c4bea54 | 138.141 | 249 | `cee18c7d6e20830068c6659a77047ff02989885da387301aacaf3032d8867cbb` |
+| Foreign taxed AR, closing valuation/inverse and two settlements | 1e73267e | 104.546 | 253 | `594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027` |
+| Reviewed supplier cancel/reprepare and original receipt/AP inverse | 92230f4a | 161.672 | 253 | `f2682341253a49275d894f1de6190115fac5adc60ebf5dbef7db6d0e46310503` |
+
+Each accepted packet retains clean unchanged source/web, one expected browser and
+zero unexpected/skipped/flaky results, nonowner/NOBYPASSRLS flags, three direct SQL
+tamper refusals, exact persisted/restored money and owned HTTPS/container cleanup.
+CR credits 45,000, releases AR 35,000, refunds original collected 10,000 and restores
+10 units/12,000 cost; nine effects balance at 156,000. BPC reserves 17,000, consumes
+7,400 and releases 9,600; five effects balance at 22,200. FX retains EUR gross 11,401
+and USD gross 14,251; realized gain/loss 200/370 and unrealized +740/−740 finish with
+AR/unrealized zero and cash 14,081. SR credits original unpaid AP 12,000, removes
+FIFO 12,706 and expenses original paid charges 706; ten effects balance at 66,414,
+with inventory 5,295 and cash change −6,001. These are synthetic bounded fixtures.
+
+Portable original FX artifacts reside in `wave4-evidence/fx-1e73267e/`:
+
+| Original file | SHA256 |
+|---|---|
+| fx-proof-0.json | `e98f19ce390547c951ce419b12e088c3e5c0c8f271ccc9d710bdff0248af8101` |
+| fx-proof-1.json | `46a1f22cc0a216eebe5282d766a9422b1ccf3766ddbf736a12e9cb0182507f7f` |
+| fx-proof-2.json | `42b44512124ad614a844754838950891ad185b28f72732d6ee90133ed286fa27` |
+| fx-proof-3.json | `814c10a2ba1253d5dfeb9690ca340f8f304b3bf84502433d6aa7006008db7493` |
+| fx-proof-4.json and fx-proof-ar-mobile.json | `94c26cbe298b796604661ac0068266f2a8398bf2c73181ccee8df6975b09565d` |
+| cycle-report.json | `594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027` |
+| proof-manifest.json | `3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a` |
+| oracle-normal.json | `cd5e6657b80f2dfa656599bb54be369fedea15dd60703ead17c73dcb44735a98` |
+| oracle-optimized.json | `3e2be012104525d438b09059efb12f4a32c1626572cac0bed92c00783d129456` |
+
+These are exact binary copies from the original root 1e732 browser output and the
+finance owner's retained independent manifest/normal/optimized output. Their original
+commands, source IDs and absolute acquisition paths stay unchanged. The published
+copies are rerunnable without PostgreSQL, Chrome or ReconForge imports:
+
+```shell
+python -I .github/scripts/verify_operational_fx_cycle_oracle.py --proof-directory docs/execution/wave4-evidence/fx-1e73267e --cycle-report docs/execution/wave4-evidence/fx-1e73267e/cycle-report.json --proof-manifest docs/execution/wave4-evidence/fx-1e73267e/proof-manifest.json --proof-manifest-sha256 3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a --report output/NEW-fx-independent.json
+```
+
+Repeat with `python -I -O` and a fresh report path. Membership checks reject a unique
+invented runtime effect even when public plan seals remain valid. The separately
+trusted manifest pins all five original proof hashes, the original runtime report
+and native plan/entry/effect identity list; it is a retained local trust anchor, not
+independent external attestation. Original browser/JUnit/log sidecars referenced by
+the acceptance packet remain in recorded output paths and are not claimed packaged.
+
+## Wave4 rolling evidence (2026-10-10)
+
+Protected source/head hashes and original e07 acceptance are recorded in
+WAVE4_BASELINE_2026-10-10.md. The following is retained intermediate development
+history; later accepted source-bound packets above supersede its pending local
+owner statements. No full integrated Wave4 acceptance exists yet.
+
+- BPC1 native/API at7f72c770:24 executed/pass,0skip/fail/error,498.809s;
+  raw native-1791617140219984300, exact clean source9ed45d1a82731f2b6563c81034b4062ce5c9ce71f0d7be6df2d43dfe8b0d69ce.
+- Core scoped-dimension gate:36 native cases/0skip at30a+c5f; planning gate9/0skip
+  at a4ffa822 in native-1791616869150302400, including prepared scope/revoke/rollback
+  and required dimension tuple/dict modes. Initial4failed/5passed packet retained.
+- FX first actual native cycle+HTTP at9cea6a86:2/0skip,73.248s. Expanded7a4d gate
+  executes15:11pass/4fixture failures; subsequent current-grant/rollback and actual
+  restricted unrelated native master/event dispatch targeted packets pass after
+  fixes. Full16-case cohesive583c gate is running; no final acceptance claim yet.
+- CR1 first frozen5e4 gate7pass/1downgrade failure; e33 full11-case attempt exposes
+  an injected SQL alias collision; failures retained and owner correcting it.
+- Independent pair verifier accepted a real20-cycle+20warm-up baseline probe;
+  this overlaps correctness runs and is not quiet repeated performance acceptance.
+
+All raw packets remain in output/global-operating-platform-20261009/commercial
+under their source-specific native-* directories. Warm/profile evidence is in
+output/wave4-* in the measured root/baseline/experimental worktrees. The source-
+bound final handoff will publish gate hashes and measured packets after completion.
+
 ## Retained first publication CI failure and strict contract correction (2026-10-10)
 
 Run38025608155 at5c01896a is unaccepted: Python3.12 executes4718passed,
@@ -23038,3 +23122,53 @@ The same historical run also has an actual receivables failure at job11365478196
 ## Complete hosted downgrade failure and repair (2026-10-09)
 
 CI37883376725 on5de23d14/merge91724b4c executes all29 required jobs:25 succeed, three native shards fail plus their fail-closed aggregate. Both Python profiles report4569 passed/649 existing prerequisite skips, React295 and standard browser19/9 prerequisites pass, both real ERP wire cycles and the68 expansion-native cases pass with zero skips. The verified complete logs ZIP has SHA256 ec77ba0fb805711dc0046b3d5f975aaaf58af8a23ea9111678d9bf75868a633d. All failed native cases share0115 downgrade dependency order: installment_protect() is dropped while the four own immutable triggers still reference it. The repair keeps the populated-plan refusal first, removes native/own closure triggers, drops the four own tables together, then drops their functions, without CASCADE or native source-table removal. Independent0112–0115 dependency review finds no other ordering defect. The failed run remains failed; affected migration cases and a fresh stable-source complete CI are required. Source-archive membership is reported as actual totals separately from the required verified subset.
+
+
+## Wave4 independent posting and hosted source checkpoint (2026-10-10)
+
+Published source0b598792 has38/38successful CI jobs in run38067389520, plus the
+applicable Security/Docker/CodeQL checks. Complete16native log populations and
+four business restore reports retain their individual source/command identities;
+Python3.11/3.12 each4903passes and663pre-existing prerequisite skips, Web408React
+and19Playwright. Both source archives verify132ordered migrations and recompute
+six fresh posting populations with stdlib-only normal/-O financial oracles.
+Original hosted JSON files and local availability boundaries are retained under
+wave4-evidence/ci-0b598792; this is an earlier source checkpoint, not automatic
+acceptance of a successor documentation/controller/evidence head.
+
+The separate genuine10Kcandidate capacity report has10000measured native effects
+and20disjoint warmups, exact independent5028151631minor-unit totals, zero financial
+errors/observed deadlocks and removed owned resources. Trusted rawSHA256 is
+c09be0d222823c915f93efdbd0824e33715024b2106064805d85dc4e8f405313.
+The archive hook recomputes that raw evidence under isolated normal and optimized
+Python. There is no matched10Kbaseline; its changing power prevents a causal
+comparison.100K/1Mremain unrun under the bounded7200s admission budget.
+
+Three stable-AC1Kpairs are in progress using frozen b7df9271/07452da8, original
+child bytes and identical financial controls. Their new twelve before/after
+active-scheme sidecars and six raw AC/saver sample populations will receive a
+separate trusted manifest. The c5 mixed-power packet and regressed/interrupted
+attempts remain unchanged. Performance acceptance is pending all six populations
+and adverse resource assessment. See WAVE4_ENGINEERING_MEASUREMENTS_2026-10-10.md.
+
+
+### Wave4 completed stable-power evidence closure — 2026-10-10
+
+Stable six financial/environment proof passed; paircd8c404d/manifest1e67d483 pin original reports/12power sidecars. All371observed samples AC,0battery/unavailable; original6120effects/six fresh servers. Median throughput+42.5851%, combinedCPU/success-27.1300%, p95-23.1873%, batchread-1.3370%, adverse clientCPU+2.8250% and lifetime memory+0.2254%; overall resource/performance acceptance remainsfalse, no post-hoc threshold. Independent normal/optimized proofs byte-identicalac3abc9e;73targeted cases passed with0skips. Previous mixed/failed results remain immutable. 10Kcapacity independently passed5028151631minor;100K/1M unrun; no equivalent competitor comparison. Final source archive/hosted gates are required after evidence integration.
+
+### Retained evidence-head failures and targeted closure
+
+Head2ca3b975 is not accepted: CI38078535222 failed the English FX component
+status assertion while407other React cases passed; dependent browser jobs did
+not execute. Security38078535230 failed Gitleaks and its aggregate after260
+generic-api-key findings in two retained package-source hash inventories.
+All260values were independently checked against111public0b598792 Git blobs;
+they are SHA256 source-file identities. The exact failure snapshot remains in
+wave4-evidence/unaccepted-first-pair/ci-2ca-failures.json (original9197c0db...,
+partial/nonterminal capture), and original redacted logs remain in the owner
+output/hosted-pr130-2ca3b975 directory and GitHub job artifacts. Partial passing
+Python4938/663existing skips, package132, Docker/CodeQL and native jobs are
+source-bound evidence, not acceptance of2ca. Correction requires real async
+cryptographic completion and immutable value-bound exact scanner fingerprints,
+then a new fixed-head full hosted run; no skipped/retried financial gate or broad
+scanner exclusion grants acceptance.

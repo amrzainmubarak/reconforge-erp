@@ -53,6 +53,7 @@ from reconforge.api.routes import (
     consolidation_ownership,
     consolidation_ownership_change,
     consolidation_ppa,
+    customer_returns,
     durable_job_operations,
     emergency_access,
     evidence,
@@ -76,8 +77,10 @@ from reconforge.api.routes import (
     metrics,
     notification_inbox,
     operational_finance,
+    operational_fx_tax,
     operations,
     payables,
+    procurement_commitments,
     procurement_operations,
     procurement_partial,
     professional_invoice_payment,
@@ -92,6 +95,7 @@ from reconforge.api.routes import (
     security_center,
     security_governance,
     stock_sales,
+    supplier_returns,
     users,
     webauthn,
     workflow,
@@ -435,6 +439,10 @@ def create_api_app(
     app.include_router(procurement_partial.router, prefix="/api/v1")
     app.include_router(financial_installments.router, prefix="/api/v1")
     app.include_router(commercial_collections.router, prefix="/api/v1")
+    app.include_router(customer_returns.router, prefix="/api/v1")
+    app.include_router(procurement_commitments.router, prefix="/api/v1")
+    app.include_router(supplier_returns.router, prefix="/api/v1")
+    app.include_router(operational_fx_tax.router, prefix="/api/v1")
     app.include_router(landed_cost.router, prefix="/api/v1")
     app.include_router(fixed_assets.router, prefix="/api/v1")
     app.include_router(inventory_core.router, prefix="/api/v1")
@@ -497,6 +505,10 @@ def create_api_app(
         procurement_partial.router,
         financial_installments.router,
         commercial_collections.router,
+        customer_returns.router,
+        procurement_commitments.router,
+        supplier_returns.router,
+        operational_fx_tax.router,
         landed_cost.router,
         fixed_assets.router,
         inventory_core.router,

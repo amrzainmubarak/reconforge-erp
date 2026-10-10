@@ -523,6 +523,9 @@ def test_customer_registry_migration_cannot_reinterpret_reviewed_quote_or_leave_
             "UPDATE reconforge.ar_customers SET currency_registry_digest=%s WHERE tenant_id=%s AND id=%s",
             (changed.digest, sales_runtime.tenant, document["customer_id"]),
         )
+        # Drain additive deferred owner/FK checks before ALTER TRIGGER while
+        # keeping the synthetic damaged-state injection in one transaction.
+        admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
         admin.execute("ALTER TABLE reconforge.ar_customers ENABLE TRIGGER ar_customers_currency_policy_guard")
         admin.execute(
             "INSERT INTO reconforge.currency_registry_bindings(tenant_id,workspace_id,registry_version,registry_digest,bound_by) VALUES(%s,'work',%s,%s,'synthetic-policy-migration') ON CONFLICT(tenant_id,workspace_id) DO UPDATE SET registry_version=excluded.registry_version,registry_digest=excluded.registry_digest",

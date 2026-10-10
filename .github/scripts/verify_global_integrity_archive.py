@@ -16,10 +16,33 @@ from pathlib import Path, PurePosixPath
 HELPERS = (
     "commercial_collections_browser", "erp_landed_cost_browser", "stock_commerce_browser_seed",
     "fixed_assets_browser_seed", "erp_procurement_enterprise_browser", "enterprise_financial_snapshot_browser",
+    "customer_returns_browser", "erp_procurement_commitments_browser",
+    "operational_fx_tax_browser_seed", "erp_supplier_returns_browser",
 )
 PREFIX20_SHA = "3f1ecffac62b7cc3cbea41264f2a61b7948d9875c87dd32f7eddf7f51238be41"
 INDEX_PATH = "docs/execution/benchmarks/INDEX.v1.json"
 GOLDEN = {100: "46669102", 1000: "493671004"}
+FX_EVIDENCE = "docs/execution/wave4-evidence/fx-1e73267e"
+FX_MANIFEST_SHA = "3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a"
+WAVE4_POSTING_EVIDENCE = "docs/execution/wave4-evidence/posting-1k"
+WAVE4_POSTING_MANIFEST_SHA = "c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc"
+WAVE4_STABLE_EVIDENCE = "docs/execution/wave4-evidence/posting-1k-stable-ac"
+WAVE4_STABLE_PAIR_SHA = "cd8c404d2baf129001930ce220846b89e4e06dbf59c02bc342be1935c26c09b1"
+WAVE4_STABLE_MANIFEST_SHA = "1e67d483a994e68392fd7d5a35413e7c535d8d2b78a25d1ae975cf587b3f2a7c"
+WAVE4_SCALE_EVIDENCE = "docs/execution/wave4-evidence/scale-10k/result.json"
+WAVE4_SCALE_SHA = "c09be0d222823c915f93efdbd0824e33715024b2106064805d85dc4e8f405313"
+FX_RETAINED_SHA = {
+    "cycle-report.json": "594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027",
+    "proof-manifest.json": FX_MANIFEST_SHA,
+    "oracle-normal.json": "cd5e6657b80f2dfa656599bb54be369fedea15dd60703ead17c73dcb44735a98",
+    "oracle-optimized.json": "3e2be012104525d438b09059efb12f4a32c1626572cac0bed92c00783d129456",
+}
+WAVE4_BROWSER_SHA = {
+    "customer_returns": "b5be76a4e655c0ecfb11a7cc42cf008947d6df08fd158d260cd28f16fc214f44",
+    "procurement_commitments": "cee18c7d6e20830068c6659a77047ff02989885da387301aacaf3032d8867cbb",
+    "fx_five_stage": FX_RETAINED_SHA["cycle-report.json"],
+    "supplier_returns": "f2682341253a49275d894f1de6190115fac5adc60ebf5dbef7db6d0e46310503",
+}
 
 
 def require(value: object, message: str) -> None:
@@ -135,6 +158,13 @@ def check_migrations(extracted: Path, count: int, head: str) -> dict[str, object
         visited.append(current)
         current = revisions[current]
     require(len(visited) == count and set(visited) == set(revisions), "Migration chain does not cover every revision")
+    if count >= 131:
+        require(visited[-125] == "0125_pg_landed_cost_cancellation", "Accepted 125-revision prefix differs")
+        require(visited[-131:-125] == ["0131_pg_fx_revaluation", "0130_pg_supplier_returns", "0129_pg_financial_read_plans",
+                               "0128_pg_operational_fx_tax", "0127_pg_procurement_commitments", "0126_pg_customer_returns"],
+                "Wave4 migration suffix differs")
+    if count >= 132:
+        require(visited[-132] == "0132_pg_stock_inverse_dispatch", "Corrective inverse dispatch revision differs")
     return {"count": count, "head": head, "oldest": visited[-1], "complete_linear_chain": True}
 
 
@@ -142,6 +172,202 @@ def isolated_json(command: list[str], root: Path) -> dict[str, object]:
     result = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=120)
     require(result.returncode == 0, "Extracted-source verifier failed: " + result.stderr[-3000:])
     return json.loads(result.stdout)
+
+
+def check_wave4_evidence(extracted: Path, output: Path) -> dict[str, object]:
+    packet = json.loads((extracted / "docs/execution/WAVE4_ACCEPTANCE_2026-10-10.json").read_bytes())
+    require(packet["final_acceptance"] is False, "Incremental Wave4 packet claims final acceptance")
+    embedded = 0
+
+    def check_retained(value: object) -> None:
+        nonlocal embedded
+        if isinstance(value, dict):
+            if "original_report_serialization" in value:
+                require(isinstance(value["original_report_serialization"], str), "Wave4 original report serialization differs")
+                require(sha(value["original_report_serialization"].encode("utf-8")) == value["original_report_sha256"],
+                        "Wave4 embedded original report bytes differ")
+                embedded += 1
+            for child in value.values():
+                check_retained(child)
+        elif isinstance(value, list):
+            for child in value:
+                check_retained(child)
+
+    check_retained(packet)
+    require(embedded == 44 and len(packet["retained_unsuccessful_attempts"]) == 23, "Wave4 retained report population differs")
+    fx_cases = packet["original_fx_unique_executed_case_ids"]
+    require(isinstance(fx_cases, list) and all(isinstance(case, str) and case for case in fx_cases)
+            and len(fx_cases) == len(set(fx_cases)) == 19, "Wave4 unique FX case identities differ")
+    original_fx_cases = {case for label in ("original_fx_full16", "original_fx_current_accounts2", "original_fx_restore_followup3")
+                         for case in packet["accepted_native_owner_packets"][label]["executed_case_ids"]}
+    require(set(fx_cases) == original_fx_cases, "Wave4 unique FX cases differ from retained executed owner cases")
+    require(len(packet["accepted_native_owner_packets"]) == 7,
+            "Wave4 source-bound native population differs")
+    for native_packet in packet["accepted_native_owner_packets"].values():
+        native = json.loads(native_packet["original_report_serialization"])
+        counts = native_packet["independently_parsed_junit_counts"]
+        require(native["accepted"] is True and native["source_unchanged"] is True and native["counts"] == counts,
+                "Wave4 native acceptance/source/JUnit counts differ")
+        require(type(counts["tests"]) is int and counts["tests"] > 0
+                and all(type(counts[key]) is int and counts[key] == 0 for key in ("failures", "errors", "skipped")),
+                "Wave4 native execution incomplete")
+    browser = packet["accepted_actual_https_and_populated_restore"]
+    require(set(browser) == {"customer_returns", "procurement_commitments", "fx_five_stage", "supplier_returns"},
+            "Wave4 accepted actual cycle set differs")
+    for label, retained_browser in browser.items():
+        require(retained_browser["original_report_sha256"] == WAVE4_BROWSER_SHA[label], "Wave4 actual cycle raw report changed")
+        runtime = json.loads(retained_browser["original_report_serialization"])
+        require(runtime["status"] == "passed" and runtime["source_unchanged"] is True
+                and runtime["source_commit"] == runtime["source_commit_after"], "Wave4 accepted runtime source differs")
+        require(all(runtime[key] is True for key in ("tracked_clean_before", "tracked_clean_after", "built_web_unchanged",
+                                                     "owned_container_removed", "owned_https_process_stopped"))
+                and runtime["role_privileges"] == [False, False]
+                and all(type(flag) is bool for flag in runtime["role_privileges"]), "Wave4 runtime isolation/cleanup differs")
+        require(all(type(runtime["browser_counts"][key]) is int and runtime["browser_counts"][key] == count
+                    for key, count in {"expected": 1, "skipped": 0, "unexpected": 0, "flaky": 0}.items()),
+                "Wave4 actual runtime outcome differs")
+        require(runtime["native_restore"]["status"] == "passed" and runtime["native_restore"]["tamper_refusals"] == 3
+                and runtime["persisted_effects"] == runtime["native_restore"]["verified_effects"], "Wave4 restore financial evidence differs")
+    require(all(attempt["accepted"] is False for attempt in packet["retained_unsuccessful_attempts"])
+            and packet["retained_interrupted_general_partition"]["accepted"] is False, "Wave4 unaccepted attempt promoted")
+    evidence = extracted / FX_EVIDENCE
+    for name, expected_sha in FX_RETAINED_SHA.items():
+        require(sha((evidence / name).read_bytes()) == expected_sha, "Retained FX raw bytes differ: " + name)
+    require((evidence / "cycle-report.json").read_bytes() == browser["fx_five_stage"]["original_report_serialization"].encode("utf-8"),
+            "Portable FX runtime report differs from the incremental packet")
+    manifest = json.loads((evidence / "proof-manifest.json").read_bytes())
+    for index, effect in enumerate(manifest["native_effects"]):
+        require(sha((evidence / f"fx-proof-{index}.json").read_bytes()) == effect["file_sha256"], "FX original proof bytes differ")
+    require((evidence / "fx-proof-ar-mobile.json").read_bytes() == (evidence / "fx-proof-4.json").read_bytes(),
+            "FX Arabic retained final evidence differs")
+    validations = {}
+    for mode in ("normal", "optimized"):
+        fresh = output / ("independent-fx-cycle-" + mode + ".json")
+        isolated_json([sys.executable, "-I", *(["-O"] if mode == "optimized" else []),
+                       str(extracted / ".github/scripts/verify_operational_fx_cycle_oracle.py"),
+                       "--proof-directory", str(evidence), "--cycle-report", str(evidence / "cycle-report.json"),
+                       "--proof-manifest", str(evidence / "proof-manifest.json"), "--proof-manifest-sha256", FX_MANIFEST_SHA,
+                       "--report", str(fresh)], extracted)
+        current = json.loads(fresh.read_bytes())
+        original = json.loads((evidence / ("oracle-" + mode + ".json")).read_bytes())
+        require(current["status"] == original["status"] == "passed", "Extracted FX rational oracle failed")
+        for field in ("proof_manifest_sha256", "source_commit", "source_sha256", "built_web_sha256", "report_sha256", "dump_sha256",
+                      "native_effects", "unique_audit_events", "unique_outbox_events", "account_balances_minor", "source_id", "invoice_id",
+                      "foreign_gross_minor", "functional_gross_minor", "foreign_receipts_minor", "historical_releases_minor",
+                      "realized_fx_minor", "closing_value_minor", "unrealized_difference_minor", "restored_table_count"):
+            require(current[field] == original[field], "Extracted FX independent result differs: " + field)
+        validations[mode] = current
+    return {"embedded_original_reports": embedded, "actual_cycle_count": len(browser),
+            "trusted_manifest_sha256": FX_MANIFEST_SHA, "original_raw_hashes": FX_RETAINED_SHA,
+            "independent_fx_oracle": validations, "final_program_acceptance": False}
+
+
+def check_wave4_posting_pair(extracted: Path, output: Path) -> dict[str, object]:
+    evidence = extracted / WAVE4_POSTING_EVIDENCE
+    require(sha((evidence / "manifest.json").read_bytes()) == WAVE4_POSTING_MANIFEST_SHA,
+            "Trusted Wave4 posting manifest bytes differ")
+    validations = {}
+    for mode in ("normal", "optimized"):
+        fresh = output / ("independent-wave4-posting-" + mode + ".json")
+        isolated_json([sys.executable, "-I", *(["-O"] if mode == "optimized" else []),
+                       str(extracted / ".github/scripts/verify_wave4_posting_pair.py"),
+                       "--manifest", str(evidence / "manifest.json"),
+                       "--manifest-sha256", WAVE4_POSTING_MANIFEST_SHA,
+                       "--report", str(fresh)], extracted)
+        current = json.loads(fresh.read_bytes())
+        require(current["status"] == "passed" and current["distinct_container_count"] == 6
+                and current["measured_cycles_per_variant"] == 3000,
+                "Extracted independent Wave4 posting oracle failed")
+        require(current["financial_verification"] == "passed"
+                and current["performance_comparison_accepted"] is False,
+                "Financial verification must remain separate from performance acceptance")
+        environment = current["environment_equivalence"]
+        require(environment["static_configuration_equal"] is True
+                and environment["dynamic_host_power_constant"] is False
+                and environment["dynamic_host_power_classification"] == "changed"
+                and environment["power_counts"] == {"ac": 248, "battery": 263, "unavailable": 0},
+                "Retained mixed-power environment classification differs")
+        validations[mode] = current
+    require(validations["normal"] == validations["optimized"], "Optimized-mode posting proof differs")
+    return {"trusted_manifest_sha256": WAVE4_POSTING_MANIFEST_SHA,
+            "independent_verification": validations, "resource_improvement_acceptance": False}
+
+
+def check_wave4_stable_power(extracted: Path, output: Path) -> dict[str, object]:
+    validations = {}
+    for mode in ("normal", "optimized"):
+        fresh = output / ("independent-wave4-stable-power-" + mode + ".json")
+        isolated_json([sys.executable, "-I", *(["-O"] if mode == "optimized" else []),
+                       str(extracted / ".github/scripts/verify_stable_power_environment.py"),
+                       "--packet", str(extracted / WAVE4_STABLE_EVIDENCE),
+                       "--pair-sha256", WAVE4_STABLE_PAIR_SHA,
+                       "--manifest-sha256", WAVE4_STABLE_MANIFEST_SHA,
+                       "--expected-scheme-guid", "381b4222-f694-41f0-9685-ff5bb260df2e",
+                       "--report", str(fresh)], extracted)
+        current = json.loads(fresh.read_bytes())
+        require(current["status"] == "passed"
+                and current["financial_verification"] == "passed"
+                and current["environment_verification"] == "passed"
+                and current["performance_comparison_accepted"] is False,
+                "Extracted stable-power proof or acceptance scope differs")
+        environment = current["environment"]
+        require(environment["sidecar_count"] == 12
+                and current["financial"]["distinct_container_count"] == 6
+                and current["financial"]["measured_cycles_per_variant"] == 3000,
+                "Extracted stable-power population differs")
+        require(current["financial"]["environment_equivalence"]["power_counts"]
+                == {"ac": 371, "battery": 0, "unavailable": 0},
+                "Extracted stable-power samples differ")
+        validations[mode] = current
+    require(validations["normal"] == validations["optimized"], "Optimized stable-power proof differs")
+    return {"trusted_pair_sha256": WAVE4_STABLE_PAIR_SHA,
+            "trusted_manifest_sha256": WAVE4_STABLE_MANIFEST_SHA,
+            "independent_verification": validations, "resource_improvement_acceptance": False}
+
+
+def check_wave4_scale(extracted: Path) -> dict[str, object]:
+    code = """
+import importlib.util,json,pathlib,sys
+root=pathlib.Path(sys.argv[1])
+spec=importlib.util.spec_from_file_location('scale_oracle',root/'.github/scripts/benchmark_global_engineering_pair.py')
+module=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+packet,digest=module._retained.read_json(root/sys.argv[2])
+module.require(digest==sys.argv[3],'Trusted scale report bytes differ')
+measured=module.verify(packet,pathlib.Path(packet['runtime_root']).resolve(),
+    '07452da8742406d2223ce522c87aee0fcd223a90',10000)
+module.require(measured['oracle_total_minor']=='5028151631','Independent 10K oracle differs')
+print(json.dumps({'status':'passed','financial_verification':'passed',
+    'trusted_report_sha256':digest,'measured':measured,
+    'performance_comparison_accepted':False,
+    'comparison_scope':'Single candidate capacity run; dynamic power changed; no matched 10K baseline.'}))
+"""
+    values = [isolated_json([sys.executable, "-I", *(["-O"] if optimized else []),
+                            "-c", code, str(extracted), WAVE4_SCALE_EVIDENCE,
+                            WAVE4_SCALE_SHA], extracted) for optimized in (False, True)]
+    require(values[0] == values[1] and values[0]["status"] == "passed",
+            "Extracted independent 10K proof differs under optimization")
+    return values[0]
+
+
+def check_reviewed_source_digest_ignores(extracted: Path) -> dict[str, object]:
+    code = """
+import hashlib,importlib.util,json,pathlib,sys
+root=pathlib.Path(sys.argv[1])
+spec=importlib.util.spec_from_file_location('source_digest_policy',root/'.github/scripts/validate_supply_chain_policy.py')
+module=importlib.util.module_from_spec(spec)
+sys.modules[spec.name]=module
+spec.loader.exec_module(module)
+module._validate_gitleaks_config(root)
+print(json.dumps({'status':'passed','reviewed_exact_fingerprints':520,
+    'registry_sha256':hashlib.sha256((root/module._GITLEAKS_REVIEW_REGISTRY).read_bytes()).hexdigest(),
+    'scope':'Pinned registry/report/line/value guards; scanner itself is a separate security gate.'}))
+"""
+    values = [isolated_json([sys.executable, "-I", *(["-O"] if optimized else []),
+                            "-c", code, str(extracted)], extracted) for optimized in (False, True)]
+    require(values[0] == values[1] and values[0]["status"] == "passed",
+            "Extracted source-digest review guard differs under optimization")
+    return values[0]
 
 
 def check_imports(extracted: Path) -> dict[str, object]:
@@ -184,6 +410,43 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/benchmark_enterprise_finance.py", "tests/fixtures/landed_cost_owner_0123_69951414.sql",
         ".github/scripts/verify_global_integrity_archive.py", ".github/scripts/verify_native_posting_pair.py",
         "tests/test_native_posting_pair_verifier.py",
+        "tests/test_container_resource_counters.py", "tests/test_postgres_financial_read_plans.py",
+        "tests/test_global_engineering_pair.py", "tests/fixtures/enterprise-warmup-20-ea83335c.json",
+        "tests/test_host_processor_observation.py", "reconforge/benchmark/host_processor_observation.py",
+        "tests/test_wave4_posting_pair_verifier.py", ".github/scripts/verify_wave4_posting_pair.py",
+        "tests/test_customer_returns.py", "tests/test_customer_returns_api.py", "tests/test_postgres_customer_returns.py",
+        "tests/test_postgres_stock_sales_reversal_dispatch.py",
+        "tests/test_procurement_commitments.py", "tests/test_postgres_procurement_commitments.py", "tests/test_postgres_procurement_commitments_api.py",
+        "tests/test_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax_api.py",
+        "tests/test_postgres_operational_fx_tax_migration.py", ".github/scripts/benchmark_global_engineering_pair.py",
+        "tests/test_supplier_returns.py", "tests/test_postgres_supplier_returns.py", "tests/test_postgres_supplier_returns_api.py",
+        "tests/test_operational_fx_revaluation.py", "tests/test_postgres_operational_fx_revaluation.py",
+        "tests/test_postgres_operational_fx_revaluation_migration.py", ".github/scripts/verify_erp_expansion_browser.py",
+        ".github/scripts/verify_operational_fx_cycle_oracle.py", "tests/test_operational_fx_cycle_oracle.py",
+        "docs/execution/WAVE4_ACCEPTANCE_2026-10-10.json", "docs/execution/WAVE4_ACCEPTANCE_2026-10-10.md",
+        "docs/execution/WAVE4_ENGINEERING_MEASUREMENTS_2026-10-10.md",
+        "docs/execution/wave4-evidence/.gitattributes",
+        WAVE4_POSTING_EVIDENCE + "/manifest.json", WAVE4_POSTING_EVIDENCE + "/pair.json",
+        WAVE4_POSTING_EVIDENCE + "/source-instrumentation-binding.json",
+        WAVE4_SCALE_EVIDENCE,
+        ".github/scripts/benchmark_stable_power_pair.py", "tests/test_stable_power_pair_controller.py",
+        ".github/scripts/verify_stable_power_environment.py", "tests/test_stable_power_environment_verifier.py",
+        ".github/scripts/validate_supply_chain_policy.py", ".gitleaks.toml", ".gitleaksignore",
+        "docs/security/gitleaks-public-source-digests-wave4.v1.json", "tests/test_supply_chain_policy.py",
+        *(WAVE4_POSTING_EVIDENCE + "/" + name + ".json" for name in
+          ("1-baseline", "1-candidate", "2-candidate", "2-baseline", "3-baseline", "3-candidate")),
+        *(FX_EVIDENCE + "/" + name for name in FX_RETAINED_SHA),
+        *(FX_EVIDENCE + f"/fx-proof-{index}.json" for index in range(5)), FX_EVIDENCE + "/fx-proof-ar-mobile.json",
+        *(name for name in tracked if name.startswith("docs/execution/wave4-evidence/") and name.endswith(".json")),
+        "apps/web/src/operational-fx-tax-fixture.json", "modules/customer-returns.yaml",
+        "docs/modules/procurement-commitments.yaml", "docs/modules/operational-fx-tax.yaml",
+        "docs/modules/supplier-returns.yaml", "docs/operator/supplier-returns.md",
+        "docs/adr/0851-original-supplier-debit-and-capitalized-receipt-return.md",
+        "docs/adr/0852-scoped-original-stock-revenue-inverse-dispatch.md",
+        "docs/operator/customer-returns.md", "docs/operator/procurement-commitments.md", "docs/operator/operational-fx-tax.md",
+        "docs/adr/0847-original-customer-source-credits-and-partial-refunds.md",
+        "docs/adr/0848-native-purchase-appropriation-closure.md", "docs/adr/0849-historical-foreign-ar-effective-tax-and-realized-fx.md",
+        "docs/adr/0850-invoker-financial-read-policy-planning.md", "docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md",
         "apps/web/src/fixed-asset-evidence-fixture.json", "docs/adr/0845-governed-abandonment-and-native-evidence-performance.md",
         "docs/adr/0846-retained-unreceived-landed-cost-cancellation.md", "docs/operator/commercial-collections.md",
         "docs/operator/landed-cost.md", "docs/operator/fixed-assets.md", "docs/execution/GLOBAL_ENGINEERING_BENCHMARK_2026-10-10.md",
@@ -235,6 +498,11 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
                        "--root", str(extracted), "--report", str(pair_proof)], extracted)
         report["independent_posting_pair"] = json.loads(pair_proof.read_text(encoding="utf-8"))
         require(report["independent_posting_pair"]["status"] == "passed", "Extracted independent posting oracle failed")
+        report["wave4_portable_evidence"] = check_wave4_evidence(extracted, target)
+        report["wave4_independent_posting_pair"] = check_wave4_posting_pair(extracted, target)
+        report["wave4_stable_power_posting_pair"] = check_wave4_stable_power(extracted, target)
+        report["wave4_independent_scale_10k"] = check_wave4_scale(extracted)
+        report["reviewed_source_digest_ignores"] = check_reviewed_source_digest_ignores(extracted)
         report["browser_helper_imports"] = check_imports(extracted)
         report["acceptance_packet_keys"] = sorted(json.loads((extracted / "docs/execution" / (args.acceptance_stem + ".json")).read_text(encoding="utf-8")))
         with zipfile.ZipFile(args.wheel) as wheel:
@@ -266,8 +534,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=125)
-    parser.add_argument("--migration-head", default="0125_pg_landed_cost_cancellation")
+    parser.add_argument("--migration-count", type=int, default=132)
+    parser.add_argument("--migration-head", default="0132_pg_stock_inverse_dispatch")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

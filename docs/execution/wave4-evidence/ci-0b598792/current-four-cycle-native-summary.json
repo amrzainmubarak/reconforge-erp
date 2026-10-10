@@ -1,0 +1,852 @@
+{
+  "schema_version": "hosted-wave4-evidence-summary-v1",
+  "head_sha": "0b5987927391f2e46a91813f8ccee71763b4140a",
+  "ci_merge_sha": "375bf7c5e8bc6aca87bc98f6008a576d88c96efc",
+  "run_id": 38067389520,
+  "captured_at_utc": "2026-10-10T17:08:37Z",
+  "original_jobs_api": {
+    "label": "jobs-main",
+    "api_path": "repos/amrzainmubarak/reconforge-erp/actions/runs/38067389520/jobs?per_page=100&filter=latest",
+    "raw_file": "jobs-main-20261010T170835Z.json",
+    "bytes": 165408,
+    "sha256": "42ee3a7834fa12e2cdefe96cd1d28de295acc38ea735a8de012590b493adc688",
+    "transport": "requests REST",
+    "job_counts": {
+      "success": 38
+    },
+    "changed_jobs": [
+      {
+        "id": 114257698060,
+        "name": "server-boundaries (erp-expansion)",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257698060",
+        "failed_steps": []
+      },
+      {
+        "id": 114266160862,
+        "name": "server-boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "html_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114266160862",
+        "failed_steps": []
+      }
+    ]
+  },
+  "business_browser_reports": [
+    {
+      "scenario": "customer-returns",
+      "job_id": 114258228318,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114258228318",
+      "raw_report": {
+        "file": "customer-returns-artifact/report.json",
+        "bytes": 87485,
+        "sha256": "25f000dc99d4d8730a8ad4e7e7cebd7920835a5d06a5f9596827ee769799705b"
+      },
+      "source_commit": "375bf7c5e8bc6aca87bc98f6008a576d88c96efc",
+      "source_sha256": "c3aafbed35f051c913d5ef6002f9d9c88e42a577818ade515f78b625795e645c",
+      "web_sha256": "89d7744ee75a352c9ad1b6ff5c6066177a9a840b97657c80b36fac1ff97717ff",
+      "wall_seconds": 111.824,
+      "browser_counts": {
+        "startTime": "2026-10-10T16:31:45.967Z",
+        "duration": 53674.13,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "credit_memo_id": "CR1-8756ac36866b4c4fa332b5f506bc2789",
+        "retained_customer_return_plans": 4,
+        "posted_whole_credits": 1,
+        "cancelled_reviewed_credits": 1,
+        "posted_partial_refunds": 2,
+        "original_receipts_retained": 1,
+        "posting_effects": 9,
+        "credit_minor": "45000",
+        "original_collected_minor": "10000",
+        "original_receivable_released_minor": "35000",
+        "refund_total_minor": "10000",
+        "refund_due_minor": "0",
+        "restored_original_fifo_quantity": "10",
+        "restored_original_fifo_minor": "12000",
+        "retained_original_consumptions": 1,
+        "native_fifo_restitutions": 1,
+        "gl_turnover_minor": "156000"
+      },
+      "native_restore": {
+        "status": "passed",
+        "dump_sha256": "130d68975bb604615a9ef57fce6ab97f7fe9a0f74f89235737f31ef2410973eb",
+        "table_count": 253,
+        "populated_tables": 72,
+        "rows": 760,
+        "forced_rls_financial_tables": 55,
+        "tamper_refusals": 3,
+        "verified_effects_equal": true
+      },
+      "owned_cleanup_completed": true
+    },
+    {
+      "scenario": "procurement-commitments",
+      "job_id": 114258228312,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114258228312",
+      "raw_report": {
+        "file": "procurement-commitments-artifact/report.json",
+        "bytes": 87062,
+        "sha256": "4cd32e855432558272fe6853e25b41d58aeec10df2d01eee7f038e9ace112644"
+      },
+      "source_commit": "375bf7c5e8bc6aca87bc98f6008a576d88c96efc",
+      "source_sha256": "c3aafbed35f051c913d5ef6002f9d9c88e42a577818ade515f78b625795e645c",
+      "web_sha256": "89d7744ee75a352c9ad1b6ff5c6066177a9a840b97657c80b36fac1ff97717ff",
+      "wall_seconds": 65.327,
+      "browser_counts": {
+        "startTime": "2026-10-10T16:30:32.426Z",
+        "duration": 36787.371999999996,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "order_id": "PPORDER-03d7c12ea4eaeacd",
+        "budget_id": "BGT-4a26d2d03cd947478c6bbc65ff71cf00",
+        "original_minor": "17000",
+        "consumed_minor": "7400",
+        "released_minor": "9600",
+        "available_minor": "12600",
+        "line_count": 2,
+        "stock_receipts": 2,
+        "supplier_invoices": 1,
+        "payment_installments": 2,
+        "posting_effects": 5,
+        "expected_turnover_minor": "22200",
+        "remaining_inventory_minor": "7400"
+      },
+      "native_restore": {
+        "status": "passed",
+        "dump_sha256": "40606309f19f4981b078ff3979d5e00dccb265a3835a15171adf330f3818b554",
+        "table_count": 253,
+        "populated_tables": 74,
+        "rows": 1524,
+        "forced_rls_financial_tables": 59,
+        "tamper_refusals": 3,
+        "verified_effects_equal": true
+      },
+      "owned_cleanup_completed": true
+    },
+    {
+      "scenario": "supplier-returns",
+      "job_id": 114258228307,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114258228307",
+      "raw_report": {
+        "file": "supplier-returns-artifact/report.json",
+        "bytes": 87284,
+        "sha256": "e0bb6c0c6b66c0ff3f72a756fbec9b70356c26ee1e6db84a5b07a5e5c924379f"
+      },
+      "source_commit": "375bf7c5e8bc6aca87bc98f6008a576d88c96efc",
+      "source_sha256": "c3aafbed35f051c913d5ef6002f9d9c88e42a577818ade515f78b625795e645c",
+      "web_sha256": "89d7744ee75a352c9ad1b6ff5c6066177a9a840b97657c80b36fac1ff97717ff",
+      "wall_seconds": 116.578,
+      "browser_counts": {
+        "startTime": "2026-10-10T16:32:22.067Z",
+        "duration": 79783.106,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "order_id": "PPORDER-5581762cf5153545",
+        "supplier_return_id": "SR1-8190ec7f423f422e9d7546006f9f81e9",
+        "cancelled_supplier_return_id": "SR1-9964289a6dbc4aebb2f0f07093b08e4e",
+        "reviewed_cancellations": 1,
+        "supplier_credit_minor": "12000",
+        "removed_fifo_minor": "12706",
+        "charge_expense_minor": "706",
+        "stock_receipts": 2,
+        "supplier_invoices": 2,
+        "payment_installments": 2,
+        "posting_effects": 10,
+        "expected_turnover_minor": "66414",
+        "remaining_inventory_minor": "5295",
+        "cash_change_minor": "-6001"
+      },
+      "native_restore": {
+        "status": "passed",
+        "dump_sha256": "02d40f509190bb6e1e9332fc59c2ede7a1456492477c61a20232482230760667",
+        "table_count": 253,
+        "populated_tables": 80,
+        "rows": 2076,
+        "forced_rls_financial_tables": 64,
+        "tamper_refusals": 3,
+        "verified_effects_equal": true
+      },
+      "owned_cleanup_completed": true
+    },
+    {
+      "scenario": "operational-fx-tax",
+      "job_id": 114258228255,
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114258228255",
+      "raw_report": {
+        "file": "operational-fx-tax-artifact/report.json",
+        "bytes": 87781,
+        "sha256": "b7cd4e434a0ca1697ecff0ec2011d337ad6d72c4702f38b13f7f3f6d54864e4b"
+      },
+      "source_commit": "375bf7c5e8bc6aca87bc98f6008a576d88c96efc",
+      "source_sha256": "c3aafbed35f051c913d5ef6002f9d9c88e42a577818ade515f78b625795e645c",
+      "web_sha256": "89d7744ee75a352c9ad1b6ff5c6066177a9a840b97657c80b36fac1ff97717ff",
+      "wall_seconds": 77.55,
+      "browser_counts": {
+        "startTime": "2026-10-10T16:32:41.632Z",
+        "duration": 42204.893000000004,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "source_id": "FX-2ea72445a1164c4f9c62f11592f5baad",
+        "invoice_id": "ARINV-d1b861c4a946b19c",
+        "native_invoice_status": "Paid",
+        "source_plans": 5,
+        "native_posting_effects": 5,
+        "unrealized_fx_minor": [
+          "740",
+          "-740"
+        ],
+        "foreign_currency": "EUR",
+        "functional_currency": "USD",
+        "foreign_gross_minor": "11401",
+        "functional_gross_minor": "14251",
+        "foreign_receipts_minor": [
+          "4000",
+          "7401"
+        ],
+        "historical_releases_minor": [
+          "5000",
+          "9251"
+        ],
+        "realized_fx_minor": [
+          "200",
+          "-370"
+        ],
+        "account_balances_minor": {
+          "AR": "0",
+          "REVENUE": "-12501",
+          "TAX": "-1750",
+          "CASH": "14081",
+          "GAIN": "-200",
+          "LOSS": "370",
+          "UGAIN": "0"
+        }
+      },
+      "native_restore": {
+        "status": "passed",
+        "dump_sha256": "f6b9170a6c4e34911c35cc250fa710e881c5ed38955cbd427e4282b36e4515c3",
+        "table_count": 253,
+        "populated_tables": 44,
+        "rows": 608,
+        "forced_rls_financial_tables": 45,
+        "tamper_refusals": 3,
+        "verified_effects_equal": true
+      },
+      "owned_cleanup_completed": true
+    }
+  ],
+  "retained_native_logs": [
+    {
+      "job_id": 114257697055,
+      "name": "server-boundaries (fx-revaluation)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697055",
+      "raw_log": {
+        "file": "job-114257697055.log",
+        "bytes": 203776,
+        "sha256": "f10eb02ded6be8a478dd1ad4f17b0721ac9dcd41e54a9ab4f08fb363a2aee169"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 7,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697227,
+      "name": "server-boundaries (writeback)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697227",
+      "raw_log": {
+        "file": "job-114257697227.log",
+        "bytes": 235110,
+        "sha256": "746478dbae2c5de4367613706c84abca79568203dfb8fc54b463291d67436dc9"
+      },
+      "ordered_command_populations": [],
+      "dedicated_runner_receipts": [
+        "postgres_writeback_identity_migration_matrix",
+        "writeback_receiver_idempotency",
+        "postgres_writeback_receiver_idempotency_matrix",
+        "postgres_writeback_receiver_failover_matrix",
+        "postgres_writeback_recovery_compensation_matrix"
+      ],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697273,
+      "name": "server-boundaries (supplier-returns)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697273",
+      "raw_log": {
+        "file": "job-114257697273.log",
+        "bytes": 209616,
+        "sha256": "958f2df700415b3277711838020f092964ec86a4efb7e2111910c8cf7bf80dde"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 28,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697282,
+      "name": "server-boundaries (commercial-integrity)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697282",
+      "raw_log": {
+        "file": "job-114257697282.log",
+        "bytes": 299195,
+        "sha256": "2e15888176ea173f1afa4c31c6b600ac6f35d92ecf81b1ed4da40a17a651d566"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 19,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 15,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697306,
+      "name": "server-boundaries (supply-integrity)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697306",
+      "raw_log": {
+        "file": "job-114257697306.log",
+        "bytes": 341351,
+        "sha256": "c4a3497d36e8242b67dea866ccd1103efc59683e1c14d0b9a548da0799ef08e2"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 49,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 24,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697313,
+      "name": "server-boundaries (native)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697313",
+      "raw_log": {
+        "file": "job-114257697313.log",
+        "bytes": 117551,
+        "sha256": "f4d90414c8922f823f14719463b9397ec27c3ee4ebef6885294077e9e2c867f3"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697327,
+      "name": "server-boundaries (finance-posting)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697327",
+      "raw_log": {
+        "file": "job-114257697327.log",
+        "bytes": 234275,
+        "sha256": "292302e203c77917b67f7125ac04cc051b460950703a203ef4435317bed53397"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 54,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697332,
+      "name": "server-boundaries (industry-close)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697332",
+      "raw_log": {
+        "file": "job-114257697332.log",
+        "bytes": 126781,
+        "sha256": "40db6f280839fa412c756e4bb004cf5dcab6978deb01e0204768e91e4178ca38"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 4,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 4,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697376,
+      "name": "server-boundaries (receivables)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697376",
+      "raw_log": {
+        "file": "job-114257697376.log",
+        "bytes": 268417,
+        "sha256": "2c232facc8ef7ea591b14765d968c8479b5780ab45602ac0c685431ee7779f17"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 87,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 72,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 77,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697414,
+      "name": "server-boundaries (finance-integrity)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697414",
+      "raw_log": {
+        "file": "job-114257697414.log",
+        "bytes": 379028,
+        "sha256": "f083957a580644b7739d5975b42194845f6cc87f5b6be949a270b086aeffe8b6"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 17,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 7,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 4,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 21,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697419,
+      "name": "server-boundaries (durable-scale)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697419",
+      "raw_log": {
+        "file": "job-114257697419.log",
+        "bytes": 111064,
+        "sha256": "526f72220330fe9ff089236505dd92b206fdb12d099969b1045e540f8ee35449"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 4,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697436,
+      "name": "server-boundaries (parity)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697436",
+      "raw_log": {
+        "file": "job-114257697436.log",
+        "bytes": 438682,
+        "sha256": "29f061ee66f3717bfe60248ecf434c47c29d0a43270079d8e169a097e8b815f4"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 659,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697441,
+      "name": "server-boundaries (matching-runtime)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697441",
+      "raw_log": {
+        "file": "job-114257697441.log",
+        "bytes": 112951,
+        "sha256": "07eee01d2564f5ad162259e31daadfa2c098d0a8c1c83b2a5dc17f39a4589bc5"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 3,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 5,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257697549,
+      "name": "server-boundaries (inventory-payables)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257697549",
+      "raw_log": {
+        "file": "job-114257697549.log",
+        "bytes": 595376,
+        "sha256": "bc1cc205ce4e1ee0bd6715a159dbd3cc503b6fd6dd6a38eeaea55c6ef39a5239"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 119,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 30,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 2,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 1,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257698060,
+      "name": "server-boundaries (erp-expansion)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257698060",
+      "raw_log": {
+        "file": "job-114257698060.log",
+        "bytes": 442916,
+        "sha256": "38ead0dbae6655724e60ca80d713fc3f70ba128c73d28895b19b68c25f6d5ed8"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 43,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 29,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    },
+    {
+      "job_id": 114257698242,
+      "name": "server-boundaries (finance-reporting)",
+      "job_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520/job/114257698242",
+      "raw_log": {
+        "file": "job-114257698242.log",
+        "bytes": 316396,
+        "sha256": "79efe6756c6b0cd7483df529860f71909477fc9d73f9205621300a0d0a44c9ec"
+      },
+      "ordered_command_populations": [
+        {
+          "collected": 25,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        },
+        {
+          "collected": 7,
+          "skipped": 0,
+          "xfailed": 0,
+          "xpassed": 0,
+          "stats_available": 1
+        }
+      ],
+      "dedicated_runner_receipts": [],
+      "count_scope": "per executed pytest command; overlapping suites are not unique program case totals"
+    }
+  ],
+  "native_logs_not_retained_yet": [],
+  "local_execution": "none; original off-host CI reports/logs inspected only",
+  "final_program_acceptance": false,
+  "pending_boundaries": [
+    "complete current hosted CI terminal metadata",
+    "root 10K result",
+    "fresh stable-power six-run comparison"
+  ]
+}

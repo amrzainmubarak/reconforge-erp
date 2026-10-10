@@ -1536,10 +1536,9 @@ class PostgresFinanceCoreRepository:
                 ON dimensions.tenant_id=links.tenant_id AND dimensions.id=links.dimension_id
                JOIN reconforge.finance_dimension_values values_ ON values_.tenant_id=links.tenant_id
                 AND values_.id=links.dimension_value_id
-               JOIN reconforge.finance_entry_lines lines ON lines.tenant_id=links.tenant_id
-                AND lines.id=links.entry_line_id WHERE links.tenant_id=%s AND lines.entry_id=%s
+               WHERE links.tenant_id=%s AND links.entry_line_id=ANY(%s)
                ORDER BY links.entry_line_id,dimensions.dimension_code""",
-            (self.tenant_id, entry_id),
+            (self.tenant_id, [row["id"] if isinstance(row, Mapping) else row[0] for row in line_rows]),
         ).fetchall()
         dimensions_by_line: dict[str, dict[str, str]] = {}
         for row in dimension_rows:
@@ -1606,8 +1605,10 @@ class PostgresFinanceCoreRepository:
         ):
             raise PlatformError("Posting date must remain inside the selected fiscal period.")
         scope = self.connection.execute(
-            """SELECT organizations.active,entities.active,journals.active,charts.active,currencies.active,
-                      entities.currency_code,journals.currency_code,journals.organization_code
+            """SELECT organizations.active AS organization_active,entities.active AS entity_active,
+                      journals.active AS journal_active,charts.active AS chart_active,currencies.active AS currency_active,
+                      entities.currency_code AS entity_currency,journals.currency_code AS journal_currency,
+                      journals.organization_code AS journal_organization_code
                FROM reconforge.finance_entries entries
                JOIN reconforge.finance_journals journals ON journals.tenant_id=entries.tenant_id AND journals.id=entries.journal_id
                JOIN reconforge.finance_charts charts ON charts.tenant_id=journals.tenant_id AND charts.id=journals.chart_id
@@ -1651,13 +1652,14 @@ class PostgresFinanceCoreRepository:
         ):
             raise PlatformError("Ledger-control entry contains an inactive or inconsistent finance reference.")
         totals = self.connection.execute(
-            """SELECT COUNT(*),COALESCE(SUM(debit_minor),0),COALESCE(SUM(credit_minor),0)
+            """SELECT COUNT(*) AS line_count,COALESCE(SUM(debit_minor),0) AS debit_minor,
+                      COALESCE(SUM(credit_minor),0) AS credit_minor,ARRAY_AGG(id ORDER BY line_number) AS line_ids
                FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s""",
             (self.tenant_id, entry_id),
         ).fetchone()
         if totals is None:
             raise PostgresFinanceCoreError("Unable to verify PostgreSQL Finance Core entry totals.")
-        total_data = _row(totals, ("line_count", "debit_minor", "credit_minor"))
+        total_data = _row(totals, ("line_count", "debit_minor", "credit_minor", "line_ids"))
         if (
             int(total_data["line_count"]) < 2
             or int(total_data["debit_minor"]) <= 0
@@ -1680,25 +1682,37 @@ class PostgresFinanceCoreRepository:
             """SELECT 1 FROM reconforge.finance_entry_line_dimensions links
                JOIN reconforge.finance_dimensions dimensions ON dimensions.tenant_id=links.tenant_id AND dimensions.id=links.dimension_id
                JOIN reconforge.finance_dimension_values values_ ON values_.tenant_id=links.tenant_id AND values_.id=links.dimension_value_id
-               JOIN reconforge.finance_entry_lines lines ON lines.tenant_id=links.tenant_id AND lines.id=links.entry_line_id
-               WHERE links.tenant_id=%s AND lines.entry_id=%s AND
+               WHERE links.tenant_id=%s AND links.entry_line_id=ANY(%s) AND
                 (NOT dimensions.active OR NOT values_.active OR dimensions.workspace_id<>%s
                  OR (dimensions.organization_code<>'' AND dimensions.organization_code<>%s)
                  OR values_.dimension_id<>dimensions.id) LIMIT 1""",
-            (self.tenant_id, entry_id, entry["workspace_id"], entry["organization_code"]),
+            (self.tenant_id, total_data["line_ids"], entry["workspace_id"], entry["organization_code"]),
         ).fetchone()
-        missing_dimension = self.connection.execute(
-            """SELECT 1 FROM reconforge.finance_entry_lines lines CROSS JOIN reconforge.finance_dimensions dimensions
-               WHERE lines.tenant_id=%s AND lines.entry_id=%s AND dimensions.tenant_id=lines.tenant_id
-                AND dimensions.workspace_id=%s AND dimensions.active=TRUE AND dimensions.required_on_entries=TRUE
-                AND (dimensions.organization_code='' OR dimensions.organization_code=%s) AND NOT EXISTS (
-                 SELECT 1 FROM reconforge.finance_entry_line_dimensions links WHERE links.tenant_id=lines.tenant_id
-                  AND links.entry_line_id=lines.id AND links.dimension_id=dimensions.id) LIMIT 1""",
-            (self.tenant_id, entry_id, entry["workspace_id"], entry["organization_code"]),
-        ).fetchone()
+        # Authorize current required dimensions before planning link coverage.
+        # The usual zero-required case avoids duplicating the complete line RLS
+        # hierarchy in a correlated anti-join. Nonempty coverage is exact over
+        # the already scoped entry lines; every query still enforces FORCE RLS.
+        required = self.connection.execute(
+            """SELECT id FROM reconforge.finance_dimensions WHERE tenant_id=%s
+               AND workspace_id=%s AND active=TRUE AND required_on_entries=TRUE
+               AND (organization_code='' OR organization_code=%s) ORDER BY id""",
+            (self.tenant_id, entry["workspace_id"], entry["organization_code"]),
+        ).fetchall()
+        missing_dimension = False
+        if required:
+            required_ids = [row["id"] if isinstance(row, Mapping) else row[0] for row in required]
+            coverage = self.connection.execute(
+                """SELECT dimension_id,COUNT(DISTINCT entry_line_id) AS line_count FROM reconforge.finance_entry_line_dimensions
+                   WHERE tenant_id=%s AND entry_line_id=ANY(%s) AND dimension_id=ANY(%s)
+                   GROUP BY dimension_id""",
+                (self.tenant_id, total_data["line_ids"], required_ids),
+            ).fetchall()
+            coverage_rows = [_row(row, ("dimension_id", "line_count")) for row in coverage]
+            counts = {row["dimension_id"]: int(row["line_count"]) for row in coverage_rows}
+            missing_dimension = any(counts.get(identifier, 0) != int(total_data["line_count"]) for identifier in required_ids)
         if invalid_dimension is not None:
             raise PlatformError("Ledger-control entry contains an inactive or cross-scope accounting dimension.")
-        if missing_dimension is not None:
+        if missing_dimension:
             raise PlatformError("Ledger-control entry is missing a required accounting dimension.")
 
 

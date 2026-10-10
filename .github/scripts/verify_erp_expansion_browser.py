@@ -74,7 +74,7 @@ def require_browser_acceptance(stats: object) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -111,6 +111,62 @@ def main() -> int:
             "UPDATE reconforge.procurement_partial_orders SET total_minor=total_minor+1 WHERE tenant_id=%s",
             "UPDATE reconforge.procurement_partial_order_lines SET quantity=quantity+1 WHERE tenant_id=%s",
             "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+        )
+    elif args.scenario == "procurement-commitments":
+        from tests.erp_procurement_commitments_browser import (
+            PROCUREMENT_COMMITMENT_BROWSER_TABLES,
+            seed_procurement_commitments_browser,
+            verify_procurement_commitments_browser,
+        )
+        seed, verify_cycles = seed_procurement_commitments_browser, verify_procurement_commitments_browser
+        configuration = "apps/web/live/erp-procurement-commitments.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + PROCUREMENT_COMMITMENT_BROWSER_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.procurement_commitment_plans SET plan_digest=repeat('0',64) WHERE tenant_id=%s",
+            "DELETE FROM reconforge.procurement_commitment_commands WHERE tenant_id=%s",
+            "UPDATE reconforge.procurement_partial_orders SET total_minor=total_minor+1 WHERE tenant_id=%s",
+        )
+    elif args.scenario == "supplier-returns":
+        from tests.erp_supplier_returns_browser import (
+            SUPPLIER_RETURN_BROWSER_TABLES,
+            seed_supplier_returns_browser,
+            verify_supplier_returns_browser,
+        )
+        seed, verify_cycles = seed_supplier_returns_browser, verify_supplier_returns_browser
+        configuration = "apps/web/live/erp-supplier-returns.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + SUPPLIER_RETURN_BROWSER_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.supplier_return_plans SET amount_minor=amount_minor+1 WHERE tenant_id=%s",
+            "DELETE FROM reconforge.supplier_return_commands WHERE tenant_id=%s",
+            "DELETE FROM reconforge.ap_supplier_invoice_credits WHERE tenant_id=%s",
+        )
+    elif args.scenario == "customer-returns":
+        from tests.customer_returns_browser import (
+            CUSTOMER_RETURN_TABLES,
+            seed_customer_returns_browser,
+            verify_customer_returns_browser,
+        )
+        seed, verify_cycles = seed_customer_returns_browser, verify_customer_returns_browser
+        configuration = "apps/web/live/customer-returns.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + CUSTOMER_RETURN_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.customer_return_plans SET amount_minor=amount_minor+1 WHERE tenant_id=%s",
+            "DELETE FROM reconforge.customer_return_commands WHERE tenant_id=%s",
+            "DELETE FROM reconforge.customer_return_events WHERE tenant_id=%s",
+        )
+    elif args.scenario == "operational-fx-tax":
+        from tests.operational_fx_tax_browser_seed import (
+            OPERATIONAL_FX_TABLES,
+            seed_operational_fx_browser,
+            verify_operational_fx_browser,
+        )
+        seed, verify_cycles = seed_operational_fx_browser, verify_operational_fx_browser
+        configuration = "apps/web/live/operational-fx-tax.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + OPERATIONAL_FX_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.operational_fx_sources SET payload=jsonb_set(payload,'{foreign_gross_minor}',to_jsonb((payload->>'foreign_gross_minor')::bigint+1)) WHERE tenant_id=%s",
+            "UPDATE reconforge.operational_fx_reviews SET reviewer_actor_id='erp-maker' WHERE tenant_id=%s",
+            "UPDATE reconforge.operational_fx_commands SET response_json='{}'::jsonb WHERE tenant_id=%s",
         )
     elif args.scenario == "snapshots":
         from tests.enterprise_financial_snapshot_browser import (
@@ -271,6 +327,9 @@ def main() -> int:
             oracle_path = output / "financial-snapshot-oracle.json"
             oracle_path.write_text(json.dumps(financial_snapshot_oracle(), indent=2) + "\n", encoding="utf-8")
             environment["RECONFORGE_FINANCIAL_SNAPSHOT_ORACLE"] = str(oracle_path)
+        elif args.scenario == "customer-returns":
+            from tests.customer_returns_browser import customer_return_browser_source
+            environment["RECONFORGE_CUSTOMER_RETURN_SOURCE"] = customer_return_browser_source(runtime)
 
         with (output / "https-runtime.log").open("w", encoding="utf-8") as log:
             runtime_command = "import sys; sys.path.insert(0, sys.argv[1]); from tests.gfo_browser_runtime import main; main()"

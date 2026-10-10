@@ -231,8 +231,24 @@ DECLARE j JSONB;changed JSONB[];p RECORD;native_entry TEXT;number TEXT;receipt T
 BEGIN
  changed:=CASE WHEN TG_OP='INSERT' THEN ARRAY[to_jsonb(NEW)] WHEN TG_OP='DELETE' THEN ARRAY[to_jsonb(OLD)] ELSE ARRAY[to_jsonb(OLD),to_jsonb(NEW)] END;
  FOREACH j IN ARRAY changed LOOP
+ -- Shared worker evidence is not an LC owner dependency. Classify each image
+ -- before reading protected LC tables; OLD still closes renamed source events.
+ IF TG_TABLE_NAME='domain_audit_events' AND j->>'object_type' IS DISTINCT FROM 'landed_cost'
+ AND upper(COALESCE(j->>'object_id','')) NOT LIKE 'LC1-%'
+ AND left(COALESCE(j->>'action',''),12)<>'landed_cost_' THEN CONTINUE; END IF;
+ IF TG_TABLE_NAME='outbox_events' AND j->>'aggregate_type' IS DISTINCT FROM 'landed_cost'
+ AND upper(COALESCE(j->>'aggregate_id','')) NOT LIKE 'LC1-%'
+ AND upper(COALESCE(j->>'event_id','')) NOT LIKE 'LCOUT-%'
+ AND left(COALESCE(j->>'event_type',''),12)<>'landed_cost_' THEN CONTINUE; END IF;
  native_entry:=NULL;number:=NULL;receipt:=NULL;parent:=NULL;
  IF TG_TABLE_NAME IN('finance_accounts','finance_journals') THEN
+ -- Master changes need LC indexes only if the native ledger already references
+ -- this master from a reserved LC entry. Do not grant workers an owner read.
+ IF NOT EXISTS(SELECT 1 FROM reconforge.finance_entries e WHERE e.tenant_id=j->>'tenant_id'
+ AND upper(e.entry_number) LIKE 'LC1-%' AND
+ ((TG_TABLE_NAME='finance_journals' AND e.journal_id=j->>'id') OR
+ (TG_TABLE_NAME='finance_accounts' AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines x
+ WHERE x.tenant_id=e.tenant_id AND x.entry_id=e.id AND x.account_id=j->>'id')))) THEN CONTINUE; END IF;
  FOR p IN SELECT q.* FROM reconforge.landed_cost_plans q JOIN reconforge.finance_entries e
  ON e.tenant_id=q.tenant_id AND e.id=q.entry_id WHERE q.tenant_id=j->>'tenant_id' AND
  ((TG_TABLE_NAME='finance_journals' AND e.journal_id=j->>'id') OR
@@ -251,6 +267,10 @@ BEGIN
  IF TG_TABLE_NAME='finance_posting_effects' AND j->>'reverses_effect_id' IS NOT NULL THEN
  SELECT entry_id INTO native_entry FROM reconforge.finance_posting_effects WHERE tenant_id=j->>'tenant_id' AND id=j->>'reverses_effect_id'; END IF;
  IF native_entry IS NOT NULL AND number IS NULL THEN SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=j->>'tenant_id' AND id=native_entry; END IF;
+ -- Known ordinary entries cannot be LC cash or initial receipt artifacts. A
+ -- missing header remains subject to reverse closure, including deleted owners.
+ IF native_entry IS NOT NULL AND number IS NOT NULL
+ AND upper(number) NOT LIKE 'LC1-%' AND upper(number) NOT LIKE 'IRP1-%' THEN CONTINUE; END IF;
  IF upper(COALESCE(number,'')) LIKE 'LC1-%' AND NOT EXISTS(SELECT 1 FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND entry_id=native_entry) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Reserved landed cost GL entry requires its source owner'; END IF;
  FOR p IN SELECT * FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND

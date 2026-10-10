@@ -244,3 +244,76 @@ def test_raw_master_mutation_cannot_detach_landed_financial_mapping(runtime: Rec
         assert len(changed) == 1, "The actual native master row must be exercised."
     with runtime.actor(MAKER) as (connection, _, actor):
         assert PostgresLandedCostRepository(connection,runtime.tenant).get(plan["id"],actor=actor) == plan
+
+
+def test_legacy_worker_evidence_needs_no_landed_owner_read(runtime: ReceiptRuntime) -> None:
+    """Invoker audit/outbox closure ignores unrelated images, including updates."""
+    from collections.abc import Iterator
+    from contextlib import contextmanager
+    from uuid import uuid4
+
+    import psycopg
+    from psycopg import sql
+
+    from reconforge.infrastructure.postgres import set_local_tenant_scope
+    from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+
+    prepare(runtime, create_order(runtime))  # Owner data really exists in this tenant.
+    role = "lc_legacy_worker_" + uuid4().hex[:12]
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        admin.execute(sql.SQL("CREATE ROLE {} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS").format(sql.Identifier(role)))
+        admin.execute(sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(role)))
+        for table in ("domain_audit_ledger_state", "domain_audit_events", "outbox_events"):
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(role)))
+
+    @contextmanager
+    def worker() -> Iterator[Any]:
+        with psycopg.connect(runtime.admin_dsn) as connection:
+            connection.execute(sql.SQL("SET LOCAL ROLE {}").format(sql.Identifier(role)))
+            set_local_tenant_scope(connection, runtime.tenant)
+            assert connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone() == (False, False)
+            for table in ("landed_cost_plans", "landed_cost_allocations", "landed_cost_reviews", "landed_cost_links", "landed_cost_commands"):
+                assert connection.execute("SELECT has_table_privilege(current_user,%s,'SELECT')", ("reconforge." + table,)).fetchone() == (False,)
+            yield connection
+
+    def evidence(connection: Any, *, audit_override: dict[str, str] | None = None,
+                 outbox_override: dict[str, str] | None = None) -> str:
+        audit = {"object_type": "reconciliation_run", "object_id": "legacy-matcher", "action": "run_completed", **(audit_override or {})}
+        PostgresAuditEventRepository(connection, runtime.tenant).append(actor_label="legacy-worker", **audit)
+        event = {"event_id": "legacy-event-" + uuid4().hex, "event_type": "reconciliation.run_completed",
+                 "aggregate_type": "reconciliation_run", "aggregate_id": "legacy-matcher", **(outbox_override or {})}
+        connection.execute("""INSERT INTO reconforge.outbox_events(tenant_id,event_id,event_type,aggregate_type,aggregate_id,payload)
+            VALUES(%s,%s,%s,%s,%s,'{}'::jsonb)""", (runtime.tenant,event["event_id"],event["event_type"],event["aggregate_type"],event["aggregate_id"]))
+        return event["event_id"]
+
+    try:
+        with worker() as connection:
+            identifier = evidence(connection)
+            connection.execute("UPDATE reconforge.outbox_events SET event_type='reconciliation.run_requeued',aggregate_id='legacy-retry' WHERE tenant_id=%s AND event_id=%s", (runtime.tenant,identifier))
+        with worker() as connection:
+            assert connection.execute("SELECT event_type,aggregate_id FROM reconforge.outbox_events WHERE tenant_id=%s AND event_id=%s", (runtime.tenant,identifier)).fetchone() == ("reconciliation.run_requeued", "legacy-retry")
+        # Each retained LC discriminator independently prevents the shortcut.
+        for marker in ({"object_type": "landed_cost"}, {"object_id": "LC1-reserved"}, {"action": "landed_cost_prepared"}):
+            with pytest.raises(psycopg.errors.InsufficientPrivilege, match="landed_cost_plans"), worker() as connection:
+                evidence(connection, audit_override=marker)
+        for marker in ({"aggregate_type": "landed_cost"}, {"aggregate_id": "LC1-reserved"},
+                       {"event_type": "landed_cost_prepared"}, {"event_id": "LCOUT-reserved"}):
+            with pytest.raises(psycopg.errors.InsufficientPrivilege, match="landed_cost_plans"), worker() as connection:
+                evidence(connection, outbox_override=marker)
+    finally:
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            admin.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(role)))
+            admin.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))
+
+
+def test_renamed_landed_outbox_image_still_closes_original_owner(runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    plan = prepare(runtime, create_order(runtime))
+    with pytest.raises(psycopg.errors.CheckViolation), runtime.actor(MAKER) as (connection, _, _):
+        changed = connection.execute("""UPDATE reconforge.outbox_events SET aggregate_type='reconciliation_run',
+            aggregate_id='legacy-matcher',event_type='reconciliation.run_completed' WHERE tenant_id=%s AND aggregate_type='landed_cost'
+            AND aggregate_id=%s RETURNING event_id""", (runtime.tenant,plan["id"])).fetchall()
+        assert len(changed) == 1
+    with runtime.actor(MAKER) as (connection, _, actor):
+        assert PostgresLandedCostRepository(connection,runtime.tenant).get(plan["id"],actor=actor) == plan

@@ -358,6 +358,10 @@ jobs:
       max-parallel: 4
       matrix:
         shard:
+          # Exercise changed-owner invariants before the legacy partition.
+          - commercial-integrity
+          - supply-integrity
+          - finance-integrity
           - writeback
           - native
           - parity
@@ -368,9 +372,6 @@ jobs:
           - finance-posting
           - inventory-payables
           - erp-expansion
-          - commercial-integrity
-          - supply-integrity
-          - finance-integrity
           - finance-reporting
     services:
       postgres:

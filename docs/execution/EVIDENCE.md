@@ -1,5 +1,23 @@
 # ReconForge Execution Evidence Log
 
+## Retained first publication CI failure and strict contract correction (2026-10-10)
+
+Run38025608155 at5c01896a is unaccepted: Python3.12 executes4718passed,
+1failed,663existing prerequisite skips in589.45s; Python3.11 has the same
+counts in798.57s. The only failing test expects the previous429-route API
+inventory; the three guarded additions yield432. Its correction25952708 keeps
+strict count/digest closure, binds exact permissions for every added route and
+proves removing only those three preserves the accepted429-route digest.
+All11 focused authorization contracts pass. No financial code or skip changes.
+The completed six enterprise browser/restore scenarios and legacy ERP scenario
+remain historical passes; unfinished old-run shards may be cancelled when the
+corrected head replaces that run and never count as accepted execution.
+The corrected-head required checks remain the final hosted authority.
+Raw failed logs SHA256:3.12 `90510bd4f825252372d6221818536321e397b1340d9d881ac7632b53ff39e720`;
+3.11 `f6b2985c312031eab7872855e8528e4ef1e79f3fbc11c43fd53ae3a2b428be4c`.
+[3.12 failure](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38025608155/job/114135693035),
+[3.11 failure](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38025608155/job/114135693115).
+
 ## Wave3 source-bound publication (2026-10-10)
 
 [Acceptance narrative](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md) and

@@ -161,7 +161,7 @@ for name,module in tuple(sys.modules.items()):
   pathlib.Path(module.__file__).resolve().relative_to(root)
 print(json.dumps({'helpers':origins,'all_loaded_reconforge_and_tests_modules_from_extracted_source':True}))
 """
-    return isolated_json([sys.executable, "-I", "-c", code, str(extracted), json.dumps(HELPERS)], extracted)
+    return isolated_json([sys.executable, "-I", "-c", code, str(extracted), json.dumps((*HELPERS, "mandatory_native_gate"))], extracted)
 
 
 def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
@@ -177,6 +177,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
     required = {
         "LICENSE", "README.md", "MANIFEST.in", "pyproject.toml", "alembic.ini", "reconforge_migration_sql.py",
         "alembic/env.py", "alembic/script.py.mako", "tests/__init__.py", INDEX_PATH,
+        "tests/mandatory_native_gate.py", "tests/test_mandatory_native_gate.py",
         "tests/test_benchmark_evidence_index.py", "tests/test_alembic_postgres.py",
         ".github/scripts/verify_benchmark_index.py", ".github/scripts/verify_commercial_collections.py",
         ".github/scripts/benchmark_enterprise_finance.py", "tests/fixtures/landed_cost_owner_0123_69951414.sql",

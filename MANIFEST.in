@@ -1367,6 +1367,7 @@ include docs/execution/benchmarks/commercial-collection-projection-two-runs-2026
 include docs/execution/benchmarks/enterprise-native-finance-post-repair-cfd30de7-2026-10-10.json
 include docs/execution/benchmarks/native-dimensional-snapshot-1000-wave3-2026-10-10.json
 include .github/scripts/verify_global_integrity_archive.py
+include tests/mandatory_native_gate.py
 include docs/operator/commercial-collections.md
 include docs/operator/landed-cost.md
 include docs/operator/fixed-assets.md

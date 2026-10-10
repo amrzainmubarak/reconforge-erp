@@ -1,19 +1,42 @@
 """Owned pinned PostgreSQL gate; credentials remain in child memory only."""
 from __future__ import annotations
 
+import json
 import os
 import secrets
 import subprocess  # nosec B404
 import sys
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 import psycopg
+from defusedxml.ElementTree import fromstring
 from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[2]
 IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+
+
+def require_native_acceptance(document: str | None) -> dict[str, int]:
+    """Require actual passing cases; exit zero with skipped cases is insufficient."""
+    if document is None:
+        raise ValueError("Mandatory native JUnit evidence is missing")
+    root = fromstring(document)
+    suites = list(root.iter("testsuite"))
+    if not suites:
+        raise ValueError("Mandatory native test suites are missing")
+    counts = {name: sum(int(suite.attrib[name]) for suite in suites)
+              for name in ("tests", "failures", "errors", "skipped")}
+    cases = list(root.iter("testcase"))
+    if counts["tests"] < 1 or counts["tests"] != len(cases):
+        raise ValueError("Mandatory native case execution is incomplete")
+    if any(counts[name] for name in ("failures", "errors", "skipped")) or any(
+        case.find(tag) is not None for case in cases for tag in ("failure", "error", "skipped")
+    ):
+        raise ValueError("Mandatory native cases must pass without skips")
+    return counts
 
 
 def run(args: list[str], *, env: dict[str, str] | None = None) -> str:
@@ -21,6 +44,8 @@ def run(args: list[str], *, env: dict[str, str] | None = None) -> str:
 
 
 def main() -> int:
+    started_at = datetime.now(UTC).isoformat()
+    started = time.perf_counter()
     output = ROOT / "output/global-operating-platform-20261009/commercial"
     output = output / ("native-" + str(time.time_ns()))
     output.mkdir(parents=True, exist_ok=True)
@@ -58,8 +83,26 @@ def main() -> int:
         (output / "native-gate.log").write_text(diagnostic, encoding="utf-8")
         if xml is not None:
             xml_path.write_text(xml, encoding="utf-8")
+        accepted = False
+        counts = None
+        acceptance_error = None
+        try:
+            counts = require_native_acceptance(xml)
+            accepted = result.returncode == 0
+        except Exception as exc:
+            # Retain the type only: malformed external evidence can contain
+            # credentials or source financial data in parser diagnostics.
+            acceptance_error = type(exc).__name__
+        report = {"schema_version": "native-gate-v1", "source_commit": run(["git", "rev-parse", "HEAD"]),
+                  "tracked_status": run(["git", "status", "--porcelain", "--untracked-files=no"]),
+                  "started_at": started_at, "duration_seconds": time.perf_counter() - started,
+                  "python_version": sys.version, "postgres_image": IMAGE, "targets": groups,
+                  "pytest_exit_code": result.returncode, "counts": counts,
+                  "accepted": accepted, "acceptance_error_type": acceptance_error}
+        (output / "native-gate.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         print(diagnostic[-10000:])
-        return result.returncode
+        print(json.dumps({"accepted": accepted, "counts": counts, "evidence": str(output)}))
+        return result.returncode if result.returncode else (0 if accepted else 2)
     finally:
         run(["docker", "rm", "--force", container])
 

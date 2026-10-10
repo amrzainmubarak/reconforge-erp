@@ -65,6 +65,7 @@ async function phase(page: Page, id: string, action: "review" | "post" | "cancel
 }
 test("actual original credit release partial cash refunds lost responses and bilingual native evidence", async ({ page }) => {
   test.setTimeout(360_000); expect(base && tenant && password && source, "Owned native HTTPS fixture and source ID must be provided").toBeTruthy();
+  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   const cancelled = await prepare(page, true); await phase(page, cancelled.id, "review"); await phase(page, cancelled.id, "cancel", true);
   const credit = await prepare(page); expect([credit.credit_minor, credit.cogs_restored_minor, credit.refund_entitlement_minor, credit.receivable_released_minor]).toEqual(["45000", "12000", "10000", "35000"]);
   await phase(page, credit.id, "review"); const posted = await phase(page, credit.id, "post", true); expect(posted.posting_effect_ids).toHaveLength(3);
@@ -81,7 +82,6 @@ test("actual original credit release partial cash refunds lost responses and bil
   await expect(page.getByText("Refund liability remaining:", { exact: false })).toContainText("0.00 USD");
   await expect(page.getByRole("form", { name: "Prepare partial cash refund", exact: true })).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.getByRole("button", { name: "Switch language", exact: true }).click();
   await expect(page.getByRole("heading", { name: "إرجاع العميل الأصلي وردّ النقد على دفعات", exact: true })).toBeVisible();
   await expect(page.locator("main#main-content")).toHaveAttribute("dir", "rtl");

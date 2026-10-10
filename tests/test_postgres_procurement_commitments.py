@@ -424,12 +424,14 @@ def test_actual_ordered_upgrade_empty_rollback_and_populated_refusal_preserve_na
         reserved_runtime, budget = budget_runtime.__wrapped__(database)
         create(reserved_runtime, budget)
         retained = snapshot(reserved_runtime)
+        with psycopg.connect(database[0]) as admin:
+            retained_revision = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
         refused = subprocess.run([sys.executable, "-m", "alembic", "downgrade", "0125_pg_landed_cost_cancellation"], cwd=root, env=env,
             capture_output=True, text=True, timeout=180, check=False)
         assert refused.returncode != 0 and "Retained appropriation history" in refused.stderr
         assert snapshot(reserved_runtime) == retained
         with psycopg.connect(database[0]) as admin:
-            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0127_pg_procurement_commitments"
+            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == retained_revision
     finally:
         delegated.close()
 

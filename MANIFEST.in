@@ -1344,3 +1344,25 @@ include docs/execution/ERP_EXPANSION_ACCEPTANCE_2026-10-09.json
 include docs/operator/financial-reporting.md
 include docs/operator/stock-sales.md
 include docs/operator/procurement-partial.md
+
+# Reproducible governed-abandonment, native-proof and benchmark source closure.
+include tests/fixtures/landed_cost_owner_0123_69951414.sql
+include apps/web/src/fixed-asset-evidence-fixture.json
+include .github/scripts/verify_commercial_collections.py
+include .github/scripts/benchmark_enterprise_finance.py
+include tests/commercial_collections_browser.py
+include tests/erp_landed_cost_browser.py
+include tests/stock_commerce_browser_seed.py
+include tests/fixed_assets_browser_seed.py
+include tests/erp_procurement_enterprise_browser.py
+include tests/enterprise_financial_snapshot_browser.py
+include docs/adr/0845-governed-abandonment-and-native-evidence-performance.md
+include docs/adr/0846-retained-unreceived-landed-cost-cancellation.md
+include docs/execution/GLOBAL_CAPABILITY_COVERAGE_2026-10-10.md
+include docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE3_2026-10-10.md
+include docs/execution/benchmarks/enterprise-native-finance-1000-2026-10-09.json
+include docs/execution/benchmarks/enterprise-native-finance-pr127-34b9-2026-10-10.json
+include docs/execution/benchmarks/enterprise-native-finance-current-6272889d-2026-10-10.json
+include docs/execution/benchmarks/commercial-collection-projection-two-runs-2026-10-10.json
+include docs/execution/benchmarks/enterprise-native-finance-post-repair-cfd30de7-2026-10-10.json
+include docs/execution/benchmarks/native-dimensional-snapshot-1000-wave3-2026-10-10.json

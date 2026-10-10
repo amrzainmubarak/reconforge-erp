@@ -20,6 +20,11 @@ from typing import Any
 CONFIG = ("profile", "seed", "counts", "workers", "repetitions", "posting_warmup_cycles", "max_seconds", "image",
           "python", "platform", "logical_cpus", "processor", "architecture", "docker_version", "docker_engine_resources",
           "postgres_version", "postgres_configuration", "runtime_role_flags")
+DATABASE_COUNTERS = frozenset(("xact_commit", "xact_rollback", "blks_read", "blks_hit", "tup_returned", "tup_fetched",
+    "tup_inserted", "tup_updated", "tup_deleted", "conflicts", "temp_files", "temp_bytes", "deadlocks",
+    "blk_read_time_ms", "blk_write_time_ms"))
+DATABASE_TIMINGS = frozenset(("blk_read_time_ms", "blk_write_time_ms"))
+WAL_COUNTERS = frozenset(("wal_records", "wal_fpi", "wal_bytes"))
 
 _spec = importlib.util.spec_from_file_location("retained_pair_verifier", Path(__file__).with_name("verify_native_posting_pair.py"))
 if _spec is None or _spec.loader is None:
@@ -31,6 +36,27 @@ _spec.loader.exec_module(_retained)
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise ValueError(message)
+
+
+def verify_observation_counters(samples: list[dict[str, Any]]) -> None:
+    """A reset anywhere in the window invalidates cumulative resource deltas."""
+    previous_database: dict[str, Any] | None = None
+    previous_wal: dict[str, int] | None = None
+    for sample in samples:
+        database, raw_wal = sample["postgres_database_counters"], sample["postgres_wal_counters"]
+        require(set(database) == DATABASE_COUNTERS and set(raw_wal) == WAL_COUNTERS, "Incomplete database/WAL counter contract")
+        for name, value in database.items():
+            require(type(value) in ((int, float) if name in DATABASE_TIMINGS else (int,))
+                    and math.isfinite(value) and value >= 0, "Invalid database observation counter")
+        require(all(type(raw_wal[name]) is int and raw_wal[name] >= 0 for name in ("wal_records", "wal_fpi")), "Invalid WAL observation counter")
+        raw_bytes = raw_wal["wal_bytes"]
+        require(isinstance(raw_bytes, str) and raw_bytes.isascii() and raw_bytes.isdecimal()
+                and str(int(raw_bytes)) == raw_bytes, "Invalid WAL byte counter")
+        wal = {**raw_wal, "wal_bytes": int(raw_bytes)}
+        if previous_database is not None and previous_wal is not None:
+            require(all(database[name] >= previous_database[name] for name in DATABASE_COUNTERS)
+                    and all(wal[name] >= previous_wal[name] for name in WAL_COUNTERS), "Database/WAL observation counter decreased or reset")
+        previous_database, previous_wal = database, wal
 
 
 def verify(packet: dict[str, Any], root: Path, commit: str, count: int) -> dict[str, Any]:
@@ -85,7 +111,8 @@ def verify(packet: dict[str, Any], root: Path, commit: str, count: int) -> dict[
         require(posting["cycle_latency_seconds"][label] == sorted(raw)[math.ceil(count * fraction) - 1], "Percentile differs from raw observations")
     warm = packet["posting_warmup"]
     size = packet["posting_warmup_cycles"]
-    require(type(size) is int and 10 <= size <= 100 and warm["status"] == "passed" and warm["completed_cycles"] == size
+    require(type(size) is int and size == 20, "Driver requires exactly 20 genuine warmup cycles")
+    require(warm["status"] == "passed" and warm["completed_cycles"] == size
             and warm["outside_measured_population"] is True and warm["indices"] == list(range(count, count + size))
             and all(type(value) is int for value in warm["indices"]), "Missing genuine warmup")
     require(len(warm["effect_ids"]) == len(set(warm["effect_ids"])) == size and all(isinstance(value, str) and value for value in warm["effect_ids"])
@@ -93,6 +120,7 @@ def verify(packet: dict[str, Any], root: Path, commit: str, count: int) -> dict[
     require(len(warm["raw_cycle_latency_seconds"]) == size and all(type(value) in (int, float) and math.isfinite(value) and value > 0
             for value in warm["raw_cycle_latency_seconds"]), "Missing warmup latencies")
     resource_summary = _retained.resources(packet)
+    verify_observation_counters(packet["resource_sampling"]["raw_samples"])
     before, after = (packet[name]["parsed"] for name in ("posting_container_counters_before", "posting_container_counters_after"))
     cpu = (after["cpu_microseconds"]["usage_usec"] - before["cpu_microseconds"]["usage_usec"]) / 1_000_000
     require(cpu > 0, "Missing kernel CPU delta")

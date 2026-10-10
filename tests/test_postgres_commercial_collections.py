@@ -254,3 +254,63 @@ def test_sql_unowned_receipt_allocation_and_plan_mutation_are_rejected(receipt_d
         connection.execute("UPDATE reconforge.commercial_collection_plans SET amount_minor=1 WHERE tenant_id=%s AND id=%s", (runtime.tenant, posted["id"]))
     with runtime.actor("poster") as (connection, _, actor):
         assert PostgresCommercialCollectionsRepository(connection, runtime.tenant).get(posted["id"], actor=actor) == posted
+
+
+def test_unrelated_worker_evidence_needs_no_collection_table_read_authority(receipt_database: tuple[str, str]) -> None:
+    import psycopg
+    from psycopg import sql
+
+    from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+    from reconforge.infrastructure.postgres_outbox import PostgresOutboxRepository
+    from tests.test_postgres_inventory_receipt_posting import create_receipt_runtime
+
+    runtime = create_receipt_runtime(receipt_database)
+    app_role = psycopg.conninfo.conninfo_to_dict(receipt_database[1])["user"]
+    tables = ("commercial_collection_plans", "commercial_collection_reviews", "commercial_collection_links",
+              "commercial_collection_commands")
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        for table in tables:
+            admin.execute(sql.SQL("REVOKE SELECT ON reconforge.{} FROM {}")
+                .format(sql.Identifier(table), sql.Identifier(app_role)))
+    try:
+        with runtime.actor("maker") as (connection, _, actor):
+            assert not any(connection.execute("SELECT has_table_privilege(current_user,%s,'SELECT') permitted",
+                ("reconforge." + table,)).fetchone()["permitted"] for table in tables)
+            audit = PostgresAuditEventRepository(connection, runtime.tenant).append(actor_user_id=actor.user_id,
+                actor_label=actor.username, object_type="durable_job", object_id="UNRELATED-JOB",
+                action="job_completed", metadata={"schema_version": 1})
+            connection.execute("""INSERT INTO reconforge.outbox_events
+                (tenant_id,event_id,event_type,aggregate_type,aggregate_id,workspace_id,organization_id,legal_entity_id,payload)
+                VALUES(%s,'unrelated-outbox','job_completed','durable_job','UNRELATED-JOB','work','org','entity',
+                    jsonb_build_object('audit_event_id',%s::text,'schema_version',1))""", (runtime.tenant, audit.id))
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        with runtime.actor("maker") as (connection, _, _actor):
+            outbox = PostgresOutboxRepository(connection)
+            claims = outbox.claim_pending(tenant_id=runtime.tenant, worker_id="restricted-worker", limit=100,
+                workspace_id="work", organization_id="org", legal_entity_id="entity")
+            retained = next(event for event in claims if event.id == "unrelated-outbox")
+            outbox.mark_published(tenant_id=runtime.tenant, event_id=retained.id,
+                worker_id="restricted-worker", lease_generation=retained.lease_generation)
+            connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+        with runtime.actor("maker") as (connection, _, _actor):
+            assert connection.execute("SELECT status FROM reconforge.outbox_events WHERE tenant_id=%s AND event_id='unrelated-outbox'",
+                (runtime.tenant,)).fetchone()["status"] == "Published"
+            assert connection.execute("SELECT 1 FROM reconforge.domain_audit_events WHERE tenant_id=%s AND id=%s",
+                (runtime.tenant, audit.id)).fetchone() is not None
+        # Restricted workers must still encounter the actual CA owner closure
+        # for reserved references. No missing-table privilege is bypassed.
+        with pytest.raises(psycopg.errors.InsufficientPrivilege, match="commercial_collection_plans"), runtime.actor("maker") as (connection, _, actor):
+            PostgresAuditEventRepository(connection, runtime.tenant).append(actor_user_id=actor.user_id,
+                actor_label=actor.username, object_type="operational_finance", object_id="CA1-RESTRICTED",
+                action="commercial_collection_posted", metadata={})
+        with pytest.raises(psycopg.errors.InsufficientPrivilege, match="commercial_collection_plans"), runtime.actor("maker") as (connection, _, _actor):
+            connection.execute("""INSERT INTO reconforge.outbox_events
+                (tenant_id,event_id,event_type,aggregate_type,aggregate_id,workspace_id,organization_id,legal_entity_id,payload)
+                VALUES(%s,'CA1-RESTRICTED-OUTBOX','commercial_collection_posted','operational_finance','CA1-RESTRICTED',
+                    'work','org','entity','{}'::jsonb)""", (runtime.tenant,))
+    finally:
+        # Restore only the fixture's existing read grants for subsequent cases.
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            for table in tables:
+                admin.execute(sql.SQL("GRANT SELECT ON reconforge.{} TO {}")
+                    .format(sql.Identifier(table), sql.Identifier(app_role)))

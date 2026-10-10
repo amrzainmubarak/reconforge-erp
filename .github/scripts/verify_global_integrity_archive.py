@@ -165,6 +165,7 @@ print(json.dumps({'helpers':origins,'all_loaded_reconforge_and_tests_modules_fro
 
 
 def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
+    require(hasattr(tarfile, "data_filter"), "Safe archive inspection requires tarfile.data_filter (Python 3.11.4+)")
     root = args.root.resolve()
     source_commit = git(root, "rev-parse", "HEAD")
     require(not git(root, "status", "--porcelain", "--untracked-files=no"), "Publication source has tracked mutations")
@@ -181,6 +182,8 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_benchmark_evidence_index.py", "tests/test_alembic_postgres.py",
         ".github/scripts/verify_benchmark_index.py", ".github/scripts/verify_commercial_collections.py",
         ".github/scripts/benchmark_enterprise_finance.py", "tests/fixtures/landed_cost_owner_0123_69951414.sql",
+        ".github/scripts/verify_global_integrity_archive.py", ".github/scripts/verify_native_posting_pair.py",
+        "tests/test_native_posting_pair_verifier.py",
         "apps/web/src/fixed-asset-evidence-fixture.json", "docs/adr/0845-governed-abandonment-and-native-evidence-performance.md",
         "docs/adr/0846-retained-unreceived-landed-cost-cancellation.md", "docs/operator/commercial-collections.md",
         "docs/operator/landed-cost.md", "docs/operator/fixed-assets.md", "docs/execution/GLOBAL_ENGINEERING_BENCHMARK_2026-10-10.md",
@@ -227,6 +230,11 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
                 "--root", str(extracted), "--index", str(extracted / INDEX_PATH)], extracted)
         require(len(report["benchmark_index"]["verified_entries"]) == args.index_count, "Extracted index count differs")
         report["paired_raw_reports"] = check_pair(extracted, pair)
+        pair_proof = target / "independent-posting-pair.json"
+        isolated_json([sys.executable, "-I", str(extracted / ".github/scripts/verify_native_posting_pair.py"),
+                       "--root", str(extracted), "--report", str(pair_proof)], extracted)
+        report["independent_posting_pair"] = json.loads(pair_proof.read_text(encoding="utf-8"))
+        require(report["independent_posting_pair"]["status"] == "passed", "Extracted independent posting oracle failed")
         report["browser_helper_imports"] = check_imports(extracted)
         report["acceptance_packet_keys"] = sorted(json.loads((extracted / "docs/execution" / (args.acceptance_stem + ".json")).read_text(encoding="utf-8")))
         with zipfile.ZipFile(args.wheel) as wheel:

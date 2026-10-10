@@ -8,6 +8,18 @@ implementation dependency with retained failed gates, above PR126/125/124.
 
 Three separately owned worktrees deliver existing-owner extensions:
 
+Reconstruct the indexed raw bytes, independently recalculate seeded integer
+totals and raw percentiles, and disclose adverse observations without application
+imports or a database:
+
+```text
+python .github/scripts/verify_native_posting_pair.py --root . --report output/fresh-pair-proof.json
+```
+
+Inspect fresh built wheel/source artifacts with
+`.github/scripts/verify_global_integrity_archive.py`; its safe extraction requires
+Python3.11.4+ and also runs the standalone financial oracle from extracted source.
+
 | Cycle | Complete tested behavior | Boundaries |
 | --- | --- | --- |
 | CA1 collections | Independent cancel of unposted claims releases invoice residual/plan receipt-name capacity; preparation/review/validated GL and original ACKs survive; partial collections continue to original AR/cash/GL. | Positive zero-tax functional currency;200 retained plans/invoice; no posted cancellation, customer credit/refund or external transfer. |

@@ -413,6 +413,7 @@ def test_charge_backed_original_fifo_return_preserves_landed_cost_and_restitutes
         assert connection.execute("SELECT count(*) n FROM reconforge.inventory_valuation_reversal_effects WHERE tenant_id=%s AND effect_type='Restore'", (runtime.tenant,)).fetchone()["n"] == 1
     result = balances(runtime)
     assert result["COGS"] == result["REVENUE"] == result["AR"] == result["REFUND"] == 0
+    assert result["INVENTORY"] == 18001 and result["CASH"] == -1001 and result["CLEARING"] == -17000
 
 
 def test_cancelled_source_releases_future_cash_admission_and_posted_history_survives_inactive_accounts(
@@ -429,14 +430,16 @@ def test_cancelled_source_releases_future_cash_admission_and_posted_history_surv
     runtime, source, invoice = create_runtime(receipt_database, 0)
     retained = prepare_return(runtime, source)
     cancelled = phase(runtime, phase(runtime, retained, "review", "checker"), "cancel", "poster")
-    with runtime.actor("maker") as (connection, _, actor):
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         PostgresFinanceCoreRepository(connection, runtime.tenant).upsert_account(account_code="CASH2", name="Second collected cash",
             account_type="Asset", normal_balance="Debit", workspace="work")
+    with runtime.actor("maker") as (connection, _, actor):
         args = CommercialCollectionPreparation("work", "org", "entity", "ORG", "ENTITY", invoice, "CASH", "period", "2026-10-10",
             "CASH2", "AR", "Different native cash after original claim release", 1000, "RELEASED-CASH2")
         collection = PostgresCommercialCollectionsRepository(connection, runtime.tenant).prepare(args, command_id="released-cash-prepare", actor=actor)
     complete(runtime, collection, "RELEASED-CASH2")
     assert prepare_return(runtime, source) == retained
+
     with runtime.actor("maker") as (connection, _, actor):
         owner = PostgresCustomerReturnsRepository(connection, runtime.tenant)
         assert owner.get(cancelled["id"], actor=actor) == cancelled
@@ -444,8 +447,9 @@ def test_cancelled_source_releases_future_cash_admission_and_posted_history_surv
     parent = phase(runtime, phase(runtime, replacement, "review", "checker"), "post", "poster")
     installment = refund(runtime, parent, 1000, "historical-refund")
     phase(runtime, phase(runtime, installment, "review", "checker"), "post", "poster")
-    with runtime.actor("maker") as (connection, _, actor):
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         connection.execute("UPDATE reconforge.finance_accounts SET active=FALSE,allow_posting=FALSE WHERE tenant_id=%s AND account_code IN('CASH2','REFUND')", (runtime.tenant,))
+    with runtime.actor("maker") as (connection, _, actor):
         owner = PostgresCustomerReturnsRepository(connection, runtime.tenant)
         assert owner.get(parent["id"], actor=actor) == parent
         assert PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(invoice)["refund_due_minor"] == 0
@@ -467,3 +471,84 @@ def test_cancelled_source_releases_future_cash_admission_and_posted_history_surv
             admin.execute("SET LOCAL session_replication_role='replica'")
             admin.execute("UPDATE reconforge.customer_return_plans SET payload=%s::jsonb WHERE tenant_id=%s AND id=%s", (canonical_json(original), runtime.tenant, parent["id"]))
     assert prepare_return(runtime, source) == retained
+
+
+def test_original_return_and_new_issue_share_currency_admission_before_stock_and_fifo_locks(
+    receipt_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import threading
+    import time
+
+    import psycopg
+
+    from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+    from tests.test_postgres_stock_sales import repository
+
+    runtime, source, _invoice = create_runtime(receipt_database, 0, quantity="5")
+    parent = phase(runtime, prepare_return(runtime, source), "review", "checker")
+    reserved = create_reserved_order(runtime, "AFTER-RETURN-LOCK", "3")
+    acquired, release, attempting = threading.Event(), threading.Event(), threading.Event()
+    state = threading.local()
+    pids: dict[str, int] = {}
+    original = FinancePolicyStore.lock_binding
+
+    def hold_binding(store: FinancePolicyStore, workspace_id: str) -> None:
+        original(store, workspace_id)
+        if threading.current_thread().name.startswith("cr-original-post") and not getattr(state, "held", False):
+            state.held = True
+            acquired.set()
+            assert release.wait(45), "Synthetic return binding coordinator timed out"
+
+    def post_return() -> dict[str, Any]:
+        with runtime.actor("poster") as (connection, _, actor):
+            pids["return"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            return PostgresCustomerReturnsRepository(connection, runtime.tenant).post(parent["id"],
+                expected_plan_digest=parent["plan_digest"], command_id="return-binding-post",
+                reason="Restore exact original cost before competing new issue", actor=actor)
+
+    def prepare_issue() -> dict[str, Any]:
+        with runtime.actor("maker") as (connection, _, actor):
+            pids["issue"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            attempting.set()
+            return repository(connection, runtime).act(reserved["id"], "prepare-issue", expected_version=reserved["row_version"],
+                command_id="new-issue-binding-prepare", reason="Retain FIFO cost after original restitution",
+                parameters={"posting_date": "2026-10-10", "period_id": "period", "policy_code": "FIFO"}, actor=actor)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(FinancePolicyStore, "lock_binding", hold_binding)
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="cr-original-post") as returns, ThreadPoolExecutor(max_workers=1) as sales:
+            returned = returns.submit(post_return)
+            try:
+                assert acquired.wait(30)
+                issued = sales.submit(prepare_issue)
+                assert attempting.wait(30)
+                deadline = time.monotonic() + 15
+                blocked = False
+                with psycopg.connect(runtime.admin_dsn, autocommit=True) as observer:
+                    while time.monotonic() < deadline:
+                        if pids["return"] in observer.execute("SELECT pg_blocking_pids(%s)", (pids["issue"],)).fetchone()[0]:
+                            blocked = True
+                            break
+                        time.sleep(.05)
+                    assert blocked, "New issue must wait on the return's canonical currency binding"
+                    # A wait late in create_entry would still appear in
+                    # pg_blocking_pids, while already holding these native rows.
+                    with observer.transaction():
+                        assert observer.execute("SELECT id FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s FOR UPDATE NOWAIT",
+                            (runtime.tenant, reserved["id"])).fetchone()
+                        assert observer.execute("SELECT id FROM reconforge.inventory_cost_layers WHERE tenant_id=%s FOR UPDATE NOWAIT",
+                            (runtime.tenant,)).fetchone()
+                assert not returned.done() and not issued.done()
+            finally:
+                release.set()
+            credited, proposed = returned.result(timeout=120), issued.result(timeout=120)
+    assert credited["status"] == "Posted" and proposed["status"] == "IssuePrepared"
+    assert proposed["issue_plan"]["total_cost_minor"] == int(Fraction(12000 * 3, 10)) == 3600
+    proposed = execute(runtime, proposed, "review-issue", "checker")
+    execute(runtime, proposed, "deliver", "poster")
+    with runtime.actor("maker") as (connection, _, actor):
+        layer = connection.execute("SELECT sum(remaining_quantity_scaled) q,sum(remaining_value_minor) v FROM reconforge.inventory_cost_layers WHERE tenant_id=%s",
+                                   (runtime.tenant,)).fetchone()
+        assert (layer["q"], layer["v"]) == (7, 8400)
+        assert PostgresCustomerReturnsRepository(connection, runtime.tenant).get(parent["id"], actor=actor) == credited
+    assert balances(runtime) == {"AR": 0, "REVENUE": 0, "COGS": 3600, "INVENTORY": 8400, "CLEARING": -12000}

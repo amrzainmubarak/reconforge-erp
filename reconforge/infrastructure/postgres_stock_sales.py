@@ -296,7 +296,26 @@ class PostgresStockSalesRepository:
             replay = self._replay(command_id, request)
             if replay is not None:
                 return replay
+            context: Mapping[str, Any] = {}
+            if operation in {"prepare-issue", "prepare-invoice", "prepare-collection"}:
+                context = parameters
+            elif operation in {"review-issue", "deliver", "cancel"} and row["issue_plan"]:
+                context = row["issue_plan"]["request"]
+            elif operation in {"review-invoice", "invoice"}:
+                context = row["invoice_parameters"] or {}
+            elif operation in {"review-collection", "collect"}:
+                context = row["collection_parameters"] or {}
+            if context:
+                date_field = "invoice_date" if operation in {"prepare-invoice", "review-invoice", "invoice"} else (
+                    "receipt_date" if operation in {"prepare-collection", "review-collection", "collect"} else "posting_date")
+                self.postings._period(text(context.get("period_id"), "period_id"), row["workspace_id"],
+                                      text(context.get(date_field), date_field))
+            if context or operation == "cancel":
+                # Source returns admit the same binding before their stock/FIFO
+                # locks. Native AR captures must also precede these row locks.
+                FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(row["workspace_id"])
             row = self._order(identifier, lock=True)
+            self._actor(actor, operation, row)
             if row["row_version"] != expected_version or row["status"] not in STOCK_STAGES:
                 raise FinancePostingError("stock_sales_version_conflict", "Order changed; reload before proceeding.")
             stage = STOCK_STAGES.index(row["status"])

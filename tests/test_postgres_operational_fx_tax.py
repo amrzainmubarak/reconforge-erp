@@ -442,3 +442,31 @@ def test_rebound_registry_keeps_historical_source_and_refuses_new_policy_reinter
             assert PostgresOperationalFxTaxRepository(connection, runtime.tenant).plan_evidence(posted["id"], actor=actor) == original
     finally:
         CurrencyRegistry.reset_to_bundled()
+
+
+def test_every_retained_fx_table_rejects_tamper_with_owner_constraint_and_preserves_history(fx_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    runtime = fx_runtime
+    posted = finish_fx(runtime, prepare_fx(runtime))
+    with runtime.actor("poster") as (connection, _, actor):
+        before = PostgresOperationalFxTaxRepository(connection, runtime.tenant).plan_evidence(posted["id"], actor=actor)
+    # Each polymorphic trigger branch must return the declared financial
+    # constraint, not an unrelated record-field/permission/syntax exception.
+    for statement in (
+        "UPDATE reconforge.operational_fx_sources SET payload=jsonb_set(payload,'{foreign_gross_minor}','1') WHERE tenant_id=%s",
+        "UPDATE reconforge.operational_fx_plans SET payload=jsonb_set(payload,'{amount_minor}','1') WHERE tenant_id=%s",
+        "UPDATE reconforge.operational_fx_reviews SET reviewer_actor_id='maker' WHERE tenant_id=%s",
+        "UPDATE reconforge.operational_fx_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+        "UPDATE reconforge.operational_fx_commands SET response_json='{}'::jsonb WHERE tenant_id=%s",
+        "DELETE FROM reconforge.operational_fx_sources WHERE tenant_id=%s",
+        "DELETE FROM reconforge.operational_fx_plans WHERE tenant_id=%s",
+        "DELETE FROM reconforge.operational_fx_reviews WHERE tenant_id=%s",
+        "DELETE FROM reconforge.operational_fx_links WHERE tenant_id=%s",
+        "DELETE FROM reconforge.operational_fx_commands WHERE tenant_id=%s",
+    ):
+        with pytest.raises(psycopg.errors.CheckViolation, match="immutable") as rejection, runtime.actor("poster") as (connection, _, _):
+            connection.execute(statement, (runtime.tenant,))
+        assert rejection.value.diag.constraint_name == "operational_fx_owner"
+        with runtime.actor("poster") as (connection, _, actor):
+            assert PostgresOperationalFxTaxRepository(connection, runtime.tenant).plan_evidence(posted["id"], actor=actor) == before

@@ -90,7 +90,11 @@ CREATE FUNCTION reconforge.fx_event(t TEXT,p TEXT,a TEXT,b TEXT,actor TEXT,actio
 $fx$;
 CREATE FUNCTION reconforge.fx_protect() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fx$
 BEGIN
- IF TG_TABLE_NAME='operational_fx_plans' AND TG_OP='UPDATE' AND NEW.phase=OLD.phase+1 AND (to_jsonb(NEW)-'phase')=(to_jsonb(OLD)-'phase') THEN RETURN NEW; END IF;
+ -- Resolve the composite plan field only inside its matching table branch;
+ -- boolean SQL expressions can resolve NEW.phase before short-circuiting.
+ IF TG_TABLE_NAME='operational_fx_plans' AND TG_OP='UPDATE' THEN
+  IF NEW.phase=OLD.phase+1 AND (to_jsonb(NEW)-'phase')=(to_jsonb(OLD)-'phase') THEN RETURN NEW; END IF;
+ END IF;
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='operational_fx_owner',MESSAGE='Historical FX source, policy, review and acknowledgement are immutable';
 END $fx$;
 CREATE FUNCTION reconforge.fx_command_actor() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fx$

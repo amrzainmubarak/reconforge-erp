@@ -125,7 +125,7 @@ def main() -> int:
         environment = os.environ.copy()
         environment["POSTGRES_PASSWORD"] = admin_password
         server_options = (["-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.track=all",
-                           "-c", "track_io_timing=on"] if args.profile_database else [])
+                           "-c", "pg_stat_statements.track_planning=on", "-c", "track_io_timing=on"] if args.profile_database else [])
         container = run(["docker", "run", "--detach", "--rm", "--name", "reconforge-enterprise-finance-" + uuid4().hex[:12],
             "--label", "reconforge.owner=enterprise-finance-benchmark", "-e", "POSTGRES_PASSWORD", "-p", "127.0.0.1::5432", IMAGE,
             *server_options], environment=environment).stdout.strip()

@@ -4,20 +4,26 @@ from __future__ import annotations
 from fractions import Fraction
 from typing import Any
 
+import pytest
+
+from reconforge.domain.commercial_collections import CommercialCollectionPreparation
 from reconforge.domain.financial_reporting import AccountClassification, OpeningLine, OpeningPreparation, ReportingScope
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres_commercial_collections import PostgresCommercialCollectionsRepository
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
 from reconforge.infrastructure.postgres_fixed_assets import PostgresFixedAssetsRepository
 from reconforge.infrastructure.postgres_landed_cost import PostgresLandedCostRepository
 from reconforge.infrastructure.postgres_procurement_partial import PostgresProcurementPartialRepository
 from tests.test_postgres_commercial_collections import complete as collect
+from tests.test_postgres_commercial_collections import phase as collection_phase
 from tests.test_postgres_commercial_collections import prepare as prepare_collection
 from tests.test_postgres_financial_reporting import post_opening
 from tests.test_postgres_fixed_assets import acquire, finish, operation, seed_asset_masters
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 from tests.test_postgres_landed_cost import phase as landed_phase
 from tests.test_postgres_landed_cost import prepare as prepare_landed
+from tests.test_postgres_landed_cost import request as landed_request
 from tests.test_postgres_procurement_multiline import (
     CHECKER,
     POSTER,
@@ -61,7 +67,10 @@ def reviewed_reporting_map(runtime: ReceiptRuntime) -> dict[str, Any]:
             command_id="global-map-review", actor=actor)
 
 
-def test_paid_landed_stock_partial_ar_assets_and_native_statements_share_one_financial_truth(receipt_database: tuple[str, str]) -> None:
+@pytest.mark.parametrize("abandon_reviewed_claims", [False, True])
+def test_paid_landed_stock_partial_ar_assets_and_native_statements_share_one_financial_truth(
+    receipt_database: tuple[str, str], abandon_reviewed_claims: bool,
+) -> None:
     runtime = create_multiline_runtime(receipt_database)
     runtime = create_stock_runtime(receipt_database, base_runtime=runtime, seed_stock=False)
     seed_asset_masters(runtime)
@@ -82,7 +91,26 @@ def test_paid_landed_stock_partial_ar_assets_and_native_statements_share_one_fin
             command_id="global-funding-review", actor=actor)
     assert post_opening(runtime, funding)["status"] == "Posted"
     purchase = create_order(runtime, "GLOBAL-SUPPLY")
-    landed = landed_phase(runtime, landed_phase(runtime, prepare_landed(runtime, purchase), "review", CHECKER), "post", POSTER)
+    landed = prepare_landed(runtime, purchase)
+    if abandon_reviewed_claims:
+        with runtime.actor(CHECKER) as (connection, _, actor):
+            landed = PostgresLandedCostRepository(connection, runtime.tenant).act(
+                landed["id"], "review", expected_plan_digest=landed["plan_digest"], command_id="global-lc-abandoned-review",
+                reason="Independently review receipt that will retain abandonment evidence", actor=actor)
+        with runtime.actor(POSTER) as (connection, _, actor):
+            owner = PostgresLandedCostRepository(connection, runtime.tenant)
+            args = {"expected_plan_digest": landed["plan_digest"], "command_id": "global-lc-cancel",
+                    "reason": "Retain reviewed abandoned receipt evidence before safe replacement", "actor": actor}
+            cancelled_landed = owner.cancel(landed["id"], **args)
+            assert cancelled_landed["status"] == "Cancelled"
+            assert owner.cancel(landed["id"], **args) == cancelled_landed
+            assert connection.execute("SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 1
+            assert connection.execute("SELECT count(*) FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 0
+            purchase = PostgresProcurementPartialRepository(connection, runtime.tenant).get(purchase["order"]["id"], actor=actor)
+        with runtime.actor("maker") as (connection, _, actor):
+            landed = PostgresLandedCostRepository(connection, runtime.tenant).prepare(
+                landed_request(purchase, number="GLOBAL-LC-REPLACEMENT"), command_id="global-lc-replacement", actor=actor)
+    landed = landed_phase(runtime, landed_phase(runtime, landed, "review", CHECKER), "post", POSTER)
     freight = independent_allocation(777, (12000, 5000))
     duties = independent_allocation(224, (12000, 5000))
     item_value = 12000 + freight[0] + duties[0]
@@ -108,7 +136,19 @@ def test_paid_landed_stock_partial_ar_assets_and_native_statements_share_one_fin
         sale = execute(runtime, sale, action, human, parameters)
     cogs = int(Fraction(item_value * 5, 10))
     revenue = 5 * 5000 * (10000 - 1000) // 10000
-    first = collect(runtime, prepare_collection(runtime, sale["invoice_id"], 9000, "GLOBAL-1"), "global-ar-1")
+    first_plan = prepare_collection(runtime, sale["invoice_id"], 9000, "GLOBAL-1")
+    if abandon_reviewed_claims:
+        first_plan = collection_phase(runtime, first_plan, "review", "checker", "global-ar-abandoned-review")
+        cancelled_collection = collection_phase(runtime, first_plan, "cancel", "poster", "global-ar-cancel")
+        assert cancelled_collection["status"] == "Cancelled"
+        with runtime.actor("maker") as (connection, _, actor):
+            replacement = CommercialCollectionPreparation(workspace_id="work", organization_id="org", legal_entity_id="entity",
+                organization_code="ORG", entity_code="ENTITY", source_id=sale["invoice_id"], journal_code="CASH", period_id="period",
+                posting_date="2026-10-10", debit_account_code="CASH", credit_account_code="AR", reason="Replace abandoned collection without changing actual receipt",
+                amount_minor=9000, receipt_number="PARTIAL-CASH-GLOBAL-1")
+            first_plan = PostgresCommercialCollectionsRepository(connection, runtime.tenant).prepare(
+                replacement, command_id="global-ar-replacement", actor=actor)
+    first = collect(runtime, first_plan, "global-ar-1")
     with runtime.actor("maker") as (connection, _, _):
         invoice = connection.execute("SELECT status FROM reconforge.ar_invoices WHERE tenant_id=%s AND id=%s", (runtime.tenant, sale["invoice_id"])).fetchone()
         assert invoice["status"] == "PartiallyPaid"
@@ -139,6 +179,9 @@ def test_paid_landed_stock_partial_ar_assets_and_native_statements_share_one_fin
             JOIN reconforge.inventory_items i ON i.tenant_id=l.tenant_id AND i.id=l.item_id WHERE l.tenant_id=%s ORDER BY i.item_code""", (runtime.tenant,)).fetchall()
         assert [tuple(row) for row in layers] == [("ITEM", 5, 6353), ("WEIGHT", 250, 5295)]
         assert PostgresLandedCostRepository(connection, runtime.tenant).get(landed["id"], actor=actor)["status"] == "Posted"
+        if abandon_reviewed_claims:
+            assert PostgresLandedCostRepository(connection, runtime.tenant).get(cancelled_landed["id"], actor=actor)["status"] == "Cancelled"
+            assert PostgresCommercialCollectionsRepository(connection, runtime.tenant).get(cancelled_collection["id"], actor=actor)["status"] == "Cancelled"
         assert PostgresFixedAssetsRepository(connection, runtime.tenant).get(asset["asset_id"], actor=actor)["status"] == "Disposed"
         supplier = PostgresProcurementPartialRepository(connection, runtime.tenant).get(purchase["order"]["id"], actor=actor)
         assert supplier["totals"]["paid_minor"] == "17000" and supplier["totals"]["outstanding_minor"] == "0"

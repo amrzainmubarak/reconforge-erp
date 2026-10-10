@@ -63,6 +63,7 @@ jobs:
         run: >-
           uv run --no-sync pytest
           --ignore=tests/test_postgres_commercial_collections.py
+          --ignore=tests/test_postgres_commercial_collection_cancellation.py
           --ignore=tests/test_postgres_financial_reporting_snapshots.py
           --ignore=tests/test_postgres_financial_snapshot_migration.py
           --ignore=tests/test_postgres_financial_snapshot_recovery.py
@@ -70,6 +71,8 @@ jobs:
           --ignore=tests/test_postgres_global_operating_cycles.py
           --ignore=tests/test_postgres_landed_cost.py
           --ignore=tests/test_postgres_landed_cost_api.py
+          --ignore=tests/test_postgres_landed_cost_cancellation.py
+          --ignore=tests/test_postgres_posting_snapshot_profile.py
           --ignore=tests/test_postgres_native_event_dispatch_migration.py
           --ignore=tests/test_postgres_stock_commerce.py
           --ignore=tests/test_postgres_stock_commerce_api.py
@@ -610,11 +613,12 @@ jobs:
             erp-expansion)
               uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
               uv run --no-sync pytest tests/test_postgres_stock_commerce.py tests/test_postgres_stock_commerce_api.py tests/test_postgres_stock_commerce_migrations.py tests/test_postgres_procurement_multiline.py tests/test_postgres_procurement_multiline_api.py tests/test_postgres_procurement_multiline_migrations.py -q
-              uv run --no-sync pytest tests/test_postgres_commercial_collections.py -q
-              uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py -q
+              uv run --no-sync pytest tests/test_postgres_commercial_collections.py tests/test_postgres_commercial_collection_cancellation.py -q
+              uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py tests/test_postgres_landed_cost_cancellation.py -q
               uv run --no-sync pytest tests/test_postgres_fixed_assets.py -q
               uv run --no-sync pytest tests/test_postgres_global_operating_cycles.py -q
               uv run --no-sync pytest tests/test_postgres_native_event_dispatch_migration.py -q
+              uv run --no-sync pytest tests/test_postgres_posting_snapshot_profile.py -q
               ;;
             finance-reporting)
               uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q

@@ -10,7 +10,10 @@ from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.operational_fx_tax import HistoricalRate
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
 from reconforge.infrastructure.postgres_operational_fx_revaluation_schema import DOWNGRADE_SQL
-from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository, _FxPostingParticipant
+from reconforge.infrastructure.postgres_operational_fx_tax import (
+    PostgresOperationalFxTaxRepository,
+    _FxPostingParticipant,
+)
 from reconforge.platform.common import platform_id
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 from tests.test_postgres_operational_fx_tax import (

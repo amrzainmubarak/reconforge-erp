@@ -150,6 +150,8 @@ def validate_measurement(report: dict[str, Any], commit: str) -> dict[str, Any]:
     for profile in profiles:
         count = profile["count"]
         oracle = minor_oracle(count)
+        population = json.dumps(effects[:count], sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+        require(hashlib.sha256(population).hexdigest() == profile["dataset_effect_ids_sha256"], "Read dataset/posting population mismatch")
         require(profile["status"] == "passed" and profile["expected"] == dict.fromkeys(TOTAL_FIELDS, oracle), "Read-prefix oracle/status mismatch")
         require(profile["cache_policy"] == "both warmed; alternating modes", "Different cache policy")
         require(set(profile["samples"]) == {"per_effect_baseline", "bounded_batch"}, "Different read modes")

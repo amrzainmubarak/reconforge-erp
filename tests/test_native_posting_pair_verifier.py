@@ -39,6 +39,38 @@ def test_independent_seed_oracle_matches_retained_integer_golden_totals() -> Non
     assert VERIFIER["minor_oracle"](1000) == "493671004"
 
 
+@pytest.mark.parametrize("prefix", [100, 1000])
+def test_unique_invented_effect_cannot_escape_read_population_binding(prefix: int) -> None:
+    report = posting_prefix()
+    effects = report["posting"]["ordered_effect_ids"]
+    profiles = []
+    for count, golden in ((100, "46669102"), (1000, "493671004")):
+        samples = {}
+        for mode in ("per_effect_baseline", "bounded_batch"):
+            requests = count if mode == "per_effect_baseline" else count // 100
+            seconds = count if mode == "per_effect_baseline" else 1
+            samples[mode] = [{"repetition": repetition, "status": "complete", "error_count": 0,
+                             "requested_effects": count, "effects": count, "debit_minor": golden,
+                             "credit_minor": golden, "effects_digest": "retained-digest",
+                             "raw_request_latency_seconds": [1] * requests,
+                             "request_unit": "one_effect" if mode == "per_effect_baseline" else "up_to_100_effects",
+                             "request_latency_seconds": {"p50": 1, "p95": 1, "p99": 1},
+                             "seconds": seconds, "verified_effects_per_second": count / seconds,
+                             "client_execute_calls": requests * (3 if mode == "per_effect_baseline" else 2)}
+                            for repetition in range(3)]
+        profiles.append({"count": count, "status": "passed", "cache_policy": "both warmed; alternating modes",
+                         "expected": dict.fromkeys(VERIFIER["TOTAL_FIELDS"], golden), "samples": samples,
+                         "financial_effects_digest": "retained-digest", "median_seconds_baseline": count,
+                         "median_seconds_optimized": 1, "measured_speedup": count,
+                         "dataset_effect_ids_sha256": hashlib.sha256(json.dumps(effects[:count], sort_keys=True,
+                             separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()})
+    report["verified_reads"] = profiles
+    effects[prefix - 1] = "invented-unique-unposted-effect"
+    assert len(set(effects)) == 1000
+    with pytest.raises(ERROR, match="Read dataset/posting population mismatch"):
+        VERIFIER["validate_measurement"](report, "source")
+
+
 @pytest.mark.parametrize("attack", ["money", "indices", "effects", "percentile", "durability"])
 def test_forged_complete_financial_evidence_is_rejected(attack: str) -> None:
     report = posting_prefix()

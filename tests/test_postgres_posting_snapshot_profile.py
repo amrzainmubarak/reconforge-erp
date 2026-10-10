@@ -97,7 +97,10 @@ def test_scoped_dimension_projection_and_late_required_coverage(posting_database
         if mapping_rows:
             from psycopg.rows import dict_row
 
-            connection.row_factory = dict_row
+            # The pool lease delegates reads; row_factory must be set on its
+            # real driver connection, not shadowed on the lease wrapper.
+            connection._connection.row_factory = dict_row
+            assert type(connection.execute("SELECT 1 AS probe").fetchone()) is dict
         if linked_lines == 4:
             core._validate_entry_integrity(entry_id)
         else:

@@ -1,6 +1,5 @@
 """Bound financial RLS read planning with invoker visibility predicates."""
 from alembic import op
-
 from reconforge.infrastructure.postgres_financial_read_plans import (
     POSTGRES_FINANCIAL_READ_PLANS_ROLLBACK_SQL,
     POSTGRES_FINANCIAL_READ_PLANS_SQL,

@@ -260,30 +260,53 @@ def test_original_partial_delivery_cost_restores_after_later_sale_without_repric
 
 
 def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_credit_refusal() -> None:
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
     import psycopg
     from psycopg import sql
-
-    from reconforge.infrastructure.postgres_customer_returns_schema import DOWNGRADE_SQL, UPGRADE_SQL
 
     delegated = receipt_database.__wrapped__()
     database = next(delegated)
     try:
         runtime, source, _invoice = create_runtime(database, 0)
         before = retained_state(runtime)
+        root = Path(__file__).resolve().parents[1]
+        environment = {**os.environ, "RECONFORGE_POSTGRES_DSN": runtime.admin_dsn}
+        body_query = "SELECT oid::regprocedure::text,pg_get_functiondef(oid) FROM pg_proc WHERE pronamespace='reconforge'::regnamespace AND proname IN ('stock_sales_close','stock_sales_native_close','stock_commerce_public','collection_close','collection_invoice_close','ops_close_plan','inventory_valuation_reversal_guard') ORDER BY proname"
         with psycopg.connect(runtime.admin_dsn) as admin:
-            bodies = admin.execute("SELECT oid::regprocedure::text,pg_get_functiondef(oid) FROM pg_proc WHERE pronamespace='reconforge'::regnamespace AND proname IN ('stock_sales_close','stock_commerce_public','collection_close','collection_invoice_close','ops_close_plan','inventory_valuation_reversal_guard') ORDER BY proname").fetchall()
-            admin.execute(DOWNGRADE_SQL)
+            bodies = admin.execute(body_query).fetchall()
+            retained_revision = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+        # Later owners retain prior function bodies. Exercise their ordered
+        # removal before CR1 instead of executing an out-of-order schema fragment.
+        rollback = subprocess.run([sys.executable, "-m", "alembic", "downgrade", "0125_pg_landed_cost_cancellation"],
+            cwd=root, env=environment, capture_output=True, text=True, timeout=180, check=False)
+        assert rollback.returncode == 0, rollback.stderr[-3000:]
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0125_pg_landed_cost_cancellation"
             assert admin.execute("SELECT to_regclass('reconforge.customer_return_plans')").fetchone()[0] is None
             assert not any("customer_return_" in row[0] for row in admin.execute("SELECT pg_get_functiondef(oid) FROM pg_proc WHERE pronamespace='reconforge'::regnamespace AND prokind='f'").fetchall())
-            admin.execute(UPGRADE_SQL)
-            assert admin.execute("SELECT oid::regprocedure::text,pg_get_functiondef(oid) FROM pg_proc WHERE pronamespace='reconforge'::regnamespace AND proname IN ('stock_sales_close','stock_commerce_public','collection_close','collection_invoice_close','ops_close_plan','inventory_valuation_reversal_guard') ORDER BY proname").fetchall() == bodies
+        forward = subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=root,
+            env=environment, capture_output=True, text=True, timeout=180, check=False)
+        assert forward.returncode == 0, forward.stderr[-3000:]
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == retained_revision
+            assert admin.execute(body_query).fetchall() == bodies
             app_user = psycopg.conninfo.conninfo_to_dict(database[1])["user"]
             for table in ("customer_return_plans", "customer_return_events", "customer_return_commands"):
                 admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(app_user)))
         assert retained_state(runtime) == before
         plan = prepare_return(runtime, source)
-        with pytest.raises(psycopg.Error, match="refuses to discard"), psycopg.connect(runtime.admin_dsn) as admin:
-            admin.execute(DOWNGRADE_SQL)
+        populated = retained_state(runtime)
+        refused = subprocess.run([sys.executable, "-m", "alembic", "downgrade", "0125_pg_landed_cost_cancellation"],
+            cwd=root, env=environment, capture_output=True, text=True, timeout=180, check=False)
+        assert refused.returncode != 0 and "refuses to discard" in refused.stderr
+        assert retained_state(runtime) == populated
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == retained_revision
+            assert admin.execute(body_query).fetchall() == bodies
         assert prepare_return(runtime, source) == plan
     finally:
         with pytest.raises(StopIteration):

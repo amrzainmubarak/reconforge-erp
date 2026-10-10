@@ -58,6 +58,10 @@ def main() -> int:
     parser.add_argument("--profile-stages", action="store_true", help="Retain redacted client phase and SQL-template timings")
     parser.add_argument("--profile-cpu", action="store_true", help="Opt-in bounded per-worker function discovery; not quiet performance acceptance")
     parser.add_argument("--profile-database", action="store_true", help="Owned synthetic PostgreSQL statement/JIT/I/O discovery; no SQL text retained")
+    parser.add_argument("--join-collapse-limit", type=int, choices=range(1, 9), default=8,
+                        help="Owned planner experiment only; current PostgreSQL default is 8")
+    parser.add_argument("--from-collapse-limit", type=int, choices=range(1, 9), default=8,
+                        help="Owned subquery planner experiment only; current PostgreSQL default is 8")
     parser.add_argument("--snapshot-lines", type=int, default=0, help="Optional separate balanced 2..1000-line dimensional snapshot profile")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -99,6 +103,8 @@ def main() -> int:
         "source_commit": run(["git", "rev-parse", "HEAD"]).stdout.strip(), "source_sha256": tracked_source_sha256(),
         "profile": "native-three-human-cash-equity-v1", "seed": args.seed, "counts": counts,
         "workers": args.workers, "repetitions": args.repetitions, "max_seconds": args.max_seconds,
+        "planner_experiment": {"join_collapse_limit": args.join_collapse_limit,
+                               "from_collapse_limit": args.from_collapse_limit},
         "snapshot_lines": args.snapshot_lines,
         "image": IMAGE, "python": sys.version, "platform": platform.platform(), "logical_cpus": os.cpu_count(),
         "processor": platform.processor(), "architecture": platform.machine(),
@@ -126,6 +132,8 @@ def main() -> int:
         environment["POSTGRES_PASSWORD"] = admin_password
         server_options = (["-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.track=all",
                            "-c", "pg_stat_statements.track_planning=on", "-c", "track_io_timing=on"] if args.profile_database else [])
+        server_options.extend(["-c", f"join_collapse_limit={args.join_collapse_limit}",
+                               "-c", f"from_collapse_limit={args.from_collapse_limit}"])
         container = run(["docker", "run", "--detach", "--rm", "--name", "reconforge-enterprise-finance-" + uuid4().hex[:12],
             "--label", "reconforge.owner=enterprise-finance-benchmark", "-e", "POSTGRES_PASSWORD", "-p", "127.0.0.1::5432", IMAGE,
             *server_options], environment=environment).stdout.strip()
@@ -155,7 +163,8 @@ def main() -> int:
             report["postgres_configuration"] = dict(admin.execute(
                 "SELECT name,setting FROM pg_settings WHERE name=ANY(%s)",
                 (["shared_buffers", "work_mem", "max_connections", "fsync", "synchronous_commit", "full_page_writes", "wal_level", "track_io_timing",
-                  "jit", "jit_above_cost", "jit_inline_above_cost", "jit_optimize_above_cost"],)).fetchall())
+                  "jit", "jit_above_cost", "jit_inline_above_cost", "jit_optimize_above_cost",
+                  "join_collapse_limit", "from_collapse_limit"],)).fetchall())
             report["postgres_io_timing_interpretation"] = (
                 "blk_read_time_ms/blk_write_time_ms are cumulative pg_stat_database counters; "
                 "zero milliseconds with track_io_timing=off do not prove zero I/O latency; no I/O peak is measured")

@@ -143,6 +143,8 @@ POSTGRES_MIGRATION_REVISIONS: tuple[str, ...] = (
     "0127_pg_procurement_commitments",
     "0128_pg_operational_fx_tax",
     "0129_pg_financial_read_plans",
+    "0130_pg_supplier_returns",
+    "0131_pg_fx_revaluation",
 )
 
 _MIGRATION_TOKEN_PATTERN = re.compile(r"^[0-9]{4}_[A-Za-z0-9_]+$")

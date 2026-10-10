@@ -17,7 +17,7 @@ HELPERS = (
     "commercial_collections_browser", "erp_landed_cost_browser", "stock_commerce_browser_seed",
     "fixed_assets_browser_seed", "erp_procurement_enterprise_browser", "enterprise_financial_snapshot_browser",
     "customer_returns_browser", "erp_procurement_commitments_browser",
-    "operational_fx_tax_browser_seed",
+    "operational_fx_tax_browser_seed", "erp_supplier_returns_browser",
 )
 PREFIX20_SHA = "3f1ecffac62b7cc3cbea41264f2a61b7948d9875c87dd32f7eddf7f51238be41"
 INDEX_PATH = "docs/execution/benchmarks/INDEX.v1.json"
@@ -137,6 +137,11 @@ def check_migrations(extracted: Path, count: int, head: str) -> dict[str, object
         visited.append(current)
         current = revisions[current]
     require(len(visited) == count and set(visited) == set(revisions), "Migration chain does not cover every revision")
+    if count >= 131:
+        require(visited[-125] == "0125_pg_landed_cost_cancellation", "Accepted 125-revision prefix differs")
+        require(visited[:6] == ["0131_pg_fx_revaluation", "0130_pg_supplier_returns", "0129_pg_financial_read_plans",
+                               "0128_pg_operational_fx_tax", "0127_pg_procurement_commitments", "0126_pg_customer_returns"],
+                "Wave4 migration suffix differs")
     return {"count": count, "head": head, "oldest": visited[-1], "complete_linear_chain": True}
 
 
@@ -191,8 +196,13 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_procurement_commitments.py", "tests/test_postgres_procurement_commitments.py", "tests/test_postgres_procurement_commitments_api.py",
         "tests/test_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax_api.py",
         "tests/test_postgres_operational_fx_tax_migration.py", ".github/scripts/benchmark_global_engineering_pair.py",
+        "tests/test_supplier_returns.py", "tests/test_postgres_supplier_returns.py", "tests/test_postgres_supplier_returns_api.py",
+        "tests/test_operational_fx_revaluation.py", "tests/test_postgres_operational_fx_revaluation.py",
+        "tests/test_postgres_operational_fx_revaluation_migration.py", ".github/scripts/verify_erp_expansion_browser.py",
         "apps/web/src/operational-fx-tax-fixture.json", "modules/customer-returns.yaml",
         "docs/modules/procurement-commitments.yaml", "docs/modules/operational-fx-tax.yaml",
+        "docs/modules/supplier-returns.yaml", "docs/operator/supplier-returns.md",
+        "docs/adr/0851-original-supplier-debit-and-capitalized-receipt-return.md",
         "docs/operator/customer-returns.md", "docs/operator/procurement-commitments.md", "docs/operator/operational-fx-tax.md",
         "docs/adr/0847-original-customer-source-credits-and-partial-refunds.md",
         "docs/adr/0848-native-purchase-appropriation-closure.md", "docs/adr/0849-historical-foreign-ar-effective-tax-and-realized-fx.md",
@@ -279,8 +289,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=125)
-    parser.add_argument("--migration-head", default="0125_pg_landed_cost_cancellation")
+    parser.add_argument("--migration-count", type=int, default=131)
+    parser.add_argument("--migration-head", default="0131_pg_fx_revaluation")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

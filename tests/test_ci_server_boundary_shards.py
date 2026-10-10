@@ -15,20 +15,27 @@ SHARDS = {
     "writeback", "native", "parity", "durable-scale", "matching-runtime",
     "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
     "commercial-integrity", "supply-integrity", "finance-integrity",
+    "supplier-returns", "fx-revaluation",
 }
 INTEGRITY_FILES = {
     "commercial-integrity": (
         "tests/test_postgres_commercial_collections.py", "tests/test_postgres_commercial_collection_cancellation.py",
+        "tests/test_postgres_customer_returns.py",
     ),
     "supply-integrity": (
         "tests/test_postgres_landed_cost.py", "tests/test_postgres_landed_cost_api.py",
         "tests/test_postgres_landed_cost_cancellation.py",
+        "tests/test_postgres_procurement_commitments.py", "tests/test_postgres_procurement_commitments_api.py",
     ),
     "finance-integrity": (
         "tests/test_postgres_fixed_assets.py", "tests/test_postgres_fixed_assets_evidence.py",
         "tests/test_postgres_global_operating_cycles.py", "tests/test_postgres_native_event_dispatch_migration.py",
         "tests/test_postgres_posting_snapshot_profile.py",
+        "tests/test_postgres_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax_api.py",
+        "tests/test_postgres_operational_fx_tax_migration.py", "tests/test_postgres_financial_read_plans.py",
     ),
+    "supplier-returns": ("tests/test_postgres_supplier_returns.py", "tests/test_postgres_supplier_returns_api.py"),
+    "fx-revaluation": ("tests/test_postgres_operational_fx_revaluation.py", "tests/test_postgres_operational_fx_revaluation_migration.py"),
 }
 PROOF_OWNERS = {
     "verify_postgres_writeback_identity_migration_matrix.py": "writeback",
@@ -112,7 +119,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 46  # Preserve all commands, including the snapshot-profile regression.
+    assert len(commands) == 51  # Retain 46 original commands and all five complete Wave4 owner commands.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -203,6 +210,24 @@ def test_integrity_owners_execute_complete_files_once_without_filtered_admission
     assert "postgres" in job["services"]
     # Legacy commerce/procurement and their migration coverage remain separate.
     assert len(groups["erp-expansion"]) == 2
+
+
+def test_enterprise_browser_matrix_requires_every_real_https_and_populated_restore_owner() -> None:
+    job = _workflow()["jobs"]["enterprise-browser-recovery"]
+    assert job["strategy"]["matrix"]["scenario"] == [
+        "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
+        "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
+    ]
+    assert job["strategy"]["fail-fast"] is False
+    assert "continue-on-error" not in job
+    gate = next(step for step in job["steps"] if step["name"] == "Execute enterprise HTTPS cycle and populated native recovery")
+    assert "if" not in gate and "continue-on-error" not in gate
+    assert shlex.split(gate["run"]) == [
+        "uv", "run", "--no-sync", "python", ".github/scripts/verify_erp_expansion_browser.py",
+        "--scenario", "${{ matrix.scenario }}", "--verify-native-restore", "--output", "${{ runner.temp }}/enterprise-browser",
+    ]
+    upload = next(step for step in job["steps"] if step["name"] == "Retain source-bound enterprise recovery evidence")
+    assert upload["if"] == "always()" and upload["with"]["if-no-files-found"] == "error"
 
 
 def test_both_python_versions_inspect_built_publication_archives_and_retain_failures() -> None:

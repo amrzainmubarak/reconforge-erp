@@ -74,7 +74,7 @@ def require_browser_acceptance(stats: object) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "operational-fx-tax"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets", "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -125,6 +125,20 @@ def main() -> int:
             "UPDATE reconforge.procurement_commitment_plans SET plan_digest=repeat('0',64) WHERE tenant_id=%s",
             "DELETE FROM reconforge.procurement_commitment_commands WHERE tenant_id=%s",
             "UPDATE reconforge.procurement_partial_orders SET total_minor=total_minor+1 WHERE tenant_id=%s",
+        )
+    elif args.scenario == "supplier-returns":
+        from tests.erp_supplier_returns_browser import (
+            SUPPLIER_RETURN_BROWSER_TABLES,
+            seed_supplier_returns_browser,
+            verify_supplier_returns_browser,
+        )
+        seed, verify_cycles = seed_supplier_returns_browser, verify_supplier_returns_browser
+        configuration = "apps/web/live/erp-supplier-returns.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + SUPPLIER_RETURN_BROWSER_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.supplier_return_plans SET amount_minor=amount_minor+1 WHERE tenant_id=%s",
+            "DELETE FROM reconforge.supplier_return_commands WHERE tenant_id=%s",
+            "DELETE FROM reconforge.ap_supplier_invoice_credits WHERE tenant_id=%s",
         )
     elif args.scenario == "customer-returns":
         from tests.customer_returns_browser import (

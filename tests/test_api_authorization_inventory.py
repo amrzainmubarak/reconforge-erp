@@ -15,9 +15,12 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 451
-EXPECTED_DIGEST = "90780f19dac4f8111b65b0f4a08e28a96f2ff19bf558724a6d9dddbb87cc4667"
-WAVE4_PREFIXES = ("/api/v1/customer-returns/", "/api/v1/procurement-commitments/", "/api/v1/operational-fx-tax/")
+EXPECTED_ROUTE_COUNT = 459
+EXPECTED_DIGEST = "f41b3007bbcc9cc1285cc836be0cb2e81d2e2c4e03713f83f6d245db27fccc9a"
+WAVE4_PREFIXES = (
+    "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
+    "/api/v1/operational-fx-tax/", "/api/v1/supplier-returns/",
+)
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -62,6 +65,7 @@ HANDLER_BOUNDARY_HELPERS = {
     "fixed_assets.py": frozenset({"execute", "_authority"}),
     "customer_returns.py": frozenset({"execute", "_authority"}),
     "procurement_commitments.py": frozenset({"_execute", "_authority"}),
+    "supplier_returns.py": frozenset({"_execute"}),
     "operational_fx_tax.py": frozenset({"execute", "_authority"}),
     "identity_administration.py": frozenset({"_service"}),
     "inventory_core.py": frozenset({"_server_call"}),
@@ -207,6 +211,8 @@ def test_wave4_source_routes_preserve_accepted_authority_and_require_exact_permi
                  for path in ("invoices", "invoices/{source_id}", "plans/{plan_id}/evidence")]
     expected += [RouteAuthorizationContract("POST", "/api/v1/operational-fx-tax/" + path, "all", (permission,))
                  for path, permission in (("invoices", "finance_core.manage"), ("invoices/{source_id}/settlements", "finance_core.manage"),
+                                          ("invoices/{source_id}/revaluations", "finance_core.manage"),
+                                          ("invoices/{source_id}/revaluation-reversals", "finance_core.manage"),
                                           ("plans/{plan_id}/post", "finance_core.post"), ("plans/{plan_id}/review", "finance_core.validate"))]
     expected += [RouteAuthorizationContract(method, "/api/v1/procurement-commitments/" + path, "all", permissions)
                  for method, path, permissions in (
@@ -214,6 +220,20 @@ def test_wave4_source_routes_preserve_accepted_authority_and_require_exact_permi
                      ("POST", "orders", ("budget_control.manage", "budget_control.read", "finance_core.read", "inventory.read", "payables.manage", "payables.read")),
                      ("POST", "orders/{order_id}/consume", ("budget_control.manage", "budget_control.read", "finance_core.post", "finance_core.read", "inventory.read", "payables.approve", "payables.read")),
                      ("POST", "orders/{order_id}/release", ("budget_control.manage", "budget_control.read", "finance_core.read", "inventory.read", "payables.approve", "payables.read")),
+                 )]
+    supplier_read = ("finance_core.read", "inventory.read", "payables.read")
+    expected += [RouteAuthorizationContract("GET", "/api/v1/supplier-returns/" + path, "all", supplier_read)
+                 for path in ("plans/{plan_id}", "orders/{order_id}")]
+    expected += [RouteAuthorizationContract("POST", "/api/v1/supplier-returns/" + path, "all", permissions)
+                 for path, permissions in (
+                     ("plans", ("finance_core.manage", "finance_core.read", "finance_core.reverse", "inventory.manage", "inventory.read",
+                                "inventory.valuation.manage", "inventory.valuation.reverse.manage", "payables.manage", "payables.read")),
+                     ("plans/{plan_id}/review", ("finance_core.read", "finance_core.reverse", "finance_core.validate", "inventory.post", "inventory.read",
+                                               "inventory.valuation.approve", "inventory.valuation.reverse.approve", "payables.approve", "payables.read")),
+                     ("plans/{plan_id}/post", ("finance_core.post", "finance_core.read", "finance_core.reverse", "inventory.post", "inventory.read",
+                                             "inventory.valuation.approve", "inventory.valuation.reverse.approve", "payables.manage", "payables.read")),
+                     ("plans/{plan_id}/cancel", ("finance_core.read", "finance_core.validate", "inventory.read",
+                                               "inventory.valuation.reverse.approve", "payables.approve", "payables.read")),
                  )]
     added = [contract for contract in contracts if contract.path.startswith(WAVE4_PREFIXES)]
     assert sorted(added, key=lambda item: (item.method, item.path)) == sorted(expected, key=lambda item: (item.method, item.path))

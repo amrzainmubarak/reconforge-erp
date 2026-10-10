@@ -40,8 +40,9 @@ def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None
     assert POSTGRES_MIGRATION_REVISIONS[125:] == (
         "0126_pg_customer_returns", "0127_pg_procurement_commitments",
         "0128_pg_operational_fx_tax", "0129_pg_financial_read_plans",
+        "0130_pg_supplier_returns", "0131_pg_fx_revaluation",
     )
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 129
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 131
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:

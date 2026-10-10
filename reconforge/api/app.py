@@ -95,6 +95,7 @@ from reconforge.api.routes import (
     security_center,
     security_governance,
     stock_sales,
+    supplier_returns,
     users,
     webauthn,
     workflow,
@@ -440,6 +441,7 @@ def create_api_app(
     app.include_router(commercial_collections.router, prefix="/api/v1")
     app.include_router(customer_returns.router, prefix="/api/v1")
     app.include_router(procurement_commitments.router, prefix="/api/v1")
+    app.include_router(supplier_returns.router, prefix="/api/v1")
     app.include_router(operational_fx_tax.router, prefix="/api/v1")
     app.include_router(landed_cost.router, prefix="/api/v1")
     app.include_router(fixed_assets.router, prefix="/api/v1")
@@ -505,6 +507,7 @@ def create_api_app(
         commercial_collections.router,
         customer_returns.router,
         procurement_commitments.router,
+        supplier_returns.router,
         operational_fx_tax.router,
         landed_cost.router,
         fixed_assets.router,

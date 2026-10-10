@@ -604,3 +604,70 @@ def test_native_stock_lost_ack_after_period_close_rechecks_current_authority_aft
         with pytest.raises(FinancePostingError):
             attempt.result(timeout=60)
     assert retained_state(runtime) == before
+
+
+def test_below_cost_native_stock_source_reads_and_replays_require_retained_cogs_amount_authority(
+    receipt_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from decimal import Decimal
+
+    import psycopg
+
+    import reconforge.infrastructure.postgres_operational_finance as authority
+    from reconforge.auth.policy import evaluate_principal_access
+    from reconforge.domain.stock_sales import StockOrder
+    from tests.test_postgres_stock_sales import repository
+
+    runtime = create_stock_runtime(receipt_database)
+    with runtime.actor("maker") as (connection, _, actor):
+        sale = repository(connection, runtime).create(StockOrder("BELOW-COST", "CUSTOMER", "BELOW-COST-SOURCE", "ITEM", "MAIN", "STOCK",
+            "5", 1000, "USD", "2026-10-09", "Original sale below retained FIFO cost", 0), command_id="below-cost-create", actor=actor)
+    sale = execute(runtime, sale, "submit", "maker")
+    sale = execute(runtime, sale, "approve", "checker")
+    sale = execute(runtime, sale, "reserve", "maker")
+    sale = execute(runtime, sale, "prepare-issue", "maker", {"posting_date": "2026-10-09", "period_id": "period", "policy_code": "FIFO"})
+    reviewed = execute(runtime, sale, "review-issue", "checker")
+    delivered = execute(runtime, reviewed, "deliver", "poster")
+    assert delivered["total_minor"] == "5000" and delivered["cogs_minor"] == "6000"
+    before = retained_state(runtime)
+    ceiling = Decimal("55.00")
+    observed: list[Decimal | None] = []
+
+    def governed_policy(principal: Any, **context: Any) -> Any:
+        observed.append(context.get("amount"))
+        return evaluate_principal_access(principal, maximum_amount=ceiling, **context)
+
+    monkeypatch.setattr(authority, "evaluate_principal_access", governed_policy)
+
+    def refuse_retained_source() -> None:
+        with runtime.actor("maker") as (connection, _, actor):
+            owner = repository(connection, runtime)
+            with pytest.raises(FinancePostingError, match="authorization"):
+                owner.get(delivered["id"], actor=actor)
+            with pytest.raises(FinancePostingError, match="authorization"):
+                owner.list(actor=actor)
+        with pytest.raises(FinancePostingError, match="authorization"):
+            execute(runtime, sale, "review-issue", "checker")
+        with pytest.raises(FinancePostingError, match="authorization"):
+            execute(runtime, reviewed, "deliver", "poster")
+
+    refuse_retained_source()
+    # Current catalog precision cannot reinterpret retained source60 as6 and
+    # evade a55 ceiling after an administrator-damaged restore.
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        old_precision = admin.execute("SELECT minor_units FROM reconforge.currencies WHERE tenant_id=%s AND code='USD'", (runtime.tenant,)).fetchone()[0]
+        admin.execute("SET LOCAL session_replication_role='replica'")
+        admin.execute("UPDATE reconforge.currencies SET minor_units=3 WHERE tenant_id=%s AND code='USD'", (runtime.tenant,))
+    try:
+        refuse_retained_source()
+    finally:
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            admin.execute("SET LOCAL session_replication_role='replica'")
+            admin.execute("UPDATE reconforge.currencies SET minor_units=%s WHERE tenant_id=%s AND code='USD'", (old_precision, runtime.tenant))
+    assert retained_state(runtime) == before
+    ceiling = Decimal("70.00")
+    with runtime.actor("maker") as (connection, _, actor):
+        assert repository(connection, runtime).get(delivered["id"], actor=actor) == delivered
+    assert execute(runtime, sale, "review-issue", "checker") == reviewed
+    assert execute(runtime, reviewed, "deliver", "poster") == delivered
+    assert Decimal("60.00") in observed and Decimal("6.000") not in observed

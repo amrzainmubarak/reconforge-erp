@@ -68,9 +68,16 @@ class PostgresStockSalesRepository:
         return dict(row)
 
     def _actor(self, actor: PostingActor, operation: str, row: Mapping[str, Any] | None = None) -> None:
+        source = (row.get("source") or row) if row else {}
+        retained = source.get("monetary_policy")
         for permission in sorted(OPERATION_PERMISSIONS.get(operation, READ)):
             self.authority._actor(actor, permission, mutation=operation != "read",
-                amount=row["total_minor"] if row else None, currency=row["currency_code"] if row else None)
+                amount=row["total_minor"] if row and not retained else None,
+                currency=row["currency_code"] if row and not retained else None)
+            if row and retained:
+                amount = max(row["total_minor"], source["total_minor"], (row.get("issue_plan") or {}).get("total_cost_minor", 0))
+                self.ops._actor(actor, permission, {**self.scope, "amount_minor": amount,
+                    "currency_precision": retained["precision"]}, mutation=operation != "read")
         if operation != "read":
             self.connection.execute("SELECT set_config('app.stock_sales_actor_id',%s,true)", (actor.user_id,))
 

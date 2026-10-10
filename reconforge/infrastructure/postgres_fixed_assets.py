@@ -271,7 +271,7 @@ class PostgresFixedAssetsRepository:
     def get(self, asset_id: str, *, actor: PostingActor, before_sequence: int | None = None) -> dict[str, Any]:
         with self.owner._transaction():
             asset = self._asset(asset_id)
-            self.owner._actor(actor, "finance_core.read", asset, mutation=False)
+            self.owner._actor(actor, "finance_core.read", {**asset, "amount_minor": asset["cost_minor"]}, mutation=False)
             state = self._state(asset)
             ids = records(self.connection.execute("""SELECT id,sequence FROM reconforge.fixed_asset_plans
                 WHERE tenant_id=%s AND asset_id=%s AND (%s::integer IS NULL OR sequence<%s)
@@ -290,6 +290,49 @@ class PostgresFixedAssetsRepository:
             self.connection.execute("SELECT reconforge.asset_close(%s,%s)", (self.tenant_id, plan_id))
             return self._view_plan(plan_id)
 
+    def plan_evidence(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
+        """Verify source, review and native effect before exposing bounded proof.
+
+        This is a projection of retained evidence, not a new financial effect.
+        Canonical JSON retains exact integer lexemes for independent browser or
+        offline SHA-256 verification even above JavaScript's safe integer range.
+        """
+        with self.owner._transaction():
+            plan = self._plan(plan_id)
+            self._authorize_plan(actor, "finance_core.read", plan, mutation=False)
+            self.connection.execute("SELECT reconforge.asset_close(%s,%s)", (self.tenant_id, plan_id))
+            asset = self._asset(str(plan["asset_id"]))
+            self.owner._actor(actor, "finance_core.read", {**asset, "amount_minor": asset["cost_minor"]}, mutation=False)
+            view = self._view_plan(plan_id)
+            phases = [{"action": "fixed_asset_prepared", "actor_id": plan["preparer_actor_id"], **row}
+                      for row in records(self.connection.execute(
+                          "SELECT audit_event_id,outbox_event_id FROM reconforge.fixed_asset_plans WHERE tenant_id=%s AND id=%s",
+                          (self.tenant_id, plan_id)))]
+            if plan["phase"] >= 1:
+                phases.extend({"action": "fixed_asset_reviewed", **row} for row in records(self.connection.execute(
+                    "SELECT reviewer_actor_id AS actor_id,audit_event_id,outbox_event_id FROM reconforge.fixed_asset_reviews WHERE tenant_id=%s AND plan_id=%s",
+                    (self.tenant_id, plan_id))))
+            native = None
+            if plan["phase"] == 2:
+                effect = self.owner.posting.get_effect(view["posting_effect_id"], actor=actor)
+                if (effect["entry_id"] != plan["entry_id"] or effect["snapshot"] != plan["snapshot"]
+                        or effect["validation_digest"] != plan["validation_digest"]):
+                    raise FinancePostingError("asset_evidence_invalid", "Native effect differs from retained asset evidence.")
+                native = {key: effect[key] for key in ("id", "entry_id", "validation_digest", "posted_actor_id",
+                                                       "posted_at", "audit_event_id", "outbox_event_id")}
+                phases.extend({"action": "fixed_asset_posted", **row} for row in records(self.connection.execute(
+                    "SELECT posted_actor_id AS actor_id,audit_event_id,outbox_event_id FROM reconforge.fixed_asset_links WHERE tenant_id=%s AND plan_id=%s",
+                    (self.tenant_id, plan_id))))
+                phases.append({"action": "finance_entry_posted", "actor_id": native["posted_actor_id"],
+                               "audit_event_id": native["audit_event_id"], "outbox_event_id": native["outbox_event_id"]})
+            return {"schema_version": "fixed-asset-native-evidence-v1", "asset_definition": asset, "plan": view,
+                    "canonical_asset_json": canonical_json({key: value for key, value in asset.items() if key != "asset_digest"}),
+                    "canonical_plan_json": canonical_json({key: value for key, value in plan.items()
+                                                           if key not in {"phase", "plan_digest", "validation_digest"}}),
+                    "canonical_snapshot_json": canonical_json(plan["snapshot"]), "native_effect": native, "phases": phases,
+                    "totals": {side + "_minor": str(sum(row[side + "_minor"] for row in plan["snapshot"]["lines"]))
+                               for side in ("debit", "credit")}}
+
     def list_assets(self, scope: Mapping[str, Any], *, actor: PostingActor, after: str = "", limit: int = 25) -> dict[str, Any]:
         if type(limit) is not int or not 1 <= limit <= 100:
             raise FinancePostingError("asset_request_invalid", "Asset page size must be between 1 and 100.")
@@ -298,5 +341,7 @@ class PostgresFixedAssetsRepository:
             rows = records(self.connection.execute("""SELECT id,payload FROM reconforge.fixed_assets
                 WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=%s AND id>%s
                 ORDER BY id COLLATE "C" LIMIT %s""", (self.tenant_id, scope["workspace_id"], scope["organization_id"], scope["legal_entity_id"], after, limit + 1)))
+            for row in rows[:limit]:
+                self.owner._actor(actor, "finance_core.read", {**row["payload"], "amount_minor": row["payload"]["cost_minor"]}, mutation=False)
             return {"assets": [{**row["payload"], **self._state(row["payload"])} for row in rows[:limit]],
                     "next_after": rows[limit-1]["id"] if len(rows) > limit else None}

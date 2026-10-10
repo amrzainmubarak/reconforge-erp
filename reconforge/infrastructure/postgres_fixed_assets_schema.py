@@ -62,7 +62,7 @@ BEGIN
 END $fa$;
 """
 
-UPGRADE_SQL = r"""
+UPGRADE_BEFORE_REVERSE_SQL = r"""
 DO $fa$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.finance_entries WHERE upper(entry_number) LIKE 'FA1-%' OR upper(id) LIKE 'FA1-%') THEN
   RAISE EXCEPTION 'FA1 namespace already contains incompatible native entries';
@@ -328,7 +328,9 @@ BEGIN
  IF (SELECT count(*) FROM reconforge.fixed_asset_commands WHERE tenant_id=t AND plan_id=i)<>p.phase+1 THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Every retained asset phase requires its immutable command'; END IF;
 END $fa$;
-""" + REVERSE_CLOSE_SQL + r"""
+"""
+
+UPGRADE_AFTER_REVERSE_SQL = r"""
 DO $fa$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['fixed_assets','fixed_asset_plans','fixed_asset_reviews','fixed_asset_links','fixed_asset_commands'] LOOP
   EXECUTE format('ALTER TABLE reconforge.%I ENABLE ROW LEVEL SECURITY',n);
@@ -347,6 +349,8 @@ DO $fa$ DECLARE n TEXT; BEGIN
  END LOOP;
 END $fa$;
 """
+
+UPGRADE_SQL = "".join((UPGRADE_BEFORE_REVERSE_SQL, REVERSE_CLOSE_SQL, UPGRADE_AFTER_REVERSE_SQL))
 
 DOWNGRADE_SQL = r"""
 DO $fa$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.fixed_assets) THEN

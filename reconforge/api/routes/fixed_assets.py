@@ -139,6 +139,12 @@ def prepare(request: Request, asset_id: str, payload: OperationRequest, user: Ma
     return execute(request, user, run)
 
 
+@router.get("/plans/{plan_id}/evidence")
+def get_plan_evidence(request: Request, plan_id: str, user: Read) -> dict[str, Any]:
+    _authority(request, "finance_core.read")
+    return execute(request, user, lambda repository, actor, scope: {"evidence": repository.plan_evidence(plan_id, actor=actor)})
+
+
 @router.post("/plans/{plan_id}/review")
 def review(request: Request, plan_id: str, payload: PhaseRequest, user: Review) -> dict[str, Any]:
     _authority(request, "finance_core.validate")

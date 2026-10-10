@@ -108,3 +108,42 @@ it.each(["en", "ar"] as const)("writes a real nested multiwarehouse purchase com
   await waitFor(() => expect(writes).toHaveLength(2));
   expect(writes[1]).toBe(writes[0]);
 });
+
+it("keeps one landed-cost and one supplier-return form through approved purchase refreshes", async () => {
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  const header = detail("receipt");
+  const source = { ...header, order: { ...header.order, multiline: true, line_count: 2, total_minor: "17000", request: { ...header.order.request, item_code: "ITEM", location_code: "MAIN/STOCK", policy_code: "FIFO" } }, receipts: [], invoices: [],
+    lines: [
+      { id: "line-each", sequence: 1, item_code: "ITEM", uom_id: "unit-each", uom_code: "EA", quantity_precision: 0, location_code: "MAIN/STOCK", policy_code: "FIFO", quantity_text: "10", unit_price_minor: "1200", total_minor: "12000", reserved_receipt_quantity: "0", received_quantity: "0", invoiced_quantity: "0" },
+      { id: "line-weight", sequence: 2, item_code: "WEIGHT", uom_id: "unit-kg", uom_code: "KG", quantity_precision: 2, location_code: "NORTH/STOCK", policy_code: "FIFO", quantity_text: "2.50", unit_price_minor: "2000", total_minor: "5000", reserved_receipt_quantity: "0", received_quantity: "0", invoiced_quantity: "0" },
+    ], totals: { ordered_quantity: "0", reserved_receipt_quantity: "0", received_quantity: "0", invoiced_quantity: "0", received_minor: "0", accrued_minor: "0", paid_minor: "0", outstanding_minor: "0" },
+    pages: { receipt_after: 0, invoice_after: 0, page_size: 25, receipt_count: 0, invoice_count: 0, next_receipt_after: null, next_invoice_after: null } };
+  vi.stubGlobal("fetch", vi.fn(async (path: RequestInfo | URL) => {
+    if (String(path).endsWith("/auth/me")) return response({ id: "id-maker", username: "maker", principal_type: "user", permissions: [...permissions, "inventory.valuation.reverse.manage", "inventory.valuation.reverse.approve", "finance_core.reverse"], authorized_scopes: { workspaces: ["work"] } });
+    if (String(path).endsWith("/scopes")) return response({ records: [scope] });
+    if (String(path).endsWith("/options")) return response({ ...options, periods: [{ id: "period", name: "October", start_date: "2026-10-01", end_date: "2026-10-31" }] });
+    if (String(path).includes("/orders/page?")) return response({ records: [source.order], next_after: null, page_size: 25 });
+    if (String(path).includes("/landed-cost/") || String(path).includes("/supplier-returns/")) return response({ records: [], next_after: null });
+    return response(source);
+  }));
+  try {
+    render(<BrowserSessionProvider><Begin actor="maker" /><ProcurementPartialPage locale="en" /></BrowserSessionProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Begin fixture" }));
+    fireEvent.click(screen.getByRole("button", { name: "Elevate fixture" }));
+    await screen.findByRole("option", { name: "Organization · Entity · USD" });
+    fireEvent.change(screen.getByLabelText("Organization and legal entity"), { target: { value: "entity" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Open ORDER-1" }));
+    await screen.findByRole("form", { name: "Prepare original supplier debit" });
+    for (let revision = 0; revision < 3; revision++) {
+      fireEvent.change(screen.getByLabelText("Review or posting reason"), { target: { value: `Current independent reason ${revision}` } });
+      expect(screen.getAllByRole("form", { name: "Prepare landed cost bundle" })).toHaveLength(1);
+      expect(screen.getAllByRole("form", { name: "Prepare original supplier debit" })).toHaveLength(1);
+      expect(screen.getAllByLabelText("Landed cost number", { exact: true })).toHaveLength(1);
+      expect(screen.getAllByLabelText("Supplier return number", { exact: true })).toHaveLength(1);
+      source.order.row_version++;
+      fireEvent.click(screen.getByRole("button", { name: "Refresh this order" }));
+      await screen.findByRole("form", { name: "Prepare original supplier debit" });
+    }
+    expect(errors.mock.calls.filter(args => args.some(value => String(value).includes("same key")))).toEqual([]);
+  } finally { errors.mockRestore(); }
+});

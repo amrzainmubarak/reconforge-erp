@@ -159,6 +159,82 @@ def test_concurrent_valuation_prepare_and_populated_revaluation_rollback_refusal
         assert PostgresOperationalFxTaxRepository(connection, runtime.tenant).get(initial["source_id"], actor=actor)["active_revaluation_plan_id"] == first["id"]
 
 
+def test_closing_position_and_inverse_require_original_precision_current_amount_authority(
+    fx_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from decimal import Decimal
+
+    import psycopg
+
+    from reconforge.auth.policy import evaluate_principal_access
+    from reconforge.infrastructure import postgres_operational_finance as authority
+
+    runtime = fx_runtime
+    initial = finish_fx(runtime, prepare_fx(runtime))
+    valuation = revalue_fx(runtime, initial["source_id"], "1.8")
+    # Independent half-up rational result: 11401 * 18 / 10 -> 20522.
+    assert initial["amount_minor"] == 14251 and valuation["amount_minor"] == 6271
+    assert valuation["equation"]["valued_outstanding_minor"] == 20522
+    ceiling = Decimal("150.00")
+    observed: list[Decimal | None] = []
+
+    def governed(principal: Any, **context: Any) -> Any:
+        observed.append(context.get("amount"))
+        return evaluate_principal_access(principal, maximum_amount=ceiling, **context)
+
+    monkeypatch.setattr(authority, "evaluate_principal_access", governed)
+
+    def refuse(plan: dict[str, Any], *, inverse: bool) -> None:
+        with runtime.actor("poster") as (connection, _, actor):
+            owner = PostgresOperationalFxTaxRepository(connection, runtime.tenant)
+            for operation in (lambda: owner.get(initial["source_id"], actor=actor),
+                              lambda: owner.plan_evidence(plan["id"], actor=actor),
+                              lambda: owner.post(plan["id"], expected_plan_digest=plan["plan_digest"],
+                                  command_id="post-" + plan["id"], reason="Independent FX equation post", actor=actor)):
+                with pytest.raises(FinancePostingError, match="authorization"):
+                    operation()
+        with pytest.raises(FinancePostingError, match="authorization"), runtime.actor("checker") as (connection, _, actor):
+            PostgresOperationalFxTaxRepository(connection, runtime.tenant).review(plan["id"], expected_plan_digest=plan["plan_digest"],
+                command_id="review-" + plan["id"], reason="Independent FX equation review", actor=actor)
+        if inverse:
+            with pytest.raises(FinancePostingError, match="authorization"):
+                reverse_fx(runtime, initial["source_id"], valuation["id"])
+        else:
+            for command in ("closing", "new-narrow-closing"):
+                with pytest.raises(FinancePostingError, match="authorization"):
+                    revalue_fx(runtime, initial["source_id"], "1.8", command)
+
+    refuse(valuation, inverse=False)
+    # Administrator corruption of the current master cannot reinterpret a
+    # retained 205.22 position as 20.522 for reads or lost-response retries.
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        admin.execute("SET LOCAL session_replication_role=replica")
+        admin.execute("UPDATE reconforge.currencies SET minor_units=3 WHERE tenant_id=%s AND code='USD'", (runtime.tenant,))
+    try:
+        refuse(valuation, inverse=False)
+    finally:
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            admin.execute("SET LOCAL session_replication_role=replica")
+            admin.execute("UPDATE reconforge.currencies SET minor_units=2 WHERE tenant_id=%s AND code='USD'", (runtime.tenant,))
+    ceiling = Decimal("300.00")
+    assert revalue_fx(runtime, initial["source_id"], "1.8") == valuation
+    valuation = finish_fx(runtime, valuation)
+    inverse = reverse_fx(runtime, initial["source_id"], valuation["id"])
+    ceiling = Decimal("150.00")
+    refuse(inverse, inverse=True)
+    ceiling = Decimal("300.00")
+    assert reverse_fx(runtime, initial["source_id"], valuation["id"]) == inverse
+    inverse = finish_fx(runtime, inverse)
+    ceiling = Decimal("150.00")
+    refuse(inverse, inverse=True)
+    ceiling = Decimal("300.00")
+    with runtime.actor("poster") as (connection, _, actor):
+        proof = PostgresOperationalFxTaxRepository(connection, runtime.tenant).plan_evidence(inverse["id"], actor=actor)
+        assert proof["native_effect"]["id"] == inverse["posting_effect_id"]
+    assert native_balances(runtime)["AR"] == 14251 and native_balances(runtime)["UGAIN"] == 0
+    assert Decimal("205.22") in observed and Decimal("20.522") not in observed
+
+
 def test_actual_http_closing_valuation_and_generated_inverse_have_native_three_human_effects(
     fx_runtime: ReceiptRuntime, receipt_database: tuple[str, str], tmp_path: Path,
 ) -> None:

@@ -13,6 +13,7 @@ from reconforge.domain.operational_fx_tax import (
     ForeignInvoicePreparation,
     HistoricalRate,
     canonical_day,
+    exact_minor,
     fail,
     invoice_equation,
     settlement_equation,
@@ -118,9 +119,22 @@ class PostgresOperationalFxTaxRepository:
         self.owner._actor(actor, permission, {**scope, "amount_minor": source["functional_gross_minor"],
                          "currency_precision": functional["currency_precision"]}, mutation=mutation)
         if plan:
-            self.owner._actor(actor, permission, plan, mutation=mutation)
+            position = plan
+            if plan["kind"] == "reverse_revaluation":
+                position = self._peek("plan", plan["equation"]["original_revaluation_id"])
+                if position["kind"] != "revalue" or position["source_id"] != source["id"]:
+                    fail("A valuation inverse requires its exact original source position.", "fx_state_invalid")
+            amount = exact_minor(plan["amount_minor"], "native journal debit turnover")
+            if position["kind"] == "revalue":
+                # Evidence exposes the entire closing monetary position even
+                # when its correcting journal contains only a smaller delta.
+                amount = max(amount, exact_minor(position["amount_minor"], "original valuation debit turnover"),
+                    exact_minor(position["equation"]["historical_outstanding_minor"], "original monetary position", zero=True),
+                    exact_minor(position["equation"]["valued_outstanding_minor"], "closing monetary position"))
+            admission = {**plan, "amount_minor": amount, "currency_precision": functional["currency_precision"]}
+            self.owner._actor(actor, permission, admission, mutation=mutation)
             if mutation and plan["kind"] == "reverse_revaluation":
-                self.owner._actor(actor, "finance_core.reverse", plan, mutation=True)
+                self.owner._actor(actor, "finance_core.reverse", admission, mutation=True)
             if plan["kind"] == "settle":
                 self.owner._actor(actor, permission, {**scope, "amount_minor": plan["equation"]["foreign_minor"],
                     "currency_precision": foreign["currency_precision"]}, mutation=mutation)

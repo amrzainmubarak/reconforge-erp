@@ -1,13 +1,15 @@
 """Native exact reservation release, retained source evidence and SQL closure."""
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import replace
+from dataclasses import asdict, replace
 from typing import Any
 
 import pytest
 
-from reconforge.domain.finance_posting import FinancePostingError, digest_payload
+from reconforge.domain.finance_posting import FinancePostingError, canonical_json, digest_payload, validation_digest
+from reconforge.domain.operational_finance import exact_minor_text
 from reconforge.domain.procurement_partial import PartialQuantityPreparation, ProcurementPartialError
+from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot
 from reconforge.infrastructure.postgres_landed_cost import PostgresLandedCostRepository
 from reconforge.infrastructure.postgres_landed_cost_cancellation_schema import install_postgres_landed_cost_cancellation
 from reconforge.infrastructure.postgres_procurement_partial import PostgresProcurementPartialRepository
@@ -295,4 +297,61 @@ def test_lost_native_charge_participant_cannot_prepare_uncapitalized_bundle(runt
     monkeypatch.setattr(PostgresProcurementPartialRepository, "prepare_receipt_line", lose_charge)
     with pytest.raises(psycopg.errors.CheckViolation, match="conserved bundle|capitalized"), runtime.actor(MAKER) as (connection, _, actor):
         PostgresLandedCostRepository(connection, runtime.tenant).prepare(request(source), command_id="faulty-native-cost", actor=actor)
+    assert all_state(runtime) == before
+
+
+def insert_memberless_owner(runtime: ReceiptRuntime, source: dict[str, Any], shape: str) -> None:
+    """Raw SQL retains a correct native cash draft, digest, actor and exact ack."""
+    from uuid import uuid4
+    preparation = request(source)
+    with runtime.actor(MAKER) as (connection, _, actor):
+        owner = PostgresLandedCostRepository(connection, runtime.tenant)
+        owner.purchase._scope_transaction()
+        parent = owner.purchase._order(preparation.order_id, lock=True)
+        original = parent["request_json"]
+        amount = preparation.freight_minor + preparation.duty_minor
+        owner._authorize(parent, actor, "prepare", amount)
+        identifier = "LC1-" + uuid4().hex
+        mapping = connection.execute("""SELECT a.account_code FROM reconforge.inventory_valuation_policies p
+            JOIN reconforge.finance_accounts a ON a.tenant_id=p.tenant_id AND a.id=p.receipt_clearing_account_id
+            JOIN reconforge.procurement_partial_order_lines l ON l.tenant_id=p.tenant_id AND l.policy_id=p.id
+            WHERE l.tenant_id=%s AND l.order_id=%s ORDER BY l.sequence LIMIT 1""", (runtime.tenant, parent["id"])).fetchone()
+        paid = exact_minor_text(amount, 2)
+        entry = owner.finance.finance.create_entry(entry_number=identifier, workspace=parent["workspace_id"],
+            organization_code=original["organization_code"], entity_code=original["entity_code"], journal_code=original["journal_code"],
+            posting_date=preparation.posting_date, period_id=preparation.period_id, description=preparation.reason,
+            external_reference="LANDED-COST:" + identifier, actor_label=actor.username,
+            lines=[{"account_code": mapping["account_code"], "debit": paid, "credit": "0", "description": preparation.reason},
+                   {"account_code": original["cash_account_code"], "debit": "0", "credit": paid, "description": preparation.reason}])
+        snapshot = posting_snapshot(connection, runtime.tenant, posting_entry(connection, runtime.tenant, entry["id"]))
+        malformed = asdict(preparation)
+        malformed.pop("lines")
+        if shape != "missing":
+            malformed["lines"] = None if shape == "null" else []
+        payload = {"schema_version": "landed-cost-v1", "id": identifier, "request": malformed,
+            "entry_id": entry["id"], "snapshot": snapshot, "validation_digest": validation_digest(snapshot),
+            "preparer_actor_id": actor.user_id, **{key: parent[key] for key in ("workspace_id", "organization_id", "legal_entity_id")}}
+        if shape != "missing":
+            payload["allocations"] = None if shape == "null" else []
+        seal = digest_payload(payload)
+        audit, outbox = owner._event({**payload, "plan_digest": seal}, "landed_cost_prepared", actor)
+        connection.execute("""INSERT INTO reconforge.landed_cost_plans(tenant_id,id,order_id,workspace_id,organization_id,
+            legal_entity_id,entry_id,amount_minor,phase,payload,plan_digest,audit_event_id,outbox_event_id)
+            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,0,%s::jsonb,%s,%s,%s)""",
+            (runtime.tenant, identifier, parent["id"], parent["workspace_id"], parent["organization_id"], parent["legal_entity_id"],
+             entry["id"], amount, canonical_json(payload), seal, audit, outbox))
+        command = {"operation": "prepare", "actor_id": actor.user_id, "request": malformed}
+        connection.execute("""INSERT INTO reconforge.landed_cost_commands(tenant_id,workspace_id,plan_id,operation,command_id,
+            actor_id,request_digest,request_json,response_json) VALUES(%s,%s,%s,'prepare',%s,%s,%s,%s::jsonb,reconforge.landed_cost_ack(%s,%s,0))""",
+            (runtime.tenant, parent["workspace_id"], identifier, "memberless-" + identifier, actor.user_id,
+             digest_payload(command), canonical_json(command), runtime.tenant, identifier))
+
+
+@pytest.mark.parametrize("shape", ["missing", "null", "empty"])
+def test_raw_sql_cannot_seal_charge_owner_without_receiving_members(runtime: ReceiptRuntime, shape: str) -> None:
+    import psycopg
+    source = create_order(runtime)
+    before = all_state(runtime)
+    with pytest.raises(psycopg.errors.CheckViolation, match="Allocations must conserve"):
+        insert_memberless_owner(runtime, source, shape)
     assert all_state(runtime) == before

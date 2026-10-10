@@ -69,9 +69,17 @@ END
 $lc$;
 ALTER FUNCTION reconforge.landed_cost_close(TEXT,TEXT) RENAME TO landed_cost_close_pre_cancel;
 CREATE FUNCTION reconforge.landed_cost_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
-DECLARE p RECORD;c RECORD;expected JSONB;projection JSONB;
+DECLARE p RECORD;c RECORD;expected JSONB;projection JSONB;members INTEGER;freight NUMERIC;duty NUMERIC;
 BEGIN
  PERFORM reconforge.landed_cost_close_pre_cancel(t,i);
+ SELECT * INTO p FROM reconforge.landed_cost_plans WHERE tenant_id=t AND id=i;
+ SELECT count(*),sum(freight_minor),sum(duty_minor) INTO members,freight,duty
+ FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i;
+ IF members NOT BETWEEN 1 AND 128
+ OR CASE WHEN jsonb_typeof(p.payload#>'{request,lines}')='array' THEN jsonb_array_length(p.payload#>'{request,lines}') ELSE 0 END<>members
+ OR freight IS DISTINCT FROM (p.payload#>>'{request,freight_minor}')::numeric
+ OR duty IS DISTINCT FROM (p.payload#>>'{request,duty_minor}')::numeric THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Allocations must conserve all paid charges and source members'; END IF;
  -- Refresh installed 0123 owners too: ordinary-source query avoidance must
  -- never permit a charged owner to lose its exact native capitalization.
  IF EXISTS(SELECT 1 FROM reconforge.landed_cost_allocations a JOIN reconforge.procurement_partial_receipts d
@@ -81,7 +89,6 @@ BEGIN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Charged owner requires its exact capitalized native receipt cost'; END IF;
  SELECT * INTO c FROM reconforge.landed_cost_cancellations WHERE tenant_id=t AND plan_id=i;
  IF c IS NULL THEN RETURN; END IF;
- SELECT * INTO p FROM reconforge.landed_cost_plans WHERE tenant_id=t AND id=i;
  expected:=jsonb_build_object('operation','cancel','actor_id',c.actor_id,'request',jsonb_build_object(
  'plan_id',i,'expected_plan_digest',p.plan_digest,'reason',c.reason));
  projection:=jsonb_build_object('actor_id',c.actor_id,'reason',c.reason,'command_id',c.command_id,'audit_event_id',c.audit_event_id,'outbox_event_id',c.outbox_event_id);

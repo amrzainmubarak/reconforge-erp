@@ -21,8 +21,14 @@ checks were skipped and are not executed evidence.
 The later 0b5987927391f2e46a91813f8ccee71763b4140a source also has all 38 jobs
 successful in [run38067389520](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520),
 including both Python archive checks and eleven actual HTTPS/populated restores.
-The upcoming final documentation/artifact head still needs its own archive and
-hosted checks; source acceptance does not complete the worldwide ERP program.
+The assembled final source requires its own archive and hosted checks. Exact
+head/run-bound results are retained in the final handoff output and
+[DraftPR130 checks](https://github.com/amrzainmubarak/reconforge-erp/pull/130/checks),
+so recording a run does not mutate the source that run accepted. Source acceptance
+does not complete the worldwide ERP program. Original evidence-head2ca failures
+are retained; its all16native shards/both archives passed but its Web/secret gates
+refused full acceptance. Repairs explicitly await real FX cryptographic completion
+and bind reviewed public hash fingerprints to immutable values before scanning.
 
 Scoped completed cycles are whole zero-tax functional-currency CR1 credit/FIFO
 restoration and CRF1 original-cash refund installments; BPC1 merchandise reserve,

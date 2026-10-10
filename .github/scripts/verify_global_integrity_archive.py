@@ -350,6 +350,26 @@ print(json.dumps({'status':'passed','financial_verification':'passed',
     return values[0]
 
 
+def check_reviewed_source_digest_ignores(extracted: Path) -> dict[str, object]:
+    code = """
+import hashlib,importlib.util,json,pathlib,sys
+root=pathlib.Path(sys.argv[1])
+spec=importlib.util.spec_from_file_location('source_digest_policy',root/'.github/scripts/validate_supply_chain_policy.py')
+module=importlib.util.module_from_spec(spec)
+sys.modules[spec.name]=module
+spec.loader.exec_module(module)
+module._validate_gitleaks_config(root)
+print(json.dumps({'status':'passed','reviewed_exact_fingerprints':520,
+    'registry_sha256':hashlib.sha256((root/module._GITLEAKS_REVIEW_REGISTRY).read_bytes()).hexdigest(),
+    'scope':'Pinned registry/report/line/value guards; scanner itself is a separate security gate.'}))
+"""
+    values = [isolated_json([sys.executable, "-I", *(["-O"] if optimized else []),
+                            "-c", code, str(extracted)], extracted) for optimized in (False, True)]
+    require(values[0] == values[1] and values[0]["status"] == "passed",
+            "Extracted source-digest review guard differs under optimization")
+    return values[0]
+
+
 def check_imports(extracted: Path) -> dict[str, object]:
     code = """
 import importlib,json,pathlib,sys
@@ -411,6 +431,8 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         WAVE4_SCALE_EVIDENCE,
         ".github/scripts/benchmark_stable_power_pair.py", "tests/test_stable_power_pair_controller.py",
         ".github/scripts/verify_stable_power_environment.py", "tests/test_stable_power_environment_verifier.py",
+        ".github/scripts/validate_supply_chain_policy.py", ".gitleaks.toml", ".gitleaksignore",
+        "docs/security/gitleaks-public-source-digests-wave4.v1.json", "tests/test_supply_chain_policy.py",
         *(WAVE4_POSTING_EVIDENCE + "/" + name + ".json" for name in
           ("1-baseline", "1-candidate", "2-candidate", "2-baseline", "3-baseline", "3-candidate")),
         *(FX_EVIDENCE + "/" + name for name in FX_RETAINED_SHA),
@@ -480,6 +502,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         report["wave4_independent_posting_pair"] = check_wave4_posting_pair(extracted, target)
         report["wave4_stable_power_posting_pair"] = check_wave4_stable_power(extracted, target)
         report["wave4_independent_scale_10k"] = check_wave4_scale(extracted)
+        report["reviewed_source_digest_ignores"] = check_reviewed_source_digest_ignores(extracted)
         report["browser_helper_imports"] = check_imports(extracted)
         report["acceptance_packet_keys"] = sorted(json.loads((extracted / "docs/execution" / (args.acceptance_stem + ".json")).read_text(encoding="utf-8")))
         with zipfile.ZipFile(args.wheel) as wheel:

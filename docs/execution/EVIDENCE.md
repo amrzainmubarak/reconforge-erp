@@ -23155,3 +23155,20 @@ and adverse resource assessment. See WAVE4_ENGINEERING_MEASUREMENTS_2026-10-10.m
 ### Wave4 completed stable-power evidence closure — 2026-10-10
 
 Stable six financial/environment proof passed; paircd8c404d/manifest1e67d483 pin original reports/12power sidecars. All371observed samples AC,0battery/unavailable; original6120effects/six fresh servers. Median throughput+42.5851%, combinedCPU/success-27.1300%, p95-23.1873%, batchread-1.3370%, adverse clientCPU+2.8250% and lifetime memory+0.2254%; overall resource/performance acceptance remainsfalse, no post-hoc threshold. Independent normal/optimized proofs byte-identicalac3abc9e;73targeted cases passed with0skips. Previous mixed/failed results remain immutable. 10Kcapacity independently passed5028151631minor;100K/1M unrun; no equivalent competitor comparison. Final source archive/hosted gates are required after evidence integration.
+
+### Retained evidence-head failures and targeted closure
+
+Head2ca3b975 is not accepted: CI38078535222 failed the English FX component
+status assertion while407other React cases passed; dependent browser jobs did
+not execute. Security38078535230 failed Gitleaks and its aggregate after260
+generic-api-key findings in two retained package-source hash inventories.
+All260values were independently checked against111public0b598792 Git blobs;
+they are SHA256 source-file identities. The exact failure snapshot remains in
+wave4-evidence/unaccepted-first-pair/ci-2ca-failures.json (original9197c0db...,
+partial/nonterminal capture), and original redacted logs remain in the owner
+output/hosted-pr130-2ca3b975 directory and GitHub job artifacts. Partial passing
+Python4938/663existing skips, package132, Docker/CodeQL and native jobs are
+source-bound evidence, not acceptance of2ca. Correction requires real async
+cryptographic completion and immutable value-bound exact scanner fingerprints,
+then a new fixed-head full hosted run; no skipped/retried financial gate or broad
+scanner exclusion grants acceptance.

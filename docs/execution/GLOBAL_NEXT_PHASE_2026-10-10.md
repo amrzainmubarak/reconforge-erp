@@ -5,6 +5,41 @@ Preserve PR127 and its PR126/125/124 ancestors, current native source owners,
 Python/PostgreSQL/React, exact arithmetic, FORCE RLS and the modular monolith.
 Bind new delivery claims to their actual commit, migrations and acceptance packet.
 
+## Wave4 completion and dependency update
+
+Wave4 delivered whole original customer credits/FIFO restitution and partial cash
+refunds, merchandise budget-backed PO partial receipts/AP consumption and release,
+whole unissued supplier receipt/unpaid AP correction with paid-charge expense,
+and taxed foreign AR settlement plus reviewed closing valuation and exact reversal.
+These are scoped native cycles; the extensions in sections1–5 remain dependencies,
+not implied completion. Manufacturing remains existing control/report export only.
+The accepted business checkpoint is0b598792; the final evidence/security/UI head
+needs its own successful hosted gates, including archived raw comparisons.
+
+Prioritize the remaining work by operational closure and measured cost:
+
+1. Close final artifact/CI gates and attribute the residual client CPU+2.825% and
+   client lifetime memory+0.2254% in the stable1K experiment. Retain the observed
+   throughput+42.585% and combinedCPU/success-27.130% without global acceptance.
+   Add phase-bound identity/resource observations before further optimization;
+   retain current KDF and authorization, and fully complete1,000-line business
+   cycles before treating report fixtures as a scale claim.
+2. Join budget reinstatement/replacement receiving to exact original supplier
+   credits; then partial/issued/paid returns and taxed/foreign customer inverses.
+   These depend on original allocation provenance, quantity caps, AP/AR settlement
+   history and atomically conserved budget/inventory/GL effects.
+3. Add PR/RFQ/reviewed supplier comparison and funded freight/duty obligations to
+   those proven procurement owners, with deterministic variances and approvals.
+4. Broaden retained tax/rate sources and foreign AP/stock semantics, then paired
+   intercompany/elimination/group close over proven entity and currency owners.
+5. Execute component issue→WIP→completion/scrap→finished goods/GL before native
+   MRP or planning automation; then commercial pricing/revenue recognition and
+   project/service/payroll work with explicit source-dependent financial oracles.
+
+Verified10K is a single-candidate capacity observation, not a matched10K speedup.
+100K/1M and multi-region HA/DR RPO/RTO remain unrun. Expand only with explicit
+resource admission, identical workloads and independently checked financial sums.
+
 ## Verified contract boundaries before expansion
 
 - Legacy `StockOrder` is single-item; `CommercialOrder` admits 1–1,000 lines.

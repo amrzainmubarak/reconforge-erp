@@ -124,10 +124,19 @@ def fixture_report(proofs: list[dict]) -> dict:
     return report
 
 
+def fixture_manifest(proofs: list[dict], report: dict) -> dict:
+    return {"status": "passed", "source_commit": report["source_commit"],
+            "report_sha256": hashlib.sha256(json.dumps(report).encode()).hexdigest(),
+            "native_effects": [{"kind": proof["plan"]["kind"], "plan_id": proof["plan"]["id"], "entry_id": proof["plan"]["entry_id"],
+                                "effect_id": proof["native_effect"]["id"], "amount_minor": int(proof["plan"]["amount_minor"]),
+                                "file_sha256": hashlib.sha256(json.dumps(proof).encode()).hexdigest()} for proof in proofs]}
+
+
 def test_explicit_integer_fixture_and_original_native_inverse_pass() -> None:
     proofs = fixture_proofs()
     verified = ORACLE["verify_proofs"](proofs)
-    ORACLE["verify_report"](fixture_report(proofs), verified)
+    report = fixture_report(proofs)
+    ORACLE["verify_report"](report, verified, fixture_manifest(proofs, report))
     assert verified["account_balances_minor"]["AR"] == verified["account_balances_minor"]["UGAIN"] == 0
     assert verified["unique_audit_events"] == verified["unique_outbox_events"] == 20
 
@@ -183,6 +192,7 @@ def test_rehashed_forged_financial_proof_is_rejected(attack: str, message: str) 
 def test_report_cannot_replace_the_actual_financial_or_restore_population(attack: str, message: str) -> None:
     proofs = fixture_proofs()
     report = fixture_report(proofs)
+    manifest = fixture_manifest(proofs, report)
     if attack == "cash":
         report["persisted_effects"]["account_balances_minor"]["CASH"] = "14082"
     elif attack == "restored_population":
@@ -195,17 +205,51 @@ def test_report_cannot_replace_the_actual_financial_or_restore_population(attack
     else:
         report["browser_counts"]["skipped"] = 1
     with pytest.raises(ERROR, match=message):
-        ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs))
+        ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs), manifest)
 
 
 def test_post_restore_authentication_allows_only_identity_digest_with_same_population() -> None:
     proofs = fixture_proofs()
     report = fixture_report(proofs)
+    manifest = fixture_manifest(proofs, report)
     report["native_restore"]["probe_checkpoint"]["tables"]["identity_users"]["sha256"] = "f" * 64
-    ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs))
+    ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs), manifest)
     report["native_restore"]["probe_checkpoint"]["tables"]["identity_users"]["rows"] = 5
     with pytest.raises(ERROR, match="retained financial"):
-        ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs))
+        ORACLE["verify_report"](report, ORACLE["verify_proofs"](proofs), manifest)
+
+
+def test_unique_substituted_runtime_effect_cannot_escape_trusted_original_membership() -> None:
+    proofs = fixture_proofs()
+    report = fixture_report(proofs)
+    manifest = fixture_manifest(proofs, report)
+    manifest_blob = json.dumps(manifest).encode()
+    original_plan_digest = proofs[4]["plan"]["plan_digest"]
+    proofs[4]["plan"]["posting_effect_id"] = proofs[4]["native_effect"]["id"] = "PST-unique-invented-unposted"
+    # Runtime-only IDs are absent from the sealed plan: old arithmetic/seal checks pass.
+    verified = ORACLE["verify_proofs"](proofs)
+    assert proofs[4]["plan"]["plan_digest"] == original_plan_digest
+    assert len({proof["native_effect"]["id"] for proof in proofs}) == 5
+    with pytest.raises(ERROR, match="Native effect identities differ"):
+        ORACLE["verify_report"](report, verified, manifest)
+    with pytest.raises(ERROR, match="trusted retained membership"):
+        ORACLE["verify_membership"]([json.dumps(proof).encode() for proof in proofs], json.dumps(report).encode(),
+                                   manifest_blob, hashlib.sha256(manifest_blob).hexdigest())
+
+
+@pytest.mark.parametrize("attack,message", [("manifest", "manifest SHA256"), ("report", "Runtime report differs")])
+def test_changing_manifest_or_runtime_report_cannot_replace_the_explicit_trust_anchor(attack: str, message: str) -> None:
+    proofs = fixture_proofs()
+    report = fixture_report(proofs)
+    manifest = fixture_manifest(proofs, report)
+    trusted_sha256 = hashlib.sha256(json.dumps(manifest).encode()).hexdigest()
+    if attack == "manifest":
+        manifest["native_effects"][4]["effect_id"] = "PST-forged"
+    else:
+        report["persisted_effects"]["native_posting_effects"] = 6
+    with pytest.raises(ERROR, match=message):
+        ORACLE["verify_membership"]([json.dumps(proof).encode() for proof in proofs], json.dumps(report).encode(),
+                                   json.dumps(manifest).encode(), trusted_sha256)
 
 
 def test_duplicate_json_key_is_rejected_even_if_a_hash_could_be_recomputed() -> None:
@@ -218,8 +262,12 @@ def test_standalone_cli_keeps_financial_checks_under_python_optimization(tmp_pat
     proofs = fixture_proofs()
     for index, proof in enumerate(proofs):
         (tmp_path / f"fx-proof-{index}.json").write_text(json.dumps(proof), encoding="utf-8")
-    (tmp_path / "cycle.json").write_text(json.dumps(fixture_report(proofs)), encoding="utf-8")
-    command = [sys.executable, *(["-O"] if optimized else []), str(SCRIPT), "--proof-directory", str(tmp_path), "--cycle-report", str(tmp_path / "cycle.json")]
+    report = fixture_report(proofs)
+    (tmp_path / "cycle.json").write_text(json.dumps(report), encoding="utf-8")
+    manifest_blob = json.dumps(fixture_manifest(proofs, report)).encode()
+    (tmp_path / "manifest.json").write_bytes(manifest_blob)
+    command = [sys.executable, *(["-O"] if optimized else []), str(SCRIPT), "--proof-directory", str(tmp_path), "--cycle-report", str(tmp_path / "cycle.json"),
+               "--proof-manifest", str(tmp_path / "manifest.json"), "--proof-manifest-sha256", hashlib.sha256(manifest_blob).hexdigest()]
     positive = tmp_path / "positive.json"
     run = subprocess.run([*command, "--report", str(positive)], check=False, capture_output=True, text=True)
     assert run.returncode == 0, run.stdout + run.stderr

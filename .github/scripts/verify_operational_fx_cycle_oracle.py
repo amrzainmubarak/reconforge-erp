@@ -1,8 +1,10 @@
 """Offline independent rational oracle for the five-stage synthetic FX browser fixture.
 
 Requires only the Python standard library. Reads fx-proof-0..4.json plus the
-actual browser/restore report; never imports ReconForge or contacts a database.
-Hashes bind the supplied files, not an external attestation of their origin.
+actual browser/restore report and a previously retained proof manifest, whose
+trusted SHA256 must be supplied separately. Never imports ReconForge or contacts
+a database. Membership is bound to that explicit trust anchor; hashes do not
+provide an external attestation of the manifest's origin.
 """
 from __future__ import annotations
 
@@ -255,7 +257,23 @@ def verify_proofs(proofs: list[dict[str, Any]]) -> dict[str, Any]:
             "realized_fx_minor": oracle["realized"], "closing_value_minor": oracle["closing"], "unrealized_difference_minor": oracle["delta"]}
 
 
-def verify_report(report: dict[str, Any], oracle: dict[str, Any]) -> None:
+def verify_membership(proof_blobs: list[bytes], report_blob: bytes, manifest_blob: bytes, trusted_sha256: str) -> dict[str, Any]:
+    require(re.fullmatch(r"[a-f0-9]{64}", trusted_sha256) is not None and digest(manifest_blob) == trusted_sha256,
+            "Trusted proof manifest SHA256 differs")
+    manifest = decode(manifest_blob)
+    require(manifest["status"] == "passed" and len(proof_blobs) == len(manifest["native_effects"]) == 5
+            and [effect["kind"] for effect in manifest["native_effects"]] == list(KINDS), "Trusted proof manifest population differs")
+    require(digest(report_blob) == manifest["report_sha256"] and decode(report_blob)["source_commit"] == manifest["source_commit"],
+            "Runtime report differs from the trusted proof manifest")
+    for blob, effect in zip(proof_blobs, manifest["native_effects"], strict=True):
+        require(digest(blob) == effect["file_sha256"], "Downloaded proof differs from the trusted retained membership")
+    return manifest
+
+
+def verify_report(report: dict[str, Any], oracle: dict[str, Any], manifest: dict[str, Any]) -> None:
+    require(manifest["status"] == "passed" and manifest["source_commit"] == report["source_commit"]
+            and [{key: effect[key] for key in ("kind", "plan_id", "entry_id", "effect_id", "amount_minor")}
+                 for effect in manifest["native_effects"]] == oracle["native_effects"], "Native effect identities differ from trusted retained membership")
     require(report["status"] == "passed" and report["scenario"] == "operational-fx-tax"
             and all(report[key] is True for key in ("source_unchanged", "built_web_unchanged", "tracked_clean_before", "tracked_clean_after", "owned_container_removed", "owned_https_process_stopped")), "Actual runtime acceptance closure incomplete")
     require(re.fullmatch(r"[a-f0-9]{40}", report["source_commit"]) is not None and report["source_commit"] == report["source_commit_after"]
@@ -291,6 +309,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--proof-directory", required=True, type=Path)
     parser.add_argument("--cycle-report", type=Path, help="Defaults to proof-directory/../report.json")
+    parser.add_argument("--proof-manifest", required=True, type=Path, help="Previously retained accepted proof hashes and native effect identities")
+    parser.add_argument("--proof-manifest-sha256", required=True, help="Trusted manifest hash obtained separately from accepted evidence")
     parser.add_argument("--report", required=True, type=Path, help="Fresh output path; existing files are refused")
     args = parser.parse_args(argv)
     require(not args.report.exists(), "Output report already exists; preserve previous evidence")
@@ -299,18 +319,22 @@ def main(argv: list[str] | None = None) -> int:
     try:
         directory = args.proof_directory.resolve()
         cycle_path = (args.cycle_report or directory.parent / "report.json").resolve()
+        manifest_path = args.proof_manifest.resolve()
         result["command"] = [sys.executable, *(["-" + "O" * sys.flags.optimize] if sys.flags.optimize else []), str(Path(__file__).resolve()),
-                             "--proof-directory", str(directory), "--cycle-report", str(cycle_path), "--report", str(args.report.resolve())]
+                             "--proof-directory", str(directory), "--cycle-report", str(cycle_path), "--proof-manifest", str(manifest_path),
+                             "--proof-manifest-sha256", args.proof_manifest_sha256, "--report", str(args.report.resolve())]
         result["python_version"] = sys.version
         require({path.name for path in directory.glob("fx-proof-[0-9]*.json")} == {f"fx-proof-{index}.json" for index in range(5)}, "Exactly five numbered downloaded proofs are required")
-        paths = [directory / f"fx-proof-{index}.json" for index in range(5)] + [cycle_path]
+        paths = [directory / f"fx-proof-{index}.json" for index in range(5)] + [cycle_path, manifest_path]
         require(all(path.stat().st_size <= 8 * 1024 * 1024 for path in paths), "Evidence file exceeds the offline bound")
         blobs = [path.read_bytes() for path in paths]
         result["inputs"] = [{"path": str(path), "sha256": digest(blob)} for path, blob in zip(paths, blobs, strict=True)]
+        manifest = verify_membership(blobs[:5], blobs[5], blobs[6], args.proof_manifest_sha256)
+        result["proof_manifest_sha256"] = args.proof_manifest_sha256
         proofs = [decode(blob) for blob in blobs[:5]]
-        report = decode(blobs[-1])
+        report = decode(blobs[5])
         oracle = verify_proofs(proofs)
-        verify_report(report, oracle)
+        verify_report(report, oracle, manifest)
         mobile = directory / "fx-proof-ar-mobile.json"
         if mobile.exists():
             require(mobile.stat().st_size <= 8 * 1024 * 1024, "Arabic evidence file exceeds the offline bound")
@@ -318,7 +342,7 @@ def main(argv: list[str] | None = None) -> int:
             require(decode(mobile_blob) == proofs[4], "Arabic mobile proof differs from the final retained evidence")
             result["inputs"].append({"path": str(mobile), "sha256": digest(mobile_blob)})
         result.update(status="passed", source_commit=report["source_commit"], source_sha256=report["source_sha256"], built_web_sha256=report["built_web_sha256"],
-                      report_sha256=digest(blobs[-1]), restored_table_count=len(report["native_restore"]["snapshot"]["tables"]),
+                      report_sha256=digest(blobs[5]), restored_table_count=len(report["native_restore"]["snapshot"]["tables"]),
                       dump_sha256=report["native_restore"]["dump_sha256"], **oracle)
     except (VerificationError, KeyError, TypeError, ValueError, OSError) as exc:
         result["error"] = str(exc)

@@ -9,6 +9,8 @@ import pytest
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
+from reconforge.infrastructure.postgres_operational_fx_revaluation_schema import DOWNGRADE_SQL as REVALUATION_DOWN
+from reconforge.infrastructure.postgres_operational_fx_revaluation_schema import UPGRADE_SQL as REVALUATION_UP
 from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
 from reconforge.infrastructure.postgres_operational_fx_tax_schema import DOWNGRADE_SQL, UPGRADE_SQL
 from reconforge.infrastructure.postgres_outbox import PostgresOutboxRepository
@@ -30,9 +32,11 @@ def test_empty_schema_rollback_reupgrade_and_populated_evidence_refusal(receipt_
     from psycopg import sql
 
     with psycopg.connect(receipt_database[0]) as admin:
+        admin.execute(REVALUATION_DOWN)
         admin.execute(DOWNGRADE_SQL)
         assert admin.execute("SELECT to_regclass('reconforge.operational_fx_sources')").fetchone()[0] is None
         admin.execute(UPGRADE_SQL)
+        admin.execute(REVALUATION_UP)
         # Additive table recreation drops its previous ACLs; deployment's
         # explicit module grant step must accompany the restored schema.
         app_user = psycopg.conninfo.conninfo_to_dict(receipt_database[1])["user"]

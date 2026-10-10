@@ -35,7 +35,31 @@ explicit UTC observation/source and reason. Review and post with separate
 humans. Posting closes the native foreign allocation and functional cash,
 historical AR release and realized gain/loss atomically. No bank transfer is
 instructed. Complete the pending plan before preparing another installment;
-the history is bounded at 200 settlements.
+the history is bounded at 200 operations after recognition, including any
+closing valuations and their inverses.
+
+### Closing valuation and explicit inverse
+
+For an outstanding posted source with no pending operation, choose **Prepare
+closing valuation**. Enter its nonregressing date/open period, exact closing
+rate, UTC observation/source and two additional distinct native accounts:
+Unrealized Gain Income and Unrealized Loss Expense, outside the original five
+roles and tax accounts. The proposed difference is the closing conversion of
+the foreign outstanding balance minus the original functional outstanding
+balance. Three separate humans review/post its retained native journal. Native
+foreign AR, receipts, original revenue and taxes remain unchanged.
+
+For the example below, after the first receipt, `7401` foreign minor units
+remain with original functional AR `9251`. A closing rate `1.35` values that
+monetary balance at `9991` and posts AR debit/unrealized gain credit `740`.
+The register displays both original and closing carrying values. Before a
+receipt or another valuation, choose **Prepare exact valuation reversal**;
+enter date/open period/reason and review/post with three humans, each also
+holding current `finance_core.reverse`. Its Generated native posting must
+exactly invert the original valuation effect, retained policy and dimensions.
+AR returns to `9251`, unrealized gain to zero, and ordinary partial settlement
+can then resume with the original cumulative historical-release equation.
+Zero-difference valuations and inverse-of-inverse proposals are refused.
 
 ## Exact example and oracle
 
@@ -74,6 +98,8 @@ Use the normal browser cookie/session, CSRF token for mutations and
 | `GET /invoices?after=...&limit=25` | Authorized keyset source register, follow `next_after`. |
 | `GET /invoices/{source_id}` | Original source, foreign/functional residual and bounded exact history. |
 | `POST /invoices/{source_id}/settlements` | Prepare a retained installment with `foreign_minor`, `settlement_rate`, period/date/reason and new command. |
+| `POST /invoices/{source_id}/revaluations` | Prepare closing rate/observation, unrealized gain/loss accounts, period/date/reason and new command. |
+| `POST /invoices/{source_id}/revaluation-reversals` | Prepare exact `original_revaluation_id` inverse with period/date/reason and new command; requires current reversal permission. |
 | `POST /plans/{plan_id}/review` | Second human, command ID, `expected_plan_digest`, reason. |
 | `POST /plans/{plan_id}/post` | Third human, independent command ID, retained digest, reason. |
 | `GET /plans/{plan_id}/evidence` | Native closure and exact source/plan/ledger proof. |
@@ -107,9 +133,9 @@ The existing native posted balances, independently reviewed financial
 classification map and reports include these functional postings. Fully posted
 history remains verifiable after a period closes; fresh financial effects
 require the current open period. Account, currency, original rate, tax policy
-and phase evidence cannot be edited to repair a posted result. Revaluation and
-source-owned reversal remain separate future work; generic journal reversal
-cannot detach FX1 history.
+and phase evidence cannot be edited to repair a posted result. Only the explicit
+closing-valuation inverse can reverse that effect; generic journal reversal
+cannot detach FX1 history. Original invoice/source reversal remains separate work.
 
 Before upgrade, retain a verified backup and matching application/migration
 source. Empty owner tables support additive rollback. A populated downgrade
@@ -120,7 +146,14 @@ and bind acceptance to that exact source/backup hash. Integrated HTTPS populated
 restore evidence is required separately from component/native unit results.
 
 No claim is made for tax-jurisdiction compliance, Production Ready status,
-external settlement, AP FX, unrealized revaluation, inclusive/compound tax or
+external settlement, AP FX, inclusive/compound tax or
 foreign inventory sources. Benchmarks of retained snapshot reads are distinct
 from complete native posting workloads; any performance claim requires matched
 source, workload, host/durability settings and retained raw results.
+
+The original FX1 owner has 19 unique accepted native cases and actual HTTPS
+plus populated restore acceptance at integrated `02749705`; its raw report is
+`output/wave4-fx-browser-027/report.json` (93.093 seconds, one expected case,
+zero skipped/unexpected/flaky). The additive migration0131 closing valuation
+and inverse extension requires its own complete native and actual five-stage
+browser/restore gate; the earlier three-stage packet does not validate it.

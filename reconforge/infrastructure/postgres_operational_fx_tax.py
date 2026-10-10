@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from reconforge.domain.finance_posting import PostingActor, canonical_json, digest_payload, text, validation_digest
 from reconforge.domain.operational_finance import exact_minor_text
+from reconforge.domain.operational_fx_revaluation import revaluation_equation, reversal_equation
 from reconforge.domain.operational_fx_tax import (
     MAX_SETTLEMENTS,
     ForeignInvoicePreparation,
@@ -93,6 +94,8 @@ class PostgresOperationalFxTaxRepository:
                          "currency_precision": functional["currency_precision"]}, mutation=mutation)
         if plan:
             self.owner._actor(actor, permission, plan, mutation=mutation)
+            if mutation and plan["kind"] == "reverse_revaluation":
+                self.owner._actor(actor, "finance_core.reverse", plan, mutation=True)
             if plan["kind"] == "settle":
                 self.owner._actor(actor, permission, {**scope, "amount_minor": plan["equation"]["foreign_minor"],
                     "currency_precision": foreign["currency_precision"]}, mutation=mutation)
@@ -135,16 +138,24 @@ class PostgresOperationalFxTaxRepository:
         return result
 
     def _state(self, source: Mapping[str, Any]) -> dict[str, Any]:
-        rows = records(self.connection.execute("""SELECT kind,sequence,payload FROM reconforge.operational_fx_plans
+        rows = records(self.connection.execute("""SELECT id,kind,sequence,payload FROM reconforge.operational_fx_plans
             WHERE tenant_id=%s AND source_id=%s AND phase=2 ORDER BY sequence""", (self.tenant_id, source["id"])))
+        active = None
+        for row in rows:
+            if row["kind"] == "revalue":
+                active = row
+            elif row["kind"] == "reverse_revaluation":
+                active = None
         return {"recognized": bool(rows), "sequence": len(rows),
                 "foreign_paid_minor": sum(row["payload"]["equation"]["foreign_minor"] for row in rows if row["kind"] == "settle"),
                 "historical_released_minor": sum(row["payload"]["equation"]["historical_release_minor"] for row in rows if row["kind"] == "settle"),
-                "last_posting_date": rows[-1]["payload"]["posting_date"] if rows else source["request"]["posting_date"]}
+                "last_posting_date": rows[-1]["payload"]["posting_date"] if rows else source["request"]["posting_date"],
+                "active_revaluation_plan_id": active["id"] if active else None,
+                "unrealized_fx_minor": active["payload"]["equation"]["unrealized_fx_minor"] if active else 0}
 
     def _prepare(self, source: Mapping[str, Any], *, kind: str, equation: dict[str, Any], period_id: str,
                  posting_date: str, reason: str, sequence: int, request: Mapping[str, Any],
-                 command_id: str, digest: str, actor: PostingActor) -> dict[str, Any]:
+                 command_id: str, digest: str, actor: PostingActor, reverses_posting_id: str | None = None) -> dict[str, Any]:
         if self.connection.execute("SELECT 1 FROM reconforge.operational_fx_plans WHERE tenant_id=%s AND source_id=%s AND phase<2",
                                    (self.tenant_id, source["id"])).fetchone():
             fail("Complete the pending foreign receivable operation first.", "fx_state_conflict")
@@ -158,14 +169,19 @@ class PostgresOperationalFxTaxRepository:
             organization_code=source["request"]["organization_code"], entity_code=source["request"]["entity_code"],
             period_id=period_id, journal_code=source["request"]["journal_code"], posting_date=posting_date,
             description=reason, workspace=source["workspace_id"], external_reference="FX:" + source["id"] + ":" + kind,
+            source_type="Generated" if reverses_posting_id else "Manual",
             actor_label=actor.username, lines=[{"account_code": line["account_code"],
                 "debit": exact_minor_text(line["debit_minor"], precision) if line["debit_minor"] else "0",
                 "credit": exact_minor_text(line["credit_minor"], precision) if line["credit_minor"] else "0",
                 "description": reason} for line in equation["lines"]])
+        if reverses_posting_id:
+            self.connection.execute("UPDATE reconforge.finance_entries SET reverses_posting_id=%s WHERE tenant_id=%s AND id=%s",
+                                    (reverses_posting_id, self.tenant_id, entry["id"]))
         snapshot = posting_snapshot(self.connection, self.tenant_id, posting_entry(self.connection, self.tenant_id, entry["id"]))
         if any(snapshot["entry"][key] != value for key, value in source["functional_policy"].items()):
             fail("Native GL must retain the original functional currency policy.", "fx_currency_invalid")
-        plan = {"schema_version": "operational-fx-plan-v1", "id": plan_id, "source_id": source["id"], **scope,
+        plan = {"schema_version": "operational-fx-plan-v2" if kind in {"revalue", "reverse_revaluation"} else "operational-fx-plan-v1",
+                "id": plan_id, "source_id": source["id"], **scope,
                 "kind": kind, "sequence": sequence, "period_id": period_id, "posting_date": posting_date, "reason": reason,
                 "currency_code": source["functional_policy"]["currency_code"], "currency_precision": precision,
                 "source_digest": source["source_digest"], "entry_id": entry["id"], "equation": equation,
@@ -240,6 +256,8 @@ class PostgresOperationalFxTaxRepository:
                 self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, replay["id"]))
                 return replay
             state = self._state(source)
+            if state["active_revaluation_plan_id"]:
+                fail("Explicitly reverse the posted closing valuation before settling its historical source.", "fx_state_conflict")
             if not state["recognized"] or state["sequence"] > MAX_SETTLEMENTS or posting_date < state["last_posting_date"]:
                 fail("A posted recognition, monotonic date and bounded settlement history are required.", "fx_state_invalid")
             _, context = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(source["foreign_policy"])
@@ -247,6 +265,60 @@ class PostgresOperationalFxTaxRepository:
                 historical_before_minor=state["historical_released_minor"], settlement_rate=settlement_rate, posting_date=posting_date, context=context)
             return self._prepare(source, kind="settle", equation=equation, period_id=period_id, posting_date=posting_date,
                 reason=str(request["reason"]), sequence=state["sequence"], request=request, command_id=command_id, digest=digest, actor=actor)
+
+    def prepare_revaluation(self, source_id: str, *, closing_rate: HistoricalRate, unrealized_gain_account_code: str,
+                            unrealized_loss_account_code: str, period_id: str, posting_date: str, reason: str,
+                            command_id: str, actor: PostingActor) -> dict[str, Any]:
+        request = {"kind": "revalue", "source_id": text(source_id, "source_id"), "closing_rate": closing_rate.payload(posting_date),
+                   "unrealized_gain_account_code": text(unrealized_gain_account_code, "unrealized gain account", maximum=64),
+                   "unrealized_loss_account_code": text(unrealized_loss_account_code, "unrealized loss account", maximum=64),
+                   "period_id": text(period_id, "period_id"), "posting_date": canonical_day(posting_date, "posting_date"),
+                   "reason": text(reason, "reason", maximum=500)}
+        return self._prepare_valuation(source_id, request=request, command_id=command_id, actor=actor)
+
+    def prepare_revaluation_reversal(self, source_id: str, *, original_revaluation_id: str, period_id: str,
+                                    posting_date: str, reason: str, command_id: str, actor: PostingActor) -> dict[str, Any]:
+        request = {"kind": "reverse_revaluation", "source_id": text(source_id, "source_id"),
+                   "original_revaluation_id": text(original_revaluation_id, "original revaluation"),
+                   "period_id": text(period_id, "period_id"), "posting_date": canonical_day(posting_date, "posting_date"),
+                   "reason": text(reason, "reason", maximum=500)}
+        return self._prepare_valuation(source_id, request=request, command_id=command_id, actor=actor)
+
+    def _prepare_valuation(self, source_id: str, *, request: dict[str, Any], command_id: str,
+                           actor: PostingActor) -> dict[str, Any]:
+        with self.owner._transaction():
+            source = self._peek("source", source_id)
+            self._authorize(actor, "finance_core.manage", source)
+            digest, replay = self._command(source, "prepare", command_id, actor, request)
+            self._period(request["period_id"])
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(source["workspace_id"])
+            source = self._source(source_id)
+            if replay is not None:
+                self._authorize(actor, "finance_core.manage", source, replay)
+                self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, replay["id"]))
+                return replay
+            state = self._state(source)
+            if not state["recognized"] or state["sequence"] > MAX_SETTLEMENTS or request["posting_date"] < state["last_posting_date"]:
+                fail("A posted recognition, monotonic date and bounded operation history are required.", "fx_state_invalid")
+            reversal = None
+            if request["kind"] == "revalue":
+                if state["active_revaluation_plan_id"]:
+                    fail("Explicitly reverse the previous closing valuation first.", "fx_state_conflict")
+                _, context = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(source["foreign_policy"])
+                equation = revaluation_equation(source, foreign_before_minor=state["foreign_paid_minor"],
+                    historical_before_minor=state["historical_released_minor"], closing_rate=HistoricalRate(**request["closing_rate"]),
+                    posting_date=request["posting_date"], unrealized_gain_account_code=request["unrealized_gain_account_code"],
+                    unrealized_loss_account_code=request["unrealized_loss_account_code"], context=context)
+            else:
+                if state["active_revaluation_plan_id"] != request["original_revaluation_id"]:
+                    fail("Use the exact active posted closing valuation.", "fx_state_conflict")
+                original = self._view(request["original_revaluation_id"])
+                self._authorize(actor, "finance_core.manage", source, original)
+                equation = reversal_equation(original)
+                reversal = original["posting_effect_id"]
+            return self._prepare(source, kind=request["kind"], equation=equation, period_id=request["period_id"],
+                posting_date=request["posting_date"], reason=request["reason"], sequence=state["sequence"], request=request,
+                command_id=command_id, digest=digest, actor=actor, reverses_posting_id=reversal)
 
     def _phase(self, operation: str, plan_id: str, *, expected_plan_digest: str, reason: str,
                command_id: str, actor: PostingActor) -> dict[str, Any]:
@@ -326,7 +398,9 @@ class PostgresOperationalFxTaxRepository:
                 self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, plan["id"]))
             state = self._state(source)
             return {**source, **state, "foreign_outstanding_minor": source["foreign_gross_minor"] - state["foreign_paid_minor"],
-                    "functional_outstanding_minor": source["functional_gross_minor"] - state["historical_released_minor"], "plans": plans}
+                    "functional_outstanding_minor": source["functional_gross_minor"] - state["historical_released_minor"],
+                    "valued_functional_outstanding_minor": source["functional_gross_minor"] - state["historical_released_minor"] + state["unrealized_fx_minor"],
+                    "plans": plans}
 
     def list_sources(self, scope: Mapping[str, Any], *, actor: PostingActor, after: str = "", limit: int = 25) -> dict[str, Any]:
         if type(limit) is not int or not 1 <= limit <= 100:

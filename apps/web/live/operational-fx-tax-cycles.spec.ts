@@ -37,8 +37,8 @@ async function phase(page: Page, sourceId: string, planId: string, operation: "r
   return (await response.json()).plan;
 }
 
-test("real foreign tax source partial gain loss native AR closure immutable retry and bilingual evidence", async ({ page }) => {
-  test.setTimeout(240_000);
+test("real foreign tax source closing valuation inverse partial gain loss native AR closure and bilingual evidence", async ({ page }) => {
+  test.setTimeout(360_000);
   expect(base && tenant && password, "Owned HTTPS native fixture must be supplied").toBeTruthy();
   await login(page, "browser-maker"); await enter(page);
   const form = page.getByRole("form", { name: "Prepare foreign invoice", exact: true });
@@ -66,7 +66,7 @@ test("real foreign tax source partial gain loss native AR closure immutable retr
   const response = await retry; expect(response.status(), await response.text()).toBe(200); let plan = (await response.json()).plan;
   expect(plan).toEqual(lost); expect(response.request().postDataJSON().command_id).toBe(commandId);
   const sourceId = plan.source_id as string;
-  for (let stage = 0; stage < 3; stage++) {
+  for (let stage = 0; stage < 5; stage++) {
     plan = await phase(page, sourceId, plan.id, "review", "browser-checker");
     plan = await phase(page, sourceId, plan.id, "post", "browser-poster");
     expect(plan.status).toBe("Posted");
@@ -77,22 +77,40 @@ test("real foreign tax source partial gain loss native AR closure immutable retr
     expect(proof.source.request.original_rate).toEqual({ rate: "1.25", source: "Browser original spot", effective_at: "2026-10-01T12:00:00Z" });
     expect(proof.native_effect.id).toBe(plan.posting_effect_id); expect(proof.native_effect.entry_id).toBe(plan.entry_id);
     expect(proof.native_effect.validation_digest).toBe(plan.validation_digest); expect(proof.plan.plan_digest).toBe(plan.plan_digest);
-    expect(proof.totals).toEqual({ debit_minor: ["14251", "5200", "9251"][stage], credit_minor: ["14251", "5200", "9251"][stage] });
+    expect(proof.totals).toEqual({ debit_minor: ["14251", "5200", "740", "740", "9251"][stage], credit_minor: ["14251", "5200", "740", "740", "9251"][stage] });
     expect(proof.phases.map((row: { actor_id: string }) => row.actor_id)).toEqual(["erp-maker", "erp-checker", "erp-poster", "erp-poster"]);
     expect(new Set(proof.phases.map((row: { audit_event_id: string }) => row.audit_event_id)).size).toBe(4);
     expect(new Set(proof.phases.map((row: { outbox_event_id: string }) => row.outbox_event_id)).size).toBe(4);
-    if (stage > 0) { expect(plan.equation.realized_fx_minor).toBe(["200", "-370"][stage - 1]); expect(plan.equation.historical_release_minor).toBe(["5000", "9251"][stage - 1]); }
+    if (stage === 1 || stage === 4) { expect(plan.equation.realized_fx_minor).toBe(stage === 1 ? "200" : "-370"); expect(plan.equation.historical_release_minor).toBe(stage === 1 ? "5000" : "9251"); }
+    if (stage === 2 || stage === 3) expect(plan.equation.unrealized_fx_minor).toBe(stage === 2 ? "740" : "-740");
     await expect(page.getByRole("status").filter({ hasText: "Three canonical financial hashes and native human audit references verified in this browser." })).toBeVisible();
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download verified FX evidence", exact: true }).click();
     await (await download).saveAs(`${process.env.RECONFORGE_ERP_BROWSER_ARTIFACTS}/fx-proof-${stage}.json`);
-    if (stage === 2) break;
+    if (stage === 4) break;
     await login(page, "browser-maker"); await enter(page, sourceId);
+    if (stage === 1 || stage === 2) {
+      const reverse = stage === 2, label = reverse ? "Prepare exact valuation reversal" : "Prepare closing valuation";
+      const valuation = page.getByRole("form", { name: label, exact: true });
+      await valuation.getByLabel("Posting date", { exact: true }).fill(reverse ? "2026-10-04" : "2026-10-03");
+      await valuation.getByLabel("Reason", { exact: true }).fill("Actual reviewed closing valuation and exact inverse");
+      await valuation.getByRole("combobox", { name: "Open accounting period", exact: true }).selectOption("period");
+      if (!reverse) {
+        await valuation.getByRole("combobox", { name: "Unrealized FX gain account", exact: true }).selectOption("UGAIN");
+        await valuation.getByRole("combobox", { name: "Unrealized FX loss account", exact: true }).selectOption("ULOSS");
+        const closing = valuation.getByRole("group", { name: "Retained closing spot rate", exact: true });
+        for (const [label, value] of Object.entries({ "Functional units per foreign unit": "1.35", "Rate observation source": "Browser closing spot", "Observed UTC timestamp": "2026-10-03T23:00:00Z" })) await closing.getByLabel(label, { exact: true }).fill(value);
+      } else await expect(page.getByRole("form", { name: "Prepare partial foreign receipt", exact: true })).toHaveCount(0);
+      const prepared = page.waitForResponse(reply => reply.url().endsWith(`${root}/invoices/${sourceId}/${reverse ? "revaluation-reversals" : "revaluations"}`) && reply.request().method() === "POST");
+      await valuation.getByRole("button", { name: label, exact: true }).click();
+      const actualPrepare = await prepared; expect(actualPrepare.status(), await actualPrepare.text()).toBe(200); plan = (await actualPrepare.json()).plan;
+      continue;
+    }
     const settlement = page.getByRole("form", { name: "Prepare partial foreign receipt", exact: true });
-    for (const [label, value] of Object.entries({ "Receipt amount (foreign minor units)": stage === 0 ? "4000" : "7401", "Posting date": stage === 0 ? "2026-10-02" : "2026-10-03", Reason: "Actual browser partial original foreign receipt" })) await settlement.getByLabel(label, { exact: true }).fill(value);
+    for (const [label, value] of Object.entries({ "Receipt amount (foreign minor units)": stage === 0 ? "4000" : "7401", "Posting date": stage === 0 ? "2026-10-02" : "2026-10-05", Reason: "Actual browser partial original foreign receipt" })) await settlement.getByLabel(label, { exact: true }).fill(value);
     await settlement.getByRole("combobox", { name: "Open accounting period", exact: true }).selectOption("period");
     const spot = settlement.getByRole("group", { name: "Settlement spot rate", exact: true });
-    for (const [label, value] of Object.entries({ "Functional units per foreign unit": stage === 0 ? "1.3" : "1.2", "Rate observation source": "Browser settlement spot", "Observed UTC timestamp": stage === 0 ? "2026-10-02T12:00:00Z" : "2026-10-03T12:00:00Z" })) await spot.getByLabel(label, { exact: true }).fill(value);
+    for (const [label, value] of Object.entries({ "Functional units per foreign unit": stage === 0 ? "1.3" : "1.2", "Rate observation source": "Browser settlement spot", "Observed UTC timestamp": stage === 0 ? "2026-10-02T12:00:00Z" : "2026-10-05T12:00:00Z" })) await spot.getByLabel(label, { exact: true }).fill(value);
     const prepared = page.waitForResponse(reply => reply.url().endsWith(`${root}/invoices/${sourceId}/settlements`) && reply.request().method() === "POST");
     await settlement.getByRole("button", { name: "Prepare partial foreign receipt", exact: true }).click();
     const actualPrepare = await prepared; expect(actualPrepare.status(), await actualPrepare.text()).toBe(200); plan = (await actualPrepare.json()).plan;

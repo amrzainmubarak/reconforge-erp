@@ -88,6 +88,24 @@ class PhaseRequest(StrictModel):
     reason: str = Field(min_length=1, max_length=500)
 
 
+class RevaluationRequest(StrictModel):
+    command_id: str = Field(min_length=1, max_length=140)
+    closing_rate: RateRequest
+    unrealized_gain_account_code: str = Field(pattern=r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
+    unrealized_loss_account_code: str = Field(pattern=r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
+    period_id: str = Field(min_length=1, max_length=160)
+    posting_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class RevaluationReversalRequest(StrictModel):
+    command_id: str = Field(min_length=1, max_length=140)
+    original_revaluation_id: str = Field(pattern=r"^FX1-[a-f0-9]{32}$")
+    period_id: str = Field(min_length=1, max_length=160)
+    posting_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    reason: str = Field(min_length=1, max_length=500)
+
+
 def execute(request: Request, user: LocalUser,
             operation: Callable[[PostgresOperationalFxTaxRepository, PostingActor, FinanceCoreExecutionScope], Any]) -> Any:
     if not server_finance_core_enabled(request):
@@ -145,6 +163,21 @@ def prepare_settlement(request: Request, source_id: str, payload: SettlementRequ
 def get_evidence(request: Request, plan_id: str, user: Read) -> dict[str, Any]:
     _authority(request, "finance_core.read")
     return execute(request, user, lambda repository, actor, scope: {"evidence": repository.plan_evidence(plan_id, actor=actor)})
+
+
+@router.post("/invoices/{source_id}/revaluations")
+def prepare_revaluation(request: Request, source_id: str, payload: RevaluationRequest, user: Manage) -> dict[str, Any]:
+    _authority(request, "finance_core.manage")
+    return execute(request, user, lambda repository, actor, scope: {"plan": repository.prepare_revaluation(source_id,
+        **payload.model_dump(exclude={"closing_rate"}), closing_rate=HistoricalRate(**payload.closing_rate.model_dump()), actor=actor)})
+
+
+@router.post("/invoices/{source_id}/revaluation-reversals")
+def prepare_revaluation_reversal(request: Request, source_id: str, payload: RevaluationReversalRequest, user: Manage) -> dict[str, Any]:
+    _authority(request, "finance_core.manage")
+    _authority(request, "finance_core.reverse")
+    return execute(request, user, lambda repository, actor, scope: {"plan": repository.prepare_revaluation_reversal(source_id,
+        **payload.model_dump(), actor=actor)})
 
 
 @router.post("/plans/{plan_id}/review")

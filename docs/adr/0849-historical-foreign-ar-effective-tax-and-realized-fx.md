@@ -81,10 +81,10 @@ accounting and commercial collection boundaries remain unchanged.
 ## Explicit limits and validation
 
 This slice handles standalone foreign service/customer invoices, at most eight
-net-exclusive tax components and 200 sequential settlements. It does not add
+net-exclusive tax components and 200 sequential operations after recognition. It does not add
 foreign inventory sales, AP FX, external payment execution, compound/inclusive
-tax, automated jurisdiction policy selection, rate feeds, unrealized
-revaluation, source reversal or consolidation. A settlement converting to zero
+tax, automated jurisdiction policy selection, rate feeds, original invoice
+source reversal or consolidation. A settlement converting to zero
 functional cash is refused explicitly. Values and complete debit turnover are
 bounded by 9,000,000,000,000,000,000 minor units and rates by exact bounded decimal
 text. Functional journals retain the original registry policy; incompatible
@@ -98,3 +98,31 @@ dispatch. API and Studio tests cover strict exact inputs, real scoped HTTP
 identity, same-command transport ambiguity and independent evidence validation.
 Actual HTTPS/Studio and populated restore acceptance belong to the integrated
 fixed-source packet; passing component tests does not imply that final gate.
+
+## Additive closing valuation and exact inverse, migration0131
+
+The original five-table owner and private native posting participant also own
+`revalue` and `reverse_revaluation` plan-v2 operations. A closing-rate observation
+values only the outstanding foreign monetary AR; independent SQL NUMERIC
+recomputes original cumulative release, foreign residual, closing conversion
+and unrealized difference. Its separate Income/Expense account roles cannot
+reuse revenue, realized FX, cash or tax roles. Original source, tax, registry,
+foreign native AR and allocations remain immutable.
+
+Only one posted closing valuation can remain active. A later receipt or valuation
+requires an explicit three-human complete inverse, with current persisted
+`finance_core.reverse` in addition to phase permissions. Its Generated native
+entry and effect bind the exact original posting identity and inverse lines,
+policy, scope and dimensions. This conservative boundary keeps existing
+historical settlement arithmetic unchanged; it does not claim automatic close
+reversal scheduling or settlement directly against a revalued basis.
+
+Migration0131 creates a forward replacement of the accepted `fx_close` body
+using explicit single-occurrence transformation guards. Original source/tax,
+native snapshot/account, command, audit/outbox and SoD clauses are retained.
+No existing migration text, RLS policy, ordinary-owner trigger or permission
+cache is replaced. Its additive equation helper runs only for retained FX1
+operations. Empty valuation history can roll back to the accepted original
+owner while preserving original posted invoices; any retained valuation or
+inverse refuses destructive rollback. Full acceptance of this extension is
+pending its new native tests and actual five-stage HTTPS/populated restore.

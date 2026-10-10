@@ -7,18 +7,20 @@ export interface FxRate { rate: string; source: string; effective_at: string }
 export interface FxTax { rate: string; source: string; policy_id: string; version: string; country_code: string; transaction_class: string; effective_from: string; effective_to: string; account_code: string; policy_digest: string; foreign_tax_minor: string; functional_tax_minor: string }
 export interface FxLine { account_id: string; line_number: number; debit_minor: string; credit_minor: string; description: string }
 export interface FxPlan extends FinanceScope {
-  id: string; source_id: string; entry_id: string; kind: "recognize" | "settle"; phase: number; status: "Prepared" | "Reviewed" | "Posted"; sequence: number;
+  id: string; source_id: string; entry_id: string; kind: "recognize" | "settle" | "revalue" | "reverse_revaluation"; phase: number; status: "Prepared" | "Reviewed" | "Posted"; sequence: number;
   currency_code: string; currency_precision: number; posting_date: string; period_id: string; reason: string; amount_minor: string;
   preparer_actor_id: string; reviewer_actor_id: string | null; posting_effect_id: string | null; receipt_id: string | null;
   plan_digest: string; source_digest: string; validation_digest: string; snapshot: { entry: Record<string, unknown>; lines: FxLine[] };
-  equation: { foreign_minor?: string; historical_release_minor?: string; functional_cash_minor?: string; realized_fx_minor?: string; settlement_rate?: FxRate };
+  equation: { foreign_minor?: string; historical_release_minor?: string; functional_cash_minor?: string; realized_fx_minor?: string; settlement_rate?: FxRate;
+    unrealized_fx_minor?: string; valued_outstanding_minor?: string; historical_outstanding_minor?: string; closing_rate?: FxRate; original_revaluation_id?: string; original_posting_effect_id?: string };
 }
 export interface FxSource extends FinanceScope {
   id: string; invoice_id: string; source_digest: string; foreign_policy: FxPolicy; functional_policy: FxPolicy;
   request: { invoice_number: string; customer_code: string; posting_date: string; original_rate: FxRate; country_code: string; transaction_class: string };
   foreign_net_minor: string; foreign_tax_minor: string; foreign_gross_minor: string; functional_net_minor: string; functional_gross_minor: string; tax_components: FxTax[];
 }
-export interface FxDetail extends FxSource { foreign_outstanding_minor: string; functional_outstanding_minor: string; foreign_paid_minor: string; historical_released_minor: string; plans: FxPlan[] }
+export interface FxDetail extends FxSource { foreign_outstanding_minor: string; functional_outstanding_minor: string; foreign_paid_minor: string; historical_released_minor: string; plans: FxPlan[];
+  active_revaluation_plan_id: string | null; unrealized_fx_minor: string; valued_functional_outstanding_minor: string }
 export interface FxEvidence { source: FxSource; plan: FxPlan; canonical_source_json: string; canonical_plan_json: string; canonical_snapshot_json: string; native_effect: null | { id: string; entry_id: string; posted_actor_id: string; validation_digest: string; audit_event_id: string; outbox_event_id: string }; phases: { action: string; actor_id: string; audit_event_id: string; outbox_event_id: string }[]; totals: { debit_minor: string; credit_minor: string } }
 
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -50,7 +52,8 @@ export function parseFxSource(value: unknown, scope: FinanceScope): FxSource {
 }
 export function parseFxPlan(value: unknown, scope: FinanceScope): FxPlan {
   scoped(value, scope);
-  if (value.schema_version !== "operational-fx-plan-v1" || !["id", "source_id", "entry_id", "currency_code", "preparer_actor_id", "posting_date", "period_id", "reason"].every(key => text(value[key])) || !["plan_digest", "source_digest", "validation_digest"].every(key => digest(value[key])) || !["recognize", "settle"].includes(String(value.kind)) || !integer(value.sequence, 200) || !integer(value.phase, 2) || ["Prepared", "Reviewed", "Posted"][value.phase] !== value.status || !integer(value.currency_precision, 8) || !minor(value.amount_minor) || !object(value.snapshot) || !Array.isArray(value.snapshot.lines) || value.snapshot.lines.length < 2 || value.snapshot.lines.length > 10 || !object(value.equation)) invalid();
+  const valuation = value.kind === "revalue" || value.kind === "reverse_revaluation";
+  if (value.schema_version !== (valuation ? "operational-fx-plan-v2" : "operational-fx-plan-v1") || !["id", "source_id", "entry_id", "currency_code", "preparer_actor_id", "posting_date", "period_id", "reason"].every(key => text(value[key])) || !["plan_digest", "source_digest", "validation_digest"].every(key => digest(value[key])) || !["recognize", "settle", "revalue", "reverse_revaluation"].includes(String(value.kind)) || !integer(value.sequence, 200) || !integer(value.phase, 2) || ["Prepared", "Reviewed", "Posted"][value.phase] !== value.status || !integer(value.currency_precision, 8) || !minor(value.amount_minor) || !object(value.snapshot) || !Array.isArray(value.snapshot.lines) || value.snapshot.lines.length < 2 || value.snapshot.lines.length > 10 || !object(value.equation)) invalid();
   const header = value.snapshot.entry; scoped(header, scope);
   if (header.id !== value.entry_id || ["currency_code", "currency_precision", "posting_date", "period_id", "preparer_actor_id"].some(key => header[key] !== value[key])) invalid();
   if (value.phase === 0 ? value.reviewer_actor_id !== null : !text(value.reviewer_actor_id) || value.reviewer_actor_id === value.preparer_actor_id) invalid();
@@ -63,6 +66,9 @@ export function parseFxPlan(value: unknown, scope: FinanceScope): FxPlan {
   if (debit !== credit || debit.toString() !== value.amount_minor || debit <= 0n || debit > 9000000000000000000n) invalid();
   const equation = value.equation;
   if (value.kind === "settle" && (!["foreign_minor", "historical_release_minor", "functional_cash_minor"].every(key => minor(equation[key])) || !minor(equation.realized_fx_minor, true) || BigInt(equation.functional_cash_minor as string) - BigInt(equation.historical_release_minor as string) !== BigInt(equation.realized_fx_minor))) invalid();
+  if (valuation && (!minor(equation.unrealized_fx_minor, true) || BigInt(equation.unrealized_fx_minor) === 0n || (BigInt(equation.unrealized_fx_minor) < 0n ? -BigInt(equation.unrealized_fx_minor) : BigInt(equation.unrealized_fx_minor)).toString() !== value.amount_minor || value.snapshot.lines.length !== 2)) invalid();
+  if (value.kind === "revalue" && (!minor(equation.valued_outstanding_minor) || !minor(equation.historical_outstanding_minor) || BigInt(equation.valued_outstanding_minor) - BigInt(equation.historical_outstanding_minor) !== BigInt(equation.unrealized_fx_minor as string) || header.source_type !== "Manual" || header.reverses_posting_id !== null)) invalid();
+  if (value.kind === "reverse_revaluation" && (!text(equation.original_revaluation_id) || !text(equation.original_posting_effect_id) || header.source_type !== "Generated" || header.reverses_posting_id !== equation.original_posting_effect_id)) invalid();
   return value as unknown as FxPlan;
 }
 export function mergeFxPlan(current: FxPlan | null, acknowledgement: FxPlan): FxPlan {
@@ -73,7 +79,15 @@ export function parseFxDetail(value: unknown, scope: FinanceScope): FxDetail {
   if (!["foreign_outstanding_minor", "functional_outstanding_minor", "foreign_paid_minor", "historical_released_minor"].every(key => minor(value[key])) || !Array.isArray(value.plans) || value.plans.length > 201 || BigInt(value.foreign_outstanding_minor as string) + BigInt(value.foreign_paid_minor as string) !== BigInt(source.foreign_gross_minor) || BigInt(value.functional_outstanding_minor as string) + BigInt(value.historical_released_minor as string) !== BigInt(source.functional_gross_minor)) invalid();
   const rows = value.plans;
   const plans = rows.map((row, index) => { const plan = parseFxPlan(row, scope); if (plan.source_id !== source.id || plan.source_digest !== source.source_digest || plan.sequence !== index || (index < rows.length - 1 && plan.phase !== 2)) invalid(); return plan; });
-  return { ...value, plans } as unknown as FxDetail;
+  let active: FxPlan | null = null;
+  for (const plan of plans.filter(row => row.phase === 2)) {
+    if (plan.kind === "revalue") { if (active) invalid(); active = plan; }
+    else if (plan.kind === "reverse_revaluation") { if (!active || plan.equation.original_revaluation_id !== active.id || plan.equation.original_posting_effect_id !== active.posting_effect_id || BigInt(plan.equation.unrealized_fx_minor as string) !== -BigInt(active.equation.unrealized_fx_minor as string)) invalid(); active = null; }
+    else if (plan.kind === "settle" && active) invalid();
+  }
+  const delta = active?.equation.unrealized_fx_minor ?? "0", valued = (BigInt(value.functional_outstanding_minor as string) + BigInt(delta)).toString();
+  if ((value.active_revaluation_plan_id !== undefined && value.active_revaluation_plan_id !== (active?.id ?? null)) || (value.unrealized_fx_minor !== undefined && value.unrealized_fx_minor !== delta) || (value.valued_functional_outstanding_minor !== undefined && value.valued_functional_outstanding_minor !== valued) || !minor(valued)) invalid();
+  return { ...value, plans, active_revaluation_plan_id: active?.id ?? null, unrealized_fx_minor: delta, valued_functional_outstanding_minor: valued } as unknown as FxDetail;
 }
 function canonical(value: unknown, key = ""): string {
   if (key.endsWith("_minor") && minor(value, true)) return value;

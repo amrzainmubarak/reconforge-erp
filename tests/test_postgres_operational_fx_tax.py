@@ -40,7 +40,7 @@ def seed_fx_masters(runtime: ReceiptRuntime) -> None:
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         connection.execute("INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES(%s,'EUR','Euro',2)", (runtime.tenant,))
         finance = PostgresFinanceCoreRepository(connection, runtime.tenant)
-        for account, kind in (("AR", "Asset"), ("REVENUE", "Income"), ("CASH", "Asset"), ("GAIN", "Income"), ("LOSS", "Expense"), ("TAX", "Liability")):
+        for account, kind in (("AR", "Asset"), ("REVENUE", "Income"), ("CASH", "Asset"), ("GAIN", "Income"), ("LOSS", "Expense"), ("TAX", "Liability"), ("UGAIN", "Income"), ("ULOSS", "Expense")):
             finance.upsert_account(account_code=account, name=account, account_type=kind, chart_code="DEFAULT", workspace="work")
         identities = PostgresIdentityRepository(connection)
         for permission in ("finance_core.read", "receivables.read", "receivables.manage", "receivables.approve"):

@@ -29,6 +29,23 @@ describe("native foreign and functional currency response closure", () => {
     const reviewed = parseFxPlan({ ...fixture.plan, phase: 1, status: "Reviewed", posting_effect_id: null }, scope);
     expect(mergeFxPlan(posted, reviewed)).toBe(posted); expect(mergeFxPlan(reviewed, posted)).toBe(posted);
   });
+  it("binds active closing carrying value to exact posted valuation and generated inverse", () => {
+    const revaluation = { ...fixture.plan, schema_version: "operational-fx-plan-v2", id: "closing", sequence: 1, kind: "revalue", amount_minor: "1140", posting_effect_id: "closing-effect",
+      equation: { unrealized_fx_minor: "1140", historical_outstanding_minor: "14251", valued_outstanding_minor: "15391" },
+      snapshot: { ...fixture.plan.snapshot, entry: { ...fixture.plan.snapshot.entry, source_type: "Manual", reverses_posting_id: null }, lines: [
+        { ...fixture.plan.snapshot.lines[0], debit_minor: "1140" }, { ...fixture.plan.snapshot.lines[1], credit_minor: "1140" }] } };
+    const detail = { ...fixture.source, foreign_outstanding_minor: "11401", foreign_paid_minor: "0", functional_outstanding_minor: "14251", historical_released_minor: "0", plans: [fixture.plan, revaluation],
+      active_revaluation_plan_id: "closing", unrealized_fx_minor: "1140", valued_functional_outstanding_minor: "15391" };
+    expect(parseFxDetail(detail, scope).active_revaluation_plan_id).toBe("closing");
+    expect(() => parseFxDetail({ ...detail, valued_functional_outstanding_minor: "14251" }, scope)).toThrow();
+    const inverse = { ...revaluation, id: "inverse", sequence: 2, kind: "reverse_revaluation", posting_effect_id: "inverse-effect",
+      equation: { unrealized_fx_minor: "-1140", original_revaluation_id: "closing", original_posting_effect_id: "closing-effect" },
+      snapshot: { ...revaluation.snapshot, entry: { ...revaluation.snapshot.entry, source_type: "Generated", reverses_posting_id: "closing-effect" },
+        lines: revaluation.snapshot.lines.map(row => ({ ...row, debit_minor: row.credit_minor, credit_minor: row.debit_minor })) } };
+    const closed = { ...detail, plans: [...detail.plans, inverse], active_revaluation_plan_id: null, unrealized_fx_minor: "0", valued_functional_outstanding_minor: "14251" };
+    expect(parseFxDetail(closed, scope).unrealized_fx_minor).toBe("0");
+    expect(() => parseFxDetail({ ...closed, plans: [...detail.plans, { ...inverse, equation: { ...inverse.equation, original_posting_effect_id: "invented" } }] }, scope)).toThrow();
+  });
   it("verifies all three canonical hashes and exact native audit provenance", async () => {
     const result = await verifyFxEvidence(fixture, scope, parseFxPlan(fixture.plan, scope));
     expect(result.phases.map(row => row.actor_id)).toEqual(["maker", "checker", "poster", "poster"]);

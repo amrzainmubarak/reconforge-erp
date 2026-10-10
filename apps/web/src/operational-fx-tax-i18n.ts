@@ -18,6 +18,7 @@ const en = {
   verify: "Verify source, operation and native journal", verified: "Three canonical financial hashes and native human audit references verified in this browser.", download: "Download verified FX evidence",
   actor: "Human actor", audit: "Audit event", outbox: "Outbox event", action: "Evidence action", retry: "Retry the same command", unknown: "The response is unknown. Retain this exact command and retry it before changing the proposal.",
   denied: "Current human permission, amount or scope authority does not allow this operation.", conflict: "The source, residual or accounting period changed. Refresh its retained state.", unavailable: "The FX service or its verified response is unavailable.", invalid: "Enter exact minor units, rates, UTC observations and complete effective tax policy fields.",
+  revalue: "Prepare closing valuation", reverse_revaluation: "Prepare exact valuation reversal", closingRate: "Retained closing spot rate", unrealized_gain_account_code: "Unrealized FX gain account", unrealized_loss_account_code: "Unrealized FX loss account", unrealized: "Unrealized FX gain / loss", valuedResidual: "Closing functional outstanding", reverseRequired: "Reverse the posted closing valuation before preparing a receipt or another valuation.",
 };
 const ar: Record<keyof typeof en, string> = {
   title: "الذمم الأجنبية والعملات التاريخية والضرائب", intro: "إثبات فاتورة خدمة بعملة أجنبية مع حفظ سياسات الضريبة الأصلية وتسوية المقبوضات الجزئية في الدفتر الوظيفي بفروق صرف محققة دقيقة.",
@@ -37,6 +38,7 @@ const ar: Record<keyof typeof en, string> = {
   verify: "التحقق من المصدر والعملية والقيد الأصلي", verified: "تم التحقق داخل المتصفح من ثلاث بصمات مالية معيارية ومراجع التدقيق البشرية الأصلية.", download: "تنزيل أدلة العملة المتحقق منها",
   actor: "المستخدم البشري", audit: "حدث التدقيق", outbox: "حدث صندوق الإرسال", action: "إجراء الدليل", retry: "إعادة المحاولة بنفس الأمر", unknown: "نتيجة الرد غير معلومة. احتفظ بهذا الأمر الدقيق وأعد إرساله قبل تغيير المقترح.",
   denied: "لا تسمح الصلاحية البشرية أو صلاحية المبلغ أو النطاق الحالية بهذه العملية.", conflict: "تغير المصدر أو الرصيد أو الفترة المحاسبية. حدّث الحالة المحفوظة.", unavailable: "خدمة العملات أو ردها المتحقق منه غير متاح.", invalid: "أدخل وحدات صغرى وأسعارًا دقيقة وملاحظات بتوقيت UTC وسياسة ضريبة مكتملة السريان.",
+  revalue: "إعداد تقييم الإقفال", reverse_revaluation: "إعداد عكس التقييم الدقيق", closingRate: "سعر الصرف الفوري المحفوظ للإقفال", unrealized_gain_account_code: "حساب ربح الصرف غير المحقق", unrealized_loss_account_code: "حساب خسارة الصرف غير المحققة", unrealized: "ربح أو خسارة الصرف غير المحققة", valuedResidual: "الرصيد الوظيفي بقيمة الإقفال", reverseRequired: "اعكس تقييم الإقفال المرحل قبل إعداد قبض أو تقييم جديد.",
 };
 export type FxMessage = keyof typeof en;
 export const fxTranslate = (locale: Locale, key: FxMessage): string => (locale === "ar" ? ar : en)[key];

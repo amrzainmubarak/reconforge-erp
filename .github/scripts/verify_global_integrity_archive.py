@@ -186,7 +186,13 @@ def check_wave4_evidence(extracted: Path, output: Path) -> dict[str, object]:
 
     check_retained(packet)
     require(embedded == 44 and len(packet["retained_unsuccessful_attempts"]) == 23, "Wave4 retained report population differs")
-    require(len(packet["accepted_native_owner_packets"]) == 7 and len(packet["original_fx_unique_executed_case_ids"]) == 19,
+    fx_cases = packet["original_fx_unique_executed_case_ids"]
+    require(isinstance(fx_cases, list) and all(isinstance(case, str) and case for case in fx_cases)
+            and len(fx_cases) == len(set(fx_cases)) == 19, "Wave4 unique FX case identities differ")
+    original_fx_cases = {case for label in ("original_fx_full16", "original_fx_current_accounts2", "original_fx_restore_followup3")
+                         for case in packet["accepted_native_owner_packets"][label]["executed_case_ids"]}
+    require(set(fx_cases) == original_fx_cases, "Wave4 unique FX cases differ from retained executed owner cases")
+    require(len(packet["accepted_native_owner_packets"]) == 7,
             "Wave4 source-bound native population differs")
     for native_packet in packet["accepted_native_owner_packets"].values():
         native = json.loads(native_packet["original_report_serialization"])

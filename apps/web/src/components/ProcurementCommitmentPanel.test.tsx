@@ -25,6 +25,12 @@ it("blocks original creator release and makes monetary source evidence visible",
   await waitFor(() => expect(screen.getByRole("button", { name: "Release remaining obligation" })).toBeDisabled());
   expect(screen.getByText("reserve-audit")).toBeVisible();
 });
+it("passes only the canonical budget hierarchy when the procurement scope contains display metadata", async () => {
+  render(<ProcurementCommitmentPanel {...props} scope={{ ...scope, organization_code: "ORG", entity_code: "ENT", organization_name: "Organization", entity_name: "Entity" }} />);
+  await waitFor(() => expect(loadBudgetDetail).toHaveBeenCalled());
+  expect(vi.mocked(loadBudgetDetail).mock.calls[0][1]).toEqual({ workspace_id: "work", organization_id: "org", legal_entity_id: "entity" });
+  expect(screen.getByRole("button", { name: "Release remaining obligation" })).toBeEnabled();
+});
 it("retries precisely the retained command after response loss without permitting a new action", async () => {
   vi.mocked(procurementCommitmentCommand).mockRejectedValueOnce(new Error("lost response")).mockImplementationOnce(async () => {
     vi.mocked(procurementCommitmentGet).mockResolvedValue(released()); return released();

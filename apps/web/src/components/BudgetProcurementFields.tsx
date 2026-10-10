@@ -11,7 +11,8 @@ export function BudgetProcurementFields({ session, scope, periodId, locked, loca
   const ar = locale === "ar";
   useEffect(() => {
     const controller = new AbortController();
-    loadBudgetPage(session, scope, offset, controller.signal).then((page) => {
+    const budgetScope = { workspace_id: scope.workspace_id, organization_id: scope.organization_id, legal_entity_id: scope.legal_entity_id };
+    loadBudgetPage(session, budgetScope, offset, controller.signal).then((page) => {
       if (!controller.signal.aborted) { setRecords(page.envelopes); setNext(page.pagination.has_more); }
     }).catch((error) => { if (!controller.signal.aborted) onError(error); });
     return () => controller.abort();

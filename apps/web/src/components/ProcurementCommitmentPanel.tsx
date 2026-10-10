@@ -26,7 +26,8 @@ export function ProcurementCommitmentPanel({ session, scope, detail, locale, act
     procurementCommitmentGet(session, scope, detail.order.id, controller.signal).then(async (value) => {
       if (controller.signal.aborted || !alive.current) return;
       accept(value);
-      const budget = await loadBudgetDetail(session, scope, value.budget_id, controller.signal);
+      const budgetScope = { workspace_id: scope.workspace_id, organization_id: scope.organization_id, legal_entity_id: scope.legal_entity_id };
+      const budget = await loadBudgetDetail(session, budgetScope, value.budget_id, controller.signal);
       if (!controller.signal.aborted && alive.current) setBudgetVersion(budget.row_version);
     }).catch((error) => { if (!controller.signal.aborted && alive.current) { setFailed(true); onError(error); } });
     return () => controller.abort();

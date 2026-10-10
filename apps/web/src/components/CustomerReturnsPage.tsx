@@ -62,7 +62,7 @@ function ReturnSession({ locale }: { locale: Locale }) {
   }
   useEffect(() => {
     if (!auth.session) return; const controller = new AbortController();
-    loadBudgetIdentity(auth.session, controller.signal).then(value => { if (current() && !controller.signal.aborted) { setIdentity(value); setScopeInput({ workspace_id: value.workspaces[0] ?? "", organization_id: value.organizations[0] ?? "", legal_entity_id: value.entities[0] ?? "" }); } }).catch(caught => { if (!controller.signal.aborted) fail(caught); });
+    loadBudgetIdentity(auth.session, controller.signal).then(value => { if (current() && !controller.signal.aborted) { setScopeInput({ workspace_id: value.workspaces[0] ?? "", organization_id: value.organizations[0] ?? "", legal_entity_id: value.entities[0] ?? "" }); setIdentity(value); } }).catch(caught => { if (!controller.signal.aborted) fail(caught); });
     return () => controller.abort();
   }, [auth.session, auth.revision]);
   useEffect(() => {
@@ -115,7 +115,7 @@ function ReturnSession({ locale }: { locale: Locale }) {
     if (!/^[1-9]\d{0,18}$/.test(refund.amount_minor) || BigInt(refund.amount_minor) > BigInt(balance.refund_due_minor)) { setError("invalid"); return; }
     void send(prepareScopedCommand(`${root}/${plan.id}/refunds`, refund));
   }
-  const input = (label: Word, value: string, change: (value: string) => void, type = "text") => <label>{t(label)}<input required disabled={locked} maxLength={label === "reason" ? 500 : 160} type={type} value={value} onChange={event => change(event.target.value)} /></label>;
+  const input = (label: Word, value: string, change: (value: string) => void, type = "text", disabled = false) => <label>{t(label)}<input required disabled={locked || disabled} maxLength={label === "reason" ? 500 : 160} type={type} value={value} onChange={event => change(event.target.value)} /></label>;
   const money = (value: string | undefined) => value !== undefined && plan ? `${formatExactDecimal(financeMoney(value, plan.currency_precision), locale)} ${plan.currency_code}` : "—";
   const independent = Boolean(plan && identity?.id !== plan.preparer_actor_id), third = independent && identity?.id !== plan?.reviewer_actor_id;
   return <main id="main-content" className="financial-reporting" dir={locale === "ar" ? "rtl" : "ltr"}>
@@ -125,7 +125,7 @@ function ReturnSession({ locale }: { locale: Locale }) {
     {!auth.session ? <form className="panel reporting-form" aria-label={t("signIn")} onSubmit={event => void authenticate(event)}>{(["tenant", "username", "password"] as const).map(key => <div key={key}>{input(key, login[key], value => setLogin({ ...login, [key]: value }), key === "password" ? "password" : "text")}</div>)}<button disabled={locked}>{t("signIn")}</button></form> : <>
       <section className="panel"><bdi>{auth.username}</bdi><button disabled={locked} onClick={() => { if (!auth.session) return; setBusy(true); void endBrowserAdminSession(auth.session).then(() => { if (current()) auth.clear(auth.revision); }).catch(fail).finally(() => { if (current()) setBusy(false); }); }}>{t("signOut")}</button></section>
       {!identity?.stepUp && identity?.human && <form className="panel reporting-form" aria-label={t("stepUp")} onSubmit={event => void authenticate(event, true)}>{input("password", login.password, value => setLogin({ ...login, password: value }), "password")}<button disabled={locked}>{t("stepUp")}</button></form>}
-      <form className="panel reporting-form" aria-label={t("apply")} onSubmit={apply}>{(["workspace_id", "organization_id", "legal_entity_id"] as const).map(key => <div key={key}>{input(key, scopeInput[key], value => { setScopeInput({ ...scopeInput, [key]: value }); setScope(null); setPlans([]); setPlan(null); })}</div>)}<button disabled={locked || !identity}>{t("apply")}</button></form>
+      <form className="panel reporting-form" aria-label={t("apply")} onSubmit={apply}>{(["workspace_id", "organization_id", "legal_entity_id"] as const).map(key => <div key={key}>{input(key, scopeInput[key], value => { setScopeInput(old => ({ ...old, [key]: value })); setScope(null); setPlans([]); setPlan(null); }, "text", !identity)}</div>)}<button disabled={locked || !identity}>{t("apply")}</button></form>
       {scope && has(READ) && <>
         <section className="panel"><button disabled={locked} onClick={() => setRefresh(old => old + 1)}>{t("refresh")}</button><label>{t("select")}<select disabled={locked} value={plan?.id ?? ""} onChange={event => { setPlan(plans.find(row => row.id === event.target.value) ?? null); setError(null); }}><option value="">—</option>{plans.map(row => <option key={row.id} value={row.id}>{row.operation} · {row.status} · {row.id}</option>)}</select></label>{!plans.length && <p>{t("empty")}</p>}</section>
         {has(permissions.prepare) && <form className="panel reporting-form" aria-label={t("prepare")} onSubmit={prepare}>{(Object.keys(fields) as (keyof typeof fields)[]).map(key => <div key={key}>{input(key, fields[key], value => setFields({ ...fields, [key]: value }), key === "posting_date" ? "date" : "text")}</div>)}<button disabled={locked || !allowed("prepare")}>{t("prepare")}</button></form>}

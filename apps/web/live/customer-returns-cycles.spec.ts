@@ -16,7 +16,9 @@ async function enter(page: Page, id = "") {
   await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: "Customer returns", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Original customer returns and partial refunds", exact: true })).toBeVisible();
   const form = page.getByRole("form", { name: "Apply scope", exact: true });
-  for (const [label, value] of Object.entries({ "Workspace ID": "work", "Organization ID": "org", "Legal entity ID": "entity" })) await form.getByLabel(label, { exact: true }).fill(value);
+  const scope = { "Workspace ID": "work", "Organization ID": "org", "Legal entity ID": "entity" };
+  for (const [label, value] of Object.entries(scope)) { const field = form.getByLabel(label, { exact: true }); await expect(field).toBeEnabled(); await field.fill(value); }
+  for (const [label, value] of Object.entries(scope)) await expect(form.getByLabel(label, { exact: true })).toHaveValue(value);
   const loaded = page.waitForResponse(reply => reply.url().endsWith("/customer-returns/plans") && reply.request().method() === "GET");
   await form.getByRole("button", { name: "Apply scope", exact: true }).click(); expect((await loaded).status()).toBe(200);
   if (id) { await page.getByRole("combobox", { name: "Retained credit or refund", exact: true }).selectOption(id); await expect(page.getByRole("region", { name: "Original source and native financial evidence", exact: true })).toBeVisible(); }

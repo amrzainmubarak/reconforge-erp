@@ -36,8 +36,7 @@ def fx_request(number: str = "SERVICE-1", *, net: int = 10001) -> ForeignInvoice
         receivable_account_code="AR", revenue_account_code="REVENUE", cash_account_code="CASH", gain_account_code="GAIN", loss_account_code="LOSS", reason="Synthetic retained foreign service")
 
 
-def seed_fx_runtime(database: tuple[str, str]) -> ReceiptRuntime:
-    runtime = create_receipt_runtime(database)
+def seed_fx_masters(runtime: ReceiptRuntime) -> None:
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         connection.execute("INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES(%s,'EUR','Euro',2)", (runtime.tenant,))
         finance = PostgresFinanceCoreRepository(connection, runtime.tenant)
@@ -49,6 +48,11 @@ def seed_fx_runtime(database: tuple[str, str]) -> ReceiptRuntime:
             identities.grant_permission(tenant_id=runtime.tenant, role_name="receipt-operator", permission_name=permission)
         PostgresReceivablesRepository(connection, runtime.tenant).upsert_customer(customer_code="FOREIGN", name="Synthetic foreign customer", currency_code="EUR",
             credit_limit_minor=9_000_000_000_000_000_000, workspace="work", organization_code="ORG", entity_code="ENTITY")
+
+
+def seed_fx_runtime(database: tuple[str, str]) -> ReceiptRuntime:
+    runtime = create_receipt_runtime(database)
+    seed_fx_masters(runtime)
     return runtime
 
 

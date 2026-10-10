@@ -597,7 +597,10 @@ def test_native_stock_lost_ack_after_period_close_rechecks_current_authority_aft
                     time.sleep(.05)
             assert blocked, "Lost acknowledgement retry must actually wait on its native command lock"
             with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
-                connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE,lifecycle_version=lifecycle_version+1,revoked_at=now(),revoked_by='poster',revocation_reason_code='access_change' WHERE tenant_id=%s AND role_name='receipt-operator' AND permission_name='sales.manage'", (runtime.tenant,))
+                assert connection.execute("""UPDATE reconforge.identity_role_permissions SET active=FALSE,lifecycle_version=lifecycle_version+1,
+                    revoked_at=now(),revoked_by='poster',revocation_reason_code='access_change' WHERE tenant_id=%s
+                    AND role_id IN(SELECT id FROM reconforge.identity_roles WHERE tenant_id=%s AND name='receipt-operator')
+                    AND permission_name='sales.manage'""", (runtime.tenant, runtime.tenant)).rowcount == 1
         with pytest.raises(FinancePostingError):
             attempt.result(timeout=60)
     assert retained_state(runtime) == before

@@ -11,6 +11,11 @@ const words = {
   ar: { cancel: "إلغاء الحزمة قبل الاستلام", cancelled: "ملغاة؛ تحررت حجوزات الاستلام", cancelEvidence: "فاعل الإلغاء ودليله", title: "استلام بتكاليف وصول مدفوعة", scope: "توزع تكلفة الشحن والرسوم حسب قيمة البضاعة. تستلم جميع البنود المختارة ويثبت دفع النقدية في معاملة واحدة بعد مراجعة مستقلة. تبقى مطابقة فاتورة المورد بسعر البضاعة الأصلي.", number: "رقم تكاليف الوصول", freight: "الشحن المدفوع بوحدات العملة الصغرى", duty: "الرسوم المدفوعة بوحدات العملة الصغرى", date: "تاريخ القيد", period: "الفترة المالية", quantity: "كمية الاستلام", prepare: "إعداد حزمة تكاليف الوصول", review: "مراجعة الحزمة", post: "استلام الحزمة وإثبات التكاليف المدفوعة", retry: "إعادة إرسال الأمر نفسه", unknown: "لم يتأكد الرد. أعد الإرسال باستخدام معرف الأمر المحفوظ.", error: "تعذر تأكيد الحزمة. حدّث الأدلة الحالية أو أعد إرسال الأمر نفسه.", prepared: "معدة", reviewed: "مراجعة", posted: "مثبتة", original: "البضاعة", capitalized: "تكلفة المخزون المرسملة", first: "أول الحزم", next: "الحزم التالية", empty: "لا توجد حزمة تكاليف وصول مدفوعة في هذه الصفحة.", reason: "استخدم سبب العملية في أدلة أمر الشراء أعلاه.", receipt: "الاستلام", actor: "المعد / المراجع / المثبت", evidence: "دليل قيد النقدية" },
 };
 
+const validationWords = {
+  en: { members: "Enter a receiving quantity for at least one purchase line.", charges: "Enter positive paid freight or duties with a combined amount no greater than 9000000000000000000 minor units." },
+  ar: { members: "أدخل كمية استلام لبند شراء واحد على الأقل.", charges: "أدخل شحنًا أو رسومًا مدفوعة موجبة بمجموع لا يتجاوز 9000000000000000000 وحدة عملة صغرى." },
+};
+
 interface Props { locale: Locale; session: BrowserAdminSession; scope: ProcurementScope; detail: PartialDetail; actorId: string | null; permissions: string[]; elevated: boolean; locked: boolean; reason: string; periods: { id: string; name: string }[]; onChanged: () => Promise<void>; onBusy: (value: boolean) => void; onError: (error: unknown) => void }
 
 export function LandedCostPanel({ locale, session, scope, detail, actorId, permissions, elevated, locked, reason, periods, onChanged, onBusy, onError }: Props) {
@@ -20,6 +25,7 @@ export function LandedCostPanel({ locale, session, scope, detail, actorId, permi
   const [quantities, setQuantities] = useState<Record<string, string>>({}), [plans, setPlans] = useState<LandedPlan[]>([]), [focus, setFocus] = useState<LandedPlan | null>(null);
   const [after, setAfter] = useState(""), [next, setNext] = useState<string | null>(null), [reload, setReload] = useState(0);
   const [pending, setPending] = useState<PreparedScopedCommand | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState(false);
+  const [validation, setValidation] = useState<"members" | "charges" | null>(null);
   const mounted = useRef(true), running = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
@@ -36,7 +42,7 @@ export function LandedCostPanel({ locale, session, scope, detail, actorId, permi
     allowed(["payables.manage", "payables.settle", "inventory.post", "inventory.valuation.approve", "finance_core.post"]) && actorId !== plan.preparer_actor_id && actorId !== plan.reviewer_actor_id;
   async function send(command: PreparedScopedCommand) {
     if (running.current) return;
-    running.current = true; setBusy(true); onBusy(true); setPending(command); setError(false);
+    running.current = true; setBusy(true); onBusy(true); setPending(command); setError(false); setValidation(null);
     try {
       const result = await landedCommand(session, scope, orderId, command);
       if (mounted.current) { setFocus(result); setPending(null); setReload((value) => value + 1); }
@@ -51,7 +57,8 @@ export function LandedCostPanel({ locale, session, scope, detail, actorId, permi
     event.preventDefault();
     if (locked || pending || !prepareAllowed || !reason.trim() || !/^(0|[1-9][0-9]{0,18})$/.test(freight) || !/^(0|[1-9][0-9]{0,18})$/.test(duty)) return;
     const lines = (detail.lines ?? []).filter((line) => quantities[line.id]?.trim()).map((line) => ({ line_id: line.id, quantity: quantities[line.id].trim() }));
-    if (!lines.length || BigInt(freight) + BigInt(duty) < 1n || BigInt(freight) + BigInt(duty) > 9000000000000000000n) { setError(true); return; }
+    if (!lines.length) { setError(false); setValidation("members"); return; }
+    if (BigInt(freight) + BigInt(duty) < 1n || BigInt(freight) + BigInt(duty) > 9000000000000000000n) { setError(false); setValidation("charges"); return; }
     void send(prepareScopedCommand(landedRoot + "/plans", { number, order_id: orderId, expected_version: detail.order.row_version, lines,
       freight_minor: freight, duty_minor: duty, posting_date: date, period_id: period, reason }));
   }
@@ -60,6 +67,7 @@ export function LandedCostPanel({ locale, session, scope, detail, actorId, permi
   return <section aria-label={t.title}>
     <h3>{t.title}</h3><p>{t.scope}</p>
     {error && <p role="alert">{t.error}</p>}
+    {validation && <p role="alert">{validationWords[locale][validation]}</p>}
     {pending && !busy && <aside role="status"><p>{t.unknown}</p><code>{String(pending.body.command_id)}</code><button disabled={locked} onClick={() => void send(pending)}>{t.retry}</button></aside>}
     {prepareAllowed && <form aria-label={t.prepare} onSubmit={prepare}><fieldset disabled={disabled}><legend>{t.prepare}</legend>
       <label>{t.number}<input required maxLength={40} value={number} onChange={(event) => setNumber(event.target.value)} /></label>

@@ -90,10 +90,19 @@ test("real HTTPS Studio capitalizes paid freight and duties, receives two wareho
     expect(released.lines.map((line: { reserved_receipt_quantity: string }) => line.reserved_receipt_quantity)).toEqual(["0", "0"]);
     const corrected = replacement.getByRole("form", { name: "Prepare landed cost bundle", exact: true });
     await corrected.getByLabel("Landed cost number", { exact: true }).fill("BROWSER-PAID-COST");
+    await corrected.getByLabel("Paid freight in minor units", { exact: true }).fill("777");
+    await corrected.getByLabel("Paid duties in minor units", { exact: true }).fill("224");
+    await corrected.getByLabel("Quantity to receive · ITEM · MAIN/STOCK · EA", { exact: true }).fill("10");
+    await corrected.getByLabel("Quantity to receive · WEIGHT · NORTH/STOCK · KG", { exact: true }).fill("2.50");
+    await expect(corrected.getByRole("button", { name: "Prepare landed cost bundle", exact: true })).toBeEnabled();
     const reprepare = maker.waitForResponse(reply => reply.url().endsWith("/landed-cost/plans") && reply.request().method() === "POST");
     await corrected.getByRole("button", { name: "Prepare landed cost bundle", exact: true }).click();
     const accepted = await acknowledgement(await reprepare);
     expect(accepted.status).toBe("Prepared");
+    expect(accepted.amount_minor).toBe("1001");
+    expect(accepted.id).not.toBe(retained.id);
+    expect(accepted.allocations.map((allocation: { base_minor: string; freight_minor: string; duty_minor: string }) =>
+      [allocation.base_minor, allocation.freight_minor, allocation.duty_minor]).sort()).toEqual([["12000", "548", "158"], ["5000", "229", "66"]]);
     const { region: checking } = await inspect(checker);
     const reviewed = checker.waitForResponse(reply => reply.url().endsWith(`/landed-cost/plans/${accepted.id}/review`));
     await checking.getByRole("button", { name: "Review bundle", exact: true }).click();

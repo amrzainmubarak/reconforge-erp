@@ -22,6 +22,16 @@ def verify_supplier_returns_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
         owner = PostgresSupplierReturnsRepository(connection, runtime.tenant)
         plan = owner.get(rows[0]["id"], actor=actor)
         purchase = owner.purchase.get(rows[0]["order_id"], actor=actor)
+        cancelled_rows = connection.execute("SELECT id FROM reconforge.supplier_return_plans WHERE tenant_id=%s AND order_id=%s AND number='SR1-BROWSER-CANCELLED'", (runtime.tenant, purchase["order"]["id"])).fetchall()
+        require(len(cancelled_rows) == 1, "Reviewed cancellation and fresh replacement must both originate in actual Studio.")
+        cancelled = owner.get(cancelled_rows[0]["id"], actor=actor)
+        require(cancelled["status"] == "Cancelled" and not cancelled["posting_effect_ids"]
+                and len({cancelled["preparer_actor_id"], cancelled["reviewer_actor_id"], cancelled["cancelled_actor_id"]}) == 3
+                and cancelled["receipt_id"] == plan["receipt_id"] and cancelled["native_invoice_id"] == plan["native_invoice_id"]
+                and cancelled["evidence"]["cancel_audit_event_id"] and cancelled["evidence"]["cancel_outbox_event_id"],
+                "Cancelled original claim must retain three-human review/evidence while releasing the same receipt/AP for its replacement.")
+        require(connection.execute("SELECT count(*) FROM reconforge.inventory_receipt_links WHERE tenant_id=%s AND plan_id=%s", (runtime.tenant, cancelled["inverse_plan"]["plan_id"])).fetchone()[0] == 0,
+                "Retained cancelled native inverse must have no inventory or financial publication.")
         require((plan["status"], plan["credit_minor"], plan["inventory_removed_minor"], plan["charge_expense_minor"], plan["amount_minor"])
             == ("Posted", "12000", "12706", "706", "25412"), "Original merchandise credit and capitalized FIFO Remove differ from independent integer oracle.")
         require(len(plan["posting_effect_ids"]) == 3 and len({plan["preparer_actor_id"], plan["reviewer_actor_id"], plan["posted_actor_id"]}) == 3,
@@ -40,5 +50,5 @@ def verify_supplier_returns_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
             JOIN reconforge.finance_accounts a ON a.tenant_id=f.tenant_id AND a.id=line->>'account_id' WHERE f.tenant_id=%s GROUP BY a.account_code""", (runtime.tenant,)).fetchall()
         require({row["account_code"]: int(row["amount"]) for row in balances} == {"AP": 0, "CASH": -6001, "CLEARING": 0, "INVENTORY": 5295, "ADJUSTMENT": 706},
             "Supplier return must expense original paid charges without manufacturing a cash refund.")
-        return {"order_id": purchase["order"]["id"], "supplier_return_id": plan["id"], "supplier_credit_minor": "12000", "removed_fifo_minor": "12706", "charge_expense_minor": "706",
+        return {"order_id": purchase["order"]["id"], "supplier_return_id": plan["id"], "cancelled_supplier_return_id": cancelled["id"], "reviewed_cancellations": 1, "supplier_credit_minor": "12000", "removed_fifo_minor": "12706", "charge_expense_minor": "706",
                 "stock_receipts": 2, "supplier_invoices": 2, "payment_installments": 2, "posting_effects": 10, "expected_turnover_minor": "66414", "remaining_inventory_minor": "5295", "cash_change_minor": "-6001"}

@@ -78,18 +78,40 @@ test("actual HTTPS original supplier debit removes charged FIFO, credits unpaid 
       return source.invoices.at(-1);
     }
     const originalInvoice = await invoice(0, "10");
-    const { region: returning, detail } = await inspect(maker), form = returning.getByRole("form", { name: "Prepare original supplier debit", exact: true });
-    await form.getByLabel("Supplier return number", { exact: true }).fill("SR1-BROWSER");
-    await form.getByLabel("Whole original receipt", { exact: true }).selectOption(detail.receipts.find((r: { order_line_id: string }) => r.order_line_id === detail.lines[0].id).id);
-    await form.getByLabel("Exact unpaid supplier invoice", { exact: true }).selectOption(originalInvoice.id);
-    await form.getByLabel("Supplier return posting date", { exact: true }).fill("2026-10-13");
-    await form.getByLabel("Paid charge expense account", { exact: true }).fill("ADJUSTMENT");
-    const supplierPrepared = maker.waitForResponse(reply => reply.url().endsWith("/supplier-returns/plans") && reply.request().method() === "POST");
-    await form.getByRole("button", { name: "Prepare original supplier debit", exact: true }).click();
-    const debit = await acknowledgement(await supplierPrepared); expect(debit).toMatchObject({ credit_minor: "12000", inventory_removed_minor: "12706", charge_expense_minor: "706" });
+    async function prepareDebit(returnNumber: string) {
+      const { region: returning, detail } = await inspect(maker), form = returning.getByRole("form", { name: "Prepare original supplier debit", exact: true });
+      const originalReceipt = detail.receipts.find((r: { order_line_id: string }) => r.order_line_id === detail.lines[0].id);
+      expect(originalReceipt.supplier_return_owner_id).toBeFalsy();
+      expect(detail.invoices.find((i: { id: string }) => i.id === originalInvoice.id).supplier_return_owner_id).toBeFalsy();
+      // A replacement is a fresh complete request; retain every original field.
+      await form.getByLabel("Supplier return number", { exact: true }).fill(returnNumber);
+      await form.getByLabel("Whole original receipt", { exact: true }).selectOption(originalReceipt.id);
+      await form.getByLabel("Exact unpaid supplier invoice", { exact: true }).selectOption(originalInvoice.id);
+      await form.getByLabel("Supplier return posting date", { exact: true }).fill("2026-10-13");
+      await form.getByLabel("Supplier return fiscal period", { exact: true }).selectOption("period");
+      await form.getByLabel("Paid charge expense account", { exact: true }).fill("ADJUSTMENT");
+      const supplierPrepared = maker.waitForResponse(reply => reply.url().endsWith("/supplier-returns/plans") && reply.request().method() === "POST");
+      await expect(form.getByRole("button", { name: "Prepare original supplier debit", exact: true })).toBeEnabled();
+      await form.getByRole("button", { name: "Prepare original supplier debit", exact: true }).click();
+      const debit = await acknowledgement(await supplierPrepared);
+      expect(debit).toMatchObject({ number: returnNumber, status: "Prepared", credit_minor: "12000", inventory_removed_minor: "12706", charge_expense_minor: "706" });
+      return debit;
+    }
+    async function debitAction(page: Page, debit: { id: string; number: string }, label: string, operation: string) {
+      const { region: current } = await inspect(page);
+      const row = current.getByRole("listitem").filter({ has: current.getByRole("heading", { name: debit.number, exact: true }) });
+      const saved = page.waitForResponse(reply => reply.url().endsWith(`/supplier-returns/plans/${debit.id}/${operation}`) && reply.request().method() === "POST");
+      await row.getByRole("button", { name: label, exact: true }).click();
+      return acknowledgement(await saved);
+    }
+    const cancelledDraft = await prepareDebit("SR1-BROWSER-CANCELLED");
+    expect((await debitAction(checker, cancelledDraft, "Review supplier debit", "review")).status).toBe("Reviewed");
+    const cancelled = await debitAction(poster, cancelledDraft, "Cancel unposted supplier debit", "cancel");
+    expect(cancelled).toMatchObject({ status: "Cancelled", posting_effect_ids: [], cancellation_reason: "Real browser independent enterprise operation" });
+    expect(cancelled.evidence.cancel_audit_event_id && cancelled.evidence.cancel_outbox_event_id).toBeTruthy();
+    const debit = await prepareDebit("SR1-BROWSER"); expect(debit.id).not.toBe(cancelled.id);
     for (const [page, label, operation] of [[checker, "Review supplier debit", "review"], [poster, "Remove original FIFO and credit AP", "post"]] as const) {
-      const { region: current } = await inspect(page), saved = page.waitForResponse(reply => reply.url().endsWith(`/supplier-returns/plans/${debit.id}/${operation}`));
-      await current.getByRole("button", { name: label, exact: true }).click(); await acknowledgement(await saved);
+      await debitAction(page, debit, label, operation);
     }
     const remainingInvoice = await invoice(1, "2.50");
     for (const amount of ["2000", "3000"]) {
@@ -105,6 +127,8 @@ test("actual HTTPS original supplier debit removes charged FIFO, credits unpaid 
     }
     const final = await inspect(poster); expect(final.detail.totals).toMatchObject({ accrued_minor: "17000", credited_minor: "12000", paid_minor: "5000", outstanding_minor: "0" });
     await expect(final.region.getByRole("region", { name: "Original receipt supplier debit", exact: true })).toContainText("Posted");
+    const retainedCancellation = final.region.getByRole("listitem").filter({ has: final.region.getByRole("heading", { name: cancelledDraft.number, exact: true }) });
+    await expect(retainedCancellation).toContainText("Cancelled"); await expect(retainedCancellation.getByRole("button")).toHaveCount(0);
     await poster.setViewportSize({ width: 390, height: 844 }); expect(await poster.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page: poster }).include(".procurement-partial-page").analyze()).violations).toEqual([]);
     await poster.screenshot({ path: test.info().outputPath("supplier-return-390px-en.png"), fullPage: true });

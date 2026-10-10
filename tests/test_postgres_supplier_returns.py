@@ -166,6 +166,28 @@ def test_paid_original_ap_refuses_supplier_return_without_any_draft_or_claim(run
     assert snapshot(runtime) == before
 
 
+def test_reviewed_cancellation_releases_same_original_source_for_one_fresh_posted_debit(runtime: ReceiptRuntime) -> None:
+    purchase = source(runtime)
+    prepared = prepare(runtime, purchase)
+    cancelled = phase(runtime, phase(runtime, prepared, "review", CHECKER), "cancel", POSTER)
+    with runtime.actor(MAKER) as (connection, _, actor):
+        owner = PostgresSupplierReturnsRepository(connection, runtime.tenant)
+        replacement = owner.prepare(preparation(purchase, "SR1-REPLACEMENT"), command_id="replacement-prepare", actor=actor)
+        assert replacement["id"] != cancelled["id"] and replacement["receipt_id"] == cancelled["receipt_id"]
+        assert owner.get(cancelled["id"], actor=actor) == cancelled
+        assert owner.prepare(preparation(purchase), command_id="sr-prepare", actor=actor) == prepared
+    posted = phase(runtime, phase(runtime, replacement, "review", CHECKER), "post", POSTER)
+    with runtime.actor(MAKER) as (connection, _, actor):
+        owner = PostgresSupplierReturnsRepository(connection, runtime.tenant)
+        assert owner.get(cancelled["id"], actor=actor) == cancelled and owner.get(posted["id"], actor=actor) == posted
+        assert connection.execute("SELECT count(*) FROM reconforge.ap_supplier_invoice_credits WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 1
+        assert connection.execute("SELECT count(*) FROM reconforge.inventory_receipt_links WHERE tenant_id=%s AND plan_id=%s", (runtime.tenant, cancelled["inverse_plan"]["plan_id"])).fetchone()[0] == 0
+        assert connection.execute("SELECT sum(remaining_value_minor) FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 0
+        totals = connection.execute("""SELECT count(DISTINCT effect.id),sum((line->>'debit_minor')::numeric),sum((line->>'credit_minor')::numeric)
+            FROM reconforge.finance_posting_effects effect CROSS JOIN LATERAL jsonb_array_elements(effect.snapshot_json->'lines') line WHERE tenant_id=%s""", (runtime.tenant,)).fetchone()
+        assert tuple(totals) == (4, 9600, 9600)
+
+
 @pytest.mark.parametrize("operation,actor_name,reviewed", [("review", MAKER, False), ("post", MAKER, True), ("post", CHECKER, True), ("cancel", MAKER, False), ("cancel", CHECKER, True)])
 def test_current_original_three_human_duties_are_inseparable(runtime: ReceiptRuntime, operation: str, actor_name: str, reviewed: bool) -> None:
     plan = prepare(runtime, source(runtime))

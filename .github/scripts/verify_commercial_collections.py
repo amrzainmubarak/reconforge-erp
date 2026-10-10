@@ -44,11 +44,21 @@ def main() -> int:
                 time.sleep(.2)
         environment.update(RECONFORGE_TEST_POSTGRES_ADMIN_DSN=admin_dsn, RECONFORGE_TEST_POSTGRES_DSN=app_dsn)
         groups = sys.argv[1:] or ["tests/test_postgres_commercial_collections.py", "tests/test_postgres_stock_commerce.py", "tests/test_postgres_stock_sales.py"]
-        with (output / "native-gate.log").open("w", encoding="utf-8") as log:
-            result = subprocess.run([sys.executable, "-m", "pytest", "-q", "--tb=short", *groups,
-                "--junitxml=" + str(output / "native-gate.xml")], cwd=ROOT, env=environment, stdout=log, stderr=subprocess.STDOUT,
-                check=False, timeout=900)  # nosec B603
-        print((output / "native-gate.log").read_text(encoding="utf-8")[-10000:])
+        result = subprocess.run([sys.executable, "-m", "pytest", "-q", "--tb=short", *groups,
+            "--junitxml=" + str(output / "native-gate.xml")], cwd=ROOT, env=environment,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            check=False, timeout=900)  # nosec B603
+        diagnostic = result.stdout
+        xml_path = output / "native-gate.xml"
+        xml = xml_path.read_text(encoding="utf-8") if xml_path.exists() else None
+        for secret in (admin_dsn, app_dsn, admin_password, app_password):
+            diagnostic = diagnostic.replace(secret, "[redacted]")
+            if xml is not None:
+                xml = xml.replace(secret, "[redacted]")
+        (output / "native-gate.log").write_text(diagnostic, encoding="utf-8")
+        if xml is not None:
+            xml_path.write_text(xml, encoding="utf-8")
+        print(diagnostic[-10000:])
         return result.returncode
     finally:
         run(["docker", "rm", "--force", container])

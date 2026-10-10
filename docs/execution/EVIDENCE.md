@@ -1,5 +1,17 @@
 # ReconForge Execution Evidence Log
 
+- GLOBAL-20261010 corrective migration gate: actual nonowner PostgreSQL17.10
+  source owners posted at0122, then upgraded to0123 and returned compatibly to
+  0122. All financial rows, function OIDs/ACL/search paths, table ACL/FORCE RLS,
+  policies and trigger identities retain their digest. Both corrected function
+  bodies refresh; populated asset/landed-cost destructive downgrades refuse.
+  This case and ordered empty procurement downgrade/re-upgrade pass. The same
+  first packet retains one later stock fixture failure caused by recreated
+  downstream table ACLs; restoring exactly the prior fixture grants fixes it.
+  The affected stock migration plus native finance posting gate then passes
+  17/17 with zero skips/xfails/xpasses. No production grant expansion is used.
+  Mandatory native dispatch includes the populated upgrade as a complete file.
+
 - GLOBAL-20261010 first hosted acceptance is failed, not relabeled:
   CI38006481633/head5e575031. Both Python versions exposed the Phase4 backlog
   contract drift; Python3.12 retained1failed/4665passed/663 pre-existing optional

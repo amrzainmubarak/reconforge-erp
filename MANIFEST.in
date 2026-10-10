@@ -1398,6 +1398,8 @@ include tests/test_postgres_financial_read_plans.py
 include tests/test_container_resource_counters.py
 include tests/test_global_engineering_pair.py
 include tests/test_host_processor_observation.py
+include tests/test_wave4_posting_pair_verifier.py
+include .github/scripts/verify_wave4_posting_pair.py
 include tests/fixtures/enterprise-warmup-20-ea83335c.json
 include .github/scripts/benchmark_global_engineering_pair.py
 include apps/web/src/operational-fx-tax-fixture.json

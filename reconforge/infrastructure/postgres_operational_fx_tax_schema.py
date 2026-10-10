@@ -272,7 +272,7 @@ BEGIN
   AND reconforge.fx_event(t,i,l.audit_event_id,l.outbox_event_id,l.posted_actor_id,'operational_fx_posted',jsonb_build_object('plan_digest',v->>'plan_digest','posting_effect_id',f.id)), 'FX publication requires three distinct humans and exact unreversed native effect');
   IF p.kind='settle' THEN
    SELECT * INTO receipt FROM reconforge.ar_receipts WHERE tenant_id=t AND id=l.receipt_id;
-   PERFORM reconforge.fx_assert(receipt.id IS NOT NULL AND receipt.receipt_number=p.id AND receipt.receipt_date::text=v->>'posting_date'
+   PERFORM reconforge.fx_assert(receipt.id IS NOT NULL AND receipt.receipt_number=upper(p.id) AND receipt.receipt_date::text=v->>'posting_date'
    AND receipt.currency_code=inv.currency_code AND receipt.amount_minor=(equation->>'foreign_minor')::numeric AND receipt.status='Posted'
    AND (receipt.workspace_id,receipt.organization_id,receipt.legal_entity_id,receipt.customer_id)=(inv.workspace_id,inv.organization_id,inv.legal_entity_id,inv.customer_id)
    AND receipt.currency_precision=fp AND to_jsonb(receipt)->>'currency_registry_digest'=a->'foreign_policy'->>'currency_registry_digest'

@@ -4,7 +4,7 @@ claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0122_pg_fixed_assets"
+current_source_migration_head: "0123_pg_native_event_dispatch"
 native_source_extensions:
   claim_boundary: Separate native owner kernels compose existing services; these entries do not retroactively increase historical application-service parity counts.
   ci_shard: erp-expansion
@@ -13,6 +13,8 @@ native_source_extensions:
     - {id: LC1, adapter: reconforge.infrastructure.postgres_landed_cost.PostgresLandedCostRepository, migration: 0121_pg_landed_cost, test: tests/test_postgres_landed_cost.py, additional_tests: [tests/test_postgres_landed_cost_api.py], limitation: prepaid_value_allocation_before_initial_fifo_no_postpublication_revaluation}
     - {id: FA1, adapter: reconforge.infrastructure.postgres_fixed_assets.PostgresFixedAssetsRepository, migration: 0122_pg_fixed_assets, test: tests/test_postgres_fixed_assets.py, limitation: functional_currency_cash_acquisition_cumulative_service_month_straight_line}
   cross_domain_test: tests/test_postgres_global_operating_cycles.py
+  compatibility_migration: 0123_pg_native_event_dispatch
+  compatibility_test: tests/test_postgres_native_event_dispatch_migration.py
 production_foundation_review:
   executed_at: "2026-10-03"
   evidence: "PRODUCTION_AUDIT_2026-10-03.md"

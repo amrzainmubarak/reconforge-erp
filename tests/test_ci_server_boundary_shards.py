@@ -97,7 +97,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 44  # Prior40 plus three owners and the combined operating cycle.
+    assert len(commands) == 45  # Prior40, three owners, combined cycle and populated dispatch upgrade.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -142,6 +142,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
         ("tests/test_postgres_landed_cost_api.py", "erp-expansion"),
         ("tests/test_postgres_fixed_assets.py", "erp-expansion"),
         ("tests/test_postgres_global_operating_cycles.py", "erp-expansion"),
+        ("tests/test_postgres_native_event_dispatch_migration.py", "erp-expansion"),
 
     ):
         selected = [shard for shard, entries in groups.items()
@@ -163,6 +164,7 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
         "tests/test_postgres_commercial_collections.py", "tests/test_postgres_landed_cost.py",
         "tests/test_postgres_landed_cost_api.py", "tests/test_postgres_fixed_assets.py",
         "tests/test_postgres_global_operating_cycles.py",
+        "tests/test_postgres_native_event_dispatch_migration.py",
     }
     assert shlex.split(unit["run"]) == [
         "uv", "run", "--no-sync", "pytest", *[f"--ignore={path}" for path in sorted(ignored)],

@@ -70,6 +70,7 @@ jobs:
           --ignore=tests/test_postgres_global_operating_cycles.py
           --ignore=tests/test_postgres_landed_cost.py
           --ignore=tests/test_postgres_landed_cost_api.py
+          --ignore=tests/test_postgres_native_event_dispatch_migration.py
           --ignore=tests/test_postgres_stock_commerce.py
           --ignore=tests/test_postgres_stock_commerce_api.py
           --ignore=tests/test_postgres_stock_commerce_migrations.py
@@ -613,6 +614,7 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py -q
               uv run --no-sync pytest tests/test_postgres_fixed_assets.py -q
               uv run --no-sync pytest tests/test_postgres_global_operating_cycles.py -q
+              uv run --no-sync pytest tests/test_postgres_native_event_dispatch_migration.py -q
               ;;
             finance-reporting)
               uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q

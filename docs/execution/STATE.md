@@ -27,8 +27,20 @@ Benchmark instrumentation at3dabe93e passed10 genuine native cycles on revision0
 in22.672s, retaining10 raw cycle observations,11 raw read observations and two
 resource samples. It verifies nonowner/NOBYPASSRLS execution and unchanged source;
 it does not accept new business owners or establish a performance improvement.
-Final integrated native/UI/restore/regression/security gates and a new
-Draft PR remain pending. No production, banking or competitor superiority claim.
+Draft PR128 is open above PR127. Its first fixed-source hosted gate,
+CI38006481633 at5e575031, failed and remains retained. Seven normal HTTPS
+browser/restore jobs, web, four engine-parity jobs, HA/DR, object storage,
+Security38006481629, Docker38006481705 and CodeQL38006481715 passed on that
+source; these are not overall acceptance. Failure analysis found unrelated
+event/master dispatch reading new owner tables under legacy restricted roles,
+an unordered direct multiline downgrade, and a Phase4 backlog contract drift.
+Repairs preserve RLS, ACLs, immutable identities and financial closure. Genuine
+CA1/LC1 event recovery now passes loss of acknowledgement, crashed leases,
+fencing and exactly one consumer receipt/effect with unchanged financial rows.
+Additive0123 refreshes corrected invoker functions for existing0122 databases;
+its downgrade preserves the compatible correction without deleting history.
+Final repaired-source integrated acceptance and benchmark remain pending.
+No production, banking or competitor superiority claim.
 
 The fixed6272889d source now passes the final native1000-cycle local benchmark:
 zero errors, independent493671004minor totals,1.316464posting cycles/s,

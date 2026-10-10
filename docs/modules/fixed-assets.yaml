@@ -9,7 +9,7 @@ data_classification: confidential_financial
 retention_policy: immutable_financial_history
 permissions: [finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
 default_roles: [independent_preparer, independent_reviewer, independent_poster]
-migrations: [0122_pg_fixed_assets]
+migrations: [0122_pg_fixed_assets, 0123_pg_native_event_dispatch]
 domain_invariants:
   - Exact bounded integer minor units with retained native currency policy
   - Cumulative straight-line ROUND_HALF_UP entitlement without monthly rounding drift

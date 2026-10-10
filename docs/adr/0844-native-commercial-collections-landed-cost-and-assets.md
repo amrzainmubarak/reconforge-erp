@@ -49,6 +49,13 @@ cost, revenue and settlement consequences before being called complete.
 
 ## Rollback
 
+Corrective revision0123 replaces only the LC1/FA1 reverse-close invoker
+functions, with unchanged signatures, trigger references and storage contracts.
+It refreshes existing0122 installations; rerunning table-creation SQL is not an
+upgrade strategy. Returning the revision metadata to0122 retains the compatible
+dispatch correction, rather than restoring known broken unrelated-owner reads.
+Existing source revisions still refuse to remove populated financial history.
+
 Keep the PR stack unmerged. Downgrade new owners only when their protected source
 tables are empty; otherwise preserve history and restore a verified pre-upgrade
 backup to an isolated target. Never delete posted financial effects for rollback.

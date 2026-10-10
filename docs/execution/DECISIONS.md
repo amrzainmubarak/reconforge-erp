@@ -1,5 +1,16 @@
 # ReconForge Execution Decisions Log
 
+- GLOBAL-20261010 corrective integration: preserve failed CI38006481633 at
+  5e575031. Classify native owner namespaces before reading new protected tables
+  for unrelated legacy events/masters. Retain invoker authority and every
+  relevant owner closure; never grant legacy workers access merely to pass.
+  Outbox event identities are opaque case-sensitive keys, separately validated
+  from normalized tenant/consumer scopes. Wrong-case IDs have no lease authority.
+  Additive0123 replaces only LC/FA reverse-close functions, preserving OIDs,
+  ACLs and financial history. Downgrade to0122 retains this compatible fix;
+  destructive source downgrades remain guarded by their original revisions.
+  Keep Phase4 program identity and track ADR0844 as its active sprint.
+
 - GLOBAL-20261010 / ADR0844: extend the existing native source owners with CA1
   invoice installments, LC1 prepaid receipt charges and FA1 cash-funded asset
   lifecycle. Preserve original ledger, currency, identity, inventory and audit

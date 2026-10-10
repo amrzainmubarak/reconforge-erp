@@ -1,5 +1,20 @@
 # ReconForge Execution Evidence Log
 
+- GLOBAL-20261010 first hosted acceptance is failed, not relabeled:
+  CI38006481633/head5e575031. Both Python versions exposed the Phase4 backlog
+  contract drift; Python3.12 retained1failed/4665passed/663 pre-existing optional
+  prerequisite skips. Native failures exposed inappropriate new owner reads
+  by existing restricted workers/masters and a direct downgrade dependency.
+  Seven HTTPS browser/restore jobs and separate web/engine/HA/DR/storage jobs
+  passed; Security38006481629, Docker38006481705 and CodeQL38006481715 passed
+  only that initial source. Overall acceptance remains failed until successor.
+  Source-bound restricted LC event and FA master repair gates each pass2/2,
+  and real CA1/LC1 Outbox recovery passes2/2 in69.231s with zero selected skips.
+  Recovery XML SHA256
+  80b731558d577f97c07a3951cbcdb9bfeb05509ff5b2ba929412467c5e3d5619.
+  Financial source/FIFO/GL rows retain their exact digest after dead-letter
+  replay, lost acknowledgement, lease expiration and fenced recovery.
+
 - GLOBAL-20261010 fixed6272889d native benchmark: PostgreSQL17.10/full122,
   nonowner/NOBYPASSRLS false,false;1000 three-human cycles/four workers, zero
   errors, independently expected493671004minor totals. Posting759.610646s,

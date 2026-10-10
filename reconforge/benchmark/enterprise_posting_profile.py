@@ -16,6 +16,8 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
+_FUNCTION_PROFILE_LOCK = threading.Lock()
+
 
 class PostingProfile:
     def __init__(self, enabled: bool = True, *, profile_cpu: bool = False) -> None:
@@ -38,26 +40,34 @@ class PostingProfile:
     def actor(self, runtime: Any, username: str, index: int, phase: str) -> Iterator[tuple[Any, Any, Any]]:
         # Profile only the first32 cycles, separately per worker thread. Retain
         # code identifiers and counters, never arguments, locals or SQL content.
-        profiler = cProfile.Profile() if self.enabled and self.profile_cpu and 0 <= index < 32 else None
+        acquired = (self.enabled and self.profile_cpu and 0 <= index < 32
+                    and _FUNCTION_PROFILE_LOCK.acquire(blocking=False))
+        profiler = cProfile.Profile() if acquired else None
+        profiler_started = False
         try:
             if profiler is not None:
                 profiler.enable()
+                profiler_started = True
             with self._actor(runtime, username, index, phase) as values:
                 yield values
         finally:
-            if profiler is not None:
-                profiler.disable()
-                stats = pstats.Stats(profiler)
-                with self._lock:
-                    for (filename, line, function), (primitive, calls, own, cumulative, _callers) in getattr(stats, "stats").items():
-                        key = (phase, filename, line, function)
-                        row = self._functions.setdefault(key, {"phase": phase, "filename": filename,
-                            "line": line, "function": function, "primitive_calls": 0, "calls": 0,
-                            "self_seconds": 0.0, "cumulative_seconds": 0.0})
-                        row["primitive_calls"] += primitive
-                        row["calls"] += calls
-                        row["self_seconds"] += own
-                        row["cumulative_seconds"] += cumulative
+            try:
+                if profiler is not None and profiler_started:
+                    profiler.disable()
+                    stats: Any = pstats.Stats(profiler)
+                    with self._lock:
+                        for (filename, line, function), (primitive, calls, own, cumulative, _callers) in stats.stats.items():
+                            key = (phase, filename, line, function)
+                            row = self._functions.setdefault(key, {"phase": phase, "filename": filename,
+                                "line": line, "function": function, "primitive_calls": 0, "calls": 0,
+                                "self_seconds": 0.0, "cumulative_seconds": 0.0})
+                            row["primitive_calls"] += primitive
+                            row["calls"] += calls
+                            row["self_seconds"] += own
+                            row["cumulative_seconds"] += cumulative
+            finally:
+                if acquired:
+                    _FUNCTION_PROFILE_LOCK.release()
 
     @contextmanager
     def _actor(self, runtime: Any, username: str, index: int, phase: str) -> Iterator[tuple[Any, Any, Any]]:
@@ -119,7 +129,7 @@ class PostingProfile:
                 "raw_phase_observations": sorted(self._observations, key=lambda row: (row["index"], row["phase"])),
                 "phase_totals": phases, "statement_templates": sorted(self._sql.values(), key=lambda row: -row["seconds"]),
                 "function_profile": {"enabled": self.enabled and self.profile_cpu, "cycle_ceiling": 32,
-                    "timer_scope": "cProfile wall durations include blocking I/O; phase thread CPU excludes other workers",
+                    "timer_scope": "cProfile wall durations include blocking I/O; one process-wide profiler at a time; phase thread CPU excludes other workers",
                     "functions": sorted(self._functions.values(), key=lambda row: (-row["self_seconds"], row["phase"], row["filename"], row["line"]))},
                 "sensitive_collection": "no SQL text, parameters, credentials, error messages or financial rows"}
 

@@ -84,6 +84,33 @@ def test_function_discovery_ceiling_preserves_business_work_without_profiling_la
     assert report["function_profile"]["functions"] == []
 
 
+def test_concurrent_phase_observation_cannot_start_conflicting_process_profilers() -> None:
+    from concurrent.futures import ThreadPoolExecutor
+    from contextlib import contextmanager
+    from threading import Barrier
+
+    from reconforge.benchmark.enterprise_posting_profile import PostingProfile
+
+    barrier = Barrier(4)
+
+    class Runtime:
+        @contextmanager
+        def actor(self, username: str):
+            barrier.wait(timeout=5)
+            yield object(), object(), object()
+
+    profile = PostingProfile(profile_cpu=True)
+
+    def work(index: int) -> int:
+        with profile.actor(Runtime(), "human", index, "post"):
+            return sum(range(1000))
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        assert list(executor.map(work, range(4))) == [499500] * 4
+    assert len(profile.report()["raw_phase_observations"]) == 12
+    assert profile.report()["function_profile"]["functions"]
+
+
 def test_snapshot_comparison_keeps_failed_raw_samples_without_false_acceptance(monkeypatch: pytest.MonkeyPatch) -> None:
     import reconforge.benchmark.enterprise_snapshot as benchmark
     from reconforge.domain.finance_posting import HEADER_FIELDS, make_entry_snapshot, validation_digest

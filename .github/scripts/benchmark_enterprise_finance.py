@@ -59,6 +59,8 @@ def main() -> int:
     parser.add_argument("--snapshot-lines", type=int, default=0, help="Optional separate balanced 2..1000-line dimensional snapshot profile")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if args.profile_cpu and args.workers != 1:
+        parser.error("Function discovery requires --workers 1; use --profile-stages for concurrent phase CPU measurements")
     counts = sorted(set(args.counts))
     if (not counts or counts[0] < 1 or counts[-1] > 10000 or not 1 <= args.workers <= 16
             or not 1 <= args.repetitions <= 10 or not 30 <= args.max_seconds <= 7200

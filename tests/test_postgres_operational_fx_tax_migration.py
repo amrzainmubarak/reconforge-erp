@@ -8,6 +8,7 @@ import pytest
 
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
 from reconforge.infrastructure.postgres_operational_fx_tax_schema import DOWNGRADE_SQL, UPGRADE_SQL
 from reconforge.infrastructure.postgres_outbox import PostgresOutboxRepository
@@ -133,3 +134,51 @@ def test_legacy_customer_and_financial_master_maintenance_needs_no_fx_read_grant
             assert connection.execute(statement).rowcount == 1
     with db["boundary"].transaction("finance_scope") as connection:
         assert connection.execute("SELECT name FROM reconforge.ar_customers WHERE customer_code='ORDINARY'").fetchone()[0] == "Maintained ordinary customer"
+
+
+def test_populated_fx_workspace_preserves_unrelated_account_owner_permissions(receipt_database: tuple[str, str]) -> None:
+    import psycopg
+    from psycopg import sql
+
+    runtime = seed_fx_runtime(receipt_database)
+    finish_fx(runtime, prepare_fx(runtime))
+    role = "fx_legacy_master_" + uuid4().hex[:10]
+    app_user = psycopg.conninfo.conninfo_to_dict(runtime.factory.settings.dsn)["user"]
+    boundary = PostgresTenantBoundary(runtime.factory)
+
+    @contextmanager
+    def legacy() -> Any:
+        with boundary.transaction(runtime.tenant) as connection:
+            connection.execute(sql.SQL("SET LOCAL ROLE {}").format(sql.Identifier(role)))
+            yield connection
+
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        admin.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(sql.Identifier(role)))
+        admin.execute(sql.SQL("GRANT {} TO {}").format(sql.Identifier(role), sql.Identifier(app_user)))
+        admin.execute(sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(role)))
+        admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA reconforge TO {}").format(sql.Identifier(role)))
+        for table in ("operational_fx_sources", "operational_fx_plans", "operational_fx_reviews", "operational_fx_links", "operational_fx_commands"):
+            admin.execute(sql.SQL("REVOKE ALL ON {} FROM {}").format(sql.Identifier("reconforge", table), sql.Identifier(role)))
+    try:
+        with legacy() as connection:
+            assert connection.execute("SELECT has_table_privilege(current_user,'reconforge.operational_fx_plans','SELECT') allowed").fetchone()["allowed"] is False
+            finance = PostgresFinanceCoreRepository(connection, runtime.tenant)
+            finance.upsert_account(account_code="UNRELATED", name="Ordinary account", account_type="Asset", chart_code="DEFAULT", workspace="work")
+            finance.upsert_account(account_code="UNRELATED", name="Maintained ordinary account", account_type="Asset", chart_code="DEFAULT", workspace="work")
+            native = PostgresReceivablesRepository(connection, runtime.tenant)
+            native.upsert_customer(customer_code="ORDINARY", name="Ordinary customer", currency_code="EUR", credit_limit_minor=10000,
+                workspace="work", organization_code="ORG", entity_code="ENTITY")
+            native.upsert_customer(customer_code="ORDINARY", name="Maintained customer", currency_code="EUR", credit_limit_minor=20000,
+                workspace="work", organization_code="ORG", entity_code="ENTITY")
+        # A master actually used by retained FX remains protected and invoker
+        # access to its exact owner is required before accepting its mutation.
+        with pytest.raises(psycopg.errors.InsufficientPrivilege, match="operational_fx_plans"), legacy() as connection:
+            connection.execute("UPDATE reconforge.finance_accounts SET name='Hidden source change' WHERE tenant_id=%s AND account_code='AR'", (runtime.tenant,))
+        with runtime.actor("poster") as (connection, _, actor):
+            assert connection.execute("SELECT name FROM reconforge.finance_accounts WHERE tenant_id=%s AND account_code='UNRELATED'", (runtime.tenant,)).fetchone()["name"] == "Maintained ordinary account"
+            sources = connection.execute("SELECT id FROM reconforge.operational_fx_sources WHERE tenant_id=%s", (runtime.tenant,)).fetchall()
+            assert PostgresOperationalFxTaxRepository(connection, runtime.tenant).get(sources[0]["id"], actor=actor)["foreign_outstanding_minor"] == 11401
+    finally:
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            admin.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(role)))
+            admin.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))

@@ -411,3 +411,34 @@ def test_native_zero_and_three_decimal_foreign_policies_match_independent_ration
         assert detail["foreign_policy"]["currency_precision"] == precision and detail["functional_policy"]["currency_precision"] == 2
         assert detail["foreign_outstanding_minor"] == detail["functional_outstanding_minor"] == 0
         assert PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(detail["invoice_id"])["status"] == "Paid"
+
+
+def test_rebound_registry_keeps_historical_source_and_refuses_new_policy_reinterpretation(fx_runtime: ReceiptRuntime) -> None:
+    from reconforge.infrastructure.postgres_master_data import PostgresMasterDataRepository
+    from reconforge.utils.money import CurrencyRegistry, CurrencySpec
+
+    runtime = fx_runtime
+    prepared = prepare_fx(runtime)
+    posted = finish_fx(runtime, prepared)
+    with runtime.actor("poster") as (connection, _, actor):
+        original = PostgresOperationalFxTaxRepository(connection, runtime.tenant).plan_evidence(posted["id"], actor=actor)
+    try:
+        # Same scales, different immutable registry provenance: equality of
+        # precision alone cannot silently substitute a later monetary policy.
+        CurrencyRegistry.register(CurrencySpec(code="EUR", name="Synthetic same-scale drift", minor_units=2),
+            registry_version="wave4-native-rebound", source="Synthetic policy drift")
+        with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+            rebound = PostgresMasterDataRepository(connection).bind_currency_registry(tenant_id=runtime.tenant, workspace="work")
+            assert rebound["registry_digest"] != original["source"]["foreign_policy"]["currency_registry_digest"]
+        assert prepare_fx(runtime) == prepared
+        with runtime.actor("poster") as (connection, _, actor):
+            repository = PostgresOperationalFxTaxRepository(connection, runtime.tenant)
+            assert repository.plan_evidence(posted["id"], actor=actor) == original
+        with pytest.raises(FinancePostingError, match="original functional currency policy"):
+            settle_fx(runtime, posted["source_id"], 100, "1.3", "2026-10-02")
+        with runtime.actor("poster") as (connection, _, actor):
+            assert connection.execute("SELECT count(*) n FROM reconforge.finance_entries WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 1
+            assert connection.execute("SELECT count(*) n FROM reconforge.ar_receipts WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 0
+            assert PostgresOperationalFxTaxRepository(connection, runtime.tenant).plan_evidence(posted["id"], actor=actor) == original
+    finally:
+        CurrencyRegistry.reset_to_bundled()

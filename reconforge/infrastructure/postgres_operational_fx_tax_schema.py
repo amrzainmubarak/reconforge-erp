@@ -372,7 +372,8 @@ BEGIN
      AND upper(left(z.entry_number,4))='FX1-') THEN CONTINUE; END IF;
    ELSE
     IF NOT EXISTS(SELECT 1 FROM reconforge.finance_entries z WHERE z.tenant_id=changed->>'tenant_id' AND upper(left(z.entry_number,4))='FX1-'
-     AND ((TG_TABLE_NAME='finance_accounts' AND z.workspace_id=changed->>'workspace_id')
+     AND ((TG_TABLE_NAME='finance_accounts' AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines used
+       WHERE used.tenant_id=z.tenant_id AND used.entry_id=z.id AND used.account_id=changed->>'id'))
       OR(TG_TABLE_NAME='finance_journals' AND z.journal_id=changed->>'id')
       OR(TG_TABLE_NAME='fiscal_periods' AND z.period_id=changed->>'id'))) THEN CONTINUE; END IF;
    END IF;
@@ -381,7 +382,8 @@ BEGIN
    JOIN reconforge.finance_entries native ON native.tenant_id=z.tenant_id AND native.id=z.entry_id
    JOIN reconforge.ar_invoices ar ON ar.tenant_id=source.tenant_id AND ar.id=source.invoice_id
    WHERE z.tenant_id=changed->>'tenant_id' AND
-   ((TG_TABLE_NAME='finance_accounts' AND native.workspace_id=changed->>'workspace_id')
+   ((TG_TABLE_NAME='finance_accounts' AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines used
+     WHERE used.tenant_id=native.tenant_id AND used.entry_id=native.id AND used.account_id=changed->>'id'))
    OR (TG_TABLE_NAME='finance_journals' AND native.journal_id=changed->>'id')
    OR (TG_TABLE_NAME='fiscal_periods' AND z.phase<2 AND native.period_id=changed->>'id')
    OR (TG_TABLE_NAME='legal_entities' AND source.legal_entity_id=changed->>'id')

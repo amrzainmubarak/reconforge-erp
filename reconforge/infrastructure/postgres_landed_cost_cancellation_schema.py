@@ -72,6 +72,13 @@ CREATE FUNCTION reconforge.landed_cost_close(t TEXT,i TEXT) RETURNS VOID LANGUAG
 DECLARE p RECORD;c RECORD;expected JSONB;projection JSONB;
 BEGIN
  PERFORM reconforge.landed_cost_close_pre_cancel(t,i);
+ -- Refresh installed 0123 owners too: ordinary-source query avoidance must
+ -- never permit a charged owner to lose its exact native capitalization.
+ IF EXISTS(SELECT 1 FROM reconforge.landed_cost_allocations a JOIN reconforge.procurement_partial_receipts d
+ ON d.tenant_id=a.tenant_id AND d.id=a.receipt_id JOIN reconforge.inventory_receipt_plans r
+ ON r.tenant_id=d.tenant_id AND r.id=d.receipt_plan_id WHERE a.tenant_id=t AND a.plan_id=i
+ AND r.total_value_minor::numeric<>a.base_minor::numeric+a.freight_minor+a.duty_minor) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Charged owner requires its exact capitalized native receipt cost'; END IF;
  SELECT * INTO c FROM reconforge.landed_cost_cancellations WHERE tenant_id=t AND plan_id=i;
  IF c IS NULL THEN RETURN; END IF;
  SELECT * INTO p FROM reconforge.landed_cost_plans WHERE tenant_id=t AND id=i;

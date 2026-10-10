@@ -281,3 +281,18 @@ def test_ordinary_multiline_receipt_role_needs_no_landed_owner_privilege(runtime
         with psycopg.connect(runtime.admin_dsn) as admin:
             for table in tables:
                 admin.execute(sql.SQL("GRANT SELECT ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(app_user)))
+
+
+def test_lost_native_charge_participant_cannot_prepare_uncapitalized_bundle(runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch) -> None:
+    """All original native rows/commands can be valid while the cost is wrong."""
+    import psycopg
+    source = create_order(runtime)
+    before = all_state(runtime)
+    original = PostgresProcurementPartialRepository.prepare_receipt_line
+    def lose_charge(self: PostgresProcurementPartialRepository, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        kwargs.pop("_source_owner", None)
+        return original(self, *args, **kwargs)
+    monkeypatch.setattr(PostgresProcurementPartialRepository, "prepare_receipt_line", lose_charge)
+    with pytest.raises(psycopg.errors.CheckViolation, match="conserved bundle|capitalized"), runtime.actor(MAKER) as (connection, _, actor):
+        PostgresLandedCostRepository(connection, runtime.tenant).prepare(request(source), command_id="faulty-native-cost", actor=actor)
+    assert all_state(runtime) == before

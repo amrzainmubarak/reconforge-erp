@@ -204,7 +204,7 @@ CREATE FUNCTION reconforge.landed_cost_ack(t TEXT,i TEXT,ack_stage INTEGER) RETU
 $lc$;
 CREATE FUNCTION reconforge.landed_cost_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
 DECLARE p RECORD;o RECORD;e RECORD;r RECORD;l RECORD;f RECORD;a RECORD;d RECORD;n RECORD;c RECORD;header JSONB;lines JSONB;allocations JSONB;
- cash TEXT;clearing TEXT;maker TEXT;total NUMERIC;expected_freight NUMERIC;expected_duty NUMERIC;expected_actor TEXT;expected_request JSONB;
+ cash TEXT;clearing TEXT;maker TEXT;total NUMERIC;native_cost NUMERIC;expected_freight NUMERIC;expected_duty NUMERIC;expected_actor TEXT;expected_request JSONB;
 BEGIN
  SELECT * INTO p FROM reconforge.landed_cost_plans WHERE tenant_id=t AND id=i;
  IF p IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='LC1 source owner is required'; END IF;
@@ -255,7 +255,7 @@ BEGIN
  FOR a IN SELECT * FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i ORDER BY sequence LOOP
  SELECT * INTO d FROM reconforge.procurement_partial_receipts WHERE tenant_id=t AND id=a.receipt_id;
  SELECT * INTO n FROM reconforge.procurement_partial_order_lines WHERE tenant_id=t AND order_id=o.id AND id=a.order_line_id;
- SELECT q.receipt_clearing_account_id INTO clearing FROM reconforge.inventory_receipt_plans q WHERE q.tenant_id=t AND q.id=d.receipt_plan_id;
+ SELECT q.receipt_clearing_account_id,q.total_value_minor INTO clearing,native_cost FROM reconforge.inventory_receipt_plans q WHERE q.tenant_id=t AND q.id=d.receipt_plan_id;
  SELECT floor((p.payload#>>'{request,freight_minor}')::numeric*a.base_minor/total)+CASE WHEN rank<=residual THEN 1 ELSE 0 END INTO expected_freight
  FROM (SELECT order_line_id,row_number() OVER(ORDER BY mod((p.payload#>>'{request,freight_minor}')::numeric*base_minor,total) DESC,order_line_id COLLATE "C") rank,
  (p.payload#>>'{request,freight_minor}')::numeric-sum(floor((p.payload#>>'{request,freight_minor}')::numeric*base_minor/total)) OVER() residual
@@ -266,6 +266,7 @@ BEGIN
  FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i) weights WHERE order_line_id=a.order_line_id;
  IF d IS NULL OR n IS NULL OR d.order_id<>o.id OR d.order_line_id<>n.id OR a.quantity_text::numeric<>d.quantity
  OR a.base_minor<>d.total_minor OR a.base_minor::numeric<>d.quantity*n.unit_price_minor
+ OR native_cost IS DISTINCT FROM a.base_minor::numeric+a.freight_minor+a.duty_minor
  OR a.freight_minor<>expected_freight OR a.duty_minor<>expected_duty OR clearing IS DISTINCT FROM lines->0->>'account_id'
  OR d.stage<>p.phase OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(p.payload#>'{request,lines}') z
  WHERE z->>'line_id'=n.id AND (z->>'quantity')::numeric=d.quantity)

@@ -93,7 +93,8 @@ def mock_packet(repetition: int, variant: str, position: int) -> dict[str, Any]:
     for index, row in enumerate(packet["resource_sampling"]["raw_samples"]):
         row["host_processor"] = {"status": "priming" if index == 0 else "available",
             "processor_performance_percent": None if index == 0 else 123.5,
-            "processor_frequency_mhz": None if index == 0 else 3100.0}
+            "processor_frequency_mhz": None if index == 0 else 3100.0,
+            "power": {"status": "available", "ac_online": True, "battery_saver_on": False}}
     return packet
 
 
@@ -130,6 +131,16 @@ def test_independent_thousand_cycle_populations_and_adverse_changes_are_verified
     manifest, digest = fixture(tmp_path)
     report = VERIFIER.verify_manifest(manifest, digest)
     assert report["status"] == "passed"
+    assert report["financial_verification"] == "passed"
+    assert report["environment_equivalence"]["dynamic_host_power_constant"] is True
+    assert report["environment_equivalence"]["dynamic_host_power_classification"] == "constant_observed"
+    assert report["performance_comparison_accepted"] is False
+    observed = report["runs"][0]["host_observations"]
+    assert observed["power_counts"] == {"ac": observed["sample_count"], "battery": 0, "unavailable": 0}
+    assert observed["counter_status_counts"]["priming"] == 1
+    assert observed["quantiles"]["processor_frequency_mhz"]["median"] == 3100.0
+    assert observed["quantiles"]["processor_frequency_mhz"]["unavailable_samples"] == 1
+    assert observed["quantiles"]["processor_performance_percent"]["p95"] == 123.5
     assert report["independent_oracle_minor"] == {"100": "46669102", "1000": "493671004"}
     assert report["measured_cycles_per_variant"] == 3000 and report["warmup_cycles_per_variant"] == 60
     assert report["distinct_native_effects_including_warmup"] == 6120 and report["distinct_container_count"] == 6
@@ -139,6 +150,79 @@ def test_independent_thousand_cycle_populations_and_adverse_changes_are_verified
     assert report["candidate_change_percent"]["client_cpu_seconds"] > 0
     assert report["candidate_change_percent"]["bounded_batch_read_seconds"] > 0
     assert report["cost_per_success_currency"] is None and report["cross_database_digest_equality_tested"] is False
+
+
+def test_changed_host_power_keeps_financial_proof_and_refuses_performance_acceptance(tmp_path: Path) -> None:
+    manifest, _ = fixture(tmp_path)
+
+    def mutate(packet: dict[str, Any]) -> None:
+        packet["resource_sampling"]["raw_samples"][-1]["host_processor"]["power"].update(
+            ac_online=False, battery_saver_on=True)
+
+    digest = rewrite_packet(manifest, 2, mutate)
+    report = VERIFIER.verify_manifest(manifest, digest)
+    assert report["status"] == report["financial_verification"] == "passed"
+    assert report["performance_comparison_accepted"] is False
+    environment = report["environment_equivalence"]
+    assert environment["static_configuration_equal"] is True
+    assert environment["dynamic_host_power_constant"] is False
+    assert environment["dynamic_host_power_classification"] == "changed"
+    assert environment["power_counts"]["battery"] == 1 and environment["power_counts"]["unavailable"] == 0
+    assert environment["observed_power_states"] == ["ac", "battery"]
+    assert report["runs"][2]["host_observations"]["battery_saver_counts"]["on"] == 1
+    assert "unavailable" in environment["frequency_or_performance_phase_binding"]
+
+
+@pytest.mark.parametrize("invalid", [None, 0, 1, "false", False])
+def test_power_admission_requires_available_status_and_exact_boolean(tmp_path: Path, invalid: Any) -> None:
+    manifest, _ = fixture(tmp_path)
+
+    def mutate(packet: dict[str, Any]) -> None:
+        power = packet["resource_sampling"]["raw_samples"][-1]["host_processor"]["power"]
+        if invalid is False:
+            power.update(status="unavailable", ac_online=False, battery_saver_on=False)
+        else:
+            power.update(ac_online=invalid, battery_saver_on=0)
+
+    report = VERIFIER.verify_manifest(manifest, rewrite_packet(manifest, 1, mutate))
+    assert report["financial_verification"] == "passed"
+    assert report["environment_equivalence"]["dynamic_host_power_constant"] is False
+    assert report["environment_equivalence"]["dynamic_host_power_classification"] == "unverified"
+    assert report["performance_comparison_accepted"] is False
+    observed = report["runs"][1]["host_observations"]
+    assert observed["power_counts"]["unavailable"] == 1
+    assert observed["power_counts"]["battery"] == 0
+    assert observed["battery_saver_counts"]["unavailable"] == 1
+
+
+def test_absent_power_and_missing_counter_values_remain_explicitly_unavailable(tmp_path: Path) -> None:
+    manifest, _ = fixture(tmp_path)
+
+    def mutate(packet: dict[str, Any]) -> None:
+        for sample in packet["resource_sampling"]["raw_samples"]:
+            sample["host_processor"] = {"status": "unavailable", "processor_performance_percent": None,
+                                        "processor_frequency_mhz": None}
+
+    report = VERIFIER.verify_manifest(manifest, rewrite_packet(manifest, 0, mutate))
+    observed = report["runs"][0]["host_observations"]
+    assert report["financial_verification"] == "passed"
+    assert report["environment_equivalence"]["dynamic_host_power_constant"] is False
+    assert observed["power_counts"] == {"ac": 0, "battery": 0, "unavailable": observed["sample_count"]}
+    assert observed["counter_status_counts"] == {"unavailable": observed["sample_count"]}
+    for quantile in observed["quantiles"].values():
+        assert quantile["available_samples"] == 0
+        assert quantile["unavailable_samples"] == observed["sample_count"]
+        assert all(quantile[name] is None for name in ("min", "median", "p50", "p95", "p99", "max"))
+
+
+def test_boolean_counter_values_are_refused_instead_of_becoming_zero(tmp_path: Path) -> None:
+    manifest, _ = fixture(tmp_path)
+
+    def mutate(packet: dict[str, Any]) -> None:
+        packet["resource_sampling"]["raw_samples"][-1]["host_processor"]["processor_frequency_mhz"] = False
+
+    with pytest.raises(ValueError, match="numeric value invalid"):
+        VERIFIER.verify_manifest(manifest, rewrite_packet(manifest, 1, mutate))
 
 
 def test_explicit_trusted_anchor_cannot_be_replaced_by_self_checksum(tmp_path: Path) -> None:

@@ -12,6 +12,8 @@ are relative to the manifest directory. The explicit trusted manifest digest
 must come from a prior trusted channel; recomputing it from received bytes does
 not authenticate that evidence. Keep the two sibling verifier scripts beside
 this script. No checkout, database, Docker, network, or application imports.
+Financial verification is separate from performance acceptance. Static CONFIG
+equality does not establish constant dynamic host power or per-phase frequency.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ import json
 import math
 import re
 import statistics
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -115,6 +118,65 @@ def _current_run_contract(packet: dict[str, Any]) -> str:
     return container
 
 
+def _host_observations(packet: dict[str, Any]) -> dict[str, Any]:
+    """Classify retained host samples; unavailable data never imply zero or AC."""
+    rows = packet["resource_sampling"]["raw_samples"]
+    counters: Counter[str] = Counter()
+    power: Counter[str] = Counter()
+    saver: Counter[str] = Counter()
+    unavailable: Counter[str] = Counter()
+    values: dict[str, list[int | float]] = {name: [] for name in (
+        "processor_frequency_mhz", "processor_performance_percent")}
+    for row in rows:
+        observation = row["host_processor"]
+        counters[observation["status"]] += 1
+        for name, retained in values.items():
+            value = observation[name]
+            if type(value) in (int, float) and math.isfinite(value) and value >= 0:
+                retained.append(value)
+        status = observation.get("power")
+        available = isinstance(status, dict) and status.get("status") == "available"
+        online = status.get("ac_online") if available else None
+        if type(online) is bool:
+            power["ac" if online else "battery"] += 1
+        else:
+            power["unavailable"] += 1
+            unavailable["missing_power" if status is None else
+                        "power_not_available" if not available else "ac_online_not_boolean"] += 1
+        flag = status.get("battery_saver_on") if available else None
+        saver["on" if flag is True else "off" if flag is False else "unavailable"] += 1
+    quantiles: dict[str, dict[str, Any]] = {}
+    for name, retained in values.items():
+        ordered = sorted(retained)
+        quantiles[name] = {"available_samples": len(ordered), "unavailable_samples": len(rows) - len(ordered),
+                          "min": ordered[0] if ordered else None,
+                          "median": statistics.median(ordered) if ordered else None,
+                          "p50": ordered[math.ceil(len(ordered) * .5) - 1] if ordered else None,
+                          "p95": ordered[math.ceil(len(ordered) * .95) - 1] if ordered else None,
+                          "p99": ordered[math.ceil(len(ordered) * .99) - 1] if ordered else None,
+                          "max": ordered[-1] if ordered else None}
+    return {"sample_count": len(rows), "counter_status_counts": dict(counters),
+            "power_counts": {name: power[name] for name in ("ac", "battery", "unavailable")},
+            "power_unavailable_reasons": dict(unavailable),
+            "battery_saver_counts": {name: saver[name] for name in ("on", "off", "unavailable")},
+            "quantiles": quantiles, "quantile_method": "nearest rank; median is arithmetic median",
+            "scope": "host-wide sparse samples across setup tail, warmup, posting and reads; no per-phase or per-core binding"}
+
+
+def _environment_equivalence(summaries: list[dict[str, Any]]) -> dict[str, Any]:
+    counts = {name: sum(row["host_observations"]["power_counts"][name] for row in summaries)
+              for name in ("ac", "battery", "unavailable")}
+    states = [name for name in ("ac", "battery") if counts[name]]
+    constant = len(states) == 1 and counts["unavailable"] == 0
+    return {"static_configuration_equal": True, "dynamic_host_power_constant": constant,
+            "dynamic_host_power_classification": "changed" if len(states) > 1 else
+                                                 "constant_observed" if constant else "unverified",
+            "power_counts": counts, "observed_power_states": states,
+            "dynamic_host_power_constant_scope": "retained available boolean power samples only; sparse observations do not prove uninterrupted power or equal per-core scheduling",
+            "frequency_or_performance_phase_binding": "unavailable: no phase start/end timestamps or retained posting timer origin",
+            "causal_attribution": "unproven; power/frequency observations do not establish the cause of measured CPU differences"}
+
+
 def verify_manifest(manifest_path: Path, trusted_manifest_sha256: str) -> dict[str, Any]:
     """Bind the exact six raw byte streams, then independently verify their content."""
     require(_sha(trusted_manifest_sha256), "Explicit trusted manifest SHA256 is required")
@@ -173,12 +235,21 @@ def verify_manifest(manifest_path: Path, trusted_manifest_sha256: str) -> dict[s
                           "report_sha256": report_digest, "source_commit": packet["source_commit"],
                           "source_sha256": fingerprint, "container_id": container,
                           "started_at": packet["started_at"], "finished_at": packet["finished_at"],
-                          "verified": verified})
+                          "verified": verified, "host_observations": _host_observations(packet)})
     medians = {variant: {metric: statistics.median(row["verified"][metric] for row in summaries if row["variant"] == variant)
                          for metric in METRICS} for variant in COMMITS}
     changes = {metric: (medians["candidate"][metric] / medians["baseline"][metric] - 1) * 100 for metric in METRICS}
     require(all(math.isfinite(value) for value in changes.values()), "Invalid comparison metric")
+    environment = _environment_equivalence(summaries)
+    reasons = ["Financial byte/arithmetic verification does not certify performance acceptance."]
+    if not environment["dynamic_host_power_constant"]:
+        reasons.append("Dynamic host power changed or is not fully available in the retained samples.")
+    for metric in ("client_cpu_seconds", "bounded_batch_read_seconds", "total_cpu_seconds_per_success"):
+        if changes[metric] > 0:
+            reasons.append(f"Adverse candidate change retained: {metric}.")
     return {"schema_version": SCHEMA, "status": "passed", "trusted_manifest_sha256": digest,
+            "financial_verification": "passed", "performance_comparison_accepted": False,
+            "performance_comparison_reasons": reasons, "environment_equivalence": environment,
             "commits": COMMITS, "source_fingerprints": source_fingerprints,
             "run_order": "BC,CB,BC", "runs": summaries, "common_configuration": reference,
             "independent_oracle_minor": {str(count): _pair._retained.minor_oracle(count) for count in (100, 1000)},
@@ -190,9 +261,11 @@ def verify_manifest(manifest_path: Path, trusted_manifest_sha256: str) -> dict[s
                        "Offline byte/arithmetic verification does not rerun or independently inspect the original databases.",
                        "Three fresh populations per source do not prove statistical causation or competitor superiority.",
                        "Native three-human cash/equity cycles include authentication; not HTTP or mixed ERP throughput.",
-                       "Resource windows include warmup/reads and observer overhead; sampled peaks can miss spikes.",
+                       "Sampled resource windows include warmup/reads and observer overhead; measured posting CPU counters have separate boundaries; sampled peaks can miss spikes.",
                        "Per-sample Docker records omit container IDs; six distinct final IDs and financial populations prove retained freshness only.",
                        "Host counters may be explicitly unavailable; frequency/performance does not measure temperature.",
+                       "Equal static configuration is separate from dynamic host power; constant observed power alone does not accept resource regressions.",
+                       "Host quantiles include all sampled stages and have no exact posting/identity phase binding or causal attribution.",
                        "Adverse changes remain in the computed results; monetary cost, failover, RPO/RTO are unmeasured."]}
 
 

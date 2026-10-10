@@ -56,3 +56,26 @@ it("loads scoped bundle evidence through the strict query transport", async () =
   expect(fetch.mock.calls[0][0]).toBe("/api/v1/landed-cost/orders/order?after=");
   expect(fetch.mock.calls[0][1]).toMatchObject({ method: "GET", credentials: "same-origin", headers: { "X-ReconForge-Tenant": "tenant", "X-ReconForge-Workspace": "work", "X-ReconForge-Organization": "org", "X-ReconForge-Legal-Entity": "entity" } });
 });
+
+it("retains source phase and exact independent cancellation evidence", () => {
+  const cancellation = { actor_id: "canceller", reason: "Rejected before receiving", command_id: "cancel-1", audit_event_id: "audit", outbox_event_id: "outbox" };
+  const source = { ...plan(), status: "Cancelled", cancellation };
+  expect(parseLandedPlan(source, scope, "order").allocations[0].stage).toBe(0);
+  expect(() => parseLandedPlan({ ...source, cancellation: { ...cancellation, actor_id: "maker" } }, scope, "order")).toThrow("contract_invalid");
+  expect(() => parseLandedPlan({ ...source, phase: 2 }, scope, "order")).toThrow("contract_invalid");
+  expect(() => parseLandedPlan({ ...source, status: "Prepared" }, scope, "order")).toThrow("contract_invalid");
+  expect(() => parseLandedPlan({ ...source, cancellation: { ...cancellation, audit_event_id: "" } }, scope, "order")).toThrow("contract_invalid");
+});
+
+it("binds cancellation acknowledgement to the exact retained command and reason", async () => {
+  const command = prepareScopedCommand("/api/v1/landed-cost/plans/LC1-plan/cancel", { expected_plan_digest: "a".repeat(64), reason: "Replace unreceived bundle" });
+  const cancellation = { actor_id: "canceller", reason: command.body.reason, command_id: command.body.command_id, audit_event_id: "audit", outbox_event_id: "outbox" };
+  const source = { ...plan(), status: "Cancelled", cancellation };
+  const fetch = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => ({ ...source, cancellation: { ...cancellation, command_id: "wrong" } }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => source });
+  vi.stubGlobal("fetch", fetch);
+  const session = { tenantId: "tenant", csrfToken: "synthetic-csrf" } as BrowserAdminSession;
+  await expect(landedCommand(session, scope, "order", command)).rejects.toThrow("contract_invalid");
+  expect((await landedCommand(session, scope, "order", command)).status).toBe("Cancelled");
+  expect(fetch.mock.calls[0][1].body).toBe(fetch.mock.calls[1][1].body);
+});

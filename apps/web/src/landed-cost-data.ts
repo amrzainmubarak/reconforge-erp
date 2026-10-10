@@ -4,7 +4,8 @@ import type { PreparedScopedCommand } from "./scoped-command";
 
 export const landedRoot = "/api/v1/landed-cost";
 export interface LandedAllocation { sequence: number; order_line_id: string; quantity_text: string; base_minor: string; freight_minor: string; duty_minor: string; receipt_id: string; receipt_plan_id: string; stage: number }
-export interface LandedPlan { id: string; order_id: string; number: string; workspace_id: string; organization_id: string; legal_entity_id: string; phase: number; status: "Prepared" | "Reviewed" | "Posted"; plan_digest: string; freight_minor: string; duty_minor: string; amount_minor: string; currency_code: string; entry_id: string; preparer_actor_id: string; reviewer_actor_id: string | null; posted_actor_id: string | null; posting_effect_id: string | null; allocations: LandedAllocation[] }
+export interface LandedCancellation { actor_id: string; reason: string; command_id: string; audit_event_id: string; outbox_event_id: string }
+export interface LandedPlan { id: string; order_id: string; number: string; workspace_id: string; organization_id: string; legal_entity_id: string; phase: number; status: "Prepared" | "Reviewed" | "Posted" | "Cancelled"; plan_digest: string; freight_minor: string; duty_minor: string; amount_minor: string; currency_code: string; entry_id: string; preparer_actor_id: string; reviewer_actor_id: string | null; posted_actor_id: string | null; posting_effect_id: string | null; allocations: LandedAllocation[]; cancellation?: LandedCancellation }
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const text = (value: unknown): value is string => typeof value === "string" && value.length > 0 && value.length <= 500;
 const money = (value: unknown): value is string => typeof value === "string" && /^(0|[1-9][0-9]{0,18})$/.test(value) && BigInt(value) <= 9000000000000000000n;
@@ -13,13 +14,17 @@ function invalid(): never { throw new Error("landed_cost_contract_invalid"); }
 export function parseLandedPlan(value: unknown, scope: ProcurementScope, orderId: string): LandedPlan {
   if (!object(value) || value.order_id !== orderId || value.workspace_id !== scope.workspace_id || value.organization_id !== scope.organization_id || value.legal_entity_id !== scope.legal_entity_id ||
       !["id", "number", "entry_id", "preparer_actor_id"].every((key) => text(value[key])) || !Number.isInteger(value.phase) || Number(value.phase) < 0 || Number(value.phase) > 2 ||
-      value.status !== ["Prepared", "Reviewed", "Posted"][Number(value.phase)] || typeof value.plan_digest !== "string" || !/^[0-9a-f]{64}$/.test(value.plan_digest) ||
+      (value.status === "Cancelled" ? !object(value.cancellation) || Number(value.phase) > 1 : value.status !== ["Prepared", "Reviewed", "Posted"][Number(value.phase)] || value.cancellation !== undefined) || typeof value.plan_digest !== "string" || !/^[0-9a-f]{64}$/.test(value.plan_digest) ||
       value.currency_code !== scope.currency_code || !["freight_minor", "duty_minor", "amount_minor"].every((key) => money(value[key])) ||
       BigInt(String(value.amount_minor)) === 0n || BigInt(String(value.freight_minor)) + BigInt(String(value.duty_minor)) !== BigInt(String(value.amount_minor)) ||
       ![value.reviewer_actor_id, value.posted_actor_id, value.posting_effect_id].every((item) => item === null || text(item)) ||
       (value.phase === 0) !== (value.reviewer_actor_id === null) || (value.phase === 2) !== (value.posted_actor_id !== null) || (value.phase === 2) !== (value.posting_effect_id !== null) ||
       value.reviewer_actor_id === value.preparer_actor_id || (value.phase === 2 && new Set([value.preparer_actor_id, value.reviewer_actor_id, value.posted_actor_id]).size !== 3) ||
       !Array.isArray(value.allocations) || value.allocations.length < 1 || value.allocations.length > 128) invalid();
+  const cancellation = value.cancellation;
+  if (value.status === "Cancelled" && (!object(cancellation) ||
+      !["actor_id", "reason", "command_id", "audit_event_id", "outbox_event_id"].every((key) => text(cancellation[key])) ||
+      cancellation.actor_id === value.preparer_actor_id || cancellation.actor_id === value.reviewer_actor_id)) invalid();
   let freight = 0n, duty = 0n;
   const sources = new Set<string>(), receipts = new Set<string>();
   for (const [index, allocation] of value.allocations.entries()) {
@@ -64,9 +69,10 @@ export async function landedCommand(session: BrowserAdminSession, scope: Procure
       if (!allocation || scale(allocation.quantity_text) !== scale(line.quantity)) invalid();
     }
   } else {
-    const path = /^\/api\/v1\/landed-cost\/plans\/([^/]+)\/(review|post)$/.exec(command.path);
+    const path = /^\/api\/v1\/landed-cost\/plans\/([^/]+)\/(review|post|cancel)$/.exec(command.path);
     if (!path || decodeURIComponent(path[1]) !== plan.id || plan.plan_digest !== command.body.expected_plan_digest ||
-        plan.phase !== (path[2] === "review" ? 1 : 2)) invalid();
+        (path[2] === "cancel" ? plan.status !== "Cancelled" || plan.cancellation?.command_id !== command.body.command_id ||
+          plan.cancellation?.reason !== String(command.body.reason).trim() : plan.status === "Cancelled" || plan.phase !== (path[2] === "review" ? 1 : 2))) invalid();
   }
   return plan;
 }

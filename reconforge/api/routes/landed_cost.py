@@ -81,3 +81,10 @@ def post(request: Request, identifier: str, payload: ActionRequest,
          user: LocalUser = Depends(required(POST))) -> dict[str, Any]:
     return execute(request, user, POST, lambda shared, actor, scope:
         PostgresLandedCostRepository(shared.connection, scope.tenant_id).act(identifier, "post", **payload.model_dump(), actor=actor))
+
+
+@router.post("/plans/{identifier}/cancel")
+def cancel(request: Request, identifier: str, payload: ActionRequest,
+           user: LocalUser = Depends(required(REVIEW))) -> dict[str, Any]:
+    return execute(request, user, REVIEW, lambda shared, actor, scope:
+        PostgresLandedCostRepository(shared.connection, scope.tenant_id).cancel(identifier, **payload.model_dump(), actor=actor))

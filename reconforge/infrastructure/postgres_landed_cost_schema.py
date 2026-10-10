@@ -40,6 +40,9 @@ BEGIN
  ELSIF TG_TABLE_NAME='procurement_partial_receipts' THEN receipt:=j->>'id';
  ELSIF TG_TABLE_NAME='procurement_partial_orders' THEN parent:=j->>'id';
  END IF;
+ IF TG_TABLE_NAME IN('procurement_partial_receipts','procurement_partial_orders') AND NOT EXISTS(
+ SELECT 1 FROM reconforge.procurement_partial_receipts d JOIN reconforge.inventory_receipt_plans r ON r.tenant_id=d.tenant_id AND r.id=d.receipt_plan_id
+ WHERE d.tenant_id=j->>'tenant_id' AND d.order_id=COALESCE(parent,j->>'order_id') AND r.total_value_minor<>d.total_minor) THEN CONTINUE; END IF;
  IF TG_TABLE_NAME='finance_posting_effects' AND j->>'reverses_effect_id' IS NOT NULL THEN
  SELECT entry_id INTO native_entry FROM reconforge.finance_posting_effects WHERE tenant_id=j->>'tenant_id' AND id=j->>'reverses_effect_id'; END IF;
  IF native_entry IS NOT NULL AND number IS NULL THEN SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=j->>'tenant_id' AND id=native_entry; END IF;
@@ -47,6 +50,19 @@ BEGIN
  -- missing header remains subject to reverse closure, including deleted owners.
  IF native_entry IS NOT NULL AND number IS NOT NULL
  AND upper(number) NOT LIKE 'LC1-%' AND upper(number) NOT LIKE 'IRP1-%' THEN CONTINUE; END IF;
+ IF (upper(COALESCE(number,'')) LIKE 'IRP1-%' OR upper(COALESCE(native_entry,'')) LIKE 'IRP1-%') AND NOT EXISTS(
+ SELECT 1 FROM reconforge.inventory_receipt_plans r JOIN reconforge.procurement_partial_receipts d ON d.tenant_id=r.tenant_id AND d.receipt_plan_id=r.id
+ WHERE r.tenant_id=j->>'tenant_id' AND r.finance_entry_id=native_entry AND EXISTS(SELECT 1 FROM reconforge.procurement_partial_receipts q
+ JOIN reconforge.inventory_receipt_plans z ON z.tenant_id=q.tenant_id AND z.id=q.receipt_plan_id
+ WHERE q.tenant_id=d.tenant_id AND q.order_id=d.order_id AND z.total_value_minor<>q.total_minor)) THEN CONTINUE; END IF;
+ -- A deferred ordinary child DELETE can outlive its header or lose visibility
+ -- after legitimate draft replacement. Reserved receipt artifact identities
+ -- still enter closure; a reserved LC header itself always enters via OLD.
+ IF TG_TABLE_NAME IN('finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects')
+ AND number IS NULL AND upper(COALESCE(native_entry,'')) NOT LIKE 'IRP1-%'
+ AND upper(COALESCE(native_entry,'')) NOT LIKE 'LC1-%'
+ AND upper(COALESCE(j->>'id','')) NOT LIKE 'IRP1-%'
+ AND upper(COALESCE(j->>'id','')) NOT LIKE 'LC1-%' THEN CONTINUE; END IF;
  IF upper(COALESCE(number,'')) LIKE 'LC1-%' AND NOT EXISTS(SELECT 1 FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND entry_id=native_entry) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Reserved landed cost GL entry requires its source owner'; END IF;
  FOR p IN SELECT * FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND
@@ -60,7 +76,8 @@ BEGIN
 END $lc$;
 """
 
-UPGRADE_SQL = r"""
+# Static migration fragments only; no request or database value is interpolated.
+_UPGRADE_DEFINITION_SQL = r"""
 DO $lc$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND (rolsuper OR rolbypassrls)) THEN
   RAISE EXCEPTION 'Landed cost migration requires forced-RLS migration authority'; END IF;
@@ -281,10 +298,12 @@ DO $lc$ DECLARE definition TEXT;needle TEXT:='OR r.total_value_minor<>d.total_mi
  definition:=pg_get_functiondef('reconforge.pp_verify_multiline_pre_landed(text,text)'::regprocedure);
  IF length(definition)-length(replace(definition,needle,''))<>length(needle) THEN RAISE EXCEPTION 'Unsupported prior receipt closure'; END IF;
  definition:=replace(definition,'reconforge.pp_verify_multiline_pre_landed','reconforge.pp_verify_multiline');
- definition:=replace(definition,needle,'OR r.total_value_minor::numeric<>d.total_minor::numeric+COALESCE((SELECT freight_minor::numeric+duty_minor FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=d.id),0)');
+ definition:=replace(definition,needle,'OR r.total_value_minor::numeric<>d.total_minor::numeric+CASE WHEN r.total_value_minor=d.total_minor THEN 0 ELSE COALESCE((SELECT freight_minor::numeric+duty_minor FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=d.id),0) END');
  EXECUTE definition;
 END $lc$;
-""" + REVERSE_CLOSE_SQL + r"""DO $lc$ DECLARE n TEXT; BEGIN
+"""
+
+_UPGRADE_TRIGGER_SQL = r"""DO $lc$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['landed_cost_plans','landed_cost_allocations','landed_cost_reviews','landed_cost_links','landed_cost_commands'] LOOP
  EXECUTE format('ALTER TABLE reconforge.%I ENABLE ROW LEVEL SECURITY',n);
  EXECUTE format('ALTER TABLE reconforge.%I FORCE ROW LEVEL SECURITY',n);
@@ -301,6 +320,8 @@ END $lc$;
  END LOOP;
 END $lc$;
 """
+
+UPGRADE_SQL = _UPGRADE_DEFINITION_SQL + REVERSE_CLOSE_SQL + _UPGRADE_TRIGGER_SQL
 
 DOWNGRADE_SQL = r"""
 DO $lc$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.landed_cost_plans) THEN

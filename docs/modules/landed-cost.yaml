@@ -1,6 +1,6 @@
 id: landed-cost
 name: Paid landed cost and atomic capitalized receiving
-version: 0.1.0
+version: 0.2.0
 maturity: experimental
 owner: finance-operations
 dependencies: [procurement-partial, inventory-receipt-posting, finance-core, postgres-identity]
@@ -20,15 +20,18 @@ domain_invariants:
   - Three distinct persisted human identities prepare, review and publish every receipt and its cash effect
   - Deferred bidirectional SQL closure rejects detached receipt or cash publication and unowned LC1 entries
   - Never mutate an already published FIFO layer; retained corrections need a separately completed reversal contract
-domain_events: [landed_cost_prepared, landed_cost_reviewed, landed_cost_posted]
-api_routes: ["/api/v1/landed-cost/plans", "/api/v1/landed-cost/plans/{id}", "/api/v1/landed-cost/plans/{id}/review", "/api/v1/landed-cost/plans/{id}/post", "/api/v1/landed-cost/orders/{order_id}"]
+  - Independent cancellation retains original unreceived phase and all exact original acknowledgements while releasing only its actual per-line receiving reservations
+  - Cancelled receipt and cash drafts cannot progress or publish through API, repository or direct SQL
+  - Ordinary native receiving requires no landed owner privileges; native charged sources remain fail closed
+domain_events: [landed_cost_prepared, landed_cost_reviewed, landed_cost_posted, landed_cost_cancelled]
+api_routes: ["/api/v1/landed-cost/plans", "/api/v1/landed-cost/plans/{id}", "/api/v1/landed-cost/plans/{id}/review", "/api/v1/landed-cost/plans/{id}/post", "/api/v1/landed-cost/plans/{id}/cancel", "/api/v1/landed-cost/orders/{order_id}"]
 cli_commands: []
 ui_routes: [/procurement-partial]
 import_schemas: []
 export_schemas: []
 synthetic_fixtures: [tests/test_postgres_landed_cost.py]
 threat_model:
-  - Five forced-RLS tables retain canonical tenant, workspace, organization and legal entity ownership
+  - Six forced-RLS tables retain canonical tenant, workspace, organization and legal entity ownership
   - All retry commands remain bound to exact payload, persisted human and original immutable response
   - Parent order locking serializes quantity reservations and prevents oversupply
   - Typed native posting participant and database closure deny detached generic cash posting
@@ -38,8 +41,10 @@ rollback_plan: Empty downgrade only; populated financial history requires verifi
 test_matrix:
   domain: tests/test_landed_cost.py
   postgres: tests/test_postgres_landed_cost.py
+  cancellation: tests/test_postgres_landed_cost_cancellation.py
   api: tests/test_postgres_landed_cost_api.py
   web: apps/web/src/landed-cost-data.test.ts
+  web_lifecycle: apps/web/src/components/LandedCostPanel.test.tsx
   browser: apps/web/live/erp-landed-cost.spec.ts
 runtime_acceptance: Source-bound native API Studio and populated restore milestones passed; final integrated source gate remains required
 adapter_matrix:
@@ -51,3 +56,4 @@ limitations:
   - 128 selected lines per atomic receiving bundle and 200 retained bundles per purchase order
   - Four bundles per keyset response with at most 512 projected allocations
   - No supplier-return, debit-note or landed-cost reversal claim
+  - Cancellation releases quantities, never retained document, source-number or evidence budgets; no posted reversal

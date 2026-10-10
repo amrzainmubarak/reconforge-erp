@@ -370,6 +370,11 @@ class PostgresProcurementPartialRepository:
                 LEFT JOIN reconforge.inventory_receipt_links l ON l.tenant_id=p.tenant_id AND l.plan_id=p.id
                 WHERE p.tenant_id=%s AND p.id=%s""", (self.tenant_id, part["receipt_plan_id"]))
             part.update(dict(actors))
+        if row.get("multiline", False):
+            cancelled = self._cancelled_receipts(str(row["id"]))
+            for part in receipts:
+                if part["id"] in cancelled:
+                    part["cancellation_plan_id"] = cancelled[part["id"]]
         for part in invoices:
             part["stage"] = INVOICE_STAGES[part["stage"]]
             part["total_minor"] = str(part["total_minor"])
@@ -448,6 +453,16 @@ class PostgresProcurementPartialRepository:
             WHERE l.tenant_id=%s AND l.order_id=%s ORDER BY l.sequence""", (self.tenant_id, row["id"])).fetchall()]
         for line in lines:
             line["unit_price_minor"], line["total_minor"] = str(line["unit_price_minor"]), str(line["total_minor"])
+        if self._has_landed_receipts(str(row["id"])) and self.connection.execute("SELECT to_regclass('reconforge.landed_cost_cancellations') IS NOT NULL AS installed").fetchone()["installed"]:
+            released = self.connection.execute("""SELECT r.order_line_id,sum(r.quantity)::text AS quantity
+                FROM reconforge.procurement_partial_receipts r JOIN reconforge.landed_cost_allocations a
+                ON a.tenant_id=r.tenant_id AND a.receipt_id=r.id JOIN reconforge.landed_cost_cancellations c
+                ON c.tenant_id=a.tenant_id AND c.plan_id=a.plan_id WHERE r.tenant_id=%s AND r.order_id=%s GROUP BY r.order_line_id""",
+                (self.tenant_id, row["id"])).fetchall()
+            released_by_line = {item["order_line_id"]: item["quantity"] for item in released}
+            for line in lines:
+                line["reserved_receipt_quantity"] = quantity_text(exact_sum((Decimal(line["reserved_receipt_quantity"]),
+                    Decimal("-" + released_by_line.get(line["id"], "0")))))
         for invoice in result["invoices"]:
             allocations = self.connection.execute("""SELECT a.id,a.order_line_id AS line_id,a.sequence,a.quantity_text,a.total_minor,l.item_code,l.location_code,l.uom_id
                 FROM reconforge.procurement_partial_invoice_lines a JOIN reconforge.procurement_partial_order_lines l ON l.tenant_id=a.tenant_id AND l.id=a.order_line_id
@@ -474,6 +489,19 @@ class PostgresProcurementPartialRepository:
             "next_receipt_after": result["receipts"][-1]["sequence"] if result["receipts"] and result["receipts"][-1]["sequence"] < counts["receipts"] else None,
             "next_invoice_after": result["invoices"][-1]["sequence"] if result["invoices"] and result["invoices"][-1]["sequence"] < counts["invoices"] else None}
         return result
+
+    def _cancelled_receipts(self, order_id: str) -> dict[str, str]:
+        if not self._has_landed_receipts(order_id) or not self.connection.execute("SELECT to_regclass('reconforge.landed_cost_cancellations') IS NOT NULL AS installed").fetchone()["installed"]:
+            return {}
+        return {row["receipt_id"]: row["plan_id"] for row in self.connection.execute("""SELECT a.receipt_id,a.plan_id
+            FROM reconforge.landed_cost_allocations a JOIN reconforge.landed_cost_cancellations c
+            ON c.tenant_id=a.tenant_id AND c.plan_id=a.plan_id WHERE a.tenant_id=%s AND a.order_id=%s""", (self.tenant_id, order_id)).fetchall()}
+
+    def _has_landed_receipts(self, order_id: str) -> bool:
+        """Classify native charged sources before reading LC owner indexes."""
+        return self.connection.execute("""SELECT EXISTS(SELECT 1 FROM reconforge.procurement_partial_receipts r
+            JOIN reconforge.inventory_receipt_plans p ON p.tenant_id=r.tenant_id AND p.id=r.receipt_plan_id
+            WHERE r.tenant_id=%s AND r.order_id=%s AND p.total_value_minor<>r.total_minor) AS charged""", (self.tenant_id, order_id)).fetchone()["charged"] is True
 
     def create_multiline(self, request: MultilineProcurementPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]:
         request, total = normalize_multiline(request)
@@ -534,7 +562,7 @@ class PostgresProcurementPartialRepository:
             return self._remember(order_id, command_id, "create", digest, payload, actor, created=True)
 
     def prepare_receipt_line(self, order_id: str, line_id: str, request: PartialQuantityPreparation, *, expected_version: int,
-                             command_id: str, actor: PostingActor) -> dict[str, Any]:
+                             command_id: str, actor: PostingActor, _source_owner: object | None = None) -> dict[str, Any]:
         with self.connection.transaction():
             self._scope_transaction()
             line = self._one("SELECT * FROM reconforge.procurement_partial_order_lines WHERE tenant_id=%s AND order_id=%s AND id=%s",
@@ -548,14 +576,19 @@ class PostgresProcurementPartialRepository:
             summary = self._one("SELECT count(*) AS count,COALESCE(max(sequence),0) AS sequence FROM reconforge.procurement_partial_receipts WHERE tenant_id=%s AND order_id=%s",
                 (self.tenant_id, order_id))
             self._approved_multiline(row, summary["count"])
-            quantities = tuple(item["quantity_text"] for item in self.connection.execute("SELECT quantity_text FROM reconforge.procurement_partial_receipts WHERE tenant_id=%s AND order_id=%s AND order_line_id=%s",
-                (self.tenant_id, order_id, line_id)).fetchall())
+            cancelled = self._cancelled_receipts(order_id)
+            quantities = tuple(item["quantity_text"] for item in self.connection.execute("SELECT id,quantity_text FROM reconforge.procurement_partial_receipts WHERE tenant_id=%s AND order_id=%s AND order_line_id=%s",
+                (self.tenant_id, order_id, line_id)).fetchall() if item["id"] not in cancelled)
             reserve_quantity(request.quantity, line["quantity_text"], quantities)
             quantity_to_scaled(request.quantity, line["quantity_precision"])
             sequence, number = summary["sequence"] + 1, "PPR-" + row["number"] + "-" + str(summary["sequence"] + 1)
             original = row["request_json"]
             receipt_value = amount
-            if self.connection.execute("SELECT to_regclass('reconforge.landed_cost_allocations') IS NOT NULL AS installed").fetchone()["installed"]:
+            if _source_owner is not None:
+                from reconforge.infrastructure.postgres_landed_cost import _LandedCostReceivingParticipant
+                if not isinstance(_source_owner, _LandedCostReceivingParticipant) or not _source_owner.admits(
+                    self.connection, self.tenant_id, order_id, platform_id("PPRECEIPT", order_id, sequence)):
+                    raise ProcurementPartialError("landed_cost_source_conflict", "Charged receiving requires the current native source participant.")
                 allocation = self.connection.execute("""SELECT base_minor,freight_minor,duty_minor FROM reconforge.landed_cost_allocations
                     WHERE tenant_id=%s AND order_id=%s AND receipt_id=%s AND order_line_id=%s""",
                     (self.tenant_id, order_id, platform_id("PPRECEIPT", order_id, sequence), line_id)).fetchone()

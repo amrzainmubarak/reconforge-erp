@@ -31,12 +31,22 @@ class _LandedCostPostingParticipant:
                 and self.owner.tenant_id == tenant_id and self.entry_id == entry_id)
 
 
+class _LandedCostReceivingParticipant:
+    def __init__(self, owner: PostgresLandedCostRepository, order_id: str, receipt_id: str) -> None:
+        self.owner, self.order_id, self.receipt_id = owner, order_id, receipt_id
+
+    def admits(self, connection: Any, tenant_id: str, order_id: str, receipt_id: str) -> bool:
+        return (self.owner._receiving_participant is self and self.owner.connection is connection
+                and self.owner.tenant_id == tenant_id and self.order_id == order_id and self.receipt_id == receipt_id)
+
+
 class PostgresLandedCostRepository:
     def __init__(self, connection: Any, tenant_id: str) -> None:
         self.connection, self.tenant_id = connection, tenant_id
         self.purchase = PostgresProcurementPartialRepository(connection, tenant_id)
         self.finance = PostgresOperationalFinanceRepository(connection, tenant_id)
         self._participant: _LandedCostPostingParticipant | None = None
+        self._receiving_participant: _LandedCostReceivingParticipant | None = None
 
     def _row(self, identifier: str) -> dict[str, Any]:
         return self.purchase._one("SELECT * FROM reconforge.landed_cost_plans WHERE tenant_id=%s AND id=%s FOR UPDATE",
@@ -56,6 +66,9 @@ class PostgresLandedCostRepository:
         digest = digest_payload({"operation": operation, "actor_id": actor.user_id, "request": dict(request)})
         self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
                                 (canonical_json([self.tenant_id, row["workspace_id"], "landed-cost", command]),))
+        cancelled = self._cancellation(command_id=command, workspace_id=str(row["workspace_id"]))
+        if cancelled is not None:
+            raise ProcurementPartialError("landed_cost_command_conflict", "Command already belongs to retained cancellation evidence.")
         retained = self.connection.execute("SELECT * FROM reconforge.landed_cost_commands WHERE tenant_id=%s AND workspace_id=%s AND command_id=%s",
                                             (self.tenant_id, row["workspace_id"], command)).fetchone()
         if retained is None:
@@ -86,7 +99,7 @@ class PostgresLandedCostRepository:
                                           (self.tenant_id, identifier)).fetchone()
         link = self.connection.execute("SELECT posted_actor_id,posting_effect_id FROM reconforge.landed_cost_links WHERE tenant_id=%s AND plan_id=%s",
                                         (self.tenant_id, identifier)).fetchone()
-        return {"id": identifier, "order_id": row["order_id"], "number": payload["request"]["number"],
+        result = {"id": identifier, "order_id": row["order_id"], "number": payload["request"]["number"],
             "workspace_id": row["workspace_id"], "organization_id": row["organization_id"], "legal_entity_id": row["legal_entity_id"],
             "phase": row["phase"], "status": ("Prepared", "Reviewed", "Posted")[row["phase"]],
             "plan_digest": row["plan_digest"], "freight_minor": str(payload["request"]["freight_minor"]),
@@ -96,6 +109,24 @@ class PostgresLandedCostRepository:
             "posted_actor_id": link["posted_actor_id"] if link else None, "posting_effect_id": link["posting_effect_id"] if link else None,
             "allocations": [{key: str(value) if key in {"base_minor", "freight_minor", "duty_minor"} else value
                              for key, value in dict(item).items() if key not in {"tenant_id", "plan_id", "order_id"}} for item in allocations]}
+        cancelled = self._cancellation(plan_id=identifier)
+        if cancelled is not None:
+            result.update(status="Cancelled", cancellation=self._cancellation_projection(cancelled))
+        return result
+
+    def _cancellation(self, *, plan_id: str | None = None, command_id: str | None = None,
+                      workspace_id: str | None = None) -> dict[str, Any] | None:
+        if not self.connection.execute("SELECT to_regclass('reconforge.landed_cost_cancellations') IS NOT NULL AS installed").fetchone()["installed"]:
+            return None
+        query = ("SELECT * FROM reconforge.landed_cost_cancellations WHERE tenant_id=%s AND plan_id=%s" if plan_id is not None
+                 else "SELECT * FROM reconforge.landed_cost_cancellations WHERE tenant_id=%s AND workspace_id=%s AND command_id=%s")
+        args = (self.tenant_id, plan_id) if plan_id is not None else (self.tenant_id, workspace_id, command_id)
+        row = self.connection.execute(query, args).fetchone()
+        return dict(row) if row is not None else None
+
+    @staticmethod
+    def _cancellation_projection(row: Mapping[str, Any]) -> dict[str, Any]:
+        return {key: row[key] for key in ("actor_id", "reason", "command_id", "audit_event_id", "outbox_event_id")}
 
     def _remember(self, plan: Mapping[str, Any], operation: str, command: str, actor: PostingActor,
                   request: Mapping[str, Any], digest: str) -> dict[str, Any]:
@@ -181,8 +212,12 @@ class PostgresLandedCostRepository:
                     (self.tenant_id, identifier, parent["id"], *captured.values()))
             for index, (line, part, _) in enumerate(parts, start=1):
                 current = self.purchase._order(parent["id"])
-                self.purchase.prepare_receipt_line(parent["id"], line["id"], part, expected_version=current["row_version"],
-                    command_id=platform_id("LCCMD", identifier, "prepare", index), actor=actor)
+                self._receiving_participant = _LandedCostReceivingParticipant(self, parent["id"], retained[index - 1]["receipt_id"])
+                try:
+                    self.purchase.prepare_receipt_line(parent["id"], line["id"], part, expected_version=current["row_version"],
+                        command_id=platform_id("LCCMD", identifier, "prepare", index), actor=actor, _source_owner=self._receiving_participant)
+                finally:
+                    self._receiving_participant = None
             return self._remember(plan, "prepare", command_id, actor, asdict(request), digest)
 
     def get(self, identifier: str, *, actor: PostingActor) -> dict[str, Any]:
@@ -220,6 +255,8 @@ class PostgresLandedCostRepository:
             digest, replay = self._command(plan, operation, command_id, actor, request)
             if replay is not None:
                 return replay
+            if self._cancellation(plan_id=identifier) is not None:
+                raise ProcurementPartialError("landed_cost_cancelled", "Retained cancelled receiving cannot progress to review or publication.")
             if plan["phase"] != (0 if operation == "review" else 1) or plan["plan_digest"] != expected_plan_digest:
                 raise ProcurementPartialError("landed_cost_phase_conflict", "The current retained bundle stage and digest are required.")
             payload = plan["payload"]
@@ -250,3 +287,43 @@ class PostgresLandedCostRepository:
                     VALUES(%s,%s,%s,%s,%s,%s,%s)""", (self.tenant_id, identifier, effect["id"], actor.user_id, reason, audit, outbox))
             self.connection.execute("UPDATE reconforge.landed_cost_plans SET phase=phase+1 WHERE tenant_id=%s AND id=%s", (self.tenant_id, identifier))
             return self._remember({**payload, "plan_digest": plan["plan_digest"]}, operation, command_id, actor, request, digest)
+
+    def cancel(self, identifier: str, *, expected_plan_digest: str, command_id: str,
+               reason: str, actor: PostingActor) -> dict[str, Any]:
+        """Retain an unreceived bundle and release only its exact reservations."""
+        from reconforge.domain.inventory_receipt_posting import exact_text
+        reason, command_id = exact_text(reason, maximum=500), exact_text(command_id, maximum=140)
+        request = {"plan_id": identifier, "expected_plan_digest": expected_plan_digest, "reason": reason}
+        envelope = {"operation": "cancel", "actor_id": actor.user_id, "request": request}
+        digest = digest_payload(envelope)
+        with self.connection.transaction():
+            self.purchase._scope_transaction()
+            plan = self._row(identifier)
+            parent = self.purchase._order(plan["order_id"], lock=True)
+            self._authorize(parent, actor, "review", plan["amount_minor"])
+            self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                (canonical_json([self.tenant_id, plan["workspace_id"], "landed-cost", command_id]),))
+            if self.connection.execute("SELECT 1 FROM reconforge.landed_cost_commands WHERE tenant_id=%s AND workspace_id=%s AND command_id=%s",
+                (self.tenant_id, plan["workspace_id"], command_id)).fetchone() is not None:
+                raise ProcurementPartialError("landed_cost_command_conflict", "Command belongs to a retained receiving operation.")
+            retained = self._cancellation(command_id=command_id, workspace_id=plan["workspace_id"])
+            if retained is not None:
+                if (retained["plan_id"], retained["actor_id"], retained["request_digest"]) != (identifier, actor.user_id, digest):
+                    raise ProcurementPartialError("landed_cost_command_conflict", "Cancellation command belongs to another exact source, request or human.")
+                self.connection.execute("SELECT reconforge.landed_cost_close(%s,%s)", (self.tenant_id, identifier))
+                return dict(retained["response_json"])
+            if plan["phase"] not in (0, 1) or plan["plan_digest"] != expected_plan_digest or self._cancellation(plan_id=identifier) is not None:
+                raise ProcurementPartialError("landed_cost_phase_conflict", "Only the current uncancelled unreceived bundle can be cancelled.")
+            view = self._view(identifier)
+            if actor.user_id in (view["preparer_actor_id"], view["reviewer_actor_id"]):
+                raise ProcurementPartialError("landed_cost_duties_conflict", "Cancellation requires a human independent of the preparer and any reviewer.")
+            audit, outbox = self._event(plan, "landed_cost_cancelled", actor)
+            cancellation = {"actor_id": actor.user_id, "reason": reason, "command_id": command_id,
+                            "audit_event_id": audit, "outbox_event_id": outbox}
+            response = {**view, "status": "Cancelled", "cancellation": cancellation}
+            self.connection.execute("""INSERT INTO reconforge.landed_cost_cancellations(tenant_id,plan_id,workspace_id,source_phase,
+                actor_id,reason,command_id,request_digest,request_json,response_json,audit_event_id,outbox_event_id)
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s::jsonb,%s,%s)""",
+                (self.tenant_id, identifier, plan["workspace_id"], plan["phase"], actor.user_id, reason, command_id, digest,
+                 canonical_json(envelope), canonical_json(response), audit, outbox))
+            return response

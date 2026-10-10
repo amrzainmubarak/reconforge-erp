@@ -5,7 +5,8 @@ active_sprint: "Native Commercial, Landed Cost and Asset Cycles — ADR0844"
 snapshot:
   evidence_base_commit: "34b9e7a5b2a7c4d8ae49b641a36de030a878d507"
   policy_change_commit: "the commit containing this file"
-  published: false
+  published: true
+  publication: "Draft PR128; frozen snapshot precedes successor hosted acceptance"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 

@@ -244,6 +244,20 @@
       "profile_id": "commercial-collection-projection/one-line-reviewed-partial-receipt-two-runs-v1",
       "status": "verified",
       "workload_family": "commercial_projection"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-post-repair-cfd30de7-2026-10-10.json",
+      "artifact_sha256": "4c9ab43acf5ab4f327010013611e4cea5a73f7d1863019edc8db4d4654ce6530",
+      "claim_boundary": "One local single-entity USD profile:1000 native three-human cash/equity postings, four workers, same seed and warmed verified reads. Latency includes authentication. Not HTTP TPS, mixed ERP capacity, production sizing, causal proof, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/1000-three-human-v1@post-repair-cfd30de7",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
     }
   ],
   "index_id": "benchmark-evidence-index-v1",

@@ -1,5 +1,10 @@
 # Execution State
 
+Publication snapshot: this file is frozen before the successor hosted gate.
+Current integrated acceptance is recorded by Draft PR128 required checks and
+its source-bound acceptance packet; prior failed/source-specific evidence stays
+historical. Do not repeat accepted owner capabilities to update this snapshot.
+
 ## Active global operating platform program (2026-10-09; ADR0844)
 
 Verified base: PR127 `34b9e7a5b2a7c4d8ae49b641a36de030a878d507`, preserving
@@ -39,7 +44,12 @@ CA1/LC1 event recovery now passes loss of acknowledgement, crashed leases,
 fencing and exactly one consumer receipt/effect with unchanged financial rows.
 Additive0123 refreshes corrected invoker functions for existing0122 databases;
 its downgrade preserves the compatible correction without deleting history.
-Final repaired-source integrated acceptance and benchmark remain pending.
+Repaired-source hosted acceptance remains required at publication time.
+The unchangedcfd30de7/full123 retest passes1000 native cycles, zero errors and
+the independent493671004minor oracle. Posting1.145287cycles/s is23.23% below
+PR127 and13.00% below6272889d; p50/p95/p99=3.417656/4.423447/4.747318s.
+Raw observations and93 resource samples remain published. No broad performance
+gain is claimed; source-specific corrective gates and benchmark are complete.
 No production, banking or competitor superiority claim.
 
 The fixed6272889d source now passes the final native1000-cycle local benchmark:

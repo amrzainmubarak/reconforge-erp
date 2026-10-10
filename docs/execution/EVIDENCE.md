@@ -1,5 +1,19 @@
 # ReconForge Execution Evidence Log
 
+- GLOBAL-20261010 final corrective benchmark, unchangedcfd30de7/full123,
+  PostgreSQL17.10/nonowner false,false,1000 native three-human cycles/4workers:
+  all completed,0errors/nonadmissions, independent493671004minor oracle passes.
+  Posting873.143320s/1.145287cycles/s, p50/p95/p99
+  3.417656/4.423447/4.747318s. Throughput regresses23.23% vsPR127 and13.00%
+  vs6272889d; cause unresolved. Current1000-effect reads13.696350→1.121742s
+  preserve existing batching, not new posting improvement. Complete1000 cycle,
+  3333 read vectors and93 resource samples retained. Original report SHA256
+  306ab7117fca913ab81a367eba551634ae99b40a5bb62f18342a95a8be6994a4.
+  Docker restarted before run; background containers preserved, one count-only
+  observation query recorded. No causal/statistical/competitor performance claim.
+  Publication25-case integrity/oracle gate and19-entry index pass; final hosted
+  acceptance belongs to its separately bound DraftPR128 required checks.
+
 - GLOBAL-20261010 corrective migration gate: actual nonowner PostgreSQL17.10
   source owners posted at0122, then upgraded to0123 and returned compatibly to
   0122. All financial rows, function OIDs/ACL/search paths, table ACL/FORCE RLS,

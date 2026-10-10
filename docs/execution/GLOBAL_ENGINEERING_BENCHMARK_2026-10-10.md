@@ -1,6 +1,54 @@
 # Global operating platform: bounded engineering measurements
 
-Publication date: 2026-10-10. The actual runs began and finished on 2026-10-09 UTC. Native posting throughput regressed against the accepted PR127 run. Financial correctness passed on both sources. The current within-run bounded-batch read advantage exercises an existing pathway; the new measured optimization is the commercial projection's allocation lookup reuse.
+Publication date: 2026-10-10. Initial runs occurred on 2026-10-09 UTC; the corrective-source run occurred on 2026-10-10 UTC. Native posting throughput regressed against accepted PR127 in both expansion observations. Financial correctness passed. Within-run bounded-batch reads exercise an existing pathway; the new measured optimization is commercial projection allocation lookup reuse.
+
+## Corrective-source retest
+
+[Full post-repair observations](benchmarks/enterprise-native-finance-post-repair-cfd30de7-2026-10-10.json)
+retain source `cfd30de7a5ae1958b17e81f4988cbe9fa461457a`, migration0123,
+unchanged whole-source SHA256 `4eb38a271b4b49b9d420c79b11513fb36b3d199697adfc31af26aa7fd9e05231`
+and original report SHA256 `306ab7117fca913ab81a367eba551634ae99b40a5bb62f18342a95a8be6994a4`.
+Same pinned PostgreSQL17.10, seed, hardware profile, four workers,1000 three-human
+native cash/equity cycles and100/1000-effect reads each with three repetitions.
+All1000 cycles complete, zero failures/nonadmissions, independent493671004minor
+debit=credit=cash=equity. Source remains unchanged and owned container removed.
+
+| Metric | Accepted PR12734b9 | Pre-repair6272889d | Correctivecfd30de7 |
+| --- | ---: | ---: | ---: |
+| Posting seconds | 670.269043 | 759.610646 | 873.143320 |
+| Native cycles/s | 1.491938 | 1.316464 | 1.145287 |
+| p50 seconds | 2.562645 | 3.115654 | 3.417656 |
+| p95 seconds | 3.352172 | 3.296120 | 4.423447 |
+| p99 seconds | 4.595277 | 3.581297 | 4.747318 |
+|1000-effect per-effect read median seconds | 6.957988 | 7.669656 | 13.696350 |
+|1000-effect batch read median seconds | 0.474097 | 0.569061 | 1.121742 |
+
+Corrective posting throughput is23.23% below accepted PR127 and13.00% below the
+pre-repair observation. The within-run existing batch path is12.2099x faster
+than per-effect reads; both absolute read durations regress between sources.
+This result rejects a broad performance-improvement claim. Namespace dispatch
+fixes are required correctness/compatibility work; these measurements do not
+establish them as a speed optimization or identify the regression's cause.
+Docker Desktop restarted before this run; thirteen pre-existing containers were
+preserved. Resource availability, cache/host contention and sampling differ:
+one observation per source cannot isolate causality or statistical confidence.
+One operator count-only query observed1000 BENCH effects late in the run; it
+adds an observation query to cumulative database counters, not business throughput.
+
+The new packet retains1000 cycle latencies,3333 timed read request observations
+and93 ten-second resource samples. Sampled client RSS max124747776bytes;
+database container memory max180.3MiB, aggregate CPU max295.0%, lock-wait sessions
+max2. First-to-last counters record0 deadlocks/rollbacks/conflicts and19911960
+WAL bytes; counters include reads and sampler work and omit earlier seeding.
+These are samples, not peak-resource/lock-duration evidence. I/O timing remains
+off; cost, RPO/RTO and competitor measurements remain unavailable in this profile.
+Native1000 operations are the highest completed posting tier here; no10000,
+100000 or million-posting claim follows. Instrumenting authentication, posting
+SQL and wait spans on repeated equal workloads is the next performance priority.
+
+The evidence index now contains19 entries and preserves every accepted old entry.
+Earlier source-specific packets below remain unchanged. Later evidence-only
+publication does not reattribute the benchmark to a different runtime source.
 
 ## Retained evidence and source binding
 

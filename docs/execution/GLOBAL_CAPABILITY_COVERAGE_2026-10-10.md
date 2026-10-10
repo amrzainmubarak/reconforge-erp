@@ -31,6 +31,8 @@ Complexity is relative engineering effort, not an unsupported calendar estimate.
 Exact worktree milestone commits and artifact hashes are retained in
 [source-bound milestone evidence](GLOBAL_OPERATING_MILESTONES_2026-10-10.json).
 Final acceptance must independently bind the new PR head and its required checks.
+This is a frozen publication snapshot; successor acceptance is recorded in
+Draft PR128 required checks without relabeling the older milestone sources.
 
 | Domain | Existing/new executable scope | Milestone evidence paths and bounded proof | Gap, dependency and complexity | Measurable differentiation opportunity |
 | --- | --- | --- | --- | --- |

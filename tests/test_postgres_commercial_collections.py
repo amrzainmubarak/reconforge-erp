@@ -1,5 +1,6 @@
 """Real individual-invoice partial receipts and immutable cash ownership."""
 from concurrent.futures import ThreadPoolExecutor
+from hashlib import sha256
 from typing import Any
 
 import pytest
@@ -55,6 +56,154 @@ def phase(runtime: ReceiptRuntime, plan: dict[str, Any], operation: str, who: st
 
 def complete(runtime: ReceiptRuntime, plan: dict[str, Any], suffix: str) -> dict[str, Any]:
     return phase(runtime, phase(runtime, plan, "review", "checker", "review-" + suffix), "post", "poster", "post-" + suffix)
+
+
+@pytest.mark.parametrize("producer", ["collections", "landed-cost"])
+def test_real_financial_outbox_identity_survives_failure_lost_ack_and_worker_recovery(
+    receipt_database: tuple[str, str], producer: str,
+) -> None:
+    from psycopg import sql
+
+    from reconforge.domain.finance_posting import digest_payload
+    from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+    from reconforge.infrastructure.postgres_outbox import PostgresOutboxIntegrityError, PostgresOutboxRepository
+    from reconforge.infrastructure.postgres_outbox_consumer import (
+        PostgresOutboxConsumer,
+        PostgresOutboxConsumerIntegrityError,
+    )
+
+    if producer == "collections":
+        runtime = create_stock_runtime(receipt_database)
+        _, invoice_id = invoiced(runtime)
+        plan = complete(runtime, prepare(runtime, invoice_id, 10000, "OUTBOX"), "OUTBOX")
+        username, event_type, prefix = "maker", "commercial_collection_posted", "OBX-"
+    else:
+        from tests.test_postgres_landed_cost import (
+            CHECKER,
+            MAKER,
+            POSTER,
+            create_multiline_runtime,
+            create_order,
+        )
+        from tests.test_postgres_landed_cost import (
+            phase as landed_phase,
+        )
+        from tests.test_postgres_landed_cost import (
+            prepare as landed_prepare,
+        )
+
+        runtime = create_multiline_runtime(receipt_database)
+        plan = landed_prepare(runtime, create_order(runtime))
+        plan = landed_phase(runtime, landed_phase(runtime, plan, "review", CHECKER), "post", POSTER)
+        username, event_type, prefix = MAKER, "landed_cost_posted", "LCOUT-"
+
+    def financial_state(connection: Any) -> str:
+        # Delivery and observation audit are mutable independently. All source,
+        # quantity, FIFO, settlement, GL and owner rows must retain exact values.
+        tables = connection.execute("""SELECT c.table_name FROM information_schema.columns c
+            JOIN information_schema.tables t ON (t.table_schema,t.table_name)=(c.table_schema,c.table_name)
+            WHERE c.table_schema='reconforge' AND c.column_name='tenant_id' AND t.table_type='BASE TABLE'
+            AND c.table_name ~ '^(finance_|ar_|ap_|inventory_|stock_|commercial_collection_|landed_cost_|procurement_)'
+            ORDER BY c.table_name""").fetchall()
+        snapshot = {}
+        for table in tables:
+            values = connection.execute(sql.SQL("SELECT to_jsonb(r) value FROM reconforge.{} r WHERE tenant_id=%s ORDER BY to_jsonb(r)::text")
+                .format(sql.Identifier(table["table_name"])), (runtime.tenant,)).fetchall()
+            snapshot[table["table_name"]] = [row["value"] for row in values]
+        return digest_payload(snapshot)
+
+    claims = {"tenant_id": runtime.tenant, "limit": 100, "lease_seconds": 300,
+              "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
+    with runtime.actor(username) as (connection, _, _actor):
+        before = financial_state(connection)
+        row = connection.execute("""SELECT event_id FROM reconforge.outbox_events
+            WHERE tenant_id=%s AND aggregate_id=%s AND event_type=%s""", (runtime.tenant, plan["id"], event_type)).fetchone()
+        assert row is not None and row["event_id"].startswith(prefix)
+        identifier = row["event_id"]
+        outbox = PostgresOutboxRepository(connection)
+        batch = outbox.claim_pending(worker_id="publisher-a", **claims)
+        event = next(event for event in batch if event.id == identifier)
+        assert event.id != event.id.lower() and event.lease_generation == 1
+        for other in batch:
+            if other.id != identifier:
+                outbox.mark_published(tenant_id=runtime.tenant, event_id=other.id,
+                    worker_id="publisher-a", lease_generation=other.lease_generation)
+        outbox.assert_claim(tenant_id=runtime.tenant, event_id=identifier, worker_id="publisher-a", lease_generation=1)
+        # Event case is immutable identity. A differently cased key never owns
+        # its retained lease, even when tenant and consumer IDs normalize.
+        with pytest.raises(PostgresOutboxIntegrityError):
+            outbox.mark_published(tenant_id=runtime.tenant, event_id=identifier.lower(), worker_id="publisher-a", lease_generation=1)
+        with pytest.raises(PostgresOutboxIntegrityError):
+            outbox.mark_failed(tenant_id=runtime.tenant, event_id=identifier, worker_id="publisher-wrong",
+                lease_generation=1, error="Wrong worker", retry_base_seconds=0)
+        assert outbox.mark_failed(tenant_id=runtime.tenant, event_id=identifier, worker_id="publisher-a",
+            lease_generation=1, error="Delivery failed before acknowledgement", max_attempts=1, retry_base_seconds=0)
+    with runtime.actor(username) as (connection, _, _actor):
+        outbox = PostgresOutboxRepository(connection)
+        outbox.replay_dead(tenant_id=runtime.tenant, event_id=identifier)
+        second = outbox.claim_pending(worker_id="publisher-a", **claims)
+        assert len(second) == 1 and second[0].id == identifier and second[0].lease_generation == 2
+
+    consumer = PostgresOutboxConsumer(runtime.factory)
+    consumption = {"tenant_id": runtime.tenant, "consumer_id": "FINANCIAL-OBSERVATION", "event_id": identifier,
+                   "event_digest": sha256(event.payload_json.encode()).hexdigest(),
+                   "workspace_id": "work", "organization_id": "org", "legal_entity_id": "entity"}
+
+    def observe(connection: Any) -> str:
+        return PostgresAuditEventRepository(connection, runtime.tenant).append(
+            actor_label=username, action="financial_event_observed", object_type="outbox_delivery", object_id=identifier,
+            metadata={"event_digest": consumption["event_digest"]}).id
+
+    def duplicate_effect(_connection: Any) -> None:
+        raise AssertionError("Lost acknowledgement must not repeat the persisted observation effect")
+
+    with runtime.actor(username):
+        applied = consumer.apply(effect=observe, **consumption)
+        assert applied.status == "applied" and applied.event_id == identifier
+        assert applied.consumer_id == "financial-observation"
+    # Provider committed its database effect, then its response was lost and
+    # the publisher died. Retained expiry simulates that failure deterministically.
+    with runtime.actor(username) as (connection, _, _actor):
+        connection.execute("""UPDATE reconforge.outbox_events SET claimed_at=clock_timestamp()-interval '1 second'
+            WHERE tenant_id=%s AND event_id=%s""", (runtime.tenant, identifier))
+        outbox = PostgresOutboxRepository(connection)
+        with pytest.raises(PostgresOutboxIntegrityError):
+            outbox.assert_claim(tenant_id=runtime.tenant, event_id=identifier, worker_id="publisher-a", lease_generation=2)
+        with pytest.raises(PostgresOutboxIntegrityError):
+            outbox.mark_published(tenant_id=runtime.tenant, event_id=identifier, worker_id="publisher-a", lease_generation=2)
+    with runtime.actor(username) as (connection, _, _actor):
+        outbox = PostgresOutboxRepository(connection)
+        recovered = outbox.claim_pending(worker_id="publisher-b", **claims)
+        assert len(recovered) == 1 and recovered[0].id == identifier and recovered[0].lease_generation == 3
+        with pytest.raises(PostgresOutboxIntegrityError):
+            outbox.mark_failed(tenant_id=runtime.tenant, event_id=identifier, worker_id="publisher-a",
+                lease_generation=2, error="Fenced prior publisher", retry_base_seconds=0)
+    with runtime.actor(username):
+        duplicate = consumer.apply(effect=duplicate_effect, **consumption)
+        assert duplicate.status == "duplicate" and duplicate.event_id == identifier
+        assert duplicate.effect_digest == applied.effect_digest
+        with pytest.raises(PostgresOutboxConsumerIntegrityError, match="digest"):
+            consumer.apply(effect=duplicate_effect, **{**consumption, "event_digest": "0" * 64})
+    with runtime.actor(username) as (connection, _, _actor):
+        outbox = PostgresOutboxRepository(connection)
+        outbox.mark_published(tenant_id=runtime.tenant, event_id=identifier, worker_id="publisher-b", lease_generation=3)
+    with runtime.actor(username) as (connection, _, _actor):
+        outbox = PostgresOutboxRepository(connection)
+        # A lost acknowledgement of Published leaves the closed row intact;
+        # repeated acknowledgements retain the existing explicit conflict API.
+        with pytest.raises(PostgresOutboxIntegrityError, match="already published"):
+            outbox.mark_published(tenant_id=runtime.tenant, event_id=identifier, worker_id="publisher-b", lease_generation=3)
+        assert outbox.summary(tenant_id=runtime.tenant)["pending"] == 0
+        evidence = connection.execute("""SELECT lease_generation,action FROM reconforge.outbox_delivery_evidence
+            WHERE tenant_id=%s AND event_id=%s ORDER BY occurred_at,lease_generation,action""", (runtime.tenant, identifier)).fetchall()
+        assert [(row["lease_generation"], row["action"]) for row in evidence] == [
+            (1, "claimed"), (1, "failed"), (1, "requeued"), (2, "claimed"),
+            (2, "expired"), (3, "claimed"), (3, "published")]
+        assert connection.execute("""SELECT count(*) n FROM reconforge.outbox_consumer_receipts
+            WHERE tenant_id=%s AND event_id=%s AND consumer_id='financial-observation'""", (runtime.tenant, identifier)).fetchone()["n"] == 1
+        assert connection.execute("""SELECT count(*) n FROM reconforge.domain_audit_events
+            WHERE tenant_id=%s AND object_id=%s AND action='financial_event_observed'""", (runtime.tenant, identifier)).fetchone()["n"] == 1
+        assert financial_state(connection) == before
 
 
 def test_three_partial_receipts_inside_one_invoice_conserve_independent_cash_ar_and_cogs(receipt_database: tuple[str, str]) -> None:

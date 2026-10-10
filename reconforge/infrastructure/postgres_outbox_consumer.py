@@ -25,6 +25,10 @@ from reconforge.infrastructure.postgres import (
     validate_tenant_id,
     validate_workspace_id,
 )
+from reconforge.infrastructure.postgres_outbox import (
+    PostgresOutboxValidationError,
+    validate_postgres_outbox_event_id,
+)
 from reconforge.io.persisted import PersistedJsonError, decode_postgres_outbox_payload
 
 _DIGEST_PATTERN = re.compile(r"^[a-f0-9]{64}$")
@@ -183,7 +187,10 @@ class PostgresOutboxConsumer:
 
         tenant = _tenant(tenant_id)
         consumer = _scope_id(consumer_id, "consumer_id")
-        event = _scope_id(event_id, "event_id")
+        try:
+            event = validate_postgres_outbox_event_id(event_id)
+        except PostgresOutboxValidationError as exc:
+            raise PostgresOutboxConsumerValidationError(str(exc)) from exc
         payload_digest = _digest(event_digest, "event_digest")
         if not callable(effect):
             raise PostgresOutboxConsumerValidationError("effect must be callable.")

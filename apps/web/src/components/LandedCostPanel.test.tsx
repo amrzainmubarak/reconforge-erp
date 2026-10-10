@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { landedCommand, landedPage, type LandedPlan } from "../landed-cost-data";
 import type { PartialDetail } from "../procurement-partial-data";
@@ -11,10 +11,11 @@ const scope = { workspace_id: "work", organization_id: "org", legal_entity_id: "
 const detail = { order: { id: "order", row_version: 3, request: { posting_date: "2026-10-10", period_id: "period" } }, lines: [] } as unknown as PartialDetail;
 const permissions = ["payables.manage", "payables.approve", "payables.settle", "inventory.manage", "inventory.post", "inventory.valuation.manage", "inventory.valuation.approve", "finance_core.manage", "finance_core.validate", "finance_core.post"];
 function plan(): LandedPlan { return { id: "LC1-source", order_id: "order", number: "COST-1", ...scope, phase: 0, status: "Prepared", plan_digest: "a".repeat(64), freight_minor: "1", duty_minor: "0", amount_minor: "1", entry_id: "entry", preparer_actor_id: "maker", reviewer_actor_id: null, posted_actor_id: null, posting_effect_id: null, allocations: [] }; }
-function panel(actorId: string, current: PartialDetail = detail) {
-  return render(<LandedCostPanel locale="en" session={{ tenantId: "tenant" } as BrowserAdminSession} scope={scope} detail={current} actorId={actorId}
-    permissions={permissions} elevated locked={false} reason="Replace unreceived source" periods={[{ id: "period", name: "October" }]} onChanged={vi.fn().mockResolvedValue(undefined)} onBusy={vi.fn()} onError={vi.fn()} />);
+function panelElement(actorId: string, current: PartialDetail = detail) {
+  return <LandedCostPanel locale="en" session={{ tenantId: "tenant" } as BrowserAdminSession} scope={scope} detail={current} actorId={actorId}
+    permissions={permissions} elevated locked={false} reason="Replace unreceived source" periods={[{ id: "period", name: "October" }]} onChanged={vi.fn().mockResolvedValue(undefined)} onBusy={vi.fn()} onError={vi.fn()} />;
 }
+function panel(actorId: string, current: PartialDetail = detail) { return render(panelElement(actorId, current)); }
 beforeEach(() => { vi.clearAllMocks(); vi.mocked(landedPage).mockResolvedValue({ records: [plan()], next_after: null }); });
 
 it("prevents preparer cancellation and exposes the independent human action", async () => {
@@ -74,6 +75,32 @@ it("accepts a newer terminal list state after a confirmed review acknowledgement
   expect(screen.queryByRole("button", { name: "Review bundle" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Receive bundle and post paid charges" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Cancel unreceived bundle" })).toBeNull();
+});
+
+it.each(["Cancelled", "Posted"] as const)("retains observed %s evidence when an older review acknowledgement arrives after the list refresh", async (status) => {
+  const reviewed = { ...plan(), phase: 1 as const, status: "Reviewed" as const, reviewer_actor_id: "checker" };
+  const terminal: LandedPlan = status === "Cancelled" ? {
+    ...reviewed, status, cancellation: { actor_id: "poster", reason: "Independent release", command_id: "cancel",
+      audit_event_id: "terminal-cancel-audit", outbox_event_id: "terminal-cancel-outbox" },
+  } : { ...reviewed, phase: 2, status, posted_actor_id: "poster", posting_effect_id: "terminal-post-effect" };
+  let resolveAcknowledgement!: (value: LandedPlan) => void;
+  const acknowledgement = new Promise<LandedPlan>((resolve) => { resolveAcknowledgement = resolve; });
+  vi.mocked(landedCommand).mockReturnValue(acknowledgement);
+  vi.mocked(landedPage).mockReset().mockResolvedValueOnce({ records: [plan()], next_after: null })
+    .mockResolvedValueOnce({ records: [terminal], next_after: null }).mockRejectedValue(new Error("final list unavailable"));
+  const view = panel("checker");
+  fireEvent.click(await screen.findByRole("button", { name: "Review bundle" }));
+  await waitFor(() => expect(landedCommand).toHaveBeenCalledOnce());
+  view.rerender(panelElement("checker", { ...detail, order: { ...detail.order, row_version: 4 } }));
+  await screen.findByText(status === "Cancelled" ? "terminal-cancel-audit" : "terminal-post-effect");
+  await act(async () => { resolveAcknowledgement(reviewed); await acknowledgement; });
+  await screen.findByRole("alert");
+  expect(vi.mocked(landedPage).mock.calls).toHaveLength(3);
+  expect(screen.getByText(status === "Cancelled" ? "terminal-cancel-audit" : "terminal-post-effect")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Review bundle" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Receive bundle and post paid charges" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Cancel unreceived bundle" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Retry the same command" })).toBeNull();
 });
 
 it("requires fresh quantities and paid charges after cancelled source evidence is reloaded", async () => {

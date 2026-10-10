@@ -18,6 +18,12 @@ const validationWords = {
 
 interface Props { locale: Locale; session: BrowserAdminSession; scope: ProcurementScope; detail: PartialDetail; actorId: string | null; permissions: string[]; elevated: boolean; locked: boolean; reason: string; periods: { id: string; name: string }[]; onChanged: () => Promise<void>; onBusy: (value: boolean) => void; onError: (error: unknown) => void }
 
+function mergeAcknowledgement(current: LandedPlan, acknowledgement: LandedPlan): LandedPlan {
+  if (current.status === "Cancelled" || current.status === "Posted" ||
+      (acknowledgement.status !== "Cancelled" && current.phase > acknowledgement.phase)) return current;
+  return acknowledgement;
+}
+
 export function LandedCostPanel({ locale, session, scope, detail, actorId, permissions, elevated, locked, reason, periods, onChanged, onBusy, onError }: Props) {
   const t = words[locale], orderId = detail.order.id;
   const [number, setNumber] = useState(""), [freight, setFreight] = useState("0"), [duty, setDuty] = useState("0");
@@ -45,7 +51,11 @@ export function LandedCostPanel({ locale, session, scope, detail, actorId, permi
     running.current = true; setBusy(true); onBusy(true); setPending(command); setError(false); setValidation(null);
     try {
       const result = await landedCommand(session, scope, orderId, command);
-      if (mounted.current) { setFocus(result); setPlans((current) => current.map((plan) => plan.id === result.id ? result : plan)); setPending(null); setReload((value) => value + 1); }
+      if (mounted.current) {
+        setFocus((current) => current?.id === result.id ? mergeAcknowledgement(current, result) : result);
+        setPlans((current) => current.map((plan) => plan.id === result.id ? mergeAcknowledgement(plan, result) : plan));
+        setPending(null); setReload((value) => value + 1);
+      }
       await onChanged();
     } catch (caught) {
       if (mounted.current) { setError(true); if (caught instanceof AdminApiError && caught.status < 500) setPending(null); onError(caught); }

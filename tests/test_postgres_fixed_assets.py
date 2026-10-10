@@ -11,6 +11,10 @@ from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
 from reconforge.infrastructure.postgres_fixed_assets import PostgresFixedAssetsRepository
+from tests.test_postgres_finance_scope import (
+    finance_database,
+    isolated_postgres_migration_dsn,
+)
 from tests.test_postgres_inventory_receipt_posting import (
     ReceiptRuntime,
     create_receipt_runtime,
@@ -18,7 +22,7 @@ from tests.test_postgres_inventory_receipt_posting import (
     receipt_database,
 )
 
-__all__ = ["pytestmark", "receipt_database"]
+__all__ = ["finance_database", "isolated_postgres_migration_dsn", "pytestmark", "receipt_database"]
 
 
 def seed_asset_masters(runtime: ReceiptRuntime) -> ReceiptRuntime:
@@ -202,6 +206,69 @@ def test_closed_period_and_changed_acquisition_retry_are_refused(asset_runtime: 
         connection.execute("UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='nov'", (runtime.tenant,))
     with pytest.raises(Exception, match="Open|open"):
         operation(runtime, first["asset_id"], kind="depreciate", date="2026-11-01", period="nov", month="2026-10")
+
+
+def test_pending_asset_protects_all_six_mapped_accounts_period_and_entity(
+    asset_runtime: ReceiptRuntime,
+) -> None:
+    import psycopg
+
+    runtime = asset_runtime
+    boundary = PostgresTenantBoundary(runtime.factory)
+    with boundary.transaction(runtime.tenant) as connection:
+        connection.execute(
+            "INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES(%s,'EUR','Euro',2)",
+            (runtime.tenant,),
+        )
+    plan = acquire(runtime)
+    # Only FIXED/CASH appear in the acquisition lines. The other four mappings
+    # still belong to the retained lifecycle and cannot be reclassified.
+    for account in ("FIXED", "ACCUM", "DEPRECIATION", "CASH", "GAIN", "LOSS"):
+        with pytest.raises(psycopg.errors.CheckViolation, match="retained financial classifications"), boundary.transaction(runtime.tenant, workspace_id="work", organization_id="org") as connection:
+            connection.execute(
+                "UPDATE reconforge.finance_accounts SET account_type='Liability' WHERE tenant_id=%s AND account_code=%s",
+                (runtime.tenant, account),
+            )
+    with pytest.raises(psycopg.errors.CheckViolation, match="open original period"), boundary.transaction(runtime.tenant) as connection:
+        connection.execute(
+            "UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='period'",
+            (runtime.tenant,),
+        )
+    with pytest.raises(psycopg.errors.RaiseException, match="functional currency is immutable"), boundary.transaction(runtime.tenant) as connection:
+        connection.execute(
+            "UPDATE reconforge.legal_entities SET currency_code='EUR' WHERE tenant_id=%s AND id='entity'",
+            (runtime.tenant,),
+        )
+    finish(runtime, plan)
+    assert balances(runtime) == {"FIXED": 10101, "CASH": -10101}
+
+
+def test_legacy_master_maintenance_without_asset_select_privileges(finance_database: Any) -> None:
+    # This role received grants at revision 0094, before asset tables existed.
+    # Preserve those real legacy ACLs rather than granting owner dependencies.
+    db = finance_database
+    with db["boundary"].transaction("finance_scope") as connection:
+        flags = connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
+        assert tuple(flags) == (False, False)
+        for table in ("fixed_assets", "fixed_asset_plans", "fixed_asset_reviews", "fixed_asset_links", "fixed_asset_commands"):
+            assert connection.execute(
+                "SELECT has_table_privilege(current_user,%s,'SELECT')", ("reconforge." + table,),
+            ).fetchone()[0] is False
+        assert connection.execute(
+            "SELECT count(*) FROM reconforge.finance_entries WHERE tenant_id='finance_scope' AND upper(left(entry_number,4))='FA1-'",
+        ).fetchone()[0] == 0
+        for statement in (
+            "UPDATE reconforge.legal_entities SET name='Maintained entity' WHERE tenant_id='finance_scope' AND id='entity_a1'",
+            "UPDATE reconforge.finance_accounts SET name='Maintained account' WHERE tenant_id='finance_scope' AND account_code='A_CASH'",
+            "UPDATE reconforge.finance_journals SET name='Maintained journal' WHERE tenant_id='finance_scope' AND journal_code='J_A'",
+            "UPDATE reconforge.fiscal_periods SET name='Maintained period' WHERE tenant_id='finance_scope' AND id='period'",
+        ):
+            assert connection.execute(statement).rowcount == 1
+    # The transaction must commit all deferred OLD/NEW owner guards successfully.
+    with db["boundary"].transaction("finance_scope") as connection:
+        assert connection.execute(
+            "SELECT name FROM reconforge.fiscal_periods WHERE tenant_id='finance_scope' AND id='period'",
+        ).fetchone()[0] == "Maintained period"
 
 
 def test_current_amount_policy_is_applied_before_acquisition_and_retained_ack(asset_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch) -> None:

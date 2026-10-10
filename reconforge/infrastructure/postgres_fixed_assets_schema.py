@@ -279,6 +279,14 @@ BEGIN
    PERFORM reconforge.asset_close(changed->>'tenant_id',owner_id);CONTINUE;
   END IF;
   IF TG_TABLE_NAME IN ('finance_accounts','finance_journals','fiscal_periods','legal_entities') THEN
+   -- Every retained asset starts with its atomic FA1 acquisition header. A
+   -- legacy master-only role need not read asset owners when that scoped
+   -- native namespace is absent. Inspect both OLD/NEW images independently.
+   IF NOT EXISTS(SELECT 1 FROM reconforge.finance_entries entry
+    WHERE entry.tenant_id=changed->>'tenant_id' AND
+    (upper(left(entry.entry_number,4))='FA1-' OR upper(left(entry.id,4))='FA1-')) THEN
+    CONTINUE;
+   END IF;
    FOR p IN SELECT q.* FROM reconforge.fixed_asset_plans q JOIN reconforge.fixed_assets definition
     ON definition.tenant_id=q.tenant_id AND definition.id=q.asset_id JOIN reconforge.finance_entries entry
     ON entry.tenant_id=q.tenant_id AND entry.id=q.entry_id WHERE q.tenant_id=changed->>'tenant_id' AND

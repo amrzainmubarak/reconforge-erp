@@ -1,0 +1,286 @@
+{
+  "schema_version": "operational-fx-native-evidence-v1",
+  "source": {
+    "schema_version": "operational-fx-source-v1",
+    "id": "FX-synthetic",
+    "workspace_id": "work",
+    "organization_id": "org",
+    "legal_entity_id": "entity",
+    "request": {
+      "workspace_id": "work",
+      "organization_id": "org",
+      "legal_entity_id": "entity",
+      "organization_code": "ORG",
+      "entity_code": "ENTITY",
+      "customer_code": "FOREIGN",
+      "invoice_number": "SERVICE-1",
+      "posting_date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "period_id": "period",
+      "journal_code": "STOCK",
+      "foreign_currency_code": "EUR",
+      "net_minor": "10001",
+      "original_rate": {
+        "rate": "1.25",
+        "source": "Synthetic original spot",
+        "effective_at": "2026-10-01T12:00:00Z"
+      },
+      "country_code": "EG",
+      "transaction_class": "synthetic-service",
+      "taxes": [
+        {
+          "policy_id": "SYNTHETIC-VAT",
+          "country_code": "EG",
+          "transaction_class": "synthetic-service",
+          "effective_from": "2026-01-01",
+          "effective_to": "2026-12-31",
+          "rate": "0.14",
+          "account_code": "TAX",
+          "source": "Synthetic reviewed fraction",
+          "version": "2026-v1",
+          "policy_digest": "20afd54f032cf71d28ab65371e80b6601c7505a29534fee20b54f3f46b56f18b"
+        }
+      ],
+      "receivable_account_code": "AR",
+      "revenue_account_code": "REVENUE",
+      "cash_account_code": "CASH",
+      "gain_account_code": "GAIN",
+      "loss_account_code": "LOSS",
+      "reason": "Synthetic retained foreign service"
+    },
+    "foreign_policy": {
+      "currency_code": "EUR",
+      "currency_precision": 2,
+      "currency_rounding_policy": "ROUND_HALF_UP",
+      "currency_registry_version": "iso-4217-list-one-2026-01-01-rf1",
+      "currency_registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246"
+    },
+    "functional_policy": {
+      "currency_code": "USD",
+      "currency_precision": 2,
+      "currency_rounding_policy": "ROUND_HALF_UP",
+      "currency_registry_version": "iso-4217-list-one-2026-01-01-rf1",
+      "currency_registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246"
+    },
+    "foreign_net_minor": "10001",
+    "foreign_tax_minor": "1400",
+    "foreign_gross_minor": "11401",
+    "functional_net_minor": "12501",
+    "functional_gross_minor": "14251",
+    "tax_components": [
+      {
+        "policy_id": "SYNTHETIC-VAT",
+        "country_code": "EG",
+        "transaction_class": "synthetic-service",
+        "effective_from": "2026-01-01",
+        "effective_to": "2026-12-31",
+        "rate": "0.14",
+        "account_code": "TAX",
+        "source": "Synthetic reviewed fraction",
+        "version": "2026-v1",
+        "policy_digest": "20afd54f032cf71d28ab65371e80b6601c7505a29534fee20b54f3f46b56f18b",
+        "foreign_tax_minor": "1400",
+        "functional_tax_minor": "1750"
+      }
+    ],
+    "functional_allocation_policy": "converted-cumulative-prefix-v1",
+    "lines": [
+      {
+        "account_code": "AR",
+        "debit_minor": "14251",
+        "credit_minor": "0"
+      },
+      {
+        "account_code": "REVENUE",
+        "debit_minor": "0",
+        "credit_minor": "12501"
+      },
+      {
+        "account_code": "TAX",
+        "debit_minor": "0",
+        "credit_minor": "1750"
+      }
+    ],
+    "preparer_actor_id": "maker",
+    "invoice_id": "ARINV-synthetic",
+    "source_digest": "3d5f39221735ea6d259155e4e7cccb028f236e92057ac7f88b191779d6847295"
+  },
+  "plan": {
+    "schema_version": "operational-fx-plan-v1",
+    "id": "FX1-synthetic",
+    "source_id": "FX-synthetic",
+    "workspace_id": "work",
+    "organization_id": "org",
+    "legal_entity_id": "entity",
+    "kind": "recognize",
+    "sequence": 0,
+    "period_id": "period",
+    "posting_date": "2026-10-01",
+    "reason": "Synthetic retained foreign service",
+    "currency_code": "USD",
+    "currency_precision": 2,
+    "source_digest": "3d5f39221735ea6d259155e4e7cccb028f236e92057ac7f88b191779d6847295",
+    "entry_id": "GLE-synthetic",
+    "equation": {
+      "lines": [
+        {
+          "account_code": "AR",
+          "debit_minor": "14251",
+          "credit_minor": "0"
+        },
+        {
+          "account_code": "REVENUE",
+          "debit_minor": "0",
+          "credit_minor": "12501"
+        },
+        {
+          "account_code": "TAX",
+          "debit_minor": "0",
+          "credit_minor": "1750"
+        }
+      ]
+    },
+    "amount_minor": "14251",
+    "snapshot": {
+      "schema_version": "finance-entry-review-v1",
+      "entry": {
+        "id": "GLE-synthetic",
+        "workspace_id": "work",
+        "organization_id": "org",
+        "legal_entity_id": "entity",
+        "journal_id": "journal",
+        "period_id": "period",
+        "entry_number": "FX1-SYNTHETIC",
+        "posting_date": "2026-10-01",
+        "description": "Synthetic retained foreign service",
+        "external_reference": "FX:FX-synthetic:recognize",
+        "source_type": "Manual",
+        "currency_code": "USD",
+        "currency_precision": 2,
+        "currency_rounding_policy": "ROUND_HALF_UP",
+        "currency_registry_version": "iso-4217-list-one-2026-01-01-rf1",
+        "currency_registry_digest": "d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246",
+        "preparer_actor_id": "maker",
+        "reverses_posting_id": null
+      },
+      "lines": [
+        {
+          "line_number": 1,
+          "account_id": "AR",
+          "description": "Synthetic retained foreign service",
+          "debit_minor": "14251",
+          "credit_minor": "0",
+          "dimensions": {}
+        },
+        {
+          "line_number": 2,
+          "account_id": "REVENUE",
+          "description": "Synthetic retained foreign service",
+          "debit_minor": "0",
+          "credit_minor": "12501",
+          "dimensions": {}
+        },
+        {
+          "line_number": 3,
+          "account_id": "TAX",
+          "description": "Synthetic retained foreign service",
+          "debit_minor": "0",
+          "credit_minor": "1750",
+          "dimensions": {}
+        }
+      ]
+    },
+    "preparer_actor_id": "maker",
+    "command_request": {
+      "kind": "recognize",
+      "workspace_id": "work",
+      "organization_id": "org",
+      "legal_entity_id": "entity",
+      "organization_code": "ORG",
+      "entity_code": "ENTITY",
+      "customer_code": "FOREIGN",
+      "invoice_number": "SERVICE-1",
+      "posting_date": "2026-10-01",
+      "due_date": "2026-10-31",
+      "period_id": "period",
+      "journal_code": "STOCK",
+      "foreign_currency_code": "EUR",
+      "net_minor": "10001",
+      "original_rate": {
+        "rate": "1.25",
+        "source": "Synthetic original spot",
+        "effective_at": "2026-10-01T12:00:00Z"
+      },
+      "country_code": "EG",
+      "transaction_class": "synthetic-service",
+      "taxes": [
+        {
+          "policy_id": "SYNTHETIC-VAT",
+          "country_code": "EG",
+          "transaction_class": "synthetic-service",
+          "effective_from": "2026-01-01",
+          "effective_to": "2026-12-31",
+          "rate": "0.14",
+          "account_code": "TAX",
+          "source": "Synthetic reviewed fraction",
+          "version": "2026-v1",
+          "policy_digest": "20afd54f032cf71d28ab65371e80b6601c7505a29534fee20b54f3f46b56f18b"
+        }
+      ],
+      "receivable_account_code": "AR",
+      "revenue_account_code": "REVENUE",
+      "cash_account_code": "CASH",
+      "gain_account_code": "GAIN",
+      "loss_account_code": "LOSS",
+      "reason": "Synthetic retained foreign service"
+    },
+    "plan_digest": "c3ac0920e4629b8941dd1ba4839ddac0141623e9182c4314aa64f470334e87ee",
+    "validation_digest": "8588787b7648017fa5b20f7a865b79d3a4a6d940e39bcf5c69821b1736675b5b",
+    "phase": 2,
+    "status": "Posted",
+    "reviewer_actor_id": "checker",
+    "posting_effect_id": "effect-synthetic",
+    "receipt_id": null
+  },
+  "canonical_source_json": "{\"foreign_gross_minor\":11401,\"foreign_net_minor\":10001,\"foreign_policy\":{\"currency_code\":\"EUR\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\"},\"foreign_tax_minor\":1400,\"functional_allocation_policy\":\"converted-cumulative-prefix-v1\",\"functional_gross_minor\":14251,\"functional_net_minor\":12501,\"functional_policy\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\"},\"id\":\"FX-synthetic\",\"invoice_id\":\"ARINV-synthetic\",\"legal_entity_id\":\"entity\",\"lines\":[{\"account_code\":\"AR\",\"credit_minor\":0,\"debit_minor\":14251},{\"account_code\":\"REVENUE\",\"credit_minor\":12501,\"debit_minor\":0},{\"account_code\":\"TAX\",\"credit_minor\":1750,\"debit_minor\":0}],\"organization_id\":\"org\",\"preparer_actor_id\":\"maker\",\"request\":{\"cash_account_code\":\"CASH\",\"country_code\":\"EG\",\"customer_code\":\"FOREIGN\",\"due_date\":\"2026-10-31\",\"entity_code\":\"ENTITY\",\"foreign_currency_code\":\"EUR\",\"gain_account_code\":\"GAIN\",\"invoice_number\":\"SERVICE-1\",\"journal_code\":\"STOCK\",\"legal_entity_id\":\"entity\",\"loss_account_code\":\"LOSS\",\"net_minor\":10001,\"organization_code\":\"ORG\",\"organization_id\":\"org\",\"original_rate\":{\"effective_at\":\"2026-10-01T12:00:00Z\",\"rate\":\"1.25\",\"source\":\"Synthetic original spot\"},\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"reason\":\"Synthetic retained foreign service\",\"receivable_account_code\":\"AR\",\"revenue_account_code\":\"REVENUE\",\"taxes\":[{\"account_code\":\"TAX\",\"country_code\":\"EG\",\"effective_from\":\"2026-01-01\",\"effective_to\":\"2026-12-31\",\"policy_digest\":\"20afd54f032cf71d28ab65371e80b6601c7505a29534fee20b54f3f46b56f18b\",\"policy_id\":\"SYNTHETIC-VAT\",\"rate\":\"0.14\",\"source\":\"Synthetic reviewed fraction\",\"transaction_class\":\"synthetic-service\",\"version\":\"2026-v1\"}],\"transaction_class\":\"synthetic-service\",\"workspace_id\":\"work\"},\"schema_version\":\"operational-fx-source-v1\",\"tax_components\":[{\"account_code\":\"TAX\",\"country_code\":\"EG\",\"effective_from\":\"2026-01-01\",\"effective_to\":\"2026-12-31\",\"foreign_tax_minor\":1400,\"functional_tax_minor\":1750,\"policy_digest\":\"20afd54f032cf71d28ab65371e80b6601c7505a29534fee20b54f3f46b56f18b\",\"policy_id\":\"SYNTHETIC-VAT\",\"rate\":\"0.14\",\"source\":\"Synthetic reviewed fraction\",\"transaction_class\":\"synthetic-service\",\"version\":\"2026-v1\"}],\"workspace_id\":\"work\"}",
+  "canonical_plan_json": "{\"amount_minor\":14251,\"command_request\":{\"cash_account_code\":\"CASH\",\"country_code\":\"EG\",\"customer_code\":\"FOREIGN\",\"due_date\":\"2026-10-31\",\"entity_code\":\"ENTITY\",\"foreign_currency_code\":\"EUR\",\"gain_account_code\":\"GAIN\",\"invoice_number\":\"SERVICE-1\",\"journal_code\":\"STOCK\",\"kind\":\"recognize\",\"legal_entity_id\":\"entity\",\"loss_account_code\":\"LOSS\",\"net_minor\":10001,\"organization_code\":\"ORG\",\"organization_id\":\"org\",\"original_rate\":{\"effective_at\":\"2026-10-01T12:00:00Z\",\"rate\":\"1.25\",\"source\":\"Synthetic original spot\"},\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"reason\":\"Synthetic retained foreign service\",\"receivable_account_code\":\"AR\",\"revenue_account_code\":\"REVENUE\",\"taxes\":[{\"account_code\":\"TAX\",\"country_code\":\"EG\",\"effective_from\":\"2026-01-01\",\"effective_to\":\"2026-12-31\",\"policy_digest\":\"20afd54f032cf71d28ab65371e80b6601c7505a29534fee20b54f3f46b56f18b\",\"policy_id\":\"SYNTHETIC-VAT\",\"rate\":\"0.14\",\"source\":\"Synthetic reviewed fraction\",\"transaction_class\":\"synthetic-service\",\"version\":\"2026-v1\"}],\"transaction_class\":\"synthetic-service\",\"workspace_id\":\"work\"},\"currency_code\":\"USD\",\"currency_precision\":2,\"entry_id\":\"GLE-synthetic\",\"equation\":{\"lines\":[{\"account_code\":\"AR\",\"credit_minor\":0,\"debit_minor\":14251},{\"account_code\":\"REVENUE\",\"credit_minor\":12501,\"debit_minor\":0},{\"account_code\":\"TAX\",\"credit_minor\":1750,\"debit_minor\":0}]},\"id\":\"FX1-synthetic\",\"kind\":\"recognize\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"preparer_actor_id\":\"maker\",\"reason\":\"Synthetic retained foreign service\",\"schema_version\":\"operational-fx-plan-v1\",\"sequence\":0,\"snapshot\":{\"entry\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\",\"description\":\"Synthetic retained foreign service\",\"entry_number\":\"FX1-SYNTHETIC\",\"external_reference\":\"FX:FX-synthetic:recognize\",\"id\":\"GLE-synthetic\",\"journal_id\":\"journal\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"preparer_actor_id\":\"maker\",\"reverses_posting_id\":null,\"source_type\":\"Manual\",\"workspace_id\":\"work\"},\"lines\":[{\"account_id\":\"AR\",\"credit_minor\":0,\"debit_minor\":14251,\"description\":\"Synthetic retained foreign service\",\"dimensions\":{},\"line_number\":1},{\"account_id\":\"REVENUE\",\"credit_minor\":12501,\"debit_minor\":0,\"description\":\"Synthetic retained foreign service\",\"dimensions\":{},\"line_number\":2},{\"account_id\":\"TAX\",\"credit_minor\":1750,\"debit_minor\":0,\"description\":\"Synthetic retained foreign service\",\"dimensions\":{},\"line_number\":3}],\"schema_version\":\"finance-entry-review-v1\"},\"source_digest\":\"3d5f39221735ea6d259155e4e7cccb028f236e92057ac7f88b191779d6847295\",\"source_id\":\"FX-synthetic\",\"workspace_id\":\"work\"}",
+  "canonical_snapshot_json": "{\"entry\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"currency_registry_digest\":\"d78f817456f78fa3dedf39dc3de2f8554f79e08c65d463ab1a60a36b3850b246\",\"currency_registry_version\":\"iso-4217-list-one-2026-01-01-rf1\",\"currency_rounding_policy\":\"ROUND_HALF_UP\",\"description\":\"Synthetic retained foreign service\",\"entry_number\":\"FX1-SYNTHETIC\",\"external_reference\":\"FX:FX-synthetic:recognize\",\"id\":\"GLE-synthetic\",\"journal_id\":\"journal\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"preparer_actor_id\":\"maker\",\"reverses_posting_id\":null,\"source_type\":\"Manual\",\"workspace_id\":\"work\"},\"lines\":[{\"account_id\":\"AR\",\"credit_minor\":0,\"debit_minor\":14251,\"description\":\"Synthetic retained foreign service\",\"dimensions\":{},\"line_number\":1},{\"account_id\":\"REVENUE\",\"credit_minor\":12501,\"debit_minor\":0,\"description\":\"Synthetic retained foreign service\",\"dimensions\":{},\"line_number\":2},{\"account_id\":\"TAX\",\"credit_minor\":1750,\"debit_minor\":0,\"description\":\"Synthetic retained foreign service\",\"dimensions\":{},\"line_number\":3}],\"schema_version\":\"finance-entry-review-v1\"}",
+  "native_effect": {
+    "id": "effect-synthetic",
+    "entry_id": "GLE-synthetic",
+    "posted_actor_id": "poster",
+    "validation_digest": "8588787b7648017fa5b20f7a865b79d3a4a6d940e39bcf5c69821b1736675b5b",
+    "audit_event_id": "audit-3",
+    "outbox_event_id": "outbox-3"
+  },
+  "phases": [
+    {
+      "action": "operational_fx_prepared",
+      "actor_id": "maker",
+      "audit_event_id": "audit-0",
+      "outbox_event_id": "outbox-0"
+    },
+    {
+      "action": "operational_fx_reviewed",
+      "actor_id": "checker",
+      "audit_event_id": "audit-1",
+      "outbox_event_id": "outbox-1"
+    },
+    {
+      "action": "operational_fx_posted",
+      "actor_id": "poster",
+      "audit_event_id": "audit-2",
+      "outbox_event_id": "outbox-2"
+    },
+    {
+      "action": "finance_entry_posted",
+      "actor_id": "poster",
+      "audit_event_id": "audit-3",
+      "outbox_event_id": "outbox-3"
+    }
+  ],
+  "totals": {
+    "debit_minor": "14251",
+    "credit_minor": "14251"
+  }
+}

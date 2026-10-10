@@ -63,7 +63,8 @@ CREATE FUNCTION reconforge.fx_rate(v JSONB,day TEXT) RETURNS NUMERIC LANGUAGE pl
 BEGIN
  PERFORM reconforge.fx_assert(reconforge.fx_object(v,ARRAY['rate','source','effective_at'])
  AND jsonb_typeof(v->'rate')='string' AND v->>'rate'~'^(0|[1-9][0-9]{0,11})(\.[0-9]{1,12})?$'
- AND (v->>'rate')::numeric>0 AND reconforge.irp_text(v->>'source',200)
+ AND (v->>'rate')::numeric>0 AND jsonb_typeof(v->'source')='string' AND reconforge.irp_text(v->>'source',200)
+ AND jsonb_typeof(v->'effective_at')='string'
  AND v->>'effective_at'~'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
  AND reconforge.irp_timestamp(v->>'effective_at') AND left(v->>'effective_at',10)=day,'FX rate requires exact bounded decimal and original UTC spot provenance');
  RETURN (v->>'rate')::numeric;
@@ -93,12 +94,27 @@ BEGIN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='operational_fx_owner',MESSAGE='Historical FX source, policy, review and acknowledgement are immutable';
 END $fx$;
 CREATE FUNCTION reconforge.fx_command_actor() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fx$
-DECLARE permission TEXT; ar_permission TEXT;
+DECLARE permission TEXT; ar_permission TEXT;p RECORD;customer RECORD;period RECORD;
 BEGIN
  permission:=CASE NEW.operation WHEN 'prepare' THEN 'finance_core.manage' WHEN 'review' THEN 'finance_core.validate' ELSE 'finance_core.post' END;
  ar_permission:=CASE NEW.operation WHEN 'review' THEN 'receivables.approve' ELSE 'receivables.manage' END;
  PERFORM reconforge.fx_assert(reconforge.sales_revenue_actor(NEW.tenant_id,NEW.actor_id,permission)
  AND reconforge.sales_revenue_actor(NEW.tenant_id,NEW.actor_id,ar_permission),'FX command requires current persisted human finance and AR permissions');
+ SELECT * INTO p FROM reconforge.operational_fx_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.plan_id;
+ SELECT * INTO period FROM reconforge.fiscal_periods WHERE tenant_id=NEW.tenant_id AND id=p.payload->>'period_id' FOR SHARE;
+ SELECT c.* INTO customer FROM reconforge.ar_customers c JOIN reconforge.ar_invoices i ON i.tenant_id=c.tenant_id AND i.customer_id=c.id
+  JOIN reconforge.operational_fx_sources s ON s.tenant_id=i.tenant_id AND s.invoice_id=i.id WHERE s.tenant_id=NEW.tenant_id AND s.id=p.source_id FOR UPDATE OF c;
+ PERFORM reconforge.fx_assert(period.id IS NOT NULL AND period.status='Open'
+  AND (p.payload->>'posting_date')::date BETWEEN period.start_date AND period.end_date
+  AND customer.id IS NOT NULL AND customer.status='Active'
+  AND reconforge.irp_scope(NEW.tenant_id,NEW.workspace_id,NEW.organization_id,NEW.legal_entity_id),
+  'FX phase requires current open period and active native customer in authorized hierarchy');
+ IF NEW.operation='review' AND p.kind='recognize' THEN
+  PERFORM reconforge.fx_assert(NOT customer.credit_hold AND customer.credit_limit_minor >=
+   (SELECT COALESCE(sum(i.total_minor-COALESCE((SELECT sum(z.amount_minor) FROM reconforge.ar_receipt_allocations z WHERE z.tenant_id=i.tenant_id AND z.invoice_id=i.id),0)),0)
+    FROM reconforge.ar_invoices i WHERE i.tenant_id=NEW.tenant_id AND i.customer_id=customer.id AND i.status IN ('Approved','PartiallyPaid')),
+   'FX recognition approval requires original native credit control without silent override');
+ END IF;
  RETURN NEW;
 END $fx$;
 CREATE TRIGGER operational_fx_current_actor BEFORE INSERT ON reconforge.operational_fx_commands FOR EACH ROW EXECUTE FUNCTION reconforge.fx_command_actor();
@@ -161,6 +177,9 @@ BEGIN
  expected:=jsonb_build_array(jsonb_build_object('account_code',q->>'receivable_account_code','debit_minor',0,'credit_minor',0),
  jsonb_build_object('account_code',q->>'revenue_account_code','debit_minor',0,'credit_minor',fn));
  FOR tax IN SELECT value FROM jsonb_array_elements(q->'taxes') LOOP
+  FOREACH field IN ARRAY ARRAY['policy_id','version','country_code','transaction_class','effective_from','effective_to','rate','account_code','source','policy_digest'] LOOP
+   PERFORM reconforge.fx_assert(jsonb_typeof(tax->field)='string','FX tax policy metadata requires canonical strings');
+  END LOOP;
   PERFORM reconforge.fx_assert(reconforge.fx_object(tax,ARRAY['policy_id','version','country_code','transaction_class','effective_from','effective_to','rate','account_code','source','policy_digest'])
   AND tax->>'country_code'=q->>'country_code' AND tax->>'transaction_class'=q->>'transaction_class'
   AND reconforge.irp_text(tax->>'policy_id',200) AND reconforge.irp_text(tax->>'version',200) AND reconforge.irp_text(tax->>'source',200)
@@ -179,6 +198,8 @@ BEGIN
  AND (a->>'functional_net_minor')::numeric=fn AND (a->>'functional_gross_minor')::numeric=lg, 'FX independently recomputed original tax and conversion differ');
  PERFORM reconforge.fx_assert(inv.invoice_number='FX1-'||(q->>'invoice_number') AND inv.invoice_date::text=q->>'posting_date' AND inv.due_date::text=q->>'due_date'
  AND inv.currency_code=q->>'foreign_currency_code' AND inv.subtotal_minor=net AND inv.tax_minor=fg-net AND inv.total_minor=fg
+ AND inv.created_by=(SELECT username FROM reconforge.identity_users WHERE tenant_id=t AND id=a->>'preparer_actor_id')
+ AND inv.cancelled_by='' AND inv.cancelled_at IS NULL AND inv.cancel_reason='' AND inv.credit_override_reason=''
  AND (inv.workspace_id,inv.organization_id,inv.legal_entity_id)=(s.workspace_id,s.organization_id,s.legal_entity_id)
  AND customer.customer_code=q->>'customer_code' AND customer.currency_code=inv.currency_code
  AND (customer.workspace_id,customer.organization_id,customer.legal_entity_id)=(s.workspace_id,s.organization_id,s.legal_entity_id)
@@ -276,12 +297,21 @@ BEGIN
    AND receipt.currency_code=inv.currency_code AND receipt.amount_minor=(equation->>'foreign_minor')::numeric AND receipt.status='Posted'
    AND (receipt.workspace_id,receipt.organization_id,receipt.legal_entity_id,receipt.customer_id)=(inv.workspace_id,inv.organization_id,inv.legal_entity_id,inv.customer_id)
    AND receipt.currency_precision=fp AND to_jsonb(receipt)->>'currency_registry_digest'=a->'foreign_policy'->>'currency_registry_digest'
+   AND to_jsonb(receipt)->>'currency_registry_version'=a->'foreign_policy'->>'currency_registry_version'
+   AND to_jsonb(receipt)->>'currency_rounding_policy'=a->'foreign_policy'->>'currency_rounding_policy'
    AND receipt.posted_by=(SELECT username FROM reconforge.identity_users WHERE tenant_id=t AND id=l.posted_actor_id)
+   AND receipt.created_by=receipt.posted_by AND receipt.posted_at IS NOT NULL
    AND (SELECT count(*) FROM reconforge.ar_receipt_allocations WHERE tenant_id=t AND receipt_id=receipt.id)=1
    AND EXISTS(SELECT 1 FROM reconforge.ar_receipt_allocations z WHERE z.tenant_id=t AND z.receipt_id=receipt.id AND z.invoice_id=inv.id AND z.amount_minor=receipt.amount_minor), 'FX settlement requires exact foreign native receipt and single source allocation');
   ELSE PERFORM reconforge.fx_assert(l.receipt_id IS NULL,'FX recognition cannot create a cash receipt'); END IF;
  END IF;
  SELECT COALESCE(sum((payload->'equation'->>'foreign_minor')::numeric),0) INTO all_paid FROM reconforge.operational_fx_plans WHERE tenant_id=t AND source_id=s.id AND phase=2 AND kind='settle';
+ IF EXISTS(SELECT 1 FROM reconforge.operational_fx_plans z WHERE z.tenant_id=t AND z.source_id=s.id AND z.sequence=0 AND z.phase>=1) THEN
+  PERFORM reconforge.fx_assert(inv.approved_at IS NOT NULL AND inv.approved_by=(SELECT u.username FROM reconforge.identity_users u
+   JOIN reconforge.operational_fx_reviews review ON review.tenant_id=u.tenant_id AND review.reviewer_actor_id=u.id
+   JOIN reconforge.operational_fx_plans initial ON initial.tenant_id=review.tenant_id AND initial.id=review.plan_id
+   WHERE u.tenant_id=t AND initial.source_id=s.id AND initial.sequence=0),'FX original native approval must bind its independent retained reviewer');
+ ELSE PERFORM reconforge.fx_assert(inv.approved_by='' AND inv.approved_at IS NULL,'Unreviewed FX source cannot retain an unrelated native approval'); END IF;
  PERFORM reconforge.fx_assert(all_paid=(SELECT COALESCE(sum(amount_minor),0) FROM reconforge.ar_receipt_allocations WHERE tenant_id=t AND invoice_id=inv.id)
  AND inv.status=CASE WHEN all_paid=fg THEN 'Paid' WHEN all_paid>0 THEN 'PartiallyPaid'
  WHEN EXISTS(SELECT 1 FROM reconforge.operational_fx_plans z WHERE z.tenant_id=t AND z.source_id=s.id AND z.sequence=0 AND z.phase>=1) THEN 'Approved' ELSE 'Submitted' END,
@@ -326,6 +356,10 @@ BEGIN
   ELSIF TG_TABLE_NAME='ar_receipts' THEN
    receipt:=changed->>'id';IF upper(left(COALESCE(changed->>'receipt_number',''),4))<>'FX1-' THEN CONTINUE; END IF;
    PERFORM reconforge.fx_assert(EXISTS(SELECT 1 FROM reconforge.operational_fx_links z WHERE z.tenant_id=changed->>'tenant_id' AND z.receipt_id=receipt),'Reserved FX1 native receipt requires its complete posted source');
+  ELSIF TG_TABLE_NAME IN ('domain_audit_events','outbox_events') THEN
+   IF COALESCE(changed->>'action',changed->>'event_type','') NOT IN ('operational_fx_prepared','operational_fx_reviewed','operational_fx_posted') THEN CONTINUE; END IF;
+   PERFORM reconforge.fx_assert(EXISTS(SELECT 1 FROM reconforge.operational_fx_plans z WHERE z.tenant_id=changed->>'tenant_id'
+    AND z.id=COALESCE(changed->>'object_id',changed->>'aggregate_id')),'Reserved FX event requires its complete retained source');
   ELSIF TG_TABLE_NAME IN ('finance_accounts','finance_journals','fiscal_periods','legal_entities','ar_customers') THEN
    FOR plan IN SELECT z.id,z.tenant_id FROM reconforge.operational_fx_plans z
    JOIN reconforge.operational_fx_sources source ON source.tenant_id=z.tenant_id AND source.id=z.source_id

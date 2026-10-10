@@ -1,0 +1,47 @@
+id: operational-fx-tax
+name: Historical foreign native AR, effective tax and realized FX
+version: 1.0.0
+maturity: experimental
+owner: Amr
+dependencies: [finance-core, finance-operational-posting, receivables, currency-registry, identity, master-data, outbox, financial-reporting]
+incompatible_versions: []
+data_classification: confidential_financial
+retention_policy: immutable_financial_history
+permissions: [finance_core.read, finance_core.manage, finance_core.validate, finance_core.post, receivables.read, receivables.manage, receivables.approve]
+default_roles: [independent_preparer, independent_reviewer, independent_poster]
+migrations: [0128_pg_operational_fx_tax]
+domain_invariants:
+  - Original source currency policy and reviewed historical rate are immutable
+  - Exact net-exclusive tax components retain country, effective dates, class, version and content digest
+  - Converted cumulative tax prefixes equal functional gross less net revenue
+  - Partial settlements release cumulative original-rate AR without rounding drift
+  - Native foreign receipts and functional cash, AR and realized FX post atomically
+  - Native AR states, allocations, GL snapshots, effects, commands, audit and outbox close independently in SQL
+  - Three distinct current humans, current finance and AR grants and amount/scope authorization
+  - Retried historical acknowledgements require current original-source and full journal turnover authority
+  - FORCE RLS on all five owner tables and namespace-protected source participants
+  - One pending plan per invoice and at most 200 sequential settlements
+domain_events: [operational_fx_prepared, operational_fx_reviewed, operational_fx_posted]
+api_routes: [/api/v1/operational-fx-tax/invoices, /api/v1/operational-fx-tax/invoices/{source_id}, /api/v1/operational-fx-tax/invoices/{source_id}/settlements, /api/v1/operational-fx-tax/plans/{plan_id}/review, /api/v1/operational-fx-tax/plans/{plan_id}/post, /api/v1/operational-fx-tax/plans/{plan_id}/evidence]
+cli_commands: []
+ui_routes: [/operational-fx-tax]
+import_schemas: []
+export_schemas: [operational-fx-native-evidence-v1]
+synthetic_fixtures: [apps/web/src/operational-fx-tax-fixture.json, tests/test_postgres_operational_fx_tax.py]
+threat_model: docs/adr/0849-historical-foreign-ar-effective-tax-and-realized-fx.md
+benchmarks: []
+rollback_plan: Empty additive tables can downgrade; populated financial evidence refuses destructive downgrade and requires verified populated restore.
+test_matrix:
+  exact_domain: tests/test_operational_fx_tax.py
+  native_database: tests/test_postgres_operational_fx_tax.py
+  native_http: tests/test_postgres_operational_fx_tax_api.py
+  native_migration_and_worker: tests/test_postgres_operational_fx_tax_migration.py
+  response_and_evidence: apps/web/src/operational-fx-tax-data.test.ts
+  studio_component: apps/web/src/components/OperationalFxTaxPage.test.tsx
+runtime_acceptance: "Original native/HTTP two-case acceptance source9cea6a86; complete hardened source and actual integrated HTTPS populated restore gate pending. See raw owner packets; no inherited performance or release claim."
+limitations:
+  - PostgreSQL-native standalone foreign customer invoices; no SQLite backend or foreign inventory source
+  - Manual reviewed net-exclusive components; no jurisdiction tax rule feed or compliance claim
+  - Exact spot recognition and realized settlement FX; no unrealized revaluation, AP FX or source reversal
+  - Functional zero-cash installments are explicitly rejected
+  - Ledger cash recognition does not instruct external bank transfers

@@ -17,6 +17,7 @@ from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePo
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+from reconforge.platform.common import PlatformError
 from tests.test_postgres_inventory_receipt_posting import (
     ReceiptRuntime,
     create_receipt_runtime,
@@ -142,6 +143,9 @@ def test_direct_sql_native_ar_state_allocation_and_detached_gl_are_refused(fx_ru
     for statement in (
         "UPDATE reconforge.ar_invoices SET status='Cancelled' WHERE tenant_id=%s",
         "UPDATE reconforge.ar_invoices SET invoice_number='ESCAPED' WHERE tenant_id=%s",
+        "UPDATE reconforge.ar_invoices SET approved_by='poster' WHERE tenant_id=%s",
+        "UPDATE reconforge.ar_invoices SET approved_at=NULL WHERE tenant_id=%s",
+        "UPDATE reconforge.ar_invoices SET cancel_reason='unrelated' WHERE tenant_id=%s",
         "UPDATE reconforge.operational_fx_sources SET payload=jsonb_set(payload,'{foreign_gross_minor}','1') WHERE tenant_id=%s",
         "UPDATE reconforge.operational_fx_commands SET response_json='{}' WHERE tenant_id=%s",
         "DELETE FROM reconforge.operational_fx_reviews WHERE tenant_id=%s",
@@ -237,3 +241,164 @@ def test_original_policy_tax_scope_and_history_current_amount_authority(fx_runti
         policy = {key: value for key, value in tax.items() if key not in {"foreign_tax_minor", "functional_tax_minor", "policy_digest"}}
         assert hashlib.sha256(json.dumps(policy, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest() == tax["policy_digest"]
         assert tax["version"] == "2026-v1" and tax["country_code"] == "EG" and tax["transaction_class"] == "synthetic-service"
+
+
+def test_currency_admission_precedes_customer_in_concurrent_recognition_and_settlement(
+    fx_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import threading
+    import time
+
+    import psycopg
+
+    from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+
+    runtime = fx_runtime
+    initial = finish_fx(runtime, prepare_fx(runtime))
+    acquired, release, attempting = threading.Event(), threading.Event(), threading.Event()
+    state = threading.local()
+    pids: dict[str, int] = {}
+    original = FinancePolicyStore.lock_binding
+
+    def hold_binding(store: FinancePolicyStore, workspace_id: str) -> None:
+        original(store, workspace_id)
+        if threading.current_thread().name.startswith("fx-recognition") and not getattr(state, "held", False):
+            state.held = True
+            acquired.set()
+            assert release.wait(25), "Synthetic currency lock coordinator timed out"
+
+    def recognize() -> dict[str, Any]:
+        with runtime.actor("maker") as (connection, _, actor):
+            pids["recognition"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            return PostgresOperationalFxTaxRepository(connection, runtime.tenant).prepare_invoice(
+                fx_request("SECOND-SOURCE"), command_id="second-source", actor=actor,
+            )
+
+    def settlement() -> dict[str, Any]:
+        with runtime.actor("maker") as (connection, _, actor):
+            pids["settlement"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            attempting.set()
+            return PostgresOperationalFxTaxRepository(connection, runtime.tenant).prepare_settlement(initial["source_id"],
+                foreign_minor=100, settlement_rate=HistoricalRate("1.3", "Synthetic race spot", "2026-10-02T12:00:00Z"),
+                period_id="period", posting_date="2026-10-02", reason="Retain exact native lock ordering", command_id="race-settle", actor=actor)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(FinancePolicyStore, "lock_binding", hold_binding)
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="fx-recognition") as creator, ThreadPoolExecutor(max_workers=1) as collector:
+            recognition = creator.submit(recognize)
+            try:
+                assert acquired.wait(20)
+                partial = collector.submit(settlement)
+                assert attempting.wait(20)
+                deadline = time.monotonic() + 15
+                blocked = False
+                with psycopg.connect(runtime.admin_dsn, autocommit=True) as observer:
+                    while time.monotonic() < deadline:
+                        blockers = observer.execute("SELECT pg_blocking_pids(%s)", (pids["settlement"],)).fetchone()[0]
+                        if pids["recognition"] in blockers:
+                            blocked = True
+                            break
+                        time.sleep(.05)
+                assert blocked, "Settlement must wait on canonical binding before taking the customer's row"
+                assert not recognition.done() and not partial.done()
+            finally:
+                release.set()
+            new_source, proposed = recognition.result(timeout=45), partial.result(timeout=45)
+    assert new_source["source_id"] != proposed["source_id"] == initial["source_id"]
+    assert new_source["status"] == proposed["status"] == "Prepared"
+    finish_fx(runtime, new_source)
+    finish_fx(runtime, proposed)
+
+
+def test_current_grants_are_rechecked_on_original_prepare_and_post_retries(fx_runtime: ReceiptRuntime) -> None:
+    runtime = fx_runtime
+    initial = finish_fx(runtime, prepare_fx(runtime))
+    with runtime.actor("poster") as (connection, _, actor):
+        repository = PostgresOperationalFxTaxRepository(connection, runtime.tenant)
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE WHERE tenant_id=%s AND permission_name='finance_core.post'", (runtime.tenant,))
+        with pytest.raises(FinancePostingError, match="authorization"):
+            repository.post(initial["id"], expected_plan_digest=initial["plan_digest"], reason="Independent FX equation post", command_id="post-" + initial["id"], actor=actor)
+        assert repository.plan_evidence(initial["id"], actor=actor)["native_effect"]["id"] == initial["posting_effect_id"]
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE WHERE tenant_id=%s AND permission_name='receivables.manage'", (runtime.tenant,))
+    with runtime.actor("maker") as (connection, _, actor), pytest.raises(FinancePostingError):
+        PostgresOperationalFxTaxRepository(connection, runtime.tenant).prepare_invoice(fx_request(), command_id="prepare-SERVICE-1", actor=actor)
+
+
+def test_posted_native_reporting_and_closed_period_keep_retained_evidence(fx_runtime: ReceiptRuntime) -> None:
+    from reconforge.domain.financial_reporting import AccountClassification, ReportingScope
+    from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
+
+    runtime = fx_runtime
+    initial = finish_fx(runtime, prepare_fx(runtime))
+    finish_fx(runtime, settle_fx(runtime, initial["source_id"], 11401, "1.3", "2026-10-02"))
+    with runtime.actor("maker") as (connection, _, actor):
+        mapping = PostgresFinancialReportingRepository(connection, runtime.tenant).prepare_map(ReportingScope("work", "org", "entity"),
+            name="Reviewed foreign source chart", accounts=[AccountClassification(account, section, account == "CASH") for account, section in
+            (("AR", "CurrentAsset"), ("CASH", "CurrentAsset"), ("TAX", "CurrentLiability"), ("REVENUE", "Income"), ("GAIN", "Income"), ("LOSS", "Expense"))],
+            command_id="fx-map-prepare", actor=actor)
+    with runtime.actor("checker") as (connection, _, actor):
+        mapping = PostgresFinancialReportingRepository(connection, runtime.tenant).review_map(mapping["id"], expected_digest=mapping["map_digest"],
+            reason="Independent original FX classifications", command_id="fx-map-review", actor=actor)
+    with runtime.actor("poster") as (connection, _, actor):
+        posted = PostgresFinancePostingRepository(connection, runtime.tenant).posted_balances_as_of(period_id="period", as_of_date="2026-10-31",
+            organization_code="ORG", entity_code="ENTITY", workspace="work", actor=actor)
+        assert posted["totals"]["closing"]["effect_count"] == 2
+        assert posted["totals"]["closing"]["turnover_totals"]["balanced"] is True
+        report = PostgresFinancialReportingRepository(connection, runtime.tenant).report(map_id=mapping["id"], period_id="period", as_of_date="2026-10-31",
+            organization_code="ORG", entity_code="ENTITY", actor=actor)
+        assert report["report_digest"] and report["currency_policy"]["currency_code"] == "USD"
+        connection.execute("UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='period'", (runtime.tenant,))
+    with runtime.actor("poster") as (connection, _, actor):
+        repository = PostgresOperationalFxTaxRepository(connection, runtime.tenant)
+        assert repository.plan_evidence(initial["id"], actor=actor)["plan"]["status"] == "Posted"
+        assert repository.post(initial["id"], expected_plan_digest=initial["plan_digest"], reason="Independent FX equation post", command_id="post-" + initial["id"], actor=actor)["status"] == "Posted"
+    with runtime.actor("maker") as (connection, _, actor), pytest.raises((FinancePostingError, PlatformError), match="[Cc]losed|[Oo]pen"):
+        PostgresOperationalFxTaxRepository(connection, runtime.tenant).prepare_invoice(fx_request("AFTER-CLOSE"), command_id="after-close", actor=actor)
+
+
+def test_force_rls_hides_foreign_sources_plans_commands_reviews_and_links(fx_runtime: ReceiptRuntime) -> None:
+    runtime = fx_runtime
+    finish_fx(runtime, prepare_fx(runtime))
+    tables = ("operational_fx_sources", "operational_fx_plans", "operational_fx_commands", "operational_fx_reviews", "operational_fx_links")
+    boundary = PostgresTenantBoundary(runtime.factory)
+    with runtime.actor("poster") as (connection, _, _):
+        flags = connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
+        assert dict(flags) == {"rolsuper": False, "rolbypassrls": False}
+        for table in tables:
+            actual = connection.execute("SELECT relrowsecurity,relforcerowsecurity FROM pg_class WHERE oid=%s::regclass", ("reconforge." + table,)).fetchone()
+            assert dict(actual) == {"relrowsecurity": True, "relforcerowsecurity": True}
+    # Closed constant statements avoid identifiers sourced from untrusted data.
+    statement = "SELECT count(*) n FROM {table}"
+    from psycopg import sql
+    for tenant, workspace, entity in ((runtime.tenant, "other", "entity"), (runtime.tenant, "work", "other"), ("foreign-tenant", "work", "entity")):
+        with boundary.transaction(tenant, workspace_id=workspace, organization_id="org", legal_entity_id=entity) as connection:
+            for table in tables:
+                assert connection.execute(sql.SQL(statement).format(table=sql.Identifier("reconforge", table))).fetchone()["n"] == 0
+
+
+@pytest.mark.parametrize(("currency", "precision", "rate"), (("JPY", 0, "0.0067"), ("KWD", 3, "3.27")))
+def test_native_zero_and_three_decimal_foreign_policies_match_independent_rational_oracle(
+    fx_runtime: ReceiptRuntime, currency: str, precision: int, rate: str,
+) -> None:
+    runtime = fx_runtime
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+        connection.execute("INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES(%s,%s,%s,%s)",
+                           (runtime.tenant, currency, currency, precision))
+        PostgresReceivablesRepository(connection, runtime.tenant).upsert_customer(customer_code="FOREIGN-" + currency, name="Synthetic precision customer",
+            currency_code=currency, credit_limit_minor=9_000_000_000_000_000_000, workspace="work", organization_code="ORG", entity_code="ENTITY")
+    source = replace(fx_request(currency + "-SOURCE"), foreign_currency_code=currency, customer_code="FOREIGN-" + currency,
+                     original_rate=HistoricalRate(rate, "Synthetic precision spot", "2026-10-01T12:00:00Z"))
+    initial = finish_fx(runtime, prepare_fx(runtime, source))
+    gross = 10001 + rounded(Fraction(10001) * Fraction("0.14"))
+    scaling = Fraction(10 ** 2, 10 ** precision)
+    expected = rounded(Fraction(gross) * Fraction(rate) * scaling)
+    assert initial["amount_minor"] == expected
+    first = finish_fx(runtime, settle_fx(runtime, initial["source_id"], 4000, rate, "2026-10-02"))
+    final = finish_fx(runtime, settle_fx(runtime, initial["source_id"], gross - 4000, rate, "2026-10-03"))
+    assert first["equation"]["historical_release_minor"] == rounded(Fraction(4000) * Fraction(rate) * scaling)
+    assert first["equation"]["historical_release_minor"] + final["equation"]["historical_release_minor"] == expected
+    with runtime.actor("poster") as (connection, _, actor):
+        detail = PostgresOperationalFxTaxRepository(connection, runtime.tenant).get(initial["source_id"], actor=actor)
+        assert detail["foreign_policy"]["currency_precision"] == precision and detail["functional_policy"]["currency_precision"] == 2
+        assert detail["foreign_outstanding_minor"] == detail["functional_outstanding_minor"] == 0
+        assert PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(detail["invoice_id"])["status"] == "Paid"

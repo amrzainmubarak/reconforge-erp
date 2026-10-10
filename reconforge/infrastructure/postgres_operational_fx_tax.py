@@ -38,6 +38,23 @@ class PostgresOperationalFxTaxRepository:
         self.ar = PostgresReceivablesRepository(connection, tenant_id)
         self._participant: _FxPostingParticipant | None = None
 
+    def _peek(self, table: str, identifier: str) -> dict[str, Any]:
+        # These two closed statements only inspect already RLS-scoped immutable
+        # metadata. The command lock precedes native parent and owner row locks.
+        statement = {
+            "source": "SELECT payload FROM reconforge.operational_fx_sources WHERE tenant_id=%s AND id=%s",
+            "plan": "SELECT payload FROM reconforge.operational_fx_plans WHERE tenant_id=%s AND id=%s",
+        }[table]
+        rows = records(self.connection.execute(statement, (self.tenant_id, text(identifier, table + "_id"))))
+        if not rows:
+            fail("Foreign receivable is absent or outside current scope.", "fx_" + table + "_not_found")
+        return dict(rows[0]["payload"])
+
+    def _period(self, period_id: str) -> None:
+        if self.connection.execute("SELECT id FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s FOR SHARE",
+                                   (self.tenant_id, period_id)).fetchone() is None:
+            fail("A current scoped accounting period is required.", "fx_scope_denied")
+
     def _source(self, source_id: str) -> dict[str, Any]:
         rows = records(self.connection.execute(
             "SELECT invoice_id FROM reconforge.operational_fx_sources WHERE tenant_id=%s AND id=%s",
@@ -96,7 +113,6 @@ class PostgresOperationalFxTaxRepository:
         row = rows[0]
         if (row["operation"], row["actor_id"], row["request_digest"]) != (operation, actor.user_id, digest):
             fail("Command identifies a different actor or immutable request.", "fx_command_conflict")
-        self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, row["plan_id"]))
         return digest, row["response_json"]
 
     def _view(self, plan_id: str) -> dict[str, Any]:
@@ -166,8 +182,11 @@ class PostgresOperationalFxTaxRepository:
         args = request.payload()
         with self.owner._transaction():
             digest, replay = self._command(args, "prepare", command_id, actor, {"kind": "recognize", **args})
+            self._period(request.period_id)
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(request.workspace_id)
             if replay is not None:
                 self._authorize(actor, "finance_core.manage", self._source(replay["source_id"]), replay)
+                self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, replay["id"]))
                 return replay
             rows = records(self.connection.execute("""SELECT e.currency_code,c.minor_units FROM reconforge.legal_entities e
                 JOIN reconforge.currencies c ON c.tenant_id=e.tenant_id AND c.code=e.currency_code AND c.active
@@ -210,11 +229,15 @@ class PostgresOperationalFxTaxRepository:
                    "settlement_rate": settlement_rate.payload(posting_date), "period_id": text(period_id, "period_id"),
                    "posting_date": canonical_day(posting_date, "posting_date"), "reason": text(reason, "reason", maximum=500)}
         with self.owner._transaction():
-            source = self._source(source_id)
+            source = self._peek("source", source_id)
             self._authorize(actor, "finance_core.manage", source)
             digest, replay = self._command(source, "prepare", command_id, actor, request)
+            self._period(period_id)
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(source["workspace_id"])
+            source = self._source(source_id)
             if replay is not None:
                 self._authorize(actor, "finance_core.manage", source, replay)
+                self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, replay["id"]))
                 return replay
             state = self._state(source)
             if not state["recognized"] or state["sequence"] > MAX_SETTLEMENTS or posting_date < state["last_posting_date"]:
@@ -230,11 +253,16 @@ class PostgresOperationalFxTaxRepository:
         request = {"plan_id": plan_id, "expected_plan_digest": expected_plan_digest, "reason": text(reason, "reason", maximum=500)}
         permission = "finance_core.validate" if operation == "review" else "finance_core.post"
         with self.owner._transaction():
-            plan = self._plan(plan_id)
-            source = self._source(plan["source_id"])
+            plan = self._peek("plan", plan_id)
+            source = self._peek("source", plan["source_id"])
             self._authorize(actor, permission, source, plan)
             digest, replay = self._command(plan, operation, command_id, actor, request)
+            self._period(plan["period_id"])
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(plan["workspace_id"])
+            plan = self._plan(plan_id)
+            source = self._source(plan["source_id"])
             if replay is not None:
+                self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, plan_id))
                 return replay
             if plan["plan_digest"] != expected_plan_digest or plan["phase"] != (0 if operation == "review" else 1):
                 fail("Use the current retained plan digest and expected lifecycle phase.", "fx_state_conflict")

@@ -60,6 +60,19 @@ class FinancePolicyStore:
 
             raise PlatformError(str(exc)) from exc
 
+    def lock_binding(self, workspace_id: str) -> None:
+        """Retain the canonical PostgreSQL writer-compatible admission lock.
+
+        Composing native owners may acquire this before business parent locks;
+        doing so does not recapture or reinterpret a historical policy. SQLite
+        already uses its caller-owned transaction and needs no advisory lock.
+        """
+        if self.tenant_id is not None:
+            self.connection.execute(
+                "SELECT pg_advisory_xact_lock(hashtextextended(jsonb_build_array(%s::text,'currency_registry_binding',%s::text)::text,0))",
+                (self.tenant_id, workspace_id),
+            )
+
     def capture(
         self, *, workspace_id: str, currency_code: str, minor_units: int | None, actor_label: str,
         existing: Mapping[str, object] | None = None,
@@ -77,10 +90,7 @@ class FinancePolicyStore:
                         (workspace_id,),
                     ).fetchone()
                 else:
-                    self.connection.execute(
-                        "SELECT pg_advisory_xact_lock(hashtextextended(jsonb_build_array(%s::text,'currency_registry_binding',%s::text)::text,0))",
-                        (self.tenant_id, workspace_id),
-                    )
+                    self.lock_binding(workspace_id)
                     row = self.connection.execute(
                         "SELECT registry_version,registry_digest FROM reconforge.currency_registry_bindings "
                         "WHERE tenant_id=%s AND workspace_id=%s FOR SHARE",

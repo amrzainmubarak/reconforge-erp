@@ -2,6 +2,64 @@
 from collections.abc import Mapping
 from typing import Any
 
+REVERSE_CLOSE_SQL = r"""CREATE OR REPLACE FUNCTION reconforge.landed_cost_reverse_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
+DECLARE j JSONB;changed JSONB[];p RECORD;native_entry TEXT;number TEXT;receipt TEXT;parent TEXT;
+BEGIN
+ changed:=CASE WHEN TG_OP='INSERT' THEN ARRAY[to_jsonb(NEW)] WHEN TG_OP='DELETE' THEN ARRAY[to_jsonb(OLD)] ELSE ARRAY[to_jsonb(OLD),to_jsonb(NEW)] END;
+ FOREACH j IN ARRAY changed LOOP
+ -- Shared worker evidence is not an LC owner dependency. Classify each image
+ -- before reading protected LC tables; OLD still closes renamed source events.
+ IF TG_TABLE_NAME='domain_audit_events' AND j->>'object_type' IS DISTINCT FROM 'landed_cost'
+ AND upper(COALESCE(j->>'object_id','')) NOT LIKE 'LC1-%'
+ AND left(COALESCE(j->>'action',''),12)<>'landed_cost_' THEN CONTINUE; END IF;
+ IF TG_TABLE_NAME='outbox_events' AND j->>'aggregate_type' IS DISTINCT FROM 'landed_cost'
+ AND upper(COALESCE(j->>'aggregate_id','')) NOT LIKE 'LC1-%'
+ AND upper(COALESCE(j->>'event_id','')) NOT LIKE 'LCOUT-%'
+ AND left(COALESCE(j->>'event_type',''),12)<>'landed_cost_' THEN CONTINUE; END IF;
+ native_entry:=NULL;number:=NULL;receipt:=NULL;parent:=NULL;
+ IF TG_TABLE_NAME IN('finance_accounts','finance_journals') THEN
+ -- Master changes need LC indexes only if the native ledger already references
+ -- this master from a reserved LC entry. Do not grant workers an owner read.
+ IF NOT EXISTS(SELECT 1 FROM reconforge.finance_entries e WHERE e.tenant_id=j->>'tenant_id'
+ AND upper(e.entry_number) LIKE 'LC1-%' AND
+ ((TG_TABLE_NAME='finance_journals' AND e.journal_id=j->>'id') OR
+ (TG_TABLE_NAME='finance_accounts' AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines x
+ WHERE x.tenant_id=e.tenant_id AND x.entry_id=e.id AND x.account_id=j->>'id')))) THEN CONTINUE; END IF;
+ FOR p IN SELECT q.* FROM reconforge.landed_cost_plans q JOIN reconforge.finance_entries e
+ ON e.tenant_id=q.tenant_id AND e.id=q.entry_id WHERE q.tenant_id=j->>'tenant_id' AND
+ ((TG_TABLE_NAME='finance_journals' AND e.journal_id=j->>'id') OR
+ (TG_TABLE_NAME='finance_accounts' AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines x
+ WHERE x.tenant_id=q.tenant_id AND x.entry_id=e.id AND x.account_id=j->>'id'))) LOOP
+ PERFORM reconforge.landed_cost_close(p.tenant_id,p.id);
+ END LOOP;
+ CONTINUE;
+ END IF;
+ IF TG_TABLE_NAME='finance_entries' THEN native_entry:=j->>'id';number:=j->>'entry_number';
+ ELSIF TG_TABLE_NAME IN('finance_entry_lines','finance_posting_effects') THEN native_entry:=j->>'entry_id';
+ ELSIF TG_TABLE_NAME='finance_entry_line_dimensions' THEN SELECT entry_id INTO native_entry FROM reconforge.finance_entry_lines WHERE tenant_id=j->>'tenant_id' AND id=j->>'entry_line_id';
+ ELSIF TG_TABLE_NAME='procurement_partial_receipts' THEN receipt:=j->>'id';
+ ELSIF TG_TABLE_NAME='procurement_partial_orders' THEN parent:=j->>'id';
+ END IF;
+ IF TG_TABLE_NAME='finance_posting_effects' AND j->>'reverses_effect_id' IS NOT NULL THEN
+ SELECT entry_id INTO native_entry FROM reconforge.finance_posting_effects WHERE tenant_id=j->>'tenant_id' AND id=j->>'reverses_effect_id'; END IF;
+ IF native_entry IS NOT NULL AND number IS NULL THEN SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=j->>'tenant_id' AND id=native_entry; END IF;
+ -- Known ordinary entries cannot be LC cash or initial receipt artifacts. A
+ -- missing header remains subject to reverse closure, including deleted owners.
+ IF native_entry IS NOT NULL AND number IS NOT NULL
+ AND upper(number) NOT LIKE 'LC1-%' AND upper(number) NOT LIKE 'IRP1-%' THEN CONTINUE; END IF;
+ IF upper(COALESCE(number,'')) LIKE 'LC1-%' AND NOT EXISTS(SELECT 1 FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND entry_id=native_entry) THEN
+ RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Reserved landed cost GL entry requires its source owner'; END IF;
+ FOR p IN SELECT * FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND
+ (id=j->>'plan_id' OR (TG_TABLE_NAME='landed_cost_plans' AND id=j->>'id') OR entry_id=native_entry OR order_id=parent
+ OR EXISTS(SELECT 1 FROM reconforge.landed_cost_allocations a WHERE a.tenant_id=j->>'tenant_id' AND a.plan_id=landed_cost_plans.id AND a.receipt_id=receipt)
+ OR (TG_TABLE_NAME='domain_audit_events' AND id=j->>'object_id') OR (TG_TABLE_NAME='outbox_events' AND id=j->>'aggregate_id')) LOOP
+ PERFORM reconforge.landed_cost_close(p.tenant_id,p.id);
+ END LOOP;
+ END LOOP;
+ RETURN NULL;
+END $lc$;
+"""
+
 UPGRADE_SQL = r"""
 DO $lc$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND (rolsuper OR rolbypassrls)) THEN
@@ -226,63 +284,7 @@ DO $lc$ DECLARE definition TEXT;needle TEXT:='OR r.total_value_minor<>d.total_mi
  definition:=replace(definition,needle,'OR r.total_value_minor::numeric<>d.total_minor::numeric+COALESCE((SELECT freight_minor::numeric+duty_minor FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=d.id),0)');
  EXECUTE definition;
 END $lc$;
-CREATE FUNCTION reconforge.landed_cost_reverse_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
-DECLARE j JSONB;changed JSONB[];p RECORD;native_entry TEXT;number TEXT;receipt TEXT;parent TEXT;
-BEGIN
- changed:=CASE WHEN TG_OP='INSERT' THEN ARRAY[to_jsonb(NEW)] WHEN TG_OP='DELETE' THEN ARRAY[to_jsonb(OLD)] ELSE ARRAY[to_jsonb(OLD),to_jsonb(NEW)] END;
- FOREACH j IN ARRAY changed LOOP
- -- Shared worker evidence is not an LC owner dependency. Classify each image
- -- before reading protected LC tables; OLD still closes renamed source events.
- IF TG_TABLE_NAME='domain_audit_events' AND j->>'object_type' IS DISTINCT FROM 'landed_cost'
- AND upper(COALESCE(j->>'object_id','')) NOT LIKE 'LC1-%'
- AND left(COALESCE(j->>'action',''),12)<>'landed_cost_' THEN CONTINUE; END IF;
- IF TG_TABLE_NAME='outbox_events' AND j->>'aggregate_type' IS DISTINCT FROM 'landed_cost'
- AND upper(COALESCE(j->>'aggregate_id','')) NOT LIKE 'LC1-%'
- AND upper(COALESCE(j->>'event_id','')) NOT LIKE 'LCOUT-%'
- AND left(COALESCE(j->>'event_type',''),12)<>'landed_cost_' THEN CONTINUE; END IF;
- native_entry:=NULL;number:=NULL;receipt:=NULL;parent:=NULL;
- IF TG_TABLE_NAME IN('finance_accounts','finance_journals') THEN
- -- Master changes need LC indexes only if the native ledger already references
- -- this master from a reserved LC entry. Do not grant workers an owner read.
- IF NOT EXISTS(SELECT 1 FROM reconforge.finance_entries e WHERE e.tenant_id=j->>'tenant_id'
- AND upper(e.entry_number) LIKE 'LC1-%' AND
- ((TG_TABLE_NAME='finance_journals' AND e.journal_id=j->>'id') OR
- (TG_TABLE_NAME='finance_accounts' AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines x
- WHERE x.tenant_id=e.tenant_id AND x.entry_id=e.id AND x.account_id=j->>'id')))) THEN CONTINUE; END IF;
- FOR p IN SELECT q.* FROM reconforge.landed_cost_plans q JOIN reconforge.finance_entries e
- ON e.tenant_id=q.tenant_id AND e.id=q.entry_id WHERE q.tenant_id=j->>'tenant_id' AND
- ((TG_TABLE_NAME='finance_journals' AND e.journal_id=j->>'id') OR
- (TG_TABLE_NAME='finance_accounts' AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines x
- WHERE x.tenant_id=q.tenant_id AND x.entry_id=e.id AND x.account_id=j->>'id'))) LOOP
- PERFORM reconforge.landed_cost_close(p.tenant_id,p.id);
- END LOOP;
- CONTINUE;
- END IF;
- IF TG_TABLE_NAME='finance_entries' THEN native_entry:=j->>'id';number:=j->>'entry_number';
- ELSIF TG_TABLE_NAME IN('finance_entry_lines','finance_posting_effects') THEN native_entry:=j->>'entry_id';
- ELSIF TG_TABLE_NAME='finance_entry_line_dimensions' THEN SELECT entry_id INTO native_entry FROM reconforge.finance_entry_lines WHERE tenant_id=j->>'tenant_id' AND id=j->>'entry_line_id';
- ELSIF TG_TABLE_NAME='procurement_partial_receipts' THEN receipt:=j->>'id';
- ELSIF TG_TABLE_NAME='procurement_partial_orders' THEN parent:=j->>'id';
- END IF;
- IF TG_TABLE_NAME='finance_posting_effects' AND j->>'reverses_effect_id' IS NOT NULL THEN
- SELECT entry_id INTO native_entry FROM reconforge.finance_posting_effects WHERE tenant_id=j->>'tenant_id' AND id=j->>'reverses_effect_id'; END IF;
- IF native_entry IS NOT NULL AND number IS NULL THEN SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=j->>'tenant_id' AND id=native_entry; END IF;
- -- Known ordinary entries cannot be LC cash or initial receipt artifacts. A
- -- missing header remains subject to reverse closure, including deleted owners.
- IF native_entry IS NOT NULL AND number IS NOT NULL
- AND upper(number) NOT LIKE 'LC1-%' AND upper(number) NOT LIKE 'IRP1-%' THEN CONTINUE; END IF;
- IF upper(COALESCE(number,'')) LIKE 'LC1-%' AND NOT EXISTS(SELECT 1 FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND entry_id=native_entry) THEN
- RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Reserved landed cost GL entry requires its source owner'; END IF;
- FOR p IN SELECT * FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND
- (id=j->>'plan_id' OR (TG_TABLE_NAME='landed_cost_plans' AND id=j->>'id') OR entry_id=native_entry OR order_id=parent
- OR EXISTS(SELECT 1 FROM reconforge.landed_cost_allocations a WHERE a.tenant_id=j->>'tenant_id' AND a.plan_id=landed_cost_plans.id AND a.receipt_id=receipt)
- OR (TG_TABLE_NAME='domain_audit_events' AND id=j->>'object_id') OR (TG_TABLE_NAME='outbox_events' AND id=j->>'aggregate_id')) LOOP
- PERFORM reconforge.landed_cost_close(p.tenant_id,p.id);
- END LOOP;
- END LOOP;
- RETURN NULL;
-END $lc$;
-DO $lc$ DECLARE n TEXT; BEGIN
+""" + REVERSE_CLOSE_SQL + r"""DO $lc$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['landed_cost_plans','landed_cost_allocations','landed_cost_reviews','landed_cost_links','landed_cost_commands'] LOOP
  EXECUTE format('ALTER TABLE reconforge.%I ENABLE ROW LEVEL SECURITY',n);
  EXECUTE format('ALTER TABLE reconforge.%I FORCE ROW LEVEL SECURITY',n);

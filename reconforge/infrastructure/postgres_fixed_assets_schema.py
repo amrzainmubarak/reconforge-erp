@@ -1,5 +1,67 @@
 """Additive source and native GL closure for retained fixed asset history."""
 
+REVERSE_CLOSE_SQL = r"""
+CREATE OR REPLACE FUNCTION reconforge.asset_reverse_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fa$
+DECLARE changed JSONB;changes JSONB[];p RECORD;native_entry TEXT;native_number TEXT;owner_id TEXT;selected_asset TEXT;
+BEGIN
+ IF TG_OP='INSERT' THEN changes:=ARRAY[to_jsonb(NEW)]; ELSIF TG_OP='DELETE' THEN changes:=ARRAY[to_jsonb(OLD)];
+ ELSE changes:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)]; END IF;
+ FOREACH changed IN ARRAY changes LOOP
+  native_entry:=NULL;native_number:=NULL;selected_asset:=NULL;
+  IF TG_TABLE_NAME IN ('domain_audit_events','outbox_events') THEN
+   owner_id:=CASE WHEN TG_TABLE_NAME='domain_audit_events' THEN changed->>'object_id' ELSE changed->>'aggregate_id' END;
+   IF upper(left(COALESCE(owner_id,''),4))<>'FA1-' THEN CONTINUE; END IF;
+   PERFORM reconforge.asset_close(changed->>'tenant_id',owner_id);CONTINUE;
+  END IF;
+  IF TG_TABLE_NAME IN ('finance_accounts','finance_journals','fiscal_periods','legal_entities') THEN
+   -- Every retained asset starts with its atomic FA1 acquisition header. A
+   -- legacy master-only role need not read asset owners when that scoped
+   -- native namespace is absent. Inspect both OLD/NEW images independently.
+   IF NOT EXISTS(SELECT 1 FROM reconforge.finance_entries entry
+    WHERE entry.tenant_id=changed->>'tenant_id' AND
+    (upper(left(entry.entry_number,4))='FA1-' OR upper(left(entry.id,4))='FA1-')) THEN
+    CONTINUE;
+   END IF;
+   FOR p IN SELECT q.* FROM reconforge.fixed_asset_plans q JOIN reconforge.fixed_assets definition
+    ON definition.tenant_id=q.tenant_id AND definition.id=q.asset_id JOIN reconforge.finance_entries entry
+    ON entry.tenant_id=q.tenant_id AND entry.id=q.entry_id WHERE q.tenant_id=changed->>'tenant_id' AND
+    ((TG_TABLE_NAME='finance_journals' AND entry.journal_id=changed->>'id')
+     OR (TG_TABLE_NAME='fiscal_periods' AND entry.period_id=changed->>'id' AND q.phase<2)
+     OR (TG_TABLE_NAME='legal_entities' AND q.legal_entity_id=changed->>'id')
+     OR (TG_TABLE_NAME='finance_accounts' AND definition.workspace_id=changed->>'workspace_id'
+      AND changed->>'account_code'=ANY(ARRAY[definition.payload->>'asset_account_code',definition.payload->>'accumulated_account_code',
+       definition.payload->>'expense_account_code',definition.payload->>'cash_account_code',definition.payload->>'gain_account_code',definition.payload->>'loss_account_code']))) LOOP
+    PERFORM reconforge.asset_close(p.tenant_id,p.id);
+   END LOOP;
+   CONTINUE;
+  END IF;
+  IF TG_TABLE_NAME='fixed_assets' THEN
+   selected_asset:=changed->>'id';
+   IF NOT EXISTS(SELECT 1 FROM reconforge.fixed_asset_plans q WHERE q.tenant_id=changed->>'tenant_id' AND q.asset_id=selected_asset AND q.sequence=0 AND q.kind='acquire') THEN
+    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Asset registration requires its atomic native acquisition plan'; END IF;
+  ELSIF TG_TABLE_NAME='fixed_asset_plans' THEN selected_asset:=changed->>'asset_id';
+  END IF;
+  IF TG_TABLE_NAME IN ('finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects') THEN
+   native_entry:=CASE WHEN TG_TABLE_NAME='finance_entries' THEN changed->>'id' ELSE changed->>'entry_id' END;
+   IF TG_TABLE_NAME='finance_entry_line_dimensions' THEN SELECT entry_id INTO native_entry FROM reconforge.finance_entry_lines
+    WHERE tenant_id=changed->>'tenant_id' AND id=changed->>'entry_line_id'; END IF;
+   IF TG_TABLE_NAME='finance_posting_effects' AND changed->>'reverses_effect_id' IS NOT NULL THEN SELECT entry_id INTO native_entry
+    FROM reconforge.finance_posting_effects WHERE tenant_id=changed->>'tenant_id' AND id=changed->>'reverses_effect_id'; END IF;
+   native_number:=CASE WHEN TG_TABLE_NAME='finance_entries' THEN changed->>'entry_number' ELSE NULL END;
+   IF native_number IS NULL THEN SELECT entry_number INTO native_number FROM reconforge.finance_entries
+    WHERE tenant_id=changed->>'tenant_id' AND id=native_entry; END IF;
+   IF upper(left(COALESCE(native_number,''),4))<>'FA1-' AND upper(left(COALESCE(native_entry,''),4))<>'FA1-' THEN CONTINUE; END IF;
+   IF NOT EXISTS(SELECT 1 FROM reconforge.fixed_asset_plans q WHERE q.tenant_id=changed->>'tenant_id' AND q.entry_id=native_entry) THEN
+    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Reserved FA1 native entry requires its source'; END IF;
+  END IF;
+  FOR p IN SELECT q.* FROM reconforge.fixed_asset_plans q WHERE q.tenant_id=changed->>'tenant_id' AND
+   (q.id=changed->>'plan_id' OR q.id=changed->>'id' OR q.entry_id=native_entry OR q.asset_id=selected_asset) LOOP
+   PERFORM reconforge.asset_close(p.tenant_id,p.id);
+  END LOOP;
+ END LOOP;RETURN NULL;
+END $fa$;
+"""
+
 UPGRADE_SQL = r"""
 DO $fa$ BEGIN
  IF EXISTS(SELECT 1 FROM reconforge.finance_entries WHERE upper(entry_number) LIKE 'FA1-%' OR upper(id) LIKE 'FA1-%') THEN
@@ -266,65 +328,7 @@ BEGIN
  IF (SELECT count(*) FROM reconforge.fixed_asset_commands WHERE tenant_id=t AND plan_id=i)<>p.phase+1 THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Every retained asset phase requires its immutable command'; END IF;
 END $fa$;
-CREATE FUNCTION reconforge.asset_reverse_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $fa$
-DECLARE changed JSONB;changes JSONB[];p RECORD;native_entry TEXT;native_number TEXT;owner_id TEXT;selected_asset TEXT;
-BEGIN
- IF TG_OP='INSERT' THEN changes:=ARRAY[to_jsonb(NEW)]; ELSIF TG_OP='DELETE' THEN changes:=ARRAY[to_jsonb(OLD)];
- ELSE changes:=ARRAY[to_jsonb(OLD),to_jsonb(NEW)]; END IF;
- FOREACH changed IN ARRAY changes LOOP
-  native_entry:=NULL;native_number:=NULL;selected_asset:=NULL;
-  IF TG_TABLE_NAME IN ('domain_audit_events','outbox_events') THEN
-   owner_id:=CASE WHEN TG_TABLE_NAME='domain_audit_events' THEN changed->>'object_id' ELSE changed->>'aggregate_id' END;
-   IF upper(left(COALESCE(owner_id,''),4))<>'FA1-' THEN CONTINUE; END IF;
-   PERFORM reconforge.asset_close(changed->>'tenant_id',owner_id);CONTINUE;
-  END IF;
-  IF TG_TABLE_NAME IN ('finance_accounts','finance_journals','fiscal_periods','legal_entities') THEN
-   -- Every retained asset starts with its atomic FA1 acquisition header. A
-   -- legacy master-only role need not read asset owners when that scoped
-   -- native namespace is absent. Inspect both OLD/NEW images independently.
-   IF NOT EXISTS(SELECT 1 FROM reconforge.finance_entries entry
-    WHERE entry.tenant_id=changed->>'tenant_id' AND
-    (upper(left(entry.entry_number,4))='FA1-' OR upper(left(entry.id,4))='FA1-')) THEN
-    CONTINUE;
-   END IF;
-   FOR p IN SELECT q.* FROM reconforge.fixed_asset_plans q JOIN reconforge.fixed_assets definition
-    ON definition.tenant_id=q.tenant_id AND definition.id=q.asset_id JOIN reconforge.finance_entries entry
-    ON entry.tenant_id=q.tenant_id AND entry.id=q.entry_id WHERE q.tenant_id=changed->>'tenant_id' AND
-    ((TG_TABLE_NAME='finance_journals' AND entry.journal_id=changed->>'id')
-     OR (TG_TABLE_NAME='fiscal_periods' AND entry.period_id=changed->>'id' AND q.phase<2)
-     OR (TG_TABLE_NAME='legal_entities' AND q.legal_entity_id=changed->>'id')
-     OR (TG_TABLE_NAME='finance_accounts' AND definition.workspace_id=changed->>'workspace_id'
-      AND changed->>'account_code'=ANY(ARRAY[definition.payload->>'asset_account_code',definition.payload->>'accumulated_account_code',
-       definition.payload->>'expense_account_code',definition.payload->>'cash_account_code',definition.payload->>'gain_account_code',definition.payload->>'loss_account_code']))) LOOP
-    PERFORM reconforge.asset_close(p.tenant_id,p.id);
-   END LOOP;
-   CONTINUE;
-  END IF;
-  IF TG_TABLE_NAME='fixed_assets' THEN
-   selected_asset:=changed->>'id';
-   IF NOT EXISTS(SELECT 1 FROM reconforge.fixed_asset_plans q WHERE q.tenant_id=changed->>'tenant_id' AND q.asset_id=selected_asset AND q.sequence=0 AND q.kind='acquire') THEN
-    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Asset registration requires its atomic native acquisition plan'; END IF;
-  ELSIF TG_TABLE_NAME='fixed_asset_plans' THEN selected_asset:=changed->>'asset_id';
-  END IF;
-  IF TG_TABLE_NAME IN ('finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects') THEN
-   native_entry:=CASE WHEN TG_TABLE_NAME='finance_entries' THEN changed->>'id' ELSE changed->>'entry_id' END;
-   IF TG_TABLE_NAME='finance_entry_line_dimensions' THEN SELECT entry_id INTO native_entry FROM reconforge.finance_entry_lines
-    WHERE tenant_id=changed->>'tenant_id' AND id=changed->>'entry_line_id'; END IF;
-   IF TG_TABLE_NAME='finance_posting_effects' AND changed->>'reverses_effect_id' IS NOT NULL THEN SELECT entry_id INTO native_entry
-    FROM reconforge.finance_posting_effects WHERE tenant_id=changed->>'tenant_id' AND id=changed->>'reverses_effect_id'; END IF;
-   native_number:=CASE WHEN TG_TABLE_NAME='finance_entries' THEN changed->>'entry_number' ELSE NULL END;
-   IF native_number IS NULL THEN SELECT entry_number INTO native_number FROM reconforge.finance_entries
-    WHERE tenant_id=changed->>'tenant_id' AND id=native_entry; END IF;
-   IF upper(left(COALESCE(native_number,''),4))<>'FA1-' AND upper(left(COALESCE(native_entry,''),4))<>'FA1-' THEN CONTINUE; END IF;
-   IF NOT EXISTS(SELECT 1 FROM reconforge.fixed_asset_plans q WHERE q.tenant_id=changed->>'tenant_id' AND q.entry_id=native_entry) THEN
-    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='fixed_asset_owner',MESSAGE='Reserved FA1 native entry requires its source'; END IF;
-  END IF;
-  FOR p IN SELECT q.* FROM reconforge.fixed_asset_plans q WHERE q.tenant_id=changed->>'tenant_id' AND
-   (q.id=changed->>'plan_id' OR q.id=changed->>'id' OR q.entry_id=native_entry OR q.asset_id=selected_asset) LOOP
-   PERFORM reconforge.asset_close(p.tenant_id,p.id);
-  END LOOP;
- END LOOP;RETURN NULL;
-END $fa$;
+""" + REVERSE_CLOSE_SQL + r"""
 DO $fa$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['fixed_assets','fixed_asset_plans','fixed_asset_reviews','fixed_asset_links','fixed_asset_commands'] LOOP
   EXECUTE format('ALTER TABLE reconforge.%I ENABLE ROW LEVEL SECURITY',n);

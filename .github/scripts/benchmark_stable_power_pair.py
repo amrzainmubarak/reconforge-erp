@@ -119,7 +119,21 @@ def write_json(path: Path, value: dict[str, Any]) -> str:
 def verify_sidecars(output: Path, rows: list[dict[str, Any]], expected_guid: str) -> dict[str, Any]:
     require(len(rows) == 6, "Incomplete environmental population")
     bindings = []
-    for row in rows:
+    reports = []
+    seen: set[str] = set()
+    for row, (repetition, variant) in zip(rows, _offline.ORDER, strict=True):
+        require(row["repetition"] == repetition and row["variant"] == variant, "Environmental run order differs")
+        require(_offline._sha(row.get("report_sha256")), "Raw report SHA missing or invalid")
+        report = Path(row["report"]).resolve()
+        require(report.is_relative_to(output.resolve()), "Environmental report escapes output")
+        raw_report = report.read_bytes()
+        digest = hashlib.sha256(raw_report).hexdigest()
+        require(digest == row["report_sha256"] and digest not in seen, "Environmental raw report SHA differs or repeats")
+        seen.add(digest)
+        samples = verify_sampled_power(_offline._json(raw_report))
+        reports.append({"repetition": repetition, "variant": variant,
+                        "report": report.relative_to(output.resolve()).as_posix(), "report_sha256": digest,
+                        "verified_sample_count": samples["sample_count"]})
         for phase in ("before", "after"):
             record = row[f"environment_{phase}"]
             path = _offline._report_path(output.resolve(), record["path"])
@@ -135,8 +149,7 @@ def verify_sidecars(output: Path, rows: list[dict[str, Any]], expected_guid: str
             bindings.append({"repetition": row["repetition"], "variant": row["variant"], "phase": phase, **record})
     return {"schema_version": "stable-power-environment-proof-v1", "status": "passed",
             "expected_scheme_guid": expected_guid, "sidecar_count": 12, "sidecars": bindings,
-            "raw_reports": [{"repetition": row["repetition"], "variant": row["variant"],
-                             "report_sha256": row.get("report_sha256")} for row in rows],
+            "raw_reports": reports,
             "sampled_ac_and_saver_off_verified": True,
             "scope": "scheme GUID before/after each child and available exact-boolean AC/saver retained samples; no power-mode overlay or continuous measurement"}
 

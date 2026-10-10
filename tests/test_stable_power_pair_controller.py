@@ -140,16 +140,30 @@ def test_native_windows_power_boundary_abi_is_explicit(monkeypatch: pytest.Monke
     assert value["raw"]["ACLineStatus"] == 1 and value["raw"]["SystemStatusFlag"] == 0
 
 
-def test_environmental_sidecar_byte_substitution_is_refused(tmp_path: Path) -> None:
+@pytest.mark.parametrize("damage", ["sidecar_bytes", "missing_report_sha", "null_report_sha", "rehashed_battery_sample"])
+def test_environmental_sidecar_and_bound_sample_substitution_are_refused(tmp_path: Path, damage: str) -> None:
     rows = []
-    for repetition, variant in CONTROLLER._offline.ORDER:
+    for position, (repetition, variant) in enumerate(CONTROLLER._offline.ORDER):
         row = {"repetition": repetition, "variant": variant}
+        report = tmp_path / f"{repetition}-{variant}" / "result.json"
+        report.parent.mkdir()
+        row.update(report=str(report), report_sha256=CONTROLLER.write_json(report, mock_packet(repetition, variant, position)))
         for phase in ("before", "after"):
             name = f"{repetition}-{variant}-{phase}.json"
             row[f"environment_{phase}"] = {"path": name, "sha256": CONTROLLER.write_json(tmp_path / name, snapshot())}
         rows.append(row)
     assert CONTROLLER.verify_sidecars(tmp_path, rows, GUID)["status"] == "passed"
-    first = tmp_path / rows[0]["environment_before"]["path"]
-    first.write_bytes(first.read_bytes() + b" ")
-    with pytest.raises(ValueError, match="sidecar SHA"):
+    if damage == "sidecar_bytes":
+        first = tmp_path / rows[0]["environment_before"]["path"]
+        first.write_bytes(first.read_bytes() + b" ")
+    elif damage == "missing_report_sha":
+        del rows[0]["report_sha256"]
+    elif damage == "null_report_sha":
+        rows[0]["report_sha256"] = None
+    else:
+        first = Path(rows[0]["report"])
+        packet = json.loads(first.read_bytes())
+        packet["resource_sampling"]["raw_samples"][-1]["host_processor"]["power"]["ac_online"] = False
+        rows[0]["report_sha256"] = CONTROLLER.write_json(first, packet)
+    with pytest.raises(ValueError):
         CONTROLLER.verify_sidecars(tmp_path, rows, GUID)

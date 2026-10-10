@@ -48,9 +48,19 @@ class PostgresFixedAssetsRepository:
         return dict(rows[0]["payload"])
 
     def _plan(self, identifier: str) -> dict[str, Any]:
+        # Detail reads already hold the asset before visiting its plans. Resolve
+        # the immutable RLS-scoped owner first so evidence/review/post use that
+        # same lock order instead of deadlocking an automatic detail refresh.
+        identifier = text(identifier, "plan_id")
+        owners = records(self.connection.execute(
+            "SELECT asset_id FROM reconforge.fixed_asset_plans WHERE tenant_id=%s AND id=%s",
+            (self.tenant_id, identifier)))
+        if not owners:
+            raise FinancePostingError("asset_not_found", "Asset plan is absent or outside current scope.")
+        self._asset(str(owners[0]["asset_id"]))
         rows = records(self.connection.execute(
             "SELECT payload,phase FROM reconforge.fixed_asset_plans WHERE tenant_id=%s AND id=%s FOR UPDATE",
-            (self.tenant_id, text(identifier, "plan_id"))))
+            (self.tenant_id, identifier)))
         if not rows:
             raise FinancePostingError("asset_not_found", "Asset plan is absent or outside current scope.")
         return {**rows[0]["payload"], "phase": rows[0]["phase"]}

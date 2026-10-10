@@ -153,3 +153,68 @@ def test_small_depreciation_does_not_disclose_large_original_asset_under_current
         assert Decimal("280.33") in observed
         ceiling = Decimal("300.00")
         assert repository.get(initial["asset_id"], actor=actor)["plans"][-1]["id"] == disposal["id"]
+
+
+def test_detail_refresh_and_native_evidence_serialize_without_lock_inversion(
+    asset_runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Force the browser's detail/proof overlap; neither read may deadlock."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+    from time import monotonic, sleep
+
+    import psycopg
+
+    runtime = asset_runtime
+    posted = finish(runtime, acquire(runtime))
+    before = retained(runtime)
+    asset_locked, proof_ready, release_detail = Event(), Event(), Event()
+    pids: dict[str, int] = {}
+    original_asset = PostgresFixedAssetsRepository._asset
+
+    def pause_detail(repository: PostgresFixedAssetsRepository, identifier: str) -> dict[str, Any]:
+        asset = original_asset(repository, identifier)
+        if repository.connection.info.backend_pid == pids.get("detail") and not asset_locked.is_set():
+            asset_locked.set()
+            assert release_detail.wait(15), "Bounded detail lock release was not delivered."
+        return asset
+
+    monkeypatch.setattr(PostgresFixedAssetsRepository, "_asset", pause_detail)
+
+    def read_detail() -> dict[str, Any]:
+        with runtime.actor("poster") as (connection, _, actor):
+            pids["detail"] = connection.info.backend_pid
+            connection.execute("SET LOCAL statement_timeout='10s'")
+            assert dict(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()) == {"rolsuper": False, "rolbypassrls": False}
+            return PostgresFixedAssetsRepository(connection, runtime.tenant).get(posted["asset_id"], actor=actor)
+
+    def read_proof() -> dict[str, Any]:
+        with runtime.actor("poster") as (connection, _, actor):
+            pids["proof"] = connection.info.backend_pid
+            connection.execute("SET LOCAL statement_timeout='10s'")
+            proof_ready.set()
+            return PostgresFixedAssetsRepository(connection, runtime.tenant).plan_evidence(posted["id"], actor=actor)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        detail = executor.submit(read_detail)
+        try:
+            assert asset_locked.wait(15), "Detail did not acquire the source asset lock."
+            proof = executor.submit(read_proof)
+            assert proof_ready.wait(15), "Proof reader did not start."
+            with psycopg.connect(runtime.admin_dsn, autocommit=True) as observer:
+                deadline = monotonic() + 15
+                while monotonic() < deadline:
+                    blockers = observer.execute("SELECT pg_blocking_pids(%s)", (pids["proof"],)).fetchone()[0]
+                    if pids["detail"] in blockers:
+                        break
+                    sleep(.01)
+                else:
+                    pytest.fail("Proof did not wait on the held source lock; overlap was not exercised.")
+        finally:
+            release_detail.set()
+        actual_detail, actual_proof = detail.result(timeout=20), proof.result(timeout=20)
+    assert actual_detail["plans"][-1]["id"] == posted["id"]
+    assert actual_detail["status"] == "Active" and actual_detail["carrying_minor"] == 10101
+    verify(actual_proof, posted)
+    assert actual_proof["native_effect"]["id"] == posted["posting_effect_id"]
+    assert retained(runtime) == before

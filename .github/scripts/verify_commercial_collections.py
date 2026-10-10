@@ -1,6 +1,7 @@
 """Owned pinned PostgreSQL gate; credentials remain in child memory only."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import secrets
@@ -43,9 +44,21 @@ def run(args: list[str], *, env: dict[str, str] | None = None) -> str:
     return subprocess.check_output(args, cwd=ROOT, env=env, text=True, timeout=60).strip()  # nosec B603
 
 
+def source_digest() -> str:
+    names = run(["git", "ls-files", "-z"]).split("\0")
+    digest = hashlib.sha256()
+    for name in sorted(filter(None, names)):
+        digest.update(name.encode())
+        digest.update(hashlib.sha256((ROOT / name).read_bytes()).digest())
+    return digest.hexdigest()
+
+
 def main() -> int:
     started_at = datetime.now(UTC).isoformat()
     started = time.perf_counter()
+    source_commit = run(["git", "rev-parse", "HEAD"])
+    source_before = source_digest()
+    status_before = run(["git", "status", "--porcelain", "--untracked-files=no"])
     output = ROOT / "output/global-operating-platform-20261009/commercial"
     output = output / ("native-" + str(time.time_ns()))
     output.mkdir(parents=True, exist_ok=True)
@@ -93,11 +106,17 @@ def main() -> int:
             # Retain the type only: malformed external evidence can contain
             # credentials or source financial data in parser diagnostics.
             acceptance_error = type(exc).__name__
-        report = {"schema_version": "native-gate-v1", "source_commit": run(["git", "rev-parse", "HEAD"]),
-                  "tracked_status": run(["git", "status", "--porcelain", "--untracked-files=no"]),
+        status_after = run(["git", "status", "--porcelain", "--untracked-files=no"])
+        source_after = source_digest()
+        unchanged = source_before == source_after and source_commit == run(["git", "rev-parse", "HEAD"])
+        cases_passed = accepted
+        accepted = cases_passed and unchanged and not status_before and not status_after
+        report = {"schema_version": "native-gate-v1", "source_commit": source_commit,
+                  "source_sha256_before": source_before, "source_sha256_after": source_after,
+                  "source_unchanged": unchanged, "tracked_status_before": status_before, "tracked_status_after": status_after,
                   "started_at": started_at, "duration_seconds": time.perf_counter() - started,
                   "python_version": sys.version, "postgres_image": IMAGE, "targets": groups,
-                  "pytest_exit_code": result.returncode, "counts": counts,
+                  "pytest_exit_code": result.returncode, "counts": counts, "native_cases_passed": cases_passed,
                   "accepted": accepted, "acceptance_error_type": acceptance_error}
         (output / "native-gate.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         print(diagnostic[-10000:])

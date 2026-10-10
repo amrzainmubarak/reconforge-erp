@@ -9,7 +9,7 @@ from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreR
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
 from reconforge.infrastructure.postgres_stock_sales_reversal_dispatch_schema import DOWNGRADE_SQL, UPGRADE_SQL
 from reconforge.platform.common import server_principal_context
-from tests.test_postgres_customer_returns import create_runtime, request, retained_state
+from tests.test_postgres_customer_returns import balances, create_runtime, request, retained_state
 from tests.test_postgres_finance_posting import (
     CHECKER,
     MAKER,
@@ -59,6 +59,7 @@ def test_corrective_original_effect_dispatch_round_trip_restores_exact_function_
         corrected = _definition(admin)
         assert _OBSOLETE not in corrected and _CORRECTED in corrected
         assert "AND original_entry.external_reference ~ '^OPS1-[a-f0-9]{32}$'" in corrected
+        assert "AND original_entry.entry_number=upper(original_entry.external_reference)" in corrected
         admin.execute(DOWNGRADE_SQL)
         assert _definition(admin) == original
         admin.execute(UPGRADE_SQL)
@@ -148,3 +149,55 @@ def test_original_stock_revenue_inverse_remains_closed_with_unrelated_generated_
             with psycopg.connect(runtime.admin_dsn) as admin:
                 admin.execute(sql.SQL("GRANT SELECT ON reconforge.operational_finance_links TO {}").format(sql.Identifier(role)))
     assert retained_state(runtime) == before
+
+
+def test_unrelated_manual_original_cannot_borrow_ops_reference_to_trigger_stock_owner_reads(
+    receipt_database: tuple[str, str],
+) -> None:
+    import psycopg
+    from psycopg import sql
+
+    runtime, order_id, _invoice = create_runtime(receipt_database, 0)
+    with runtime.actor("maker") as (connection, _, _actor):
+        reference = connection.execute("SELECT invoice_plan_id FROM reconforge.stock_sales_orders WHERE tenant_id=%s AND id=%s",
+            (runtime.tenant, order_id)).fetchone()["invoice_plan_id"]
+        role = connection.execute("SELECT current_user").fetchone()["current_user"]
+    original_balances = balances(runtime)
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        _install(admin)
+        prior = admin.execute("SELECT has_table_privilege(%s,'reconforge.operational_finance_links','SELECT')", (role,)).fetchone()[0]
+        admin.execute(sql.SQL("REVOKE SELECT ON reconforge.operational_finance_links FROM {}").format(sql.Identifier(role)))
+    try:
+        with runtime.actor("maker") as (connection, _, _actor):
+            with pytest.raises(psycopg.errors.InsufficientPrivilege), connection.transaction():
+                connection.execute("SELECT 1 FROM reconforge.operational_finance_links")
+            entry = PostgresFinanceCoreRepository(connection, runtime.tenant).create_entry(entry_number="MANUAL-COPIED-OPS-REFERENCE",
+                organization_code="ORG", entity_code="ENTITY", period_id="period", journal_code="CASH", posting_date="2026-10-10",
+                description="Free-form reference does not claim the original operational owner", workspace="work", actor_label="maker",
+                external_reference=reference, lines=[{"account_code": "CASH", "debit": "1.00"}, {"account_code": "REFUND", "credit": "1.00"}])
+        with runtime.actor("checker") as (connection, _, actor):
+            PostgresFinanceCoreRepository(connection, runtime.tenant).validate_entry(entry["id"], reason="Independent manual review", actor_label="checker")
+            digest = PostgresFinancePostingRepository(connection, runtime.tenant).preview(entry["id"], actor=actor)["validation_digest"]
+        with runtime.actor("poster") as (connection, _, actor):
+            effect = PostgresFinancePostingRepository(connection, runtime.tenant).post(entry["id"], command_id="manual-copied-reference-post",
+                expected_validation_digest=digest, reason="Unrelated native manual effect", actor=actor)
+        with runtime.actor("maker") as (connection, _, actor):
+            inverse = PostgresFinancePostingRepository(connection, runtime.tenant).prepare_reversal(effect["id"], command_id="manual-copied-reference-reverse",
+                entry_number="MANUAL-COPIED-OPS-INVERSE", period_id="period", posting_date="2026-10-10", reason="Unrelated manual exact inverse", actor=actor)
+        with runtime.actor("checker") as (connection, _, actor):
+            PostgresFinanceCoreRepository(connection, runtime.tenant).validate_entry(inverse["entry_id"], reason="Independent inverse review", actor_label="checker")
+            inverse_digest = PostgresFinancePostingRepository(connection, runtime.tenant).preview(inverse["entry_id"], actor=actor)["validation_digest"]
+        with runtime.actor("poster") as (connection, _, actor):
+            reversed_effect = PostgresFinancePostingRepository(connection, runtime.tenant).post(inverse["entry_id"], command_id="manual-copied-reference-inverse-post",
+                expected_validation_digest=inverse_digest, reason="Post unrelated exact inverse", actor=actor)
+            assert reversed_effect["reverses_effect_id"] == effect["id"]
+            totals = connection.execute("SELECT count(DISTINCT f.id) n,sum(l.debit_minor) d,sum(l.credit_minor) c FROM reconforge.finance_posting_effects f JOIN reconforge.finance_entry_lines l ON l.tenant_id=f.tenant_id AND l.entry_id=f.entry_id WHERE f.tenant_id=%s AND f.id=ANY(%s)",
+                (runtime.tenant, [effect["id"], reversed_effect["id"]])).fetchone()
+            assert (totals["n"], totals["d"], totals["c"]) == (2, 200, 200)
+        current_balances = balances(runtime)
+        assert all(current_balances.get(account, 0) == original_balances.get(account, 0)
+                   for account in current_balances.keys() | original_balances.keys())
+    finally:
+        if prior:
+            with psycopg.connect(runtime.admin_dsn) as admin:
+                admin.execute(sql.SQL("GRANT SELECT ON reconforge.operational_finance_links TO {}").format(sql.Identifier(role)))

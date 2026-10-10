@@ -17,7 +17,8 @@ DECLARE definition TEXT;
      JOIN reconforge.finance_entries original_entry
       ON original_entry.tenant_id=original_effect.tenant_id AND original_entry.id=original_effect.entry_id
      WHERE original_effect.tenant_id=changed->>'tenant_id' AND original_effect.id=reverse_effect
-      AND original_entry.external_reference ~ '^OPS1-[a-f0-9]{32}$';
+      AND original_entry.external_reference ~ '^OPS1-[a-f0-9]{32}$'
+      AND original_entry.entry_number=upper(original_entry.external_reference);
     END IF;
     $route$;
 BEGIN

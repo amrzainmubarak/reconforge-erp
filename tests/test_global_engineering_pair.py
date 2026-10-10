@@ -78,3 +78,30 @@ def test_corrupted_populations_and_metrics_are_refused(damage: str) -> None:
         packet["resource_sampling"]["errors"] = ["retained synthetic failure"]
     with pytest.raises(ValueError):
         verify(packet)
+
+
+def test_consistent_smaller_warmup_cannot_replace_exact_driver_twenty_cycles() -> None:
+    packet = deepcopy(PACKET)
+    packet["posting_warmup_cycles"] = 10
+    warm = packet["posting_warmup"]
+    warm["completed_cycles"] = 10
+    for field in ("indices", "effect_ids", "raw_cycle_latency_seconds"):
+        warm[field] = warm[field][:10]
+    with pytest.raises(ValueError, match="exactly 20"):
+        verify(packet)
+
+
+@pytest.mark.parametrize("counter", ["xact_commit", "wal_records", "wal_fpi", "wal_bytes", "middle_database", "middle_wal"])
+def test_reset_observation_counters_are_refused_even_if_the_final_sample_recovers(counter: str) -> None:
+    packet = deepcopy(PACKET)
+    samples = packet["resource_sampling"]["raw_samples"]
+    if counter == "middle_database":
+        samples[2]["postgres_database_counters"]["xact_commit"] = samples[1]["postgres_database_counters"]["xact_commit"] - 1
+    elif counter == "middle_wal":
+        samples[2]["postgres_wal_counters"]["wal_bytes"] = str(int(samples[1]["postgres_wal_counters"]["wal_bytes"]) - 1)
+    elif counter == "xact_commit":
+        samples[-1]["postgres_database_counters"][counter] = 0
+    else:
+        samples[-1]["postgres_wal_counters"][counter] = "0" if counter == "wal_bytes" else 0
+    with pytest.raises(ValueError, match="decreased or reset"):
+        verify(packet)

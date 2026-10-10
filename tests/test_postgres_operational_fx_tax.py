@@ -168,7 +168,7 @@ def test_direct_sql_native_ar_state_allocation_and_detached_gl_are_refused(fx_ru
         PostgresOperationalFxTaxRepository(connection, runtime.tenant).review(pending["id"], expected_plan_digest=pending["plan_digest"], reason="Review", command_id="review", actor=actor)
     with runtime.actor("poster") as (connection, _, actor), pytest.raises(FinancePostingError, match="owner"):
         PostgresFinancePostingRepository(connection, runtime.tenant).post(pending["entry_id"], expected_validation_digest=pending["validation_digest"], command_id="bypass", reason="Detached post", actor=actor)
-    with runtime.actor("poster") as (connection, _, actor), pytest.raises(FinancePostingError, match="source inverse"):
+    with runtime.actor("poster") as (connection, _, actor), pytest.raises(FinancePostingError, match="source-owned inverse"):
         PostgresFinancePostingRepository(connection, runtime.tenant).prepare_reversal(initial["posting_effect_id"], entry_number="DETACHED", period_id="period",
             posting_date="2026-10-04", reason="Detached inverse", command_id="inverse", actor=actor)
 

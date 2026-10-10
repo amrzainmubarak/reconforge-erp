@@ -1605,8 +1605,10 @@ class PostgresFinanceCoreRepository:
         ):
             raise PlatformError("Posting date must remain inside the selected fiscal period.")
         scope = self.connection.execute(
-            """SELECT organizations.active,entities.active,journals.active,charts.active,currencies.active,
-                      entities.currency_code,journals.currency_code,journals.organization_code
+            """SELECT organizations.active AS organization_active,entities.active AS entity_active,
+                      journals.active AS journal_active,charts.active AS chart_active,currencies.active AS currency_active,
+                      entities.currency_code AS entity_currency,journals.currency_code AS journal_currency,
+                      journals.organization_code AS journal_organization_code
                FROM reconforge.finance_entries entries
                JOIN reconforge.finance_journals journals ON journals.tenant_id=entries.tenant_id AND journals.id=entries.journal_id
                JOIN reconforge.finance_charts charts ON charts.tenant_id=journals.tenant_id AND charts.id=journals.chart_id
@@ -1650,7 +1652,8 @@ class PostgresFinanceCoreRepository:
         ):
             raise PlatformError("Ledger-control entry contains an inactive or inconsistent finance reference.")
         totals = self.connection.execute(
-            """SELECT COUNT(*),COALESCE(SUM(debit_minor),0),COALESCE(SUM(credit_minor),0),ARRAY_AGG(id ORDER BY line_number)
+            """SELECT COUNT(*) AS line_count,COALESCE(SUM(debit_minor),0) AS debit_minor,
+                      COALESCE(SUM(credit_minor),0) AS credit_minor,ARRAY_AGG(id ORDER BY line_number) AS line_ids
                FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s""",
             (self.tenant_id, entry_id),
         ).fetchone()

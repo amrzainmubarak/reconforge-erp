@@ -17,8 +17,11 @@ __all__ = ["finance_database", "isolated_postgres_migration_dsn"]
 
 
 def _rows(connection: Any) -> tuple[tuple[Any, ...], tuple[Any, ...]]:
-    return tuple(connection.execute("SELECT id,entry_id FROM reconforge.finance_entry_lines ORDER BY id").fetchall()), tuple(
-        connection.execute("SELECT entry_line_id,dimension_id,dimension_value_id FROM reconforge.finance_entry_line_dimensions ORDER BY 1,2").fetchall())
+    return tuple((row[0], row[1]) for row in connection.execute(
+        "SELECT id,entry_id FROM reconforge.finance_entry_lines ORDER BY id", prepare=True).fetchall()), tuple(
+        (row[0], row[1], row[2]) for row in connection.execute(
+            "SELECT entry_line_id,dimension_id,dimension_value_id FROM reconforge.finance_entry_line_dimensions ORDER BY 1,2",
+            prepare=True).fetchall())
 
 
 def test_read_plan_visibility_matches_original_policies_across_reused_scopes(finance_database: dict[str, Any]) -> None:

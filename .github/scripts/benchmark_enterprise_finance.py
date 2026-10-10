@@ -36,6 +36,7 @@ from reconforge.benchmark.enterprise_financial import (  # noqa: E402
 from reconforge.benchmark.enterprise_posting_profile import PostingProfile  # noqa: E402
 from reconforge.benchmark.enterprise_snapshot import measure_snapshot_reads  # noqa: E402
 from reconforge.benchmark.resource_sampling import ResourceSampler  # noqa: E402
+from reconforge.benchmark.server_query_profile import query_profile  # noqa: E402
 from reconforge.infrastructure.postgres import PostgresTenantBoundary  # noqa: E402
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository  # noqa: E402
 from reconforge.infrastructure.postgres_finance_posting import (  # noqa: E402
@@ -56,6 +57,7 @@ def main() -> int:
     parser.add_argument("--seed", default="enterprise-native-v1")
     parser.add_argument("--profile-stages", action="store_true", help="Retain redacted client phase and SQL-template timings")
     parser.add_argument("--profile-cpu", action="store_true", help="Opt-in bounded per-worker function discovery; not quiet performance acceptance")
+    parser.add_argument("--profile-database", action="store_true", help="Owned synthetic PostgreSQL statement/JIT/I/O discovery; no SQL text retained")
     parser.add_argument("--snapshot-lines", type=int, default=0, help="Optional separate balanced 2..1000-line dimensional snapshot profile")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -122,8 +124,11 @@ def main() -> int:
             "OperatingSystem", "OSType", "Architecture", "KernelVersion", "NCPU", "MemTotal", "Driver")}
         environment = os.environ.copy()
         environment["POSTGRES_PASSWORD"] = admin_password
+        server_options = (["-c", "shared_preload_libraries=pg_stat_statements", "-c", "pg_stat_statements.track=all",
+                           "-c", "track_io_timing=on"] if args.profile_database else [])
         container = run(["docker", "run", "--detach", "--rm", "--name", "reconforge-enterprise-finance-" + uuid4().hex[:12],
-            "--label", "reconforge.owner=enterprise-finance-benchmark", "-e", "POSTGRES_PASSWORD", "-p", "127.0.0.1::5432", IMAGE], environment=environment).stdout.strip()
+            "--label", "reconforge.owner=enterprise-finance-benchmark", "-e", "POSTGRES_PASSWORD", "-p", "127.0.0.1::5432", IMAGE,
+            *server_options], environment=environment).stdout.strip()
         port = run(["docker", "port", container, "5432/tcp"]).stdout.strip().rsplit(":", 1)[1]
         admin_dsn = f"postgresql://postgres:{admin_password}@127.0.0.1:{port}/postgres?connect_timeout=5"
         app_dsn = f"postgresql://enterprise_benchmark:{app_password}@127.0.0.1:{port}/postgres?connect_timeout=5"
@@ -131,6 +136,8 @@ def main() -> int:
             try:
                 with psycopg.connect(admin_dsn, autocommit=True) as admin:
                     admin.execute(sql.SQL("CREATE ROLE enterprise_benchmark LOGIN PASSWORD {}").format(sql.Literal(app_password)))
+                    if args.profile_database:
+                        admin.execute("CREATE EXTENSION pg_stat_statements")
                     report["postgres_version"] = admin.execute("SHOW server_version").fetchone()[0]
                 break
             except psycopg.OperationalError:
@@ -147,7 +154,8 @@ def main() -> int:
             report["revision"] = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
             report["postgres_configuration"] = dict(admin.execute(
                 "SELECT name,setting FROM pg_settings WHERE name=ANY(%s)",
-                (["shared_buffers", "work_mem", "max_connections", "fsync", "synchronous_commit", "full_page_writes", "wal_level", "track_io_timing"],)).fetchall())
+                (["shared_buffers", "work_mem", "max_connections", "fsync", "synchronous_commit", "full_page_writes", "wal_level", "track_io_timing",
+                  "jit", "jit_above_cost", "jit_inline_above_cost", "jit_optimize_above_cost"],)).fetchall())
             report["postgres_io_timing_interpretation"] = (
                 "blk_read_time_ms/blk_write_time_ms are cumulative pg_stat_database counters; "
                 "zero milliseconds with track_io_timing=off do not prove zero I/O latency; no I/O peak is measured")
@@ -210,7 +218,11 @@ def main() -> int:
                     raise AssertionError("Actual native posting differs from independent financial oracle")
             return str(effect["id"]), time.perf_counter() - begin
 
+        if args.profile_database:
+            with psycopg.connect(admin_dsn, autocommit=True) as diagnostic:
+                diagnostic.execute("SELECT pg_stat_statements_reset()")
         posting_started = time.perf_counter()
+        posting_cpu_started = time.process_time()
         completed: dict[int, tuple[str, float]] = {}
         failures: list[dict[str, object]] = []
         admitted = 0
@@ -232,6 +244,7 @@ def main() -> int:
                         failures.append({"index": index, "exception_type": type(exc).__name__})
         posted = [completed[index] for index in sorted(completed)]
         posting_seconds = time.perf_counter() - posting_started
+        posting_cpu_seconds = time.process_time() - posting_cpu_started
         report["posting"] = {"completed_cycles": len(posted), "concurrency": args.workers, "seconds": posting_seconds,
             "native_postings_per_second": len(posted) / posting_seconds, "error_count": 0,
             "requested_cycles": counts[-1], "admitted_cycles": admitted, "failed_cycles": failures,
@@ -241,6 +254,11 @@ def main() -> int:
         report["posting"]["error_count"] = len(failures)
         report["posting"]["raw_cycle_latency_seconds"] = [row[1] for row in posted]
         report["posting"]["ordered_effect_ids"] = [row[0] for row in posted]
+        report["posting"]["client_process_cpu_seconds"] = posting_cpu_seconds
+        report["posting"]["client_cpu_seconds_per_completed_cycle"] = posting_cpu_seconds / len(posted) if posted else None
+        if args.profile_database:
+            with psycopg.connect(admin_dsn, autocommit=True) as diagnostic:
+                report["posting_database_profile"] = query_profile(diagnostic, "enterprise_benchmark")
         if failures:
             raise RuntimeError("Native posting profile failed; retained successful and failed admissions are not acceptance")
         profiles: list[dict[str, object]] = []

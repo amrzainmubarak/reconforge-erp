@@ -68,7 +68,7 @@ _ADMIT = _function(_EXTENSION, "collection_command_admit", "$ca$")
 _ADMIT = _replace(_ADMIT, "NEW.operation='review'", "NEW.operation IN('review','cancel')")
 _ADMIT = _replace(_ADMIT, "WHEN'review' THEN'finance_core.validate'", "WHEN'review' THEN'finance_core.validate' WHEN'cancel' THEN'finance_core.validate'")
 
-UPGRADE_SQL = r"""
+_UPGRADE_STORAGE_SQL = r"""
 ALTER TABLE reconforge.commercial_collection_plans DROP CONSTRAINT commercial_collection_plans_phase_check;
 ALTER TABLE reconforge.commercial_collection_plans ADD CONSTRAINT commercial_collection_plans_phase_check CHECK(phase BETWEEN 0 AND 3);
 ALTER TABLE reconforge.commercial_collection_commands DROP CONSTRAINT commercial_collection_commands_operation_check;
@@ -110,9 +110,10 @@ CREATE TRIGGER immutable BEFORE INSERT OR UPDATE OR DELETE ON reconforge.commerc
  FOR EACH ROW EXECUTE FUNCTION reconforge.collection_protect();
 CREATE CONSTRAINT TRIGGER collection_owner_closure AFTER INSERT OR UPDATE OR DELETE ON reconforge.commercial_collection_cancellations
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.collection_reverse_close();
-""" + _PROTECT + _CLOSE + _ADMIT + REVERSE_CLOSE_SQL
+"""
+UPGRADE_SQL = _UPGRADE_STORAGE_SQL + _PROTECT + _CLOSE + _ADMIT + REVERSE_CLOSE_SQL
 
-DOWNGRADE_SQL = r"""
+_DOWNGRADE_STORAGE_SQL = r"""
 DO $ca$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.commercial_collection_cancellations)
  OR EXISTS(SELECT 1 FROM reconforge.commercial_collection_plans WHERE phase=3) THEN
  RAISE EXCEPTION 'Cancellation downgrade refuses to discard retained release evidence'; END IF; END $ca$;
@@ -124,4 +125,5 @@ ALTER TABLE reconforge.commercial_collection_plans DROP CONSTRAINT commercial_co
 ALTER TABLE reconforge.commercial_collection_plans ADD CONSTRAINT commercial_collection_plans_phase_check CHECK(phase BETWEEN 0 AND 2);
 ALTER TABLE reconforge.commercial_collection_commands DROP CONSTRAINT commercial_collection_commands_operation_check;
 ALTER TABLE reconforge.commercial_collection_commands ADD CONSTRAINT commercial_collection_commands_operation_check CHECK(operation IN('prepare','review','post'));
-""" + _function(_ORIGINAL, "collection_protect") + _function(_ORIGINAL, "collection_close") + _function(_EXTENSION, "collection_command_admit", "$ca$") + REVERSE_CLOSE_SQL
+"""
+DOWNGRADE_SQL = _DOWNGRADE_STORAGE_SQL + _function(_ORIGINAL, "collection_protect") + _function(_ORIGINAL, "collection_close") + _function(_EXTENSION, "collection_command_admit", "$ca$") + REVERSE_CLOSE_SQL

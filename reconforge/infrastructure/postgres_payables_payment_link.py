@@ -644,7 +644,8 @@ class PostgresPayablesPaymentLinkRepository:
         if lock:
             row = self.connection.execute(
                 """SELECT id,workspace_id,organization_id,legal_entity_id,currency_code,total_minor,status,
-                          created_by,approved_by,row_version
+                          created_by,approved_by,row_version,
+                          to_jsonb(ap_supplier_invoices)->>'supplier_return_owner_id' AS supplier_return_owner_id
                    FROM reconforge.ap_supplier_invoices
                    WHERE tenant_id=%s AND id=%s FOR NO KEY UPDATE""",
                 (self.tenant_id, invoice_id),
@@ -652,7 +653,8 @@ class PostgresPayablesPaymentLinkRepository:
         else:
             row = self.connection.execute(
                 """SELECT id,workspace_id,organization_id,legal_entity_id,currency_code,total_minor,status,
-                          created_by,approved_by,row_version
+                          created_by,approved_by,row_version,
+                          to_jsonb(ap_supplier_invoices)->>'supplier_return_owner_id' AS supplier_return_owner_id
                    FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s""",
                 (self.tenant_id, invoice_id),
             ).fetchone()
@@ -766,6 +768,8 @@ class PostgresPayablesPaymentLinkRepository:
         cash_account_id: str,
         settlement_actor_id: str,
     ) -> FinancePaymentEvidence:
+        if invoice.get("supplier_return_owner_id") is not None:
+            raise PlatformError("The retained supplier return owns this unpaid AP residual.")
         settlement_id = self._canonical_principal_id(
             settlement_actor_id, field="Settlement actor id"
         )

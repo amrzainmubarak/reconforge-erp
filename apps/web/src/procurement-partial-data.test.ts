@@ -87,6 +87,28 @@ describe("partial procurement exact source contract", () => {
       (value: ReturnType<typeof multilineDraft>) => { value.lines[1].invoiced_quantity = "1"; },
     ]) { const source = multilineDraft(); change(source); expect(() => parsePartialDetail(source, scope)).toThrow("contract_invalid"); }
   });
+  it("retains original accrued quantities while exact native supplier credit closes AP and matches the full page", () => {
+    const base = multilineDraft(), owner = "SR1-" + "a".repeat(32);
+    const invoice = { id: "partial-invoice", order_id: "partial-order", number: "PPI-1", sequence: 1, quantity_text: null,
+      total_minor: "12000", posting_date: "2026-10-03", period_id: "period", native_invoice_id: "native-ap",
+      accrual_plan_id: "OPS1-accrual", accrual_effect_id: "original-ap-effect", accrual_preparer_actor_id: "maker",
+      accrual_reviewer_actor_id: "checker", accrual_posted_actor_id: "poster", stage: "Accrued", created_version: 7,
+      approved_version: 8, prepared_version: 9, reviewed_version: 10, posted_version: 11, native_status: "Credited",
+      native_version: 4, paid_minor: "0", outstanding_minor: "0", credited_minor: "12000", supplier_return_owner_id: owner,
+      supplier_credit_note_id: owner, payment_links: [], installment_plans: [], payment_history_count: 0,
+      lines: [{ id: "allocation", line_id: "line-each", sequence: 1, quantity_text: "10", total_minor: "12000", item_code: "ITEM", location_code: "MAIN/STOCK", uom_id: "unit-each" }] };
+    const source = { ...base, order: { ...base.order, stage: "Approved", row_version: 11 },
+      lines: base.lines.map((line, index) => index === 0 ? { ...line, reserved_receipt_quantity: "10", received_quantity: "10", invoiced_quantity: "10" } : line),
+      invoices: [invoice], pages: { ...base.pages, invoice_count: 1 },
+      totals: { ...base.totals, received_minor: "12000", accrued_minor: "12000", credited_minor: "12000", outstanding_minor: "0" } };
+    expect(parsePartialDetail(source, scope).invoices[0].native_status).toBe("Credited");
+    for (const changed of [
+      { ...source, invoices: [{ ...invoice, supplier_return_owner_id: undefined }] },
+      { ...source, invoices: [{ ...invoice, credited_minor: "11999" }] },
+      { ...source, totals: { ...source.totals, credited_minor: "11999", outstanding_minor: "1" } },
+      { ...source, totals: { ...source.totals, credited_minor: "12001", accrued_minor: "12001" } },
+    ]) expect(() => parsePartialDetail(changed, scope)).toThrow("contract_invalid");
+  });
   it("rejects missing document pages rather than showing truncated history as complete", () => {
     const source = multilineDraft(); source.pages.receipt_count = 30; source.pages.next_receipt_after = 25;
     expect(() => parsePartialDetail(source, scope)).toThrow("contract_invalid");

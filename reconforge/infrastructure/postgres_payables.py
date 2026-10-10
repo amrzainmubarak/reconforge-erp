@@ -41,7 +41,7 @@ from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 _CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,63}$")
 SUPPLIER_STATUSES = ("Draft", "Active", "Suspended", "Closed")
-INVOICE_STATUSES = ("Draft", "Submitted", "Matched", "Exception", "Approved", "Paid", "Rejected")
+INVOICE_STATUSES = ("Draft", "Submitted", "Matched", "Exception", "Approved", "Paid", "Rejected", "Credited")
 
 
 class PostgresPayablesError(RuntimeError):
@@ -737,13 +737,17 @@ class PostgresPayablesRepository:
         row = self.connection.execute(
             """SELECT id,workspace_id,organization_id,legal_entity_id,supplier_id,purchase_order_id,
                       invoice_number,invoice_date,due_date,currency_code,tax_minor,total_minor,status,
-                      created_by,approved_by,approved_at,created_at,updated_at,row_version
+                      created_by,approved_by,approved_at,created_at,updated_at,row_version,
+                      to_jsonb(ap_supplier_invoices)->>'supplier_return_owner_id' AS supplier_return_owner_id
                FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s""",
             (self.tenant_id, _text(invoice_id, "Supplier invoice id", maximum=128)),
         ).fetchone()
         if row is None:
             raise PlatformError("Supplier invoice not found.")
-        result = _row(row, self._INVOICE_COLUMNS)
+        result = _row(row, self._INVOICE_COLUMNS + ("supplier_return_owner_id",))
+        if result.pop("supplier_return_owner_id") is not None:
+            result.update(_row(self.connection.execute("SELECT reconforge.sr_invoice_projection(%s,%s) AS value",
+                (self.tenant_id, invoice_id)).fetchone(), ("value",))["value"])
         lines = self.connection.execute(
             """SELECT id,supplier_invoice_id,purchase_order_line_id,line_number,description,
                       invoiced_quantity_text AS invoiced_quantity,unit_price_minor,tax_minor,
@@ -1556,4 +1560,9 @@ class PostgresPayablesRepository:
                    ORDER BY invoice_date,invoice_number,id""",
                 (self.tenant_id, workspace_id, normalized_status, normalized_status),
             ).fetchall()
-            return [_row(row, self._INVOICE_COLUMNS) for row in rows]
+            result = [_row(row, self._INVOICE_COLUMNS) for row in rows]
+            for invoice in result:
+                if invoice["status"] == "Credited":
+                    invoice.update(_row(self.connection.execute("SELECT reconforge.sr_invoice_projection(%s,%s) AS value",
+                        (self.tenant_id, invoice["id"])).fetchone(), ("value",))["value"])
+            return result

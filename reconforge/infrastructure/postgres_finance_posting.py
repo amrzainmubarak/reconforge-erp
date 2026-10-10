@@ -493,6 +493,15 @@ class PostgresFinancePostingRepository:
                     raise FinancePostingError(
                         "posting_source_unsupported", "Installments must post through their complete settlement owner."
                     )
+            if entry["entry_number"].upper().startswith("SR1-") or entry["id"].upper().startswith("SR1-"):
+                from reconforge.infrastructure.postgres_supplier_returns import _SupplierReturnPostingParticipant
+
+                if not isinstance(_source_owner, _SupplierReturnPostingParticipant) or not _source_owner.admits(
+                    self.connection, self.tenant_id, entry["id"]
+                ):
+                    raise FinancePostingError(
+                        "posting_source_unsupported", "Supplier-return entries require their native source owner."
+                    )
             if entry["entry_number"].upper().startswith("OPS1-") or entry["id"].upper().startswith("OPS1-"):
                 from reconforge.infrastructure.postgres_operational_finance import _OperationalPostingParticipant
 
@@ -608,7 +617,7 @@ class PostgresFinancePostingRepository:
             if original["source_kind"] not in {"Manual", "Reversal"}:
                 raise FinancePostingError("posting_source_unsupported", "Inventory postings require a reviewed full source inverse.")
             source = posting_entry(self.connection, self.tenant_id, original["entry_id"])
-            if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "FX1-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "FX1-")):
+            if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "FX1-", "SR1-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "FX1-", "SR1-")):
                 raise FinancePostingError(
                     "posting_source_unsupported", "Operational sources require a reviewed native source inverse."
                 )

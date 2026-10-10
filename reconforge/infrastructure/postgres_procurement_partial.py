@@ -88,6 +88,18 @@ class PostgresProcurementPartialRepository:
                     budget._actor(scope, "budget_control.manage", write=True, amount=amount)
             except BudgetControlError as exc:
                 raise ProcurementPartialError("procurement_commitment_authority_denied", str(exc)) from exc
+        if operation == "read" and row.get("multiline", False):
+            # Ordinary invoices exit on their native retained marker before any
+            # protected SR1 table is read. Source money uses its original policy.
+            returned = self.connection.execute("""SELECT DISTINCT to_jsonb(h)->>'supplier_return_owner_id' AS owner_id
+                FROM reconforge.ap_supplier_invoices h JOIN reconforge.procurement_partial_invoices i
+                ON i.tenant_id=h.tenant_id AND i.native_invoice_id=h.id WHERE i.tenant_id=%s AND i.order_id=%s
+                AND to_jsonb(h)->>'supplier_return_owner_id' IS NOT NULL""", (self.tenant_id, row["id"])).fetchall()
+            if returned:
+                from reconforge.infrastructure.postgres_supplier_returns import PostgresSupplierReturnsRepository
+                owner = PostgresSupplierReturnsRepository(self.connection, self.tenant_id)
+                for retained in returned:
+                    owner.get(retained["owner_id"], actor=actor)
 
     def _documents(self, order_id: str, kind: str) -> list[dict[str, Any]]:
         row = self._order(order_id)
@@ -421,7 +433,9 @@ class PostgresProcurementPartialRepository:
                     LEFT JOIN reconforge.operational_finance_links l ON l.tenant_id=p.tenant_id AND l.plan_id=p.id
                     WHERE p.tenant_id=%s AND p.id=%s""", (self.tenant_id, part["accrual_plan_id"]))
                 part.update(dict(actors))
-            native = self._one("SELECT status,row_version FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s",
+            native = self._one("""SELECT status,row_version,
+                to_jsonb(ap_supplier_invoices)->>'supplier_return_owner_id' AS supplier_return_owner_id
+                FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s""",
                                (self.tenant_id, part["native_invoice_id"]))
             if row.get("multiline", False):
                 links = self.connection.execute("SELECT id,finance_effect_id,amount_minor,created_at FROM reconforge.ap_payment_links WHERE tenant_id=%s AND supplier_invoice_id=%s ORDER BY created_at DESC,id DESC LIMIT 25",
@@ -437,6 +451,11 @@ class PostgresProcurementPartialRepository:
             part.update(native_status=native["status"], native_version=native["row_version"], paid_minor=str(paid),
                         outstanding_minor=str(int(part["total_minor"]) - paid),
                         payment_links=[{**dict(item), "amount_minor": str(item["amount_minor"])} for item in links])
+            if native["supplier_return_owner_id"] is not None:
+                projection = self._one("SELECT reconforge.sr_invoice_projection(%s,%s) AS value",
+                    (self.tenant_id, part["native_invoice_id"]))["value"]
+                part.update(projection)
+                part["outstanding_minor"] = str(int(projection["outstanding_minor"]) - paid)
             part["installment_plans"] = []
             if installments_available:
                 plan_query = """SELECT p.id,p.payload,p.phase,r.reviewer_actor_id,l.posting_effect_id,l.payment_link_id
@@ -511,6 +530,15 @@ class PostgresProcurementPartialRepository:
             (self.tenant_id, row["id"], self.tenant_id, row["id"]))
         result["totals"] = {**{key: "0" for key in ("ordered_quantity", "reserved_receipt_quantity", "received_quantity", "invoiced_quantity")},
                             **{key: str(value) for key, value in totals.items()}}
+        returned = self.connection.execute("""SELECT h.id FROM reconforge.ap_supplier_invoices h
+            JOIN reconforge.procurement_partial_invoices i ON i.tenant_id=h.tenant_id AND i.native_invoice_id=h.id
+            WHERE i.tenant_id=%s AND i.order_id=%s AND to_jsonb(h)->>'supplier_return_owner_id' IS NOT NULL""",
+            (self.tenant_id, row["id"])).fetchall()
+        if returned:
+            credited = sum(int(self._one("SELECT reconforge.sr_invoice_projection(%s,%s) AS value",
+                (self.tenant_id, invoice["id"]))["value"]["credited_minor"]) for invoice in returned)
+            result["totals"]["credited_minor"] = str(credited)
+            result["totals"]["outstanding_minor"] = str(int(result["totals"]["outstanding_minor"]) - credited)
         counts = self._one("""SELECT
             (SELECT count(*) FROM reconforge.procurement_partial_receipts WHERE tenant_id=%s AND order_id=%s) AS receipts,
             (SELECT count(*) FROM reconforge.procurement_partial_invoices WHERE tenant_id=%s AND order_id=%s) AS invoices""",

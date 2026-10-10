@@ -40,6 +40,7 @@ test_matrix:
   native_migration_and_worker: tests/test_postgres_operational_fx_tax_migration.py
   exact_revaluation: tests/test_operational_fx_revaluation.py
   native_revaluation: tests/test_postgres_operational_fx_revaluation.py
+  native_revaluation_migration: tests/test_postgres_operational_fx_revaluation_migration.py
   response_and_evidence: apps/web/src/operational-fx-tax-data.test.ts
   studio_component: apps/web/src/components/OperationalFxTaxPage.test.tsx
 runtime_acceptance: "Original FX1: 19 unique native cases; actual HTTPS plus populated restore accepted at integrated02749705, 93.093s and zero skips/unexpected/flaky. Additive0131 closing valuation/inverse acceptance is pending its own native and five-stage browser/restore packet. No inherited performance or release claim."

@@ -165,18 +165,25 @@ class PostgresOperationalFxTaxRepository:
         burden = sum(line["debit_minor"] for line in equation["lines"])
         self._authorize(actor, "finance_core.manage", source, {**scope, "kind": kind, "equation": equation,
                         "amount_minor": burden, "currency_precision": precision})
-        entry = self.owner.finance.create_entry(entry_number=plan_id.upper(),
+        if reverses_posting_id:
+            original = self.owner.posting._get_effect(reverses_posting_id)
+            self._participant = _FxPostingParticipant(self, original["entry_id"])
+            try:
+                reversed_entry = self.owner.posting.prepare_reversal(reverses_posting_id, command_id="FX1:inverse:" + command_id,
+                    entry_number=plan_id.upper(), period_id=period_id, posting_date=posting_date, reason=reason,
+                    actor=actor, _source_owner=self._participant)
+            finally:
+                self._participant = None
+            entry = {"id": reversed_entry["entry_id"]}
+        else:
+            entry = self.owner.finance.create_entry(entry_number=plan_id.upper(),
             organization_code=source["request"]["organization_code"], entity_code=source["request"]["entity_code"],
             period_id=period_id, journal_code=source["request"]["journal_code"], posting_date=posting_date,
             description=reason, workspace=source["workspace_id"], external_reference="FX:" + source["id"] + ":" + kind,
-            source_type="Generated" if reverses_posting_id else "Manual",
             actor_label=actor.username, lines=[{"account_code": line["account_code"],
                 "debit": exact_minor_text(line["debit_minor"], precision) if line["debit_minor"] else "0",
                 "credit": exact_minor_text(line["credit_minor"], precision) if line["credit_minor"] else "0",
                 "description": reason} for line in equation["lines"]])
-        if reverses_posting_id:
-            self.connection.execute("UPDATE reconforge.finance_entries SET reverses_posting_id=%s WHERE tenant_id=%s AND id=%s",
-                                    (reverses_posting_id, self.tenant_id, entry["id"]))
         snapshot = posting_snapshot(self.connection, self.tenant_id, posting_entry(self.connection, self.tenant_id, entry["id"]))
         if any(snapshot["entry"][key] != value for key, value in source["functional_policy"].items()):
             fail("Native GL must retain the original functional currency policy.", "fx_currency_invalid")

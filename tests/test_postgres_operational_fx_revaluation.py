@@ -8,7 +8,8 @@ import pytest
 
 from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.operational_fx_tax import HistoricalRate
-from reconforge.infrastructure.postgres_operational_fx_revaluation_schema import DOWNGRADE_SQL, UPGRADE_SQL
+from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
+from reconforge.infrastructure.postgres_operational_fx_revaluation_schema import DOWNGRADE_SQL
 from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 from tests.test_postgres_operational_fx_tax import (
@@ -62,6 +63,9 @@ def test_partial_native_ar_closing_gain_loss_and_explicit_inverse_before_final_s
         assert detail["foreign_outstanding_minor"] == 7401 and detail["functional_outstanding_minor"] == 9251
         assert detail["valued_functional_outstanding_minor"] == 9251 + difference and detail["active_revaluation_plan_id"] == valuation["id"]
         assert len(repository.plan_evidence(valuation["id"], actor=actor)["phases"]) == 4
+        with pytest.raises(FinancePostingError, match="source-owned inverse"):
+            PostgresFinancePostingRepository(connection, runtime.tenant).prepare_reversal(valuation["posting_effect_id"],
+                command_id="detached-inverse", entry_number="DETACHED-FX-INVERSE", period_id="period", posting_date="2026-10-04", reason="Detached inverse", actor=actor)
     with pytest.raises(FinancePostingError, match="reverse"):
         settle_fx(runtime, initial["source_id"], 7401, "1.2", "2026-10-05")
     inverse = finish_fx(runtime, reverse_fx(runtime, initial["source_id"], valuation["id"]))
@@ -133,20 +137,6 @@ def test_concurrent_valuation_prepare_and_populated_revaluation_rollback_refusal
         admin.execute(DOWNGRADE_SQL)
     with runtime.actor("poster") as (connection, _, actor):
         assert PostgresOperationalFxTaxRepository(connection, runtime.tenant).get(initial["source_id"], actor=actor)["active_revaluation_plan_id"] == first["id"]
-
-
-def test_empty_revaluation_rollback_preserves_original_posted_source_and_reupgrade(fx_runtime: ReceiptRuntime) -> None:
-    import psycopg
-
-    runtime = fx_runtime
-    original = finish_fx(runtime, prepare_fx(runtime))
-    with psycopg.connect(runtime.admin_dsn) as admin:
-        admin.execute(DOWNGRADE_SQL)
-    with runtime.actor("poster") as (connection, _, actor):
-        assert PostgresOperationalFxTaxRepository(connection, runtime.tenant).plan_evidence(original["id"], actor=actor)["native_effect"]["id"] == original["posting_effect_id"]
-    with psycopg.connect(runtime.admin_dsn) as admin:
-        admin.execute(UPGRADE_SQL)
-    finish_fx(runtime, revalue_fx(runtime, original["source_id"]))
 
 
 def test_actual_http_closing_valuation_and_generated_inverse_have_native_three_human_effects(

@@ -12,10 +12,7 @@ Its existing dirty files are protected, with SHA256:
 | File | SHA256 |
 | --- | --- |
 | `reconforge/infrastructure/postgres_fixed_assets_schema.py` | `947fe0b9d75f528225200aaadb3bb4505cc6ca438201f64be2c7e4321005ae13` |
-| `reconforge/infrastructure/postgres_landed_cost_schema.py` | `a65fd766f4082f9e92ad7fc663e496681eded67bf2055e7e074f3ddd6920ff3263` |
-
-The second hash above is corrected by the verified raw record below; retain
-the canonical protected hash as `a65fd766f4082f9e92ad7fc663e496681ed67bf2055e7e074f3ddd6920ff3263`.
+| `reconforge/infrastructure/postgres_landed_cost_schema.py` | `a65fd766f4082f9e92ad7fc663e496681ed67bf2055e7e074f3ddd6920ff3263` |
 
 ## Existing acceptance and fresh audit
 

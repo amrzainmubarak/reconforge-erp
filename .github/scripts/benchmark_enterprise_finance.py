@@ -55,6 +55,7 @@ def main() -> int:
     parser.add_argument("--max-seconds", type=int, default=1200)
     parser.add_argument("--seed", default="enterprise-native-v1")
     parser.add_argument("--profile-stages", action="store_true", help="Retain redacted client phase and SQL-template timings")
+    parser.add_argument("--profile-cpu", action="store_true", help="Opt-in bounded per-worker function discovery; not quiet performance acceptance")
     parser.add_argument("--snapshot-lines", type=int, default=0, help="Optional separate balanced 2..1000-line dimensional snapshot profile")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -110,7 +111,7 @@ def main() -> int:
     deadline = started + args.max_seconds
     container = ""
     sampler: ResourceSampler | None = None
-    posting_profile = PostingProfile(args.profile_stages)
+    posting_profile = PostingProfile(args.profile_stages or args.profile_cpu, profile_cpu=args.profile_cpu)
     admin_password, app_password = secrets.token_hex(24), secrets.token_hex(24)
     secret_values.extend([admin_password, app_password])
     try:

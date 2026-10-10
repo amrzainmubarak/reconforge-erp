@@ -32,6 +32,36 @@ def test_accepted_native_profile_retains_its_independent_integer_oracle() -> Non
     assert percentile([4, 1, 2, 3], .95) == 4
 
 
+def test_posting_phase_profile_preserves_failure_boundaries_without_collecting_secrets() -> None:
+    from contextlib import contextmanager
+
+    from reconforge.benchmark.enterprise_posting_profile import PostingProfile
+
+    class Connection:
+        def execute(self, statement: str, parameters: tuple[str, ...]) -> str:
+            if statement == "FAIL":
+                raise ValueError("secret-password private-dsn")
+            return parameters[0]
+
+    class Runtime:
+        @contextmanager
+        def actor(self, username: str):
+            yield Connection(), "secret-auth", "secret-actor"
+            raise RuntimeError("secret-commit-error")
+
+    profile = PostingProfile()
+    with pytest.raises(RuntimeError, match="secret-commit"), profile.actor(Runtime(), "secret-user", 3, "post") as (connection, _, _actor):
+        assert connection.execute("SELECT private-column", ("secret-parameter",)) == "secret-parameter"
+        with pytest.raises(ValueError):
+            connection.execute("FAIL", ("secret-parameter",))
+    report = profile.report()
+    assert len(report["raw_phase_observations"]) == 3
+    assert report["phase_totals"]["post.transaction_exit"]["failures"] == 1
+    assert sum(row["calls"] for row in report["statement_templates"]) == 2
+    assert sum(row["failures"] for row in report["statement_templates"]) == 1
+    assert "secret-" not in str(report) and "private-" not in str(report)
+
+
 def test_resource_sampling_preserves_observations_and_redacts_error_text() -> None:
     import threading
 

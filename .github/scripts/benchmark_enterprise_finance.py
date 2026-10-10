@@ -33,6 +33,7 @@ from reconforge.benchmark.enterprise_financial import (  # noqa: E402
     measure_verified_reads,
     percentile,
 )
+from reconforge.benchmark.enterprise_posting_profile import PostingProfile  # noqa: E402
 from reconforge.benchmark.resource_sampling import ResourceSampler  # noqa: E402
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository  # noqa: E402
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository  # noqa: E402
@@ -48,6 +49,7 @@ def main() -> int:
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--max-seconds", type=int, default=1200)
     parser.add_argument("--seed", default="enterprise-native-v1")
+    parser.add_argument("--profile-stages", action="store_true", help="Retain redacted client phase and SQL-template timings")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     counts = sorted(set(args.counts))
@@ -100,6 +102,7 @@ def main() -> int:
     deadline = started + args.max_seconds
     container = ""
     sampler: ResourceSampler | None = None
+    posting_profile = PostingProfile(args.profile_stages)
     admin_password, app_password = secrets.token_hex(24), secrets.token_hex(24)
     secret_values.extend([admin_password, app_password])
     try:
@@ -178,16 +181,16 @@ def main() -> int:
             value = amount_minor(args.seed, index)
             exact_amount = f"{value // 100}.{value % 100:02d}"
             begin = time.perf_counter()
-            with runtime.actor("browser-maker") as (connection, _, actor):
+            with posting_profile.actor(runtime, "browser-maker", index, "prepare") as (connection, _, actor):
                 entry = PostgresFinanceCoreRepository(connection, runtime.tenant).create_entry(
                     entry_number=f"BENCH-{index:08d}", organization_code="ORG", entity_code="ENTITY", period_id="period",
                     journal_code="STOCK", posting_date="2026-10-08", description="Deterministic synthetic benchmark",
                     workspace="work", actor_label=actor.username,
                     lines=[{"account_code": "CASH", "debit": exact_amount}, {"account_code": "EQUITY", "credit": exact_amount}])
-            with runtime.actor("browser-checker") as (connection, _, actor):
+            with posting_profile.actor(runtime, "browser-checker", index, "review") as (connection, _, actor):
                 PostgresFinanceCoreRepository(connection, runtime.tenant).validate_entry(entry["id"], reason="Independent benchmark review", actor_label=actor.username)
                 preview = PostgresFinancePostingRepository(connection, runtime.tenant).preview(entry["id"], actor=actor)
-            with runtime.actor("browser-poster") as (connection, _, actor):
+            with posting_profile.actor(runtime, "browser-poster", index, "post") as (connection, _, actor):
                 effect = PostgresFinancePostingRepository(connection, runtime.tenant).post(entry["id"],
                     command_id=f"benchmark-post-{index:08d}", expected_validation_digest=preview["validation_digest"],
                     reason="Explicit benchmark financial posting", actor=actor)
@@ -262,6 +265,7 @@ def main() -> int:
             diagnostic = diagnostic.replace(value, "[redacted]")
         report["failure"] = diagnostic
     finally:
+        report["posting_profile"] = posting_profile.report()
         if sampler is not None:
             report["resource_sampling"] = sampler.stop()
         if container:

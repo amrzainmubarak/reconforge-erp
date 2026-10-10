@@ -17,21 +17,21 @@ tasks:
     title: Preserve original FIFO and financial history through governed credit and partial refund
     status: in_progress
     depends_on: [AMR-WAVE3-001]
-    exit_evidence: Whole original source inverse, cash liability conservation, current whole-turnover authority, SQL bypass and race/rollback, three-human Studio lost responses and populated restore.
+    exit_evidence: CR complete native15 and actual HTTPS/populated249-table restore accepted at9c4bea54; whole zero-tax functional-currency original source/FIFO inverse, retained cash installments and current authority. Exact-final-head hosted native/general acceptance remains pending; partial/taxed/foreign stock returns remain gaps.
   - id: AMR-WAVE4-002
     priority: P0
     area: purchase-appropriation
     title: Bind approved budget to native partial purchase receipt and AP accrual
     status: in_progress
     depends_on: [AMR-WAVE3-001]
-    exit_evidence: Frozen native/API24 passed at7f72c770; actual HTTPS master-only seeded purchase/budget cycle and populated restore remain required.
+    exit_evidence: Frozen native/API24 passed at7f72c770 and master-only seeded multi-line appropriation/receipt/AP/payment actual HTTPS/populated249-table restore passed at9c4bea54. Exact-final-head hosted acceptance remains pending; PR/RFQ/contracts and supplier-return budget reinstatement remain gaps.
   - id: AMR-WAVE4-003
     priority: P0
     area: historical-fx-tax
     title: Native foreign taxed AR invoice and partial functional settlement with realized FX
     status: in_progress
     depends_on: [AMR-WAVE3-001]
-    exit_evidence: Independent cumulative historical release across0/2/3 precision, current revoked grant/retry, original native receipt and exact functional GL, browser cryptographic seals and close/report restore.
+    exit_evidence: Original FX packets contain19 unique native/API cases with retained0/2/3 precision; five-stage recognition/settlement/closing/inverse/final-settlement actual HTTPS/populated253-table restore passed at1e73267e. Portable Fraction oracle binds original proof bytes and exact native membership to separately trusted3ac5 manifest. Final hosted acceptance and broader AP/stock/country tax remain pending.
   - id: AMR-WAVE4-004
     priority: P0
     area: posting-performance
@@ -44,8 +44,15 @@ tasks:
     area: supplier-return
     title: Exact unpaid original AP debit plus unissued FIFO supplier restitution
     status: in_progress
-    depends_on: [AMR-WAVE4-002]
-    exit_evidence: SR1 source0130 uses original native reversal, no paid/pending/BPC1 source admission until accounting conservation supports it; full native/API/Studio/SQL/race/restore gate required.
+    depends_on: [AMR-WAVE3-002]
+    exit_evidence: SR actual HTTPS/populated253-table restore passed at92230f4a, including reviewed cancel/reprepare, unpaid original AP credit, native whole unissued FIFO inverse and approved expense disposition of original paid charges. Complete latest28 native/API cases require hosted acceptance. Partial/issued/adjusted receipts, paid merchandise and BPC1 sources remain unsupported.
+  - id: AMR-WAVE4-006
+    priority: P0
+    area: closing-fx-and-original-inverse
+    title: Revalue retained open foreign AR then reverse the exact native original before settlement
+    status: in_progress
+    depends_on: [AMR-WAVE4-003]
+    exit_evidence: Complete closing/inverse6 native cases passed at5ac359c1 and full-position current ABAC1 atdcdbe8c7; actual five-stage1e732 cycle closes AR and unrealized FX after exact inverse. Final hosted gate remains pending; group translation and broader AP/stock revaluation remain gaps.
   - id: AMR-WAVE3-001
     priority: P0
     area: commercial-collections

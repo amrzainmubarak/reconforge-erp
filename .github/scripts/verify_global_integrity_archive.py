@@ -22,6 +22,14 @@ HELPERS = (
 PREFIX20_SHA = "3f1ecffac62b7cc3cbea41264f2a61b7948d9875c87dd32f7eddf7f51238be41"
 INDEX_PATH = "docs/execution/benchmarks/INDEX.v1.json"
 GOLDEN = {100: "46669102", 1000: "493671004"}
+FX_EVIDENCE = "docs/execution/wave4-evidence/fx-1e73267e"
+FX_MANIFEST_SHA = "3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a"
+FX_RETAINED_SHA = {
+    "cycle-report.json": "594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027",
+    "proof-manifest.json": FX_MANIFEST_SHA,
+    "oracle-normal.json": "cd5e6657b80f2dfa656599bb54be369fedea15dd60703ead17c73dcb44735a98",
+    "oracle-optimized.json": "3e2be012104525d438b09059efb12f4a32c1626572cac0bed92c00783d129456",
+}
 
 
 def require(value: object, message: str) -> None:
@@ -151,6 +159,85 @@ def isolated_json(command: list[str], root: Path) -> dict[str, object]:
     return json.loads(result.stdout)
 
 
+def check_wave4_evidence(extracted: Path, output: Path) -> dict[str, object]:
+    packet = json.loads((extracted / "docs/execution/WAVE4_ACCEPTANCE_2026-10-10.json").read_bytes())
+    require(packet["final_acceptance"] is False, "Incremental Wave4 packet claims final acceptance")
+    embedded = 0
+
+    def check_retained(value: object) -> None:
+        nonlocal embedded
+        if isinstance(value, dict):
+            if "original_report_serialization" in value:
+                require(isinstance(value["original_report_serialization"], str), "Wave4 original report serialization differs")
+                require(sha(value["original_report_serialization"].encode("utf-8")) == value["original_report_sha256"],
+                        "Wave4 embedded original report bytes differ")
+                embedded += 1
+            for child in value.values():
+                check_retained(child)
+        elif isinstance(value, list):
+            for child in value:
+                check_retained(child)
+
+    check_retained(packet)
+    require(embedded == 44 and len(packet["retained_unsuccessful_attempts"]) == 23, "Wave4 retained report population differs")
+    require(len(packet["accepted_native_owner_packets"]) == 7 and len(packet["original_fx_unique_executed_case_ids"]) == 19,
+            "Wave4 source-bound native population differs")
+    for native_packet in packet["accepted_native_owner_packets"].values():
+        native = json.loads(native_packet["original_report_serialization"])
+        counts = native_packet["independently_parsed_junit_counts"]
+        require(native["accepted"] is True and native["source_unchanged"] is True and native["counts"] == counts,
+                "Wave4 native acceptance/source/JUnit counts differ")
+        require(type(counts["tests"]) is int and counts["tests"] > 0
+                and all(type(counts[key]) is int and counts[key] == 0 for key in ("failures", "errors", "skipped")),
+                "Wave4 native execution incomplete")
+    browser = packet["accepted_actual_https_and_populated_restore"]
+    require(set(browser) == {"customer_returns", "procurement_commitments", "fx_five_stage", "supplier_returns"},
+            "Wave4 accepted actual cycle set differs")
+    for retained_browser in browser.values():
+        runtime = json.loads(retained_browser["original_report_serialization"])
+        require(runtime["status"] == "passed" and runtime["source_unchanged"] is True
+                and runtime["source_commit"] == runtime["source_commit_after"], "Wave4 accepted runtime source differs")
+        require(all(runtime[key] is True for key in ("tracked_clean_before", "tracked_clean_after", "built_web_unchanged",
+                                                     "owned_container_removed", "owned_https_process_stopped"))
+                and runtime["role_privileges"] == [False, False]
+                and all(type(flag) is bool for flag in runtime["role_privileges"]), "Wave4 runtime isolation/cleanup differs")
+        require(all(type(runtime["browser_counts"][key]) is int and runtime["browser_counts"][key] == count
+                    for key, count in {"expected": 1, "skipped": 0, "unexpected": 0, "flaky": 0}.items()),
+                "Wave4 actual runtime outcome differs")
+        require(runtime["native_restore"]["status"] == "passed" and runtime["native_restore"]["tamper_refusals"] == 3
+                and runtime["persisted_effects"] == runtime["native_restore"]["verified_effects"], "Wave4 restore financial evidence differs")
+    require(all(attempt["accepted"] is False for attempt in packet["retained_unsuccessful_attempts"])
+            and packet["retained_interrupted_general_partition"]["accepted"] is False, "Wave4 unaccepted attempt promoted")
+    evidence = extracted / FX_EVIDENCE
+    for name, expected_sha in FX_RETAINED_SHA.items():
+        require(sha((evidence / name).read_bytes()) == expected_sha, "Retained FX raw bytes differ: " + name)
+    manifest = json.loads((evidence / "proof-manifest.json").read_bytes())
+    for index, effect in enumerate(manifest["native_effects"]):
+        require(sha((evidence / f"fx-proof-{index}.json").read_bytes()) == effect["file_sha256"], "FX original proof bytes differ")
+    require((evidence / "fx-proof-ar-mobile.json").read_bytes() == (evidence / "fx-proof-4.json").read_bytes(),
+            "FX Arabic retained final evidence differs")
+    validations = {}
+    for mode in ("normal", "optimized"):
+        fresh = output / ("independent-fx-cycle-" + mode + ".json")
+        isolated_json([sys.executable, "-I", *(["-O"] if mode == "optimized" else []),
+                       str(extracted / ".github/scripts/verify_operational_fx_cycle_oracle.py"),
+                       "--proof-directory", str(evidence), "--cycle-report", str(evidence / "cycle-report.json"),
+                       "--proof-manifest", str(evidence / "proof-manifest.json"), "--proof-manifest-sha256", FX_MANIFEST_SHA,
+                       "--report", str(fresh)], extracted)
+        current = json.loads(fresh.read_bytes())
+        original = json.loads((evidence / ("oracle-" + mode + ".json")).read_bytes())
+        require(current["status"] == original["status"] == "passed", "Extracted FX rational oracle failed")
+        for field in ("proof_manifest_sha256", "source_commit", "source_sha256", "built_web_sha256", "report_sha256", "dump_sha256",
+                      "native_effects", "unique_audit_events", "unique_outbox_events", "account_balances_minor", "source_id", "invoice_id",
+                      "foreign_gross_minor", "functional_gross_minor", "foreign_receipts_minor", "historical_releases_minor",
+                      "realized_fx_minor", "closing_value_minor", "unrealized_difference_minor", "restored_table_count"):
+            require(current[field] == original[field], "Extracted FX independent result differs: " + field)
+        validations[mode] = current
+    return {"embedded_original_reports": embedded, "actual_cycle_count": len(browser),
+            "trusted_manifest_sha256": FX_MANIFEST_SHA, "original_raw_hashes": FX_RETAINED_SHA,
+            "independent_fx_oracle": validations, "final_program_acceptance": False}
+
+
 def check_imports(extracted: Path) -> dict[str, object]:
     code = """
 import importlib,json,pathlib,sys
@@ -200,6 +287,11 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_supplier_returns.py", "tests/test_postgres_supplier_returns.py", "tests/test_postgres_supplier_returns_api.py",
         "tests/test_operational_fx_revaluation.py", "tests/test_postgres_operational_fx_revaluation.py",
         "tests/test_postgres_operational_fx_revaluation_migration.py", ".github/scripts/verify_erp_expansion_browser.py",
+        ".github/scripts/verify_operational_fx_cycle_oracle.py", "tests/test_operational_fx_cycle_oracle.py",
+        "docs/execution/WAVE4_ACCEPTANCE_2026-10-10.json", "docs/execution/WAVE4_ACCEPTANCE_2026-10-10.md",
+        "docs/execution/wave4-evidence/.gitattributes",
+        *(FX_EVIDENCE + "/" + name for name in FX_RETAINED_SHA),
+        *(FX_EVIDENCE + f"/fx-proof-{index}.json" for index in range(5)), FX_EVIDENCE + "/fx-proof-ar-mobile.json",
         "apps/web/src/operational-fx-tax-fixture.json", "modules/customer-returns.yaml",
         "docs/modules/procurement-commitments.yaml", "docs/modules/operational-fx-tax.yaml",
         "docs/modules/supplier-returns.yaml", "docs/operator/supplier-returns.md",
@@ -259,6 +351,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
                        "--root", str(extracted), "--report", str(pair_proof)], extracted)
         report["independent_posting_pair"] = json.loads(pair_proof.read_text(encoding="utf-8"))
         require(report["independent_posting_pair"]["status"] == "passed", "Extracted independent posting oracle failed")
+        report["wave4_portable_evidence"] = check_wave4_evidence(extracted, target)
         report["browser_helper_imports"] = check_imports(extracted)
         report["acceptance_packet_keys"] = sorted(json.loads((extracted / "docs/execution" / (args.acceptance_stem + ".json")).read_text(encoding="utf-8")))
         with zipfile.ZipFile(args.wheel) as wheel:

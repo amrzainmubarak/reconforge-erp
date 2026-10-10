@@ -1,0 +1,3 @@
+# Preserve the original accepted local reports and downloaded proof byte hashes.
+.gitattributes text eol=lf
+fx-1e73267e/*.json -text -eol whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

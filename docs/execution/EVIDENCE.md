@@ -1,9 +1,69 @@
 # ReconForge Execution Evidence Log
 
+## Wave4 source-bound runtime and portable proof publication (2026-10-10)
+
+[Incremental acceptance](WAVE4_ACCEPTANCE_2026-10-10.md) and its
+[byte-exact packet](WAVE4_ACCEPTANCE_2026-10-10.json) retain four successful
+actual HTTPS/populated restore cycles, seven native owner packets, seven completed
+static/package gates, 23 unsuccessful attempts and the interrupted general Python
+run. All 44 embedded original JSON serializations reconstruct their recorded SHA256.
+Final hosted CI, complete final-source native/general gates, new archive inspection
+and three comparable performance pairs remain pending. This is not final acceptance.
+
+| Actual cycle | Frozen source | Seconds | Restored tables | Original report SHA256 |
+|---|---|---:|---:|---|
+| Whole customer credit and two refunds | 9c4bea54 | 165.156 | 249 | `b5be76a4e655c0ecfb11a7cc42cf008947d6df08fd158d260cd28f16fc214f44` |
+| Multi-line purchase appropriation, AP and installments | 9c4bea54 | 138.141 | 249 | `cee18c7d6e20830068c6659a77047ff02989885da387301aacaf3032d8867cbb` |
+| Foreign taxed AR, closing valuation/inverse and two settlements | 1e73267e | 104.546 | 253 | `594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027` |
+| Reviewed supplier cancel/reprepare and original receipt/AP inverse | 92230f4a | 161.672 | 253 | `f2682341253a49275d894f1de6190115fac5adc60ebf5dbef7db6d0e46310503` |
+
+Each accepted packet retains clean unchanged source/web, one expected browser and
+zero unexpected/skipped/flaky results, nonowner/NOBYPASSRLS flags, three direct SQL
+tamper refusals, exact persisted/restored money and owned HTTPS/container cleanup.
+CR credits 45,000, releases AR 35,000, refunds original collected 10,000 and restores
+10 units/12,000 cost; nine effects balance at 156,000. BPC reserves 17,000, consumes
+7,400 and releases 9,600; five effects balance at 22,200. FX retains EUR gross 11,401
+and USD gross 14,251; realized gain/loss 200/370 and unrealized +740/−740 finish with
+AR/unrealized zero and cash 14,081. SR credits original unpaid AP 12,000, removes
+FIFO 12,706 and expenses original paid charges 706; ten effects balance at 66,414,
+with inventory 5,295 and cash change −6,001. These are synthetic bounded fixtures.
+
+Portable original FX artifacts reside in `wave4-evidence/fx-1e73267e/`:
+
+| Original file | SHA256 |
+|---|---|
+| fx-proof-0.json | `e98f19ce390547c951ce419b12e088c3e5c0c8f271ccc9d710bdff0248af8101` |
+| fx-proof-1.json | `46a1f22cc0a216eebe5282d766a9422b1ccf3766ddbf736a12e9cb0182507f7f` |
+| fx-proof-2.json | `42b44512124ad614a844754838950891ad185b28f72732d6ee90133ed286fa27` |
+| fx-proof-3.json | `814c10a2ba1253d5dfeb9690ca340f8f304b3bf84502433d6aa7006008db7493` |
+| fx-proof-4.json and fx-proof-ar-mobile.json | `94c26cbe298b796604661ac0068266f2a8398bf2c73181ccee8df6975b09565d` |
+| cycle-report.json | `594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027` |
+| proof-manifest.json | `3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a` |
+| oracle-normal.json | `cd5e6657b80f2dfa656599bb54be369fedea15dd60703ead17c73dcb44735a98` |
+| oracle-optimized.json | `3e2be012104525d438b09059efb12f4a32c1626572cac0bed92c00783d129456` |
+
+These are exact binary copies from the original root 1e732 browser output and the
+finance owner's retained independent manifest/normal/optimized output. Their original
+commands, source IDs and absolute acquisition paths stay unchanged. The published
+copies are rerunnable without PostgreSQL, Chrome or ReconForge imports:
+
+```shell
+python -I .github/scripts/verify_operational_fx_cycle_oracle.py --proof-directory docs/execution/wave4-evidence/fx-1e73267e --cycle-report docs/execution/wave4-evidence/fx-1e73267e/cycle-report.json --proof-manifest docs/execution/wave4-evidence/fx-1e73267e/proof-manifest.json --proof-manifest-sha256 3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a --report output/NEW-fx-independent.json
+```
+
+Repeat with `python -I -O` and a fresh report path. Membership checks reject a unique
+invented runtime effect even when public plan seals remain valid. The separately
+trusted manifest pins all five original proof hashes, the original runtime report
+and native plan/entry/effect identity list; it is a retained local trust anchor, not
+independent external attestation. Original browser/JUnit/log sidecars referenced by
+the acceptance packet remain in recorded output paths and are not claimed packaged.
+
 ## Wave4 rolling evidence (2026-10-10)
 
 Protected source/head hashes and original e07 acceptance are recorded in
-WAVE4_BASELINE_2026-10-10.md. No full integrated Wave4 acceptance exists yet.
+WAVE4_BASELINE_2026-10-10.md. The following is retained intermediate development
+history; later accepted source-bound packets above supersede its pending local
+owner statements. No full integrated Wave4 acceptance exists yet.
 
 - BPC1 native/API at7f72c770:24 executed/pass,0skip/fail/error,498.809s;
   raw native-1791617140219984300, exact clean source9ed45d1a82731f2b6563c81034b4062ce5c9ce71f0d7be6df2d43dfe8b0d69ce.

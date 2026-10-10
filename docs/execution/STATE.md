@@ -9,24 +9,46 @@ commits are authored/committed by Amr. Three independent commercial/supply/finan
 worktrees implement CR1/CRF1, BPC1 and FX1; root owns contracts, ordered migrations,
 API/Studio integration, CI/package closure and performance profiling.
 
-Current candidate chain0126 customer returns→0127 procurement commitments→0128
-historical foreign AR/tax→0129 invoker read planning has one Alembic head. BPC1
-has a frozen24-case native/API acceptance at7f72c770 with no skips. Root read
-planning/tuple+dict-row gate has9 native cases passing at a4ffa822. CR1 and FX1
-expanded owner gates are still being repaired/re-run; unsuccessful source-bound
-packets are retained. Actual three new HTTPS/populated restore journeys and
-fixed-source integrated CI/full gates are pending. New SR1 supplier-return source
-is actively under construction, reserved0130/ADR0851; manufacturing is not complete.
+The linear chain now reaches 0131: customer returns→purchase commitments→foreign
+AR/tax→invoker read planning→supplier returns→closing FX valuation and exact inverse.
+Four actual HTTPS/populated restore cycles have source-bound acceptance: CR1 and
+BPC1 at 9c4bea54, five-stage FX at 1e73267e, and SR1 at 92230f4a. Each has one
+expected browser scenario, zero skips/flakies, a nonowner/NOBYPASSRLS application
+role, exact restored financial results, three SQL tamper refusals and owned cleanup.
+CR1 whole zero-tax functional-currency delivered source credits original AR and
+restores FIFO/COGS/revenue, with partial refunds of retained original cash. SR1
+accepts a whole unissued original receipt and exact accrued unpaid AP source;
+paid landed charges are disposed to approved expense, with no invented cash refund.
+FX closing retains original outstanding historical/closing positions and reverses
+the original approved native valuation before final settlement. Partial/taxed/FX
+stock returns, paid merchandise/partial/issued supplier returns, BPC1 budget
+reinstatement, broad country tax products and manufacturing remain gaps.
+
+Complete CR native 15-case acceptance is bound to 9c4bea54; BPC native/API 24 cases
+to 7f72c770; overlapping original FX packets contain 19 unique executed cases,
+with separate closing/inverse 6-case and retained-position 1-case follow-ups.
+These are not a complete native regression on the final publication head. Strict
+API inventory remains 459 routes with the accepted 429/432 predecessors preserved.
+Seven static/package gates passed at 1e73267e, including React 404 and isolated
+131-migration source/wheel closure. Its full general Python run was explicitly
+interrupted for the UI repair and remains unaccepted. Exact-final-head hosted CI
+and publication archive verification are pending; no final Wave4 acceptance exists.
 
 The diagnostic profile attributes PostgreSQL CPU to repeated financial RLS query
 planning. Identity PBKDF2 remains unchanged. Smaller join-collapse settings were
 rejected; scoped line-ID reads plus SECURITY INVOKER parent helpers are candidate
-optimizations only until three alternating independent1K posting populations
-per variant establish wall/latency/client+databaseCPU/resource results.
+optimizations only until three alternating independent 1K posting populations
+per variant establish wall/latency/client and database CPU/resource results.
+The matched baseline bc294 and candidate 92230f4a remain separate performance
+checkouts; their three complete pairs and 10K+ mixed/1,000-line workloads are pending.
 
 See [baseline and protected provenance](WAVE4_BASELINE_2026-10-10.md),
 [current functional gaps](GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md) and
 [read-policy design](../adr/0850-invoker-financial-read-policy-planning.md).
+[Source-bound acceptance](WAVE4_ACCEPTANCE_2026-10-10.md) retains 44 byte-exact
+original JSON reports and 23 unsuccessful attempts. Portable FX proof files and
+the original trusted manifest are under wave4-evidence/fx-1e73267e; the independent
+stdlib Fraction verifier requires the separately retained manifest SHA256.
 Historical accepted snapshots below retain their original source scope.
 
 ## Successor publication snapshot: locally verified operating integrity (2026-10-10)

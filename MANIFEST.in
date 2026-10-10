@@ -1422,3 +1422,9 @@ include tests/test_postgres_operational_fx_revaluation_migration.py
 include docs/modules/supplier-returns.yaml
 include docs/operator/supplier-returns.md
 include docs/adr/0851-original-supplier-debit-and-capitalized-receipt-return.md
+include docs/execution/WAVE4_ACCEPTANCE_2026-10-10.json
+include docs/execution/WAVE4_ACCEPTANCE_2026-10-10.md
+include .github/scripts/verify_operational_fx_cycle_oracle.py
+include tests/test_operational_fx_cycle_oracle.py
+recursive-include docs/execution/wave4-evidence *.json
+include docs/execution/wave4-evidence/.gitattributes

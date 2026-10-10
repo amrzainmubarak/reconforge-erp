@@ -1,0 +1,69 @@
+{
+  "status": "passed",
+  "oracle": "stdlib Fraction with independent positive half-up integer rounding; no ReconForge imports",
+  "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+  "report_sha256": "594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027",
+  "foreign_net_minor": 10001,
+  "foreign_tax_minor": 1400,
+  "foreign_gross_minor": 11401,
+  "functional_net_minor": 12501,
+  "functional_tax_minor": 1750,
+  "functional_gross_minor": 14251,
+  "closing_value_minor": 9991,
+  "unrealized_difference_minor": 740,
+  "native_effects": [
+    {
+      "kind": "recognize",
+      "effect_id": "PST-b4fa4ac5bdb6492799e54a5247c30923",
+      "entry_id": "GLE-00265c6fe33d83b9",
+      "plan_id": "FX1-42f2d1e79dae43a2bfcd36511b44ee6a",
+      "amount_minor": 14251,
+      "file_sha256": "e98f19ce390547c951ce419b12e088c3e5c0c8f271ccc9d710bdff0248af8101"
+    },
+    {
+      "kind": "settle",
+      "effect_id": "PST-2836280ff4aa409abe572124a1d5e7f9",
+      "entry_id": "GLE-3cc9aa6c4164b5cc",
+      "plan_id": "FX1-96bc9ce0efcd49e9a61716bfaa5ff84c",
+      "amount_minor": 5200,
+      "file_sha256": "46a1f22cc0a216eebe5282d766a9422b1ccf3766ddbf736a12e9cb0182507f7f"
+    },
+    {
+      "kind": "revalue",
+      "effect_id": "PST-2e6141eff38f43d0bf7b74060e44430b",
+      "entry_id": "GLE-0f23cfffc36cc49e",
+      "plan_id": "FX1-575b76771a2b43fa8189c1feeeade57a",
+      "amount_minor": 740,
+      "file_sha256": "42b44512124ad614a844754838950891ad185b28f72732d6ee90133ed286fa27"
+    },
+    {
+      "kind": "reverse_revaluation",
+      "effect_id": "PST-5a0150cc6df84546bc3db529f4285f75",
+      "entry_id": "GLE-da81560d991a753f",
+      "plan_id": "FX1-bf65caea4c0647deb9c5dad8df31d4bf",
+      "amount_minor": 740,
+      "file_sha256": "814c10a2ba1253d5dfeb9690ca340f8f304b3bf84502433d6aa7006008db7493"
+    },
+    {
+      "kind": "settle",
+      "effect_id": "PST-49d2edcaa38f40e6a63a12a8b01e27e6",
+      "entry_id": "GLE-2cb672aef145141d",
+      "plan_id": "FX1-61107d753f0547dda1570d69fd82b7a8",
+      "amount_minor": 9251,
+      "file_sha256": "94c26cbe298b796604661ac0068266f2a8398bf2c73181ccee8df6975b09565d"
+    }
+  ],
+  "unique_audit_events": 20,
+  "unique_outbox_events": 20,
+  "account_balances_minor": {
+    "AR": 0,
+    "REVENUE": -12501,
+    "TAX": -1750,
+    "CASH": 14081,
+    "GAIN": -200,
+    "UGAIN": 0,
+    "LOSS": 370
+  },
+  "sum_balances_minor": 0,
+  "restored_table_count": 253
+}

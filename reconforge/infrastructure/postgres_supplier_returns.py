@@ -56,8 +56,12 @@ class PostgresSupplierReturnsRepository:
 
     def _actor(self, actor: PostingActor, operation: str, plan: Mapping[str, Any]) -> None:
         permissions = PERMISSIONS.get(operation, READ)
+        # Public evidence retains the whole original PO as well as the selected
+        # inverse. Authority covers both without changing GL turnover 2C.
+        authorization = {**plan, "amount_minor": max(int(plan["amount_minor"]),
+            int(plan["source_snapshot"]["order"]["total_minor"]))}
         for permission in sorted(permissions):
-            self.owner._actor(actor, permission, plan, mutation=operation != "read")
+            self.owner._actor(actor, permission, authorization, mutation=operation != "read")
         scope = BudgetScope(*(str(plan[key]) for key in ("workspace_id", "organization_id", "legal_entity_id")))
         live = self.authority._authority(scope, actor.user_id, actor.username)
         if (live is None or not permissions <= live.permissions or scope.workspace_id not in live.workspace_ids
@@ -151,7 +155,8 @@ class PostgresSupplierReturnsRepository:
             source = self._source(request.order_id, request.receipt_id, request.invoice_id)
             original = source["original_plan"]
             payload = {**original["scope"], **args, **return_values(source["receipt"]["total_minor"], original["source"]["total_value_minor"]),
-                       "currency_code": original["currency_policy"]["currency_code"], "currency_precision": original["currency_policy"]["currency_precision"]}
+                       "currency_code": original["currency_policy"]["currency_code"], "currency_precision": original["currency_policy"]["currency_precision"],
+                       "source_snapshot": source}
             self._actor(actor, "prepare", payload)
             digest, replay = self._command(payload, "prepare", command_id, actor, args)
             if replay is not None:

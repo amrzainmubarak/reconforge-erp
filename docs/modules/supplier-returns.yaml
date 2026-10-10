@@ -14,7 +14,7 @@ domain_invariants:
   - One complete unissued original receipt equals one complete accrued unpaid native AP line
   - Original capitalized FIFO Remove, original AP inverse and paid-charge expense commit together
   - Original merchandise equals immutable supplier credit plus paid plus outstanding native AP
-  - Current full financial burden uses original retained precision and equals twice original capitalized cost
+  - Financial burden equals twice original capitalized cost; current authority covers the larger of this burden and the entire retained original purchase total at original precision
   - Original paid landed charges remain in cash history and their returned portion becomes expense
   - Three distinct current persisted humans prepare, review and post
   - Independent unposted cancellation preserves inverse drafts and command evidence

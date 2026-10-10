@@ -343,6 +343,59 @@ def test_exact_replay_rechecks_live_permission_and_three_hierarchy_grants(runtim
     assert snapshot(runtime) == before
 
 
+def test_original_purchase_evidence_and_retries_require_full_retained_money_authority(runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch) -> None:
+    from decimal import Decimal
+
+    import psycopg
+
+    from reconforge.auth.policy import evaluate_principal_access
+    from reconforge.infrastructure import postgres_operational_finance as authority
+
+    purchase = source(runtime)
+    plan = prepare(runtime, purchase)
+    assert plan["amount_minor"] == "4800" and plan["source_snapshot"]["order"]["total_minor"] == 17000
+    before = snapshot(runtime)
+    ceiling = Decimal("50.00")
+    observed: list[Decimal | None] = []
+
+    def governed_policy(principal: Any, **context: Any) -> Any:
+        observed.append(context.get("amount"))
+        return evaluate_principal_access(principal, maximum_amount=ceiling, **context)
+
+    monkeypatch.setattr(authority, "evaluate_principal_access", governed_policy)
+
+    def refuse_original_evidence() -> None:
+        with runtime.actor(MAKER) as (connection, _, actor):
+            owner = PostgresSupplierReturnsRepository(connection, runtime.tenant)
+            for operation in (lambda: owner.get(plan["id"], actor=actor),
+                              lambda: owner.list_plans(purchase["order"]["id"], actor=actor),
+                              lambda: owner.prepare(preparation(purchase), command_id="sr-prepare", actor=actor),
+                              lambda: owner.prepare(preparation(purchase, "SR1-NEW-NARROW"), command_id="new-narrow", actor=actor)):
+                with pytest.raises(FinancePostingError, match="authorization"):
+                    operation()
+        with pytest.raises(FinancePostingError, match="authorization"), runtime.actor(CHECKER) as (connection, _, actor):
+            PostgresSupplierReturnsRepository(connection, runtime.tenant).review(plan["id"],
+                expected_plan_digest=plan["plan_digest"], command_id="narrow-review", reason="Narrow source authority refused", actor=actor)
+
+    refuse_original_evidence()
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        admin.execute("SET LOCAL session_replication_role=replica")
+        admin.execute("UPDATE reconforge.currencies SET minor_units=3 WHERE tenant_id=%s AND code='USD'", (runtime.tenant,))
+    try:
+        refuse_original_evidence()
+    finally:
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            admin.execute("SET LOCAL session_replication_role=replica")
+            admin.execute("UPDATE reconforge.currencies SET minor_units=2 WHERE tenant_id=%s AND code='USD'", (runtime.tenant,))
+    assert snapshot(runtime) == before
+    ceiling = Decimal("200.00")
+    with runtime.actor(MAKER) as (connection, _, actor):
+        owner = PostgresSupplierReturnsRepository(connection, runtime.tenant)
+        assert owner.get(plan["id"], actor=actor) == plan
+        assert owner.prepare(preparation(purchase), command_id="sr-prepare", actor=actor) == plan
+    assert Decimal("170.00") in observed and Decimal("17.000") not in observed
+
+
 def test_ordinary_receiving_accrual_and_payment_require_no_new_supplier_owner_select(runtime: ReceiptRuntime, receipt_database: tuple[str, str]) -> None:
     import psycopg
     from psycopg import sql

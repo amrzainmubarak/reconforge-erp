@@ -30,6 +30,12 @@ FX_RETAINED_SHA = {
     "oracle-normal.json": "cd5e6657b80f2dfa656599bb54be369fedea15dd60703ead17c73dcb44735a98",
     "oracle-optimized.json": "3e2be012104525d438b09059efb12f4a32c1626572cac0bed92c00783d129456",
 }
+WAVE4_BROWSER_SHA = {
+    "customer_returns": "b5be76a4e655c0ecfb11a7cc42cf008947d6df08fd158d260cd28f16fc214f44",
+    "procurement_commitments": "cee18c7d6e20830068c6659a77047ff02989885da387301aacaf3032d8867cbb",
+    "fx_five_stage": FX_RETAINED_SHA["cycle-report.json"],
+    "supplier_returns": "f2682341253a49275d894f1de6190115fac5adc60ebf5dbef7db6d0e46310503",
+}
 
 
 def require(value: object, message: str) -> None:
@@ -193,7 +199,8 @@ def check_wave4_evidence(extracted: Path, output: Path) -> dict[str, object]:
     browser = packet["accepted_actual_https_and_populated_restore"]
     require(set(browser) == {"customer_returns", "procurement_commitments", "fx_five_stage", "supplier_returns"},
             "Wave4 accepted actual cycle set differs")
-    for retained_browser in browser.values():
+    for label, retained_browser in browser.items():
+        require(retained_browser["original_report_sha256"] == WAVE4_BROWSER_SHA[label], "Wave4 actual cycle raw report changed")
         runtime = json.loads(retained_browser["original_report_serialization"])
         require(runtime["status"] == "passed" and runtime["source_unchanged"] is True
                 and runtime["source_commit"] == runtime["source_commit_after"], "Wave4 accepted runtime source differs")
@@ -211,6 +218,8 @@ def check_wave4_evidence(extracted: Path, output: Path) -> dict[str, object]:
     evidence = extracted / FX_EVIDENCE
     for name, expected_sha in FX_RETAINED_SHA.items():
         require(sha((evidence / name).read_bytes()) == expected_sha, "Retained FX raw bytes differ: " + name)
+    require((evidence / "cycle-report.json").read_bytes() == browser["fx_five_stage"]["original_report_serialization"].encode("utf-8"),
+            "Portable FX runtime report differs from the incremental packet")
     manifest = json.loads((evidence / "proof-manifest.json").read_bytes())
     for index, effect in enumerate(manifest["native_effects"]):
         require(sha((evidence / f"fx-proof-{index}.json").read_bytes()) == effect["file_sha256"], "FX original proof bytes differ")

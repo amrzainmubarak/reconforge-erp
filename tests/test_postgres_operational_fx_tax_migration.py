@@ -55,6 +55,17 @@ def test_unrelated_outbox_worker_needs_no_fx_source_read_grant(receipt_database:
 
     runtime = seed_fx_runtime(receipt_database)
     finish_fx(runtime, prepare_fx(runtime))
+    # Retain populated FX history and deliver its already-valid events through
+    # the native fenced worker before the unrelated least-privilege scenario.
+    # Direct available_at updates would bypass the required live generation.
+    with runtime.actor("poster") as (connection, _, _):
+        existing = PostgresOutboxRepository(connection).claim_pending(
+            tenant_id=runtime.tenant, worker_id="fx-history-worker", limit=50, lease_seconds=60)
+    with runtime.actor("poster") as (connection, _, _):
+        outbox = PostgresOutboxRepository(connection)
+        for event in existing:
+            outbox.mark_published(tenant_id=runtime.tenant, event_id=event.id,
+                worker_id="fx-history-worker", lease_generation=event.lease_generation)
     boundary = PostgresTenantBoundary(runtime.factory)
     role = "fx_unrelated_" + uuid4().hex[:12]
     app_user = psycopg.conninfo.conninfo_to_dict(runtime.factory.settings.dsn)["user"]
@@ -67,9 +78,6 @@ def test_unrelated_outbox_worker_needs_no_fx_source_read_grant(receipt_database:
             yield connection
 
     with psycopg.connect(runtime.admin_dsn) as admin:
-        # Retain populated FX history but keep its dispatches out of this
-        # deliberately unrelated worker's eligible synthetic queue.
-        admin.execute("UPDATE reconforge.outbox_events SET available_at='2099-01-01T00:00:00Z' WHERE tenant_id=%s", (runtime.tenant,))
         admin.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(sql.Identifier(role)))
         admin.execute(sql.SQL("GRANT {} TO {}").format(sql.Identifier(role), sql.Identifier(app_user)))
         admin.execute(sql.SQL("GRANT USAGE ON SCHEMA reconforge TO {}").format(sql.Identifier(role)))
@@ -111,10 +119,10 @@ def test_legacy_customer_and_financial_master_maintenance_needs_no_fx_read_grant
         for table in ("operational_fx_sources", "operational_fx_plans", "operational_fx_reviews", "operational_fx_links", "operational_fx_commands"):
             assert connection.execute("SELECT has_table_privilege(current_user,%s,'SELECT')", ("reconforge." + table,)).fetchone()[0] is False
         native = PostgresReceivablesRepository(connection, "finance_scope")
-        customer = native.upsert_customer(customer_code="ORDINARY", name="Ordinary customer", currency_code="EGP", credit_limit_minor=10000,
+        native.upsert_customer(customer_code="ORDINARY", name="Ordinary customer", currency_code="EGP", credit_limit_minor=10000,
             workspace="Shared", organization_code="ORG_A", entity_code="A1")
         maintained = native.upsert_customer(customer_code="ORDINARY", name="Maintained ordinary customer", currency_code="EGP", credit_limit_minor=20000,
-            workspace="Shared", organization_code="ORG_A", entity_code="A1", expected_version=customer["row_version"])
+            workspace="Shared", organization_code="ORG_A", entity_code="A1")
         assert maintained["credit_limit_minor"] == 20000
         for statement in (
             "UPDATE reconforge.legal_entities SET name='Maintained entity' WHERE tenant_id='finance_scope' AND id='entity_a1'",

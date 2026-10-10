@@ -1428,3 +1428,6 @@ include .github/scripts/verify_operational_fx_cycle_oracle.py
 include tests/test_operational_fx_cycle_oracle.py
 recursive-include docs/execution/wave4-evidence *.json
 include docs/execution/wave4-evidence/.gitattributes
+include tests/test_postgres_stock_sales_reversal_dispatch.py
+include alembic/versions/0132_postgres_stock_sales_reversal_dispatch.py
+include docs/adr/0852-scoped-original-stock-revenue-inverse-dispatch.md

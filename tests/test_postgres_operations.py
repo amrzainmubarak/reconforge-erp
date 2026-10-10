@@ -41,8 +41,9 @@ def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None
         "0126_pg_customer_returns", "0127_pg_procurement_commitments",
         "0128_pg_operational_fx_tax", "0129_pg_financial_read_plans",
         "0130_pg_supplier_returns", "0131_pg_fx_revaluation",
+        "0132_pg_stock_inverse_dispatch",
     )
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 131
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 132
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:

@@ -153,9 +153,11 @@ def check_migrations(extracted: Path, count: int, head: str) -> dict[str, object
     require(len(visited) == count and set(visited) == set(revisions), "Migration chain does not cover every revision")
     if count >= 131:
         require(visited[-125] == "0125_pg_landed_cost_cancellation", "Accepted 125-revision prefix differs")
-        require(visited[:6] == ["0131_pg_fx_revaluation", "0130_pg_supplier_returns", "0129_pg_financial_read_plans",
+        require(visited[-131:-125] == ["0131_pg_fx_revaluation", "0130_pg_supplier_returns", "0129_pg_financial_read_plans",
                                "0128_pg_operational_fx_tax", "0127_pg_procurement_commitments", "0126_pg_customer_returns"],
                 "Wave4 migration suffix differs")
+    if count >= 132:
+        require(visited[-132] == "0132_pg_stock_inverse_dispatch", "Corrective inverse dispatch revision differs")
     return {"count": count, "head": head, "oldest": visited[-1], "complete_linear_chain": True}
 
 
@@ -296,6 +298,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_container_resource_counters.py", "tests/test_postgres_financial_read_plans.py",
         "tests/test_global_engineering_pair.py", "tests/fixtures/enterprise-warmup-20-ea83335c.json",
         "tests/test_customer_returns.py", "tests/test_customer_returns_api.py", "tests/test_postgres_customer_returns.py",
+        "tests/test_postgres_stock_sales_reversal_dispatch.py",
         "tests/test_procurement_commitments.py", "tests/test_postgres_procurement_commitments.py", "tests/test_postgres_procurement_commitments_api.py",
         "tests/test_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax_api.py",
         "tests/test_postgres_operational_fx_tax_migration.py", ".github/scripts/benchmark_global_engineering_pair.py",
@@ -311,6 +314,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "docs/modules/procurement-commitments.yaml", "docs/modules/operational-fx-tax.yaml",
         "docs/modules/supplier-returns.yaml", "docs/operator/supplier-returns.md",
         "docs/adr/0851-original-supplier-debit-and-capitalized-receipt-return.md",
+        "docs/adr/0852-scoped-original-stock-revenue-inverse-dispatch.md",
         "docs/operator/customer-returns.md", "docs/operator/procurement-commitments.md", "docs/operator/operational-fx-tax.md",
         "docs/adr/0847-original-customer-source-credits-and-partial-refunds.md",
         "docs/adr/0848-native-purchase-appropriation-closure.md", "docs/adr/0849-historical-foreign-ar-effective-tax-and-realized-fx.md",
@@ -398,8 +402,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=131)
-    parser.add_argument("--migration-head", default="0131_pg_fx_revaluation")
+    parser.add_argument("--migration-count", type=int, default=132)
+    parser.add_argument("--migration-head", default="0132_pg_stock_inverse_dispatch")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

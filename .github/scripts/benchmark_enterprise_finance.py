@@ -27,6 +27,7 @@ from psycopg import sql
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+from reconforge.benchmark.container_resource_counters import PATHS, parse_counters  # noqa: E402
 from reconforge.benchmark.enterprise_financial import (  # noqa: E402
     amount_minor,
     expected_totals,
@@ -55,6 +56,7 @@ def main() -> int:
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--max-seconds", type=int, default=1200)
     parser.add_argument("--seed", default="enterprise-native-v1")
+    parser.add_argument("--posting-warmup", type=int, default=0, help="Genuine three-human extra cycles outside measured population (0..100)")
     parser.add_argument("--profile-stages", action="store_true", help="Retain redacted client phase and SQL-template timings")
     parser.add_argument("--profile-cpu", action="store_true", help="Opt-in bounded per-worker function discovery; not quiet performance acceptance")
     parser.add_argument("--profile-database", action="store_true", help="Owned synthetic PostgreSQL statement/JIT/I/O discovery; no SQL text retained")
@@ -68,10 +70,11 @@ def main() -> int:
     if args.profile_cpu and args.workers != 1:
         parser.error("Function discovery requires --workers 1; use --profile-stages for concurrent phase CPU measurements")
     counts = sorted(set(args.counts))
-    if (not counts or counts[0] < 1 or counts[-1] > 10000 or not 1 <= args.workers <= 16
+    if (not counts or counts[0] < 1 or counts[-1] > 1000000 or not 1 <= args.workers <= 16
             or not 1 <= args.repetitions <= 10 or not 30 <= args.max_seconds <= 7200
+            or not 0 <= args.posting_warmup <= 100
             or args.snapshot_lines != 0 and (not 2 <= args.snapshot_lines <= 1000 or args.snapshot_lines % 2)):
-        parser.error("Use counts 1..10000, workers 1..16, repetitions 1..10 and a bounded 30..7200 second budget")
+        parser.error("Use counts 1..1000000, workers 1..16, repetitions 1..10, warmup 0..100 and a bounded 30..7200 second budget")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     if (output / "result.json").exists():
@@ -103,6 +106,7 @@ def main() -> int:
         "source_commit": run(["git", "rev-parse", "HEAD"]).stdout.strip(), "source_sha256": tracked_source_sha256(),
         "profile": "native-three-human-cash-equity-v1", "seed": args.seed, "counts": counts,
         "workers": args.workers, "repetitions": args.repetitions, "max_seconds": args.max_seconds,
+        "posting_warmup_cycles": args.posting_warmup,
         "planner_experiment": {"join_collapse_limit": args.join_collapse_limit,
                                "from_collapse_limit": args.from_collapse_limit},
         "snapshot_lines": args.snapshot_lines,
@@ -227,9 +231,23 @@ def main() -> int:
                     raise AssertionError("Actual native posting differs from independent financial oracle")
             return str(effect["id"]), time.perf_counter() - begin
 
+        def kernel_counters(*, after: bool = False) -> dict[str, object]:
+            # Counter collection lies outside client posting wall/CPU timers.
+            # Read CPU last before admission and first after completion.
+            names = list(PATHS) if after else [name for name in PATHS if name != "cpu"] + ["cpu"]
+            raw = {name: run(["docker", "exec", container, "cat", PATHS[name]]).stdout for name in names}
+            return {"raw": raw, "parsed": parse_counters(raw)}
+
+        warm_started = time.perf_counter()
+        warm_rows = [post(counts[-1] + index) for index in range(args.posting_warmup)]
+        report["posting_warmup"] = {"status": "passed", "completed_cycles": len(warm_rows),
+            "outside_measured_population": True, "seconds": time.perf_counter() - warm_started,
+            "indices": list(range(counts[-1], counts[-1] + args.posting_warmup)),
+            "raw_cycle_latency_seconds": [row[1] for row in warm_rows], "effect_ids": [row[0] for row in warm_rows]}
         if args.profile_database:
             with psycopg.connect(admin_dsn, autocommit=True) as diagnostic:
                 diagnostic.execute("SELECT pg_stat_statements_reset()")
+        report["posting_container_counters_before"] = kernel_counters()
         posting_started = time.perf_counter()
         posting_cpu_started = time.process_time()
         completed: dict[int, tuple[str, float]] = {}
@@ -254,6 +272,7 @@ def main() -> int:
         posted = [completed[index] for index in sorted(completed)]
         posting_seconds = time.perf_counter() - posting_started
         posting_cpu_seconds = time.process_time() - posting_cpu_started
+        report["posting_container_counters_after"] = kernel_counters(after=True)
         report["posting"] = {"completed_cycles": len(posted), "concurrency": args.workers, "seconds": posting_seconds,
             "native_postings_per_second": len(posted) / posting_seconds, "error_count": 0,
             "requested_cycles": counts[-1], "admitted_cycles": admitted, "failed_cycles": failures,

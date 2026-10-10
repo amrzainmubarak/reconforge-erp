@@ -26,19 +26,22 @@ async function prepare(page: Page, lose = false) {
   const form = page.getByRole("form", { name: "Prepare whole original return", exact: true });
   for (const [label, value] of Object.entries({ "Original delivered stock order ID": source!, "Open fiscal period ID": "period", "Posting date": "2026-10-10", "Cash journal code": "CASH", "Customer refund liability account": "REFUND", "Original collected cash account": "CASH", Reason: "Actual original whole delivered source" })) await form.getByLabel(label, { exact: true }).fill(value);
   let lost: Record<string, unknown> | null = null, originalBody = "";
+  let finishLoss!: () => void;
+  const committedLoss = new Promise<void>(resolve => { finishLoss = resolve; });
   if (lose) await page.route("**/api/v1/customer-returns/plans", async route => {
     if (route.request().method() !== "POST") { await route.continue(); return; }
-    originalBody = route.request().postData()!; const reply = await route.fetch(); expect(reply.status()).toBe(200); lost = (await reply.json()).plan; await route.abort("failed");
+    originalBody = route.request().postData()!; const reply = await route.fetch(); expect(reply.status()).toBe(200); lost = (await reply.json()).plan; await route.abort("failed"); finishLoss();
   }, { times: 1 });
-  const result = page.waitForResponse(reply => reply.url().endsWith("/customer-returns/plans") && reply.request().method() === "POST");
+  const result = lose ? null : page.waitForResponse(reply => reply.url().endsWith("/customer-returns/plans") && reply.request().method() === "POST");
   await form.getByRole("button", { name: "Prepare whole original return", exact: true }).click();
   if (lose) {
+    await committedLoss;
     await expect(page.getByRole("button", { name: "Retry retained command", exact: true })).toBeVisible();
     const retried = page.waitForResponse(reply => reply.url().endsWith("/customer-returns/plans") && reply.request().method() === "POST");
     await page.getByRole("button", { name: "Retry retained command", exact: true }).click(); const reply = await retried;
     expect(reply.status(), await reply.text()).toBe(200); expect(reply.request().postData()).toBe(originalBody); const actual = (await reply.json()).plan; expect(actual).toEqual(lost); return actual;
   }
-  const reply = await result; expect(reply.status(), await reply.text()).toBe(200); return (await reply.json()).plan;
+  const reply = await result!; expect(reply.status(), await reply.text()).toBe(200); return (await reply.json()).plan;
 }
 async function phase(page: Page, id: string, action: "review" | "post" | "cancel", lose = false) {
   await login(page, action === "review" ? "browser-checker" : "browser-poster"); await enter(page, id);
@@ -46,16 +49,19 @@ async function phase(page: Page, id: string, action: "review" | "post" | "cancel
   await region.getByLabel("Reason", { exact: true }).fill(`Actual browser independent ${action}`);
   const path = `/customer-returns/plans/${id}/${action}`, name = action === "review" ? "Review source inverse" : action === "post" ? "Post complete native effect" : "Cancel unposted plan";
   let lost: Record<string, unknown> | null = null, originalBody = "";
-  if (lose) await page.route(`**/api/v1${path}`, async route => { originalBody = route.request().postData()!; const reply = await route.fetch(); expect(reply.status()).toBe(200); lost = (await reply.json()).plan; await route.abort("failed"); }, { times: 1 });
-  const response = page.waitForResponse(reply => reply.url().endsWith(path) && reply.request().method() === "POST");
+  let finishLoss!: () => void;
+  const committedLoss = new Promise<void>(resolve => { finishLoss = resolve; });
+  if (lose) await page.route(`**/api/v1${path}`, async route => { originalBody = route.request().postData()!; const reply = await route.fetch(); expect(reply.status()).toBe(200); lost = (await reply.json()).plan; await route.abort("failed"); finishLoss(); }, { times: 1 });
+  const response = lose ? null : page.waitForResponse(reply => reply.url().endsWith(path) && reply.request().method() === "POST");
   await region.getByRole("button", { name, exact: true }).click();
   if (lose) {
+    await committedLoss;
     await expect(page.getByRole("button", { name: "Retry retained command", exact: true })).toBeVisible();
     const again = page.waitForResponse(reply => reply.url().endsWith(path) && reply.request().method() === "POST");
     await page.getByRole("button", { name: "Retry retained command", exact: true }).click(); const reply = await again; expect(reply.status()).toBe(200);
     expect(reply.request().postData()).toBe(originalBody); const actual = (await reply.json()).plan; expect(actual).toEqual(lost); return actual;
   }
-  const reply = await response; expect(reply.status(), await reply.text()).toBe(200); return (await reply.json()).plan;
+  const reply = await response!; expect(reply.status(), await reply.text()).toBe(200); return (await reply.json()).plan;
 }
 test("actual original credit release partial cash refunds lost responses and bilingual native evidence", async ({ page }) => {
   test.setTimeout(360_000); expect(base && tenant && password && source, "Owned native HTTPS fixture and source ID must be provided").toBeTruthy();
@@ -76,7 +82,7 @@ test("actual original credit release partial cash refunds lost responses and bil
   await expect(page.getByRole("form", { name: "Prepare partial cash refund", exact: true })).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
-  await page.getByRole("button", { name: "العربية", exact: true }).click();
+  await page.getByRole("button", { name: "Switch language", exact: true }).click();
   await expect(page.getByRole("heading", { name: "إرجاع العميل الأصلي وردّ النقد على دفعات", exact: true })).toBeVisible();
   await expect(page.locator("main#main-content")).toHaveAttribute("dir", "rtl");
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]); expect(errors).toEqual([]);

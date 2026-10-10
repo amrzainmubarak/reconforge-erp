@@ -1699,12 +1699,13 @@ class PostgresFinanceCoreRepository:
         if required:
             required_ids = [row["id"] if isinstance(row, Mapping) else row[0] for row in required]
             coverage = self.connection.execute(
-                """SELECT dimension_id,COUNT(DISTINCT entry_line_id) FROM reconforge.finance_entry_line_dimensions
+                """SELECT dimension_id,COUNT(DISTINCT entry_line_id) AS line_count FROM reconforge.finance_entry_line_dimensions
                    WHERE tenant_id=%s AND entry_line_id=ANY(%s) AND dimension_id=ANY(%s)
                    GROUP BY dimension_id""",
                 (self.tenant_id, total_data["line_ids"], required_ids),
             ).fetchall()
-            counts = {row[0]: int(row[1]) for row in coverage}
+            coverage_rows = [_row(row, ("dimension_id", "line_count")) for row in coverage]
+            counts = {row["dimension_id"]: int(row["line_count"]) for row in coverage_rows}
             missing_dimension = any(counts.get(identifier, 0) != int(total_data["line_count"]) for identifier in required_ids)
         if invalid_dimension is not None:
             raise PlatformError("Ledger-control entry contains an inactive or cross-scope accounting dimension.")

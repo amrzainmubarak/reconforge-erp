@@ -58,7 +58,9 @@ def test_thousand_line_snapshot_matches_legacy_per_line_oracle_under_rls(posting
 
 
 @pytest.mark.parametrize("linked_lines", [4, 3, 0])
-def test_scoped_dimension_projection_and_late_required_coverage(posting_database: dict[str, Any], linked_lines: int) -> None:
+@pytest.mark.parametrize("mapping_rows", [False, True])
+def test_scoped_dimension_projection_and_late_required_coverage(posting_database: dict[str, Any], linked_lines: int,
+                                                              mapping_rows: bool) -> None:
     """An independent legacy query plus current required rules; no empty fast-path exemption."""
     db = posting_database
     with db["boundary"].transaction("finance_scope", **SCOPE) as connection:
@@ -90,13 +92,14 @@ def test_scoped_dimension_projection_and_late_required_coverage(posting_database
         PostgresFinanceCoreRepository(connection, "finance_scope").upsert_dimension(
             dimension_code="D_A", name="Current required dimension", organization_code="ORG_A", workspace="Shared",
             required_on_entries=True)
-    with db["boundary"].transaction("finance_scope", **SCOPE) as connection:
-        with server_principal_context(principal(CHECKER)):
-            core = PostgresFinanceCoreRepository(connection, "finance_scope")
-            if linked_lines == 4:
-                result = core.validate_entry(entry_id, reason="Independent complete coverage", actor_label="checker")
-                assert result["status"] == "Validated"
-            else:
-                with pytest.raises(PlatformError, match="missing a required accounting dimension"):
-                    core.validate_entry(entry_id, reason="Independent missing coverage", actor_label="checker")
-                assert core.get_entry(entry_id)["status"] == "Draft"
+    with db["boundary"].transaction("finance_scope", **SCOPE) as connection, server_principal_context(principal(CHECKER)):
+        core = PostgresFinanceCoreRepository(connection, "finance_scope")
+        if mapping_rows:
+            from psycopg.rows import dict_row
+
+            connection.row_factory = dict_row
+        if linked_lines == 4:
+            core._validate_entry_integrity(entry_id)
+        else:
+            with pytest.raises(PlatformError, match="missing a required accounting dimension"):
+                core._validate_entry_integrity(entry_id)

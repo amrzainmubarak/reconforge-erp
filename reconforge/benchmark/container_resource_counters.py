@@ -23,8 +23,8 @@ def parse_counters(raw: dict[str, str]) -> dict[str, Any]:
     for line in raw["network"].splitlines():
         if ":" not in line:
             continue
-        interface, values = line.split(":", 1)
-        fields = [int(value) for value in values.split()]
+        interface, interface_counters = line.split(":", 1)
+        fields = [int(value) for value in interface_counters.split()]
         if len(fields) != 16:
             raise ValueError("Incomplete kernel network counter")
         network[interface.strip()] = {"received_bytes": fields[0], "transmitted_bytes": fields[8]}

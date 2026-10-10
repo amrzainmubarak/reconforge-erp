@@ -12,9 +12,12 @@ API/Studio integration, CI/package closure and performance profiling.
 
 The linear chain reaches 0132, including exact original revenue inverse closure
 and ordinary-role dispatch compatibility. [Hosted CI run38059696904](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904)
-finished with all38 jobs successful at15:07:32UTC on
-b6e9dcf608df2885b61a2846a4edc8df783db72d. Complete native/API owner gates,
-actual HTTPS/populated restore scenarios and package/security gates passed there.
+had all38 jobs observed successful at15:07:32UTC on
+b6e9dcf608df2885b61a2846a4edc8df783db72d; its completed/success check-suite
+updated_at is15:04:54UTC. Complete native/API owner gates, actual HTTPS/populated
+restore scenarios and package gates passed there. Separately, four applicable
+Security checks succeeded; conditional exact-image SBOM/vulnerability/license
+checks were skipped and are not executed evidence.
 The amended documentation/evidence head still needs its publication archive and
 hosted checks; this source acceptance does not complete the worldwide ERP program.
 
@@ -36,10 +39,15 @@ The earlier current-live22 inventory and historical benchmark index stay source-
 
 Six fresh1K posting runs compare b7df9271 with07452da8 in BC/CB/BC order, four
 workers and20 warmup cycles per run, retaining durability settings and raw bytes.
+Static configuration and seven instrumentation files match, but dynamic power
+changed:248 observed AC samples and263 battery samples. B1/C1 were AC at median
+2197MHz; C2 switched AC→battery; B2/B3/C3 were battery at median2811MHz.
 Independent normal and optimized-Python oracles pass under trusted manifest
 c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc.
-Median throughput rises1.340057→1.822781 successful cycles/sec (+36.02%); combined
-client/database CPU per success falls2.524217→1.929894sec (−23.54%). Resource
+Descriptive median throughput rises1.340057→1.822781 successful cycles/sec (+36.02%);
+combined client/database CPU per success falls2.524217→1.929894sec (−23.54%). These
+observations do not establish a causal gain or a dynamically matched comparison;
+performance_comparison_accepted is false. A fresh stable-power repeat is pending. Resource
 acceptance is false: client CPU rises641.218750→785.265625sec (+22.46%) and bounded
 batch read rises0.567914→0.626310sec (+10.28%). Six raw reports and both oracles are
 staged under wave4-evidence/posting-1k; publication closure is separate. Fresh10K

@@ -38,7 +38,7 @@ tasks:
     title: Reduce measured CPU and planning cost while preserving financial and RLS controls
     status: in_progress
     depends_on: [AMR-WAVE3-001]
-    exit_evidence: Six fresh warmed1K runs financially valid under normal and optimized Python, trusted c5dfa70b manifest; median TPS +36.02% and combined CPU/success -23.54%, but client CPU +22.46% and bounded batch read +10.28% make resource acceptance false. Remediation, fresh10K and mixed full1000-line workflows remain unaccepted.
+    exit_evidence: Six fresh warmed1K runs financially valid under normal and optimized Python, trusted c5dfa70b manifest; static configuration/instrument bytes match but observed dynamic power changes across248 AC/263 battery samples. TPS +36.02%, combined CPU/success -23.54%, client CPU +22.46% and bounded batch read +10.28% are descriptive only; performance comparison and resource acceptance are false. Fresh stable-power repeat, remediation, fresh10K and mixed full1000-line workflows remain unaccepted.
   - id: AMR-WAVE4-005
     priority: P1
     area: supplier-return

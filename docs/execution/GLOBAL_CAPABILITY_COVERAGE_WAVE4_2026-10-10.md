@@ -8,10 +8,11 @@ parity, their measured limits or a superiority result. Four bounded native busin
 cycles have actual source-bound HTTPS/populated restore acceptance. All38 jobs in
 [hosted run38059696904](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904)
 passed at b6e9dcf6, including complete native/API owner gates, actual HTTPS/restore
-and ordered0132/package/security checks. The
+and ordered0132/package checks. Four applicable Security checks succeeded;
+conditional exact-image SBOM/vulnerability/license checks were skipped. The
 [incremental packet](WAVE4_ACCEPTANCE_2026-10-10.md) retains their separate commits,
-failures and limits. Three fresh matched1K pairs are financially valid, but resource
-acceptance is false; the amended documentation/evidence-head archive and checks
+failures and limits. Three fresh1K pairs are financially valid, but dynamic power
+changed; performance comparison and resource acceptance are false. The amended documentation/evidence-head archive and checks
 remain pending. No full platform or vendor superiority is claimed.
 
 | Capability / official vendor evidence | ReconForge retained base and implemented candidate | Proven evidence / remaining gap | Complexity and next dependencies | Measurable opportunity |
@@ -46,9 +47,13 @@ client and PostgreSQL cgroup CPU; those windows must not be mixed to imply a gai
 Six fresh1K runs compare b7df9271 with07452da8 in BC/CB/BC order. Normal and
 optimized-Python financial oracles pass under trusted manifest
 c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc.
-Median throughput improves36.02% and combined client/database CPU per success
-falls23.54%, but client CPU rises22.46% and bounded batch read rises10.28%.
-Resource acceptance is false. These four-worker two-line cash/equity journal
+Static configuration/seven instrumentation files match. Dynamic observations
+include248 AC/263 battery samples: B1/C1 AC median2197MHz, C2 AC→battery,
+B2/B3/C3 battery median2811MHz. No causal or per-phase frequency attribution is established.
+Descriptive medians show throughput +36.02%, combined client/database CPU per
+success −23.54%, client CPU +22.46% and bounded batch read +10.28%.
+Performance comparison and resource acceptance are false; a fresh stable-power
+repeat is pending. These four-worker two-line cash/equity journal
 measurements do not establish mixed operational or complete1,000-line sales/PO
 capacity; the1,000-line report fixture proves read parity only. Six raw reports
 and oracles are staged under wave4-evidence/posting-1k; the new evidence-head

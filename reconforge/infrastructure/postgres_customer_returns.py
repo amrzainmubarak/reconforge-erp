@@ -16,6 +16,7 @@ from reconforge.domain.finance_posting import (
     validation_digest,
 )
 from reconforge.domain.operational_finance import exact_minor_text
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot, records
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
 from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
@@ -54,6 +55,8 @@ class PostgresCustomerReturnsRepository:
         return rows[0]
 
     def _actor(self, actor: PostingActor, operation: str, plan: Mapping[str, Any]) -> None:
+        if plan.get("operation") == "Refund":
+            self._actor(actor, operation, self._row(str(plan["return_id"])))
         for permission in sorted(PERMISSIONS.get(operation, READ)):
             self.owner._actor(actor, permission, plan, mutation=operation != "read")
         if operation != "read":
@@ -83,6 +86,7 @@ class PostgresCustomerReturnsRepository:
 
     def _locks(self, plan: Mapping[str, Any]) -> dict[str, Any]:
         self.owner.posting._period(plan["period_id"], plan["workspace_id"], plan["posting_date"])
+        FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(plan["workspace_id"])
         source = self._source(str(plan["source_order_id"]))
         if plan["operation"] == "Refund":
             self._row(str(plan["return_id"]), lock=True)
@@ -116,6 +120,8 @@ class PostgresCustomerReturnsRepository:
         retained = rows[0]
         if (retained["operation"], retained["actor_id"], retained["request_digest"]) != (operation, actor.user_id, digest):
             raise FinancePostingError("customer_return_command_conflict", "Command identifies another exact request or actor.")
+        self._actor(actor, "prepare" if operation == "prepare_refund" else operation,
+                    self._row(retained["plan_id"]))
         self.connection.execute("SELECT reconforge.customer_return_close(%s,%s)", (self.tenant_id, retained["plan_id"]))
         return digest, retained["response_json"]
 
@@ -222,6 +228,7 @@ class PostgresCustomerReturnsRepository:
             if replay is not None:
                 return replay
             self.owner.posting._period(request.period_id, request.workspace_id, request.posting_date)
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(request.workspace_id)
             source = self._source(request.source_order_id)
             stock, invoice = source["stock"], source["invoice"]
             self.connection.execute("SELECT reconforge.customer_return_source_available(%s,%s)", (self.tenant_id, request.source_order_id))
@@ -260,8 +267,10 @@ class PostgresCustomerReturnsRepository:
             if replay is not None:
                 return replay
             self.owner.posting._period(request.period_id, parent["workspace_id"], request.posting_date)
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(parent["workspace_id"])
             self._source(parent["source_order_id"])
             parent = self._row(request.return_id, lock=True)
+            self._actor(actor, "prepare", parent)
             due = self._one("SELECT reconforge.customer_return_refund_due(%s,%s) amount", (self.tenant_id, request.return_id))["amount"]
             if parent["phase"] != 2 or request.amount_minor > due or request.posting_date < parent["posting_date"]:
                 raise FinancePostingError("customer_return_refund_invalid", "Refund exceeds a posted original credit's current entitlement.")
@@ -305,6 +314,7 @@ class PostgresCustomerReturnsRepository:
                 return replay
             self._locks(plan)
             plan = self._row(plan_id, lock=True)
+            self._actor(actor, "review", plan)
             if plan["phase"] != 0 or actor.user_id == plan["preparer_actor_id"]:
                 raise FinancePostingError("customer_return_review_denied", "Review requires an independent human and unreviewed source.")
             self._current(plan)
@@ -369,6 +379,7 @@ class PostgresCustomerReturnsRepository:
                 return replay
             self._locks(plan)
             plan = self._row(plan_id, lock=True)
+            self._actor(actor, "post", plan)
             reviewer = self._one("SELECT actor_id FROM reconforge.customer_return_events WHERE tenant_id=%s AND plan_id=%s AND operation='review'",
                                  (self.tenant_id, plan_id))["actor_id"]
             if plan["phase"] != 1 or actor.user_id in {plan["preparer_actor_id"], reviewer}:
@@ -402,6 +413,7 @@ class PostgresCustomerReturnsRepository:
                 return replay
             self._locks(plan)
             plan = self._row(plan_id, lock=True)
+            self._actor(actor, "cancel", plan)
             reviewers = records(self.connection.execute("SELECT actor_id FROM reconforge.customer_return_events WHERE tenant_id=%s AND plan_id=%s AND operation='review'",
                 (self.tenant_id, plan_id)))
             if plan["phase"] not in (0, 1) or actor.user_id in {plan["preparer_actor_id"], *(row["actor_id"] for row in reviewers)}:

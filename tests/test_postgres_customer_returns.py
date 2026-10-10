@@ -21,8 +21,7 @@ from tests.test_postgres_stock_sales import create_reserved_order, create_stock_
 _ = receipt_database
 
 
-def create_runtime(database: tuple[str, str], paid: int = 10000, *, quantity: str | None = None) -> tuple[ReceiptRuntime, str, str]:
-    runtime = create_stock_runtime(database)
+def configure_runtime(runtime: ReceiptRuntime) -> None:
     with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         identity = PostgresIdentityRepository(connection)
         for permission in sorted(set().union(*PERMISSIONS.values())):
@@ -30,6 +29,11 @@ def create_runtime(database: tuple[str, str], paid: int = 10000, *, quantity: st
             identity.grant_permission(tenant_id=runtime.tenant, role_name="receipt-operator", permission_name=permission)
         PostgresFinanceCoreRepository(connection, runtime.tenant).upsert_account(account_code="REFUND", name="Customer refund obligation",
             account_type="Liability", normal_balance="Credit", workspace="work")
+
+
+def create_runtime(database: tuple[str, str], paid: int = 10000, *, quantity: str | None = None) -> tuple[ReceiptRuntime, str, str]:
+    runtime = create_stock_runtime(database)
+    configure_runtime(runtime)
     if quantity is None:
         _, invoice_id = invoiced(runtime)
     else:
@@ -155,6 +159,12 @@ def test_raw_sql_cannot_cancel_original_or_post_reserved_inverse_without_stock_c
     with pytest.raises(psycopg.errors.CheckViolation), runtime.actor("poster") as (connection, _, _actor):
         connection.execute("UPDATE reconforge.ar_invoices SET status='Cancelled' WHERE tenant_id=%s AND id=%s", (runtime.tenant, invoice_id))
     assert retained_state(runtime) == before
+    with pytest.raises(psycopg.errors.CheckViolation, match="revenue inverse requires complete"), runtime.actor("maker") as (connection, _, actor):
+        owner = PostgresCustomerReturnsRepository(connection, runtime.tenant)
+        source = owner._source(order_id, lock=False)
+        args = {**request(order_id).payload(), "id": "UNRELATED-REVENUE-REVERSAL"}
+        owner._inverse(source["revenue"], "UNRELATED-REVENUE-REVERSAL", args, actor)
+    assert retained_state(runtime) == before
     plan = phase(runtime, prepare_return(runtime, order_id), "review", "checker")
     before = retained_state(runtime)
     with runtime.actor("poster") as (connection, _, actor):
@@ -278,3 +288,128 @@ def test_forward_upgrade_retains_native_source_empty_rollback_and_populated_cred
     finally:
         with pytest.raises(StopIteration):
             next(delegated)
+
+
+def test_current_full_source_amount_policy_covers_prepare_ack_and_refund_child_evidence(
+    receipt_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from decimal import Decimal
+
+    import reconforge.infrastructure.postgres_operational_finance as authority
+    from reconforge.auth.policy import evaluate_principal_access
+
+    runtime, source, _invoice = create_runtime(receipt_database)
+    ceiling = Decimal("700.00")
+    observed: list[Decimal | None] = []
+
+    def governed_policy(principal: Any, **context: Any) -> Any:
+        observed.append(context.get("amount"))
+        return evaluate_principal_access(principal, maximum_amount=ceiling, **context)
+
+    monkeypatch.setattr(authority, "evaluate_principal_access", governed_policy)
+    plan = prepare_return(runtime, source)
+    assert plan["amount_minor"] == 67000  # gross450 + original COGS120 + collected100
+    before = retained_state(runtime)
+    ceiling = Decimal("500.00")
+    with pytest.raises(FinancePostingError, match="authorization"):
+        prepare_return(runtime, source)
+    assert retained_state(runtime) == before
+    ceiling = Decimal("700.00")
+    assert prepare_return(runtime, source) == plan
+    parent = phase(runtime, phase(runtime, plan, "review", "checker"), "post", "poster")
+    first = phase(runtime, phase(runtime, refund(runtime, parent, 3000, "policy-refund-1"), "review", "checker"), "post", "poster")
+    child = refund(runtime, parent, 1000, "policy-refund-2")
+    assert first["amount_minor"] == 3000 and child["amount_minor"] == 1000 and child["refunded_before_minor"] == 3000
+    before = retained_state(runtime)
+    ceiling = Decimal("20.00")  # child10 and earlier-refund30 do not authorize original source670
+    with runtime.actor("maker") as (connection, _, actor):
+        repository = PostgresCustomerReturnsRepository(connection, runtime.tenant)
+        with pytest.raises(FinancePostingError, match="authorization"):
+            repository.get(child["id"], actor=actor)
+        with pytest.raises(FinancePostingError, match="authorization"):
+            repository.prepare_refund(CustomerRefundPreparation(parent["id"], 1000, "period", "2026-10-10", "Actual partial refund"),
+                                      command_id="policy-refund-2", actor=actor)
+    with pytest.raises(FinancePostingError, match="authorization"):
+        phase(runtime, child, "review", "checker")
+    assert retained_state(runtime) == before
+    ceiling = Decimal("700.00")
+    with runtime.actor("maker") as (connection, _, actor):
+        assert PostgresCustomerReturnsRepository(connection, runtime.tenant).get(child["id"], actor=actor) == child
+    assert Decimal("450.00") in observed and Decimal("670.00") in observed
+
+
+def test_ordinary_stock_invoice_and_collections_do_not_require_cr1_select_but_claimed_source_fails_closed(
+    receipt_database: tuple[str, str],
+) -> None:
+    import psycopg
+    from psycopg import sql
+
+    runtime = create_stock_runtime(receipt_database)
+    configure_runtime(runtime)
+    app_role = psycopg.conninfo.conninfo_to_dict(receipt_database[1])["user"]
+    tables = ("customer_return_plans", "customer_return_events", "customer_return_commands")
+
+    def permission(verb: str) -> None:
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            for table in tables:
+                statement = sql.SQL("REVOKE SELECT ON reconforge.{} FROM {}") if verb == "revoke" else sql.SQL("GRANT SELECT ON reconforge.{} TO {}")
+                admin.execute(statement.format(sql.Identifier(table), sql.Identifier(app_role)))
+
+    permission("revoke")
+    try:
+        order, invoice = invoiced(runtime)
+        collection = complete(runtime, prepare(runtime, invoice, 10000), "RESTRICTED")
+        with runtime.actor("maker") as (connection, _, actor):
+            assert not connection.execute("SELECT has_table_privilege(current_user,'reconforge.customer_return_plans','SELECT') ok").fetchone()["ok"]
+            assert not connection.execute("SELECT reconforge.customer_return_credited(%s,%s) v", (runtime.tenant, invoice)).fetchone()["v"]
+            projection = PostgresReceivablesRepository(connection, runtime.tenant).get_invoice(invoice)
+            assert projection["outstanding_minor"] == 35000 and projection["allocated_minor"] == 10000
+        assert collection["phase"] == 2
+        permission("grant")
+        source_id = order["lines"][0]["tranches"][0]["id"]
+        credited = phase(runtime, phase(runtime, prepare_return(runtime, source_id), "review", "checker"), "post", "poster")
+        assert credited["phase"] == 2
+        permission("revoke")
+        with pytest.raises(psycopg.errors.InsufficientPrivilege, match="customer_return_plans"), runtime.actor("maker") as (connection, _, _actor):
+            connection.execute("SELECT reconforge.customer_return_credited(%s,%s)", (runtime.tenant, invoice))
+    finally:
+        permission("grant")
+
+
+def test_charge_backed_original_fifo_return_preserves_landed_cost_and_restitutes_exact_charged_cost(
+    receipt_database: tuple[str, str],
+) -> None:
+    from tests.test_postgres_landed_cost import CHECKER, MAKER, POSTER, create_multiline_runtime, create_order
+    from tests.test_postgres_landed_cost import phase as landed_phase
+    from tests.test_postgres_landed_cost import prepare as landed_prepare
+
+    base = create_multiline_runtime(receipt_database)
+    purchase = create_order(base, "RETURN-LANDED-ORIGINAL")
+    landed = landed_phase(base, landed_phase(base, landed_prepare(base, purchase), "review", CHECKER), "post", POSTER)
+    runtime = create_stock_runtime(receipt_database, base_runtime=base, seed_stock=False)
+    configure_runtime(runtime)
+    original, invoice = invoiced(runtime)
+    complete(runtime, prepare(runtime, invoice, 10000), "CHARGED")
+    source_id = original["lines"][0]["tranches"][0]["id"]
+    plan = prepare_return(runtime, source_id)
+    # Independent Hamilton integer/Fraction oracle for each retained charge.
+    freight_item = Fraction(777 * 12000, 17000)
+    duty_item = Fraction(224 * 12000, 17000)
+    assert (freight_item.numerator // freight_item.denominator, duty_item.numerator // duty_item.denominator) == (548, 158)
+    charged = 12000 + 548 + 158
+    assert plan["cogs_restored_minor"] == charged == 12706
+    assert plan["credit_minor"] == 45000 and plan["refund_entitlement_minor"] == 10000
+    parent = phase(runtime, phase(runtime, plan, "review", "checker"), "post", "poster")
+    for amount, command in ((3000, "charged-refund-1"), (7000, "charged-refund-2")):
+        installment = refund(runtime, parent, amount, command)
+        phase(runtime, phase(runtime, installment, "review", "checker"), "post", "poster")
+    with runtime.actor(MAKER) as (connection, _, _actor):
+        assert connection.execute("SELECT reconforge.landed_cost_ack(%s,%s,2) v", (runtime.tenant, landed["id"])).fetchone()["v"] == landed
+        connection.execute("SELECT reconforge.landed_cost_close(%s,%s)", (runtime.tenant, landed["id"]))
+        layers = connection.execute("""SELECT x.item_code,c.original_value_minor,c.remaining_quantity_scaled,c.remaining_value_minor
+            FROM reconforge.inventory_cost_layers c JOIN reconforge.inventory_items x ON x.tenant_id=c.tenant_id AND x.id=c.item_id
+            WHERE c.tenant_id=%s ORDER BY x.item_code""", (runtime.tenant,)).fetchall()
+        assert [tuple(row) for row in layers] == [("ITEM", charged, 10, charged), ("WEIGHT", 5295, 250, 5295)]
+        assert connection.execute("SELECT count(*) n FROM reconforge.inventory_valuation_reversal_effects WHERE tenant_id=%s AND effect_type='Restore'", (runtime.tenant,)).fetchone()["n"] == 1
+    result = balances(runtime)
+    assert result["COGS"] == result["REVENUE"] == result["AR"] == result["REFUND"] == 0

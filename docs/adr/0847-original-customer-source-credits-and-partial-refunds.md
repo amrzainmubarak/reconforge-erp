@@ -33,8 +33,14 @@ Historical acknowledgements retain their original phase; current liability
 is a separate `/balance` read. Invoker-scoped deferred SQL closure checks
 native stock, original inverse snapshots/dimensions/currency, AR state,
 liability/cash lines, actor separation, audit/outbox and exact commands.
-Lock acquisition is period, native customer/invoice/source, parent/plan,
+Lock acquisition is period, existing canonical currency binding, native customer/invoice/source, parent/plan,
 canonical stock/FIFO keys, sorted layers and sorted GL entries.
+
+Refund evidence and lifecycle admission also repeat current authorization over
+the full retained parent credit turnover. An installment amount cannot admit
+the original credit or prior refund amounts that its source evidence exposes.
+Original stock-sale revenue inverses are bound to the original OPS posting
+effect in SQL, including Generated drafts with unrelated entry numbers.
 
 Bounds are one complete native stock tranche, at most 1,000 original FIFO
 consumptions, exact integer amounts/turnover at most 9e18, 200 retained refund

@@ -21,4 +21,4 @@ synthetic_fixtures: [tests/test_postgres_customer_returns.py]
 threat_model: docs/adr/0847-original-customer-source-credits-and-partial-refunds.md
 benchmarks: []
 rollback_plan: docs/operator/customer-returns.md
-test_matrix: [tests/test_customer_returns.py, tests/test_customer_returns_api.py, tests/test_postgres_customer_returns.py, apps/web/src/customer-returns-data.test.ts, apps/web/src/components/CustomerReturnsPage.test.tsx]
+test_matrix: [tests/test_customer_returns.py, tests/test_customer_returns_api.py, tests/test_postgres_customer_returns.py, tests/customer_returns_browser.py, apps/web/src/customer-returns-data.test.ts, apps/web/src/components/CustomerReturnsPage.test.tsx, apps/web/live/customer-returns-cycles.spec.ts]

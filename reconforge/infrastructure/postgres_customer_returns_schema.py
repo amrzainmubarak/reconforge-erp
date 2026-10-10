@@ -372,14 +372,23 @@ BEGIN
  'outstanding_minor','0','refund_due_minor',reconforge.customer_return_refund_due(t,p.id)::text,'pending_return_id',NULL); END IF;
  RETURN jsonb_build_object('pending_return_id',p.id,'credit_memo_id',NULL,'credited_minor','0');
 END $cr$;
-CREATE FUNCTION reconforge.customer_return_credited(t TEXT,i TEXT) RETURNS BOOLEAN LANGUAGE sql STABLE SET search_path=pg_catalog AS $cr$
- SELECT EXISTS(SELECT 1 FROM reconforge.ar_invoices h JOIN reconforge.customer_return_plans p ON p.tenant_id=h.tenant_id AND p.id=h.customer_return_owner_id
- WHERE h.tenant_id=t AND h.id=i AND p.invoice_id=i AND p.operation='Return' AND p.phase=2 AND h.status='Cancelled' AND h.cancel_reason=p.id)
-$cr$;
-CREATE FUNCTION reconforge.customer_return_inverse_entry(t TEXT,s TEXT,e TEXT) RETURNS BOOLEAN LANGUAGE sql STABLE SET search_path=pg_catalog AS $cr$
- SELECT EXISTS(SELECT 1 FROM reconforge.customer_return_plans p CROSS JOIN LATERAL jsonb_array_elements(p.payload->'entries') x
- WHERE p.tenant_id=t AND p.source_order_id=s AND p.operation='Return' AND x->>'entry_id'=e AND x->>'original_effect_id' IS NOT NULL)
-$cr$;
+CREATE FUNCTION reconforge.customer_return_credited(t TEXT,i TEXT) RETURNS BOOLEAN LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $cr$
+DECLARE marker TEXT;state TEXT;reason TEXT;p RECORD;
+BEGIN
+ SELECT customer_return_owner_id,status,cancel_reason INTO marker,state,reason FROM reconforge.ar_invoices WHERE tenant_id=t AND id=i;
+ IF marker IS NULL THEN RETURN FALSE; END IF;
+ SELECT * INTO p FROM reconforge.customer_return_plans WHERE tenant_id=t AND id=marker AND invoice_id=i AND operation='Return';
+ IF p.id IS NULL THEN RAISE EXCEPTION 'Native credited invoice requires retained CR1 source evidence'; END IF;
+ RETURN p.phase=2 AND state='Cancelled' AND reason=p.id;
+END $cr$;
+CREATE FUNCTION reconforge.customer_return_inverse_entry(t TEXT,s TEXT,e TEXT) RETURNS BOOLEAN LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $cr$
+DECLARE number TEXT;reference TEXT;
+BEGIN
+ SELECT entry_number,external_reference INTO number,reference FROM reconforge.finance_entries WHERE tenant_id=t AND id=e;
+ IF number IS NULL OR left(upper(number),4)<>'CR1-' OR left(upper(coalesce(reference,'')),4)<>'CR1-' THEN RETURN FALSE; END IF;
+ RETURN EXISTS(SELECT 1 FROM reconforge.customer_return_plans p CROSS JOIN LATERAL jsonb_array_elements(p.payload->'entries') x
+ WHERE p.tenant_id=t AND p.source_order_id=s AND p.operation='Return' AND x->>'entry_id'=e AND x->>'original_effect_id' IS NOT NULL);
+END $cr$;
 DO $cr$ DECLARE definition TEXT;anchor TEXT;
 BEGIN
  definition:=pg_get_functiondef('reconforge.stock_commerce_public(reconforge.stock_commerce_orders)'::regprocedure);
@@ -396,6 +405,23 @@ BEGIN
  definition:=replace(definition,'invoice.status IS DISTINCT FROM(CASE WHEN s=7 THEN''Submitted'' WHEN s=12 THEN''Paid'' ELSE''Approved'' END)',
   '(NOT reconforge.customer_return_credited(t,d.invoice_id) AND invoice.status IS DISTINCT FROM(CASE WHEN s=7 THEN''Submitted'' WHEN s=12 THEN''Paid'' ELSE''Approved'' END))');
  definition:=replace(definition,'invoice.status IN(''Approved'',''PartiallyPaid'',''Paid'')','(invoice.status IN(''Approved'',''PartiallyPaid'',''Paid'') OR reconforge.customer_return_credited(t,d.invoice_id))');
+ anchor:='posted:=EXISTS(SELECT 1 FROM reconforge.operational_finance_links WHERE tenant_id=t AND plan_id=p.id);';
+ IF position(anchor IN definition)=0 THEN RAISE EXCEPTION 'Retained StockSales invoice posting guard differs'; END IF;
+ definition:=replace(definition,anchor,anchor||$inverse$
+  IF EXISTS(SELECT 1 FROM reconforge.finance_entries e JOIN reconforge.operational_finance_links l
+   ON l.tenant_id=e.tenant_id AND l.posting_effect_id=e.reverses_posting_id WHERE l.tenant_id=t AND l.plan_id=d.invoice_plan_id
+   AND NOT reconforge.customer_return_inverse_entry(t,d.id,e.id))
+  OR EXISTS(SELECT 1 FROM reconforge.finance_posting_effects f JOIN reconforge.operational_finance_links l
+   ON l.tenant_id=f.tenant_id AND l.posting_effect_id=f.reverses_effect_id WHERE l.tenant_id=t AND l.plan_id=d.invoice_plan_id
+   AND NOT reconforge.customer_return_inverse_entry(t,d.id,f.entry_id)) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Original StockSales revenue inverse requires complete original-source credit';
+  END IF;
+$inverse$);
+ EXECUTE definition;
+ definition:=pg_get_functiondef('reconforge.stock_sales_native_close()'::regprocedure);
+ anchor:='OR d.cogs_effect_id=reverse_effect';
+ IF position(anchor IN definition)=0 THEN RAISE EXCEPTION 'Retained StockSales reverse dispatch differs'; END IF;
+ definition:=replace(definition,anchor,anchor||' OR EXISTS(SELECT 1 FROM reconforge.operational_finance_links l WHERE l.tenant_id=d.tenant_id AND l.plan_id=d.invoice_plan_id AND l.posting_effect_id=reverse_effect)');
  EXECUTE definition;
  definition:=pg_get_functiondef('reconforge.collection_invoice_close(text,text)'::regprocedure);
  definition:=replace(definition,'OR h.status IS DISTINCT FROM (CASE','OR (NOT reconforge.customer_return_credited(t,i) AND h.status IS DISTINCT FROM (CASE');
@@ -427,6 +453,9 @@ DO $cr$ DECLARE n TEXT;definition TEXT;BEGIN
  definition:=pg_get_functiondef('reconforge.stock_commerce_public(reconforge.stock_commerce_orders)'::regprocedure);
  definition:=replace(definition,')||reconforge.customer_return_projection(s.tenant_id,s.invoice_id) ORDER BY t.created_version)',') ORDER BY t.created_version)');
  EXECUTE definition;
+ definition:=pg_get_functiondef('reconforge.stock_sales_native_close()'::regprocedure);
+ definition:=replace(definition,' OR EXISTS(SELECT 1 FROM reconforge.operational_finance_links l WHERE l.tenant_id=d.tenant_id AND l.plan_id=d.invoice_plan_id AND l.posting_effect_id=reverse_effect)','');
+ EXECUTE definition;
  FOREACH n IN ARRAY ARRAY['customer_return_plans','customer_return_events','customer_return_commands','ar_invoices','finance_entries',
  'finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects','inventory_movements','inventory_movement_lines',
  'inventory_valuation_reversals','inventory_valuation_reversal_effects','domain_audit_events','outbox_events'] LOOP
@@ -436,6 +465,16 @@ DO $cr$ DECLARE n TEXT;definition TEXT;BEGIN
   definition:=pg_get_functiondef(('reconforge.'||n)::regprocedure);
   definition:=replace(definition,' AND NOT reconforge.customer_return_inverse_entry(t,d.id,id)','');
   definition:=replace(definition,' AND NOT reconforge.customer_return_inverse_entry(t,d.id,entry_id)','');
+  definition:=replace(definition,$inverse$
+  IF EXISTS(SELECT 1 FROM reconforge.finance_entries e JOIN reconforge.operational_finance_links l
+   ON l.tenant_id=e.tenant_id AND l.posting_effect_id=e.reverses_posting_id WHERE l.tenant_id=t AND l.plan_id=d.invoice_plan_id
+   AND NOT reconforge.customer_return_inverse_entry(t,d.id,e.id))
+  OR EXISTS(SELECT 1 FROM reconforge.finance_posting_effects f JOIN reconforge.operational_finance_links l
+   ON l.tenant_id=f.tenant_id AND l.posting_effect_id=f.reverses_effect_id WHERE l.tenant_id=t AND l.plan_id=d.invoice_plan_id
+   AND NOT reconforge.customer_return_inverse_entry(t,d.id,f.entry_id)) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='stock_sales_owner_phase',MESSAGE='Original StockSales revenue inverse requires complete original-source credit';
+  END IF;
+$inverse$,'');
   definition:=replace(definition,'(NOT reconforge.customer_return_credited(t,d.invoice_id) AND invoice.status IS DISTINCT FROM(CASE WHEN s=7 THEN''Submitted'' WHEN s=12 THEN''Paid'' ELSE''Approved'' END))','invoice.status IS DISTINCT FROM(CASE WHEN s=7 THEN''Submitted'' WHEN s=12 THEN''Paid'' ELSE''Approved'' END)');
   definition:=replace(definition,'(invoice.status IN(''Approved'',''PartiallyPaid'',''Paid'') OR reconforge.customer_return_credited(t,d.invoice_id))','invoice.status IN(''Approved'',''PartiallyPaid'',''Paid'')');
   definition:=replace(definition,'(NOT reconforge.customer_return_credited(t,i) AND h.status IS DISTINCT FROM (CASE WHEN paid=0 THEN''Approved'' WHEN paid=h.total_minor THEN''Paid'' ELSE''PartiallyPaid'' END))','h.status IS DISTINCT FROM (CASE WHEN paid=0 THEN''Approved'' WHEN paid=h.total_minor THEN''Paid'' ELSE''PartiallyPaid'' END)');
@@ -450,6 +489,9 @@ DROP TRIGGER customer_return_invoice_admission ON reconforge.ar_invoices;
 DROP TRIGGER customer_return_allocation_admission ON reconforge.ar_receipt_allocations;
 DROP TRIGGER customer_return_collection_admission ON reconforge.commercial_collection_plans;
 DROP TRIGGER customer_return_restitution_admission ON reconforge.inventory_valuation_reversals;
+DROP TRIGGER immutable ON reconforge.customer_return_plans;
+DROP TRIGGER immutable ON reconforge.customer_return_events;
+DROP TRIGGER immutable ON reconforge.customer_return_commands;
 DROP FUNCTION reconforge.customer_return_reverse_close();DROP FUNCTION reconforge.customer_return_native_admit();
 DROP FUNCTION reconforge.customer_return_close(TEXT,TEXT);DROP FUNCTION reconforge.customer_return_public(TEXT,TEXT,INTEGER);
 DROP FUNCTION reconforge.customer_return_event(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,JSONB);

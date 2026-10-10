@@ -102,6 +102,35 @@ test("wire Studio collects twelve reviewed installments inside four native invoi
       await command(checker, "Review invoice and revenue", "review-invoice", trancheId);
       await command(poster, "Post invoice and revenue", "invoice", trancheId);
       const amounts = [[3000, 4500, 6000], [2000, 5000, 8000], [8000, 10000, 13500], [2000, 3000, 4000]][index - 1];
+      if (index === 1) {
+        const originalArea = (await inspect(maker, trancheId)).getByRole("region", { name: "Collect this invoice in installments", exact: true });
+        const preparation = originalArea.getByRole("form", { name: "Prepare invoice installment", exact: true });
+        for (const [label, value] of Object.entries({ "Collection in minor units": "3000", "Unique receipt number": "BROWSER-COMMERCE-CASH-1-0", "Collection date": "2026-10-10", "Collection reason": "Release original reviewed collection before replacement" })) await preparation.getByLabel(label, { exact: true }).fill(value);
+        for (const [label, value] of Object.entries({ "Open period": "period", "Cash journal": "CASH", "Cash asset account": "CASH" })) await preparation.getByRole("combobox", { name: label, exact: true }).selectOption(value);
+        let response = maker.waitForResponse(reply => reply.url().endsWith("/commercial-collections/plans") && reply.request().method() === "POST");
+        await preparation.getByRole("button", { name: "Prepare invoice installment", exact: true }).click();
+        expect((await response).status()).toBe(200);
+        await expect(originalArea.getByRole("button", { name: "Cancel unposted invoice installment", exact: true })).toBeDisabled();
+        const reviewArea = (await inspect(checker, trancheId)).getByRole("region", { name: "Collect this invoice in installments", exact: true });
+        await reviewArea.getByLabel("Collection reason", { exact: true }).fill("Independent review before original claim release");
+        response = checker.waitForResponse(reply => /commercial-collections\/plans\/[^/]+\/review$/.test(reply.url()) && reply.request().method() === "POST");
+        await reviewArea.getByRole("button", { name: "Review invoice installment", exact: true }).click();
+        expect((await response).status()).toBe(200);
+        await expect(reviewArea.getByRole("button", { name: "Cancel unposted invoice installment", exact: true })).toBeDisabled();
+        const releaseArea = (await inspect(poster, trancheId)).getByRole("region", { name: "Collect this invoice in installments", exact: true });
+        await releaseArea.getByLabel("Collection reason", { exact: true }).fill("Third-person unposted claim release");
+        let original = "", replay = "";
+        await poster.route("**/commercial-collections/plans/*/cancel", async route => { original = route.request().postData() || ""; expect((await route.fetch()).status()).toBe(200); await route.abort("failed"); }, { times: 1 });
+        const lostRelease = poster.waitForEvent("requestfailed", { predicate: request => /commercial-collections\/plans\/[^/]+\/cancel$/.test(request.url()) });
+        await releaseArea.getByRole("button", { name: "Cancel unposted invoice installment", exact: true }).click();
+        expect((await lostRelease).failure()?.errorText).toBe("net::ERR_FAILED");
+        await expect(poster.getByRole("combobox", { name: "Workspace", exact: true })).toBeDisabled();
+        response = poster.waitForResponse(reply => /commercial-collections\/plans\/[^/]+\/cancel$/.test(reply.url()) && reply.request().method() === "POST");
+        await poster.route("**/commercial-collections/plans/*/cancel", async route => { replay = route.request().postData() || ""; await route.continue(); }, { times: 1 });
+        await releaseArea.getByRole("button", { name: "Retry retained collection command", exact: true }).click();
+        expect((await response).status()).toBe(200); expect(replay).toBe(original);
+        await expect(panel(poster).getByRole("button", { name: "Refresh commercial orders", exact: true })).toBeEnabled();
+      }
       for (let installment = 0; installment < amounts.length; installment += 1) {
         const makerArticle = await inspect(maker, trancheId);
         const area = makerArticle.getByRole("region", { name: "Collect this invoice in installments", exact: true });

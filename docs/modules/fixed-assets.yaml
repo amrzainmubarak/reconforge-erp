@@ -20,12 +20,14 @@ domain_invariants:
   - Three distinct current authorized humans for every financial operation
   - Identical command retry retains actor payload digest and acknowledgement
   - Direct SQL cannot detach source phases, native entries, effects, audit or outbox
+  - Evidence source and asset lists require current original-cost read authority
+  - Retained history detail requires current read authority on every emitted native journal turnover
 domain_events: [fixed_asset_prepared, fixed_asset_reviewed, fixed_asset_posted]
-api_routes: [/api/v1/fixed-assets/assets, /api/v1/fixed-assets/assets/{asset_id}, /api/v1/fixed-assets/assets/{asset_id}/operations, /api/v1/fixed-assets/plans/{plan_id}, /api/v1/fixed-assets/plans/{plan_id}/review, /api/v1/fixed-assets/plans/{plan_id}/post]
+api_routes: [/api/v1/fixed-assets/assets, /api/v1/fixed-assets/assets/{asset_id}, /api/v1/fixed-assets/assets/{asset_id}/operations, /api/v1/fixed-assets/plans/{plan_id}, /api/v1/fixed-assets/plans/{plan_id}/review, /api/v1/fixed-assets/plans/{plan_id}/post, /api/v1/fixed-assets/plans/{plan_id}/evidence]
 cli_commands: []
 ui_routes: [/fixed-assets]
 import_schemas: []
-export_schemas: []
+export_schemas: [fixed-asset-native-evidence-v1]
 synthetic_fixtures: [tests/fixed_assets_browser_seed.py, tests/test_postgres_fixed_assets.py]
 threat_model: docs/architecture/FIXED_ASSETS_NATIVE_OWNER.md
 benchmarks: []
@@ -33,9 +35,12 @@ rollback_plan: Empty additive tables can downgrade; populated financial evidence
 test_matrix:
   exact_domain: tests/test_fixed_assets.py
   native_database: tests/test_postgres_fixed_assets.py
+  native_evidence_and_authorization: tests/test_postgres_fixed_assets_evidence.py
   browser: apps/web/live/fixed-assets-cycles.spec.ts
   response_contract: apps/web/src/fixed-assets-data.test.ts
-runtime_acceptance: Source-bound native Studio and populated restore milestones passed; final integrated source gate remains required
+  exact_browser_proof: apps/web/src/fixed-asset-evidence.test.ts
+  evidence_panel: apps/web/src/components/FixedAssetEvidencePanel.test.tsx
+runtime_acceptance: "Finance native/wire70dffef7; consistent owner locks, evidence and populated restore; GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.json retains actual sources. Final hosted status belongs to successor Draft PR exact-head checks; operator docs/operator/fixed-assets.md"
 limitations:
   - PostgreSQL-native functional currency and cash-funded acquisition; no foreign-currency or tax calculation
   - Completed calendar service months, cumulative straight-line only; no day proration or declining-balance methods

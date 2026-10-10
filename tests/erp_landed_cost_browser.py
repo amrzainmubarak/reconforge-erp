@@ -15,7 +15,7 @@ LANDED_COST_BROWSER_TABLES = (
     "ap_supplier_invoices", "ap_supplier_invoice_lines", "ap_three_way_matches", "ap_payment_links",
     "operational_finance_plans", "operational_finance_reviews", "operational_finance_links", "operational_finance_commands",
     "financial_installment_plans", "financial_installment_reviews", "financial_installment_links", "financial_installment_commands",
-    "landed_cost_plans", "landed_cost_allocations", "landed_cost_reviews", "landed_cost_links", "landed_cost_commands",
+    "landed_cost_plans", "landed_cost_allocations", "landed_cost_reviews", "landed_cost_links", "landed_cost_commands", "landed_cost_cancellations",
 )
 
 
@@ -40,14 +40,16 @@ def verify_landed_cost_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
         require(len(orders) == 1, "Exactly one retained multiline browser owner is required.")
         repository = PostgresProcurementPartialRepository(connection, runtime.tenant)
         view = repository.get(orders[0]["id"], actor=actor)
-        require(view["order"]["multiline"] and view["order"]["line_count"] == 2 and view["order"]["row_version"] == 19,
+        require(view["order"]["multiline"] and view["order"]["line_count"] == 2 and view["order"]["row_version"] == 21,
             "Actual multiline parent phases differ.")
         require(view["totals"] == {"ordered_quantity": "0", "reserved_receipt_quantity": "0", "received_quantity": "0", "invoiced_quantity": "0",
             "received_minor": "17000", "accrued_minor": "17000", "paid_minor": "17000", "outstanding_minor": "0"}, "Full exact payable totals differ.")
         require([(line["item_code"], line["uom_code"], line["location_code"], Decimal(line["received_quantity"]), Decimal(line["invoiced_quantity"]))
             for line in view["lines"]] == [("ITEM", "EA", "MAIN/STOCK", Decimal("10"), Decimal("10")), ("WEIGHT", "KG", "NORTH/STOCK", Decimal("2.50"), Decimal("2.50"))],
             "Actual mixed units, warehouse attribution or per-line quantities differ.")
-        require(len(view["receipts"]) == 2 and all(receipt["stage"] == "Posted" for receipt in view["receipts"]), "Two actual capitalized stock receipts are required.")
+        require(len(view["receipts"]) == 4 and all(receipt["stage"] == "Posted" for receipt in view["receipts"][2:])
+            and all(receipt["stage"] == "Prepared" and receipt.get("cancellation_plan_id") for receipt in view["receipts"][:2]),
+            "Two cancelled retained drafts and two actual capitalized stock receipts are required.")
         require(len(view["invoices"]) == 2 and [invoice["total_minor"] for invoice in view["invoices"]] == ["5600", "11400"]
             and all(invoice["quantity_text"] is None and len(invoice["lines"]) == 2 and invoice["native_status"] == "Paid" for invoice in view["invoices"]),
             "Two actual native multiline invoices must be accrued and settled.")
@@ -63,8 +65,12 @@ def verify_landed_cost_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
         effects.update(row["posting_effect_id"] for row in native)
         from reconforge.infrastructure.postgres_landed_cost import PostgresLandedCostRepository
         bundles = PostgresLandedCostRepository(connection, runtime.tenant).list_for_order(view["order"]["id"], actor=actor)
-        require(bundles["next_after"] is None and len(bundles["records"]) == 1, "Exactly one retained paid-charge source is required.")
-        bundle = bundles["records"][0]
+        require(bundles["next_after"] is None and len(bundles["records"]) == 2, "One cancelled draft and one retained paid-charge source are required.")
+        cancelled = [bundle for bundle in bundles["records"] if bundle["status"] == "Cancelled"]
+        require(len(cancelled) == 1 and cancelled[0]["phase"] == 0 and cancelled[0]["posting_effect_id"] is None,
+            "Cancelled browser receiving must retain its original unreceived draft without cash GL.")
+        require(cancelled[0]["cancellation"]["actor_id"] != cancelled[0]["preparer_actor_id"], "Cancellation needs independent human evidence.")
+        bundle = next(bundle for bundle in bundles["records"] if bundle["status"] == "Posted")
         require(bundle["phase"] == 2 and bundle["freight_minor"] == "777" and bundle["duty_minor"] == "224", "Paid-charge source does not reproduce independently expected exact amounts.")
         require(len({bundle["preparer_actor_id"],bundle["reviewer_actor_id"],bundle["posted_actor_id"]}) == 3, "Three independent humans are required.")
         require(sorted((a["base_minor"],a["freight_minor"],a["duty_minor"]) for a in bundle["allocations"]) == [("12000","548","158"),("5000","229","66")], "Independent Hamilton allocation differs.")
@@ -82,5 +88,5 @@ def verify_landed_cost_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
         require([dict(row) for row in layers] == [{"item_code": "ITEM", "quantity": 10, "value": 12706}, {"item_code": "WEIGHT", "quantity": 250, "value": 5295}],
             "Original FIFO quantities and cost do not reproduce the two charged native receipts.")
         return {"order_id": view["order"]["id"], "native_order_id": view["order"]["purchase_order_id"], "line_count": 2,
-            "warehouses": ["MAIN/STOCK", "NORTH/STOCK"], "units": ["EA", "KG"], "stock_receipts": 2, "supplier_invoices": 2,
+            "warehouses": ["MAIN/STOCK", "NORTH/STOCK"], "units": ["EA", "KG"], "stock_receipts": 2, "cancelled_bundles": 1, "cancelled_receipt_drafts": 2, "supplier_invoices": 2,
             "payment_installments": 4, "posting_effects": 9, "expected_turnover_minor": "53002", "capitalized_cost_minor": "18001", "paid_charge_minor": "1001", "paid_minor": "17000", "outstanding_minor": "0"}

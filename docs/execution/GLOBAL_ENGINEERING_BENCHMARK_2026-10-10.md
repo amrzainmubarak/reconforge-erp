@@ -1,5 +1,20 @@
 # Global operating platform: bounded engineering measurements
 
+## Successor quiet retest and dimensional read optimization
+
+The current22-entry index preserves all20 prior entries and adds raw806a05db
+and70dffef7 paired reports, with1000 cycles/3333 read observations each. Both
+complete without financial failure. Candidate observed posting change+6.78%
+versus the fresh baseline and+4.30% versus historical accepted PR127.
+The snapshot64.0519x read result is a distinct alternating same-fixture experiment.
+See [source-bound acceptance](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md) for the
+raw metric table, configurations, sample limits and failures. The prior posting
+regressions below remain historical measured outcomes; none is rewritten.
+The fresh pair also retains adverse client CPU545.03125→743.703125s (+36.45%)
+and bounded-batch read0.4677991→0.4806592s (+2.75%). Resource windows cover reads
+and observer work as well as posting; the throughput gain does not establish
+CPU efficiency or across-the-board reporting improvement.
+
 Publication date: 2026-10-10. Initial runs occurred on 2026-10-09 UTC; the corrective-source run occurred on 2026-10-10 UTC. Native posting throughput regressed against accepted PR127 in both expansion observations. Financial correctness passed. Within-run bounded-batch reads exercise an existing pathway; the new measured optimization is commercial projection allocation lookup reuse.
 
 ## Corrective-source retest
@@ -46,13 +61,13 @@ Native1000 operations are the highest completed posting tier here; no10000,
 100000 or million-posting claim follows. Instrumenting authentication, posting
 SQL and wait spans on repeated equal workloads is the next performance priority.
 
-The evidence index now contains19 entries and preserves every accepted old entry.
+The historical corrective publication contained19 entries and preserves every accepted old entry.
 Earlier source-specific packets below remain unchanged. Later evidence-only
 publication does not reattribute the benchmark to a different runtime source.
 
 ## Retained evidence and source binding
 
-The [evidence index](benchmarks/INDEX.v1.json) preserves all 15 prior entries and adds three artifacts. Its verifier checks paths, canonical-LF artifact hashes, profile identity and declared digest fields. It does not execute the workload or independently certify acceptance.
+The [evidence index](benchmarks/INDEX.v1.json) preserves all 15 original accepted entries and seven later artifacts, including this successor pair. Its verifier checks paths, canonical-LF artifact hashes, profile identity and declared digest fields. It does not execute the workload or independently certify acceptance.
 
 | Artifact | Measured source | Original report SHA-256 |
 | --- | --- | --- |

@@ -67,12 +67,33 @@ ASVS certification or full SSDF conformance.
 
 No reproducible competitor packet with equivalent hardware, durability, business
 cycle, data, authority checks and independent financial oracle was available.
-NetSuite's [5,000-line CSV transaction import limit](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N410731.html)
-is an import constraint, not a latency/TPS benchmark. No vendor superiority,
+NetSuite's [transaction line-item limits](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N550610.html)
+distinguish ordinary transactions (500 UI lines or 5,000 CSV/REST/SOAP lines)
+from journal entries (1,000 UI/REST/synchronous SOAP lines or 10,000
+CSV/asynchronous SOAP lines). The same guidance recommends purchase orders of
+at most 200 lines unless created through web services. These type- and
+transport-specific limits are admission constraints, not latency/TPS results.
+No vendor superiority,
 global functional parity, statutory compliance or production-readiness claim is
 permitted by this matrix. Evidence-native behavior, integrated finance and AI
 assistance are not asserted to be globally unique merely because they are new
 in ReconForge.
+
+## Successor workload clarification: 2026-10-10
+
+The wave3 `test_postgres_posting_snapshot_profile.py` fixture constructs one
+native journal with 1,000 lines. It compares snapshot-reader financial parity,
+dimension authorization and query calls over that same journal. Its measured
+1,002-to-2 client execute-call reduction is a journal-read observation, not
+1,000 business postings or a fully settled 1,000-line order.
+
+The existing `test_real_thousand_line_order_preserves_exact_source_and_partial_native_effects`
+admits and approves a 1,000-line commercial order, then fully processes only the
+last line's tranche; the other 999 lines remain unfulfilled. Multiline purchasing
+retains its 128-line contract ceiling. Neither proves complete 1,000-line sales
+or procurement settlement, concurrent-user capacity or business TPS. Contract
+ceilings, individual fixtures and matched posting benchmarks require separate
+source-bound acceptance and measured workload descriptions.
 
 ## Dependency-first next execution order
 

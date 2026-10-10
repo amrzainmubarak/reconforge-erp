@@ -2,6 +2,18 @@
 from collections.abc import Mapping
 from typing import Any
 
+RECEIPT_CHARGE_SQL = r"""CREATE OR REPLACE FUNCTION reconforge.landed_cost_receipt_charge(t TEXT,i TEXT,native BIGINT,merchandise BIGINT)
+ RETURNS NUMERIC LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $lc$
+DECLARE charge NUMERIC;
+BEGIN
+ -- A separate PL/pgSQL statement is essential: SQL CASE still plans the
+ -- protected table and its RLS policy even when the ordinary branch wins.
+ IF native=merchandise THEN RETURN 0; END IF;
+ SELECT freight_minor::numeric+duty_minor INTO charge FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=i;
+ RETURN COALESCE(charge,0);
+END $lc$;
+"""
+
 REVERSE_CLOSE_SQL = r"""CREATE OR REPLACE FUNCTION reconforge.landed_cost_reverse_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
 DECLARE j JSONB;changed JSONB[];p RECORD;native_entry TEXT;number TEXT;receipt TEXT;parent TEXT;
 BEGIN
@@ -40,6 +52,9 @@ BEGIN
  ELSIF TG_TABLE_NAME='procurement_partial_receipts' THEN receipt:=j->>'id';
  ELSIF TG_TABLE_NAME='procurement_partial_orders' THEN parent:=j->>'id';
  END IF;
+ IF TG_TABLE_NAME IN('procurement_partial_receipts','procurement_partial_orders') AND NOT EXISTS(
+ SELECT 1 FROM reconforge.procurement_partial_receipts d JOIN reconforge.inventory_receipt_plans r ON r.tenant_id=d.tenant_id AND r.id=d.receipt_plan_id
+ WHERE d.tenant_id=j->>'tenant_id' AND d.order_id=COALESCE(parent,j->>'order_id') AND r.total_value_minor<>d.total_minor) THEN CONTINUE; END IF;
  IF TG_TABLE_NAME='finance_posting_effects' AND j->>'reverses_effect_id' IS NOT NULL THEN
  SELECT entry_id INTO native_entry FROM reconforge.finance_posting_effects WHERE tenant_id=j->>'tenant_id' AND id=j->>'reverses_effect_id'; END IF;
  IF native_entry IS NOT NULL AND number IS NULL THEN SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=j->>'tenant_id' AND id=native_entry; END IF;
@@ -47,6 +62,19 @@ BEGIN
  -- missing header remains subject to reverse closure, including deleted owners.
  IF native_entry IS NOT NULL AND number IS NOT NULL
  AND upper(number) NOT LIKE 'LC1-%' AND upper(number) NOT LIKE 'IRP1-%' THEN CONTINUE; END IF;
+ IF (upper(COALESCE(number,'')) LIKE 'IRP1-%' OR upper(COALESCE(native_entry,'')) LIKE 'IRP1-%') AND NOT EXISTS(
+ SELECT 1 FROM reconforge.inventory_receipt_plans r JOIN reconforge.procurement_partial_receipts d ON d.tenant_id=r.tenant_id AND d.receipt_plan_id=r.id
+ WHERE r.tenant_id=j->>'tenant_id' AND r.finance_entry_id=native_entry AND EXISTS(SELECT 1 FROM reconforge.procurement_partial_receipts q
+ JOIN reconforge.inventory_receipt_plans z ON z.tenant_id=q.tenant_id AND z.id=q.receipt_plan_id
+ WHERE q.tenant_id=d.tenant_id AND q.order_id=d.order_id AND z.total_value_minor<>q.total_minor)) THEN CONTINUE; END IF;
+ -- A deferred ordinary child DELETE can outlive its header or lose visibility
+ -- after legitimate draft replacement. Reserved receipt artifact identities
+ -- still enter closure; a reserved LC header itself always enters via OLD.
+ IF TG_TABLE_NAME IN('finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects')
+ AND number IS NULL AND upper(COALESCE(native_entry,'')) NOT LIKE 'IRP1-%'
+ AND upper(COALESCE(native_entry,'')) NOT LIKE 'LC1-%'
+ AND upper(COALESCE(j->>'id','')) NOT LIKE 'IRP1-%'
+ AND upper(COALESCE(j->>'id','')) NOT LIKE 'LC1-%' THEN CONTINUE; END IF;
  IF upper(COALESCE(number,'')) LIKE 'LC1-%' AND NOT EXISTS(SELECT 1 FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND entry_id=native_entry) THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Reserved landed cost GL entry requires its source owner'; END IF;
  FOR p IN SELECT * FROM reconforge.landed_cost_plans WHERE tenant_id=j->>'tenant_id' AND
@@ -60,7 +88,8 @@ BEGIN
 END $lc$;
 """
 
-UPGRADE_SQL = r"""
+# Static migration fragments only; no request or database value is interpolated.
+_UPGRADE_DEFINITION_SQL = r"""
 DO $lc$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname=current_user AND (rolsuper OR rolbypassrls)) THEN
   RAISE EXCEPTION 'Landed cost migration requires forced-RLS migration authority'; END IF;
@@ -175,7 +204,7 @@ CREATE FUNCTION reconforge.landed_cost_ack(t TEXT,i TEXT,ack_stage INTEGER) RETU
 $lc$;
 CREATE FUNCTION reconforge.landed_cost_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
 DECLARE p RECORD;o RECORD;e RECORD;r RECORD;l RECORD;f RECORD;a RECORD;d RECORD;n RECORD;c RECORD;header JSONB;lines JSONB;allocations JSONB;
- cash TEXT;clearing TEXT;maker TEXT;total NUMERIC;expected_freight NUMERIC;expected_duty NUMERIC;expected_actor TEXT;expected_request JSONB;
+ cash TEXT;clearing TEXT;maker TEXT;total NUMERIC;native_cost NUMERIC;expected_freight NUMERIC;expected_duty NUMERIC;expected_actor TEXT;expected_request JSONB;
 BEGIN
  SELECT * INTO p FROM reconforge.landed_cost_plans WHERE tenant_id=t AND id=i;
  IF p IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='LC1 source owner is required'; END IF;
@@ -218,15 +247,15 @@ BEGIN
  SELECT sum(base_minor) INTO total FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i;
  SELECT jsonb_agg(to_jsonb(x)-ARRAY['tenant_id','plan_id','order_id'] ORDER BY sequence) INTO allocations
  FROM reconforge.landed_cost_allocations x WHERE tenant_id=t AND plan_id=i;
- IF allocations IS DISTINCT FROM p.payload->'allocations' OR jsonb_array_length(allocations) NOT BETWEEN 1 AND 128
- OR jsonb_array_length(p.payload#>'{request,lines}')<>jsonb_array_length(allocations)
- OR (SELECT sum(freight_minor) FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i)<>(p.payload#>>'{request,freight_minor}')::numeric
- OR (SELECT sum(duty_minor) FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i)<>(p.payload#>>'{request,duty_minor}')::numeric THEN
+ IF allocations IS DISTINCT FROM p.payload->'allocations' OR COALESCE(jsonb_array_length(allocations),0) NOT BETWEEN 1 AND 128
+ OR (CASE WHEN jsonb_typeof(p.payload#>'{request,lines}')='array' THEN jsonb_array_length(p.payload#>'{request,lines}') ELSE 0 END)<>jsonb_array_length(allocations)
+ OR (SELECT sum(freight_minor) FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i) IS DISTINCT FROM (p.payload#>>'{request,freight_minor}')::numeric
+ OR (SELECT sum(duty_minor) FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i) IS DISTINCT FROM (p.payload#>>'{request,duty_minor}')::numeric THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Allocations must conserve all paid charges and source members'; END IF;
  FOR a IN SELECT * FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i ORDER BY sequence LOOP
  SELECT * INTO d FROM reconforge.procurement_partial_receipts WHERE tenant_id=t AND id=a.receipt_id;
  SELECT * INTO n FROM reconforge.procurement_partial_order_lines WHERE tenant_id=t AND order_id=o.id AND id=a.order_line_id;
- SELECT q.receipt_clearing_account_id INTO clearing FROM reconforge.inventory_receipt_plans q WHERE q.tenant_id=t AND q.id=d.receipt_plan_id;
+ SELECT q.receipt_clearing_account_id,q.total_value_minor INTO clearing,native_cost FROM reconforge.inventory_receipt_plans q WHERE q.tenant_id=t AND q.id=d.receipt_plan_id;
  SELECT floor((p.payload#>>'{request,freight_minor}')::numeric*a.base_minor/total)+CASE WHEN rank<=residual THEN 1 ELSE 0 END INTO expected_freight
  FROM (SELECT order_line_id,row_number() OVER(ORDER BY mod((p.payload#>>'{request,freight_minor}')::numeric*base_minor,total) DESC,order_line_id COLLATE "C") rank,
  (p.payload#>>'{request,freight_minor}')::numeric-sum(floor((p.payload#>>'{request,freight_minor}')::numeric*base_minor/total)) OVER() residual
@@ -237,6 +266,7 @@ BEGIN
  FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i) weights WHERE order_line_id=a.order_line_id;
  IF d IS NULL OR n IS NULL OR d.order_id<>o.id OR d.order_line_id<>n.id OR a.quantity_text::numeric<>d.quantity
  OR a.base_minor<>d.total_minor OR a.base_minor::numeric<>d.quantity*n.unit_price_minor
+ OR native_cost IS DISTINCT FROM a.base_minor::numeric+a.freight_minor+a.duty_minor
  OR a.freight_minor<>expected_freight OR a.duty_minor<>expected_duty OR clearing IS DISTINCT FROM lines->0->>'account_id'
  OR d.stage<>p.phase OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(p.payload#>'{request,lines}') z
  WHERE z->>'line_id'=n.id AND (z->>'quantity')::numeric=d.quantity)
@@ -281,10 +311,12 @@ DO $lc$ DECLARE definition TEXT;needle TEXT:='OR r.total_value_minor<>d.total_mi
  definition:=pg_get_functiondef('reconforge.pp_verify_multiline_pre_landed(text,text)'::regprocedure);
  IF length(definition)-length(replace(definition,needle,''))<>length(needle) THEN RAISE EXCEPTION 'Unsupported prior receipt closure'; END IF;
  definition:=replace(definition,'reconforge.pp_verify_multiline_pre_landed','reconforge.pp_verify_multiline');
- definition:=replace(definition,needle,'OR r.total_value_minor::numeric<>d.total_minor::numeric+COALESCE((SELECT freight_minor::numeric+duty_minor FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=d.id),0)');
+ definition:=replace(definition,needle,'OR r.total_value_minor::numeric<>d.total_minor::numeric+reconforge.landed_cost_receipt_charge(t,d.id,r.total_value_minor,d.total_minor)');
  EXECUTE definition;
 END $lc$;
-""" + REVERSE_CLOSE_SQL + r"""DO $lc$ DECLARE n TEXT; BEGIN
+"""
+
+_UPGRADE_TRIGGER_SQL = r"""DO $lc$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['landed_cost_plans','landed_cost_allocations','landed_cost_reviews','landed_cost_links','landed_cost_commands'] LOOP
  EXECUTE format('ALTER TABLE reconforge.%I ENABLE ROW LEVEL SECURITY',n);
  EXECUTE format('ALTER TABLE reconforge.%I FORCE ROW LEVEL SECURITY',n);
@@ -301,6 +333,8 @@ END $lc$;
  END LOOP;
 END $lc$;
 """
+
+UPGRADE_SQL = RECEIPT_CHARGE_SQL + _UPGRADE_DEFINITION_SQL + REVERSE_CLOSE_SQL + _UPGRADE_TRIGGER_SQL
 
 DOWNGRADE_SQL = r"""
 DO $lc$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.landed_cost_plans) THEN
@@ -319,6 +353,7 @@ DROP FUNCTION reconforge.landed_cost_event(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 DROP TABLE reconforge.landed_cost_commands,reconforge.landed_cost_links,reconforge.landed_cost_reviews,reconforge.landed_cost_allocations,reconforge.landed_cost_plans;
 DROP FUNCTION reconforge.landed_cost_protect();
 DROP FUNCTION reconforge.landed_cost_command_admit();
+DROP FUNCTION reconforge.landed_cost_receipt_charge(TEXT,TEXT,BIGINT,BIGINT);
 """
 
 

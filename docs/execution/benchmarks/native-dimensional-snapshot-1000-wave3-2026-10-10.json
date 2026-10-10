@@ -1,0 +1,1178 @@
+{
+  "schema_version": 1,
+  "profile_id": "native-dimensional-snapshot/1000-alternating-v1@13191719",
+  "claim_boundary": "One warmed 1000-line journal on a scoped authenticated nonowner PostgreSQL17 connection; three alternating samples per reader with identical independent line totals and reviewed digest. No posting, HTTP, mixed ERP, production sizing or competitor throughput claim.",
+  "source_sha256": "bd9fec6ac8521fe7c5a27258b357de9d4352f9bfff43c7d95a532b5c8e008709",
+  "validation_digest": "5eaa54aa227835b8aef3bc402de5b5acac13a23eb64c4d50d4a92bc6255e539c",
+  "original_report_sha256": "0f7663902145de8334287f42ff70ba0d51c54d09b755e0cf617bccedc0df542f",
+  "original_report_serialization": {
+    "encoding": "utf-8",
+    "indent": 2,
+    "ensure_ascii": true,
+    "final_newline": true,
+    "line_endings": "CRLF"
+  },
+  "measurement": {
+    "schema_version": 2,
+    "started_at": "2026-10-10T02:54:23.882299+00:00",
+    "status": "passed",
+    "source_commit": "1319171964cbde85c1ec0be995d786a19fe02b20",
+    "source_sha256": "bd9fec6ac8521fe7c5a27258b357de9d4352f9bfff43c7d95a532b5c8e008709",
+    "profile": "native-three-human-cash-equity-v1",
+    "seed": "enterprise-native-v1",
+    "counts": [
+      1
+    ],
+    "workers": 1,
+    "repetitions": 3,
+    "max_seconds": 600,
+    "snapshot_lines": 1000,
+    "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+    "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "logical_cpus": 16,
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "architecture": "AMD64",
+    "docker_version": "29.8.2",
+    "limits": [
+      "single entity and USD",
+      "native repository latency includes synthetic identity authentication",
+      "not HTTP latency",
+      "no comparable competitor measurement",
+      "no cost per transaction without a supplied resource cost model"
+    ],
+    "cost_per_transaction": null,
+    "runtime_root": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave3\\reconforge-erp",
+    "launch_cwd": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave3\\reconforge-erp",
+    "command": [
+      "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+      ".github/scripts/benchmark_enterprise_finance.py",
+      "--counts",
+      "1",
+      "--workers",
+      "1",
+      "--repetitions",
+      "3",
+      "--snapshot-lines",
+      "1000",
+      "--max-seconds",
+      "600",
+      "--output",
+      "output/finance-wave3/snapshot-alternating-1000-fixed-scope"
+    ],
+    "module_origins": {
+      "posting": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave3\\reconforge-erp\\reconforge\\infrastructure\\postgres_finance_posting.py",
+      "core": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave3\\reconforge-erp\\reconforge\\infrastructure\\postgres_finance_core.py"
+    },
+    "telemetry_policy": "read-only 10-second sampled resources on owned synthetic fixture; no production DSN or row content",
+    "docker_engine_resources": {
+      "OperatingSystem": "Docker Desktop (containerized)",
+      "OSType": "linux",
+      "Architecture": "x86_64",
+      "KernelVersion": "6.18.40.1-microsoft-standard-WSL2",
+      "NCPU": 16,
+      "MemTotal": 10266157056,
+      "Driver": "overlayfs"
+    },
+    "postgres_version": "17.10",
+    "revision": "0123_pg_native_event_dispatch",
+    "postgres_configuration": {
+      "fsync": "on",
+      "full_page_writes": "on",
+      "max_connections": "100",
+      "shared_buffers": "16384",
+      "synchronous_commit": "on",
+      "track_io_timing": "off",
+      "wal_level": "replica",
+      "work_mem": "4096"
+    },
+    "postgres_io_timing_interpretation": "blk_read_time_ms/blk_write_time_ms are cumulative pg_stat_database counters; zero milliseconds with track_io_timing=off do not prove zero I/O latency; no I/O peak is measured",
+    "runtime_role_flags": [
+      false,
+      false
+    ],
+    "posting": {
+      "completed_cycles": 1,
+      "concurrency": 1,
+      "seconds": 2.1471550999999636,
+      "native_postings_per_second": 0.46573254070002534,
+      "error_count": 0,
+      "requested_cycles": 1,
+      "admitted_cycles": 1,
+      "failed_cycles": [],
+      "not_admitted_cycles": 0,
+      "completed_indices": [
+        0
+      ],
+      "cycle_latency_seconds": {
+        "p50": 2.146571100000074,
+        "p95": 2.146571100000074,
+        "p99": 2.146571100000074
+      },
+      "expected": {
+        "debit_minor": "137453",
+        "credit_minor": "137453",
+        "cash_minor": "137453",
+        "equity_minor": "137453"
+      },
+      "raw_cycle_latency_seconds": [
+        2.146571100000074
+      ],
+      "ordered_effect_ids": [
+        "PST-29f4244c8ca042aeaacea640b8622d2c"
+      ]
+    },
+    "verified_reads": [
+      {
+        "count": 1,
+        "expected": {
+          "debit_minor": "137453",
+          "credit_minor": "137453",
+          "cash_minor": "137453",
+          "equity_minor": "137453"
+        },
+        "status": "passed",
+        "measurement_scope": "authenticated native verified effect reads; no HTTP or database-internal query count",
+        "dataset_effect_ids_sha256": "83ceb1f065b1e449ea0c1d80223e5b9098da052e3b59e650ac1dfa3187f7b3e4",
+        "cache_policy": "both warmed; alternating modes",
+        "samples": {
+          "per_effect_baseline": [
+            {
+              "repetition": 0,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.015850400000090303
+              ],
+              "error_count": 0,
+              "request_unit": "one_effect",
+              "seconds": 0.016027500000291184,
+              "client_execute_calls": 3,
+              "peak_python_allocated_bytes": 15940,
+              "client_process_cpu_seconds": 0.015625,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "62b08f30806e2c0d124b20b88557ee55a9b4fb2ee122f8240e71be4960eca3c0",
+              "verified_effects_per_second": 62.392762438423475,
+              "request_latency_seconds": {
+                "p50": 0.015850400000090303,
+                "p95": 0.015850400000090303,
+                "p99": 0.015850400000090303
+              }
+            },
+            {
+              "repetition": 1,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.014886599999954342
+              ],
+              "error_count": 0,
+              "request_unit": "one_effect",
+              "seconds": 0.015044199999920238,
+              "client_execute_calls": 3,
+              "peak_python_allocated_bytes": 16887,
+              "client_process_cpu_seconds": 0.015625,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "62b08f30806e2c0d124b20b88557ee55a9b4fb2ee122f8240e71be4960eca3c0",
+              "verified_effects_per_second": 66.47079937818573,
+              "request_latency_seconds": {
+                "p50": 0.014886599999954342,
+                "p95": 0.014886599999954342,
+                "p99": 0.014886599999954342
+              }
+            },
+            {
+              "repetition": 2,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.013905600000271079
+              ],
+              "error_count": 0,
+              "request_unit": "one_effect",
+              "seconds": 0.014066099999581638,
+              "client_execute_calls": 3,
+              "peak_python_allocated_bytes": 15564,
+              "client_process_cpu_seconds": 0.0,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "62b08f30806e2c0d124b20b88557ee55a9b4fb2ee122f8240e71be4960eca3c0",
+              "verified_effects_per_second": 71.09291132792619,
+              "request_latency_seconds": {
+                "p50": 0.013905600000271079,
+                "p95": 0.013905600000271079,
+                "p99": 0.013905600000271079
+              }
+            }
+          ],
+          "bounded_batch": [
+            {
+              "repetition": 0,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.013373899999805872
+              ],
+              "error_count": 0,
+              "request_unit": "up_to_100_effects",
+              "seconds": 0.013536299999941548,
+              "client_execute_calls": 2,
+              "peak_python_allocated_bytes": 17687,
+              "client_process_cpu_seconds": 0.0,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "62b08f30806e2c0d124b20b88557ee55a9b4fb2ee122f8240e71be4960eca3c0",
+              "verified_effects_per_second": 73.87543124814891,
+              "request_latency_seconds": {
+                "p50": 0.013373899999805872,
+                "p95": 0.013373899999805872,
+                "p99": 0.013373899999805872
+              }
+            },
+            {
+              "repetition": 1,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.013648300000113522
+              ],
+              "error_count": 0,
+              "request_unit": "up_to_100_effects",
+              "seconds": 0.013836000000083004,
+              "client_execute_calls": 2,
+              "peak_python_allocated_bytes": 18287,
+              "client_process_cpu_seconds": 0.0,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "62b08f30806e2c0d124b20b88557ee55a9b4fb2ee122f8240e71be4960eca3c0",
+              "verified_effects_per_second": 72.27522405276098,
+              "request_latency_seconds": {
+                "p50": 0.013648300000113522,
+                "p95": 0.013648300000113522,
+                "p99": 0.013648300000113522
+              }
+            },
+            {
+              "repetition": 2,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.014251099999910366
+              ],
+              "error_count": 0,
+              "request_unit": "up_to_100_effects",
+              "seconds": 0.014537300000029063,
+              "client_execute_calls": 2,
+              "peak_python_allocated_bytes": 17639,
+              "client_process_cpu_seconds": 0.0,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "62b08f30806e2c0d124b20b88557ee55a9b4fb2ee122f8240e71be4960eca3c0",
+              "verified_effects_per_second": 68.7885645888852,
+              "request_latency_seconds": {
+                "p50": 0.014251099999910366,
+                "p95": 0.014251099999910366,
+                "p99": 0.014251099999910366
+              }
+            }
+          ]
+        },
+        "median_seconds_baseline": 0.015044199999920238,
+        "median_seconds_optimized": 0.013836000000083004,
+        "measured_speedup": 1.0873229256887817,
+        "financial_effects_digest": "62b08f30806e2c0d124b20b88557ee55a9b4fb2ee122f8240e71be4960eca3c0"
+      }
+    ],
+    "snapshot_reads": {
+      "seed": "alternating-cash-equity-one-minor-v1",
+      "concurrency": 1,
+      "runtime_role_flags": [
+        false,
+        false
+      ],
+      "outside_primary_posting_measurement": true,
+      "status": "passed",
+      "fixture_stage": "complete",
+      "limits": [
+        "one fixed journal on one scoped nonowner connection",
+        "warmed cache",
+        "no end-to-end posting speedup inference"
+      ],
+      "measurement_scope": "native posting snapshot reads on one authenticated scoped connection; no HTTP, identity or posting throughput claim",
+      "cache_policy": "both warmed; alternating modes",
+      "line_count": 1000,
+      "expected_total_minor": "500",
+      "expected_validation_digest": "5eaa54aa227835b8aef3bc402de5b5acac13a23eb64c4d50d4a92bc6255e539c",
+      "request_unit": "one complete reviewed journal snapshot",
+      "samples": {
+        "per_line_baseline": [
+          {
+            "repetition": 0,
+            "status": "complete",
+            "validation_digest": "5eaa54aa227835b8aef3bc402de5b5acac13a23eb64c4d50d4a92bc6255e539c",
+            "debit_minor": "500",
+            "credit_minor": "500",
+            "lines": 1000,
+            "dimension_links": 668,
+            "seconds": 10.56946360000029,
+            "client_process_cpu_seconds": 0.546875,
+            "client_execute_calls": 1002,
+            "peak_python_allocated_bytes": 1271280
+          },
+          {
+            "repetition": 1,
+            "status": "complete",
+            "validation_digest": "5eaa54aa227835b8aef3bc402de5b5acac13a23eb64c4d50d4a92bc6255e539c",
+            "debit_minor": "500",
+            "credit_minor": "500",
+            "lines": 1000,
+            "dimension_links": 668,
+            "seconds": 10.704596500000207,
+            "client_process_cpu_seconds": 0.515625,
+            "client_execute_calls": 1002,
+            "peak_python_allocated_bytes": 1252513
+          },
+          {
+            "repetition": 2,
+            "status": "complete",
+            "validation_digest": "5eaa54aa227835b8aef3bc402de5b5acac13a23eb64c4d50d4a92bc6255e539c",
+            "debit_minor": "500",
+            "credit_minor": "500",
+            "lines": 1000,
+            "dimension_links": 668,
+            "seconds": 11.259414500000275,
+            "client_process_cpu_seconds": 0.59375,
+            "client_execute_calls": 1002,
+            "peak_python_allocated_bytes": 1252878
+          }
+        ],
+        "joined_snapshot": [
+          {
+            "repetition": 0,
+            "status": "complete",
+            "validation_digest": "5eaa54aa227835b8aef3bc402de5b5acac13a23eb64c4d50d4a92bc6255e539c",
+            "debit_minor": "500",
+            "credit_minor": "500",
+            "lines": 1000,
+            "dimension_links": 668,
+            "seconds": 0.1671238999997513,
+            "client_process_cpu_seconds": 0.0625,
+            "client_execute_calls": 2,
+            "peak_python_allocated_bytes": 1241372
+          },
+          {
+            "repetition": 1,
+            "status": "complete",
+            "validation_digest": "5eaa54aa227835b8aef3bc402de5b5acac13a23eb64c4d50d4a92bc6255e539c",
+            "debit_minor": "500",
+            "credit_minor": "500",
+            "lines": 1000,
+            "dimension_links": 668,
+            "seconds": 0.14754240000002028,
+            "client_process_cpu_seconds": 0.0625,
+            "client_execute_calls": 2,
+            "peak_python_allocated_bytes": 1241372
+          },
+          {
+            "repetition": 2,
+            "status": "complete",
+            "validation_digest": "5eaa54aa227835b8aef3bc402de5b5acac13a23eb64c4d50d4a92bc6255e539c",
+            "debit_minor": "500",
+            "credit_minor": "500",
+            "lines": 1000,
+            "dimension_links": 668,
+            "seconds": 0.21586500000012165,
+            "client_process_cpu_seconds": 0.109375,
+            "client_execute_calls": 2,
+            "peak_python_allocated_bytes": 1242916
+          }
+        ]
+      },
+      "median_seconds_baseline": 10.704596500000207,
+      "median_seconds_optimized": 0.1671238999997513,
+      "measured_speedup": 64.05185912976023
+    },
+    "database_bytes": 26080947,
+    "container_resources_final_sample": "{\"BlockIO\":\"0B / 93MB\",\"CPUPerc\":\"1.45%\",\"Container\":\"98483f84aed5e280d7c73c12afbc59c9baf571e6fa700accf1d2430a5e0cf177\",\"ID\":\"98483f84aed5\",\"MemPerc\":\"0.58%\",\"MemUsage\":\"56.66MiB / 9.561GiB\",\"Name\":\"reconforge-enterprise-finance-a82277cdaff9\",\"NetIO\":\"3.55MB / 4.31MB\",\"PIDs\":\"6\"}",
+    "source_commit_after": "1319171964cbde85c1ec0be995d786a19fe02b20",
+    "source_sha256_after": "bd9fec6ac8521fe7c5a27258b357de9d4352f9bfff43c7d95a532b5c8e008709",
+    "source_unchanged": true,
+    "posting_profile": {
+      "enabled": false,
+      "scope": "client identity entry, business calls and transaction exit; no server-internal timings",
+      "raw_phase_observations": [],
+      "phase_totals": {},
+      "statement_templates": [],
+      "sensitive_collection": "no SQL text, parameters, credentials, error messages or financial rows"
+    },
+    "resource_sampling": {
+      "interval_seconds": 10,
+      "max_samples": 1000,
+      "status": "complete",
+      "thread_still_running": false,
+      "raw_samples": [
+        {
+          "elapsed_seconds": 0.0,
+          "measurement_seconds": 1.3279999999999745,
+          "client_cpu_seconds": 3.203125,
+          "client_pid": 7276,
+          "client_memory": {
+            "rss_bytes": 115093504,
+            "process_lifetime_peak_rss_bytes": 117248000,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 35,
+            "xact_rollback": 1,
+            "blks_read": 797,
+            "blks_hit": 510954,
+            "tup_returned": 450666,
+            "tup_fetched": 430962,
+            "tup_inserted": 35663,
+            "tup_updated": 2442,
+            "tup_deleted": 1017,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 141455,
+            "wal_fpi": 1521,
+            "wal_bytes": "20319143"
+          },
+          "postgres_wait_event_type_sessions": {
+            "Client": 1
+          },
+          "docker_raw_counters": {
+            "CPUPerc": "60.41%",
+            "MemUsage": "87.09MiB / 9.561GiB",
+            "MemPerc": "0.89%",
+            "NetIO": "1.61MB / 585kB",
+            "BlockIO": "0B / 72.6MB",
+            "PIDs": "7"
+          }
+        },
+        {
+          "elapsed_seconds": 10.0,
+          "measurement_seconds": 1.3279999999999745,
+          "client_cpu_seconds": 4.5,
+          "client_pid": 7276,
+          "client_memory": {
+            "rss_bytes": 115949568,
+            "process_lifetime_peak_rss_bytes": 117248000,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 64,
+            "xact_rollback": 1,
+            "blks_read": 833,
+            "blks_hit": 542385,
+            "tup_returned": 472520,
+            "tup_fetched": 452720,
+            "tup_inserted": 35686,
+            "tup_updated": 2457,
+            "tup_deleted": 1017,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 141653,
+            "wal_fpi": 1521,
+            "wal_bytes": "20344028"
+          },
+          "postgres_wait_event_type_sessions": {
+            "none": 1
+          },
+          "docker_raw_counters": {
+            "CPUPerc": "86.52%",
+            "MemUsage": "74.83MiB / 9.561GiB",
+            "MemPerc": "0.76%",
+            "NetIO": "2.26MB / 1.39MB",
+            "BlockIO": "0B / 72.9MB",
+            "PIDs": "7"
+          }
+        },
+        {
+          "elapsed_seconds": 20.0,
+          "measurement_seconds": 1.344000000000051,
+          "client_cpu_seconds": 4.875,
+          "client_pid": 7276,
+          "client_memory": {
+            "rss_bytes": 117678080,
+            "process_lifetime_peak_rss_bytes": 117723136,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 69,
+            "xact_rollback": 1,
+            "blks_read": 833,
+            "blks_hit": 543038,
+            "tup_returned": 472950,
+            "tup_fetched": 453149,
+            "tup_inserted": 35686,
+            "tup_updated": 2457,
+            "tup_deleted": 1017,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 141653,
+            "wal_fpi": 1521,
+            "wal_bytes": "20344028"
+          },
+          "postgres_wait_event_type_sessions": {
+            "Client": 1
+          },
+          "docker_raw_counters": {
+            "CPUPerc": "97.71%",
+            "MemUsage": "87.03MiB / 9.561GiB",
+            "MemPerc": "0.89%",
+            "NetIO": "2.52MB / 1.69MB",
+            "BlockIO": "0B / 73.4MB",
+            "PIDs": "7"
+          }
+        },
+        {
+          "elapsed_seconds": 30.0,
+          "measurement_seconds": 1.344000000000051,
+          "client_cpu_seconds": 4.921875,
+          "client_pid": 7276,
+          "client_memory": {
+            "rss_bytes": 117682176,
+            "process_lifetime_peak_rss_bytes": 117731328,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 105,
+            "xact_rollback": 1,
+            "blks_read": 874,
+            "blks_hit": 552697,
+            "tup_returned": 480344,
+            "tup_fetched": 456571,
+            "tup_inserted": 35734,
+            "tup_updated": 2602,
+            "tup_deleted": 1018,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 143501,
+            "wal_fpi": 1548,
+            "wal_bytes": "20759888"
+          },
+          "postgres_wait_event_type_sessions": {
+            "none": 1
+          },
+          "docker_raw_counters": {
+            "CPUPerc": "100.05%",
+            "MemUsage": "86.86MiB / 9.561GiB",
+            "MemPerc": "0.89%",
+            "NetIO": "2.52MB / 1.69MB",
+            "BlockIO": "0B / 73.9MB",
+            "PIDs": "7"
+          }
+        },
+        {
+          "elapsed_seconds": 40.0,
+          "measurement_seconds": 1.3600000000001273,
+          "client_cpu_seconds": 5.625,
+          "client_pid": 7276,
+          "client_memory": {
+            "rss_bytes": 119033856,
+            "process_lifetime_peak_rss_bytes": 119083008,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 122,
+            "xact_rollback": 1,
+            "blks_read": 876,
+            "blks_hit": 1228155,
+            "tup_returned": 901452,
+            "tup_fetched": 877635,
+            "tup_inserted": 37418,
+            "tup_updated": 2610,
+            "tup_deleted": 1018,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 149314,
+            "wal_fpi": 1548,
+            "wal_bytes": "21517844"
+          },
+          "postgres_wait_event_type_sessions": {
+            "none": 1
+          },
+          "docker_raw_counters": {
+            "CPUPerc": "86.80%",
+            "MemUsage": "60.98MiB / 9.561GiB",
+            "MemPerc": "0.62%",
+            "NetIO": "3MB / 2.76MB",
+            "BlockIO": "0B / 92.3MB",
+            "PIDs": "7"
+          }
+        },
+        {
+          "elapsed_seconds": 50.0,
+          "measurement_seconds": 1.375,
+          "client_cpu_seconds": 6.0,
+          "client_pid": 7276,
+          "client_memory": {
+            "rss_bytes": 119001088,
+            "process_lifetime_peak_rss_bytes": 119083008,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 127,
+            "xact_rollback": 1,
+            "blks_read": 876,
+            "blks_hit": 1228808,
+            "tup_returned": 901882,
+            "tup_fetched": 878064,
+            "tup_inserted": 37418,
+            "tup_updated": 2610,
+            "tup_deleted": 1018,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 149315,
+            "wal_fpi": 1548,
+            "wal_bytes": "21517912"
+          },
+          "postgres_wait_event_type_sessions": {
+            "none": 1
+          },
+          "docker_raw_counters": {
+            "CPUPerc": "86.16%",
+            "MemUsage": "71.18MiB / 9.561GiB",
+            "MemPerc": "0.73%",
+            "NetIO": "3.15MB / 3.19MB",
+            "BlockIO": "0B / 92.3MB",
+            "PIDs": "7"
+          }
+        },
+        {
+          "elapsed_seconds": 60.016000000000076,
+          "measurement_seconds": 1.3589999999999236,
+          "client_cpu_seconds": 6.640625,
+          "client_pid": 7276,
+          "client_memory": {
+            "rss_bytes": 120209408,
+            "process_lifetime_peak_rss_bytes": 120258560,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 132,
+            "xact_rollback": 1,
+            "blks_read": 876,
+            "blks_hit": 1229693,
+            "tup_returned": 902408,
+            "tup_fetched": 878589,
+            "tup_inserted": 37418,
+            "tup_updated": 2610,
+            "tup_deleted": 1018,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 149821,
+            "wal_fpi": 1572,
+            "wal_bytes": "21769830"
+          },
+          "postgres_wait_event_type_sessions": {
+            "none": 1
+          },
+          "docker_raw_counters": {
+            "CPUPerc": "87.12%",
+            "MemUsage": "67.04MiB / 9.561GiB",
+            "MemPerc": "0.68%",
+            "NetIO": "3.3MB / 3.76MB",
+            "BlockIO": "0B / 92.9MB",
+            "PIDs": "7"
+          }
+        },
+        {
+          "elapsed_seconds": 70.01600000000008,
+          "measurement_seconds": 1.375,
+          "client_cpu_seconds": 7.1875,
+          "client_pid": 7276,
+          "client_memory": {
+            "rss_bytes": 120221696,
+            "process_lifetime_peak_rss_bytes": 120262656,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 137,
+            "xact_rollback": 1,
+            "blks_read": 876,
+            "blks_hit": 1230340,
+            "tup_returned": 902836,
+            "tup_fetched": 879016,
+            "tup_inserted": 37418,
+            "tup_updated": 2610,
+            "tup_deleted": 1018,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 149822,
+            "wal_fpi": 1572,
+            "wal_bytes": "21769880"
+          },
+          "postgres_wait_event_type_sessions": {
+            "none": 1
+          },
+          "docker_raw_counters": {
+            "CPUPerc": "85.00%",
+            "MemUsage": "72.51MiB / 9.561GiB",
+            "MemPerc": "0.74%",
+            "NetIO": "3.45MB / 4.04MB",
+            "BlockIO": "0B / 93MB",
+            "PIDs": "7"
+          }
+        },
+        {
+          "elapsed_seconds": 80.01600000000008,
+          "measurement_seconds": 1.375,
+          "client_cpu_seconds": 8.078125,
+          "client_pid": 7276,
+          "client_memory": {
+            "rss_bytes": 120442880,
+            "process_lifetime_peak_rss_bytes": 125231104,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 145,
+            "xact_rollback": 1,
+            "blks_read": 876,
+            "blks_hit": 1402609,
+            "tup_returned": 1003923,
+            "tup_fetched": 980099,
+            "tup_inserted": 37418,
+            "tup_updated": 2610,
+            "tup_deleted": 1018,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 149822,
+            "wal_fpi": 1572,
+            "wal_bytes": "21769880"
+          },
+          "postgres_wait_event_type_sessions": {},
+          "docker_raw_counters": {
+            "CPUPerc": "0.02%",
+            "MemUsage": "56.66MiB / 9.561GiB",
+            "MemPerc": "0.58%",
+            "NetIO": "3.55MB / 4.31MB",
+            "BlockIO": "0B / 93MB",
+            "PIDs": "6"
+          }
+        }
+      ],
+      "errors": [],
+      "scope": "sampled peaks can miss shorter spikes; client lifetime RSS differs from Python allocation peak"
+    },
+    "owned_container_removed": true,
+    "finished_at": "2026-10-10T02:55:56.345718+00:00",
+    "wall_seconds": 91.78200000000015
+  },
+  "failed_attempt_original_report_sha256": "c8a8678d7b909af7bf0135a53bf15a0f3133205de2829b1a2e97da72491e23cb",
+  "failed_attempt_serialization": {
+    "encoding": "utf-8",
+    "indent": 2,
+    "ensure_ascii": true,
+    "final_newline": true,
+    "line_endings": "CRLF"
+  },
+  "failed_attempt": {
+    "schema_version": 2,
+    "started_at": "2026-10-10T02:48:57.342840+00:00",
+    "status": "failed",
+    "source_commit": "4a61f83bb344819fb6beba172e9a90dda4f25f52",
+    "source_sha256": "7c426c293b1c03bed83f27999ff07d9b9e6b1afd7d54e061f7d85d01b53aaa2f",
+    "profile": "native-three-human-cash-equity-v1",
+    "seed": "enterprise-native-v1",
+    "counts": [
+      1
+    ],
+    "workers": 1,
+    "repetitions": 3,
+    "max_seconds": 600,
+    "snapshot_lines": 1000,
+    "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+    "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "logical_cpus": 16,
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "architecture": "AMD64",
+    "docker_version": "29.8.2",
+    "limits": [
+      "single entity and USD",
+      "native repository latency includes synthetic identity authentication",
+      "not HTTP latency",
+      "no comparable competitor measurement",
+      "no cost per transaction without a supplied resource cost model"
+    ],
+    "cost_per_transaction": null,
+    "runtime_root": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave3\\reconforge-erp",
+    "launch_cwd": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave3\\reconforge-erp",
+    "command": [
+      "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+      ".github/scripts/benchmark_enterprise_finance.py",
+      "--counts",
+      "1",
+      "--workers",
+      "1",
+      "--repetitions",
+      "3",
+      "--snapshot-lines",
+      "1000",
+      "--max-seconds",
+      "600",
+      "--output",
+      "output/finance-wave3/snapshot-alternating-1000"
+    ],
+    "module_origins": {
+      "posting": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave3\\reconforge-erp\\reconforge\\infrastructure\\postgres_finance_posting.py",
+      "core": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave3\\reconforge-erp\\reconforge\\infrastructure\\postgres_finance_core.py"
+    },
+    "telemetry_policy": "read-only 10-second sampled resources on owned synthetic fixture; no production DSN or row content",
+    "docker_engine_resources": {
+      "OperatingSystem": "Docker Desktop (containerized)",
+      "OSType": "linux",
+      "Architecture": "x86_64",
+      "KernelVersion": "6.18.40.1-microsoft-standard-WSL2",
+      "NCPU": 16,
+      "MemTotal": 10266157056,
+      "Driver": "overlayfs"
+    },
+    "postgres_version": "17.10",
+    "revision": "0123_pg_native_event_dispatch",
+    "postgres_configuration": {
+      "fsync": "on",
+      "full_page_writes": "on",
+      "max_connections": "100",
+      "shared_buffers": "16384",
+      "synchronous_commit": "on",
+      "track_io_timing": "off",
+      "wal_level": "replica",
+      "work_mem": "4096"
+    },
+    "postgres_io_timing_interpretation": "blk_read_time_ms/blk_write_time_ms are cumulative pg_stat_database counters; zero milliseconds with track_io_timing=off do not prove zero I/O latency; no I/O peak is measured",
+    "runtime_role_flags": [
+      false,
+      false
+    ],
+    "posting": {
+      "completed_cycles": 1,
+      "concurrency": 1,
+      "seconds": 2.0862444000001688,
+      "native_postings_per_second": 0.4793302261230367,
+      "error_count": 0,
+      "requested_cycles": 1,
+      "admitted_cycles": 1,
+      "failed_cycles": [],
+      "not_admitted_cycles": 0,
+      "completed_indices": [
+        0
+      ],
+      "cycle_latency_seconds": {
+        "p50": 2.085551900000155,
+        "p95": 2.085551900000155,
+        "p99": 2.085551900000155
+      },
+      "expected": {
+        "debit_minor": "137453",
+        "credit_minor": "137453",
+        "cash_minor": "137453",
+        "equity_minor": "137453"
+      },
+      "raw_cycle_latency_seconds": [
+        2.085551900000155
+      ],
+      "ordered_effect_ids": [
+        "PST-b0f142952f3f429a92706fa7aed80802"
+      ]
+    },
+    "verified_reads": [
+      {
+        "count": 1,
+        "expected": {
+          "debit_minor": "137453",
+          "credit_minor": "137453",
+          "cash_minor": "137453",
+          "equity_minor": "137453"
+        },
+        "status": "passed",
+        "measurement_scope": "authenticated native verified effect reads; no HTTP or database-internal query count",
+        "dataset_effect_ids_sha256": "22bdd3ee2373df09247800d0721709a257e07b62658b457303db0eaa5ae5fcbe",
+        "cache_policy": "both warmed; alternating modes",
+        "samples": {
+          "per_effect_baseline": [
+            {
+              "repetition": 0,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.015720299999884446
+              ],
+              "error_count": 0,
+              "request_unit": "one_effect",
+              "seconds": 0.015906399999948917,
+              "client_execute_calls": 3,
+              "peak_python_allocated_bytes": 15940,
+              "client_process_cpu_seconds": 0.015625,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "c2a924d952874b6aead11708f401ef69c9ce02094a9168376a26bf5ac1a42c11",
+              "verified_effects_per_second": 62.867776492682914,
+              "request_latency_seconds": {
+                "p50": 0.015720299999884446,
+                "p95": 0.015720299999884446,
+                "p99": 0.015720299999884446
+              }
+            },
+            {
+              "repetition": 1,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.015972599999713566
+              ],
+              "error_count": 0,
+              "request_unit": "one_effect",
+              "seconds": 0.016138100000262057,
+              "client_execute_calls": 3,
+              "peak_python_allocated_bytes": 16887,
+              "client_process_cpu_seconds": 0.0,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "c2a924d952874b6aead11708f401ef69c9ce02094a9168376a26bf5ac1a42c11",
+              "verified_effects_per_second": 61.96516318425103,
+              "request_latency_seconds": {
+                "p50": 0.015972599999713566,
+                "p95": 0.015972599999713566,
+                "p99": 0.015972599999713566
+              }
+            },
+            {
+              "repetition": 2,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.013548700000228564
+              ],
+              "error_count": 0,
+              "request_unit": "one_effect",
+              "seconds": 0.01377730000012889,
+              "client_execute_calls": 3,
+              "peak_python_allocated_bytes": 15564,
+              "client_process_cpu_seconds": 0.0,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "c2a924d952874b6aead11708f401ef69c9ce02094a9168376a26bf5ac1a42c11",
+              "verified_effects_per_second": 72.58316215736355,
+              "request_latency_seconds": {
+                "p50": 0.013548700000228564,
+                "p95": 0.013548700000228564,
+                "p99": 0.013548700000228564
+              }
+            }
+          ],
+          "bounded_batch": [
+            {
+              "repetition": 0,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.013214199999765697
+              ],
+              "error_count": 0,
+              "request_unit": "up_to_100_effects",
+              "seconds": 0.013378699999975652,
+              "client_execute_calls": 2,
+              "peak_python_allocated_bytes": 17759,
+              "client_process_cpu_seconds": 0.0,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "c2a924d952874b6aead11708f401ef69c9ce02094a9168376a26bf5ac1a42c11",
+              "verified_effects_per_second": 74.74567783131545,
+              "request_latency_seconds": {
+                "p50": 0.013214199999765697,
+                "p95": 0.013214199999765697,
+                "p99": 0.013214199999765697
+              }
+            },
+            {
+              "repetition": 1,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.01414710000017294
+              ],
+              "error_count": 0,
+              "request_unit": "up_to_100_effects",
+              "seconds": 0.014323599999897851,
+              "client_execute_calls": 2,
+              "peak_python_allocated_bytes": 18287,
+              "client_process_cpu_seconds": 0.0,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "c2a924d952874b6aead11708f401ef69c9ce02094a9168376a26bf5ac1a42c11",
+              "verified_effects_per_second": 69.81485101560581,
+              "request_latency_seconds": {
+                "p50": 0.01414710000017294,
+                "p95": 0.01414710000017294,
+                "p99": 0.01414710000017294
+              }
+            },
+            {
+              "repetition": 2,
+              "requested_effects": 1,
+              "effects": 1,
+              "status": "complete",
+              "raw_request_latency_seconds": [
+                0.013914899999690533
+              ],
+              "error_count": 0,
+              "request_unit": "up_to_100_effects",
+              "seconds": 0.014083099999879778,
+              "client_execute_calls": 2,
+              "peak_python_allocated_bytes": 17639,
+              "client_process_cpu_seconds": 0.0,
+              "debit_minor": "137453",
+              "credit_minor": "137453",
+              "effects_digest": "c2a924d952874b6aead11708f401ef69c9ce02094a9168376a26bf5ac1a42c11",
+              "verified_effects_per_second": 71.00709360925767,
+              "request_latency_seconds": {
+                "p50": 0.013914899999690533,
+                "p95": 0.013914899999690533,
+                "p99": 0.013914899999690533
+              }
+            }
+          ]
+        },
+        "median_seconds_baseline": 0.015906399999948917,
+        "median_seconds_optimized": 0.014083099999879778,
+        "measured_speedup": 1.1294672337826688,
+        "financial_effects_digest": "c2a924d952874b6aead11708f401ef69c9ce02094a9168376a26bf5ac1a42c11"
+      }
+    ],
+    "failure": "PostgresFinanceCoreError: PostgreSQL Finance Core operation failed.",
+    "posting_profile": {
+      "enabled": false,
+      "scope": "client identity entry, business calls and transaction exit; no server-internal timings",
+      "raw_phase_observations": [],
+      "phase_totals": {},
+      "statement_templates": [],
+      "sensitive_collection": "no SQL text, parameters, credentials, error messages or financial rows"
+    },
+    "resource_sampling": {
+      "interval_seconds": 10,
+      "max_samples": 1000,
+      "status": "complete",
+      "thread_still_running": false,
+      "raw_samples": [
+        {
+          "elapsed_seconds": 0.0,
+          "measurement_seconds": 1.1869999999998981,
+          "client_cpu_seconds": 3.625,
+          "client_pid": 14616,
+          "client_memory": {
+            "rss_bytes": 114892800,
+            "process_lifetime_peak_rss_bytes": 116342784,
+            "scope": "Windows process working set; lifetime peak begins before benchmark admission"
+          },
+          "postgres_database_counters": {
+            "xact_commit": 35,
+            "xact_rollback": 1,
+            "blks_read": 797,
+            "blks_hit": 510954,
+            "tup_returned": 450666,
+            "tup_fetched": 430962,
+            "tup_inserted": 35663,
+            "tup_updated": 2442,
+            "tup_deleted": 1017,
+            "conflicts": 0,
+            "temp_files": 0,
+            "temp_bytes": 0,
+            "deadlocks": 0,
+            "blk_read_time_ms": 0.0,
+            "blk_write_time_ms": 0.0
+          },
+          "postgres_wal_counters": {
+            "wal_records": 141455,
+            "wal_fpi": 1521,
+            "wal_bytes": "20319218"
+          },
+          "postgres_wait_event_type_sessions": {
+            "Client": 1
+          },
+          "docker_raw_counters": {
+            "CPUPerc": "49.03%",
+            "MemUsage": "55.2MiB / 9.561GiB",
+            "MemPerc": "0.56%",
+            "NetIO": "1.6MB / 558kB",
+            "BlockIO": "0B / 72.6MB",
+            "PIDs": "7"
+          }
+        }
+      ],
+      "errors": [],
+      "scope": "sampled peaks can miss shorter spikes; client lifetime RSS differs from Python allocation peak"
+    },
+    "owned_container_removed": true,
+    "finished_at": "2026-10-10T02:49:12.920229+00:00",
+    "wall_seconds": 14.875
+  }
+}

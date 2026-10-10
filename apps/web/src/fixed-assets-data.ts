@@ -11,11 +11,18 @@ export interface AssetPlan extends FinanceScope {
   id: string; asset_id: string; entry_id: string; kind: "acquire" | "depreciate" | "dispose";
   phase: number; status: "Prepared" | "Reviewed" | "Posted"; posting_date: string; period_id: string;
   amount_minor: string; accumulated_before_minor: string; proceeds_minor: string; months_after: number;
-  sequence: number; currency_code: string; currency_precision: number; plan_digest: string;
+  sequence: number; currency_code: string; currency_precision: number; plan_digest: string; asset_digest: string;
   validation_digest: string; preparer_actor_id: string; reviewer_actor_id: string | null; posting_effect_id: string | null;
   snapshot: { lines: { line_number: number; account_id: string; debit_minor: string; credit_minor: string; description: string }[] };
 }
 export interface AssetDetail extends AssetSummary { status: "PendingAcquisition" | "Active" | "Disposed"; carrying_minor: string; plans: AssetPlan[]; history_before: number | null }
+export interface AssetEvidence {
+  schema_version: "fixed-asset-native-evidence-v1"; plan: AssetPlan; asset_definition: Record<string, unknown>;
+  canonical_asset_json: string; canonical_plan_json: string; canonical_snapshot_json: string;
+  native_effect: { id: string; entry_id: string; validation_digest: string; posted_actor_id: string; posted_at: string; audit_event_id: string; outbox_event_id: string } | null;
+  phases: { action: string; actor_id: string; audit_event_id: string; outbox_event_id: string }[];
+  totals: { debit_minor: string; credit_minor: string };
+}
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const text = (value: unknown): value is string => typeof value === "string" && value.length > 0 && value.length <= 500 && !/[\x00-\x1f\x7f]/.test(value);
 const minor = (value: unknown): value is string => typeof value === "string" && /^(0|[1-9]\d{0,18})$/.test(value) && BigInt(value) <= 9000000000000000000n;
@@ -55,6 +62,48 @@ export function parseAssetDetail(value: unknown, scope: FinanceScope): AssetDeta
   let last = -1;
   const plans = value.plans.map(row => { const plan = parseAssetPlan(row, scope); if (plan.asset_id !== summary.id || plan.sequence <= last) invalid(); last = plan.sequence; return plan; });
   return { ...summary, status: value.status, carrying_minor: value.carrying_minor, plans, history_before: value.history_before } as AssetDetail;
+}
+
+function canonicalExact(value: unknown, key = ""): string {
+  if (key.endsWith("_minor") && minor(value)) return value;
+  if (Array.isArray(value)) return `[${value.map(item => canonicalExact(item)).join(",")}]`;
+  if (object(value)) return `{${Object.keys(value).sort().map(field => `${JSON.stringify(field)}:${canonicalExact(value[field], field)}`).join(",")}}`;
+  if (value === null || typeof value === "string" || typeof value === "boolean" || (typeof value === "number" && Number.isSafeInteger(value))) return JSON.stringify(value);
+  return invalid();
+}
+async function sha256(value: string): Promise<string> {
+  return [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)))].map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+export async function verifyAssetEvidence(value: unknown, scope: FinanceScope, expected: AssetPlan): Promise<AssetEvidence> {
+  if (!object(value) || value.schema_version !== "fixed-asset-native-evidence-v1" || !object(value.asset_definition) || !Array.isArray(value.phases) || !object(value.totals)) invalid();
+  const plan = parseAssetPlan(value.plan, scope), asset = value.asset_definition;
+  scoped(asset, scope);
+  if (plan.id !== expected.id || plan.plan_digest !== expected.plan_digest || plan.phase !== expected.phase || plan.posting_effect_id !== expected.posting_effect_id || asset.id !== plan.asset_id || !digest(asset.asset_digest) || plan.asset_digest !== asset.asset_digest) invalid();
+  const source = Object.fromEntries(Object.entries(asset).filter(([key]) => key !== "asset_digest"));
+  const retained = Object.fromEntries(Object.entries(value.plan as Record<string, unknown>).filter(([key]) => !["phase", "status", "reviewer_actor_id", "posting_effect_id", "plan_digest", "validation_digest"].includes(key)));
+  for (const [key, payload, expectedDigest] of [
+    ["canonical_asset_json", source, asset.asset_digest], ["canonical_plan_json", retained, plan.plan_digest], ["canonical_snapshot_json", plan.snapshot, plan.validation_digest],
+  ] as const) {
+    const canonical = value[key];
+    if (typeof canonical !== "string" || canonical.length > 65536 || canonicalExact(payload) !== canonical || await sha256(canonical) !== expectedDigest) invalid();
+  }
+  let debit = 0n, credit = 0n;
+  for (const line of plan.snapshot.lines) { debit += BigInt(line.debit_minor); credit += BigInt(line.credit_minor); }
+  if (value.totals.debit_minor !== debit.toString() || value.totals.credit_minor !== credit.toString()) invalid();
+  const actions = ["fixed_asset_prepared", "fixed_asset_reviewed", "fixed_asset_posted", "finance_entry_posted"].slice(0, plan.phase === 2 ? 4 : plan.phase + 1);
+  if (value.phases.length !== actions.length) invalid();
+  const native = value.native_effect;
+  if (plan.phase === 2) {
+    if (!object(native) || !["id", "entry_id", "posted_actor_id", "posted_at", "audit_event_id", "outbox_event_id"].every(key => text(native[key])) || native.id !== plan.posting_effect_id || native.entry_id !== plan.entry_id || native.validation_digest !== plan.validation_digest || [plan.preparer_actor_id, plan.reviewer_actor_id].includes(String(native.posted_actor_id))) invalid();
+  } else if (native !== null) invalid();
+  const actors = [plan.preparer_actor_id, plan.reviewer_actor_id, object(native) ? native.posted_actor_id : null];
+  const auditIds = new Set<string>(), outboxIds = new Set<string>();
+  for (const [index, phase] of value.phases.entries()) {
+    if (!object(phase) || phase.action !== actions[index] || phase.actor_id !== actors[Math.min(index, 2)] || !text(phase.audit_event_id) || !text(phase.outbox_event_id) || auditIds.has(phase.audit_event_id) || outboxIds.has(phase.outbox_event_id)) invalid();
+    auditIds.add(phase.audit_event_id); outboxIds.add(phase.outbox_event_id);
+    if (index === 3 && object(native) && (phase.audit_event_id !== native.audit_event_id || phase.outbox_event_id !== native.outbox_event_id)) invalid();
+  }
+  return value as unknown as AssetEvidence;
 }
 export async function assetRequest(session: BrowserAdminSession, scope: FinanceScope, path: string, command?: PreparedScopedCommand, signal?: AbortSignal): Promise<Record<string, unknown>> {
   const value = await financeRequest(session, scope, path, command?.body, signal); if (!object(value)) invalid(); return value;

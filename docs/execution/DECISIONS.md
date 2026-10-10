@@ -1,5 +1,36 @@
 # ReconForge Execution Decisions Log
 
+## Wave3 final integration decisions (2026-10-10)
+
+Retain original unposted claim evidence and immutable acknowledgements;
+confirmed current terminal state wins over delayed historical ACKs in Studio.
+Lock immutable source asset before its plan throughout supported detail/proof/
+review/post paths. The overlap regression observes real PostgreSQL blockers;
+arbitrary callers taking opposing SQL locks can still cause an abort.
+Extend the central migration registry through125 rather than weakening restore
+diagnostics. Ship every indexed benchmark artifact and native/browser proof
+dependency; verify extracted source imports and raw bytes after building.
+Publish separate source-specific oracles and raw failed attempts; never add91+19
+overlapping executions as unique cases. Keep narrow snapshot improvements distinct
+from native posting throughput,1,000-line admission and full business settlement.
+
+- WAVE3-20261010 / ADR0845/0846: retain original preparations, reviews, native
+  unposted entries and exact acknowledgements when abandoning a CA1/LC1 claim.
+  Release only unposted/unreceived business capacity; preserve audit/outbox and
+  current independent-human authority. Guard populated rollback rather than
+  deleting evidence. Reuse all existing financial, currency and identity engines.
+- Peer review requires original asset cost and every emitted historical journal
+  turnover to satisfy current read ABAC. Ordinary procurement roles keep their
+  original grants; defer protected landed-owner query planning until native source
+  ownership is established. Charged owners independently seal each receipt cost
+  and reject empty/malformed allocation sets, even on prior installed functions.
+- Native acceptance requires executed nonzero JUnit cases, no skips/errors, clean
+  unchanged tracked source and retained raw failure packets. The0122→0123 proof
+  remains bound to its exact original revision pair; new0124/0125 owners have
+  separate upgrade/rollback/recovery gates. Profiling collects template digests
+  and timings, never SQL parameters or financial rows. Optimize the existing
+  scoped snapshot query and measure equal workloads before making a speed claim.
+
 - GLOBAL-20261010 corrective integration: preserve failed CI38006481633 at
   5e575031. Classify native owner namespaces before reading new protected tables
   for unrelated legacy events/masters. Retain invoker authority and every

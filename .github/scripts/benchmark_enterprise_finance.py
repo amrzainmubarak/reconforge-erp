@@ -33,9 +33,15 @@ from reconforge.benchmark.enterprise_financial import (  # noqa: E402
     measure_verified_reads,
     percentile,
 )
+from reconforge.benchmark.enterprise_posting_profile import PostingProfile  # noqa: E402
+from reconforge.benchmark.enterprise_snapshot import measure_snapshot_reads  # noqa: E402
 from reconforge.benchmark.resource_sampling import ResourceSampler  # noqa: E402
+from reconforge.infrastructure.postgres import PostgresTenantBoundary  # noqa: E402
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository  # noqa: E402
-from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository  # noqa: E402
+from reconforge.infrastructure.postgres_finance_posting import (  # noqa: E402
+    PostgresFinancePostingRepository,
+    posting_entry,
+)
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
 
 IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
@@ -48,11 +54,14 @@ def main() -> int:
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--max-seconds", type=int, default=1200)
     parser.add_argument("--seed", default="enterprise-native-v1")
+    parser.add_argument("--profile-stages", action="store_true", help="Retain redacted client phase and SQL-template timings")
+    parser.add_argument("--snapshot-lines", type=int, default=0, help="Optional separate balanced 2..1000-line dimensional snapshot profile")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     counts = sorted(set(args.counts))
     if (not counts or counts[0] < 1 or counts[-1] > 10000 or not 1 <= args.workers <= 16
-            or not 1 <= args.repetitions <= 10 or not 30 <= args.max_seconds <= 7200):
+            or not 1 <= args.repetitions <= 10 or not 30 <= args.max_seconds <= 7200
+            or args.snapshot_lines != 0 and (not 2 <= args.snapshot_lines <= 1000 or args.snapshot_lines % 2)):
         parser.error("Use counts 1..10000, workers 1..16, repetitions 1..10 and a bounded 30..7200 second budget")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -85,6 +94,7 @@ def main() -> int:
         "source_commit": run(["git", "rev-parse", "HEAD"]).stdout.strip(), "source_sha256": tracked_source_sha256(),
         "profile": "native-three-human-cash-equity-v1", "seed": args.seed, "counts": counts,
         "workers": args.workers, "repetitions": args.repetitions, "max_seconds": args.max_seconds,
+        "snapshot_lines": args.snapshot_lines,
         "image": IMAGE, "python": sys.version, "platform": platform.platform(), "logical_cpus": os.cpu_count(),
         "processor": platform.processor(), "architecture": platform.machine(),
         "docker_version": run(["docker", "version", "--format", "{{.Server.Version}}"]).stdout.strip(),
@@ -100,6 +110,7 @@ def main() -> int:
     deadline = started + args.max_seconds
     container = ""
     sampler: ResourceSampler | None = None
+    posting_profile = PostingProfile(args.profile_stages)
     admin_password, app_password = secrets.token_hex(24), secrets.token_hex(24)
     secret_values.extend([admin_password, app_password])
     try:
@@ -178,16 +189,16 @@ def main() -> int:
             value = amount_minor(args.seed, index)
             exact_amount = f"{value // 100}.{value % 100:02d}"
             begin = time.perf_counter()
-            with runtime.actor("browser-maker") as (connection, _, actor):
+            with posting_profile.actor(runtime, "browser-maker", index, "prepare") as (connection, _, actor):
                 entry = PostgresFinanceCoreRepository(connection, runtime.tenant).create_entry(
                     entry_number=f"BENCH-{index:08d}", organization_code="ORG", entity_code="ENTITY", period_id="period",
                     journal_code="STOCK", posting_date="2026-10-08", description="Deterministic synthetic benchmark",
                     workspace="work", actor_label=actor.username,
                     lines=[{"account_code": "CASH", "debit": exact_amount}, {"account_code": "EQUITY", "credit": exact_amount}])
-            with runtime.actor("browser-checker") as (connection, _, actor):
+            with posting_profile.actor(runtime, "browser-checker", index, "review") as (connection, _, actor):
                 PostgresFinanceCoreRepository(connection, runtime.tenant).validate_entry(entry["id"], reason="Independent benchmark review", actor_label=actor.username)
                 preview = PostgresFinancePostingRepository(connection, runtime.tenant).preview(entry["id"], actor=actor)
-            with runtime.actor("browser-poster") as (connection, _, actor):
+            with posting_profile.actor(runtime, "browser-poster", index, "post") as (connection, _, actor):
                 effect = PostgresFinancePostingRepository(connection, runtime.tenant).post(entry["id"],
                     command_id=f"benchmark-post-{index:08d}", expected_validation_digest=preview["validation_digest"],
                     reason="Explicit benchmark financial posting", actor=actor)
@@ -246,6 +257,45 @@ def main() -> int:
             except Exception as exc:
                 profile.update(status="failed", failure={"exception_type": type(exc).__name__})
                 raise
+        if args.snapshot_lines:
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Explicit snapshot benchmark resource budget exhausted")
+            snapshot_profile: dict[str, object] = {"seed": "alternating-cash-equity-one-minor-v1", "concurrency": 1,
+                "runtime_role_flags": flags, "outside_primary_posting_measurement": True, "status": "preparing",
+                "fixture_stage": "canonical_dimensions",
+                "limits": ["one fixed journal on one scoped nonowner connection", "warmed cache", "no end-to-end posting speedup inference"]}
+            report["snapshot_reads"] = snapshot_profile
+            # Canonical organization masters require organization scope without
+            # a legal-entity restriction. Business journals retain three-human
+            # authenticated entity scope exactly as the primary profile does.
+            with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work", organization_id="org") as connection:
+                core = PostgresFinanceCoreRepository(connection, runtime.tenant)
+                for dimension in ("BENCH_A", "BENCH_B"):
+                    core.upsert_dimension(dimension_code=dimension, name=dimension, organization_code="ORG", workspace="work")
+                    core.upsert_dimension_value(dimension_code=dimension, value_code="SYNTHETIC", name="Synthetic", workspace="work")
+            snapshot_profile["fixture_stage"] = "prepare"
+            with runtime.actor("browser-maker") as (connection, _, actor):
+                core = PostgresFinanceCoreRepository(connection, runtime.tenant)
+                entry = core.create_entry(entry_number="BENCH-SNAPSHOT-DIMENSIONS", organization_code="ORG", entity_code="ENTITY",
+                    period_id="period", journal_code="STOCK", posting_date="2026-10-08", description="Independent alternating dimensional snapshot benchmark",
+                    workspace="work", actor_label=actor.username, lines=[
+                        {"account_code": "CASH" if index % 2 == 0 else "EQUITY",
+                         "debit" if index % 2 == 0 else "credit": "0.01",
+                         "dimensions": {"BENCH_B": "SYNTHETIC", "BENCH_A": "SYNTHETIC"} if index % 3 == 0 else {}}
+                        for index in range(args.snapshot_lines)])
+            snapshot_profile["fixture_stage"] = "review"
+            with runtime.actor("browser-checker") as (connection, _, actor):
+                PostgresFinanceCoreRepository(connection, runtime.tenant).validate_entry(entry["id"], reason="Independent dimensional benchmark review", actor_label=actor.username)
+                reviewed = PostgresFinancePostingRepository(connection, runtime.tenant).preview(entry["id"], actor=actor)
+            snapshot_profile["fixture_stage"] = "post"
+            with runtime.actor("browser-poster") as (connection, _, actor):
+                PostgresFinancePostingRepository(connection, runtime.tenant).post(entry["id"], command_id="benchmark-snapshot-post",
+                    expected_validation_digest=reviewed["validation_digest"], reason="Independent dimensional benchmark posting", actor=actor)
+            snapshot_profile["fixture_stage"] = "complete"
+            with runtime.actor("browser-checker") as (connection, _, _actor):
+                measure_snapshot_reads(connection, runtime.tenant, posting_entry(connection, runtime.tenant, entry["id"]),
+                    expected_line_count=args.snapshot_lines, expected_total_minor=args.snapshot_lines // 2,
+                    expected_validation_digest=reviewed["validation_digest"], repetitions=args.repetitions, evidence_sink=snapshot_profile)
         with psycopg.connect(admin_dsn) as admin:
             report["database_bytes"] = int(admin.execute("SELECT pg_database_size(current_database())").fetchone()[0])
         report["container_resources_final_sample"] = run(["docker", "stats", "--no-stream", "--format", "{{json .}}", container]).stdout.strip()
@@ -262,6 +312,7 @@ def main() -> int:
             diagnostic = diagnostic.replace(value, "[redacted]")
         report["failure"] = diagnostic
     finally:
+        report["posting_profile"] = posting_profile.report()
         if sampler is not None:
             report["resource_sampling"] = sampler.stop()
         if container:

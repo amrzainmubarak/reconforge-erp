@@ -1,5 +1,58 @@
 # Execution State
 
+## Successor publication snapshot: locally verified operating integrity (2026-10-10)
+
+Branch `amr/global-integrity-wave3-20261010` remains above PR128699→PR12734b9→
+PR126/125/124. Main remainsb61ea56b; primary's two pre-existing schema edits are
+protected. Three Amr-owned worktrees completed mutual review.0124/0125 and the
+125-revision registry compose the existing owners; no duplicate financial engine.
+Local owner gates91/0skip at4bb and overlapping asset-lock19/0skip at70d pass;
+three real HTTPS/populated239-table restores and360 Studio component tests pass.
+The fresh matched1000-cycle pair and independent financial oracles pass. Posting
+change+6.78% vs806; the warmed1000-line snapshot alone measures64.0519x.
+Raw source-specific evidence and retained unsuccessful attempts are in
+[GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md).
+Sample-window client CPU regresses36.45%; bounded-batch read median regresses2.75%.
+These retained adverse outcomes prevent a blanket resource/reporting speed claim.
+This is the pre-hosted publication snapshot. The successor Draft PR's exact-head
+required checks establish final hosted status; local general900s exhaustion is
+unaccepted. Broad platform expansion remains active under the
+[next phase](GLOBAL_NEXT_PHASE_2026-10-10.md), not a completed worldwide ERP claim.
+
+Production source remains frozen at70d; later commits publish evidence, operator
+guidance, standalone verification tools and tests. CI now partitions all full
+commercial/supply/finance files without removing native commands, retains no-skip
+admission, and requires post-build wheel/source inspection plus the independent
+posting oracle on both Python3.11/3.12. Actual final hosted results remain external
+to this historical local snapshot.
+
+## Historical intermediate successor: governed abandonment and verified evidence (2026-10-10; ADR0845/0846)
+
+Active branch: `amr/global-integrity-wave3-20261010`, clean integration worktree
+separate from the dirty primary checkout. Three agents own managed commercial,
+supply and finance worktrees. All new commits use Amr's existing author identity.
+Main remains `b61ea56b`; no merge or main update is authorized. Verified PR127
+head remains `34b9e7a5`, with PR126/125/124 ancestry. Existing PR128 actual head
+`69951414` is an open draft with failed hosted security/receivables/parity gates;
+it supplies the existing owners, not an inferred accepted integrated release.
+
+CA1 unposted claim cancellation, LC1 unreceived charged-plan cancellation and
+FA1 source/native-ledger evidence drill-down now compose existing posting,
+inventory, AR/AP, policy and audit/outbox engines. Additive0124/0125 retain
+abandoned preparation/review evidence and refuse destructive populated rollback.
+Cross-review additionally fixes current original-cost/history-turnover read
+authority, ordinary-role protected-table query planning and exact charged receipt
+capitalization. Every new native file is mandatory in configured CI, not skipped.
+
+Source-bound intermediate `fed54dbc` gate passed6/6 with zero skips: normal and
+cancel/replacement mixed financial oracle,1000-line snapshot digest/RLS parity,
+ordinary AR HTTP lifecycle and both native draft-scope races. Later hardening
+requires a new final fixed-source gate. Integration acceptance, actual browser
+recovery and matched benchmarks are **in progress**; development failures remain
+retained. See `GLOBAL_CAPABILITY_COVERAGE_WAVE3_2026-10-10.md` and ADR0845/0846.
+
+## Preserved PR128 publication snapshot
+
 Publication snapshot: this file is frozen before the successor hosted gate.
 Current integrated acceptance is recorded by Draft PR128 required checks and
 its source-bound acceptance packet; prior failed/source-specific evidence stays

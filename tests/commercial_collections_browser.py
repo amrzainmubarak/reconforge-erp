@@ -6,7 +6,7 @@ from tests.gfo_browser_restore import require
 from tests.stock_commerce_browser_seed import seed_stock_commerce_browser
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 
-COLLECTION_TABLES = ("commercial_collection_plans", "commercial_collection_reviews", "commercial_collection_links", "commercial_collection_commands", "stock_commerce_orders", "stock_commerce_lines", "stock_commerce_tranches", "stock_commerce_commands")
+COLLECTION_TABLES = ("commercial_collection_plans", "commercial_collection_reviews", "commercial_collection_links", "commercial_collection_commands", "commercial_collection_cancellations", "stock_commerce_orders", "stock_commerce_lines", "stock_commerce_tranches", "stock_commerce_commands")
 seed_commercial_collections_browser = seed_stock_commerce_browser
 
 def verify_commercial_collections_browser(runtime: ReceiptRuntime) -> dict[str, Any]:
@@ -32,12 +32,26 @@ def verify_commercial_collections_browser(runtime: ReceiptRuntime) -> dict[str, 
         require(connection.execute("SELECT count(*) n FROM reconforge.ar_invoices WHERE tenant_id=%s AND status='Paid'", (runtime.tenant,)).fetchone()["n"] == 4, "Native customer invoices were not fully settled.")
         collections = connection.execute("SELECT count(*) n,sum(amount_minor) total FROM reconforge.commercial_collection_plans WHERE tenant_id=%s AND phase=2", (runtime.tenant,)).fetchone()
         require(collections["n"] == 12 and collections["total"] == 69000, "Twelve actual installments must conserve four invoice totals.")
+        cancellations = connection.execute("""SELECT p.id,p.amount_minor,e.status,c.cancelled_actor_id,c.reason,
+            r.reviewer_actor_id,p.payload->>'preparer_actor_id' maker,p.payload->>'receipt_number' receipt_number
+            FROM reconforge.commercial_collection_plans p JOIN reconforge.commercial_collection_cancellations c
+            ON c.tenant_id=p.tenant_id AND c.plan_id=p.id JOIN reconforge.commercial_collection_reviews r
+            ON r.tenant_id=p.tenant_id AND r.plan_id=p.id JOIN reconforge.finance_entries e
+            ON e.tenant_id=p.tenant_id AND e.id=p.entry_id WHERE p.tenant_id=%s AND p.phase=3""", (runtime.tenant,)).fetchall()
+        require(len(cancellations) == 1, "One reviewed unposted collection release must survive populated restore.")
+        released = cancellations[0]
+        require(released["amount_minor"] == 3000 and released["status"] == "Validated" and
+                (released["maker"], released["reviewer_actor_id"], released["cancelled_actor_id"]) == ("erp-maker", "erp-checker", "erp-poster") and
+                released["reason"] == "Third-person unposted claim release" and released["receipt_number"] == "BROWSER-COMMERCE-CASH-1-0", "Release must retain original exact plan, reviewed entry and three independent actors.")
+        require(connection.execute("""SELECT count(*) n FROM reconforge.commercial_collection_commands
+            WHERE tenant_id=%s AND plan_id=%s AND operation='cancel'""", (runtime.tenant, released["id"])).fetchone()["n"] == 1, "Lost cancellation response must retain one exact command.")
         require(connection.execute("SELECT count(*) n FROM reconforge.ar_receipts WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 12, "Lost ACK must not duplicate a native receipt.")
         for plan in connection.execute("SELECT id FROM reconforge.commercial_collection_plans WHERE tenant_id=%s", (runtime.tenant,)).fetchall():
             connection.execute("SELECT reconforge.collection_close(%s,%s)", (runtime.tenant, plan["id"]))
-        totals = connection.execute("""SELECT a.account_code,sum(l.debit_minor-l.credit_minor) n FROM reconforge.finance_entry_lines l
+        totals = connection.execute("""SELECT a.account_code,sum(l.debit_minor-l.credit_minor) n FROM reconforge.finance_posting_effects f
+            JOIN reconforge.finance_entry_lines l ON l.tenant_id=f.tenant_id AND l.entry_id=f.entry_id
             JOIN reconforge.finance_accounts a ON a.tenant_id=l.tenant_id AND a.id=l.account_id WHERE l.tenant_id=%s GROUP BY a.account_code""", (runtime.tenant,)).fetchall()
         balances = {row["account_code"]: row["n"] for row in totals}
         require(balances["CASH"] == 69000 and balances["AR"] == 0 and balances["INVENTORY"] == 0 and balances["REVENUE"] == -69000 and balances["COGS"] == 28000, "Native account balances disagree with independent product cost and price arithmetic.")
         return {"commercial_order_id": result["id"], "parent_version": 38, "lines": 2, "warehouses": 2, "delivery_invoice_collection_tranches": 4, "cancelled_undelivered_tranches": 1, "posting_effects": 22,
-                "invoice_installments": 12, "receipts": 12, "revenue_minor": "69000", "cash_minor": "69000", "cogs_minor": "28000", "fifo_residual_quantity": "0", "fifo_residual_minor": "0", "gl_turnover_minor": "194000"}
+                "invoice_installments": 12, "cancelled_reviewed_installments": 1, "retained_collection_plans": 13, "receipts": 12, "revenue_minor": "69000", "cash_minor": "69000", "cogs_minor": "28000", "fifo_residual_quantity": "0", "fifo_residual_minor": "0", "gl_turnover_minor": "194000"}

@@ -8,3 +8,5 @@
 .financial-reporting code{overflow-wrap:anywhere;font-size:.85rem}.financial-reporting fieldset{border:1px solid var(--border,#d8e1de);margin-block:1rem;margin-inline:0;min-width:0}.report-snapshot-panel p,.report-snapshot-panel summary,.report-snapshot-panel bdi{overflow-wrap:anywhere}
 .reporting-statement-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:1rem}.reporting-statement-grid article{border:1px solid var(--border,#d8e1de);border-radius:8px;padding:1rem}
 @media(max-width:600px){.financial-reporting{padding:.8rem}.financial-reporting .panel{padding:.8rem}.reporting-table{border:1px solid var(--border,#d8e1de);border-radius:6px}.financial-reporting button{width:100%;margin-inline:0}}
+/* Keep the final native workflow action scrollable above the fixed mobile dock. */
+@media(max-width:840px){.financial-reporting{padding-block-end:calc(94px + env(safe-area-inset-bottom))}}

@@ -1,5 +1,60 @@
 # ReconForge Execution Evidence Log
 
+## Retained first publication CI failure and strict contract correction (2026-10-10)
+
+Run38025608155 at5c01896a is unaccepted: Python3.12 executes4718passed,
+1failed,663existing prerequisite skips in589.45s; Python3.11 has the same
+counts in798.57s. The only failing test expects the previous429-route API
+inventory; the three guarded additions yield432. Its correction25952708 keeps
+strict count/digest closure, binds exact permissions for every added route and
+proves removing only those three preserves the accepted429-route digest.
+All11 focused authorization contracts pass. No financial code or skip changes.
+The completed six enterprise browser/restore scenarios and legacy ERP scenario
+remain historical passes; unfinished old-run shards may be cancelled when the
+corrected head replaces that run and never count as accepted execution.
+The corrected-head required checks remain the final hosted authority.
+Raw failed logs SHA256:3.12 `90510bd4f825252372d6221818536321e397b1340d9d881ac7632b53ff39e720`;
+3.11 `f6b2985c312031eab7872855e8528e4ef1e79f3fbc11c43fd53ae3a2b428be4c`.
+[3.12 failure](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38025608155/job/114135693035),
+[3.11 failure](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38025608155/job/114135693115).
+
+## Wave3 source-bound publication (2026-10-10)
+
+[Acceptance narrative](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md) and
+[raw packet](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.json) preserve actual4bb/70d
+sources,91 owner executions and overlapping19 asset executions, exact JUnit,
+three HTTPS/populated restores, quality reports and six unsuccessful attempts.
+The benchmark index retains all20 predecessor entries and adds the complete
+fresh806/70d1000-cycle raw pair. Later evidence publication does not reattribute
+measurements. Full hosted status is the new Draft PR's exact-head required checks.
+
+Publication-only acceptance rejects altered seeded financial totals, raw
+percentiles, hardware/durability and original-byte hashes. The source archive
+inspection runs that independent stdlib verifier from extracted source, imports
+all six browser helpers and the mandatory admission plugin from that extraction,
+and checks complete125-revision and wheel/source byte parity. Native owner CI
+sharding preserves all46 explicit commands and the fail-closed aggregate.
+
+- WAVE3-20261010 intermediate integration `fed54dbc`: pinned PostgreSQL17.10,
+  source unchanged/clean,6 tests passed, zero failures/errors/skips. Normal and
+  abandoned/replaced reviewed LC1/CA1 branches retain the independent18-effect
+  oracle184156minor debit=credit, cash45898, inventory11648 and original reports.
+  A1000-line journal matches the legacy canonical snapshot/digest with2 scoped
+  calls; ordinary AR HTTP and both scope-reparent races pass. Raw native packet:
+  `output/global-operating-platform-20261009/commercial/native-1791600389692895000`.
+  Earlier misnamed test-selector attempt executed no cases and was rejected;
+  it remains retained at `native-1791600359467147400`. Later production hardening
+  requires a final fixed-source gate; this entry is not its acceptance.
+- Pre-change audit: full Ruff, mypy677 files,55 focused domain/evidence cases,
+  Studio342 tests/50 files/typecheck/build and Python wheel/sdist pass. Bandit
+  reports4 static SQL assembly B608 findings in inherited LC/FA schema files;
+  byte-identical constant factoring addresses them without suppressions.
+  First dependency audit timed out;60-second retry reports no known dependency
+  vulnerabilities, excluding only the local non-PyPI ReconForge distribution.
+  CLI doctor/validate/demo pass via `python -m reconforge.cli`; the missing
+  `reconforge.__main__` invocation error is retained, not accepted. Raw logs are
+  under `output/wave3-audit` and `output/wave3-baseline-demo`.
+
 - GLOBAL-20261010 final corrective benchmark, unchangedcfd30de7/full123,
   PostgreSQL17.10/nonowner false,false,1000 native three-human cycles/4workers:
   all completed,0errors/nonadmissions, independent493671004minor oracle passes.

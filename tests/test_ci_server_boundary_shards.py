@@ -14,6 +14,21 @@ ROOT = Path(__file__).resolve().parents[1]
 SHARDS = {
     "writeback", "native", "parity", "durable-scale", "matching-runtime",
     "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
+    "commercial-integrity", "supply-integrity", "finance-integrity",
+}
+INTEGRITY_FILES = {
+    "commercial-integrity": (
+        "tests/test_postgres_commercial_collections.py", "tests/test_postgres_commercial_collection_cancellation.py",
+    ),
+    "supply-integrity": (
+        "tests/test_postgres_landed_cost.py", "tests/test_postgres_landed_cost_api.py",
+        "tests/test_postgres_landed_cost_cancellation.py",
+    ),
+    "finance-integrity": (
+        "tests/test_postgres_fixed_assets.py", "tests/test_postgres_fixed_assets_evidence.py",
+        "tests/test_postgres_global_operating_cycles.py", "tests/test_postgres_native_event_dispatch_migration.py",
+        "tests/test_postgres_posting_snapshot_profile.py",
+    ),
 }
 PROOF_OWNERS = {
     "verify_postgres_writeback_identity_migration_matrix.py": "writeback",
@@ -97,7 +112,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 45  # Prior40, three owners, combined cycle and populated dispatch upgrade.
+    assert len(commands) == 46  # Preserve all commands, including the snapshot-profile regression.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -137,13 +152,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
         ("tests/test_postgres_financial_reporting_snapshots.py", "finance-reporting"),
         ("tests/test_postgres_financial_snapshot_recovery.py", "finance-reporting"),
         ("tests/test_postgres_financial_snapshot_migration.py", "finance-reporting"),
-        ("tests/test_postgres_commercial_collections.py", "erp-expansion"),
-        ("tests/test_postgres_landed_cost.py", "erp-expansion"),
-        ("tests/test_postgres_landed_cost_api.py", "erp-expansion"),
-        ("tests/test_postgres_fixed_assets.py", "erp-expansion"),
-        ("tests/test_postgres_global_operating_cycles.py", "erp-expansion"),
-        ("tests/test_postgres_native_event_dispatch_migration.py", "erp-expansion"),
-
+        *((path, owner) for owner, paths in INTEGRITY_FILES.items() for path in paths),
     ):
         selected = [shard for shard, entries in groups.items()
                     for command in entries if filename in shlex.split(command)]
@@ -161,21 +170,67 @@ def test_unconfigured_python_partition_cannot_drop_stock_native_coverage() -> No
         "tests/test_postgres_stock_commerce_migrations.py",
         "tests/test_postgres_financial_reporting_snapshots.py", "tests/test_postgres_financial_snapshot_recovery.py",
         "tests/test_postgres_financial_snapshot_migration.py",
-        "tests/test_postgres_commercial_collections.py", "tests/test_postgres_landed_cost.py",
-        "tests/test_postgres_landed_cost_api.py", "tests/test_postgres_fixed_assets.py",
-        "tests/test_postgres_global_operating_cycles.py",
-        "tests/test_postgres_native_event_dispatch_migration.py",
+        *(path for paths in INTEGRITY_FILES.values() for path in paths),
     }
-    assert shlex.split(unit["run"]) == [
-        "uv", "run", "--no-sync", "pytest", *[f"--ignore={path}" for path in sorted(ignored)],
-    ]
+    tokens = shlex.split(unit["run"])
+    assert tokens[:4] == ["uv", "run", "--no-sync", "pytest"]
+    assert Counter(tokens[4:]) == Counter(f"--ignore={path}" for path in ignored)
     native = next(step for step in workflow["jobs"]["server-boundaries"]["steps"]
                   if step["name"] == "Run live server-boundary tests")
     groups = _partition(native["run"])
+    owners = {path: owner for owner, paths in INTEGRITY_FILES.items() for path in paths}
     for path in ignored:
         assert [owner for owner, commands in groups.items()
                 for command in commands if path in shlex.split(command)] == [
-                    "finance-reporting" if "financial_" in path else "erp-expansion"]
+                    owners.get(path, "finance-reporting" if "financial_" in path else "erp-expansion")]
+
+
+def test_integrity_owners_execute_complete_files_once_without_filtered_admission() -> None:
+    job = _workflow()["jobs"]["server-boundaries"]
+    live = next(step for step in job["steps"] if step["name"] == "Run live server-boundary tests")
+    groups = _partition(live["run"])
+    for owner, paths in INTEGRITY_FILES.items():
+        selected = []
+        for command in groups[owner]:
+            tokens = shlex.split(command)
+            assert tokens[:4] == ["uv", "run", "--no-sync", "pytest"]
+            assert tokens[-1] == "-q"
+            assert all(path.startswith("tests/") and path.endswith(".py") for path in tokens[4:-1])
+            selected.extend(tokens[4:-1])
+        assert Counter(selected) == Counter(paths), f"Every full owner file must execute once: {owner}"
+    assert live["env"]["PYTEST_ADDOPTS"] == "-p tests.mandatory_native_gate"
+    assert live["env"]["RECONFORGE_TEST_POSTGRES_APP_USER"] == "reconforge_app"
+    assert "postgres" in job["services"]
+    # Legacy commerce/procurement and their migration coverage remain separate.
+    assert len(groups["erp-expansion"]) == 2
+
+
+def test_both_python_versions_inspect_built_publication_archives_and_retain_failures() -> None:
+    job = _workflow()["jobs"]["test"]
+    assert job["strategy"]["matrix"]["python-version"] == ["3.11", "3.12"]
+    steps = job["steps"]
+    build = next(index for index, step in enumerate(steps) if step["name"] == "Build package")
+    inspection = steps[build + 1]
+    assert inspection["name"] == "Verify final source archive and wheel closure"
+    assert "if" not in inspection and "continue-on-error" not in inspection
+    assert shlex.split(inspection["run"]) == [
+        "uv", "run", "--no-sync", "python", ".github/scripts/verify_global_integrity_archive.py",
+        "--root", ".", "--sdist", "dist/reconforge_erp-0.7.1.tar.gz",
+        "--wheel", "dist/reconforge_erp-0.7.1-py3-none-any.whl",
+        "--report", "${RUNNER_TEMP}/publication-source-closure-${{ matrix.python-version }}.json",
+    ]
+    install = next(step for step in steps if step["name"] == "Install locked dependencies")
+    assert "--all-extras" in shlex.split(install["run"])
+    assert "--locked" in shlex.split(install["run"])
+    upload = steps[build + 2]
+    assert upload["name"] == "Retain final source archive inspection" and upload["if"] == "always()"
+    assert "continue-on-error" not in upload
+    assert re.fullmatch(r"actions/upload-artifact@[a-f0-9]{40}", upload["uses"])
+    assert upload["with"] == {
+        "name": "publication-source-closure-${{ matrix.python-version }}",
+        "path": "${{ runner.temp }}/publication-source-closure-${{ matrix.python-version }}.json",
+        "if-no-files-found": "error",
+    }
 
 
 def test_native_services_and_unconditional_report_retention_survive_partition() -> None:

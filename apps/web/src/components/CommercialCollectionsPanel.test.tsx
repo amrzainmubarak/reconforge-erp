@@ -24,7 +24,7 @@ it("retries exactly the retained reviewed command after a lost committed respons
   vi.stubGlobal("fetch", vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
     attempts.push(String(init?.body));
     if (attempts.length === 1) throw new TypeError("Synthetic lost ACK");
-    return new Response(JSON.stringify({ plan: { ...scope, ...row.pending_collection, source_id: "invoice", allocated_before_minor: "0", status: "Posted", receipt_id: "receipt", posting_effect_id: "effect" } }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ plan: { ...scope, ...row.pending_collection, phase: 2, source_id: "invoice", allocated_before_minor: "0", status: "Posted", receipt_id: "receipt", posting_effect_id: "effect" } }), { headers: { "Content-Type": "application/json" } });
   }));
   render(<CommercialCollectionsPanel {...props} identity={{ ...identity, id: "poster" }} tranche={row} />);
   fireEvent.change(screen.getByLabelText("Collection reason"), { target: { value: "Retained three-person review" } });
@@ -38,4 +38,35 @@ it("renders Arabic RTL and retains exact invoice residual", () => {
   render(<CommercialCollectionsPanel {...props} locale="ar" tranche={{ ...tranche(), outstanding_minor: "9007199254740993" }} />);
   expect(screen.getByRole("region", { name: "تحصيل هذه الفاتورة على دفعات" })).toHaveAttribute("dir", "rtl");
   expect(screen.getByText("9007199254740993")).toBeInTheDocument();
+});
+it("releases reviewed unposted plans through an independent actor and retains the exact lost acknowledgement", async () => {
+  const row = { ...tranche(), pending_collection: { id: "CA1-" + "a".repeat(32), plan_digest: "f".repeat(64), phase: 1 as const, amount_minor: "10000", preparer_actor_id: "maker", reviewer_actor_id: "checker" } };
+  const attempts: { path: string; body: string }[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    attempts.push({ path: String(url), body: String(init?.body) });
+    if (attempts.length === 1) throw new TypeError("Lost committed cancellation acknowledgement");
+    return new Response(JSON.stringify({ plan: { ...scope, ...row.pending_collection, phase: 3, source_id: "invoice", allocated_before_minor: "0", status: "Cancelled", receipt_id: null, posting_effect_id: null, cancelled_actor_id: "poster", cancellation_reason: "Release collision" } }), { headers: { "Content-Type": "application/json" } });
+  }));
+  const view = render(<CommercialCollectionsPanel {...props} tranche={row} />);
+  fireEvent.change(screen.getByLabelText("Collection reason"), { target: { value: "Release collision" } });
+  expect(screen.getByRole("button", { name: "Cancel unposted invoice installment" })).toBeDisabled();
+  view.rerender(<CommercialCollectionsPanel {...props} identity={{ ...identity, id: "checker" }} tranche={row} />);
+  expect(screen.getByRole("button", { name: "Cancel unposted invoice installment" })).toBeDisabled();
+  view.rerender(<CommercialCollectionsPanel {...props} identity={{ ...identity, id: "poster" }} tranche={row} />);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel unposted invoice installment" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Retry retained collection command" }));
+  await waitFor(() => expect(attempts).toHaveLength(2));
+  expect(attempts[0]).toEqual(attempts[1]);
+  expect(attempts[0].path).toMatch(/\/commercial-collections\/plans\/CA1-[a-f0-9]+\/cancel$/);
+  expect(JSON.parse(attempts[0].body)).toMatchObject({ expected_plan_digest: row.pending_collection.plan_digest, reason: "Release collision" });
+  await screen.findByText(/Unposted installment released; original review evidence retained/);
+});
+it("retains a cancellation command when the response phase contradicts its terminal status", async () => {
+  const row = { ...tranche(), pending_collection: { id: "CA1-" + "a".repeat(32), plan_digest: "f".repeat(64), phase: 1 as const, amount_minor: "10000", preparer_actor_id: "maker", reviewer_actor_id: "checker" } };
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ plan: { ...scope, ...row.pending_collection, phase: 1, source_id: "invoice", allocated_before_minor: "0", status: "Cancelled", receipt_id: null, posting_effect_id: null, cancelled_actor_id: "poster", cancellation_reason: "Release collision" } }), { headers: { "Content-Type": "application/json" } })));
+  render(<CommercialCollectionsPanel {...props} identity={{ ...identity, id: "poster" }} tranche={row} />);
+  fireEvent.change(screen.getByLabelText("Collection reason"), { target: { value: "Release collision" } });
+  fireEvent.click(screen.getByRole("button", { name: "Cancel unposted invoice installment" }));
+  await screen.findByRole("button", { name: "Retry retained collection command" });
+  expect(screen.queryByText(/Unposted installment released; original review evidence retained/)).not.toBeInTheDocument();
 });

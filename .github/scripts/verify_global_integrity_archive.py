@@ -1,0 +1,294 @@
+"""Inspect already-built publication artifacts; never build or execute benchmarks."""
+from __future__ import annotations
+
+import argparse
+import ast
+import hashlib
+import json
+import math
+import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
+from pathlib import Path, PurePosixPath
+
+HELPERS = (
+    "commercial_collections_browser", "erp_landed_cost_browser", "stock_commerce_browser_seed",
+    "fixed_assets_browser_seed", "erp_procurement_enterprise_browser", "enterprise_financial_snapshot_browser",
+)
+PREFIX20_SHA = "3f1ecffac62b7cc3cbea41264f2a61b7948d9875c87dd32f7eddf7f51238be41"
+INDEX_PATH = "docs/execution/benchmarks/INDEX.v1.json"
+GOLDEN = {100: "46669102", 1000: "493671004"}
+
+
+def require(value: object, message: str) -> None:
+    if not value:
+        raise ValueError(message)
+
+
+def sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def git(root: Path, *arguments: str) -> str:
+    return subprocess.check_output(["git", *arguments], cwd=root, text=True, timeout=30).strip()
+
+
+def source_digest(root: Path, tracked: set[str]) -> str:
+    digest = hashlib.sha256()
+    for name in sorted(tracked):
+        digest.update(name.encode("utf-8"))
+        digest.update(hashlib.sha256((root / name).read_bytes()).digest())
+    return digest.hexdigest()
+
+
+def retained(packet: dict[str, object]) -> dict[str, object]:
+    policy = packet["original_report_serialization"]
+    require(isinstance(policy, dict), "Missing original serialization metadata")
+    require(policy["encoding"] == "utf-8" and policy["final_newline"] is True, "Unsupported raw serialization")
+    report = packet["measurement"]
+    require(isinstance(report, dict), "Original report must be an object")
+    text = json.dumps(report, indent=policy["indent"], ensure_ascii=policy["ensure_ascii"], allow_nan=False) + "\n"
+    require(policy["line_endings"] in {"LF", "CRLF"}, "Unsupported raw line endings")
+    if policy["line_endings"] == "CRLF":
+        text = text.replace("\n", "\r\n")
+    require(sha(text.encode("utf-8")) == packet["original_report_sha256"], "Retained report is not byte-exact")
+    return report
+
+
+def check_pair(extracted: Path, names: tuple[str, str]) -> dict[str, object]:
+    reports = []
+    outputs = []
+    for name in names:
+        packet = json.loads((extracted / name).read_text(encoding="utf-8"))
+        report = retained(packet)
+        require(report["status"] == "passed" and report["source_unchanged"] is True, "Pair report did not pass unchanged")
+        require(report["source_commit"] == report["source_commit_after"], "Pair source commit changed")
+        require(report["source_sha256"] == report["source_sha256_after"] == packet["source_sha256"], "Pair source digest changed")
+        require(report["owned_container_removed"] is True and report["runtime_role_flags"] == [False, False], "Pair runtime/cleanup evidence invalid")
+        require(report["profile"] == "native-three-human-cash-equity-v1" and report["seed"] == "enterprise-native-v1", "Wrong paired workload")
+        require(report["counts"] == [100, 1000] and report["workers"] == 4 and report["repetitions"] == 3, "Wrong paired admission")
+        posting = report["posting"]
+        require(posting["requested_cycles"] == posting["admitted_cycles"] == posting["completed_cycles"] == 1000, "Incomplete posting tier")
+        require(posting["error_count"] == posting["not_admitted_cycles"] == 0 and posting["failed_cycles"] == [], "Posting failure concealed")
+        require(posting["completed_indices"] == list(range(1000)) and len(posting["ordered_effect_ids"]) == len(set(posting["ordered_effect_ids"])) == 1000, "Posting identities incomplete")
+        vectors = posting["raw_cycle_latency_seconds"]
+        require(len(vectors) == 1000 and all(math.isfinite(v) and v >= 0 for v in vectors), "Raw posting vector incomplete")
+        require(posting["expected"] == {k: GOLDEN[1000] for k in ("debit_minor", "credit_minor", "cash_minor", "equity_minor")}, "Independent posting money oracle failed")
+        require(len(report["verified_reads"]) == 2, "Read tiers incomplete")
+        request_count = 0
+        for read in report["verified_reads"]:
+            count = read["count"]
+            require(count in GOLDEN and read["status"] == "passed", "Unexpected read tier")
+            require(read["expected"] == {k: GOLDEN[count] for k in ("debit_minor", "credit_minor", "cash_minor", "equity_minor")}, "Independent read money oracle failed")
+            require(read["cache_policy"] == "both warmed; alternating modes", "Read cache/order policy changed")
+            require(set(read["samples"]) == {"per_effect_baseline", "bounded_batch"}, "Read modes changed")
+            for mode, samples in read["samples"].items():
+                require([sample["repetition"] for sample in samples] == [0, 1, 2], "Read repetitions incomplete")
+                for sample in samples:
+                    raw = sample["raw_request_latency_seconds"]
+                    require(len(raw) == (count if mode == "per_effect_baseline" else count // 100), "Raw read vector incomplete")
+                    require(all(math.isfinite(v) and v >= 0 for v in raw), "Invalid raw read timing")
+                    require(sample["status"] == "complete" and sample["error_count"] == 0 and sample["effects"] == count, "Read observation failed")
+                    require(sample["debit_minor"] == sample["credit_minor"] == GOLDEN[count], "Observed independent read money mismatch")
+                    require(sample["effects_digest"] == read["financial_effects_digest"], "Read changed native financial evidence")
+                    request_count += len(raw)
+            if count == 1000:
+                require(read["financial_effects_digest"] == packet["financial_effects_digest"], "Wrapper financial digest differs")
+        require(request_count == 3333, "Timed read requests incomplete")
+        sampling = report["resource_sampling"]
+        require(sampling["status"] == "complete" and sampling["errors"] == [] and sampling["thread_still_running"] is False, "Resource sampler incomplete")
+        require(sampling["interval_seconds"] == 10 and bool(sampling["raw_samples"]), "Resource samples absent")
+        outputs.append({"artifact": name, "source_commit": report["source_commit"], "source_sha256": report["source_sha256"],
+                        "original_report_sha256": packet["original_report_sha256"], "posting_observations": len(vectors),
+                        "timed_read_observations": request_count, "resource_samples": len(sampling["raw_samples"])})
+        reports.append(report)
+    workload_fields = ("schema_version", "profile", "seed", "counts", "workers", "repetitions", "max_seconds", "image", "telemetry_policy")
+    for field in workload_fields:
+        require(reports[0][field] == reports[1][field], "Paired workload mismatch: " + field)
+    environment_fields = ("python", "platform", "logical_cpus", "processor", "architecture", "docker_version", "docker_engine_resources", "postgres_version", "postgres_configuration")
+    differences = [field for field in environment_fields if reports[0][field] != reports[1][field]]
+    return {"raw_reports": outputs, "workload_fields_equal": list(workload_fields), "environment_fields_different": differences,
+            "claim_boundary": "Artifact integrity and bounded independent money correctness; environment differences require explicit comparison disclosure."}
+
+
+def check_migrations(extracted: Path, count: int, head: str) -> dict[str, object]:
+    revisions = {}
+    for path in sorted((extracted / "alembic/versions").glob("*.py")):
+        assignments = {}
+        for node in ast.parse(path.read_text(encoding="utf-8")).body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id in {"revision", "down_revision"}:
+                        assignments[target.id] = ast.literal_eval(node.value)
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id in {"revision", "down_revision"}:
+                assignments[node.target.id] = ast.literal_eval(node.value)
+        require(set(assignments) == {"revision", "down_revision"}, "Migration declaration missing: " + path.name)
+        require(assignments["revision"] not in revisions, "Duplicate migration revision")
+        revisions[assignments["revision"]] = assignments["down_revision"]
+    require(len(revisions) == count, "Migration file count differs")
+    visited = []
+    current = head
+    while current is not None:
+        require(current in revisions and current not in visited, "Broken or cyclic migration chain")
+        visited.append(current)
+        current = revisions[current]
+    require(len(visited) == count and set(visited) == set(revisions), "Migration chain does not cover every revision")
+    return {"count": count, "head": head, "oldest": visited[-1], "complete_linear_chain": True}
+
+
+def isolated_json(command: list[str], root: Path) -> dict[str, object]:
+    result = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=120)
+    require(result.returncode == 0, "Extracted-source verifier failed: " + result.stderr[-3000:])
+    return json.loads(result.stdout)
+
+
+def check_imports(extracted: Path) -> dict[str, object]:
+    code = """
+import importlib,json,pathlib,sys
+sys.dont_write_bytecode=True
+root=pathlib.Path(sys.argv[1]).resolve()
+sys.path.insert(0,str(root))
+origins={}
+for name in json.loads(sys.argv[2]):
+ module=importlib.import_module('tests.'+name)
+ location=pathlib.Path(module.__file__).resolve()
+ assert location==root/'tests'/(name+'.py'),(name,str(location))
+ origins[name]=str(location)
+for name,module in tuple(sys.modules.items()):
+ if (name=='reconforge' or name.startswith('reconforge.') or name=='tests' or name.startswith('tests.')) and getattr(module,'__file__',None):
+  pathlib.Path(module.__file__).resolve().relative_to(root)
+print(json.dumps({'helpers':origins,'all_loaded_reconforge_and_tests_modules_from_extracted_source':True}))
+"""
+    return isolated_json([sys.executable, "-I", "-c", code, str(extracted), json.dumps((*HELPERS, "mandatory_native_gate"))], extracted)
+
+
+def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
+    require(hasattr(tarfile, "data_filter"), "Safe archive inspection requires tarfile.data_filter (Python 3.11.4+)")
+    root = args.root.resolve()
+    source_commit = git(root, "rev-parse", "HEAD")
+    require(not git(root, "status", "--porcelain", "--untracked-files=no"), "Publication source has tracked mutations")
+    tracked = {name for name in git(root, "ls-files", "-z").split("\0") if name}
+    source_before = source_digest(root, tracked)
+    index = json.loads((root / INDEX_PATH).read_text(encoding="utf-8"))
+    require(len(index["entries"]) == args.index_count, "Unexpected final benchmark entry count")
+    require(sha(json.dumps(index["entries"][:20], sort_keys=True, separators=(",", ":")).encode("utf-8")) == PREFIX20_SHA, "Twenty retained index entries changed")
+    pair = ("docs/execution/benchmarks/" + args.baseline_wrapper, "docs/execution/benchmarks/" + args.candidate_wrapper)
+    required = {
+        "LICENSE", "README.md", "MANIFEST.in", "pyproject.toml", "alembic.ini", "reconforge_migration_sql.py",
+        "alembic/env.py", "alembic/script.py.mako", "tests/__init__.py", INDEX_PATH,
+        "tests/mandatory_native_gate.py", "tests/test_mandatory_native_gate.py",
+        "tests/test_benchmark_evidence_index.py", "tests/test_alembic_postgres.py",
+        ".github/scripts/verify_benchmark_index.py", ".github/scripts/verify_commercial_collections.py",
+        ".github/scripts/benchmark_enterprise_finance.py", "tests/fixtures/landed_cost_owner_0123_69951414.sql",
+        ".github/scripts/verify_global_integrity_archive.py", ".github/scripts/verify_native_posting_pair.py",
+        "tests/test_native_posting_pair_verifier.py",
+        "apps/web/src/fixed-asset-evidence-fixture.json", "docs/adr/0845-governed-abandonment-and-native-evidence-performance.md",
+        "docs/adr/0846-retained-unreceived-landed-cost-cancellation.md", "docs/operator/commercial-collections.md",
+        "docs/operator/landed-cost.md", "docs/operator/fixed-assets.md", "docs/execution/GLOBAL_ENGINEERING_BENCHMARK_2026-10-10.md",
+        "docs/execution/GLOBAL_CAPABILITY_COVERAGE_2026-10-10.md", "docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE3_2026-10-10.md",
+        "docs/execution/" + args.acceptance_stem + ".json", "docs/execution/" + args.acceptance_stem + ".md",
+        *("tests/" + name + ".py" for name in HELPERS), *pair,
+        *(entry["artifact"] for entry in index["entries"]),
+        *(name for name in tracked if (name.startswith("reconforge/") or name.startswith("alembic/versions/")) and name.endswith(".py")),
+    }
+    require(all((root / name).is_file() for name in required), "Final required source member is absent")
+    require(all(name in tracked for name in required), "Final required source member is not committed")
+    report.update(source_root=str(root), source_commit=source_commit, source_sha256_before=source_before,
+                  sdist_sha256=sha(args.sdist.read_bytes()), wheel_sha256=sha(args.wheel.read_bytes()))
+    with tempfile.TemporaryDirectory(prefix="reconforge-sdist-inspection-") as temporary:
+        target = Path(temporary).resolve()
+        require(not target.is_relative_to(root) and not root.is_relative_to(target), "Extraction must be outside publication root")
+        with tarfile.open(args.sdist, "r:gz") as archive:
+            files = {}
+            prefixes = set()
+            for member in archive.getmembers():
+                path = PurePosixPath(member.name)
+                require(not path.is_absolute() and ".." not in path.parts and "\\" not in member.name, "Unsafe archive member")
+                require(not member.issym() and not member.islnk() and not member.isdev(), "Source archive links/devices are refused")
+                require(bool(path.parts), "Empty archive member")
+                prefixes.add(path.parts[0])
+                if member.isfile():
+                    relative = PurePosixPath(*path.parts[1:]).as_posix()
+                    require(relative not in files, "Duplicate source archive member")
+                    files[relative] = member
+            require(len(prefixes) == 1, "Source archive must have one top-level root")
+            require(required <= set(files), "Source archive misses required members: " + ", ".join(sorted(required - set(files))))
+            parity = {}
+            for name in sorted(tracked & set(files)):
+                original = (root / name).read_bytes()
+                stored = archive.extractfile(files[name]).read()
+                require(stored == original, "Source archive byte mismatch: " + name)
+                parity[name] = sha(stored)
+            archive.extractall(target, filter="data")
+        extracted = target / next(iter(prefixes))
+        report["sdist"] = {"file_members": len(files), "required_members": len(required), "exact_tracked_member_hashes": parity}
+        require(b"MIT License" in (extracted / "LICENSE").read_bytes() and b"Permission is hereby granted, free of charge" in (extracted / "LICENSE").read_bytes(), "MIT source license absent")
+        report["migrations"] = check_migrations(extracted, args.migration_count, args.migration_head)
+        report["benchmark_index"] = isolated_json([sys.executable, "-I", str(extracted / ".github/scripts/verify_benchmark_index.py"),
+                "--root", str(extracted), "--index", str(extracted / INDEX_PATH)], extracted)
+        require(len(report["benchmark_index"]["verified_entries"]) == args.index_count, "Extracted index count differs")
+        report["paired_raw_reports"] = check_pair(extracted, pair)
+        pair_proof = target / "independent-posting-pair.json"
+        isolated_json([sys.executable, "-I", str(extracted / ".github/scripts/verify_native_posting_pair.py"),
+                       "--root", str(extracted), "--report", str(pair_proof)], extracted)
+        report["independent_posting_pair"] = json.loads(pair_proof.read_text(encoding="utf-8"))
+        require(report["independent_posting_pair"]["status"] == "passed", "Extracted independent posting oracle failed")
+        report["browser_helper_imports"] = check_imports(extracted)
+        report["acceptance_packet_keys"] = sorted(json.loads((extracted / "docs/execution" / (args.acceptance_stem + ".json")).read_text(encoding="utf-8")))
+        with zipfile.ZipFile(args.wheel) as wheel:
+            names = wheel.namelist()
+            require(len(names) == len(set(names)), "Duplicate wheel member")
+            wheel_parity = {}
+            for name in sorted(n for n in required if n.startswith("reconforge/") and n.endswith(".py")):
+                require(name in names and wheel.read(name) == (root / name).read_bytes(), "Wheel Python source mismatch: " + name)
+                wheel_parity[name] = sha(wheel.read(name))
+            for name in sorted(n for n in required if n.startswith("alembic/") or n in {"alembic.ini", "reconforge_migration_sql.py"}):
+                hits = [n for n in names if n == name or n.endswith("/" + name)]
+                require(len(hits) == 1 and wheel.read(hits[0]) == (root / name).read_bytes(), "Wheel migration asset mismatch: " + name)
+                wheel_parity[name] = sha(wheel.read(hits[0]))
+            licenses = [n for n in names if n.endswith(".dist-info/LICENSE") or n.endswith(".dist-info/licenses/LICENSE")]
+            require(len(licenses) == 1 and wheel.read(licenses[0]) == (root / "LICENSE").read_bytes(), "Wheel MIT license mismatch")
+            report["wheel"] = {"exact_source_member_hashes": wheel_parity, "license_member": licenses[0]}
+    report["temporary_extraction_removed"] = not target.exists()
+    require(report["temporary_extraction_removed"], "Owned extraction directory remains")
+    require(git(root, "rev-parse", "HEAD") == source_commit and not git(root, "status", "--porcelain", "--untracked-files=no"), "Publication source changed during inspection")
+    report["source_sha256_after"] = source_digest(root, tracked)
+    require(report["source_sha256_after"] == source_before, "Publication source bytes changed during inspection")
+    report.update(status="passed", source_unchanged=True, tracked_clean_before=True, tracked_clean_after=True)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, required=True)
+    parser.add_argument("--sdist", type=Path, required=True)
+    parser.add_argument("--wheel", type=Path, required=True)
+    parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--index-count", type=int, default=22)
+    parser.add_argument("--migration-count", type=int, default=125)
+    parser.add_argument("--migration-head", default="0125_pg_landed_cost_cancellation")
+    parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
+    parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
+    parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")
+    args = parser.parse_args()
+    if args.report.exists():
+        parser.error("Refuse to overwrite a retained inspection report")
+    if args.report.resolve().is_relative_to(args.root.resolve()):
+        ignored = subprocess.run(["git", "check-ignore", "--quiet", "--", str(args.report.resolve())], cwd=args.root, timeout=30)
+        if ignored.returncode:
+            parser.error("An inspection report inside publication source must be explicitly ignored")
+    report: dict[str, object] = {"schema_version": "publication-source-closure-v1", "status": "failed"}
+    try:
+        inspect(args, report)
+    except Exception as exc:
+        report.update(error_type=type(exc).__name__, error=str(exc))
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(json.dumps({"status": report["status"], "report": str(args.report.resolve()), "report_sha256": sha(args.report.read_bytes()),
+                      "source_commit": report.get("source_commit"), "error": report.get("error")}, ensure_ascii=False))
+    return 0 if report["status"] == "passed" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

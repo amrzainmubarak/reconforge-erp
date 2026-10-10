@@ -65,7 +65,9 @@ def test_populated_0122_forward_dispatch_refresh_and_compatible_rollback(receipt
             # would incorrectly leave the pre-upgrade body in place.
             admin.execute(definition.replace("DECLARE ", "-- pre0123-refresh-marker\nDECLARE ", 1))
         assert _catalog(admin) == before_catalog
-    migrate("upgrade", "head")
+    # This compatibility case verifies the exact 0122 -> 0123 refresh.
+    # Later storage-owning revisions have separate populated upgrade gates.
+    migrate("upgrade", "0123_pg_native_event_dispatch")
     with psycopg.connect(receipt_database[0]) as admin:
         assert admin.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0123_pg_native_event_dispatch"
         assert _rows(admin) == before_rows and _catalog(admin) == before_catalog

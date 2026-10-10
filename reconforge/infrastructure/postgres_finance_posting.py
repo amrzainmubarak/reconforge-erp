@@ -70,18 +70,17 @@ def posting_snapshot(connection: Any, tenant_id: str, entry: Mapping[str, Any]) 
     FinancePolicyStore(connection, tenant_id=tenant_id).entry(entry)
     rows = records(
         connection.execute(
-            "SELECT id,line_number,account_id,description,debit_minor,credit_minor FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s ORDER BY line_number",
+            """SELECT l.id,l.line_number,l.account_id,l.description,l.debit_minor,l.credit_minor,
+              COALESCE(jsonb_object_agg(d.dimension_id,d.dimension_value_id ORDER BY d.dimension_id)
+                FILTER (WHERE d.dimension_id IS NOT NULL),'{}'::jsonb) AS dimensions
+              FROM reconforge.finance_entry_lines l
+              LEFT JOIN reconforge.finance_entry_line_dimensions d
+                ON d.tenant_id=l.tenant_id AND d.entry_line_id=l.id
+              WHERE l.tenant_id=%s AND l.entry_id=%s
+              GROUP BY l.tenant_id,l.id ORDER BY l.line_number""",
             (tenant_id, entry["id"]),
         )
     )
-    for row in rows:
-        links = records(
-            connection.execute(
-                "SELECT dimension_id,dimension_value_id FROM reconforge.finance_entry_line_dimensions WHERE tenant_id=%s AND entry_line_id=%s ORDER BY dimension_id",
-                (tenant_id, row["id"]),
-            )
-        )
-        row["dimensions"] = {link["dimension_id"]: link["dimension_value_id"] for link in links}
     return make_entry_snapshot(entry, rows)
 
 

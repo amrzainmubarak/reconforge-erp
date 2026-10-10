@@ -237,6 +237,18 @@ BEGIN
    PERFORM reconforge.collection_close(changed->>'tenant_id',owner_id);
    CONTINUE;
   END IF;
+  -- Ordinary AR roles already read the native stock-source index but do not
+  -- receive collection-owner grants. Dispatch on native source ownership
+  -- before touching CA tables; a stock-origin invoice remains fail closed.
+  IF TG_TABLE_NAME IN ('ar_invoices','ar_receipt_allocations') AND NOT EXISTS(
+   SELECT 1 FROM reconforge.stock_sales_orders s WHERE s.tenant_id=changed->>'tenant_id'
+   AND s.invoice_id=CASE WHEN TG_TABLE_NAME='ar_invoices' THEN changed->>'id' ELSE changed->>'invoice_id' END
+  ) THEN CONTINUE; END IF;
+  IF TG_TABLE_NAME='ar_receipts' AND NOT EXISTS(
+   SELECT 1 FROM reconforge.ar_receipt_allocations a JOIN reconforge.stock_sales_orders s
+   ON s.tenant_id=a.tenant_id AND s.invoice_id=a.invoice_id
+   WHERE a.tenant_id=changed->>'tenant_id' AND a.receipt_id=changed->>'id'
+  ) THEN CONTINUE; END IF;
   native_entry:=CASE WHEN TG_TABLE_NAME='finance_entries' THEN changed->>'id' ELSE changed->>'entry_id' END;
   IF TG_TABLE_NAME='finance_entry_line_dimensions' THEN
    SELECT entry_id INTO native_entry FROM reconforge.finance_entry_lines WHERE tenant_id=changed->>'tenant_id' AND id=changed->>'entry_line_id';
@@ -304,6 +316,9 @@ def _retained_function(source: str, name: str) -> str:
     return source[start:end].replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1)
 
 UPGRADE_SQL += _EXTENSION
+_dispatch_start = UPGRADE_SQL.index("CREATE FUNCTION reconforge.collection_reverse_close()")
+_dispatch_end = UPGRADE_SQL.index("END $fi$;", _dispatch_start) + len("END $fi$;")
+REVERSE_CLOSE_SQL = UPGRADE_SQL[_dispatch_start:_dispatch_end].replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION", 1)
 DOWNGRADE_SQL += _retained_function(_STOCK_SCHEMA, "stock_sales_close") + "\n" + _retained_function(_COMMERCE_SCHEMA, "stock_commerce_public")
 DOWNGRADE_SQL += "\nDROP FUNCTION reconforge.collection_invoice_close(TEXT,TEXT);\nDROP FUNCTION reconforge.collection_command_admit();"
 

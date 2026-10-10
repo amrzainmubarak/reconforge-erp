@@ -4,7 +4,7 @@ claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0123_pg_native_event_dispatch"
+current_source_migration_head: "0125_pg_landed_cost_cancellation"
 native_source_extensions:
   claim_boundary: Separate native owner kernels compose existing services; these entries do not retroactively increase historical application-service parity counts.
   ci_shard: erp-expansion
@@ -15,6 +15,10 @@ native_source_extensions:
   cross_domain_test: tests/test_postgres_global_operating_cycles.py
   compatibility_migration: 0123_pg_native_event_dispatch
   compatibility_test: tests/test_postgres_native_event_dispatch_migration.py
+  retained_abandonment:
+    - {owner: CA1, migration: 0124_pg_collection_cancellation, test: tests/test_postgres_commercial_collection_cancellation.py, limitation: unposted_claim_only_no_refund}
+    - {owner: LC1, migration: 0125_pg_landed_cost_cancellation, test: tests/test_postgres_landed_cost_cancellation.py, limitation: unreceived_claim_only_no_published_layer_rewrite}
+  snapshot_dimension_parity_test: tests/test_postgres_posting_snapshot_profile.py
 production_foundation_review:
   executed_at: "2026-10-03"
   evidence: "PRODUCTION_AUDIT_2026-10-03.md"

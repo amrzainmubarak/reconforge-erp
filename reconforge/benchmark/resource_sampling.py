@@ -9,6 +9,8 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from reconforge.benchmark.host_processor_observation import WindowsProcessorObservation
+
 
 def process_memory() -> dict[str, int | str]:
     """Expose the actual platform's process counters with their measurement scope."""
@@ -47,14 +49,22 @@ class ResourceSampler:
     """Sample a read-only callback; retain bounded raw samples and explicit failures."""
 
     def __init__(self, observe: Callable[[], dict[str, Any]], *, interval_seconds: float = 10,
-                 max_samples: int = 1000) -> None:
+                 max_samples: int = 1000, observe_host_processor: bool = True) -> None:
         if not 1 <= interval_seconds <= 60 or type(max_samples) is not int or not 1 <= max_samples <= 10000:
             raise ValueError("Resource sampler requires a bounded interval and sample count")
         self.observe = observe
+        if type(observe_host_processor) is not bool:
+            raise ValueError("Host processor observation must be an explicit boolean")
+        self.observe_host_processor = observe_host_processor
+        self._host_processor: dict[str, Any] = {"requested": observe_host_processor, "platform": sys.platform,
+            "status": "not_started" if observe_host_processor and sys.platform == "win32" else
+                      "unsupported_platform" if observe_host_processor else "disabled",
+            "cleanup": None,
+            "scope": "host-wide PDH/power observations; no temperature or historical cause attribution"}
         self.interval_seconds = interval_seconds
         self.max_samples = max_samples
         self.samples: list[dict[str, Any]] = []
-        self.errors: list[dict[str, str | float]] = []
+        self.errors: list[dict[str, Any]] = []
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._started = 0.0
@@ -67,17 +77,37 @@ class ResourceSampler:
         self._thread.start()
 
     def _run(self) -> None:
-        while not self._stop.is_set() and len(self.samples) + len(self.errors) < self.max_samples:
-            begin = time.monotonic()
-            try:
-                row = self.observe()
-                self.samples.append({"elapsed_seconds": begin - self._started,
-                    "measurement_seconds": time.monotonic() - begin, "client_cpu_seconds": time.process_time(),
-                    "client_pid": os.getpid(), "client_memory": process_memory(), **row})
-            except Exception as exc:
-                # Exception text may contain connection credentials. Retain type/time, never a DSN.
-                self.errors.append({"elapsed_seconds": begin - self._started, "exception_type": type(exc).__name__})
-            self._stop.wait(max(0, self.interval_seconds - (time.monotonic() - begin)))
+        host: WindowsProcessorObservation | None = None
+        try:
+            if self.observe_host_processor and sys.platform == "win32":
+                try:
+                    host = WindowsProcessorObservation()
+                    self._host_processor["status"] = "enabled"
+                except Exception as exc:
+                    self._host_processor.update(status="unavailable", exception_type=type(exc).__name__)
+            while not self._stop.is_set() and len(self.samples) + len(self.errors) < self.max_samples:
+                begin = time.monotonic()
+                observation: dict[str, Any] | None = None
+                if host is not None:
+                    try:
+                        observation = host.observe()
+                    except Exception as exc:
+                        observation = {"status": "unavailable", "processor_performance_percent": None,
+                                       "processor_frequency_mhz": None, "exception_type": type(exc).__name__}
+                try:
+                    row = self.observe()
+                    self.samples.append({"elapsed_seconds": begin - self._started,
+                        "measurement_seconds": time.monotonic() - begin, "client_cpu_seconds": time.process_time(),
+                        "client_pid": os.getpid(), "client_memory": process_memory(), **row,
+                        "host_processor": observation})
+                except Exception as exc:
+                    # Exception text may contain connection credentials. Retain type/time, never a DSN.
+                    self.errors.append({"elapsed_seconds": begin - self._started, "exception_type": type(exc).__name__,
+                                        "host_processor": observation})
+                self._stop.wait(max(0, self.interval_seconds - (time.monotonic() - begin)))
+        finally:
+            if host is not None:
+                self._host_processor["cleanup"] = host.close()
 
     def stop(self) -> dict[str, Any]:
         self._stop.set()
@@ -87,4 +117,5 @@ class ResourceSampler:
         return {"interval_seconds": self.interval_seconds, "max_samples": self.max_samples,
                 "status": "incomplete" if running or self.errors or not self.samples else "complete",
                 "thread_still_running": running, "raw_samples": list(self.samples), "errors": list(self.errors),
+                "host_processor_observation": dict(self._host_processor),
                 "scope": "sampled peaks can miss shorter spikes; client lifetime RSS differs from Python allocation peak"}

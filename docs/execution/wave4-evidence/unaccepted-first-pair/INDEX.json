@@ -1,0 +1,26 @@
+{
+  "status": "unaccepted-diagnostic",
+  "files": [
+    {
+      "file": "baseline.json",
+      "sha256": "58028bc7145108acb0b80e22037e74c85c1ab30df3bca55af6d18345ad7b2834",
+      "accepted": false
+    },
+    {
+      "file": "candidate.json",
+      "sha256": "97769e636413eca5c34604639bf5cc9bdfe93f86a9503fc2ade816c7f75ce574",
+      "accepted": false
+    },
+    {
+      "file": "pair-original.json",
+      "sha256": "41ddffc566a444a1098139e79ca407d498bca8769615b8a2cf3eafd562be2f9b",
+      "accepted": false
+    },
+    {
+      "file": "interruption.json",
+      "sha256": "db3a459a70a8915e1afae56f16a4fc0a4b4f5f9498cf383ff189e5836d4ea9ec",
+      "accepted": false
+    }
+  ],
+  "reason": "Completed first pair regressed; interrupted second candidate after fixed-source CI repair. Not three repetitions."
+}

@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "repository": "amrzainmubarak/reconforge-erp",
+  "pull_request": 130,
+  "observed_head_sha": "6642ab61d9c7546b481ceb3385b4ed2cf26b232a",
+  "observed_at_utc": "2026-10-10T11:52:47Z",
+  "final_acceptance": false,
+  "failures": [
+    {
+      "run_id": 38048075506,
+      "job_id": 114201535834,
+      "job": "test (3.12)",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38048075506/job/114201535834",
+      "head_sha": "6642ab61d9c7546b481ceb3385b4ed2cf26b232a",
+      "accepted": false,
+      "failed_steps": [
+        "Pytest",
+        "Retain final source archive inspection"
+      ],
+      "raw_log": "job-114201535834.log",
+      "raw_log_bytes": 103811,
+      "raw_log_sha256": "152dce87f6c386d5324bd7fe4fd1ecd3760e37360669457ab37733f88ef9bbe1",
+      "actual_failed_case_ids": [
+        "tests/test_repository_boundary_inventory.py::test_backend_neutral_application_inventory_is_exact_and_connection_free"
+      ],
+      "diagnosis": "Same strict boundary inventory omission as Python3.11; archive inspection not executed."
+    },
+    {
+      "run_id": 38048075506,
+      "job_id": 114201535974,
+      "job": "server-boundaries (finance-integrity)",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38048075506/job/114201535974",
+      "head_sha": "6642ab61d9c7546b481ceb3385b4ed2cf26b232a",
+      "accepted": false,
+      "failed_steps": [
+        "Run live server-boundary tests"
+      ],
+      "raw_log": "job-114201535974.log",
+      "raw_log_bytes": 507037,
+      "raw_log_sha256": "f30ea74f91eb690a569258bbfea245fe63a9b7b1b9c6b6efde106f718deff52f",
+      "actual_failed_case_ids": [
+        "tests/test_postgres_posting_snapshot_profile.py::test_thousand_line_snapshot_matches_legacy_per_line_oracle_under_rls",
+        "tests/test_postgres_posting_snapshot_profile.py::test_scoped_dimension_projection_and_late_required_coverage[False-4]",
+        "tests/test_postgres_posting_snapshot_profile.py::test_scoped_dimension_projection_and_late_required_coverage[False-3]",
+        "tests/test_postgres_posting_snapshot_profile.py::test_scoped_dimension_projection_and_late_required_coverage[False-0]",
+        "tests/test_postgres_posting_snapshot_profile.py::test_scoped_dimension_projection_and_late_required_coverage[True-4]",
+        "tests/test_postgres_posting_snapshot_profile.py::test_scoped_dimension_projection_and_late_required_coverage[True-3]",
+        "tests/test_postgres_posting_snapshot_profile.py::test_scoped_dimension_projection_and_late_required_coverage[True-0]"
+      ],
+      "diagnosis": "Seven native snapshot/dimension failures: stock_sales_native_close plans protected operational_finance_links query for unrelated ordinary native writes."
+    },
+    {
+      "run_id": 38048075506,
+      "job_id": 114201536085,
+      "job": "server-boundaries (finance-posting)",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38048075506/job/114201536085",
+      "head_sha": "6642ab61d9c7546b481ceb3385b4ed2cf26b232a",
+      "accepted": false,
+      "failed_steps": [
+        "Run live server-boundary tests"
+      ],
+      "raw_log": "job-114201536085.log",
+      "raw_log_bytes": 1257937,
+      "raw_log_sha256": "4a05f49e2f133be3b4e966bb1fc062153447a373203202040f28c487f6348f6e",
+      "actual_failed_case_ids": [
+        "tests/test_postgres_finance_posting.py::test_live_posting_exact_replay_reversal_and_posted_only_balance",
+        "tests/test_postgres_finance_posting.py::test_live_posting_requires_provenance_independence_and_matching_command",
+        "tests/test_postgres_finance_posting.py::test_live_posted_raw_mutations_and_sibling_access_are_denied",
+        "tests/test_postgres_finance_posting.py::test_live_posting_final_receipt_failure_rolls_back_effect_and_evidence",
+        "tests/test_postgres_finance_posting.py::test_live_period_close_and_post_serialize[True]",
+        "tests/test_postgres_finance_posting.py::test_live_period_close_and_post_serialize[False]",
+        "tests/test_postgres_finance_posting.py::test_live_raw_receipt_cannot_claim_an_absent_posting",
+        "tests/test_postgres_finance_posting.py::test_live_raw_receipt_cannot_claim_an_absent_reversal_draft",
+        "tests/test_postgres_finance_posting.py::test_live_replay_cannot_substitute_another_real_source_effect",
+        "tests/test_postgres_finance_posting.py::test_live_checker_cannot_replace_then_review_and_post_their_own_content",
+        "tests/test_postgres_finance_posting.py::test_live_only_stable_preparer_can_replace_authenticated_draft",
+        "tests/test_postgres_finance_posting.py::test_live_posting_read_rejects_wrong_retained_evidence[audit_event_id]",
+        "tests/test_postgres_finance_posting.py::test_live_posting_read_rejects_wrong_retained_evidence[outbox_event_id]",
+        "tests/test_postgres_finance_posting.py::test_live_raw_posting_cannot_borrow_another_effect_evidence",
+        "tests/test_postgres_finance_posting_batches.py::test_live_batched_evidence_preserves_order_scope_and_original_content",
+        "tests/test_postgres_finance_posting_concurrency.py::test_live_concurrent_post_has_one_effect[True]",
+        "tests/test_postgres_finance_posting_concurrency.py::test_live_concurrent_post_has_one_effect[False]",
+        "tests/test_postgres_finance_posting_concurrency.py::test_live_outer_rollback_owns_successful_post",
+        "tests/test_postgres_finance_posting_concurrency.py::test_live_stale_repeatable_read_child_cannot_modify_new_review_seal",
+        "tests/test_postgres_finance_posting_concurrency.py::test_live_review_and_child_write_serialize[True]",
+        "tests/test_postgres_finance_posting_concurrency.py::test_live_review_and_child_write_serialize[False]",
+        "tests/test_postgres_finance_posting_concurrency.py::test_live_independent_review_cannot_race_period_close[True]",
+        "tests/test_postgres_finance_posting_concurrency.py::test_live_independent_review_cannot_race_period_close[False]",
+        "tests/test_postgres_finance_posting_api.py::test_live_api_human_review_post_exact_unknown_reply_and_full_reversal",
+        "tests/test_postgres_finance_posting_api.py::test_live_api_scope_cookie_csrf_and_post_requires_recent_auth",
+        "tests/test_postgres_finance_posting_api.py::test_live_api_cross_period_balances_exact_opening_cutoff_and_reversal",
+        "tests/test_postgres_finance_posting_restore.py::test_live_populated_posting_native_restore",
+        "tests/test_postgres_finance_balances.py::test_live_opening_as_of_future_exclusion_reversal_and_narrowed_authority"
+      ],
+      "diagnosis": "Twenty-eight native/API posting failures share protected-link dispatch defect; three API503 symptoms cascade from same PostgreSQL permission context."
+    },
+    {
+      "run_id": 38048075506,
+      "job_id": 114201536117,
+      "job": "server-boundaries (supply-integrity)",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38048075506/job/114201536117",
+      "head_sha": "6642ab61d9c7546b481ceb3385b4ed2cf26b232a",
+      "accepted": false,
+      "failed_steps": [
+        "Run live server-boundary tests"
+      ],
+      "raw_log": "job-114201536117.log",
+      "raw_log_bytes": 344712,
+      "raw_log_sha256": "83194d1f20fdaaf976a6e42d7134cbfdc583d8a6298bc490e4bdec8bfd87c96e",
+      "actual_failed_case_ids": [
+        "tests/test_postgres_procurement_commitments.py::test_actual_ordered_upgrade_empty_rollback_and_populated_refusal_preserve_native_history"
+      ],
+      "diagnosis": "Stale module-local0127 expected migration revision after correctly refused transactional downgrade; actual preserved head0131."
+    },
+    {
+      "run_id": 38048075506,
+      "job_id": 114201536124,
+      "job": "server-boundaries (commercial-integrity)",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38048075506/job/114201536124",
+      "head_sha": "6642ab61d9c7546b481ceb3385b4ed2cf26b232a",
+      "accepted": false,
+      "failed_steps": [
+        "Run live server-boundary tests"
+      ],
+      "raw_log": "job-114201536124.log",
+      "raw_log_bytes": 292526,
+      "raw_log_sha256": "b022ebbc85e6949ecd5e33ee22e8a020344807a467accc6b9f4fbabc0a5c07c0",
+      "actual_failed_case_ids": [
+        "tests/test_postgres_customer_returns.py::test_forward_upgrade_retains_native_source_empty_rollback_and_populated_credit_refusal"
+      ],
+      "diagnosis": "Test bypasses dependency-ordered migrations by directly executing0126 downgrade while SR0130 retains a CR-patched function clone."
+    },
+    {
+      "run_id": 38048075506,
+      "job_id": 114201536166,
+      "job": "test (3.11)",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38048075506/job/114201536166",
+      "head_sha": "6642ab61d9c7546b481ceb3385b4ed2cf26b232a",
+      "accepted": false,
+      "failed_steps": [
+        "Pytest",
+        "Retain final source archive inspection"
+      ],
+      "raw_log": "job-114201536166.log",
+      "raw_log_bytes": 103198,
+      "raw_log_sha256": "36a232cc7d59b4a8588e045c3ee41239df671821ab71bcc0b1ef8e52a8d7a45c",
+      "actual_failed_case_ids": [
+        "tests/test_repository_boundary_inventory.py::test_backend_neutral_application_inventory_is_exact_and_connection_free"
+      ],
+      "diagnosis": "Strict boundary inventory omits only SupplierReturnsService; archive upload missing-report failure is a downstream consequence, verifier not executed."
+    },
+    {
+      "run_id": 38048075506,
+      "job_id": 114201536032,
+      "job": "server-boundaries (parity)",
+      "url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38048075506/job/114201536032",
+      "head_sha": "6642ab61d9c7546b481ceb3385b4ed2cf26b232a",
+      "accepted": false,
+      "failed_steps": [
+        "Run live server-boundary tests"
+      ],
+      "raw_log": "job-114201536032.log",
+      "raw_log_bytes": 669821,
+      "raw_log_sha256": "1230ef2c16c3053df1390e551285801cc31c670481595d80e5624a77b54caada",
+      "actual_failed_case_ids": [
+        "tests/test_postgres_sales_revenue.py::test_customer_registry_migration_cannot_reinterpret_reviewed_quote_or_leave_invoice_effects",
+        "tests/test_postgres_finance_scope.py::test_live_finance_legacy_is_not_rebound_and_permitted_entity_workflow_succeeds",
+        "tests/test_postgres_finance_scope.py::test_live_finance_identity_cannot_be_relabelled_or_deleted",
+        "tests/test_postgres_finance_scope.py::test_live_finance_draft_scope_replacement_serializes_with_new_line[line-before-reparent]",
+        "tests/test_postgres_finance_scope.py::test_live_finance_draft_scope_replacement_serializes_with_new_line[reparent-before-line]",
+        "tests/test_postgres_finance_scope_restore.py::test_live_populated_finance_native_restore",
+        "tests/test_postgres_master_data_authority.py::test_live_sql_mutation_guard_preserves_scope_and_reference_locks"
+      ],
+      "diagnosis": "Six protected OPS-link planning failures plus one deferred-event customer-trigger restoration fixture failure."
+    }
+  ],
+  "safe_repairs_runtime_pending": {
+    "commercial_dispatch": "d4a9774b863bdb65d6f3d2375b140f558ec79751",
+    "commercial_ordered_rollback_test": "d444cdadaac7eafb3bf291ae9933821f3b997a73",
+    "procurement_preserved_revision_test": "490f22ad20db74872a457cb80e437d8f91b9017a"
+  },
+  "claims_scope": "Read-only hosted source-bound triage. Static repair checks are not native or final CI acceptance.",
+  "corrective_source": {
+    "root_head": "bcac325cb73dc76d374ce34fa7a742e6df5a2c61",
+    "migration_head": "0132_pg_stock_inverse_dispatch",
+    "native_runtime_pending": true,
+    "owned_commits": [
+      "d4a9774b863bdb65d6f3d2375b140f558ec79751",
+      "d444cdadaac7eafb3bf291ae9933821f3b997a73",
+      "beb6b0053e4dd826a614850e17862065a94fafe8"
+    ],
+    "limits": "This packet records old-head failures and source repairs; it does not admit new hosted CI or performance results."
+  }
+}

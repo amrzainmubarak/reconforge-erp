@@ -1,0 +1,269 @@
+{
+  "schema_version": "wave4-evidence-index-v1",
+  "files": [
+    {
+      "path": "ci-b6e9dcf6/archive-path-map.json",
+      "sha256": "039e342717f887b52d730aafa2588f0c6f0c8804a6408e185ba8967f5683cb1e",
+      "bytes": 3369
+    },
+    {
+      "path": "ci-b6e9dcf6/BUSINESS_CYCLE_RAW_INDEX_b6e9dcf6.json",
+      "sha256": "43be73b8695a5e01c103d8aed192716204530642e120bda2ea6145b994a586e1",
+      "bytes": 27648
+    },
+    {
+      "path": "ci-b6e9dcf6/customer-returns-report.json",
+      "sha256": "feb6b75e3fe0f6aa9ce9d2d862a8388e54bc7eeb232112ce82f86d0fc4560a9e",
+      "bytes": 87484
+    },
+    {
+      "path": "ci-b6e9dcf6/fx-proof-0.json",
+      "sha256": "4fc77d0ec30d1db5944b1f494daeb57099248f66f45e2e69fe2354bbabbff35a",
+      "bytes": 17419
+    },
+    {
+      "path": "ci-b6e9dcf6/fx-proof-1.json",
+      "sha256": "b91008403ec105f7d347b14906a4a834d1edc110280329f490a841d6f76c3aa1",
+      "bytes": 16487
+    },
+    {
+      "path": "ci-b6e9dcf6/fx-proof-2.json",
+      "sha256": "fd3b3e92957031c8aaab163d514d34738ce058910cdb9395497129c1d0946091",
+      "bytes": 15897
+    },
+    {
+      "path": "ci-b6e9dcf6/fx-proof-3.json",
+      "sha256": "443a567f9a4a486af67d349167c8e064bee2f7170c82e6bb077a64caa2d0daff",
+      "bytes": 15594
+    },
+    {
+      "path": "ci-b6e9dcf6/fx-proof-4.json",
+      "sha256": "569c857e0b12fe993a9a8777891c32e38b0783b22942738d5f610e8e481767b8",
+      "bytes": 16505
+    },
+    {
+      "path": "ci-b6e9dcf6/network-recovery.json",
+      "sha256": "09831e0f7b741b330a2f85426cb43ff695ce07f74f572a795d1ab412af31a672",
+      "bytes": 3007
+    },
+    {
+      "path": "ci-b6e9dcf6/operational-fx-tax-report.json",
+      "sha256": "10c2f707a49aefacdce510dde9b1e3fbfdf619d1a13bd835b6780738946cdd83",
+      "bytes": 87773
+    },
+    {
+      "path": "ci-b6e9dcf6/procurement-commitments-report.json",
+      "sha256": "0e39bdc0486f69c6757d476700c756fc6f1f5688d9fbc91137962087abd46b66",
+      "bytes": 87062
+    },
+    {
+      "path": "ci-b6e9dcf6/source-binding.json",
+      "sha256": "332702b5def0ff772531074910135ddb78fbd039ae2f3406456a11acde9c3a92",
+      "bytes": 1335
+    },
+    {
+      "path": "ci-b6e9dcf6/supplier-returns-report.json",
+      "sha256": "1c754eaa81931fbe07c999ee689c3c9aef8f28eb91092871ffa4bfb59ccc54c5",
+      "bytes": 87285
+    },
+    {
+      "path": "ci-b6e9dcf6/terminal-check-suite.json",
+      "sha256": "2d197cf376bef5eb1c811484726df477cadd061afcbd37c048fa663d4d27aab6",
+      "bytes": 8630
+    },
+    {
+      "path": "ci-b6e9dcf6/terminal-supplement.json",
+      "sha256": "292c002638c8f297c816d023eab88368e36955729e72199e76de29a461454ed8",
+      "bytes": 26284
+    },
+    {
+      "path": "fx-1e73267e/cycle-report.json",
+      "sha256": "594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027",
+      "bytes": 90395
+    },
+    {
+      "path": "fx-1e73267e/fx-proof-0.json",
+      "sha256": "e98f19ce390547c951ce419b12e088c3e5c0c8f271ccc9d710bdff0248af8101",
+      "bytes": 17419
+    },
+    {
+      "path": "fx-1e73267e/fx-proof-1.json",
+      "sha256": "46a1f22cc0a216eebe5282d766a9422b1ccf3766ddbf736a12e9cb0182507f7f",
+      "bytes": 16487
+    },
+    {
+      "path": "fx-1e73267e/fx-proof-2.json",
+      "sha256": "42b44512124ad614a844754838950891ad185b28f72732d6ee90133ed286fa27",
+      "bytes": 15897
+    },
+    {
+      "path": "fx-1e73267e/fx-proof-3.json",
+      "sha256": "814c10a2ba1253d5dfeb9690ca340f8f304b3bf84502433d6aa7006008db7493",
+      "bytes": 15594
+    },
+    {
+      "path": "fx-1e73267e/fx-proof-4.json",
+      "sha256": "94c26cbe298b796604661ac0068266f2a8398bf2c73181ccee8df6975b09565d",
+      "bytes": 16505
+    },
+    {
+      "path": "fx-1e73267e/fx-proof-ar-mobile.json",
+      "sha256": "94c26cbe298b796604661ac0068266f2a8398bf2c73181ccee8df6975b09565d",
+      "bytes": 16505
+    },
+    {
+      "path": "fx-1e73267e/oracle-normal.json",
+      "sha256": "cd5e6657b80f2dfa656599bb54be369fedea15dd60703ead17c73dcb44735a98",
+      "bytes": 5953
+    },
+    {
+      "path": "fx-1e73267e/oracle-optimized.json",
+      "sha256": "3e2be012104525d438b09059efb12f4a32c1626572cac0bed92c00783d129456",
+      "bytes": 5967
+    },
+    {
+      "path": "fx-1e73267e/proof-manifest.json",
+      "sha256": "3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a",
+      "bytes": 2481
+    },
+    {
+      "path": "posting-1k/1-baseline.json",
+      "sha256": "f27db82db8bee474fe5ad5f8574167d2804939dc2ea3104e2d1f4e238fffee63",
+      "bytes": 651997
+    },
+    {
+      "path": "posting-1k/1-candidate.json",
+      "sha256": "1efbede4d8bd102257eb183af287c3a5ada4abb4e9358dc98adbd16683fc24bd",
+      "bytes": 541283
+    },
+    {
+      "path": "posting-1k/2-baseline.json",
+      "sha256": "57df0ecd223e8d59db37e656cdb5e3a5281f7340075fd3d18b7e0c4fdf9e9cad",
+      "bytes": 505536
+    },
+    {
+      "path": "posting-1k/2-candidate.json",
+      "sha256": "d8fa6e71a58a3d65eb151b99c9bf425eeaf6de9bb20206ba7f09d5d627440840",
+      "bytes": 446817
+    },
+    {
+      "path": "posting-1k/3-baseline.json",
+      "sha256": "c64610433f9710cfe36f6bd49827c3a0818755fb6356da5adab311c17431e42b",
+      "bytes": 505644
+    },
+    {
+      "path": "posting-1k/3-candidate.json",
+      "sha256": "e4ab9f853f5df7b334806d676a03ff3b9714279d3eb08edd872ad5c73d3720a9",
+      "bytes": 423837
+    },
+    {
+      "path": "posting-1k/manifest.json",
+      "sha256": "c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc",
+      "bytes": 1587
+    },
+    {
+      "path": "posting-1k/oracle-normal-initial.json",
+      "sha256": "aa37e1bf8d20f6a2f08982db6eb0c23b21057ad8862c9e68be6841aae4cacddf",
+      "bytes": 24610
+    },
+    {
+      "path": "posting-1k/oracle-normal.json",
+      "sha256": "df871dd80208db49e592ce586c1784a5cb669c2457ed6d76a070da4bdf30cd3c",
+      "bytes": 34037
+    },
+    {
+      "path": "posting-1k/oracle-optimized-initial.json",
+      "sha256": "aa37e1bf8d20f6a2f08982db6eb0c23b21057ad8862c9e68be6841aae4cacddf",
+      "bytes": 24610
+    },
+    {
+      "path": "posting-1k/oracle-optimized.json",
+      "sha256": "df871dd80208db49e592ce586c1784a5cb669c2457ed6d76a070da4bdf30cd3c",
+      "bytes": 34037
+    },
+    {
+      "path": "posting-1k/pair.json",
+      "sha256": "b5d21eced5c67b38738508dfee7db590c4a3977cb10aceae1ac5cd647043667c",
+      "bytes": 26013
+    },
+    {
+      "path": "posting-1k/source-instrumentation-binding.json",
+      "sha256": "41ff4a6e05ba71f23fbc21291a40c57744a487f612a68427a71e1dac755eb930",
+      "bytes": 2641
+    },
+    {
+      "path": "profiling/cpu-and-power-facts.json",
+      "sha256": "0eadd82d73a6a0733dd0cb51d5845d64d75b4e89e7854f675d3ba5220195cb4f",
+      "bytes": 33307
+    },
+    {
+      "path": "profiling/INDEX.json",
+      "sha256": "61a8007268da3a06a1257feb5da716ef7232172658c0610678d8b81aa9c5bb81",
+      "bytes": 1471
+    },
+    {
+      "path": "profiling/parallel-baseline-b7df9271.json",
+      "sha256": "fbdfedb030e1c825b207faf06a23c0e8c0a298ab7e6ee00fa44e45d8ebc4be75",
+      "bytes": 314583
+    },
+    {
+      "path": "profiling/parallel-candidate-07452da8.json",
+      "sha256": "687ff50d49084b9d103280d863dd7b70ee738032e6ec7eb00e4cadf38c6da84b",
+      "bytes": 302130
+    },
+    {
+      "path": "profiling/serial-baseline-bc294.json",
+      "sha256": "b3544881c5b2ec11075b5e50a41b1db9d3b16544975df39ce9150ec8d01bb742",
+      "bytes": 838986
+    },
+    {
+      "path": "profiling/serial-candidate-bcac325c.json",
+      "sha256": "c0f48046e34b4e800848aaf3d9a3d2a848ba2b49f070a1f4fd0a56fbf48a8d6c",
+      "bytes": 866070
+    },
+    {
+      "path": "unaccepted-first-pair/baseline.json",
+      "sha256": "58028bc7145108acb0b80e22037e74c85c1ab30df3bca55af6d18345ad7b2834",
+      "bytes": 335498
+    },
+    {
+      "path": "unaccepted-first-pair/candidate.json",
+      "sha256": "97769e636413eca5c34604639bf5cc9bdfe93f86a9503fc2ade816c7f75ce574",
+      "bytes": 361825
+    },
+    {
+      "path": "unaccepted-first-pair/ci-07452-failures.json",
+      "sha256": "39cfef72df39a12652b880c3163c8e3ffa384bc9e235fe1004f4c7f1087fa753",
+      "bytes": 5377
+    },
+    {
+      "path": "unaccepted-first-pair/ci-6642-failures.json",
+      "sha256": "1c9af29b1cba113288427638ff0082d9d3058c9d6d0f1111f5a3925457228582",
+      "bytes": 12159
+    },
+    {
+      "path": "unaccepted-first-pair/ci-bcac-failures.json",
+      "sha256": "ae7c01ac523ff0366b78771cf3e344e21b7980a46cd42f30da32ab8f1e104e4f",
+      "bytes": 4721
+    },
+    {
+      "path": "unaccepted-first-pair/INDEX.json",
+      "sha256": "d117f34cdb27e6296e11b20896ff7af3bb38df5ca2e351bb33f8390300e557b9",
+      "bytes": 804
+    },
+    {
+      "path": "unaccepted-first-pair/interruption.json",
+      "sha256": "db3a459a70a8915e1afae56f16a4fc0a4b4f5f9498cf383ff189e5836d4ea9ec",
+      "bytes": 543
+    },
+    {
+      "path": "unaccepted-first-pair/pair-original.json",
+      "sha256": "41ddffc566a444a1098139e79ca407d498bca8769615b8a2cf3eafd562be2f9b",
+      "bytes": 8015
+    }
+  ],
+  "financial_cycles_accepted_source": "b6e9dcf608df2885b61a2846a4edc8df783db72d",
+  "performance_comparison_accepted": false,
+  "reason": "Dynamic host power changed; clientCPU/read regressions retained; stable-power retest pending",
+  "scale10000_status": "running"
+}

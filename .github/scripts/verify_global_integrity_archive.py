@@ -24,6 +24,8 @@ INDEX_PATH = "docs/execution/benchmarks/INDEX.v1.json"
 GOLDEN = {100: "46669102", 1000: "493671004"}
 FX_EVIDENCE = "docs/execution/wave4-evidence/fx-1e73267e"
 FX_MANIFEST_SHA = "3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a"
+WAVE4_POSTING_EVIDENCE = "docs/execution/wave4-evidence/posting-1k"
+WAVE4_POSTING_MANIFEST_SHA = "c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc"
 FX_RETAINED_SHA = {
     "cycle-report.json": "594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027",
     "proof-manifest.json": FX_MANIFEST_SHA,
@@ -255,6 +257,37 @@ def check_wave4_evidence(extracted: Path, output: Path) -> dict[str, object]:
             "independent_fx_oracle": validations, "final_program_acceptance": False}
 
 
+def check_wave4_posting_pair(extracted: Path, output: Path) -> dict[str, object]:
+    evidence = extracted / WAVE4_POSTING_EVIDENCE
+    require(sha((evidence / "manifest.json").read_bytes()) == WAVE4_POSTING_MANIFEST_SHA,
+            "Trusted Wave4 posting manifest bytes differ")
+    validations = {}
+    for mode in ("normal", "optimized"):
+        fresh = output / ("independent-wave4-posting-" + mode + ".json")
+        isolated_json([sys.executable, "-I", *(["-O"] if mode == "optimized" else []),
+                       str(extracted / ".github/scripts/verify_wave4_posting_pair.py"),
+                       "--manifest", str(evidence / "manifest.json"),
+                       "--manifest-sha256", WAVE4_POSTING_MANIFEST_SHA,
+                       "--report", str(fresh)], extracted)
+        current = json.loads(fresh.read_bytes())
+        require(current["status"] == "passed" and current["distinct_container_count"] == 6
+                and current["measured_cycles_per_variant"] == 3000,
+                "Extracted independent Wave4 posting oracle failed")
+        require(current["financial_verification"] == "passed"
+                and current["performance_comparison_accepted"] is False,
+                "Financial verification must remain separate from performance acceptance")
+        environment = current["environment_equivalence"]
+        require(environment["static_configuration_equal"] is True
+                and environment["dynamic_host_power_constant"] is False
+                and environment["dynamic_host_power_classification"] == "changed"
+                and environment["power_counts"] == {"ac": 248, "battery": 263, "unavailable": 0},
+                "Retained mixed-power environment classification differs")
+        validations[mode] = current
+    require(validations["normal"] == validations["optimized"], "Optimized-mode posting proof differs")
+    return {"trusted_manifest_sha256": WAVE4_POSTING_MANIFEST_SHA,
+            "independent_verification": validations, "resource_improvement_acceptance": False}
+
+
 def check_imports(extracted: Path) -> dict[str, object]:
     code = """
 import importlib,json,pathlib,sys
@@ -309,9 +342,15 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_postgres_operational_fx_revaluation_migration.py", ".github/scripts/verify_erp_expansion_browser.py",
         ".github/scripts/verify_operational_fx_cycle_oracle.py", "tests/test_operational_fx_cycle_oracle.py",
         "docs/execution/WAVE4_ACCEPTANCE_2026-10-10.json", "docs/execution/WAVE4_ACCEPTANCE_2026-10-10.md",
+        "docs/execution/WAVE4_ENGINEERING_MEASUREMENTS_2026-10-10.md",
         "docs/execution/wave4-evidence/.gitattributes",
+        WAVE4_POSTING_EVIDENCE + "/manifest.json", WAVE4_POSTING_EVIDENCE + "/pair.json",
+        WAVE4_POSTING_EVIDENCE + "/source-instrumentation-binding.json",
+        *(WAVE4_POSTING_EVIDENCE + "/" + name + ".json" for name in
+          ("1-baseline", "1-candidate", "2-candidate", "2-baseline", "3-baseline", "3-candidate")),
         *(FX_EVIDENCE + "/" + name for name in FX_RETAINED_SHA),
         *(FX_EVIDENCE + f"/fx-proof-{index}.json" for index in range(5)), FX_EVIDENCE + "/fx-proof-ar-mobile.json",
+        *(name for name in tracked if name.startswith("docs/execution/wave4-evidence/") and name.endswith(".json")),
         "apps/web/src/operational-fx-tax-fixture.json", "modules/customer-returns.yaml",
         "docs/modules/procurement-commitments.yaml", "docs/modules/operational-fx-tax.yaml",
         "docs/modules/supplier-returns.yaml", "docs/operator/supplier-returns.md",
@@ -373,6 +412,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         report["independent_posting_pair"] = json.loads(pair_proof.read_text(encoding="utf-8"))
         require(report["independent_posting_pair"]["status"] == "passed", "Extracted independent posting oracle failed")
         report["wave4_portable_evidence"] = check_wave4_evidence(extracted, target)
+        report["wave4_independent_posting_pair"] = check_wave4_posting_pair(extracted, target)
         report["browser_helper_imports"] = check_imports(extracted)
         report["acceptance_packet_keys"] = sorted(json.loads((extracted / "docs/execution" / (args.acceptance_stem + ".json")).read_text(encoding="utf-8")))
         with zipfile.ZipFile(args.wheel) as wheel:

@@ -50,9 +50,9 @@ tasks:
     priority: P0
     area: closing-fx-and-original-inverse
     title: Revalue retained open foreign AR then reverse the exact native original before settlement
-    status: in_progress
+    status: completed
     depends_on: [AMR-WAVE4-003]
-    exit_evidence: Complete closing/inverse6 native cases passed at5ac359c1 and full-position current ABAC1 atdcdbe8c7; actual five-stage1e732 cycle closes AR and unrealized FX after exact inverse. Final hosted gate remains pending; group translation and broader AP/stock revaluation remain gaps.
+    exit_evidence: Scoped complete closing/inverse6 cases plus retained-position current ABAC1; full native7 and shared five-stage HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904. Original1e732 wire and independent Fraction oracle are preserved; group translation and broader AP/stock revaluation remain gaps.
   - id: AMR-WAVE3-001
     priority: P0
     area: commercial-collections

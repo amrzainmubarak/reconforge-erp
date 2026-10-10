@@ -1,0 +1,9 @@
+{
+  "at_utc": "2026-10-10T11:56:14.7714984Z",
+  "status": "interrupted_for_production_dispatch_repair",
+  "reason": "Published CI exposed protected-source ordinary posting dispatch regression; first pair retained as diagnostic, final six fresh runs required after repair",
+  "outer_pid": 1388,
+  "stopped_child_pid": 38468,
+  "removed_owned_container": "reconforge-enterprise-finance-4dbecefca861",
+  "incomplete_admissions_not_accepted": "second candidate run terminated before report; first complete pair remains diagnostic only"
+}

@@ -261,6 +261,9 @@ class PostgresOperationalFxTaxRepository:
             FinancePolicyStore(self.connection, tenant_id=self.tenant_id).lock_binding(plan["workspace_id"])
             plan = self._plan(plan_id)
             source = self._source(plan["source_id"])
+            # Grants can be revoked while the command waits for a currency or
+            # native parent lock; retained ACKs require authority at return.
+            self._authorize(actor, permission, source, plan)
             if replay is not None:
                 self.connection.execute("SELECT reconforge.fx_close(%s,%s)", (self.tenant_id, plan_id))
                 return replay

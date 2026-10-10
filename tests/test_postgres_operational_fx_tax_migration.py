@@ -11,6 +11,8 @@ from reconforge.infrastructure.postgres_domain import PostgresAuditEventReposito
 from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
 from reconforge.infrastructure.postgres_operational_fx_tax_schema import DOWNGRADE_SQL, UPGRADE_SQL
 from reconforge.infrastructure.postgres_outbox import PostgresOutboxRepository
+from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+from tests.test_postgres_finance_scope import finance_database, isolated_postgres_migration_dsn
 from tests.test_postgres_operational_fx_tax import (
     finish_fx,
     prepare_fx,
@@ -19,16 +21,22 @@ from tests.test_postgres_operational_fx_tax import (
     seed_fx_runtime,
 )
 
-__all__ = ["pytestmark", "receipt_database"]
+__all__ = ["finance_database", "isolated_postgres_migration_dsn", "pytestmark", "receipt_database"]
 
 
 def test_empty_schema_rollback_reupgrade_and_populated_evidence_refusal(receipt_database: tuple[str, str]) -> None:
     import psycopg
+    from psycopg import sql
 
     with psycopg.connect(receipt_database[0]) as admin:
         admin.execute(DOWNGRADE_SQL)
         assert admin.execute("SELECT to_regclass('reconforge.operational_fx_sources')").fetchone()[0] is None
         admin.execute(UPGRADE_SQL)
+        # Additive table recreation drops its previous ACLs; deployment's
+        # explicit module grant step must accompany the restored schema.
+        app_user = psycopg.conninfo.conninfo_to_dict(receipt_database[1])["user"]
+        for table in ("operational_fx_sources", "operational_fx_plans", "operational_fx_reviews", "operational_fx_links", "operational_fx_commands"):
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON {} TO {}").format(sql.Identifier("reconforge", table), sql.Identifier(app_user)))
     runtime = seed_fx_runtime(receipt_database)
     posted = finish_fx(runtime, prepare_fx(runtime))
     with psycopg.connect(receipt_database[0]) as admin:
@@ -95,3 +103,25 @@ def test_unrelated_outbox_worker_needs_no_fx_source_read_grant(receipt_database:
         with psycopg.connect(runtime.admin_dsn) as admin:
             admin.execute(sql.SQL("DROP OWNED BY {}").format(sql.Identifier(role)))
             admin.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))
+
+
+def test_legacy_customer_and_financial_master_maintenance_needs_no_fx_read_grant(finance_database: Any) -> None:
+    db = finance_database
+    with db["boundary"].transaction("finance_scope") as connection:
+        for table in ("operational_fx_sources", "operational_fx_plans", "operational_fx_reviews", "operational_fx_links", "operational_fx_commands"):
+            assert connection.execute("SELECT has_table_privilege(current_user,%s,'SELECT')", ("reconforge." + table,)).fetchone()[0] is False
+        native = PostgresReceivablesRepository(connection, "finance_scope")
+        customer = native.upsert_customer(customer_code="ORDINARY", name="Ordinary customer", currency_code="EGP", credit_limit_minor=10000,
+            workspace="Shared", organization_code="ORG_A", entity_code="A1")
+        maintained = native.upsert_customer(customer_code="ORDINARY", name="Maintained ordinary customer", currency_code="EGP", credit_limit_minor=20000,
+            workspace="Shared", organization_code="ORG_A", entity_code="A1", expected_version=customer["row_version"])
+        assert maintained["credit_limit_minor"] == 20000
+        for statement in (
+            "UPDATE reconforge.legal_entities SET name='Maintained entity' WHERE tenant_id='finance_scope' AND id='entity_a1'",
+            "UPDATE reconforge.finance_accounts SET name='Maintained account' WHERE tenant_id='finance_scope' AND account_code='A_CASH'",
+            "UPDATE reconforge.finance_journals SET name='Maintained journal' WHERE tenant_id='finance_scope' AND journal_code='J_A'",
+            "UPDATE reconforge.fiscal_periods SET name='Maintained period' WHERE tenant_id='finance_scope' AND id='period'",
+        ):
+            assert connection.execute(statement).rowcount == 1
+    with db["boundary"].transaction("finance_scope") as connection:
+        assert connection.execute("SELECT name FROM reconforge.ar_customers WHERE customer_code='ORDINARY'").fetchone()[0] == "Maintained ordinary customer"

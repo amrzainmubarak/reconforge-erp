@@ -315,16 +315,18 @@ def test_current_grants_are_rechecked_on_original_prepare_and_post_retries(fx_ru
     initial = finish_fx(runtime, prepare_fx(runtime))
     with runtime.actor("poster") as (connection, _, actor):
         repository = PostgresOperationalFxTaxRepository(connection, runtime.tenant)
-        connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE WHERE tenant_id=%s AND permission_name='finance_core.post'", (runtime.tenant,))
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE,lifecycle_version=lifecycle_version+1,revoked_at=now(),revoked_by='poster',revocation_reason_code='access_change' WHERE tenant_id=%s AND permission_name='finance_core.post'", (runtime.tenant,))
         with pytest.raises(FinancePostingError, match="authorization"):
             repository.post(initial["id"], expected_plan_digest=initial["plan_digest"], reason="Independent FX equation post", command_id="post-" + initial["id"], actor=actor)
         assert repository.plan_evidence(initial["id"], actor=actor)["native_effect"]["id"] == initial["posting_effect_id"]
-        connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE WHERE tenant_id=%s AND permission_name='receivables.manage'", (runtime.tenant,))
+        connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE,lifecycle_version=lifecycle_version+1,revoked_at=now(),revoked_by='poster',revocation_reason_code='access_change' WHERE tenant_id=%s AND permission_name='receivables.manage'", (runtime.tenant,))
     with runtime.actor("maker") as (connection, _, actor), pytest.raises(FinancePostingError):
         PostgresOperationalFxTaxRepository(connection, runtime.tenant).prepare_invoice(fx_request(), command_id="prepare-SERVICE-1", actor=actor)
 
 
 def test_posted_native_reporting_and_closed_period_keep_retained_evidence(fx_runtime: ReceiptRuntime) -> None:
+    import psycopg
+
     from reconforge.domain.financial_reporting import AccountClassification, ReportingScope
     from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
 
@@ -347,7 +349,10 @@ def test_posted_native_reporting_and_closed_period_keep_retained_evidence(fx_run
         report = PostgresFinancialReportingRepository(connection, runtime.tenant).report(map_id=mapping["id"], period_id="period", as_of_date="2026-10-31",
             organization_code="ORG", entity_code="ENTITY", actor=actor)
         assert report["report_digest"] and report["currency_policy"]["currency_code"] == "USD"
-        connection.execute("UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='period'", (runtime.tenant,))
+    # Financial operators lack shared-master mutation authority. This fixture
+    # supplies the separate governed period-close boundary as administrator.
+    with psycopg.connect(runtime.admin_dsn) as admin:
+        admin.execute("UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='period'", (runtime.tenant,))
     with runtime.actor("poster") as (connection, _, actor):
         repository = PostgresOperationalFxTaxRepository(connection, runtime.tenant)
         assert repository.plan_evidence(initial["id"], actor=actor)["plan"]["status"] == "Posted"

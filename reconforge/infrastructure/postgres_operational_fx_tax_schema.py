@@ -361,6 +361,21 @@ BEGIN
    PERFORM reconforge.fx_assert(EXISTS(SELECT 1 FROM reconforge.operational_fx_plans z WHERE z.tenant_id=changed->>'tenant_id'
     AND z.id=COALESCE(changed->>'object_id',changed->>'aggregate_id')),'Reserved FX event requires its complete retained source');
   ELSIF TG_TABLE_NAME IN ('finance_accounts','finance_journals','fiscal_periods','legal_entities','ar_customers') THEN
+   -- Ordinary native owners need no new module grant to change unrelated
+   -- masters. A reserved native source establishes relevance first; affected
+   -- owners still require invoker access and their complete FX equation.
+   IF TG_TABLE_NAME='ar_customers' THEN
+    IF NOT EXISTS(SELECT 1 FROM reconforge.ar_invoices z WHERE z.tenant_id=changed->>'tenant_id' AND z.customer_id=changed->>'id'
+     AND upper(left(z.invoice_number,4))='FX1-') THEN CONTINUE; END IF;
+   ELSIF TG_TABLE_NAME='legal_entities' THEN
+    IF NOT EXISTS(SELECT 1 FROM reconforge.finance_entries z WHERE z.tenant_id=changed->>'tenant_id' AND z.entity_code=changed->>'entity_code'
+     AND upper(left(z.entry_number,4))='FX1-') THEN CONTINUE; END IF;
+   ELSE
+    IF NOT EXISTS(SELECT 1 FROM reconforge.finance_entries z WHERE z.tenant_id=changed->>'tenant_id' AND upper(left(z.entry_number,4))='FX1-'
+     AND ((TG_TABLE_NAME='finance_accounts' AND z.workspace_id=changed->>'workspace_id')
+      OR(TG_TABLE_NAME='finance_journals' AND z.journal_id=changed->>'id')
+      OR(TG_TABLE_NAME='fiscal_periods' AND z.period_id=changed->>'id'))) THEN CONTINUE; END IF;
+   END IF;
    FOR plan IN SELECT z.id,z.tenant_id FROM reconforge.operational_fx_plans z
    JOIN reconforge.operational_fx_sources source ON source.tenant_id=z.tenant_id AND source.id=z.source_id
    JOIN reconforge.finance_entries native ON native.tenant_id=z.tenant_id AND native.id=z.entry_id

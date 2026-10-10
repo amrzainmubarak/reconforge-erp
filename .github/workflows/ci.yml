@@ -59,7 +59,7 @@ jobs:
 
       - name: Pytest
         # These fixture-only modules have no optional skip. Their complete
-        # execution is mandatory in the configured erp-expansion shard below.
+        # execution is mandatory in the configured native shards below.
         run: >-
           uv run --no-sync pytest
           --ignore=tests/test_postgres_commercial_collections.py
@@ -92,6 +92,22 @@ jobs:
 
       - name: Build package
         run: uv run --no-sync python -m build --no-isolation
+
+      - name: Verify final source archive and wheel closure
+        run: >-
+          uv run --no-sync python .github/scripts/verify_global_integrity_archive.py
+          --root .
+          --sdist dist/reconforge_erp-0.7.1.tar.gz
+          --wheel dist/reconforge_erp-0.7.1-py3-none-any.whl
+          --report "${RUNNER_TEMP}/publication-source-closure-${{ matrix.python-version }}.json"
+
+      - name: Retain final source archive inspection
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: publication-source-closure-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/publication-source-closure-${{ matrix.python-version }}.json
+          if-no-files-found: error
 
   web:
     runs-on: ubuntu-latest
@@ -352,6 +368,9 @@ jobs:
           - finance-posting
           - inventory-payables
           - erp-expansion
+          - commercial-integrity
+          - supply-integrity
+          - finance-integrity
           - finance-reporting
     services:
       postgres:
@@ -614,8 +633,14 @@ jobs:
             erp-expansion)
               uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
               uv run --no-sync pytest tests/test_postgres_stock_commerce.py tests/test_postgres_stock_commerce_api.py tests/test_postgres_stock_commerce_migrations.py tests/test_postgres_procurement_multiline.py tests/test_postgres_procurement_multiline_api.py tests/test_postgres_procurement_multiline_migrations.py -q
+              ;;
+            commercial-integrity)
               uv run --no-sync pytest tests/test_postgres_commercial_collections.py tests/test_postgres_commercial_collection_cancellation.py -q
+              ;;
+            supply-integrity)
               uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py tests/test_postgres_landed_cost_cancellation.py -q
+              ;;
+            finance-integrity)
               uv run --no-sync pytest tests/test_postgres_fixed_assets.py tests/test_postgres_fixed_assets_evidence.py -q
               uv run --no-sync pytest tests/test_postgres_global_operating_cycles.py -q
               uv run --no-sync pytest tests/test_postgres_native_event_dispatch_migration.py -q

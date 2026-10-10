@@ -26,6 +26,9 @@ FX_EVIDENCE = "docs/execution/wave4-evidence/fx-1e73267e"
 FX_MANIFEST_SHA = "3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a"
 WAVE4_POSTING_EVIDENCE = "docs/execution/wave4-evidence/posting-1k"
 WAVE4_POSTING_MANIFEST_SHA = "c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc"
+WAVE4_STABLE_EVIDENCE = "docs/execution/wave4-evidence/posting-1k-stable-ac"
+WAVE4_STABLE_PAIR_SHA = "cd8c404d2baf129001930ce220846b89e4e06dbf59c02bc342be1935c26c09b1"
+WAVE4_STABLE_MANIFEST_SHA = "1e67d483a994e68392fd7d5a35413e7c535d8d2b78a25d1ae975cf587b3f2a7c"
 WAVE4_SCALE_EVIDENCE = "docs/execution/wave4-evidence/scale-10k/result.json"
 WAVE4_SCALE_SHA = "c09be0d222823c915f93efdbd0824e33715024b2106064805d85dc4e8f405313"
 FX_RETAINED_SHA = {
@@ -290,6 +293,38 @@ def check_wave4_posting_pair(extracted: Path, output: Path) -> dict[str, object]
             "independent_verification": validations, "resource_improvement_acceptance": False}
 
 
+def check_wave4_stable_power(extracted: Path, output: Path) -> dict[str, object]:
+    validations = {}
+    for mode in ("normal", "optimized"):
+        fresh = output / ("independent-wave4-stable-power-" + mode + ".json")
+        isolated_json([sys.executable, "-I", *(["-O"] if mode == "optimized" else []),
+                       str(extracted / ".github/scripts/verify_stable_power_environment.py"),
+                       "--packet", str(extracted / WAVE4_STABLE_EVIDENCE),
+                       "--pair-sha256", WAVE4_STABLE_PAIR_SHA,
+                       "--manifest-sha256", WAVE4_STABLE_MANIFEST_SHA,
+                       "--expected-scheme-guid", "381b4222-f694-41f0-9685-ff5bb260df2e",
+                       "--report", str(fresh)], extracted)
+        current = json.loads(fresh.read_bytes())
+        require(current["status"] == "passed"
+                and current["financial_verification"] == "passed"
+                and current["environment_verification"] == "passed"
+                and current["performance_comparison_accepted"] is False,
+                "Extracted stable-power proof or acceptance scope differs")
+        environment = current["environment"]
+        require(environment["sidecar_count"] == 12
+                and current["financial"]["distinct_container_count"] == 6
+                and current["financial"]["measured_cycles_per_variant"] == 3000,
+                "Extracted stable-power population differs")
+        require(current["financial"]["environment_equivalence"]["power_counts"]
+                == {"ac": 371, "battery": 0, "unavailable": 0},
+                "Extracted stable-power samples differ")
+        validations[mode] = current
+    require(validations["normal"] == validations["optimized"], "Optimized stable-power proof differs")
+    return {"trusted_pair_sha256": WAVE4_STABLE_PAIR_SHA,
+            "trusted_manifest_sha256": WAVE4_STABLE_MANIFEST_SHA,
+            "independent_verification": validations, "resource_improvement_acceptance": False}
+
+
 def check_wave4_scale(extracted: Path) -> dict[str, object]:
     code = """
 import importlib.util,json,pathlib,sys
@@ -375,6 +410,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         WAVE4_POSTING_EVIDENCE + "/source-instrumentation-binding.json",
         WAVE4_SCALE_EVIDENCE,
         ".github/scripts/benchmark_stable_power_pair.py", "tests/test_stable_power_pair_controller.py",
+        ".github/scripts/verify_stable_power_environment.py", "tests/test_stable_power_environment_verifier.py",
         *(WAVE4_POSTING_EVIDENCE + "/" + name + ".json" for name in
           ("1-baseline", "1-candidate", "2-candidate", "2-baseline", "3-baseline", "3-candidate")),
         *(FX_EVIDENCE + "/" + name for name in FX_RETAINED_SHA),
@@ -442,6 +478,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         require(report["independent_posting_pair"]["status"] == "passed", "Extracted independent posting oracle failed")
         report["wave4_portable_evidence"] = check_wave4_evidence(extracted, target)
         report["wave4_independent_posting_pair"] = check_wave4_posting_pair(extracted, target)
+        report["wave4_stable_power_posting_pair"] = check_wave4_stable_power(extracted, target)
         report["wave4_independent_scale_10k"] = check_wave4_scale(extracted)
         report["browser_helper_imports"] = check_imports(extracted)
         report["acceptance_packet_keys"] = sorted(json.loads((extracted / "docs/execution" / (args.acceptance_stem + ".json")).read_text(encoding="utf-8")))

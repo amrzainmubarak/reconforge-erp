@@ -1,0 +1,873 @@
+{
+  "schema_version": "readonly-stable-power-six-facts-v1",
+  "financial_verification": "passed",
+  "environment_verification": "passed",
+  "performance_comparison_accepted": false,
+  "trusted_pair_sha256": "cd8c404d2baf129001930ce220846b89e4e06dbf59c02bc342be1935c26c09b1",
+  "trusted_manifest_sha256": "1e67d483a994e68392fd7d5a35413e7c535d8d2b78a25d1ae975cf587b3f2a7c",
+  "independent_reproduction_sha256": "ac3abc9e6ebd8176fcd637f9343e2e050db2a83f45a9093eb3ad43e95d61523c",
+  "commits": {
+    "baseline": "b7df92711d52bde1adb735e3d1ab538eb2f4e5cc",
+    "candidate": "07452da8742406d2223ce522c87aee0fcd223a90"
+  },
+  "source_fingerprints": {
+    "baseline": "4f597360b305d9f813f3a9c156222cb8d4d0642887ae8b4d99ceb3d8a2fc853c",
+    "candidate": "e23ce1cd57e9856d906993b24d705d8365501b7ab9e0fbd09d8c69345ccaa96c"
+  },
+  "original_native_oracle_minor": {
+    "100": "46669102",
+    "1000": "493671004"
+  },
+  "measured_count_per_variant": 3000,
+  "warmup_count_per_variant": 60,
+  "distinct_native_effects_including_warmup": 6120,
+  "distinct_container_count": 6,
+  "medians": {
+    "baseline": {
+      "posting_seconds": 622.5318169999955,
+      "throughput": 1.60634359994488,
+      "p50": 2.441582199993718,
+      "p95": 2.753405899995414,
+      "p99": 3.4311601999943377,
+      "client_cpu_seconds": 516.59375,
+      "container_cpu_seconds": 1578.474764,
+      "total_cpu_seconds_per_success": 2.0950685140000003,
+      "bounded_batch_read_seconds": 0.4706261000028462
+    },
+    "candidate": {
+      "posting_seconds": 436.60382160000154,
+      "throughput": 2.290405971105216,
+      "p50": 1.6712972000023,
+      "p95": 2.1149641999945743,
+      "p99": 2.540505299999495,
+      "client_cpu_seconds": 531.1875,
+      "container_cpu_seconds": 995.48811,
+      "total_cpu_seconds_per_success": 1.52667561,
+      "bounded_batch_read_seconds": 0.4643339999965974
+    }
+  },
+  "candidate_change_percent": {
+    "posting_seconds": -29.866424546136138,
+    "throughput": 42.585059085976916,
+    "p50": -31.54859991989619,
+    "p95": -23.187344081811666,
+    "p99": -25.957834903666477,
+    "client_cpu_seconds": 2.8249954630693797,
+    "container_cpu_seconds": -36.93354289191537,
+    "total_cpu_seconds_per_success": -27.1300389558525,
+    "bounded_batch_read_seconds": -1.3369636758800096
+  },
+  "memory_lifetime_peak_medians": {
+    "baseline": {
+      "container_lifetime_peak_memory_bytes": 318361600,
+      "client_lifetime_peak_memory_bytes": 129007616
+    },
+    "candidate": {
+      "container_lifetime_peak_memory_bytes": 216072192,
+      "client_lifetime_peak_memory_bytes": 129298432
+    }
+  },
+  "memory_lifetime_peak_change_percent": {
+    "container_lifetime_peak_memory_bytes": -32.1299453200386,
+    "client_lifetime_peak_memory_bytes": 0.22542545085089127
+  },
+  "current_sampled_lock_wait_peak": 3,
+  "all_observed_deadlock_counters_zero": true,
+  "environment_equivalence": {
+    "static_configuration_equal": true,
+    "dynamic_host_power_constant": true,
+    "dynamic_host_power_classification": "constant_observed",
+    "power_counts": {
+      "ac": 371,
+      "battery": 0,
+      "unavailable": 0
+    },
+    "observed_power_states": [
+      "ac"
+    ],
+    "dynamic_host_power_constant_scope": "retained available boolean power samples only; sparse observations do not prove uninterrupted power or equal per-core scheduling",
+    "frequency_or_performance_phase_binding": "unavailable: no phase start/end timestamps or retained posting timer origin",
+    "causal_attribution": "unproven; power/frequency observations do not establish the cause of measured CPU differences"
+  },
+  "common_configuration": {
+    "profile": "native-three-human-cash-equity-v1",
+    "seed": "enterprise-native-v1",
+    "counts": [
+      100,
+      1000
+    ],
+    "workers": 4,
+    "repetitions": 3,
+    "posting_warmup_cycles": 20,
+    "max_seconds": 1800,
+    "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+    "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "logical_cpus": 16,
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD",
+    "architecture": "AMD64",
+    "docker_version": "29.8.2",
+    "docker_engine_resources": {
+      "OperatingSystem": "Docker Desktop (containerized)",
+      "OSType": "linux",
+      "Architecture": "x86_64",
+      "KernelVersion": "6.18.40.1-microsoft-standard-WSL2",
+      "NCPU": 16,
+      "MemTotal": 10266157056,
+      "Driver": "overlayfs"
+    },
+    "postgres_version": "17.10",
+    "postgres_configuration": {
+      "from_collapse_limit": "8",
+      "fsync": "on",
+      "full_page_writes": "on",
+      "jit": "on",
+      "jit_above_cost": "100000",
+      "jit_inline_above_cost": "500000",
+      "jit_optimize_above_cost": "500000",
+      "join_collapse_limit": "8",
+      "max_connections": "100",
+      "shared_buffers": "16384",
+      "synchronous_commit": "on",
+      "track_io_timing": "off",
+      "wal_level": "replica",
+      "work_mem": "4096"
+    },
+    "runtime_role_flags": [
+      false,
+      false
+    ]
+  },
+  "runs": [
+    {
+      "repetition": 1,
+      "variant": "baseline",
+      "raw_sha256": "e8d6fdb8b2066fdf186ceebf0db2a020556a44752b2fb76da690347d22c9363b",
+      "source_commit": "b7df92711d52bde1adb735e3d1ab538eb2f4e5cc",
+      "source_sha256": "4f597360b305d9f813f3a9c156222cb8d4d0642887ae8b4d99ceb3d8a2fc853c",
+      "source_unchanged": true,
+      "owned_container_removed": true,
+      "started_at": "2026-10-10T17:02:49.342957+00:00",
+      "finished_at": "2026-10-10T17:16:11.562823+00:00",
+      "measured_count": 1000,
+      "warmup_count": 20,
+      "raw_read_requests": 3333,
+      "metrics": {
+        "posting_seconds": 704.6639286999998,
+        "throughput": 1.4191162045783319,
+        "p50": 2.7613101999959326,
+        "p95": 3.3077866999956314,
+        "p99": 4.265475799998967,
+        "client_cpu_seconds": 713.1875,
+        "container_cpu_seconds": 1729.263766,
+        "total_cpu_seconds_per_success": 2.442451266,
+        "bounded_batch_read_seconds": 0.49424379999982193
+      },
+      "memory": {
+        "container_lifetime_peak_memory_bytes": 324816896,
+        "client_lifetime_peak_memory_bytes": 129007616
+      },
+      "resource_sample_window": {
+        "sample_count": 79,
+        "interval_seconds": 10,
+        "first_elapsed_seconds": 0.8910000000032596,
+        "last_elapsed_seconds": 781.4530000000013,
+        "client_cpu_seconds_sample_window_delta": 738.0,
+        "sampled_client_rss_peak_bytes": 126156800,
+        "client_lifetime_peak_rss_bytes_at_last_sample": 129007616,
+        "sampled_docker_cpu_peak_percent": 286.49,
+        "sampled_docker_ram_peak_bytes": 180564787,
+        "sampled_lock_waiting_sessions_peak": 2,
+        "deadlock_counter_first": 0,
+        "deadlock_counter_last": 0,
+        "database_counter_sample_window_deltas": {
+          "xact_commit": 12887,
+          "xact_rollback": 0,
+          "blks_read": 82,
+          "blks_hit": 23366042,
+          "tup_returned": 16385924,
+          "tup_fetched": 16258080,
+          "tup_inserted": 11911,
+          "tup_updated": 9531,
+          "tup_deleted": 458,
+          "conflicts": 0,
+          "temp_files": 0,
+          "temp_bytes": 0,
+          "deadlocks": 0,
+          "blk_read_time_ms": 0.0,
+          "blk_write_time_ms": 0.0
+        },
+        "wal_bytes_sample_window_delta": 20022330,
+        "docker_raw_counters_first": {
+          "CPUPerc": "65.31%",
+          "MemUsage": "80.44MiB / 9.561GiB",
+          "MemPerc": "0.82%",
+          "NetIO": "1.67MB / 612kB",
+          "BlockIO": "0B / 72.7MB",
+          "PIDs": "7"
+        },
+        "docker_raw_counters_last": {
+          "CPUPerc": "28.86%",
+          "MemUsage": "73.23MiB / 9.561GiB",
+          "MemPerc": "0.75%",
+          "NetIO": "109MB / 279MB",
+          "BlockIO": "0B / 196MB",
+          "PIDs": "7"
+        }
+      },
+      "host_observations": {
+        "sample_count": 79,
+        "counter_status_counts": {
+          "priming": 1,
+          "available": 78
+        },
+        "power_counts": {
+          "ac": 79,
+          "battery": 0,
+          "unavailable": 0
+        },
+        "power_unavailable_reasons": {},
+        "battery_saver_counts": {
+          "on": 0,
+          "off": 79,
+          "unavailable": 0
+        },
+        "quantiles": {
+          "processor_frequency_mhz": {
+            "available_samples": 78,
+            "unavailable_samples": 1,
+            "min": 2547.0,
+            "median": 2823.0,
+            "p50": 2823.0,
+            "p95": 3060.0,
+            "p99": 3100.0,
+            "max": 3100.0
+          },
+          "processor_performance_percent": {
+            "available_samples": 78,
+            "unavailable_samples": 1,
+            "min": 111.86380287502,
+            "median": 131.05933502086492,
+            "p50": 131.02584728507244,
+            "p95": 135.37734885006594,
+            "p99": 135.82166812165963,
+            "max": 135.82166812165963
+          }
+        },
+        "quantile_method": "nearest rank; median is arithmetic median",
+        "scope": "host-wide sparse samples across setup tail, warmup, posting and reads; no per-phase or per-core binding"
+      }
+    },
+    {
+      "repetition": 1,
+      "variant": "candidate",
+      "raw_sha256": "b3ecb5bc0837938e6b77160623a0ae17290e24bb4dda635f94657e4e990f6dac",
+      "source_commit": "07452da8742406d2223ce522c87aee0fcd223a90",
+      "source_sha256": "e23ce1cd57e9856d906993b24d705d8365501b7ab9e0fbd09d8c69345ccaa96c",
+      "source_unchanged": true,
+      "owned_container_removed": true,
+      "started_at": "2026-10-10T17:16:14.263974+00:00",
+      "finished_at": "2026-10-10T17:25:32.054344+00:00",
+      "measured_count": 1000,
+      "warmup_count": 20,
+      "raw_read_requests": 3333,
+      "metrics": {
+        "posting_seconds": 473.35402389999945,
+        "throughput": 2.11258371009699,
+        "p50": 1.7637022000053548,
+        "p95": 2.406499900003837,
+        "p99": 2.640857700003835,
+        "client_cpu_seconds": 640.3125,
+        "container_cpu_seconds": 1011.369457,
+        "total_cpu_seconds_per_success": 1.651681957,
+        "bounded_batch_read_seconds": 0.4531790999972145
+      },
+      "memory": {
+        "container_lifetime_peak_memory_bytes": 215576576,
+        "client_lifetime_peak_memory_bytes": 135618560
+      },
+      "resource_sample_window": {
+        "sample_count": 55,
+        "interval_seconds": 10,
+        "first_elapsed_seconds": 0.8910000000032596,
+        "last_elapsed_seconds": 541.3280000000013,
+        "client_cpu_seconds_sample_window_delta": 666.265625,
+        "sampled_client_rss_peak_bytes": 130842624,
+        "client_lifetime_peak_rss_bytes_at_last_sample": 135618560,
+        "sampled_docker_cpu_peak_percent": 233.59,
+        "sampled_docker_ram_peak_bytes": 107059610,
+        "sampled_lock_waiting_sessions_peak": 3,
+        "deadlock_counter_first": 0,
+        "deadlock_counter_last": 0,
+        "database_counter_sample_window_deltas": {
+          "xact_commit": 12720,
+          "xact_rollback": 0,
+          "blks_read": 82,
+          "blks_hit": 24354688,
+          "tup_returned": 17469915,
+          "tup_fetched": 17355414,
+          "tup_inserted": 11822,
+          "tup_updated": 9201,
+          "tup_deleted": 369,
+          "conflicts": 0,
+          "temp_files": 0,
+          "temp_bytes": 0,
+          "deadlocks": 0,
+          "blk_read_time_ms": 0.0,
+          "blk_write_time_ms": 0.0
+        },
+        "wal_bytes_sample_window_delta": 18644549,
+        "docker_raw_counters_first": {
+          "CPUPerc": "36.86%",
+          "MemUsage": "55.79MiB / 9.561GiB",
+          "MemPerc": "0.57%",
+          "NetIO": "1.89MB / 671kB",
+          "BlockIO": "0B / 73.9MB",
+          "PIDs": "7"
+        },
+        "docker_raw_counters_last": {
+          "CPUPerc": "0.02%",
+          "MemUsage": "68.41MiB / 9.561GiB",
+          "MemPerc": "0.70%",
+          "NetIO": "109MB / 281MB",
+          "BlockIO": "0B / 216MB",
+          "PIDs": "6"
+        }
+      },
+      "host_observations": {
+        "sample_count": 55,
+        "counter_status_counts": {
+          "priming": 1,
+          "available": 54
+        },
+        "power_counts": {
+          "ac": 55,
+          "battery": 0,
+          "unavailable": 0
+        },
+        "power_unavailable_reasons": {},
+        "battery_saver_counts": {
+          "on": 0,
+          "off": 55,
+          "unavailable": 0
+        },
+        "quantiles": {
+          "processor_frequency_mhz": {
+            "available_samples": 54,
+            "unavailable_samples": 1,
+            "min": 2508.0,
+            "median": 2863.0,
+            "p50": 2863.0,
+            "p95": 3100.0,
+            "p99": 3100.0,
+            "max": 3100.0
+          },
+          "processor_performance_percent": {
+            "available_samples": 54,
+            "unavailable_samples": 1,
+            "min": 108.23768577127507,
+            "median": 131.06974010360423,
+            "p50": 131.0548689004187,
+            "p95": 134.04098531835314,
+            "p99": 134.78892447535569,
+            "max": 134.78892447535569
+          }
+        },
+        "quantile_method": "nearest rank; median is arithmetic median",
+        "scope": "host-wide sparse samples across setup tail, warmup, posting and reads; no per-phase or per-core binding"
+      }
+    },
+    {
+      "repetition": 2,
+      "variant": "candidate",
+      "raw_sha256": "2ff0aa25cc234be3050fd7cd4da6300424594ea11d7f8998b8a721a2cf8ec547",
+      "source_commit": "07452da8742406d2223ce522c87aee0fcd223a90",
+      "source_sha256": "e23ce1cd57e9856d906993b24d705d8365501b7ab9e0fbd09d8c69345ccaa96c",
+      "source_unchanged": true,
+      "owned_container_removed": true,
+      "started_at": "2026-10-10T17:25:33.873845+00:00",
+      "finished_at": "2026-10-10T17:34:02.407189+00:00",
+      "measured_count": 1000,
+      "warmup_count": 20,
+      "raw_read_requests": 3333,
+      "metrics": {
+        "posting_seconds": 436.60382160000154,
+        "throughput": 2.290405971105216,
+        "p50": 1.6712972000023,
+        "p95": 2.1149641999945743,
+        "p99": 2.540505299999495,
+        "client_cpu_seconds": 531.1875,
+        "container_cpu_seconds": 995.48811,
+        "total_cpu_seconds_per_success": 1.52667561,
+        "bounded_batch_read_seconds": 0.46990200000436744
+      },
+      "memory": {
+        "container_lifetime_peak_memory_bytes": 216072192,
+        "client_lifetime_peak_memory_bytes": 129298432
+      },
+      "resource_sample_window": {
+        "sample_count": 50,
+        "interval_seconds": 10,
+        "first_elapsed_seconds": 0.35900000000401633,
+        "last_elapsed_seconds": 490.5630000000019,
+        "client_cpu_seconds_sample_window_delta": 547.515625,
+        "sampled_client_rss_peak_bytes": 128626688,
+        "client_lifetime_peak_rss_bytes_at_last_sample": 129298432,
+        "sampled_docker_cpu_peak_percent": 233.31,
+        "sampled_docker_ram_peak_bytes": 111044198,
+        "sampled_lock_waiting_sessions_peak": 1,
+        "deadlock_counter_first": 0,
+        "deadlock_counter_last": 0,
+        "database_counter_sample_window_deltas": {
+          "xact_commit": 12686,
+          "xact_rollback": 0,
+          "blks_read": 82,
+          "blks_hit": 24266259,
+          "tup_returned": 17771552,
+          "tup_fetched": 17650932,
+          "tup_inserted": 11806,
+          "tup_updated": 9154,
+          "tup_deleted": 353,
+          "conflicts": 0,
+          "temp_files": 0,
+          "temp_bytes": 0,
+          "deadlocks": 0,
+          "blk_read_time_ms": 0.0,
+          "blk_write_time_ms": 0.0
+        },
+        "wal_bytes_sample_window_delta": 18751727,
+        "docker_raw_counters_first": {
+          "CPUPerc": "58.82%",
+          "MemUsage": "60.22MiB / 9.561GiB",
+          "MemPerc": "0.62%",
+          "NetIO": "1.89MB / 702kB",
+          "BlockIO": "4.1kB / 73.9MB",
+          "PIDs": "7"
+        },
+        "docker_raw_counters_last": {
+          "CPUPerc": "28.99%",
+          "MemUsage": "74.61MiB / 9.561GiB",
+          "MemPerc": "0.76%",
+          "NetIO": "109MB / 278MB",
+          "BlockIO": "4.1kB / 207MB",
+          "PIDs": "7"
+        }
+      },
+      "host_observations": {
+        "sample_count": 50,
+        "counter_status_counts": {
+          "priming": 1,
+          "available": 49
+        },
+        "power_counts": {
+          "ac": 50,
+          "battery": 0,
+          "unavailable": 0
+        },
+        "power_unavailable_reasons": {},
+        "battery_saver_counts": {
+          "on": 0,
+          "off": 50,
+          "unavailable": 0
+        },
+        "quantiles": {
+          "processor_frequency_mhz": {
+            "available_samples": 49,
+            "unavailable_samples": 1,
+            "min": 2626.0,
+            "median": 2863.0,
+            "p50": 2863.0,
+            "p95": 3021.0,
+            "p99": 3100.0,
+            "max": 3100.0
+          },
+          "processor_performance_percent": {
+            "available_samples": 49,
+            "unavailable_samples": 1,
+            "min": 116.77211097351608,
+            "median": 131.55224912498647,
+            "p50": 131.55224912498647,
+            "p95": 133.79630538331412,
+            "p99": 135.28219542304112,
+            "max": 135.28219542304112
+          }
+        },
+        "quantile_method": "nearest rank; median is arithmetic median",
+        "scope": "host-wide sparse samples across setup tail, warmup, posting and reads; no per-phase or per-core binding"
+      }
+    },
+    {
+      "repetition": 2,
+      "variant": "baseline",
+      "raw_sha256": "8dd63d67abaae57d7611ef96e773a15de4849948b63f12ee54bf3e1ce996b372",
+      "source_commit": "b7df92711d52bde1adb735e3d1ab538eb2f4e5cc",
+      "source_sha256": "4f597360b305d9f813f3a9c156222cb8d4d0642887ae8b4d99ceb3d8a2fc853c",
+      "source_unchanged": true,
+      "owned_container_removed": true,
+      "started_at": "2026-10-10T17:34:04.307393+00:00",
+      "finished_at": "2026-10-10T17:45:52.621207+00:00",
+      "measured_count": 1000,
+      "warmup_count": 20,
+      "raw_read_requests": 3333,
+      "metrics": {
+        "posting_seconds": 622.5318169999955,
+        "throughput": 1.60634359994488,
+        "p50": 2.441582199993718,
+        "p95": 2.753405899995414,
+        "p99": 3.4311601999943377,
+        "client_cpu_seconds": 516.59375,
+        "container_cpu_seconds": 1578.474764,
+        "total_cpu_seconds_per_success": 2.0950685140000003,
+        "bounded_batch_read_seconds": 0.4706261000028462
+      },
+      "memory": {
+        "container_lifetime_peak_memory_bytes": 318361600,
+        "client_lifetime_peak_memory_bytes": 129720320
+      },
+      "resource_sample_window": {
+        "sample_count": 70,
+        "interval_seconds": 10,
+        "first_elapsed_seconds": 0.3289999999979045,
+        "last_elapsed_seconds": 690.75,
+        "client_cpu_seconds_sample_window_delta": 533.390625,
+        "sampled_client_rss_peak_bytes": 126300160,
+        "client_lifetime_peak_rss_bytes_at_last_sample": 129720320,
+        "sampled_docker_cpu_peak_percent": 267.56,
+        "sampled_docker_ram_peak_bytes": 210973491,
+        "sampled_lock_waiting_sessions_peak": 2,
+        "deadlock_counter_first": 0,
+        "deadlock_counter_last": 0,
+        "database_counter_sample_window_deltas": {
+          "xact_commit": 12844,
+          "xact_rollback": 0,
+          "blks_read": 82,
+          "blks_hit": 23380200,
+          "tup_returned": 16447736,
+          "tup_fetched": 16318453,
+          "tup_inserted": 11919,
+          "tup_updated": 9514,
+          "tup_deleted": 466,
+          "conflicts": 0,
+          "temp_files": 0,
+          "temp_bytes": 0,
+          "deadlocks": 0,
+          "blk_read_time_ms": 0.0,
+          "blk_write_time_ms": 0.0
+        },
+        "wal_bytes_sample_window_delta": 20408461,
+        "docker_raw_counters_first": {
+          "CPUPerc": "74.99%",
+          "MemUsage": "71.45MiB / 9.561GiB",
+          "MemPerc": "0.73%",
+          "NetIO": "1.67MB / 613kB",
+          "BlockIO": "0B / 72.7MB",
+          "PIDs": "7"
+        },
+        "docker_raw_counters_last": {
+          "CPUPerc": "28.93%",
+          "MemUsage": "72.76MiB / 9.561GiB",
+          "MemPerc": "0.74%",
+          "NetIO": "109MB / 280MB",
+          "BlockIO": "0B / 215MB",
+          "PIDs": "7"
+        }
+      },
+      "host_observations": {
+        "sample_count": 70,
+        "counter_status_counts": {
+          "priming": 1,
+          "available": 69
+        },
+        "power_counts": {
+          "ac": 70,
+          "battery": 0,
+          "unavailable": 0
+        },
+        "power_unavailable_reasons": {},
+        "battery_saver_counts": {
+          "on": 0,
+          "off": 70,
+          "unavailable": 0
+        },
+        "quantiles": {
+          "processor_frequency_mhz": {
+            "available_samples": 69,
+            "unavailable_samples": 1,
+            "min": 2666.0,
+            "median": 2823.0,
+            "p50": 2823.0,
+            "p95": 2981.0,
+            "p99": 3021.0,
+            "max": 3021.0
+          },
+          "processor_performance_percent": {
+            "available_samples": 69,
+            "unavailable_samples": 1,
+            "min": 115.9052493121591,
+            "median": 131.0693023784753,
+            "p50": 131.0693023784753,
+            "p95": 132.66178899793434,
+            "p99": 135.01765429506457,
+            "max": 135.01765429506457
+          }
+        },
+        "quantile_method": "nearest rank; median is arithmetic median",
+        "scope": "host-wide sparse samples across setup tail, warmup, posting and reads; no per-phase or per-core binding"
+      }
+    },
+    {
+      "repetition": 3,
+      "variant": "baseline",
+      "raw_sha256": "9e934ccf5eb0ebe1d14f24674e2935fab224c5edfde5701236e69f46cd579a6e",
+      "source_commit": "b7df92711d52bde1adb735e3d1ab538eb2f4e5cc",
+      "source_sha256": "4f597360b305d9f813f3a9c156222cb8d4d0642887ae8b4d99ceb3d8a2fc853c",
+      "source_unchanged": true,
+      "owned_container_removed": true,
+      "started_at": "2026-10-10T17:45:54.378448+00:00",
+      "finished_at": "2026-10-10T17:57:31.744926+00:00",
+      "measured_count": 1000,
+      "warmup_count": 20,
+      "raw_read_requests": 3333,
+      "metrics": {
+        "posting_seconds": 615.5566831999968,
+        "throughput": 1.6245457604350242,
+        "p50": 2.4340874000045005,
+        "p95": 2.6185110000005807,
+        "p99": 2.858822700000019,
+        "client_cpu_seconds": 514.40625,
+        "container_cpu_seconds": 1563.865217,
+        "total_cpu_seconds_per_success": 2.078271467,
+        "bounded_batch_read_seconds": 0.45726160000049276
+      },
+      "memory": {
+        "container_lifetime_peak_memory_bytes": 317489152,
+        "client_lifetime_peak_memory_bytes": 127217664
+      },
+      "resource_sample_window": {
+        "sample_count": 69,
+        "interval_seconds": 10,
+        "first_elapsed_seconds": 0.34399999999732245,
+        "last_elapsed_seconds": 680.75,
+        "client_cpu_seconds_sample_window_delta": 531.0625,
+        "sampled_client_rss_peak_bytes": 123506688,
+        "client_lifetime_peak_rss_bytes_at_last_sample": 127217664,
+        "sampled_docker_cpu_peak_percent": 270.37,
+        "sampled_docker_ram_peak_bytes": 184654234,
+        "sampled_lock_waiting_sessions_peak": 2,
+        "deadlock_counter_first": 0,
+        "deadlock_counter_last": 0,
+        "database_counter_sample_window_deltas": {
+          "xact_commit": 12819,
+          "xact_rollback": 0,
+          "blks_read": 82,
+          "blks_hit": 23380325,
+          "tup_returned": 16461166,
+          "tup_fetched": 16337552,
+          "tup_inserted": 11890,
+          "tup_updated": 9423,
+          "tup_deleted": 437,
+          "conflicts": 0,
+          "temp_files": 0,
+          "temp_bytes": 0,
+          "deadlocks": 0,
+          "blk_read_time_ms": 0.0,
+          "blk_write_time_ms": 0.0
+        },
+        "wal_bytes_sample_window_delta": 19939111,
+        "docker_raw_counters_first": {
+          "CPUPerc": "76.26%",
+          "MemUsage": "76.73MiB / 9.561GiB",
+          "MemPerc": "0.78%",
+          "NetIO": "1.67MB / 638kB",
+          "BlockIO": "221kB / 72.7MB",
+          "PIDs": "7"
+        },
+        "docker_raw_counters_last": {
+          "CPUPerc": "28.92%",
+          "MemUsage": "74.04MiB / 9.561GiB",
+          "MemPerc": "0.76%",
+          "NetIO": "109MB / 279MB",
+          "BlockIO": "221kB / 214MB",
+          "PIDs": "7"
+        }
+      },
+      "host_observations": {
+        "sample_count": 69,
+        "counter_status_counts": {
+          "priming": 1,
+          "available": 68
+        },
+        "power_counts": {
+          "ac": 69,
+          "battery": 0,
+          "unavailable": 0
+        },
+        "power_unavailable_reasons": {},
+        "battery_saver_counts": {
+          "on": 0,
+          "off": 69,
+          "unavailable": 0
+        },
+        "quantiles": {
+          "processor_frequency_mhz": {
+            "available_samples": 68,
+            "unavailable_samples": 1,
+            "min": 2547.0,
+            "median": 2863.0,
+            "p50": 2863.0,
+            "p95": 2981.0,
+            "p99": 3021.0,
+            "max": 3021.0
+          },
+          "processor_performance_percent": {
+            "available_samples": 68,
+            "unavailable_samples": 1,
+            "min": 109.05575239323356,
+            "median": 130.93522945064527,
+            "p50": 130.92834321621592,
+            "p95": 132.69854577232377,
+            "p99": 133.8762996332552,
+            "max": 133.8762996332552
+          }
+        },
+        "quantile_method": "nearest rank; median is arithmetic median",
+        "scope": "host-wide sparse samples across setup tail, warmup, posting and reads; no per-phase or per-core binding"
+      }
+    },
+    {
+      "repetition": 3,
+      "variant": "candidate",
+      "raw_sha256": "7571411cc394d71f6d13f8ed839daa5a2fb1e9273c43e43f53818f0ddafc5a85",
+      "source_commit": "07452da8742406d2223ce522c87aee0fcd223a90",
+      "source_sha256": "e23ce1cd57e9856d906993b24d705d8365501b7ab9e0fbd09d8c69345ccaa96c",
+      "source_unchanged": true,
+      "owned_container_removed": true,
+      "started_at": "2026-10-10T17:57:33.626632+00:00",
+      "finished_at": "2026-10-10T18:05:40.862274+00:00",
+      "measured_count": 1000,
+      "warmup_count": 20,
+      "raw_read_requests": 3333,
+      "metrics": {
+        "posting_seconds": 417.13443549999647,
+        "throughput": 2.3973086729254423,
+        "p50": 1.6417673000032664,
+        "p95": 1.8483594000063022,
+        "p99": 1.990337900002487,
+        "client_cpu_seconds": 512.828125,
+        "container_cpu_seconds": 944.521768,
+        "total_cpu_seconds_per_success": 1.4573498930000002,
+        "bounded_batch_read_seconds": 0.4643339999965974
+      },
+      "memory": {
+        "container_lifetime_peak_memory_bytes": 217591808,
+        "client_lifetime_peak_memory_bytes": 126193664
+      },
+      "resource_sample_window": {
+        "sample_count": 48,
+        "interval_seconds": 10,
+        "first_elapsed_seconds": 0.34399999999732245,
+        "last_elapsed_seconds": 470.65699999999924,
+        "client_cpu_seconds_sample_window_delta": 529.125,
+        "sampled_client_rss_peak_bytes": 126152704,
+        "client_lifetime_peak_rss_bytes_at_last_sample": 126193664,
+        "sampled_docker_cpu_peak_percent": 238.99,
+        "sampled_docker_ram_peak_bytes": 109051904,
+        "sampled_lock_waiting_sessions_peak": 1,
+        "deadlock_counter_first": 0,
+        "deadlock_counter_last": 0,
+        "database_counter_sample_window_deltas": {
+          "xact_commit": 12677,
+          "xact_rollback": 0,
+          "blks_read": 82,
+          "blks_hit": 24268425,
+          "tup_returned": 17788488,
+          "tup_fetched": 17667842,
+          "tup_inserted": 11802,
+          "tup_updated": 9155,
+          "tup_deleted": 349,
+          "conflicts": 0,
+          "temp_files": 0,
+          "temp_bytes": 0,
+          "deadlocks": 0,
+          "blk_read_time_ms": 0.0,
+          "blk_write_time_ms": 0.0
+        },
+        "wal_bytes_sample_window_delta": 18775222,
+        "docker_raw_counters_first": {
+          "CPUPerc": "55.92%",
+          "MemUsage": "69.34MiB / 9.561GiB",
+          "MemPerc": "0.71%",
+          "NetIO": "1.95MB / 790kB",
+          "BlockIO": "65.5kB / 73.9MB",
+          "PIDs": "7"
+        },
+        "docker_raw_counters_last": {
+          "CPUPerc": "29.96%",
+          "MemUsage": "73.71MiB / 9.561GiB",
+          "MemPerc": "0.75%",
+          "NetIO": "109MB / 279MB",
+          "BlockIO": "65.5kB / 205MB",
+          "PIDs": "7"
+        }
+      },
+      "host_observations": {
+        "sample_count": 48,
+        "counter_status_counts": {
+          "priming": 1,
+          "available": 47
+        },
+        "power_counts": {
+          "ac": 48,
+          "battery": 0,
+          "unavailable": 0
+        },
+        "power_unavailable_reasons": {},
+        "battery_saver_counts": {
+          "on": 0,
+          "off": 48,
+          "unavailable": 0
+        },
+        "quantiles": {
+          "processor_frequency_mhz": {
+            "available_samples": 47,
+            "unavailable_samples": 1,
+            "min": 2587.0,
+            "median": 2823.0,
+            "p50": 2823.0,
+            "p95": 3021.0,
+            "p99": 3021.0,
+            "max": 3021.0
+          },
+          "processor_performance_percent": {
+            "available_samples": 47,
+            "unavailable_samples": 1,
+            "min": 116.51428702565248,
+            "median": 130.70156555633187,
+            "p50": 130.70156555633187,
+            "p95": 131.9968380331536,
+            "p99": 134.43552725495383,
+            "max": 134.43552725495383
+          }
+        },
+        "quantile_method": "nearest rank; median is arithmetic median",
+        "scope": "host-wide sparse samples across setup tail, warmup, posting and reads; no per-phase or per-core binding"
+      }
+    }
+  ],
+  "adverse_findings": [
+    {
+      "metric": "client_cpu_seconds",
+      "candidate_change_percent": 2.8249954630693797
+    },
+    {
+      "metric": "client_lifetime_peak_memory_bytes",
+      "candidate_change_percent": 0.22542545085089127
+    }
+  ],
+  "limits": [
+    "Native single-entity USD cash/equity repositories; not mixed ERP/HTTP or competitor performance.",
+    "Client CPU and resource samplers include observer overhead; lifetime memory peaks include startup and warmup.",
+    "Sparse host-wide power/frequency samples plus GUID bookends; no power-mode overlay, phase binding or thermal cause.",
+    "No monetary cost model/RPO/RTO/failover result; cross-database effect-ID digests are intentionally distinct."
+  ]
+}

@@ -13373,3 +13373,8 @@ scope. The genuine10Kcapacity packet receives its own pinned normal/-O archive
 oracle; it establishes neither a matched10Kspeedup nor cross-vendor superiority.
 The monetary resource cost remains null without an actual cost model. Keep the
 historic22-entry index and accepted source reports immutable.
+
+
+### Wave4 completed stable-power evidence closure — 2026-10-10
+
+Stable six financial/environment proof passed; paircd8c404d/manifest1e67d483 pin original reports/12power sidecars. All371observed samples AC,0battery/unavailable; original6120effects/six fresh servers. Median throughput+42.5851%, combinedCPU/success-27.1300%, p95-23.1873%, batchread-1.3370%, adverse clientCPU+2.8250% and lifetime memory+0.2254%; overall resource/performance acceptance remainsfalse, no post-hoc threshold. Independent normal/optimized proofs byte-identicalac3abc9e;73targeted cases passed with0skips. Previous mixed/failed results remain immutable. 10Kcapacity independently passed5028151631minor;100K/1M unrun; no equivalent competitor comparison. Final source archive/hosted gates are required after evidence integration.

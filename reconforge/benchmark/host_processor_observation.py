@@ -52,8 +52,13 @@ class ProcessorObservationBackend(Protocol):
 
 class _NativeWindowsBackend:
     def __init__(self) -> None:
-        self.pdh = ctypes.WinDLL("pdh", use_last_error=True)
-        self.kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        # Resolve Windows-only exports lazily: Linux ctypes and its type stubs
+        # omit them. Construction remains behind the Windows platform boundary.
+        load_library = getattr(ctypes, "WinDLL", None)
+        if not callable(load_library):
+            raise OSError("Windows native library loader unavailable")
+        self.pdh = load_library("pdh", use_last_error=True)
+        self.kernel = load_library("kernel32", use_last_error=True)
         self.pdh.PdhOpenQueryW.argtypes = [ctypes.c_wchar_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_void_p)]
         self.pdh.PdhAddEnglishCounterW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_size_t,
                                                   ctypes.POINTER(ctypes.c_void_p)]
@@ -91,7 +96,10 @@ class _NativeWindowsBackend:
     def power_status(self) -> tuple[bool, int | None, dict[str, int] | None]:
         value = _PowerStatus()
         if not self.kernel.GetSystemPowerStatus(ctypes.byref(value)):
-            return False, ctypes.get_last_error(), None
+            last_error = getattr(ctypes, "get_last_error", None)
+            if not callable(last_error):
+                raise OSError("Windows last-error API unavailable")
+            return False, int(last_error()), None
         return True, None, {field[0]: int(getattr(value, field[0])) for field in _PowerStatus._fields_}
 
     def close(self) -> int:

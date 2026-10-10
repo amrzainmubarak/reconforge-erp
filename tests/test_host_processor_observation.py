@@ -211,6 +211,7 @@ def test_unsupported_platform_never_calls_native_backend() -> None:
 
 def test_windows_ctypes_layout_and_language_neutral_native_lifecycle(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, tuple[Any, ...]]] = []
+    power_available = [True]
 
     class NativeFunction:
         def __init__(self, name: str) -> None:
@@ -225,7 +226,7 @@ def test_windows_ctypes_layout_and_language_neutral_native_lifecycle(monkeypatch
                 value.CStatus, value.value.doubleValue = 1, 135.25
             if self.name == "GetSystemPowerStatus":
                 ctypes.cast(args[0], ctypes.POINTER(host._PowerStatus)).contents.ACLineStatus = 1
-                return 1
+                return int(power_available[0])
             return 0
 
     class Library:
@@ -235,6 +236,7 @@ def test_windows_ctypes_layout_and_language_neutral_native_lifecycle(monkeypatch
             return value
 
     monkeypatch.setattr(ctypes, "WinDLL", lambda *_args, **_kwargs: Library(), raising=False)
+    monkeypatch.setattr(ctypes, "get_last_error", lambda: 5, raising=False)
     assert ctypes.sizeof(host._PowerStatus) == 12
     assert host._CounterValue.value.offset == 8 and ctypes.sizeof(host._CounterValue) == 16
     backend = host._NativeWindowsBackend()
@@ -243,6 +245,8 @@ def test_windows_ctypes_layout_and_language_neutral_native_lifecycle(monkeypatch
     assert backend.collect() == 0
     assert backend.formatted("test") == (0, 1, 135.25)
     assert backend.power_status()[2]["ACLineStatus"] == 1
+    power_available[0] = False
+    assert backend.power_status() == (False, 5, None)
     assert backend.close() == backend.close() == 0
     assert [name for name, _ in calls].count("PdhCloseQuery") == 1
     args = next(args for name, args in calls if name == "PdhGetFormattedCounterValue")
@@ -327,6 +331,20 @@ def test_native_library_load_failure_is_explicit_without_host_disclosure(monkeyp
     assert result["initialization"]["measurement_seconds"] >= 0
     assert "secret-" not in str(result)
     assert observed.close()["status"] == "not_opened"
+
+
+def test_missing_windows_ctypes_exports_are_unavailable_and_never_used_on_linux(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delattr(ctypes, "WinDLL", raising=False)
+    monkeypatch.delattr(ctypes, "get_last_error", raising=False)
+    linux = host.WindowsProcessorObservation(platform_name="linux")
+    assert linux.observe()["status"] == "unsupported_platform"
+    assert linux.close()["status"] == "not_opened"
+    windows = host.WindowsProcessorObservation(platform_name="win32")
+    result = windows.observe()
+    assert result["status"] == "unavailable" and result["processor_frequency_mhz"] is None
+    assert result["initialization"]["stage"] == "load_libraries"
+    assert result["initialization"]["exception_type"] == "OSError"
+    assert windows.close()["status"] == "not_opened"
 
 
 def test_sampler_optional_constructor_failure_preserves_financial_observations(monkeypatch: pytest.MonkeyPatch) -> None:

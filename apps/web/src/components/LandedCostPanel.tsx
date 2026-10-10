@@ -45,7 +45,7 @@ export function LandedCostPanel({ locale, session, scope, detail, actorId, permi
     running.current = true; setBusy(true); onBusy(true); setPending(command); setError(false); setValidation(null);
     try {
       const result = await landedCommand(session, scope, orderId, command);
-      if (mounted.current) { setFocus(result); setPending(null); setReload((value) => value + 1); }
+      if (mounted.current) { setFocus(result); setPlans((current) => current.map((plan) => plan.id === result.id ? result : plan)); setPending(null); setReload((value) => value + 1); }
       await onChanged();
     } catch (caught) {
       if (mounted.current) { setError(true); if (caught instanceof AdminApiError && caught.status < 500) setPending(null); onError(caught); }

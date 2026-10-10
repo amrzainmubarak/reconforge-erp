@@ -43,6 +43,39 @@ it("requires a third human to cancel an already reviewed bundle", async () => {
   await waitFor(() => expect(screen.getByRole("button", { name: "Cancel unreceived bundle" })).toBeDisabled());
 });
 
+it("retains the confirmed cancellation and removes all progression when the follow-up list read fails", async () => {
+  vi.mocked(landedPage).mockReset().mockResolvedValueOnce({ records: [plan()], next_after: null }).mockRejectedValue(new Error("current list unavailable"));
+  vi.mocked(landedCommand).mockImplementation(async (_session, _scope, _order, command) => ({
+    ...plan(), status: "Cancelled", cancellation: { actor_id: "checker", reason: String(command.body.reason),
+      command_id: String(command.body.command_id), audit_event_id: "confirmed-cancel-audit", outbox_event_id: "confirmed-cancel-outbox" },
+  }));
+  panel("checker");
+  fireEvent.click(await screen.findByRole("button", { name: "Cancel unreceived bundle" }));
+  await screen.findByText(/Cancelled; receiving reservations released/);
+  await screen.findByRole("alert");
+  expect(vi.mocked(landedPage).mock.calls.length).toBeGreaterThan(1);
+  expect(screen.getByText("confirmed-cancel-audit")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Review bundle" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Receive bundle and post paid charges" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Cancel unreceived bundle" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Retry the same command" })).toBeNull();
+});
+
+it("accepts a newer terminal list state after a confirmed review acknowledgement", async () => {
+  const reviewed = { ...plan(), phase: 1 as const, status: "Reviewed" as const, reviewer_actor_id: "checker" };
+  const cancelled = { ...reviewed, status: "Cancelled" as const, cancellation: { actor_id: "poster", reason: "Source cancelled after review",
+    command_id: "concurrent-cancel", audit_event_id: "latest-cancel-audit", outbox_event_id: "latest-cancel-outbox" } };
+  vi.mocked(landedPage).mockReset().mockResolvedValueOnce({ records: [plan()], next_after: null }).mockResolvedValue({ records: [cancelled], next_after: null });
+  vi.mocked(landedCommand).mockResolvedValue(reviewed);
+  panel("checker");
+  fireEvent.click(await screen.findByRole("button", { name: "Review bundle" }));
+  await screen.findByText(/Cancelled; receiving reservations released/);
+  expect(screen.getByText("latest-cancel-audit")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Review bundle" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Receive bundle and post paid charges" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Cancel unreceived bundle" })).toBeNull();
+});
+
 it("requires fresh quantities and paid charges after cancelled source evidence is reloaded", async () => {
   const cancelled = { ...plan(), status: "Cancelled" as const, cancellation: { actor_id: "checker", reason: "Replace source", command_id: "cancel", audit_event_id: "audit", outbox_event_id: "outbox" } };
   vi.mocked(landedPage).mockResolvedValue({ records: [cancelled], next_after: null });

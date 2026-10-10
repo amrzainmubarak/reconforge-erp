@@ -50,6 +50,7 @@ export const navigationGroups: NavigationGroup[] = [
     items: [
       { key: "enterprise-finance", label: "enterpriseFinance", icon: Landmark, page: "enterpriseFinance" },
       { key: "financial-reporting", label: "financialReporting", icon: FileChartColumn, page: "financialReporting" },
+      { key: "fixed-assets", label: "fixedAssets", icon: Landmark, page: "fixedAssets" },
       { key: "stock-sales", label: "stockSales", icon: Boxes, page: "stockSales" },
       { key: "procurement-partial", label: "procurementPartial", icon: Boxes, page: "procurementPartial" },
       { key: "sales-revenue", label: "salesRevenue", icon: FileChartColumn, page: "salesRevenue" },

@@ -23,6 +23,9 @@ def test_empty_real_migration_roundtrip_preserves_native_owners(receipt_database
     with psycopg.connect(admin_dsn) as connection:
         before = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
         native_count = connection.execute("SELECT count(*) FROM pg_tables WHERE schemaname='reconforge' AND tablename NOT LIKE 'stock_commerce_%'").fetchone()[0]
+        app_user = psycopg.conninfo.conninfo_to_dict(app_dsn)["user"]
+        grants = connection.execute("""SELECT table_name,privilege_type FROM information_schema.role_table_grants
+            WHERE table_schema='reconforge' AND grantee=%s ORDER BY table_name,privilege_type""", (app_user,)).fetchall()
     subprocess.run([sys.executable, "-m", "alembic", "downgrade", "0115_pg_financial_installments"], cwd=root, env=env, check=True, timeout=120)
     with psycopg.connect(admin_dsn) as connection:
         assert connection.execute("SELECT to_regclass('reconforge.stock_commerce_orders')").fetchone()[0] is None
@@ -32,12 +35,14 @@ def test_empty_real_migration_roundtrip_preserves_native_owners(receipt_database
     with psycopg.connect(admin_dsn) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == before
         assert connection.execute("SELECT count(*) FROM pg_tables WHERE schemaname='reconforge' AND tablename NOT LIKE 'stock_commerce_%'").fetchone()[0] == native_count
-        # DROP/recreate deliberately removes the old objects' ACLs. Reapply only
-        # the application's finite module grants before a later workflow test.
-        role = sql.Identifier(psycopg.conninfo.conninfo_to_dict(app_dsn)["user"])
-        for table in ("stock_commerce_orders", "stock_commerce_lines", "stock_commerce_tranches", "stock_commerce_commands"):
-            connection.execute(sql.SQL("GRANT SELECT,INSERT ON reconforge.{} TO {}").format(sql.Identifier(table), role))
-        connection.execute(sql.SQL("GRANT UPDATE ON reconforge.stock_commerce_orders TO {}").format(role))
+        # Ordered rollback also recreates later owners. Restore exactly the
+        # fixture's pre-rollback table grants; source guards and RLS stay active.
+        for table, privilege in grants:
+            assert privilege in {"SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER", "MAINTAIN"}
+            connection.execute(sql.SQL("GRANT {} ON reconforge.{} TO {}").format(
+                sql.SQL(privilege), sql.Identifier(table), sql.Identifier(app_user)))
+        assert connection.execute("""SELECT table_name,privilege_type FROM information_schema.role_table_grants
+            WHERE table_schema='reconforge' AND grantee=%s ORDER BY table_name,privilege_type""", (app_user,)).fetchall() == grants
 
 
 def test_populated_commercial_downgrade_refuses_source_history(receipt_database: tuple[str, str]) -> None:

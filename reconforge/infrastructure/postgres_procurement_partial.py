@@ -554,9 +554,20 @@ class PostgresProcurementPartialRepository:
             quantity_to_scaled(request.quantity, line["quantity_precision"])
             sequence, number = summary["sequence"] + 1, "PPR-" + row["number"] + "-" + str(summary["sequence"] + 1)
             original = row["request_json"]
+            receipt_value = amount
+            if self.connection.execute("SELECT to_regclass('reconforge.landed_cost_allocations') IS NOT NULL AS installed").fetchone()["installed"]:
+                allocation = self.connection.execute("""SELECT base_minor,freight_minor,duty_minor FROM reconforge.landed_cost_allocations
+                    WHERE tenant_id=%s AND order_id=%s AND receipt_id=%s AND order_line_id=%s""",
+                    (self.tenant_id, order_id, platform_id("PPRECEIPT", order_id, sequence), line_id)).fetchone()
+                if allocation is not None:
+                    if allocation["base_minor"] != amount:
+                        raise ProcurementPartialError("landed_cost_source_conflict", "Landed cost allocation no longer matches its merchandise source.")
+                    receipt_value += allocation["freight_minor"] + allocation["duty_minor"]
+                    if receipt_value > 9_000_000_000_000_000_000:
+                        raise ProcurementPartialError("landed_cost_amount_invalid", "Capitalized receipt value exceeds supported exact minor units.")
             plan = self.receipts.prepare_receipt(ReceiptPreparation(receipt_number=number, posting_date=request.posting_date,
                 period_id=request.period_id, item_code=line["item_code"], location_code=line["location_code"], quantity=request.quantity,
-                total_value_minor=amount, policy_code=line["policy_code"], workspace=row["workspace_id"],
+                total_value_minor=receipt_value, policy_code=line["policy_code"], workspace=row["workspace_id"],
                 organization_code=original["organization_code"], entity_code=original["entity_code"], reason=request.reason),
                 command_id=platform_id("PPCMD", order_id, command_id, "receipt"), actor=actor)
             if plan["currency_policy"]["currency_code"] != original["currency_code"]:

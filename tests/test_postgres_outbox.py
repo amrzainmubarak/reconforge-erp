@@ -38,6 +38,7 @@ from reconforge.infrastructure.postgres_outbox import (
     PostgresOutboxValidationError,
     TenantBoundPostgresOutboxRepository,
     tenant_bound_postgres_outbox_repository,
+    validate_postgres_outbox_event_id,
 )
 from reconforge.workers.outbox import OutboxWorkerError, OutboxWorkerSettings
 from reconforge.workers.postgres_outbox import PostgresOutboxWorker, PostgresOutboxWorkerError
@@ -175,6 +176,31 @@ def _outbox_manifest(worker_id: str) -> WorkerPermissionManifest:
         granted_permissions=("outbox.discover", "outbox.publish"),
         scope="tenant:tenant_a",
     )
+
+
+@pytest.mark.parametrize("identifier", ["evt-1", "OBX-aB01", "LCOUT-0001", "Z" * 64])
+def test_postgres_outbox_opaque_event_identity_retains_exact_case(identifier: str) -> None:
+    assert validate_postgres_outbox_event_id(" " + identifier + " ") == identifier
+
+
+@pytest.mark.parametrize("identifier", ["", "bad id", "id/other", "id\nother", "id;drop", "x" * 65, None, True, 42])
+def test_postgres_outbox_opaque_event_identity_rejects_malformed_tokens(identifier: object) -> None:
+    with pytest.raises(PostgresOutboxValidationError):
+        validate_postgres_outbox_event_id(identifier)
+
+
+@pytest.mark.parametrize("operation", ["assert_claim", "mark_published", "mark_failed", "replay_dead"])
+def test_postgres_outbox_exact_event_identity_reaches_every_transition(operation: str) -> None:
+    connection = _FakeConnection(attempt_count=1)
+    owner = PostgresOutboxRepository(connection)
+    arguments: dict[str, Any] = {"tenant_id": "TENANT_A", "event_id": "OBX-Exact-01"}
+    if operation != "replay_dead":
+        arguments.update(worker_id="worker-a", lease_generation=1)
+    if operation == "mark_failed":
+        arguments.update(error="Retained event retry", max_attempts=1)
+    getattr(owner, operation)(**arguments)
+    assert any(parameters and "OBX-Exact-01" in parameters for _, parameters in connection.executed)
+    assert not any(parameters and "obx-exact-01" in parameters for _, parameters in connection.executed)
 
 
 def test_postgres_outbox_claim_and_transitions_are_tenant_scoped() -> None:

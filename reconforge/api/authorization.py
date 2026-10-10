@@ -259,6 +259,26 @@ for _path, _permission in {
 for _path, _permission in {"": "finance_core.manage", "/{plan_id}/review": "finance_core.validate", "/{plan_id}/post": "finance_core.post"}.items():
     _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/financial-installments/plans" + _path)] = _erp_contract(frozenset({"payables.settle"}), _permission)
 
+for _path, _permissions in {
+    "": ("finance_core.manage", "sales.manage", "receivables.manage"),
+    "/{plan_id}/review": ("finance_core.validate", "sales.approve", "receivables.manage"),
+    "/{plan_id}/post": ("finance_core.post", "sales.manage", "receivables.manage"),
+}.items():
+    _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/commercial-collections/plans" + _path)] = _erp_contract(
+        frozenset(), *_permissions)
+for _path, _permission in {
+    "/assets": "finance_core.manage", "/assets/{asset_id}/operations": "finance_core.manage",
+    "/plans/{plan_id}/review": "finance_core.validate", "/plans/{plan_id}/post": "finance_core.post",
+}.items():
+    _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/fixed-assets" + _path)] = ("all", (_permission,))
+for _path, _permissions in {
+    "": ("payables.manage", "payables.settle", "inventory.manage", "inventory.valuation.manage", "finance_core.manage"),
+    "/{identifier}/review": ("payables.approve", "payables.settle", "inventory.post", "inventory.valuation.approve", "finance_core.validate"),
+    "/{identifier}/post": ("payables.manage", "payables.settle", "inventory.post", "inventory.valuation.approve", "finance_core.post"),
+}.items():
+    _CRITICAL_ROUTE_CONTRACTS[("POST", "/api/v1/landed-cost/plans" + _path)] = _erp_contract(
+        _PROCUREMENT_READ, *_permissions)
+
 
 
 def _dependency_contract(route: APIRoute) -> tuple[str, tuple[str, ...]] | None:

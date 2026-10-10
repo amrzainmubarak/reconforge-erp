@@ -14,8 +14,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 413
-EXPECTED_DIGEST = "93f9cd124ed44f49043f45d8d0a2539e19e3dc5f25ad0efd327ea52e4f8a2ae3"
+EXPECTED_ROUTE_COUNT = 429
+EXPECTED_DIGEST = "1c1581c2a7d8baf52e80253d5c5e8d026f09de431b250efdb4c89ea1bfd4232d"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -53,6 +53,11 @@ HANDLER_BOUNDARY_HELPERS = {
     "procurement_partial.py": frozenset({"_execute"}),
     "financial_reporting.py": frozenset({"_execute"}),
     "financial_installments.py": frozenset({"execute", "_authority"}),
+    # New source owners reuse verified PostgreSQL identity, scoped ABAC and the
+    # caller-owned transaction; no implicit local financial fallback is admitted.
+    "commercial_collections.py": frozenset({"execute", "_authority"}),
+    "landed_cost.py": frozenset({"execute"}),
+    "fixed_assets.py": frozenset({"execute", "_authority"}),
     "identity_administration.py": frozenset({"_service"}),
     "inventory_core.py": frozenset({"_server_call"}),
     "inventory_planning.py": frozenset({"_server_call"}),

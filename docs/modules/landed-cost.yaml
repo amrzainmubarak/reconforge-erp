@@ -1,0 +1,53 @@
+id: landed-cost
+name: Paid landed cost and atomic capitalized receiving
+version: 0.1.0
+maturity: experimental
+owner: finance-operations
+dependencies: [procurement-partial, inventory-receipt-posting, finance-core, postgres-identity]
+incompatible_versions: []
+data_classification: confidential-financial
+retention_policy: Immutable allocations, snapshots, command acknowledgements, audit and outbox
+permissions: [payables.read, payables.manage, payables.approve, payables.settle, inventory.read, inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
+default_roles: []
+migrations: [0121_pg_landed_cost, 0123_pg_native_event_dispatch]
+domain_invariants:
+  - Freight and duties are nonnegative exact minor units with a positive conserved aggregate
+  - Independently allocate each charge by merchandise value with largest remainders and stable source identity tie breaks
+  - Each allocation refers to one original purchase line and exact partial quantity; units never combine
+  - Native purchase receipt and supplier invoice matching retain original merchandise cost
+  - Native initial FIFO and inventory GL use merchandise plus allocated paid charges
+  - Cash credit and clearing debit post in the same transaction as every charged stock receipt
+  - Three distinct persisted human identities prepare, review and publish every receipt and its cash effect
+  - Deferred bidirectional SQL closure rejects detached receipt or cash publication and unowned LC1 entries
+  - Never mutate an already published FIFO layer; retained corrections need a separately completed reversal contract
+domain_events: [landed_cost_prepared, landed_cost_reviewed, landed_cost_posted]
+api_routes: ["/api/v1/landed-cost/plans", "/api/v1/landed-cost/plans/{id}", "/api/v1/landed-cost/plans/{id}/review", "/api/v1/landed-cost/plans/{id}/post", "/api/v1/landed-cost/orders/{order_id}"]
+cli_commands: []
+ui_routes: [/procurement-partial]
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/test_postgres_landed_cost.py]
+threat_model:
+  - Five forced-RLS tables retain canonical tenant, workspace, organization and legal entity ownership
+  - All retry commands remain bound to exact payload, persisted human and original immutable response
+  - Parent order locking serializes quantity reservations and prevents oversupply
+  - Typed native posting participant and database closure deny detached generic cash posting
+  - Current permissions, step-up and amount authorization repeat on reads, writes and retries
+benchmarks: []
+rollback_plan: Empty downgrade only; populated financial history requires verified backup restore or forward correction
+test_matrix:
+  domain: tests/test_landed_cost.py
+  postgres: tests/test_postgres_landed_cost.py
+  api: tests/test_postgres_landed_cost_api.py
+  web: apps/web/src/landed-cost-data.test.ts
+  browser: apps/web/live/erp-landed-cost.spec.ts
+runtime_acceptance: Source-bound native API Studio and populated restore milestones passed; final integrated source gate remains required
+adapter_matrix:
+  postgres: Native receipt, FIFO, source GL and cash are composed without duplicate engines
+  sqlite: No implicit operational fallback
+limitations:
+  - Paid freight and duties before initial receiving only; no retroactive layer revaluation or freight AP invoice
+  - Functional currency and existing zero-tax merchandise contract; duty is capitalized cost, not a tax-return claim
+  - 128 selected lines per atomic receiving bundle and 200 retained bundles per purchase order
+  - Four bundles per keyset response with at most 512 projected allocations
+  - No supplier-return, debit-note or landed-cost reversal claim

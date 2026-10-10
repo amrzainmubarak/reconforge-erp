@@ -16,7 +16,7 @@ import secrets
 import subprocess  # nosec B404
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
@@ -33,6 +33,7 @@ from reconforge.benchmark.enterprise_financial import (  # noqa: E402
     measure_verified_reads,
     percentile,
 )
+from reconforge.benchmark.resource_sampling import ResourceSampler  # noqa: E402
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository  # noqa: E402
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository  # noqa: E402
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
@@ -80,7 +81,7 @@ def main() -> int:
         return source_digest.hexdigest()
 
     report: dict[str, object] = {
-        "schema_version": 1, "started_at": datetime.now(UTC).isoformat(), "status": "failed",
+        "schema_version": 2, "started_at": datetime.now(UTC).isoformat(), "status": "failed",
         "source_commit": run(["git", "rev-parse", "HEAD"]).stdout.strip(), "source_sha256": tracked_source_sha256(),
         "profile": "native-three-human-cash-equity-v1", "seed": args.seed, "counts": counts,
         "workers": args.workers, "repetitions": args.repetitions, "max_seconds": args.max_seconds,
@@ -90,10 +91,15 @@ def main() -> int:
         "limits": ["single entity and USD", "native repository latency includes synthetic identity authentication",
             "not HTTP latency", "no comparable competitor measurement", "no cost per transaction without a supplied resource cost model"],
         "cost_per_transaction": None,
+        "runtime_root": str(ROOT), "launch_cwd": str(Path.cwd()), "command": [sys.executable, *sys.argv],
+        "module_origins": {"posting": str(Path(sys.modules[PostgresFinancePostingRepository.__module__].__file__).resolve()),
+                           "core": str(Path(sys.modules[PostgresFinanceCoreRepository.__module__].__file__).resolve())},
+        "telemetry_policy": "read-only 10-second sampled resources on owned synthetic fixture; no production DSN or row content",
     }
     started = time.monotonic()
     deadline = started + args.max_seconds
     container = ""
+    sampler: ResourceSampler | None = None
     admin_password, app_password = secrets.token_hex(24), secrets.token_hex(24)
     secret_values.extend([admin_password, app_password])
     try:
@@ -127,7 +133,10 @@ def main() -> int:
             report["revision"] = admin.execute("SELECT version_num FROM alembic_version").fetchone()[0]
             report["postgres_configuration"] = dict(admin.execute(
                 "SELECT name,setting FROM pg_settings WHERE name=ANY(%s)",
-                (["shared_buffers", "work_mem", "max_connections", "fsync", "synchronous_commit", "full_page_writes", "wal_level"],)).fetchall())
+                (["shared_buffers", "work_mem", "max_connections", "fsync", "synchronous_commit", "full_page_writes", "wal_level", "track_io_timing"],)).fetchall())
+            report["postgres_io_timing_interpretation"] = (
+                "blk_read_time_ms/blk_write_time_ms are cumulative pg_stat_database counters; "
+                "zero milliseconds with track_io_timing=off do not prove zero I/O latency; no I/O peak is measured")
         with psycopg.connect(app_dsn) as connection:
             flags = list(connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone())
             if flags != [False, False]:
@@ -135,6 +144,30 @@ def main() -> int:
             report["runtime_role_flags"] = flags
         runtime = seed_expansion_browser(admin_dsn, app_dsn)
         secret_values.append(runtime.password)
+
+        def observe() -> dict[str, object]:
+            # Separate diagnostic owner connection. Business operations remain on the nonowner role.
+            with psycopg.connect(admin_dsn, autocommit=True) as diagnostic:
+                diagnostic.execute("SET statement_timeout='5s'")
+                database = diagnostic.execute("""SELECT xact_commit,xact_rollback,blks_read,blks_hit,
+                    tup_returned,tup_fetched,tup_inserted,tup_updated,tup_deleted,conflicts,temp_files,temp_bytes,
+                    deadlocks,blk_read_time,blk_write_time FROM pg_stat_database WHERE datname=current_database()""").fetchone()
+                wal = diagnostic.execute("SELECT wal_records,wal_fpi,wal_bytes::text FROM pg_stat_wal").fetchone()
+                waits = diagnostic.execute("""SELECT coalesce(wait_event_type,'none'),count(*)
+                    FROM pg_stat_activity WHERE datname=current_database() AND pid<>pg_backend_pid()
+                    GROUP BY wait_event_type ORDER BY 1""").fetchall()
+            resources = subprocess.run(["docker", "stats", "--no-stream", "--format", "{{json .}}", container],
+                cwd=ROOT, capture_output=True, text=True, timeout=15, check=True)  # nosec B603
+            raw = json.loads(resources.stdout)
+            return {"postgres_database_counters": dict(zip(("xact_commit", "xact_rollback", "blks_read", "blks_hit",
+                "tup_returned", "tup_fetched", "tup_inserted", "tup_updated", "tup_deleted", "conflicts",
+                "temp_files", "temp_bytes", "deadlocks", "blk_read_time_ms", "blk_write_time_ms"), database, strict=True)),
+                "postgres_wal_counters": dict(zip(("wal_records", "wal_fpi", "wal_bytes"), wal, strict=True)),
+                "postgres_wait_event_type_sessions": dict(waits),
+                "docker_raw_counters": {key: raw.get(key) for key in ("CPUPerc", "MemUsage", "MemPerc", "NetIO", "BlockIO", "PIDs")}}
+
+        sampler = ResourceSampler(observe)
+        sampler.start()
         with runtime.actor("browser-maker") as (connection, _, _actor):
             accounts = {row["account_code"]: row["id"] for row in connection.execute(
                 "SELECT id,account_code FROM reconforge.finance_accounts WHERE tenant_id=%s AND workspace_id='work' AND account_code IN ('CASH','EQUITY')", (runtime.tenant,)).fetchall()}
@@ -164,23 +197,55 @@ def main() -> int:
             return str(effect["id"]), time.perf_counter() - begin
 
         posting_started = time.perf_counter()
+        completed: dict[int, tuple[str, float]] = {}
+        failures: list[dict[str, object]] = []
+        admitted = 0
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            posted = list(executor.map(post, range(counts[-1])))
+            pending = {}
+            while admitted < counts[-1] or pending:
+                # Bound queued work as well as workers. Stop admitting on the first actual failure.
+                while not failures and admitted < counts[-1] and len(pending) < args.workers * 2:
+                    pending[executor.submit(post, admitted)] = admitted
+                    admitted += 1
+                if not pending:
+                    break
+                finished, _ = wait(pending, return_when=FIRST_COMPLETED)
+                for future in finished:
+                    index = pending.pop(future)
+                    try:
+                        completed[index] = future.result()
+                    except Exception as exc:
+                        failures.append({"index": index, "exception_type": type(exc).__name__})
+        posted = [completed[index] for index in sorted(completed)]
         posting_seconds = time.perf_counter() - posting_started
         report["posting"] = {"completed_cycles": len(posted), "concurrency": args.workers, "seconds": posting_seconds,
             "native_postings_per_second": len(posted) / posting_seconds, "error_count": 0,
-            "cycle_latency_seconds": {key: percentile([row[1] for row in posted], fraction) for key, fraction in (("p50", .5), ("p95", .95), ("p99", .99))},
-            "expected": expected_totals(args.seed, len(posted))}
-        profiles = []
+            "requested_cycles": counts[-1], "admitted_cycles": admitted, "failed_cycles": failures,
+            "not_admitted_cycles": counts[-1] - admitted, "completed_indices": sorted(completed),
+            "cycle_latency_seconds": {key: percentile([row[1] for row in posted], fraction) for key, fraction in (("p50", .5), ("p95", .95), ("p99", .99))} if posted else None,
+            "expected": expected_totals(args.seed, len(posted)) if not failures and posted else None}
+        report["posting"]["error_count"] = len(failures)
+        report["posting"]["raw_cycle_latency_seconds"] = [row[1] for row in posted]
+        report["posting"]["ordered_effect_ids"] = [row[0] for row in posted]
+        if failures:
+            raise RuntimeError("Native posting profile failed; retained successful and failed admissions are not acceptance")
+        profiles: list[dict[str, object]] = []
+        report["verified_reads"] = profiles
         for count in counts:
             if time.monotonic() >= deadline:
                 raise TimeoutError("Explicit native benchmark resource budget exhausted")
-            with runtime.actor("browser-checker") as (connection, _, actor):
-                measured = measure_verified_reads(connection, runtime.tenant, [row[0] for row in posted[:count]], actor, repetitions=args.repetitions)
-            if measured["samples"]["bounded_batch"][0]["debit_minor"] != expected_totals(args.seed, count)["debit_minor"]:
-                raise AssertionError("Measured retained history differs from independent profile total")
-            profiles.append({"count": count, "expected": expected_totals(args.seed, count), **measured})
-        report["verified_reads"] = profiles
+            profile = {"count": count, "expected": expected_totals(args.seed, count), "status": "running"}
+            profiles.append(profile)
+            try:
+                with runtime.actor("browser-checker") as (connection, _, actor):
+                    measured = measure_verified_reads(connection, runtime.tenant, [row[0] for row in posted[:count]], actor,
+                        repetitions=args.repetitions, evidence_sink=profile)
+                if measured["samples"]["bounded_batch"][0]["debit_minor"] != expected_totals(args.seed, count)["debit_minor"]:
+                    raise AssertionError("Measured retained history differs from independent profile total")
+                profile["status"] = "passed"
+            except Exception as exc:
+                profile.update(status="failed", failure={"exception_type": type(exc).__name__})
+                raise
         with psycopg.connect(admin_dsn) as admin:
             report["database_bytes"] = int(admin.execute("SELECT pg_database_size(current_database())").fetchone()[0])
         report["container_resources_final_sample"] = run(["docker", "stats", "--no-stream", "--format", "{{json .}}", container]).stdout.strip()
@@ -197,6 +262,8 @@ def main() -> int:
             diagnostic = diagnostic.replace(value, "[redacted]")
         report["failure"] = diagnostic
     finally:
+        if sampler is not None:
+            report["resource_sampling"] = sampler.stop()
         if container:
             report["owned_container_removed"] = run(["docker", "rm", "--force", container], check=False).returncode == 0
         report["finished_at"] = datetime.now(UTC).isoformat()

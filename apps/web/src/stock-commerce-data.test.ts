@@ -26,3 +26,11 @@ it("refuses additive tranche monetary drift and quantity overcommit", () => {
   const oversold = commerceFixture("Paid"); oversold.lines[0].tranches.push({ ...oversold.lines[0].tranches[0], id: "ANOTHER" });
   expect(() => parseCommerceOrder(oversold, scope)).toThrow("commerce_contract_invalid");
 });
+it("retains actual partial invoice allocations and rejects a forged residual", () => {
+  const document = commerceFixture("Invoiced");
+  document.lines[0].collected_minor = "5000";
+  Object.assign(document.lines[0].tranches[0], { collected_minor: "5000", outstanding_minor: "8500", invoice_status: "PartiallyPaid" });
+  expect(parseCommerceOrder(document, scope).lines[0].collected_minor).toBe("5000");
+  Object.assign(document.lines[0].tranches[0], { outstanding_minor: "8499" });
+  expect(() => parseCommerceOrder(document, scope)).toThrow("commerce_contract_invalid");
+});

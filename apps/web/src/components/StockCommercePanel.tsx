@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { CommercialCollectionsPanel } from "./CommercialCollectionsPanel";
 import { AdminApiError } from "../data";
 import { type SalesIdentity, type SalesScope } from "../sales-revenue-data";
 import { executeCommerceCommand, loadCommerceOrder, loadCommercePage, prepareCommerceCommand, searchCommerceCatalog, type CommerceCommand, type CommerceOrder, type CommerceTranche } from "../stock-commerce-data";
@@ -8,7 +9,7 @@ import type { ScopedJsonValue } from "../scoped-command";
 
 const messages = {
   title: ["Commercial orders", "أوامر المبيعات التجارية"], intro: ["One approved order conserves every product line and warehouse through independently reviewed shipment, invoice and collection tranches.", "أمر معتمد واحد يحفظ كميات وقيم كل صنف ومستودع عبر دفعات تسليم وفوترة وتحصيل مستقلة المراجعة."],
-  bounds: ["Up to 1000 lines per order. Each invoice tranche is settled in full; partial settlement of one invoice and returns are not available in this cycle.", "حتى 1000 بند للأمر. تُحصّل فاتورة كل دفعة بالكامل؛ السداد الجزئي للفاتورة الواحدة والمرتجعات غير متاحين في هذه الدورة."],
+  bounds: ["Up to 1000 lines per order. Each recognized invoice supports independently reviewed partial collections with an exact remaining balance; returns require a complete inverse.", "حتى 1000 بند للأمر. تدعم كل فاتورة مرحّلة دفعات تحصيل مستقلة المراجعة ومتَبقّيًا دقيقًا؛ المرتجعات تتطلب دورة عكس مكتملة."],
   create: ["Create commercial order", "إنشاء أمر تجاري"], number: ["Order number", "رقم الأمر"], customer: ["Customer", "العميل"], reference: ["Customer reference", "مرجع العميل"], date: ["Business date", "تاريخ العملية"], currency: ["Currency", "العملة"],
   item: ["Product", "الصنف"], warehouse: ["Warehouse", "المستودع"], location: ["Location", "الموقع"], quantity: ["Quantity", "الكمية"], price: ["Unit price in minor units", "سعر الوحدة بالوحدات النقدية الصغرى"], discount: ["Discount basis points", "نقاط أساس الخصم"], description: ["Description", "الوصف"],
   add: ["Add line", "إضافة بند"], remove: ["Remove line", "حذف البند"], search: ["Search product-code prefix", "بحث ببادئة رمز الصنف"], next: ["Next page", "الصفحة التالية"], refresh: ["Refresh commercial orders", "تحديث الأوامر التجارية"], open: ["Open", "فتح"],
@@ -78,7 +79,7 @@ export function StockCommercePanel({ locale, session, scope, identity, options, 
   }
   const input = (message: Message, value: string, update: (next: string) => void, type = "text") => <label>{t(message)}<input required type={type} maxLength={500} value={value} disabled={blocked} onChange={(event) => update(event.target.value)} /></label>;
   const choose = (message: Message, value: string, update: (next: string) => void, choices: { value: string; label: string }[]) => <label>{t(message)}<select required value={value} disabled={blocked} onChange={(event) => update(event.target.value)}><option value="">—</option>{choices.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}</select></label>;
-  const tranche: CommerceTranche | undefined = detail?.lines.flatMap((line) => line.tranches).find((row) => row.id === trancheId), action = tranche && actions[tranche.status];
+  const tranche: CommerceTranche | undefined = detail?.lines.flatMap((line) => line.tranches).find((row) => row.id === trancheId), action = tranche && (tranche.status === "Invoiced" && (tranche.pending_collection || (tranche.collected_minor !== undefined && tranche.collected_minor !== "0")) ? undefined : actions[tranche.status]);
   const preparer = action?.kind && tranche?.[`${action.kind}_preparer_id`], reviewer = action?.kind && tranche?.[`${action.kind}_reviewer_id`];
   const duties = Boolean((action?.kind && (preparer === identity.id || (action.poster && (!preparer || !reviewer || reviewer === identity.id)))) || (action?.operation === "approve-tranche" && tranche?.created_by === identity.id));
   const periodChoices = options?.periods.map((period) => ({ value: period.id, label: period.name })) || [], journalChoices = options?.journals.map((journal) => ({ value: journal.journal_code, label: journal.name })) || [];
@@ -121,6 +122,7 @@ export function StockCommercePanel({ locale, session, scope, identity, options, 
           {duties && <p>{t("duties")}</p>}<button disabled={!writable || !reason || !has(...action.permissions) || duties}>{t(action.message)}</button>
         </form>}
         {tranche && ["Submitted", "Reserved", "IssueReviewed"].includes(tranche.status) && <button disabled={!writable || !reason || !has("sales.manage", "finance_core.manage")} onClick={() => command("cancel", { tranche_id: tranche.id })}>{t("cancel")}</button>}
+        {tranche?.status === "Invoiced" && tranche.outstanding_minor !== undefined && <CommercialCollectionsPanel key={tranche.id} locale={locale} session={session} scope={scope} identity={identity} tranche={tranche} options={options} disabled={blocked || stale} onPendingChange={onPendingChange} onCommitted={() => { setStale(true); setReload((old) => old + 1); }} />}
         {tranche && <details><summary>{t("evidence")}</summary><ul>{[tranche.stock_order_id, tranche.movement_id, tranche.cogs_effect_id, tranche.invoice_id, tranche.receipt_id].filter(Boolean).map((id) => <li key={id}><code>{id}</code></li>)}</ul></details>}
       </>}
     </article>}

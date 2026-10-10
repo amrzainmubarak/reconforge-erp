@@ -1,40 +1,77 @@
 schema_version: 2
-updated_at: "2026-10-09"
+updated_at: "2026-10-10"
 phase: "Phase 4 — Global Capability Expansion"
+active_sprint: "Native Commercial, Landed Cost and Asset Cycles — ADR0844"
 snapshot:
-  evidence_base_commit: "6ec9a70114edfd835386ee3b0f0085e5da1fff15"
+  evidence_base_commit: "34b9e7a5b2a7c4d8ae49b641a36de030a878d507"
   policy_change_commit: "the commit containing this file"
-  published: false
+  published: true
+  publication: "Draft PR128; frozen snapshot precedes successor hosted acceptance"
 status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-GLOBAL-001
+    priority: P0
+    area: commercial-collections
+    title: Reviewed cash installments inside one native stock-sales AR invoice
+    status: in_progress
+    depends_on: [AMR-ENT-001]
+    exit_evidence: Exact residual and receipts, three humans, native GL, SQL bypass refusal, concurrent replay, Studio and populated restore on fixed integrated source.
+  - id: AMR-GLOBAL-002
+    priority: P0
+    area: landed-cost-receiving
+    title: Paid freight and duties allocated before immutable FIFO receipt publication
+    status: in_progress
+    depends_on: [AMR-ENT-002]
+    exit_evidence: Independent integer allocation, original goods AP matching, atomic charged receipt and cash posting, concurrency, SQL closure, Studio and restore.
+  - id: AMR-GLOBAL-003
+    priority: P0
+    area: fixed-assets
+    title: Native acquisition cumulative depreciation and disposal
+    status: in_progress
+    depends_on: [AMR-ENT-003]
+    exit_evidence: Exact cumulative rounding and gain/loss oracle, three humans, immutable native effects, period fences, Studio, API, restore and tamper refusal.
+  - id: AMR-GLOBAL-004
+    priority: P0
+    area: reproducible-measurement
+    title: Raw latency resource and failure observations on the accepted native workload
+    status: in_progress
+    depends_on: [AMR-GLOBAL-001, AMR-GLOBAL-002, AMR-GLOBAL-003]
+    exit_evidence: Fixed commit, raw observations, independent totals, same-workload retest, disclosed sampled-resource scope and unchanged-source proof.
+  - id: AMR-GLOBAL-005
+    priority: P1
+    area: global-functional-coverage
+    title: Official vendor capability sources and dependency-ordered complete-cycle roadmap
+    status: in_progress
+    depends_on: [AMR-GLOBAL-001, AMR-GLOBAL-002, AMR-GLOBAL-003]
+    exit_evidence: SAP Oracle Dynamics NetSuite Odoo documentation separates documented vendor functionality from ReconForge implementation, acceptance and missing scope.
   - id: AMR-ENT-001
     priority: P0
     area: enterprise-stock-commerce
     title: Conserved multiline commercial order and partial native stock-to-cash
-    status: in_progress
+    status: completed
     depends_on: [AMR-EXP-001]
     exit_evidence: Actual multiline multiwarehouse cycle, concurrency, HTTPS, SQL closure, Studio, migration and restore on fixed integrated source.
   - id: AMR-ENT-002
     priority: P0
     area: enterprise-procurement
     title: Native multiline PO and mixed-unit supplier invoice with partial receiving and FI1 settlement
-    status: in_progress
+    status: completed
     depends_on: [AMR-EXP-002]
     exit_evidence: Complete mixed-unit multiwarehouse purchase cycle, exact matching, partial payment, concurrent rollback and SQL evidence.
   - id: AMR-ENT-003
     priority: P0
     area: scalable-financial-reporting
     title: Complete frozen statements with authorized paginated native evidence
-    status: in_progress
+    status: completed
     depends_on: [AMR-EXP-001, AMR-EXP-002]
     exit_evidence: More than1000 actual effects, independent totals, full evidence fold, backdated concurrency, SQL immutability and Studio.
   - id: AMR-ENT-004
     priority: P0
     area: native-enterprise-performance
     title: Reproducible genuine financial and operating benchmark on fixed source
-    status: in_progress
+    status: completed
     depends_on: [AMR-ENT-001, AMR-ENT-002, AMR-ENT-003]
     exit_evidence: Independent oracle, baseline and optimized same-history measurements, latency, throughput, resources and preserved failures.
   - id: AMR-EXP-001

@@ -62,10 +62,19 @@ def tracked_status(directory: Path) -> str:
     )
 
 
+def require_browser_acceptance(stats: object) -> None:
+    """An exit-zero process cannot replace execution of the required wire cycle."""
+    if not isinstance(stats, dict):
+        raise RuntimeError("Required browser execution statistics are missing")
+    for name, required in (("expected", 1), ("skipped", 0), ("unexpected", 0), ("flaky", 0)):
+        if type(stats.get(name)) is not int or stats[name] != required:
+            raise RuntimeError(f"Required browser outcome count refused: {name}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verify-native-restore", action="store_true")
-    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots"), default="expansion")
+    parser.add_argument("--scenario", choices=("expansion", "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets"), default="expansion")
     parser.add_argument("--runtime-root", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, default=ROOT / "output/erp-expansion-20261009/browser")
     parser.add_argument("--web-root", type=Path, default=ROOT / "apps/web/dist")
@@ -116,6 +125,48 @@ def main() -> int:
             "DELETE FROM reconforge.financial_report_members WHERE tenant_id=%s",
             "UPDATE reconforge.financial_report_snapshots SET report_digest=repeat('0',64) WHERE tenant_id=%s",
         )
+    elif args.scenario == "collections":
+        from tests.commercial_collections_browser import (
+            COLLECTION_TABLES,
+            seed_commercial_collections_browser,
+            verify_commercial_collections_browser,
+        )
+        seed, verify_cycles = seed_commercial_collections_browser, verify_commercial_collections_browser
+        configuration = "apps/web/live/commercial-collections.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + COLLECTION_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.commercial_collection_plans SET amount_minor=amount_minor+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.commercial_collection_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+            "DELETE FROM reconforge.commercial_collection_commands WHERE tenant_id=%s",
+        )
+    elif args.scenario == "landed-cost":
+        from tests.erp_landed_cost_browser import (
+            LANDED_COST_BROWSER_TABLES,
+            seed_landed_cost_browser,
+            verify_landed_cost_browser,
+        )
+        seed, verify_cycles = seed_landed_cost_browser, verify_landed_cost_browser
+        configuration = "apps/web/live/erp-landed-cost.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + LANDED_COST_BROWSER_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.landed_cost_plans SET amount_minor=amount_minor+1 WHERE tenant_id=%s",
+            "UPDATE reconforge.landed_cost_allocations SET freight_minor=freight_minor+1 WHERE tenant_id=%s",
+            "DELETE FROM reconforge.landed_cost_commands WHERE tenant_id=%s",
+        )
+    elif args.scenario == "fixed-assets":
+        from tests.fixed_assets_browser_seed import (
+            FIXED_ASSET_TABLES,
+            seed_fixed_assets_browser,
+            verify_fixed_assets_browser,
+        )
+        seed, verify_cycles = seed_fixed_assets_browser, verify_fixed_assets_browser
+        configuration = "apps/web/live/fixed-assets.playwright.config.ts"
+        extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + FIXED_ASSET_TABLES))
+        tamper_statements = (
+            "UPDATE reconforge.fixed_assets SET payload=payload||jsonb_build_object('cost_minor',1) WHERE tenant_id=%s",
+            "UPDATE reconforge.fixed_asset_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+            "DELETE FROM reconforge.fixed_asset_commands WHERE tenant_id=%s",
+        )
     runtime_root = args.runtime_root.resolve()
     if runtime_root != ROOT.resolve():
         raise ValueError("Run the expansion harness from its exact integrated runtime checkout.")
@@ -145,6 +196,8 @@ def main() -> int:
         "reconforge.api.app", "reconforge.infrastructure.postgres_stock_sales",
         "reconforge.infrastructure.postgres_procurement_partial", "reconforge.infrastructure.postgres_financial_installments",
         "reconforge.infrastructure.postgres_financial_reporting", "tests.erp_expansion_browser_seed",
+        "reconforge.infrastructure.postgres_commercial_collections", "reconforge.infrastructure.postgres_landed_cost",
+        "reconforge.infrastructure.postgres_fixed_assets",
         "tests.erp_expansion_browser_restore",
     ):
         origin = Path(importlib.import_module(module_name).__file__).resolve()
@@ -248,6 +301,7 @@ def main() -> int:
         if (output / "playwright.json").is_file():
             report["browser_counts"] = json.loads((output / "playwright.json").read_text(encoding="utf-8"))["stats"]
         if browser.returncode == 0:
+            require_browser_acceptance(report.get("browser_counts"))
             report["persisted_effects"] = verify_cycles(runtime)
             if args.verify_native_restore:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,

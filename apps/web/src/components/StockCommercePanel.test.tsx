@@ -20,9 +20,9 @@ it("disables reviewed revenue posting for its reviewer and exposes retained nati
   expect(screen.getByText(/three distinct humans/)).toBeInTheDocument();
   expect(screen.getByText("GL-1")).toBeInTheDocument();
 });
-it("renders Arabic RTL commercial scope and explicit partial settlement boundary", () => {
+it("renders Arabic RTL commercial scope and exact partial settlement support", () => {
   vi.stubGlobal("fetch", vi.fn(async (path: RequestInfo | URL) => String(path).includes("catalog") ? response({ items: [], next_cursor: null }) : response({ orders: [], next_cursor: null })));
   render(<StockCommercePanel locale="ar" session={session} scope={scope} identity={identity} options={null} disabled={false} onPendingChange={() => {}} />);
   expect(screen.getByRole("region", { name: "أوامر المبيعات التجارية" })).toHaveAttribute("dir", "rtl");
-  expect(screen.getByText(/السداد الجزئي للفاتورة الواحدة/)).toBeInTheDocument();
+  expect(screen.getByText(/دفعات تحصيل مستقلة المراجعة/)).toBeInTheDocument();
 });

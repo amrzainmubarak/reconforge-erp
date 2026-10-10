@@ -62,9 +62,15 @@ jobs:
         # execution is mandatory in the configured erp-expansion shard below.
         run: >-
           uv run --no-sync pytest
+          --ignore=tests/test_postgres_commercial_collections.py
           --ignore=tests/test_postgres_financial_reporting_snapshots.py
           --ignore=tests/test_postgres_financial_snapshot_migration.py
           --ignore=tests/test_postgres_financial_snapshot_recovery.py
+          --ignore=tests/test_postgres_fixed_assets.py
+          --ignore=tests/test_postgres_global_operating_cycles.py
+          --ignore=tests/test_postgres_landed_cost.py
+          --ignore=tests/test_postgres_landed_cost_api.py
+          --ignore=tests/test_postgres_native_event_dispatch_migration.py
           --ignore=tests/test_postgres_stock_commerce.py
           --ignore=tests/test_postgres_stock_commerce_api.py
           --ignore=tests/test_postgres_stock_commerce_migrations.py
@@ -174,7 +180,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        scenario: [commerce, procurement, snapshots]
+        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets]
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -510,6 +516,8 @@ jobs:
 
       - name: Run live server-boundary tests
         env:
+          PYTHONPATH: ${{ github.workspace }}
+          PYTEST_ADDOPTS: -p tests.mandatory_native_gate
           RECONFORGE_SERVER_BOUNDARY_SHARD: ${{ matrix.shard }}
           RECONFORGE_POSTGRES_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
@@ -602,6 +610,11 @@ jobs:
             erp-expansion)
               uv run --no-sync pytest tests/test_postgres_stock_sales.py tests/test_postgres_stock_sales_api.py tests/test_postgres_procurement_partial.py tests/test_postgres_procurement_partial_api.py -q
               uv run --no-sync pytest tests/test_postgres_stock_commerce.py tests/test_postgres_stock_commerce_api.py tests/test_postgres_stock_commerce_migrations.py tests/test_postgres_procurement_multiline.py tests/test_postgres_procurement_multiline_api.py tests/test_postgres_procurement_multiline_migrations.py -q
+              uv run --no-sync pytest tests/test_postgres_commercial_collections.py -q
+              uv run --no-sync pytest tests/test_postgres_landed_cost.py tests/test_postgres_landed_cost_api.py -q
+              uv run --no-sync pytest tests/test_postgres_fixed_assets.py -q
+              uv run --no-sync pytest tests/test_postgres_global_operating_cycles.py -q
+              uv run --no-sync pytest tests/test_postgres_native_event_dispatch_migration.py -q
               ;;
             finance-reporting)
               uv run --no-sync pytest tests/test_postgres_financial_installments.py tests/test_postgres_financial_reporting.py tests/test_postgres_financial_reporting_api.py -q

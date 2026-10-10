@@ -1,6 +1,67 @@
 # Execution State
 
-## Active enterprise engineering program (2026-10-09; ADR0843)
+Publication snapshot: this file is frozen before the successor hosted gate.
+Current integrated acceptance is recorded by Draft PR128 required checks and
+its source-bound acceptance packet; prior failed/source-specific evidence stays
+historical. Do not repeat accepted owner capabilities to update this snapshot.
+
+## Active global operating platform program (2026-10-09; ADR0844)
+
+Verified base: PR127 `34b9e7a5b2a7c4d8ae49b641a36de030a878d507`, preserving
+PR126/125/124. CI37978382128 succeeded on that exact accepted head. Main remains
+untouched; implementation uses `amr/global-operating-platform-20261009` and three
+independent managed commercial/supply/finance worktrees.
+
+CA1 individual-invoice AR collections, LC1 prepaid landed-cost receiving and FA1
+acquisition/depreciation/disposal kernels are integrated with native posting,
+reviewed routes and ordered revisions0120–0122. Separate native milestones pass:
+CA1 eight unique cases (including namespace-conflict preflight), LC1 twenty
+business/API/authority/COGS cases, and FA1 ten cases. All three actual normal
+HTTPS Studio cycles and populated 237-table/schema restore milestones pass on
+their own committed sources. The funded combined native cycle also passes:
+existing opening capital → charged receiving → partial AP settlement → FIFO sale
+→ partial AR collection → acquisition/depreciation/disposal → retained reports.
+Its independent oracle proves18 effects,184156minor debit=credit, cash45898,
+inventory11648 and assets57546=capital50000+unclosed result7546. Source-bound
+milestones are retained in GLOBAL_OPERATING_MILESTONES_2026-10-10.json; final
+integrated hosted acceptance remains pending.
+Cross-review strengthened monetary ABAC admission before retained retries and
+current database permission/phase admission. Development failure packets remain.
+
+Benchmark instrumentation at3dabe93e passed10 genuine native cycles on revision0119
+in22.672s, retaining10 raw cycle observations,11 raw read observations and two
+resource samples. It verifies nonowner/NOBYPASSRLS execution and unchanged source;
+it does not accept new business owners or establish a performance improvement.
+Draft PR128 is open above PR127. Its first fixed-source hosted gate,
+CI38006481633 at5e575031, failed and remains retained. Seven normal HTTPS
+browser/restore jobs, web, four engine-parity jobs, HA/DR, object storage,
+Security38006481629, Docker38006481705 and CodeQL38006481715 passed on that
+source; these are not overall acceptance. Failure analysis found unrelated
+event/master dispatch reading new owner tables under legacy restricted roles,
+an unordered direct multiline downgrade, and a Phase4 backlog contract drift.
+Repairs preserve RLS, ACLs, immutable identities and financial closure. Genuine
+CA1/LC1 event recovery now passes loss of acknowledgement, crashed leases,
+fencing and exactly one consumer receipt/effect with unchanged financial rows.
+Additive0123 refreshes corrected invoker functions for existing0122 databases;
+its downgrade preserves the compatible correction without deleting history.
+Repaired-source hosted acceptance remains required at publication time.
+The unchangedcfd30de7/full123 retest passes1000 native cycles, zero errors and
+the independent493671004minor oracle. Posting1.145287cycles/s is23.23% below
+PR127 and13.00% below6272889d; p50/p95/p99=3.417656/4.423447/4.747318s.
+Raw observations and93 resource samples remain published. No broad performance
+gain is claimed; source-specific corrective gates and benchmark are complete.
+No production, banking or competitor superiority claim.
+
+The fixed6272889d source now passes the final native1000-cycle local benchmark:
+zero errors, independent493671004minor totals,1.316464posting cycles/s,
+p50/p95/p99=3.115654/3.296120/3.581297s. Posting throughput regresses11.76%
+against accepted34b9 and requires profiling; current warmed native verified reads
+are7.669656→0.569061s through the preserved batch pathway. Raw vectors and79
+resource samples are retained with exact source/hardware/configuration in
+GLOBAL_ENGINEERING_BENCHMARK_2026-10-10.md. New projection aggregation3→1 has a
+narrow measured4.84% warm median duration reduction; no broad speed claim.
+
+## Accepted prior enterprise engineering program (2026-10-09; ADR0843, PR127)
 
 Starts at PR126 exact `21b4b8a23a4bf9c3e5562b51392fad896f39ef7d`, retaining PR125
 and PR124, on `amr/enterprise-erp-program-20261009`. Main remains `b61ea56b`.
@@ -18,9 +79,14 @@ Native commerce16-case and procurement17-case gates pass with zero skips;
 three integrated normal HTTPS cycles and populated native restore passed their
 source-bound milestones. DraftPR127 is open above unchangedPR126. The first hosted
 run40e9 retained a parser-inventory failure and legacy scope-loading race; both
-are repaired without weaker controls. All final current-source native/Python/web/
-security/image acceptance remains required. These bounded milestones do not
-complete the broad global ERP program; predecessor acceptance stays historical.
+are repaired without weaker controls. Successor34b9 passed CI37978382128,
+Security37978381712, Docker37978381685 and CodeQL37978381804: both Python versions
+4608pass/663existing prerequisite skips,39 mandatory native pytest commands
+1247passing case invocations with zero selected skips, React325 and all five
+source-bound business HTTPS/restore cycles. Fixed34b9 native1000-cycle posting
+is1.491938cycles/s; warmed verified-read median6.957988→0.474097s. The immutable
+original final packet remains in output/enterprise-erp-program-20261009. These
+bounded results accept that predecessor scope, not the broad global ERP program.
 
 ## Active ERP expansion sprint (2026-10-09; ADR0842)
 

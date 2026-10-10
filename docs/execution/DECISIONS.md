@@ -1,5 +1,43 @@
 # ReconForge Execution Decisions Log
 
+- GLOBAL-20261010 corrective integration: preserve failed CI38006481633 at
+  5e575031. Classify native owner namespaces before reading new protected tables
+  for unrelated legacy events/masters. Retain invoker authority and every
+  relevant owner closure; never grant legacy workers access merely to pass.
+  Outbox event identities are opaque case-sensitive keys, separately validated
+  from normalized tenant/consumer scopes. Wrong-case IDs have no lease authority.
+  Additive0123 replaces only LC/FA reverse-close functions, preserving OIDs,
+  ACLs and financial history. Downgrade to0122 retains this compatible fix;
+  destructive source downgrades remain guarded by their original revisions.
+  Keep Phase4 program identity and track ADR0844 as its active sprint.
+
+- GLOBAL-20261010 / ADR0844: extend the existing native source owners with CA1
+  invoice installments, LC1 prepaid receipt charges and FA1 cash-funded asset
+  lifecycle. Preserve original ledger, currency, identity, inventory and audit
+  engines; use additive revisions0120–0122 and refuse destructive populated
+  downgrades. No dependency, license or mandatory external service was added.
+- Cross-review requires exact amount/precision context and every current source
+  permission before returning a retained command acknowledgement. SQL command
+  admission independently validates current humans and phase-zero source birth;
+  historical closure preserves approved evidence after later grant revocation.
+- Run new mandatory native modules in the existing bounded ERP shard and all
+  three real browser/restore scenarios as required matrix entries. The ordinary
+  unconfigured Python partition excludes only these fixture-required modules;
+  their execution is mandatory elsewhere and no new optional skips are added.
+- Current official capability mapping is
+  `GLOBAL_CAPABILITY_COVERAGE_2026-10-10.md`. Functional-currency native GL is not
+  promoted to operational FX/tax/global statutory accounting. SSDF1.2 is draft;
+  SSDF1.1 and ASVS5.0.0 are inspected references, not certifications.
+- Retain raw benchmark cycle/read observations and sampled PostgreSQL/WAL/wait,
+  Docker and process resources. Admission is bounded and partial failures retain
+  completed/failed/not-admitted work. Cost remains null without a supplied cost
+  model; preserved PR127 measurements are not reattributed to new source.
+- Final cross-review makes configured native pytest reject skipped, xfailed,
+  xpassed and empty selections through an explicit CI-only admission plugin.
+  New LC modules no longer inherit an optional prerequisite marker. Each required
+  expansion browser scenario must execute exactly one successful nonflaky test
+  with no skips before its financial and restore evidence can be accepted.
+
 - ENT-20261009 final integration: self-contained native CI shards run independently
   of Python/web failures; both Python versions disable sibling cancellation.
   No required command, guard, role constraint or aggregate acceptance is removed.

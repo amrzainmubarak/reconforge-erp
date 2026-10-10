@@ -8,6 +8,7 @@ const operationalLabels: Partial<Record<StudioPage, MessageKey>> = {
   stockSales: "stockSales",
   procurementPartial: "procurementPartial",
   financialReporting: "financialReporting",
+  fixedAssets: "fixedAssets",
   receivables: "receivables",
   notifications: "notifications",
   budgetControl: "budgetControl",

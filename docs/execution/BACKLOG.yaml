@@ -17,42 +17,42 @@ tasks:
     title: Preserve original FIFO and financial history through governed credit and partial refund
     status: completed
     depends_on: [AMR-WAVE3-001]
-    exit_evidence: Scoped complete whole zero-tax functional-currency original source/FIFO credit and original-cash refund installments; complete native15 and actual HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904. Earlier9c4bea54 packet retained; partial/taxed/foreign stock returns remain gaps.
+    exit_evidence: Scoped complete whole zero-tax functional-currency original source/FIFO credit and original-cash refund installments; complete native15 and actual HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904 and later0b598792/run38067389520. Earlier9c4bea54 packet retained; partial/taxed/foreign stock returns remain gaps.
   - id: AMR-WAVE4-002
     priority: P0
     area: purchase-appropriation
     title: Bind approved budget to native partial purchase receipt and AP accrual
     status: completed
     depends_on: [AMR-WAVE3-001]
-    exit_evidence: Scoped complete native merchandise reserve, partial receipt/AP consume and unreceived release;24 mandatory native/API cases and actual HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904. Earlier7f72c770/9c4bea54 packets retained; PR/RFQ/contracts, charge appropriation and supplier-return budget reinstatement remain gaps.
+    exit_evidence: Scoped complete native merchandise reserve, partial receipt/AP consume and unreceived release;24 mandatory native/API cases and actual HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904 and later0b598792/run38067389520. Paid charges are refused. Earlier7f72c770/9c4bea54 packets retained; PR/RFQ/contracts, charge appropriation and supplier-return budget reinstatement remain gaps.
   - id: AMR-WAVE4-003
     priority: P0
     area: historical-fx-tax
     title: Native foreign taxed AR invoice and partial functional settlement with realized FX
     status: completed
     depends_on: [AMR-WAVE3-001]
-    exit_evidence: Scoped complete native foreign taxed AR and partial functional settlement with realized FX at retained0/2/3 precision; full native/API gates and five-stage HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904. Original19 unique cases/1e73267e wire and trusted3ac5 Fraction proof retained; broader AP/stock/country tax remain gaps.
+    exit_evidence: Scoped complete native foreign taxed AR and partial functional settlement with realized FX at retained0/2/3 precision; full native/API gates and five-stage HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904 and later0b598792/run38067389520. Original19 unique cases/1e73267e wire and trusted3ac5 Fraction proof retained; broader AP/stock/country tax remain gaps.
   - id: AMR-WAVE4-004
     priority: P0
     area: posting-performance
     title: Reduce measured CPU and planning cost while preserving financial and RLS controls
     status: in_progress
     depends_on: [AMR-WAVE3-001]
-    exit_evidence: Six fresh warmed1K runs financially valid under normal and optimized Python, trusted c5dfa70b manifest; static configuration/instrument bytes match but dynamic power changes across248 AC/263 battery samples. TPS +36.02%, combined CPU/success -23.54%, client CPU +22.46% and bounded batch read +10.28% are descriptive only; performance comparison and resource acceptance are false. Genuine10Ksingle-candidate capacity subsequently passed independent5028151631minor-unit oracle under pinned c09be0d2 raw report; no matched10Kbaseline. Fresh stable-AC three pairs are running. Resource remediation and mixed full1000-line workflows remain unaccepted.
+    exit_evidence: Retained c5dfa70b mixed-power1K packet remains descriptive/unaccepted. Separate stable1K six runs at b7df9271/07452da8 pass financial/environment proof under manifest1e67d483 with371 AC/0battery/0unavailable samples and matching scheme endpoints; observed median TPS +42.585%, combined CPU/success -27.130%, batch read -1.337%, but client CPU +2.825% remains unresolved and overall performance/resource acceptance is false. No causal CPU attribution or continuous power/thermal equivalence claim. Single-candidate10K capacity passes independent5028151631minor-unit oracle under c09be0d2 raw report with no matched baseline. Final publication-head measurements,100K/1M and mixed full1000-line business cycles remain unaccepted/unrun.
   - id: AMR-WAVE4-005
     priority: P1
     area: supplier-return
     title: Exact unpaid original AP debit plus unissued FIFO supplier restitution
     status: completed
     depends_on: [AMR-WAVE3-002]
-    exit_evidence: Scoped complete whole unissued FIFO inverse, exact unpaid original AP credit and paid-charge expense disposition with reviewed cancel/reprepare;28 mandatory native/API cases and actual HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904. Original92230f4a wire retained; partial/issued/adjusted receipts, paid merchandise, taxed/foreign returns and BPC1 sources remain unsupported.
+    exit_evidence: Scoped complete whole unissued FIFO inverse and matching single-line accrued unpaid zero-tax functional-currency AP credit, plus paid-charge expense disposition and reviewed cancel/reprepare;28 mandatory native/API cases and actual HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904 and later0b598792/run38067389520. Original92230f4a wire retained; no replacement receiving capacity. Partial/issued/adjusted receipts, paid merchandise, taxed/foreign returns and BPC1 sources/reinstatement remain unsupported.
   - id: AMR-WAVE4-006
     priority: P0
     area: closing-fx-and-original-inverse
     title: Revalue retained open foreign AR then reverse the exact native original before settlement
     status: completed
     depends_on: [AMR-WAVE4-003]
-    exit_evidence: Scoped complete closing/inverse6 cases plus retained-position current ABAC1; full native7 and shared five-stage HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904. Original1e732 wire and independent Fraction oracle are preserved; group translation and broader AP/stock revaluation remain gaps.
+    exit_evidence: Scoped complete closing/inverse6 cases plus retained-position current ABAC1; full native7 and shared five-stage HTTPS/populated restore passed at b6e9dcf6 in hosted run38059696904 and later0b598792/run38067389520. Original1e732 wire and independent Fraction oracle are preserved; group translation and broader AP/stock revaluation remain gaps.
   - id: AMR-WAVE3-001
     priority: P0
     area: commercial-collections

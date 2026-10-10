@@ -18,14 +18,19 @@ updated_at is15:04:54UTC. Complete native/API owner gates, actual HTTPS/populate
 restore scenarios and package gates passed there. Separately, four applicable
 Security checks succeeded; conditional exact-image SBOM/vulnerability/license
 checks were skipped and are not executed evidence.
-The amended documentation/evidence head still needs its publication archive and
-hosted checks; this source acceptance does not complete the worldwide ERP program.
+The later 0b5987927391f2e46a91813f8ccee71763b4140a source also has all 38 jobs
+successful in [run38067389520](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38067389520),
+including both Python archive checks and eleven actual HTTPS/populated restores.
+The upcoming final documentation/artifact head still needs its own archive and
+hosted checks; source acceptance does not complete the worldwide ERP program.
 
 Scoped completed cycles are whole zero-tax functional-currency CR1 credit/FIFO
 restoration and CRF1 original-cash refund installments; BPC1 merchandise reserve,
 partial receipt/AP consumption and unreceived release; taxed foreign AR/partial
 functional settlement, closing FX and its exact inverse; and SR1 whole unissued
-receipt/unpaid AP credit with paid landed charges disposed to approved expense.
+receipt with a matching single-line unpaid zero-tax functional-currency AP credit,
+with paid landed charges disposed to approved expense. BPC1 refuses paid charges;
+SR1 does not restore replacement receiving capacity or reinstate BPC1 budgets.
 Hosted gates include CR15, collections19, BPC24, LC49, SR28 and corrective0132's
 four cases, with zero skips/xfails/xpasses. Earlier CR/BPC9c4bea54, BPC7f72c770,
 FX1e73267e and SR92230f4a packets retain their original source scope. The original
@@ -47,7 +52,7 @@ c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc.
 Descriptive median throughput rises1.340057→1.822781 successful cycles/sec (+36.02%);
 combined client/database CPU per success falls2.524217→1.929894sec (−23.54%). These
 observations do not establish a causal gain or a dynamically matched comparison;
-performance_comparison_accepted is false. A fresh stable-power repeat is pending. Resource
+performance_comparison_accepted is false. The separate stable-power repeat is complete. Resource
 acceptance is false: client CPU rises641.218750→785.265625sec (+22.46%) and bounded
 batch read rises0.567914→0.626310sec (+10.28%). Six raw reports and both oracles are
 staged under wave4-evidence/posting-1k; publication closure is separate. Fresh10K
@@ -55,10 +60,21 @@ scale completed afterward with10000 genuine measured effects and20warmups. Its
 independent integer oracle5028151631minor units passed, source07452 stayed unchanged
 and the owned lab was removed. The pinned original3.55MBreport is under
 wave4-evidence/scale-10k; this is single-candidate capacity with changing power,
-not a matched10Kbaseline or improvement comparison. Fresh stable-AC three pairs
-are running with hash-bound before/after active Balanced scheme observations and
-per-run AC/saver samples. Mixed full1,000-line business cycles, monetary cost and
-HA/DR RPO/RTO remain unaccepted. These journal measurements establish no cross-vendor superiority.
+not a matched10Kbaseline or improvement comparison.
+
+Separate stable-AC three pairs pass financial/environment verification, bound to
+manifest1e67d483a994e68392fd7d5a35413e7c535d8d2b78a25d1ae975cf587b3f2a7c.
+They retain 371 AC/0 battery/0 unavailable samples and matching before/after
+Balanced scheme GUID. Observed median throughput improves42.585%, combined CPU
+per success falls27.130%, and bounded batch read falls1.337%; p50/p95/p99 fall
+31.549%/23.187%/25.958%. Client CPU rises2.825% and remains an unresolved adverse
+result. Overall performance/resource acceptance is false; task004 stays in_progress.
+Sparse observations do not prove continuous power, overlay mode, scheduling or
+thermal equivalence, and CPU attribution is unresolved. These are four-worker
+two-line USD cash/equity journal cycles measured at b7df9271/07452da8, not final
+publication-head measurements. Later UI/observer changes do not rewrite these bytes.
+100K/1M remain unrun. Mixed full1,000-line business cycles, monetary cost and HA/DR
+RPO/RTO remain unaccepted. No cross-vendor superiority is established.
 
 See [baseline and protected provenance](WAVE4_BASELINE_2026-10-10.md),
 [current functional gaps](GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md) and

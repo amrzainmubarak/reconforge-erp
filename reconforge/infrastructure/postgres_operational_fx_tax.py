@@ -143,7 +143,8 @@ class PostgresOperationalFxTaxRepository:
             period_id=period_id, journal_code=source["request"]["journal_code"], posting_date=posting_date,
             description=reason, workspace=source["workspace_id"], external_reference="FX:" + source["id"] + ":" + kind,
             actor_label=actor.username, lines=[{"account_code": line["account_code"],
-                "debit": exact_minor_text(line["debit_minor"], precision), "credit": exact_minor_text(line["credit_minor"], precision),
+                "debit": exact_minor_text(line["debit_minor"], precision) if line["debit_minor"] else "0",
+                "credit": exact_minor_text(line["credit_minor"], precision) if line["credit_minor"] else "0",
                 "description": reason} for line in equation["lines"]])
         snapshot = posting_snapshot(self.connection, self.tenant_id, posting_entry(self.connection, self.tenant_id, entry["id"]))
         if any(snapshot["entry"][key] != value for key, value in source["functional_policy"].items()):

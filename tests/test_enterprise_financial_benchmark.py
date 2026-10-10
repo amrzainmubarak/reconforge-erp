@@ -62,6 +62,40 @@ def test_posting_phase_profile_preserves_failure_boundaries_without_collecting_s
     assert "secret-" not in str(report) and "private-" not in str(report)
 
 
+def test_snapshot_comparison_keeps_failed_raw_samples_without_false_acceptance(monkeypatch: pytest.MonkeyPatch) -> None:
+    import reconforge.benchmark.enterprise_snapshot as benchmark
+    from reconforge.domain.finance_posting import HEADER_FIELDS, make_entry_snapshot, validation_digest
+
+    entry = {key: "fixture" for key in HEADER_FIELDS}
+    entry.update(currency_precision=2, currency_rounding_policy="ROUND_HALF_UP", currency_registry_digest="a" * 64,
+                 posting_date="2026-10-10", reverses_posting_id=None)
+    snapshot = make_entry_snapshot(entry, [
+        {"line_number": 1, "account_id": "cash", "description": "", "debit_minor": 37, "credit_minor": 0, "dimensions": {}},
+        {"line_number": 2, "account_id": "equity", "description": "", "debit_minor": 0, "credit_minor": 37, "dimensions": {"D": "V"}},
+    ])
+    calls = 0
+
+    def optimized(*_args: Any) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise RuntimeError("secret-private-dsn")
+        return snapshot
+
+    monkeypatch.setattr(benchmark, "legacy_snapshot", lambda *_args: snapshot)
+    monkeypatch.setattr(benchmark, "posting_snapshot", optimized)
+    report: dict[str, Any] = {}
+    with pytest.raises(RuntimeError, match="secret"):
+        benchmark.measure_snapshot_reads(object(), "tenant", {}, expected_line_count=2, expected_total_minor=37,
+            expected_validation_digest=validation_digest(snapshot), repetitions=3, evidence_sink=report)
+    assert report["status"] == "failed"
+    assert report["samples"]["per_line_baseline"][0]["status"] == "complete"
+    assert report["samples"]["per_line_baseline"][0]["debit_minor"] == "37"
+    assert report["samples"]["joined_snapshot"][0]["failure"] == {"exception_type": "RuntimeError"}
+    assert report["samples"]["joined_snapshot"][0]["seconds"] >= 0
+    assert "measured_speedup" not in report and "secret" not in str(report)
+
+
 def test_resource_sampling_preserves_observations_and_redacts_error_text() -> None:
     import threading
 

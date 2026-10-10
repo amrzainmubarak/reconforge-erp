@@ -34,4 +34,17 @@ python .github/scripts/benchmark_global_engineering_pair.py --baseline <baseline
 python -I .github/scripts/verify_wave4_posting_pair.py --manifest docs/execution/wave4-evidence/posting-1k/manifest.json --manifest-sha256 c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc --report <fresh-proof.json>
 ```
 
-Fresh10000-cycle capacity run is active, not accepted yet. A stable-AC three-pair retest follows it after the user confirmed fixed power.100000/1000000 are unrun; no equivalent competitor benchmark or global ranking is claimed.
+The fresh10000-cycle capacity run completed successfully at16:33UTC. The independent SHA256/integer oracle is5028151631minor units; all10000measured effects and20disjoint warmups were retained, both100/10000read populations have three verified repetitions per read mode, and the owned lab was removed. [Original3.55MBreport and independent result](wave4-evidence/scale-10k/) are pinned by report SHA256 `c09be0d222823c915f93efdbd0824e33715024b2106064805d85dc4e8f405313`.
+
+| 10K candidate capacity metric | Observed value |
+|---|---:|
+| Posting elapsed | 4376.855s |
+| Successful native cycles/sec | 2.284745 |
+| p50 / p95 / p99 | 1.678126 / 2.082625 / 2.582500s |
+| Posting client / database CPU | 5378.296875 / 9874.770547s |
+| Combined CPU per successful cycle | 1.525307s |
+| Container / client lifetime memory peak | 427376640 / 126705664bytes |
+| 10000-effect bounded-read median | 4.905057s |
+| Financial errors / sampled deadlocks | 0 / 0 |
+
+This is one candidate population with changing power during the run; there is no matched10Kbaseline or causal improvement claim. Sparse IO/network/WAL observations and memory scopes retain the limitations above. Three stable-AC pairs started afterward with the unchanged frozen child populations and Balanced scheme GUID `381b4222-f694-41f0-9685-ff5bb260df2e`; their before/after scheme readings and exact sampled AC/saver state are hash-bound separately. The active scheme does not measure Windows overlay power mode or continuous stability.100000/1000000remain unrun: linear extrapolation of this actual10Kposting alone is about12.2hours for100K, beyond the individual7200s resource budget; this extrapolation is not a measured scale result. No equivalent competitor benchmark or global ranking is claimed.

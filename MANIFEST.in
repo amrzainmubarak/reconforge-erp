@@ -1435,3 +1435,5 @@ include tests/test_postgres_stock_sales_reversal_dispatch.py
 include alembic/versions/0132_postgres_stock_sales_reversal_dispatch.py
 include docs/adr/0852-scoped-original-stock-revenue-inverse-dispatch.md
 include docs/execution/WAVE4_ENGINEERING_MEASUREMENTS_2026-10-10.md
+include .github/scripts/benchmark_stable_power_pair.py
+include tests/test_stable_power_pair_controller.py

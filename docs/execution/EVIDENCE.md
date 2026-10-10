@@ -23122,3 +23122,31 @@ The same historical run also has an actual receivables failure at job11365478196
 ## Complete hosted downgrade failure and repair (2026-10-09)
 
 CI37883376725 on5de23d14/merge91724b4c executes all29 required jobs:25 succeed, three native shards fail plus their fail-closed aggregate. Both Python profiles report4569 passed/649 existing prerequisite skips, React295 and standard browser19/9 prerequisites pass, both real ERP wire cycles and the68 expansion-native cases pass with zero skips. The verified complete logs ZIP has SHA256 ec77ba0fb805711dc0046b3d5f975aaaf58af8a23ea9111678d9bf75868a633d. All failed native cases share0115 downgrade dependency order: installment_protect() is dropped while the four own immutable triggers still reference it. The repair keeps the populated-plan refusal first, removes native/own closure triggers, drops the four own tables together, then drops their functions, without CASCADE or native source-table removal. Independent0112–0115 dependency review finds no other ordering defect. The failed run remains failed; affected migration cases and a fresh stable-source complete CI are required. Source-archive membership is reported as actual totals separately from the required verified subset.
+
+
+## Wave4 independent posting and hosted source checkpoint (2026-10-10)
+
+Published source0b598792 has38/38successful CI jobs in run38067389520, plus the
+applicable Security/Docker/CodeQL checks. Complete16native log populations and
+four business restore reports retain their individual source/command identities;
+Python3.11/3.12 each4903passes and663pre-existing prerequisite skips, Web408React
+and19Playwright. Both source archives verify132ordered migrations and recompute
+six fresh posting populations with stdlib-only normal/-O financial oracles.
+Original hosted JSON files and local availability boundaries are retained under
+wave4-evidence/ci-0b598792; this is an earlier source checkpoint, not automatic
+acceptance of a successor documentation/controller/evidence head.
+
+The separate genuine10Kcandidate capacity report has10000measured native effects
+and20disjoint warmups, exact independent5028151631minor-unit totals, zero financial
+errors/observed deadlocks and removed owned resources. Trusted rawSHA256 is
+c09be0d222823c915f93efdbd0824e33715024b2106064805d85dc4e8f405313.
+The archive hook recomputes that raw evidence under isolated normal and optimized
+Python. There is no matched10Kbaseline; its changing power prevents a causal
+comparison.100K/1Mremain unrun under the bounded7200s admission budget.
+
+Three stable-AC1Kpairs are in progress using frozen b7df9271/07452da8, original
+child bytes and identical financial controls. Their new twelve before/after
+active-scheme sidecars and six raw AC/saver sample populations will receive a
+separate trusted manifest. The c5 mixed-power packet and regressed/interrupted
+attempts remain unchanged. Performance acceptance is pending all six populations
+and adverse resource assessment. See WAVE4_ENGINEERING_MEASUREMENTS_2026-10-10.md.

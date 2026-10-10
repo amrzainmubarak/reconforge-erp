@@ -1,0 +1,52 @@
+{
+  "schema_version": "wave4-ci-archive-path-map-v1",
+  "head_sha": "0b5987927391f2e46a91813f8ccee71763b4140a",
+  "scope": "Source-bound hosted checkpoint; final successor source requires its own CI. Selected original JSON files embedded locally. Referenced original full native/Web/general logs and ZIP archives remain in owner evidence and hosted artifacts; their retained hashes do not imply local replayability.",
+  "files": [
+    {
+      "path": "current-four-cycle-native-summary.json",
+      "sha256": "68065a0138f758629558dec681cc395c5a9ec423a6319c9e58172ee989e7da2b",
+      "bytes": 27581
+    },
+    {
+      "path": "current-package-closure-summary.json",
+      "sha256": "dc98aefd0158bf5009df2db65114c9289d5322545bd3801d969d992e9644270d",
+      "bytes": 1635
+    },
+    {
+      "path": "customer-returns-report.json",
+      "sha256": "25f000dc99d4d8730a8ad4e7e7cebd7920835a5d06a5f9596827ee769799705b",
+      "bytes": 87485
+    },
+    {
+      "path": "operational-fx-tax-report.json",
+      "sha256": "b7cd4e434a0ca1697ecff0ec2011d337ad6d72c4702f38b13f7f3f6d54864e4b",
+      "bytes": 87781
+    },
+    {
+      "path": "procurement-commitments-report.json",
+      "sha256": "4cd32e855432558272fe6853e25b41d58aeec10df2d01eee7f038e9ace112644",
+      "bytes": 87062
+    },
+    {
+      "path": "publication-source-closure-3.11.json",
+      "sha256": "eb7e2822453cdee3a7e8a4aafe02d32a595639939d87a5a4794a71c71e2d586e",
+      "bytes": 573503
+    },
+    {
+      "path": "publication-source-closure-3.12.json",
+      "sha256": "6f9b5ceb393a3bece537481fc9a9c8172838d1c92dc38d2bb4fded62d4340238",
+      "bytes": 573503
+    },
+    {
+      "path": "supplier-returns-report.json",
+      "sha256": "e0bb6c0c6b66c0ff3f72a756fbec9b70356c26ee1e6db84a5b07a5e5c924379f",
+      "bytes": 87284
+    },
+    {
+      "path": "TERMINAL_CI_SUPPLEMENT_0b598792.json",
+      "sha256": "9cbde0f5a2deed44c658822a7a90c4db535e48aa1509bf766bf8dd689596b457",
+      "bytes": 260323
+    }
+  ]
+}

@@ -51,8 +51,14 @@ performance_comparison_accepted is false. A fresh stable-power repeat is pending
 acceptance is false: client CPU rises641.218750→785.265625sec (+22.46%) and bounded
 batch read rises0.567914→0.626310sec (+10.28%). Six raw reports and both oracles are
 staged under wave4-evidence/posting-1k; publication closure is separate. Fresh10K
-scale, mixed full1,000-line business cycles, monetary cost and HA/DR RPO/RTO remain
-unaccepted. These journal measurements establish no cross-vendor superiority.
+scale completed afterward with10000 genuine measured effects and20warmups. Its
+independent integer oracle5028151631minor units passed, source07452 stayed unchanged
+and the owned lab was removed. The pinned original3.55MBreport is under
+wave4-evidence/scale-10k; this is single-candidate capacity with changing power,
+not a matched10Kbaseline or improvement comparison. Fresh stable-AC three pairs
+are running with hash-bound before/after active Balanced scheme observations and
+per-run AC/saver samples. Mixed full1,000-line business cycles, monetary cost and
+HA/DR RPO/RTO remain unaccepted. These journal measurements establish no cross-vendor superiority.
 
 See [baseline and protected provenance](WAVE4_BASELINE_2026-10-10.md),
 [current functional gaps](GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md) and

@@ -2,6 +2,56 @@
   "schema_version": "wave4-evidence-index-v1",
   "files": [
     {
+      "path": "ci-0b598792/archive-path-map.json",
+      "sha256": "9a39e7ea9da80d8878df097f38f525ab9d25ea289b584ee088f4f05ba19e88ba",
+      "bytes": 2017
+    },
+    {
+      "path": "ci-0b598792/current-four-cycle-native-summary.json",
+      "sha256": "68065a0138f758629558dec681cc395c5a9ec423a6319c9e58172ee989e7da2b",
+      "bytes": 27581
+    },
+    {
+      "path": "ci-0b598792/current-package-closure-summary.json",
+      "sha256": "dc98aefd0158bf5009df2db65114c9289d5322545bd3801d969d992e9644270d",
+      "bytes": 1635
+    },
+    {
+      "path": "ci-0b598792/customer-returns-report.json",
+      "sha256": "25f000dc99d4d8730a8ad4e7e7cebd7920835a5d06a5f9596827ee769799705b",
+      "bytes": 87485
+    },
+    {
+      "path": "ci-0b598792/operational-fx-tax-report.json",
+      "sha256": "b7cd4e434a0ca1697ecff0ec2011d337ad6d72c4702f38b13f7f3f6d54864e4b",
+      "bytes": 87781
+    },
+    {
+      "path": "ci-0b598792/procurement-commitments-report.json",
+      "sha256": "4cd32e855432558272fe6853e25b41d58aeec10df2d01eee7f038e9ace112644",
+      "bytes": 87062
+    },
+    {
+      "path": "ci-0b598792/publication-source-closure-3.11.json",
+      "sha256": "eb7e2822453cdee3a7e8a4aafe02d32a595639939d87a5a4794a71c71e2d586e",
+      "bytes": 573503
+    },
+    {
+      "path": "ci-0b598792/publication-source-closure-3.12.json",
+      "sha256": "6f9b5ceb393a3bece537481fc9a9c8172838d1c92dc38d2bb4fded62d4340238",
+      "bytes": 573503
+    },
+    {
+      "path": "ci-0b598792/supplier-returns-report.json",
+      "sha256": "e0bb6c0c6b66c0ff3f72a756fbec9b70356c26ee1e6db84a5b07a5e5c924379f",
+      "bytes": 87284
+    },
+    {
+      "path": "ci-0b598792/TERMINAL_CI_SUPPLEMENT_0b598792.json",
+      "sha256": "9cbde0f5a2deed44c658822a7a90c4db535e48aa1509bf766bf8dd689596b457",
+      "bytes": 260323
+    },
+    {
       "path": "ci-b6e9dcf6/archive-path-map.json",
       "sha256": "039e342717f887b52d730aafa2588f0c6f0c8804a6408e185ba8967f5683cb1e",
       "bytes": 3369
@@ -222,6 +272,16 @@
       "bytes": 866070
     },
     {
+      "path": "scale-10k/independent-verification.json",
+      "sha256": "24c9a432bad7a9ce77a89b28ea1974149c10ba49c2875f24017cd4c4a072c17e",
+      "bytes": 3187
+    },
+    {
+      "path": "scale-10k/result.json",
+      "sha256": "c09be0d222823c915f93efdbd0824e33715024b2106064805d85dc4e8f405313",
+      "bytes": 3549187
+    },
+    {
       "path": "unaccepted-first-pair/baseline.json",
       "sha256": "58028bc7145108acb0b80e22037e74c85c1ab30df3bca55af6d18345ad7b2834",
       "bytes": 335498
@@ -262,8 +322,10 @@
       "bytes": 8015
     }
   ],
-  "financial_cycles_accepted_source": "b6e9dcf608df2885b61a2846a4edc8df783db72d",
+  "financial_cycles_accepted_source": "0b5987927391f2e46a91813f8ccee71763b4140a",
   "performance_comparison_accepted": false,
   "reason": "Dynamic host power changed; clientCPU/read regressions retained; stable-power retest pending",
-  "scale10000_status": "running"
+  "scale10000_status": "financially_verified_single_candidate_capacity_observation",
+  "scale10000_report_sha256": "c09be0d222823c915f93efdbd0824e33715024b2106064805d85dc4e8f405313",
+  "stable_power_six_run_retest_status": "running; no acceptance claim"
 }

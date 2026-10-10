@@ -13353,3 +13353,23 @@ governed operational APIs and real Studio workflows. The new user request
 authorizes receipt API/UI completion. Three isolated implementation branches
 have exclusive leaf ownership; the lead owns central integration and final
 gates. Main and unrelated cancellation-projection work remain separate.
+
+
+## 2026-10-10 — separate financial evidence, dynamic power and performance acceptance
+
+Keep the original six mixed-power runs byte-exact, with their c5 trust anchor and
+false performance acceptance. The user confirmed fixed electricity and power
+mode; an external stdlib controller repeats BC,CB,BC using unchanged frozen
+children, with read-only active-scheme observations before/after each child and
+retained AC/saver sample validation. A sidecar proof must bind actual original
+reports and their hashes; missing/battery/saver-on or changed-scheme evidence
+fails closed. No power parameters, credentials, KDF iterations, native posting
+controls or permission freshness are changed. An active scheme GUID does not
+identify a Windows overlay mode, continuous power or per-core scheduling.
+
+A successful independent financial/environment proof never erases client CPU,
+batch-read or memory regressions. Preserve each resource window and state its
+scope. The genuine10Kcapacity packet receives its own pinned normal/-O archive
+oracle; it establishes neither a matched10Kspeedup nor cross-vendor superiority.
+The monetary resource cost remains null without an actual cost model. Keep the
+historic22-entry index and accepted source reports immutable.

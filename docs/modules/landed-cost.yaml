@@ -9,7 +9,7 @@ data_classification: confidential-financial
 retention_policy: Immutable allocations, snapshots, command acknowledgements, audit and outbox
 permissions: [payables.read, payables.manage, payables.approve, payables.settle, inventory.read, inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
 default_roles: []
-migrations: [0121_pg_landed_cost, 0123_pg_native_event_dispatch]
+migrations: [0121_pg_landed_cost, 0123_pg_native_event_dispatch, 0125_pg_landed_cost_cancellation]
 domain_invariants:
   - Freight and duties are nonnegative exact minor units with a positive conserved aggregate
   - Independently allocate each charge by merchandise value with largest remainders and stable source identity tie breaks

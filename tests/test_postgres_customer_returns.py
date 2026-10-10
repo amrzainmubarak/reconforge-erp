@@ -543,7 +543,7 @@ def test_original_return_and_new_issue_share_currency_admission_before_stock_and
                 release.set()
             credited, proposed = returned.result(timeout=120), issued.result(timeout=120)
     assert credited["status"] == "Posted" and proposed["status"] == "IssuePrepared"
-    assert proposed["issue_plan"]["total_cost_minor"] == int(Fraction(12000 * 3, 10)) == 3600
+    assert int(proposed["cogs_minor"]) == int(Fraction(12000 * 3, 10)) == 3600
     proposed = execute(runtime, proposed, "review-issue", "checker")
     execute(runtime, proposed, "deliver", "poster")
     with runtime.actor("maker") as (connection, _, actor):
@@ -552,3 +552,52 @@ def test_original_return_and_new_issue_share_currency_admission_before_stock_and
         assert (layer["q"], layer["v"]) == (7, 8400)
         assert PostgresCustomerReturnsRepository(connection, runtime.tenant).get(parent["id"], actor=actor) == credited
     assert balances(runtime) == {"AR": 0, "REVENUE": 0, "COGS": 3600, "INVENTORY": 8400, "CLEARING": -12000}
+
+
+def test_native_stock_lost_ack_after_period_close_rechecks_current_authority_after_command_wait(
+    receipt_database: tuple[str, str],
+) -> None:
+    import time
+
+    import psycopg
+
+    from reconforge.domain.finance_posting import canonical_json
+    from tests.test_postgres_stock_sales import repository
+
+    runtime, source, _invoice = create_runtime(receipt_database, 0, quantity="5")
+    with runtime.actor("maker") as (connection, _, _actor):
+        retained = connection.execute("SELECT command_id,request,result FROM reconforge.stock_sales_commands WHERE tenant_id=%s AND order_id=%s AND operation='prepare-issue'",
+                                      (runtime.tenant, source)).fetchone()
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+        connection.execute("UPDATE reconforge.fiscal_periods SET status='Closed' WHERE tenant_id=%s AND id='period'", (runtime.tenant,))
+    pids: dict[str, int] = {}
+
+    def replay() -> dict[str, Any]:
+        with runtime.actor("maker") as (connection, _, actor):
+            pids["replay"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            payload = dict(retained["request"]["payload"])
+            return repository(connection, runtime).act(source, "prepare-issue", expected_version=payload.pop("expected_version"),
+                command_id=retained["command_id"], reason=payload.pop("reason"), parameters=payload, actor=actor)
+
+    assert replay() == retained["result"]
+    before = retained_state(runtime)
+    with ThreadPoolExecutor(max_workers=1) as workers:
+        with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as blocker:
+            holder = blocker.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            blocker.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                ("stock-command:" + canonical_json([runtime.tenant, "work", retained["command_id"]]),))
+            attempt = workers.submit(replay)
+            deadline = time.monotonic() + 20
+            blocked = False
+            with psycopg.connect(runtime.admin_dsn, autocommit=True) as observer:
+                while time.monotonic() < deadline:
+                    if "replay" in pids and holder in observer.execute("SELECT pg_blocking_pids(%s)", (pids["replay"],)).fetchone()[0]:
+                        blocked = True
+                        break
+                    time.sleep(.05)
+            assert blocked, "Lost acknowledgement retry must actually wait on its native command lock"
+            with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
+                connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE,lifecycle_version=lifecycle_version+1,revoked_at=now(),revoked_by='poster',revocation_reason_code='access_change' WHERE tenant_id=%s AND role_name='receipt-operator' AND permission_name='sales.manage'", (runtime.tenant,))
+        with pytest.raises(FinancePostingError):
+            attempt.result(timeout=60)
+    assert retained_state(runtime) == before

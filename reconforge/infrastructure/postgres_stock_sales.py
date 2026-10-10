@@ -133,6 +133,7 @@ class PostgresStockSalesRepository:
             command = self._request(identifier, "create", payload, actor)
             replay = self._replay(command_id, command)
             if replay is not None:
+                self._actor(actor, "create", payload)
                 return replay
             masters = self._one("""SELECT i.id item_id,i.uom_id,u.decimal_places quantity_precision,l.id location_id,
                 w.warehouse_code,c.id customer_id,e.currency_code
@@ -295,6 +296,7 @@ class PostgresStockSalesRepository:
             request = self._request(identifier, operation, {"expected_version": expected_version, "reason": reason, **dict(parameters)}, actor)
             replay = self._replay(command_id, request)
             if replay is not None:
+                self._actor(actor, operation, self._order(identifier))
                 return replay
             context: Mapping[str, Any] = {}
             if operation in {"prepare-issue", "prepare-invoice", "prepare-collection"}:

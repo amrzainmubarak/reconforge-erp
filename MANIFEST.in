@@ -1396,6 +1396,8 @@ include tests/test_postgres_operational_fx_tax_api.py
 include tests/test_postgres_operational_fx_tax_migration.py
 include tests/test_postgres_financial_read_plans.py
 include tests/test_container_resource_counters.py
+include tests/test_global_engineering_pair.py
+include tests/fixtures/enterprise-warmup-20-ea83335c.json
 include .github/scripts/benchmark_global_engineering_pair.py
 include apps/web/src/operational-fx-tax-fixture.json
 include modules/customer-returns.yaml

@@ -192,6 +192,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/verify_global_integrity_archive.py", ".github/scripts/verify_native_posting_pair.py",
         "tests/test_native_posting_pair_verifier.py",
         "tests/test_container_resource_counters.py", "tests/test_postgres_financial_read_plans.py",
+        "tests/test_global_engineering_pair.py", "tests/fixtures/enterprise-warmup-20-ea83335c.json",
         "tests/test_customer_returns.py", "tests/test_customer_returns_api.py", "tests/test_postgres_customer_returns.py",
         "tests/test_procurement_commitments.py", "tests/test_postgres_procurement_commitments.py", "tests/test_postgres_procurement_commitments_api.py",
         "tests/test_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax_api.py",

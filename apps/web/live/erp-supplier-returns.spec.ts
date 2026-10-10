@@ -99,7 +99,7 @@ test("actual HTTPS original supplier debit removes charged FIFO, credits unpaid 
     }
     async function debitAction(page: Page, debit: { id: string; number: string }, label: string, operation: string) {
       const { region: current } = await inspect(page);
-      const row = current.getByRole("listitem").filter({ has: current.getByRole("heading", { name: debit.number, exact: true }) });
+      const row = current.getByRole("listitem").filter({ has: page.getByRole("heading", { name: debit.number, exact: true }) });
       const saved = page.waitForResponse(reply => reply.url().endsWith(`/supplier-returns/plans/${debit.id}/${operation}`) && reply.request().method() === "POST");
       await row.getByRole("button", { name: label, exact: true }).click();
       return acknowledgement(await saved);
@@ -127,7 +127,7 @@ test("actual HTTPS original supplier debit removes charged FIFO, credits unpaid 
     }
     const final = await inspect(poster); expect(final.detail.totals).toMatchObject({ accrued_minor: "17000", credited_minor: "12000", paid_minor: "5000", outstanding_minor: "0" });
     await expect(final.region.getByRole("region", { name: "Original receipt supplier debit", exact: true })).toContainText("Posted");
-    const retainedCancellation = final.region.getByRole("listitem").filter({ has: final.region.getByRole("heading", { name: cancelledDraft.number, exact: true }) });
+    const retainedCancellation = final.region.getByRole("listitem").filter({ has: poster.getByRole("heading", { name: cancelledDraft.number, exact: true }) });
     await expect(retainedCancellation).toContainText("Cancelled"); await expect(retainedCancellation.getByRole("button")).toHaveCount(0);
     await poster.setViewportSize({ width: 390, height: 844 }); expect(await poster.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page: poster }).include(".procurement-partial-page").analyze()).violations).toEqual([]);

@@ -264,6 +264,7 @@ BEGIN
  END IF;
  FOR q IN SELECT p.id FROM reconforge.supplier_return_plans p WHERE p.tenant_id=j->>'tenant_id'
   AND((native_plan IS NOT NULL AND p.payload->'inverse_plan'->>'plan_id'=native_plan)
+   OR(TG_TABLE_NAME='inventory_cost_layers' AND p.payload->'inverse_plan'->'artifacts'->>'cost_layer_id'=j->>'id')
    OR(entry IS NOT NULL AND EXISTS(SELECT 1 FROM jsonb_array_elements(p.payload->'entries') x WHERE x->>'entry_id'=entry))
    OR(TG_TABLE_NAME IN('finance_accounts','finance_journals') AND EXISTS(SELECT 1 FROM jsonb_array_elements(p.payload->'entries') x JOIN reconforge.finance_entries e ON e.tenant_id=p.tenant_id AND e.id=x->>'entry_id'
     WHERE(TG_TABLE_NAME='finance_journals' AND e.journal_id=j->>'id') OR(TG_TABLE_NAME='finance_accounts' AND EXISTS(SELECT 1 FROM reconforge.finance_entry_lines z WHERE z.tenant_id=p.tenant_id AND z.entry_id=e.id AND z.account_id=j->>'id'))))) LOOP

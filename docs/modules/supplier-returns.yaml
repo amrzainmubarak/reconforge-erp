@@ -20,7 +20,7 @@ domain_invariants:
   - Independent unposted cancellation preserves inverse drafts and command evidence
   - Original native AP effect reversal dispatch refuses detached Generated journal publication
   - Ordinary native namespace admission precedes protected owner table reads
-domain_events: [supplier_return_prepare, supplier_return_review, supplier_return_post, supplier_return_cancel]
+domain_events: [supplier_return_prepared, supplier_return_review, supplier_return_post, supplier_return_cancel]
 api_routes:
   - /api/v1/supplier-returns/plans
   - /api/v1/supplier-returns/plans/{plan_id}

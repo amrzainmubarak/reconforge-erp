@@ -189,6 +189,42 @@ def test_reviewed_cancellation_releases_same_original_source_for_one_fresh_poste
         assert tuple(totals) == (4, 9600, 9600)
 
 
+def test_old_cancelled_inverse_cannot_mask_new_pending_claim_on_same_fifo_layer(runtime: ReceiptRuntime) -> None:
+    import psycopg
+
+    from reconforge.infrastructure.postgres_inventory_valuation import PostgresInventoryValuationRepository
+
+    purchase = source(runtime)
+    cancelled = phase(runtime, phase(runtime, prepare(runtime, purchase), "review", CHECKER), "cancel", POSTER)
+    with runtime.actor(MAKER) as (connection, native, actor):
+        replacement = PostgresSupplierReturnsRepository(connection, runtime.tenant).prepare(
+            preparation(purchase, "SR1-PENDING-REPLACEMENT"), command_id="replacement-prepare", actor=actor)
+        delivery = native.inventory.create_movement(movement_number="AFTER-SUPPLIER-CANCEL", movement_type="Delivery",
+            organization_code="ORG", entity_code="ENTITY", period_id="period", movement_date="2026-10-06",
+            description="Valid native stock issue behind a new pending claim", workspace="work", actor_label=actor.username,
+            lines=[{"item_code": "ITEM", "quantity": "1", "from_location": "MAIN/STOCK"}])
+    with runtime.actor(CHECKER) as (_, native, actor):
+        native.inventory.post_movement(delivery["id"], reason="Independent physical stock review", actor_label=actor.username)
+    with runtime.actor(MAKER) as (connection, _, actor):
+        document = PostgresInventoryValuationRepository(connection, runtime.tenant).create_document(
+            valuation_number="AFTER-SUPPLIER-CANCEL-FIFO", movement_id=delivery["id"], policy_code="FIFO", actor_label=actor.username)
+    before = snapshot(runtime)
+    with pytest.raises(psycopg.errors.CheckViolation, match="Pending whole supplier return"), runtime.actor(CHECKER) as (connection, _, actor):
+        PostgresInventoryValuationRepository(connection, runtime.tenant).approve_document(
+            document["id"], reason="Native issue cannot consume a currently claimed whole source", actor_label=actor.username)
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert snapshot(runtime) == before
+    phase(runtime, replacement, "cancel", CHECKER, command_id="replacement-cancel")
+    with runtime.actor(CHECKER) as (connection, _, actor):
+        approved = PostgresInventoryValuationRepository(connection, runtime.tenant).approve_document(
+            document["id"], reason="Released native source can be consumed ordinarily", actor_label=actor.username)
+        assert approved["total_value"] == "12.00"
+        owner = PostgresSupplierReturnsRepository(connection, runtime.tenant)
+        assert owner.get(cancelled["id"], actor=actor) == cancelled
+        assert connection.execute("SELECT count(*) FROM reconforge.ap_supplier_invoice_credits WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 0
+        assert connection.execute("SELECT sum(remaining_value_minor) FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 1200
+
+
 @pytest.mark.parametrize("operation,actor_name,reviewed", [("review", MAKER, False), ("post", MAKER, True), ("post", CHECKER, True), ("cancel", MAKER, False), ("cancel", CHECKER, True)])
 def test_current_original_three_human_duties_are_inseparable(runtime: ReceiptRuntime, operation: str, actor_name: str, reviewed: bool) -> None:
     plan = prepare(runtime, source(runtime))

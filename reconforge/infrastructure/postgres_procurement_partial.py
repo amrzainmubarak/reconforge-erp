@@ -52,6 +52,7 @@ class PostgresProcurementPartialRepository:
         self.payables, self.receipts = self.shared.payables, self.shared.receipts
         self.receipt_after = 0
         self.invoice_after = 0
+        self._commitment_participant: object | None = None
 
     def _one(self, query: str, arguments: tuple[Any, ...]) -> dict[str, Any]:
         result = self.connection.execute(query, arguments).fetchone()
@@ -63,6 +64,30 @@ class PostgresProcurementPartialRepository:
         query = ("SELECT * FROM reconforge.procurement_partial_orders WHERE tenant_id=%s AND id=%s FOR UPDATE" if lock
                  else "SELECT * FROM reconforge.procurement_partial_orders WHERE tenant_id=%s AND id=%s")
         return self._one(query, (self.tenant_id, exact_text(order_id)))
+
+    def _authorize(self, row: Mapping[str, Any], actor: PostingActor, operation: str) -> None:
+        self.shared._authorize(row, actor, operation)
+        request = row["request_json"]
+        if str(request["number"]).startswith("BPC1-"):
+            # Ordinary sources never query protected appropriation tables.
+            # Owned sources cannot reinterpret their retained minor units using
+            # changed live currency metadata, including cached-command retries.
+            precision = self.connection.execute("SELECT reconforge.pc_currency_precision(%s,%s,%s) AS precision",
+                                                (self.tenant_id, row["id"], request["currency_code"])).fetchone()["precision"]
+            from reconforge.domain.budget_control import BudgetControlError, BudgetScope
+            from reconforge.infrastructure.postgres_budget_control import PostgresBudgetControlRepository
+            from reconforge.platform.common import current_server_principal
+            principal = current_server_principal()
+            budget = PostgresBudgetControlRepository(self.connection, self.tenant_id,
+                require_live_session_assurance=bool(principal and principal.session_id))
+            scope = BudgetScope(*(str(row[key]) for key in ("workspace_id", "organization_id", "legal_entity_id")))
+            amount = Decimal((0, tuple(map(int, str(int(row["total_minor"])))), -precision))
+            try:
+                budget._actor(scope, "budget_control.read", write=False, amount=amount)
+                if operation != "read":
+                    budget._actor(scope, "budget_control.manage", write=True, amount=amount)
+            except BudgetControlError as exc:
+                raise ProcurementPartialError("procurement_commitment_authority_denied", str(exc)) from exc
 
     def _documents(self, order_id: str, kind: str) -> list[dict[str, Any]]:
         row = self._order(order_id)
@@ -108,14 +133,16 @@ class PostgresProcurementPartialRepository:
         self._scope_transaction()
         row = self._order(order_id)
         authority = {"prepare-receipt-line": "prepare-receipt", "match-invoice-lines": "match-invoice"}.get(operation, operation)
-        self.shared._authorize(row, actor, authority)
+        self._authorize(row, actor, authority)
         digest, replay = self._command(row, command_id, operation, payload, actor)
         if replay is not None:
-            self.shared._authorize(self._order(order_id), actor, authority)
+            self._authorize(self._order(order_id), actor, authority)
             self.connection.execute("SELECT reconforge.pp_verify_order(%s,%s)", (self.tenant_id, order_id))
             return row, digest, replay
         row = self._order(order_id, lock=True)
-        self.shared._authorize(row, actor, authority)
+        self._authorize(row, actor, authority)
+        if str(row["number"]).startswith("BPC1-"):
+            self.connection.execute("SELECT reconforge.pc_progress(%s,%s)", (self.tenant_id, order_id))
         if row["row_version"] != expected_version:
             raise ProcurementPartialError("procurement_partial_version_conflict", "Order changed; reload before preparing a new command.")
         return row, digest, None
@@ -159,10 +186,10 @@ class PostgresProcurementPartialRepository:
             scope = self.shared._scope(request)
             order_id = platform_id("PPORDER", scope["workspace_id"], request.number)
             row = {**scope, "id": order_id, "request_json": asdict(request), "total_minor": total}
-            self.shared._authorize(row, actor, "create")
+            self._authorize(row, actor, "create")
             digest, replay = self._command(row, command_id, "create", asdict(request), actor)
             if replay is not None:
-                self.shared._authorize(self._order(order_id), actor, "create")
+                self._authorize(self._order(order_id), actor, "create")
                 self.connection.execute("SELECT reconforge.pp_verify_order(%s,%s)", (self.tenant_id, order_id))
                 return replay
             item = self.receipts.inventory._item(scope["workspace_id"], request.item_code, active=True)
@@ -264,6 +291,13 @@ class PostgresProcurementPartialRepository:
         reason = exact_text(reason, maximum=500)
         payload = {"expected_version": expected_version, "reason": reason, "document_id": document_id}
         with self.connection.transaction():
+            if operation == "post-accrual":
+                self._scope_transaction()
+            if operation == "post-accrual" and str(self._order(order_id)["number"]).startswith("BPC1-"):
+                from reconforge.infrastructure.postgres_procurement_commitments import _ProcurementCommitmentParticipant
+
+                if not isinstance(self._commitment_participant, _ProcurementCommitmentParticipant) or not self._commitment_participant.admits(self, order_id, document_id):
+                    raise ProcurementPartialError("procurement_commitment_owner_required", "Post budget-backed AP through its complete appropriation consumption command.")
             row, digest, replay = self._begin(order_id, operation, expected_version, command_id, payload, actor)
             if replay is not None:
                 return replay
@@ -514,10 +548,10 @@ class PostgresProcurementPartialRepository:
             scope = self.shared._scope(original)
             order_id = platform_id("PPORDER", scope["workspace_id"], request.number)
             row = {**scope, "id": order_id, "request_json": payload, "total_minor": total}
-            self.shared._authorize(row, actor, "create")
+            self._authorize(row, actor, "create")
             digest, replay = self._command(row, command_id, "create", payload, actor)
             if replay is not None:
-                self.shared._authorize(self._order(order_id), actor, "create")
+                self._authorize(self._order(order_id), actor, "create")
                 self.connection.execute("SELECT reconforge.pp_verify_order(%s,%s)", (self.tenant_id, order_id))
                 return replay
             self._one("""SELECT id FROM reconforge.ap_suppliers WHERE tenant_id=%s AND workspace_id=%s AND supplier_code=%s
@@ -690,7 +724,7 @@ class PostgresProcurementPartialRepository:
         with self.connection.transaction():
             ensure_repository_tenant_scope(self.connection, self.tenant_id)
             row = self._order(order_id)
-            self.shared._authorize(row, actor, "read")
+            self._authorize(row, actor, "read")
             self.connection.execute("SELECT reconforge.pp_verify_order(%s,%s)", (self.tenant_id, order_id))
             invoice = self._document(order_id, invoice_id, "invoice")
             identifiers = self.connection.execute("""SELECT id FROM reconforge.financial_installment_plans
@@ -720,7 +754,7 @@ class PostgresProcurementPartialRepository:
             result = []
             for record in records[:page_size]:
                 row = self._order(record["id"])
-                self.shared._authorize(row, actor, "read")
+                self._authorize(row, actor, "read")
                 result.append({**dict(record), "stage": ORDER_STAGES[record["stage"]], "total_minor": str(record["total_minor"])})
             return json_value({"records": result, "next_after": result[-1]["id"] if len(records) > page_size else None, "page_size": page_size})
 
@@ -742,7 +776,7 @@ class PostgresProcurementPartialRepository:
         with self.connection.transaction():
             ensure_repository_tenant_scope(self.connection, self.tenant_id)
             row = self._order(order_id)
-            self.shared._authorize(row, actor, "read")
+            self._authorize(row, actor, "read")
             self.connection.execute("SELECT reconforge.pp_verify_order(%s,%s)", (self.tenant_id, order_id))
             return self._view(row)
 

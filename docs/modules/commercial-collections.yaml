@@ -1,15 +1,15 @@
 id: commercial-collections
 name: Reviewed partial collections inside native customer invoices
-version: 0.1.0
+version: 0.2.0
 maturity: experimental
 owner: commercial-operations
 dependencies: [stock-sales, receivables, finance-core, finance-posting, operational-finance]
 incompatible_versions: []
 data_classification: confidential-financial
-retention_policy: immutable plans, independent reviews, receipts, allocations, cash effects and actor-bound commands
+retention_policy: immutable plans, independent reviews, cancellations, receipts, allocations, cash effects and actor-bound commands
 permissions: [sales.read, sales.manage, sales.approve, receivables.read, receivables.manage, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post]
 default_roles: []
-migrations: [0120_pg_commercial_collections]
+migrations: [0120_pg_commercial_collections, 0124_pg_collection_cancellation]
 domain_invariants:
   - Exact positive minor-unit collection cannot exceed the current native invoice residual
   - One pending reviewed collection per already recognized stock-sale invoice
@@ -19,23 +19,27 @@ domain_invariants:
   - Legacy full collection and partial installment ownership are mutually exclusive
   - Frozen stock FIFO COGS and recognized revenue remain under their original owners
   - Receipt cash effect immutable request response audit and outbox commit together
-domain_events: [commercial_collection_prepared, commercial_collection_reviewed, commercial_collection_posted]
-api_routes: [/api/v1/commercial-collections/plans, '/api/v1/commercial-collections/plans/{id}', '/api/v1/commercial-collections/plans/{id}/review', '/api/v1/commercial-collections/plans/{id}/post']
+  - Cancelled unposted plans preserve original exact payload and Draft or Validated GL without any posting effect or receipt link
+  - Cancellation requires an authorized actor independent of preparer and retained reviewer and preserves historical command acknowledgements
+  - Cancellation releases only pending invoice and receipt name claims; native receipts and native idempotency reservations remain retained
+domain_events: [commercial_collection_prepared, commercial_collection_reviewed, commercial_collection_posted, commercial_collection_cancelled]
+api_routes: [/api/v1/commercial-collections/plans, '/api/v1/commercial-collections/plans/{id}', '/api/v1/commercial-collections/plans/{id}/review', '/api/v1/commercial-collections/plans/{id}/post', '/api/v1/commercial-collections/plans/{id}/cancel']
 cli_commands: []
 ui_routes: [/stock-sales]
 import_schemas: []
 export_schemas: []
-synthetic_fixtures: [tests/test_commercial_collections.py, tests/test_postgres_commercial_collections.py, tests/commercial_collections_browser.py]
+synthetic_fixtures: [tests/test_commercial_collections.py, tests/test_postgres_commercial_collections.py, tests/test_postgres_commercial_collection_cancellation.py, tests/commercial_collections_browser.py]
 threat_model:
   - FORCE RLS inherits the complete tenant workspace organization legal entity scope
   - Every changed native invoice receipt allocation draft review or posting triggers deferred owner closure
   - Direct SQL cannot retain an allocation without its reviewed cash effect or modify original financial evidence
   - Bound requests actors and retained responses make lost acknowledgement retries safe
 benchmarks: []
-rollback_plan: refuse downgrade with retained collection history; preserve additive schemas on application rollback
+rollback_plan: refuse cancellation downgrade with retained release evidence; refuse original owner downgrade with retained collection history; preserve additive schemas on application rollback
 test_matrix:
   domain: tests/test_commercial_collections.py
   postgres: tests/test_postgres_commercial_collections.py
+  cancellation: tests/test_postgres_commercial_collection_cancellation.py
   client: apps/web/src/components/CommercialCollectionsPanel.test.tsx
   browser: apps/web/live/commercial-collections-cycles.spec.ts
 runtime_acceptance: Source-bound native Studio and populated restore milestones passed; final integrated source gate remains required
@@ -45,4 +49,5 @@ limitations:
   - Stock delivery remains Invoiced; the separate native invoice state and collected residual identify settlement
   - No external banking transfer execution, refunds, returns, allocation reversal or FX settlement
   - Visible retained receipt namespace and prepared-plan conflicts are refused before creating financial drafts
-  - Preparation does not reserve the native receipt name through posting; later competing native commands or RLS-hidden plan names can still block a pending plan and require operator resolution; governed cancellation remains future work
+  - Preparation does not reserve the native receipt name through posting; later competing native commands or RLS-hidden plan names can block a pending plan; authorized independent cancellation releases the plan for a replacement with a valid name
+  - Cancelled is additive terminal phase3; historical preparation and review acknowledgements keep their original phase and payload; older readers may reject the new terminal representation

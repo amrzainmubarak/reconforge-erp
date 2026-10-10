@@ -80,7 +80,17 @@ def main() -> int:
                 if attempt == 149:
                     raise
                 time.sleep(.2)
-        environment.update(RECONFORGE_TEST_POSTGRES_ADMIN_DSN=admin_dsn, RECONFORGE_TEST_POSTGRES_DSN=app_dsn)
+        environment.update(RECONFORGE_TEST_POSTGRES_ADMIN_DSN=admin_dsn, RECONFORGE_TEST_POSTGRES_DSN=app_dsn,
+                           RECONFORGE_TEST_POSTGRES_APP_USER="commercial_gate", RECONFORGE_POSTGRES_DSN=admin_dsn)
+        migration = subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=ROOT, env=environment,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False, timeout=180)  # nosec B603
+        if migration.returncode:
+            diagnostic = migration.stdout
+            for secret in (admin_dsn, app_dsn, admin_password, app_password):
+                diagnostic = diagnostic.replace(secret, "[redacted]")
+            (output / "migration-failure.log").write_text(diagnostic, encoding="utf-8")
+            print(diagnostic[-10000:])
+            return migration.returncode
         groups = sys.argv[1:] or ["tests/test_postgres_commercial_collections.py", "tests/test_postgres_stock_commerce.py", "tests/test_postgres_stock_sales.py"]
         result = subprocess.run([sys.executable, "-m", "pytest", "-q", "--tb=short", *groups,
             "--junitxml=" + str(output / "native-gate.xml")], cwd=ROOT, env=environment,

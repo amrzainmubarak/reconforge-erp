@@ -101,10 +101,15 @@ class PostgresCommercialCollectionsRepository:
             "SELECT * FROM reconforge.commercial_collection_reviews WHERE tenant_id=%s AND plan_id=%s", (self.tenant_id, plan_id)))
         links = records(self.connection.execute(
             "SELECT * FROM reconforge.commercial_collection_links WHERE tenant_id=%s AND plan_id=%s", (self.tenant_id, plan_id)))
-        result = {**plan, "status": ("Prepared", "Reviewed", "Posted")[plan["phase"]],
+        result = {**plan, "status": ("Prepared", "Reviewed", "Posted", "Cancelled")[plan["phase"]],
                   "reviewer_actor_id": review[0]["reviewer_actor_id"] if review else None,
                   "posting_effect_id": links[0]["posting_effect_id"] if links else None,
                   "receipt_id": links[0]["receipt_id"] if links else None}
+        if plan["phase"] == 3:
+            cancellation = records(self.connection.execute(
+                "SELECT cancelled_actor_id,reason FROM reconforge.commercial_collection_cancellations WHERE tenant_id=%s AND plan_id=%s",
+                (self.tenant_id, plan_id)))[0]
+            result.update(cancelled_actor_id=cancellation["cancelled_actor_id"], cancellation_reason=cancellation["reason"])
         return result
 
     def get(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:
@@ -125,7 +130,7 @@ class PostgresCommercialCollectionsRepository:
             UNION ALL SELECT 1 FROM reconforge.ar_idempotency_keys
             WHERE tenant_id=%s AND workspace_id=%s AND scope=%s AND idempotency_key=%s
             UNION ALL SELECT 1 FROM reconforge.commercial_collection_plans
-            WHERE tenant_id=%s AND workspace_id=%s AND payload->>'receipt_number'=%s
+            WHERE tenant_id=%s AND workspace_id=%s AND payload->>'receipt_number'=%s AND phase<>3
             LIMIT 1""", (self.tenant_id, workspace_id, receipt_number,
                 self.tenant_id, workspace_id, "sales_receipt_name_v1:" + workspace_id, receipt_number,
                 self.tenant_id, workspace_id, receipt_number)).fetchone()
@@ -268,3 +273,35 @@ class PostgresCommercialCollectionsRepository:
             self.connection.execute("UPDATE reconforge.commercial_collection_plans SET phase=2 WHERE tenant_id=%s AND id=%s",
                                     (self.tenant_id, plan_id))
             return self._remember(plan, "post", command_id, actor, digest, args)
+
+    def cancel(self, plan_id: str, *, expected_plan_digest: str, command_id: str, reason: str,
+               actor: PostingActor) -> dict[str, Any]:
+        """Release an unposted residual claim without deleting financial evidence.
+
+        A reviewer may reject an unreviewed preparation. After review, a third
+        authorized human must cancel. No posting, receipt or allocation is
+        reversed; a posted collection must use a future explicit inverse cycle.
+        """
+        reason = text(reason, "reason", maximum=500)
+        args = {"plan_id": plan_id, "expected_plan_digest": expected_plan_digest, "reason": reason}
+        with self.owner._transaction():
+            plan = self._row(plan_id)
+            self.owner._actor(actor, "finance_core.validate", plan, source=True)
+            self.owner._actor(actor, "sales.approve", plan, source=True)
+            self.owner._actor(actor, "receivables.manage", plan, source=True)
+            digest, replay = self._command(plan, "cancel", command_id, actor, args)
+            if replay is not None:
+                return replay
+            if plan["phase"] not in (0, 1) or plan["plan_digest"] != expected_plan_digest:
+                raise FinancePostingError("collection_state_conflict", "Cancel requires a current unposted installment.")
+            view = self._view(plan_id)
+            if actor.user_id in {plan["preparer_actor_id"], view["reviewer_actor_id"]}:
+                raise FinancePostingError("collection_cancel_denied", "Cancellation requires an authorized human independent of preparation and review.")
+            audit, outbox = self.owner._event(plan, "commercial_collection_cancelled", actor,
+                {"plan_digest": plan["plan_digest"], "reason": reason})
+            self.connection.execute("""INSERT INTO reconforge.commercial_collection_cancellations
+                (tenant_id,plan_id,cancelled_actor_id,reason,audit_event_id,outbox_event_id)
+                VALUES(%s,%s,%s,%s,%s,%s)""", (self.tenant_id, plan_id, actor.user_id, reason, audit, outbox))
+            self.connection.execute("UPDATE reconforge.commercial_collection_plans SET phase=3 WHERE tenant_id=%s AND id=%s",
+                (self.tenant_id, plan_id))
+            return self._remember(plan, "cancel", command_id, actor, digest, args)

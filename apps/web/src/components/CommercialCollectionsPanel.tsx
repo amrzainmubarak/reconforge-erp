@@ -17,6 +17,7 @@ const words = {
   unknown: ["Response was lost. Retry the retained command to learn its committed result.", "فُقد الرد. أعد إرسال الأمر المحفوظ لمعرفة نتيجته المعتمدة."],
   retry: ["Retry retained collection command", "إعادة أمر التحصيل المحفوظ"], duties: ["Preparation, review and posting require three distinct authorized people.", "الإعداد والمراجعة والترحيل تتطلب ثلاثة أشخاص مختلفين لديهم الصلاحيات."],
   posted: ["Native receipt and cash effect posted", "تم ترحيل الإيصال وأثر النقد"], evidence: ["Receipt and financial evidence", "دليل الإيصال والقيد المالي"],
+  cancel: ["Cancel unposted invoice installment", "إلغاء دفعة الفاتورة غير المرحّلة"], cancelled: ["Unposted installment released; original review evidence retained", "تم تحرير الدفعة غير المرحّلة مع الاحتفاظ بدليل المراجعة الأصلي"],
 } as const;
 
 export function CommercialCollectionsPanel({ locale, session, scope, identity, tranche, options, disabled, onPendingChange, onCommitted }: {
@@ -34,12 +35,13 @@ export function CommercialCollectionsPanel({ locale, session, scope, identity, t
   const action = plan?.phase === 0 ? "review" : plan?.phase === 1 ? "post" : "prepare";
   const duties = Boolean(plan && (plan.preparer_actor_id === identity.id || (action === "post" && (!plan.reviewer_actor_id || plan.reviewer_actor_id === identity.id))));
   const permitted = action === "prepare" ? has("sales.manage", "finance_core.manage", "receivables.manage") : action === "review" ? has("sales.approve", "finance_core.validate", "receivables.manage") : has("sales.manage", "receivables.manage", "finance_core.post");
+  const canCancel = Boolean(plan && plan.preparer_actor_id !== identity.id && plan.reviewer_actor_id !== identity.id && has("sales.approve", "finance_core.validate", "receivables.manage"));
   async function send(command: CollectionCommand) {
     if (lock.current) return;
     lock.current = true; setBusy(true); setPending(command); setError(null); onPendingChange(true);
     try {
       const result = await executeCollectionCommand(session, command);
-      if (mounted.current) { setPending(null); onPendingChange(false); setError(null); setPosted(result.status === "Posted" ? result : null); onCommitted(); }
+      if (mounted.current) { setPending(null); onPendingChange(false); setError(null); setPosted(["Posted", "Cancelled"].includes(result.status) ? result : null); onCommitted(); }
     } catch (caught) {
       if (mounted.current) {
         const unknown = !(caught instanceof AdminApiError) || caught.status >= 500;
@@ -47,6 +49,10 @@ export function CommercialCollectionsPanel({ locale, session, scope, identity, t
         if (!unknown) { setPending(null); onPendingChange(false); onCommitted(); }
       }
     } finally { lock.current = false; if (mounted.current) setBusy(false); }
+  }
+  function cancel() {
+    if (!writable || !canCancel || !plan || !fields.reason.trim()) return;
+    void send(prepareCollectionCommand(scope, `/api/v1/commercial-collections/plans/${encodeURIComponent(plan.id)}/cancel`, { expected_plan_digest: plan.plan_digest, reason: fields.reason }));
   }
   function submit(event: FormEvent) {
     event.preventDefault(); if (!writable || !permitted || duties || !fields.reason.trim() || !tranche.invoice_id) return;
@@ -61,7 +67,7 @@ export function CommercialCollectionsPanel({ locale, session, scope, identity, t
     <h4>{t("title")}</h4><p>{t("balance")}: <strong>{tranche.outstanding_minor}</strong></p>
     {error && <div role="alert" tabIndex={-1} ref={alert}>{t(error)}</div>}
     {pending && !busy && <button disabled={busy} onClick={() => void send(pending)}>{t("retry")}</button>}
-    {posted && <p role="status">{t("posted")} · <code>{posted.receipt_id}</code> · <code>{posted.posting_effect_id}</code></p>}
+    {posted && <p role="status">{t(posted.status === "Cancelled" ? "cancelled" : "posted")} · <code>{posted.status === "Cancelled" ? posted.id : posted.receipt_id}</code> · <code>{posted.status === "Cancelled" ? posted.cancelled_actor_id : posted.posting_effect_id}</code></p>}
     {(plan || tranche.outstanding_minor !== "0") && <form onSubmit={submit} aria-label={t(action)}>
       {!plan && <>{input("amount_minor", "amount")}{input("receipt_number", "receipt")}{input("posting_date", "date", "date")}
         {select("period_id", "period", options?.periods.map((row) => ({ code: row.id, name: row.name })) || [])}
@@ -69,6 +75,7 @@ export function CommercialCollectionsPanel({ locale, session, scope, identity, t
         {select("debit_account_code", "cash", options?.accounts.filter((row) => row.account_type === "Asset" && row.account_code !== tranche.receivable_account_code).map((row) => ({ code: row.account_code, name: row.name })) || [])}</>}
       {plan && <p>{t("amount")}: <strong>{plan.amount_minor}</strong> · <code>{plan.id}</code></p>}
       {input("reason", "reason")}<p>{t("duties")}</p><button disabled={!writable || !permitted || duties}>{t(action)}</button>
+      {plan && <button type="button" disabled={!writable || !canCancel || !fields.reason.trim()} onClick={cancel}>{t("cancel")}</button>}
     </form>}
   </section>;
 }

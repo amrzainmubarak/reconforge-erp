@@ -54,7 +54,9 @@ def project(plan: dict[str, Any]) -> dict[str, Any]:
     keys = ("id", "workspace_id", "organization_id", "legal_entity_id", "source_id", "source_kind", "entry_id",
             "period_id", "posting_date", "receipt_number", "currency_code", "currency_precision", "status", "phase", "plan_digest",
             "validation_digest", "preparer_actor_id", "reviewer_actor_id", "posting_effect_id", "receipt_id")
-    return {**{key: plan[key] for key in keys}, "amount_minor": str(plan["amount_minor"]),
+    cancellation = ({"cancelled_actor_id": plan["cancelled_actor_id"], "cancellation_reason": plan["cancellation_reason"]}
+                    if plan["phase"] == 3 else {})
+    return {**{key: plan[key] for key in keys}, **cancellation, "amount_minor": str(plan["amount_minor"]),
             "allocated_before_minor": str(plan["allocated_before_minor"]), "invoice_version": plan["invoice_version"]}
 
 
@@ -125,5 +127,17 @@ def post(request: Request, plan_id: str, payload: PhaseRequest, user: Post) -> d
         value = repository.get(plan_id, actor=actor)
         _authority(request, "finance_core.post", value, source=True)
         return {"plan": project(repository.post(plan_id, **payload.model_dump(), actor=actor))}
+
+    return execute(request, user, run)
+
+
+@router.post("/plans/{plan_id}/cancel")
+def cancel(request: Request, plan_id: str, payload: PhaseRequest, user: Review) -> dict[str, Any]:
+    _authority(request, "finance_core.validate")
+
+    def run(repository: PostgresCommercialCollectionsRepository, actor: PostingActor, scope: FinanceCoreExecutionScope) -> Any:
+        value = repository.get(plan_id, actor=actor)
+        _authority(request, "finance_core.validate", value, source=True)
+        return {"plan": project(repository.cancel(plan_id, **payload.model_dump(), actor=actor))}
 
     return execute(request, user, run)

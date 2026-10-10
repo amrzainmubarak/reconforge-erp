@@ -106,6 +106,9 @@ test("real acquisition cumulative depreciation disposal immutable retry and bili
   await expect(page.getByText("مستبعد", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "التحقق من أدلة المصدر والقيد", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "تم التحقق من بصمات تعريف المصدر والعملية المحفوظة والقيد الأصلي داخل هذا المتصفح." })).toBeVisible();
+  const mobileDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "تنزيل الأدلة المتحقق منها", exact: true }).click();
+  await (await mobileDownload).saveAs(`${process.env.RECONFORGE_ERP_BROWSER_ARTIFACTS}/fixed-asset-proof-ar-mobile.json`);
   expect((await new AxeBuilder({ page }).include("#main-content").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations).toEqual([]);
   expect(await page.locator("#main-content").getAttribute("dir")).toBe("rtl");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

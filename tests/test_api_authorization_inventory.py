@@ -9,13 +9,14 @@ from fastapi import APIRouter
 from reconforge.api import create_api_app
 from reconforge.api.authorization import (
     RouteAuthorizationContract,
+    authorization_inventory_digest,
     build_route_authorization_inventory,
     validate_authorization_surface,
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 429
-EXPECTED_DIGEST = "1c1581c2a7d8baf52e80253d5c5e8d026f09de431b250efdb4c89ea1bfd4232d"
+EXPECTED_ROUTE_COUNT = 432
+EXPECTED_DIGEST = "1444692a691300fa3bd63fef6ab70f1c02d195a0b1b9b15b7673b58c847beb76"
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -149,6 +150,32 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
         "payables.approve", "payables.manage", "payables.match", "payables.read", "payables.reverse", "payables.settle",
     )
     validate_authorization_surface(contracts)
+
+
+def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_contracts(tmp_path: Path) -> None:
+    """Bind the three added dependencies without weakening the retained 429 routes."""
+    contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    expected = (
+        RouteAuthorizationContract(
+            "GET", "/api/v1/fixed-assets/plans/{plan_id}/evidence", "all", ("finance_core.read",),
+        ),
+        RouteAuthorizationContract(
+            "POST", "/api/v1/commercial-collections/plans/{plan_id}/cancel", "all",
+            ("finance_core.validate", "receivables.manage", "sales.approve"),
+        ),
+        RouteAuthorizationContract(
+            "POST", "/api/v1/landed-cost/plans/{identifier}/cancel", "all",
+            ("finance_core.read", "finance_core.validate", "inventory.post", "inventory.read",
+             "inventory.valuation.approve", "payables.approve", "payables.read", "payables.settle"),
+        ),
+    )
+    added_keys = {(contract.method, contract.path) for contract in expected}
+    actual_added = tuple(contract for contract in contracts if (contract.method, contract.path) in added_keys)
+    assert actual_added == expected
+    retained = tuple(contract for contract in contracts if (contract.method, contract.path) not in added_keys)
+    assert len(retained) == 429
+    assert authorization_inventory_digest(retained) == "1c1581c2a7d8baf52e80253d5c5e8d026f09de431b250efdb4c89ea1bfd4232d"
+    validate_authorization_surface(contracts, require_critical_routes=True)
 
 
 def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_classification() -> None:

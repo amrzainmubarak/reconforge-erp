@@ -6,6 +6,12 @@ invoice total, collections and postings remain available as retained source
 evidence. Partial return quantities, taxed/foreign sources and cash-account
 changes are refused by this bounded contract.
 
+Original FIFO cost includes any retained landed-cost allocation already
+capitalized into the delivered layers. The credit restores that original
+charged cost; it does not recalculate charge allocation or reverse the
+supplier's historical charge payment. Inspect the original consumption,
+landed-cost evidence and native COGS inverse together.
+
 Select **Customer returns**, sign in, verify privileged authority, and apply
 the exact workspace/organization/entity IDs. The maker supplies the original
 delivered stock-order ID, an open fiscal period, posting date no earlier than
@@ -51,6 +57,14 @@ inventory.valuation.approve, finance_core.post/reverse; cancellation requires
 sales.approve and finance_core.validate, in addition to those read grants.
 Current persisted permissions, scope, amount policies and step-up apply on
 every mutation and retry.
+
+The current amount policy must admit the full original credit turnover:
+invoice gross plus original COGS plus already collected cash. Refund reads,
+actions and retries repeat this parent authorization, even for a small
+installment. Native stock-source evidence also requires authority over the
+larger of original sale value and retained COGS. These checks use the retained
+original currency precision; changing a live currency catalog cannot reduce
+the authority required to disclose or act on historical amounts.
 
 After response loss or a server/transport failure, retry the **same retained
 command**, same actor, body and digest. The UI freezes scope and request while

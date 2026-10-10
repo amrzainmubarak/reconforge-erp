@@ -19,7 +19,14 @@ required checks establish final hosted status; local general900s exhaustion is
 unaccepted. Broad platform expansion remains active under the
 [next phase](GLOBAL_NEXT_PHASE_2026-10-10.md), not a completed worldwide ERP claim.
 
-## Current successor: governed abandonment and verified evidence (2026-10-10; ADR0845/0846)
+Production source remains frozen at70d; later commits publish evidence, operator
+guidance, standalone verification tools and tests. CI now partitions all full
+commercial/supply/finance files without removing native commands, retains no-skip
+admission, and requires post-build wheel/source inspection plus the independent
+posting oracle on both Python3.11/3.12. Actual final hosted results remain external
+to this historical local snapshot.
+
+## Historical intermediate successor: governed abandonment and verified evidence (2026-10-10; ADR0845/0846)
 
 Active branch: `amr/global-integrity-wave3-20261010`, clean integration worktree
 separate from the dirty primary checkout. Three agents own managed commercial,

@@ -10,6 +10,13 @@ The benchmark index retains all20 predecessor entries and adds the complete
 fresh806/70d1000-cycle raw pair. Later evidence publication does not reattribute
 measurements. Full hosted status is the new Draft PR's exact-head required checks.
 
+Publication-only acceptance rejects altered seeded financial totals, raw
+percentiles, hardware/durability and original-byte hashes. The source archive
+inspection runs that independent stdlib verifier from extracted source, imports
+all six browser helpers and the mandatory admission plugin from that extraction,
+and checks complete125-revision and wheel/source byte parity. Native owner CI
+sharding preserves all46 explicit commands and the fail-closed aggregate.
+
 - WAVE3-20261010 intermediate integration `fed54dbc`: pinned PostgreSQL17.10,
   source unchanged/clean,6 tests passed, zero failures/errors/skips. Normal and
   abandoned/replaced reviewed LC1/CA1 branches retain the independent18-effect

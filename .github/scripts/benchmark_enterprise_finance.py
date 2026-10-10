@@ -36,6 +36,7 @@ from reconforge.benchmark.enterprise_financial import (  # noqa: E402
 from reconforge.benchmark.enterprise_posting_profile import PostingProfile  # noqa: E402
 from reconforge.benchmark.enterprise_snapshot import measure_snapshot_reads  # noqa: E402
 from reconforge.benchmark.resource_sampling import ResourceSampler  # noqa: E402
+from reconforge.infrastructure.postgres import PostgresTenantBoundary  # noqa: E402
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository  # noqa: E402
 from reconforge.infrastructure.postgres_finance_posting import (  # noqa: E402
     PostgresFinancePostingRepository,
@@ -259,11 +260,22 @@ def main() -> int:
         if args.snapshot_lines:
             if time.monotonic() >= deadline:
                 raise TimeoutError("Explicit snapshot benchmark resource budget exhausted")
-            with runtime.actor("browser-maker") as (connection, _, actor):
+            snapshot_profile: dict[str, object] = {"seed": "alternating-cash-equity-one-minor-v1", "concurrency": 1,
+                "runtime_role_flags": flags, "outside_primary_posting_measurement": True, "status": "preparing",
+                "fixture_stage": "canonical_dimensions",
+                "limits": ["one fixed journal on one scoped nonowner connection", "warmed cache", "no end-to-end posting speedup inference"]}
+            report["snapshot_reads"] = snapshot_profile
+            # Canonical organization masters require organization scope without
+            # a legal-entity restriction. Business journals retain three-human
+            # authenticated entity scope exactly as the primary profile does.
+            with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant, workspace_id="work", organization_id="org") as connection:
                 core = PostgresFinanceCoreRepository(connection, runtime.tenant)
                 for dimension in ("BENCH_A", "BENCH_B"):
                     core.upsert_dimension(dimension_code=dimension, name=dimension, organization_code="ORG", workspace="work")
                     core.upsert_dimension_value(dimension_code=dimension, value_code="SYNTHETIC", name="Synthetic", workspace="work")
+            snapshot_profile["fixture_stage"] = "prepare"
+            with runtime.actor("browser-maker") as (connection, _, actor):
+                core = PostgresFinanceCoreRepository(connection, runtime.tenant)
                 entry = core.create_entry(entry_number="BENCH-SNAPSHOT-DIMENSIONS", organization_code="ORG", entity_code="ENTITY",
                     period_id="period", journal_code="STOCK", posting_date="2026-10-08", description="Independent alternating dimensional snapshot benchmark",
                     workspace="work", actor_label=actor.username, lines=[
@@ -271,16 +283,15 @@ def main() -> int:
                          "debit" if index % 2 == 0 else "credit": "0.01",
                          "dimensions": {"BENCH_B": "SYNTHETIC", "BENCH_A": "SYNTHETIC"} if index % 3 == 0 else {}}
                         for index in range(args.snapshot_lines)])
+            snapshot_profile["fixture_stage"] = "review"
             with runtime.actor("browser-checker") as (connection, _, actor):
                 PostgresFinanceCoreRepository(connection, runtime.tenant).validate_entry(entry["id"], reason="Independent dimensional benchmark review", actor_label=actor.username)
                 reviewed = PostgresFinancePostingRepository(connection, runtime.tenant).preview(entry["id"], actor=actor)
+            snapshot_profile["fixture_stage"] = "post"
             with runtime.actor("browser-poster") as (connection, _, actor):
                 PostgresFinancePostingRepository(connection, runtime.tenant).post(entry["id"], command_id="benchmark-snapshot-post",
                     expected_validation_digest=reviewed["validation_digest"], reason="Independent dimensional benchmark posting", actor=actor)
-            snapshot_profile: dict[str, object] = {"seed": "alternating-cash-equity-one-minor-v1", "concurrency": 1,
-                "runtime_role_flags": flags, "outside_primary_posting_measurement": True,
-                "limits": ["one fixed journal on one scoped nonowner connection", "warmed cache", "no end-to-end posting speedup inference"]}
-            report["snapshot_reads"] = snapshot_profile
+            snapshot_profile["fixture_stage"] = "complete"
             with runtime.actor("browser-checker") as (connection, _, _actor):
                 measure_snapshot_reads(connection, runtime.tenant, posting_entry(connection, runtime.tenant, entry["id"]),
                     expected_line_count=args.snapshot_lines, expected_total_minor=args.snapshot_lines // 2,

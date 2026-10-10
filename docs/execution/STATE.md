@@ -2,45 +2,49 @@
 
 ## Wave4 active integration (2026-10-10)
 
-Actual start is open DraftPR129 e07bff2a2e8197b052d53454ea85c727f7c7518e.
-Branch amr/global-enterprise-wave4-20261010 stacks above129→128→127→126→125→124.
+Actual start is DraftPR129 e07bff2a2e8197b052d53454ea85c727f7c7518e.
+DraftPR130 on amr/global-enterprise-wave4-20261010 stacks above129→128→127→126→125→124.
 Main b61ea56b and both pre-existing primary schema edits are protected; all new
 commits are authored/committed by Amr. Three independent commercial/supply/finance
-worktrees implement CR1/CRF1, BPC1 and FX1; root owns contracts, ordered migrations,
+worktrees implement CR1/CRF1, BPC1, FX1 and SR1 with reciprocal source review;
+root owns contracts, ordered migrations,
 API/Studio integration, CI/package closure and performance profiling.
 
-The linear chain now reaches 0131: customer returns→purchase commitments→foreign
-AR/tax→invoker read planning→supplier returns→closing FX valuation and exact inverse.
-Four actual HTTPS/populated restore cycles have source-bound acceptance: CR1 and
-BPC1 at 9c4bea54, five-stage FX at 1e73267e, and SR1 at 92230f4a. Each has one
-expected browser scenario, zero skips/flakies, a nonowner/NOBYPASSRLS application
-role, exact restored financial results, three SQL tamper refusals and owned cleanup.
-CR1 whole zero-tax functional-currency delivered source credits original AR and
-restores FIFO/COGS/revenue, with partial refunds of retained original cash. SR1
-accepts a whole unissued original receipt and exact accrued unpaid AP source;
-paid landed charges are disposed to approved expense, with no invented cash refund.
-FX closing retains original outstanding historical/closing positions and reverses
-the original approved native valuation before final settlement. Partial/taxed/FX
-stock returns, paid merchandise/partial/issued supplier returns, BPC1 budget
-reinstatement, broad country tax products and manufacturing remain gaps.
+The linear chain reaches 0132, including exact original revenue inverse closure
+and ordinary-role dispatch compatibility. [Hosted CI run38059696904](https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904)
+finished with all38 jobs successful at15:07:32UTC on
+b6e9dcf608df2885b61a2846a4edc8df783db72d. Complete native/API owner gates,
+actual HTTPS/populated restore scenarios and package/security gates passed there.
+The amended documentation/evidence head still needs its publication archive and
+hosted checks; this source acceptance does not complete the worldwide ERP program.
 
-Complete CR native 15-case acceptance is bound to 9c4bea54; BPC native/API 24 cases
-to 7f72c770; overlapping original FX packets contain 19 unique executed cases,
-with separate closing/inverse 6-case and retained-position 1-case follow-ups.
-These are not a complete native regression on the final publication head. Strict
+Scoped completed cycles are whole zero-tax functional-currency CR1 credit/FIFO
+restoration and CRF1 original-cash refund installments; BPC1 merchandise reserve,
+partial receipt/AP consumption and unreceived release; taxed foreign AR/partial
+functional settlement, closing FX and its exact inverse; and SR1 whole unissued
+receipt/unpaid AP credit with paid landed charges disposed to approved expense.
+Hosted gates include CR15, collections19, BPC24, LC49, SR28 and corrective0132's
+four cases, with zero skips/xfails/xpasses. Earlier CR/BPC9c4bea54, BPC7f72c770,
+FX1e73267e and SR92230f4a packets retain their original source scope. The original
+FX19 unique cases and closing6/retained-position1 follow-ups are not additive totals.
+Partial/taxed/foreign stock returns, paid/partial/issued supplier returns, BPC1
+budget reinstatement, PR/RFQ and charge appropriation remain gaps. Manufacturing
+cost controls do not post production inventory/WIP/GL; native BOM/MRP remains missing.
+Broad country tax, intercompany and the other global operational suites remain gaps.
 API inventory remains 459 routes with the accepted 429/432 predecessors preserved.
-Seven static/package gates passed at 1e73267e, including React 404 and isolated
-131-migration source/wheel closure. Its full general Python run was explicitly
-interrupted for the UI repair and remains unaccepted. Exact-final-head hosted CI
-and publication archive verification are pending; no final Wave4 acceptance exists.
+The earlier current-live22 inventory and historical benchmark index stay source-bound.
 
-The diagnostic profile attributes PostgreSQL CPU to repeated financial RLS query
-planning. Identity PBKDF2 remains unchanged. Smaller join-collapse settings were
-rejected; scoped line-ID reads plus SECURITY INVOKER parent helpers are candidate
-optimizations only until three alternating independent 1K posting populations
-per variant establish wall/latency/client and database CPU/resource results.
-The matched baseline bc294 and candidate 92230f4a remain separate performance
-checkouts; their three complete pairs and 10K+ mixed/1,000-line workloads are pending.
+Six fresh1K posting runs compare b7df9271 with07452da8 in BC/CB/BC order, four
+workers and20 warmup cycles per run, retaining durability settings and raw bytes.
+Independent normal and optimized-Python oracles pass under trusted manifest
+c5dfa70b980a9532e14e7e93e65e24f6c9fbf0f9c56524d63985fbcbaed31acc.
+Median throughput rises1.340057→1.822781 successful cycles/sec (+36.02%); combined
+client/database CPU per success falls2.524217→1.929894sec (−23.54%). Resource
+acceptance is false: client CPU rises641.218750→785.265625sec (+22.46%) and bounded
+batch read rises0.567914→0.626310sec (+10.28%). Six raw reports and both oracles are
+staged under wave4-evidence/posting-1k; publication closure is separate. Fresh10K
+scale, mixed full1,000-line business cycles, monetary cost and HA/DR RPO/RTO remain
+unaccepted. These journal measurements establish no cross-vendor superiority.
 
 See [baseline and protected provenance](WAVE4_BASELINE_2026-10-10.md),
 [current functional gaps](GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md) and

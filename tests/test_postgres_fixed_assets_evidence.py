@@ -117,6 +117,7 @@ def test_small_depreciation_does_not_disclose_large_original_asset_under_current
     runtime = asset_runtime
     initial = finish(runtime, acquire(runtime))
     depreciation = finish(runtime, operation(runtime, initial["asset_id"], kind="depreciate", date="2026-11-01", period="nov", month="2026-10"))
+    disposal = finish(runtime, operation(runtime, initial["asset_id"], kind="dispose", date="2026-11-02", period="nov", proceeds=25000))
     observed: list[Decimal | None] = []
     ceiling = Decimal("40.00")
 
@@ -141,3 +142,14 @@ def test_small_depreciation_does_not_disclose_large_original_asset_under_current
         assert Decimal("101.01") in observed and Decimal("30.33") in observed
         ceiling = Decimal("200.00")
         assert repository.plan_evidence(depreciation["id"], actor=actor)["asset_definition"]["cost_minor"] == 10101
+        # Allowed acquisition basis must not admit a larger historical disposal.
+        for read in (
+            lambda: repository.get(initial["asset_id"], actor=actor),
+            lambda: repository.get_plan(disposal["id"], actor=actor),
+            lambda: repository.plan_evidence(disposal["id"], actor=actor),
+        ):
+            with pytest.raises(FinancePostingError, match="authorization"):
+                read()
+        assert Decimal("280.33") in observed
+        ceiling = Decimal("300.00")
+        assert repository.get(initial["asset_id"], actor=actor)["plans"][-1]["id"] == disposal["id"]

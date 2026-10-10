@@ -276,11 +276,14 @@ class PostgresFixedAssetsRepository:
             ids = records(self.connection.execute("""SELECT id,sequence FROM reconforge.fixed_asset_plans
                 WHERE tenant_id=%s AND asset_id=%s AND (%s::integer IS NULL OR sequence<%s)
                 ORDER BY sequence DESC LIMIT 25""", (self.tenant_id, asset_id, before_sequence, before_sequence)))
+            plans = [self._view_plan(row["id"]) for row in reversed(ids)]
+            for plan in plans:
+                self._authorize_plan(actor, "finance_core.read", plan, mutation=False)
             for row in ids:
                 self.connection.execute("SELECT reconforge.asset_close(%s,%s)", (self.tenant_id, row["id"]))
             return {**asset, **state, "status": "Disposed" if state["disposed"] else "Active" if state["acquired"] else "PendingAcquisition",
                     "carrying_minor": 0 if state["disposed"] else asset["cost_minor"] - state["accumulated_minor"] if state["acquired"] else 0,
-                    "plans": [self._view_plan(row["id"]) for row in reversed(ids)],
+                    "plans": plans,
                     "history_before": ids[-1]["sequence"] if ids and ids[-1]["sequence"] > 0 else None}
 
     def get_plan(self, plan_id: str, *, actor: PostingActor) -> dict[str, Any]:

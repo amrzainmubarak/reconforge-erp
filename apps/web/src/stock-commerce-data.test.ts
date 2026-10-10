@@ -34,3 +34,10 @@ it("retains actual partial invoice allocations and rejects a forged residual", (
   Object.assign(document.lines[0].tranches[0], { outstanding_minor: "8499" });
   expect(() => parseCommerceOrder(document, scope)).toThrow("commerce_contract_invalid");
 });
+it("preserves collected history but accepts zero residual only with a complete native CR1 credit", () => {
+  const document = commerceFixture("Invoiced"); document.lines[0].collected_minor = "5000";
+  Object.assign(document.lines[0].tranches[0], { collected_minor: "5000", outstanding_minor: "0", invoice_status: "Cancelled", credited_minor: "13500", refund_due_minor: "5000", credit_memo_id: "CR1-" + "a".repeat(32) });
+  expect(parseCommerceOrder(document, scope).lines[0].collected_minor).toBe("5000");
+  Object.assign(document.lines[0].tranches[0], { credited_minor: "13499" });
+  expect(() => parseCommerceOrder(document, scope)).toThrow();
+});

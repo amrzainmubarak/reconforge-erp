@@ -632,6 +632,17 @@ class PostgresReceivablesRepository:
         result["lines"] = [_row(line, self._LINE) for line in lines]
         result["allocated_minor"] = self._invoice_allocated(invoice_id)
         result["outstanding_minor"] = int(result["total_minor"]) - result["allocated_minor"]
+        # An ordinary legacy invoice never requires access to source-owner tables.
+        # Native SQL closes this reserved marker against its full posted inverse.
+        if result["status"] == "Cancelled" and str(result["cancel_reason"]).startswith("CR1-"):
+            credit = self.connection.execute("""SELECT id,payload->>'credit_minor' AS credited_minor,
+                reconforge.customer_return_refund_due(tenant_id,id) AS refund_due_minor
+                FROM reconforge.customer_return_plans WHERE tenant_id=%s AND id=%s AND invoice_id=%s
+                AND operation='Return' AND phase=2""", (self.tenant_id, result["cancel_reason"], invoice_id)).fetchone()
+            if credit is None:
+                raise PlatformError("Original-source customer credit evidence is absent.")
+            result.update(credit_memo_id=credit["id"], credited_minor=int(credit["credited_minor"]),
+                          refund_due_minor=int(credit["refund_due_minor"]), outstanding_minor=0)
         return result
 
     def _invoice_recovery_source(self, invoice_id: str) -> dict[str, Any]:

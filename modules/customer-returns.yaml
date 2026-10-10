@@ -1,0 +1,24 @@
+id: customer-returns
+name: Original customer source credits and partial refunds
+version: 1.0.0
+maturity: experimental
+owner: commercial
+dependencies: [stock-sales, commercial-collections, finance-posting, inventory-valuation, receivables, identity, audit, outbox]
+incompatible_versions: []
+data_classification: confidential-financial
+retention_policy: immutable-source-and-command-history
+permissions: [sales.read, sales.manage, sales.approve, receivables.read, receivables.manage, inventory.read, inventory.post, inventory.valuation.manage, inventory.valuation.approve, finance_core.read, finance_core.manage, finance_core.validate, finance_core.post, finance_core.reverse]
+default_roles: []
+migrations: [0126_pg_customer_returns]
+domain_invariants: [original-fifo-restitution, exact-original-revenue-cogs-inverse, ar-credit-refund-liability-conservation, partial-refund-cumulative-ceiling, current-authority-on-retry, three-distinct-humans, atomic-native-effects, force-rls]
+domain_events: [customer_return_prepared, customer_return_review, customer_return_post, customer_return_cancel]
+api_routes: [/api/v1/customer-returns/plans]
+cli_commands: []
+ui_routes: [/customer-returns]
+import_schemas: []
+export_schemas: [customer-return-v1]
+synthetic_fixtures: [tests/test_postgres_customer_returns.py]
+threat_model: docs/adr/0847-original-customer-source-credits-and-partial-refunds.md
+benchmarks: []
+rollback_plan: docs/operator/customer-returns.md
+test_matrix: [tests/test_customer_returns.py, tests/test_customer_returns_api.py, tests/test_postgres_customer_returns.py, apps/web/src/customer-returns-data.test.ts, apps/web/src/components/CustomerReturnsPage.test.tsx]

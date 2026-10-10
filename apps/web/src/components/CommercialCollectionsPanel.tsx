@@ -30,7 +30,7 @@ export function CommercialCollectionsPanel({ locale, session, scope, identity, t
   const lock = useRef(false), mounted = useRef(true), alert = useRef<HTMLDivElement>(null);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => { if (error) alert.current?.focus(); }, [error]);
-  const plan = tranche.pending_collection, writable = !disabled && !busy && !pending && identity.human && identity.stepUp;
+  const plan = tranche.pending_collection, claimed = Boolean(tranche.pending_return_id || tranche.credit_memo_id), writable = !disabled && !claimed && !busy && !pending && identity.human && identity.stepUp;
   const has = (...permissions: string[]) => permissions.every((permission) => identity.permissions.includes(permission));
   const action = plan?.phase === 0 ? "review" : plan?.phase === 1 ? "post" : "prepare";
   const duties = Boolean(plan && (plan.preparer_actor_id === identity.id || (action === "post" && (!plan.reviewer_actor_id || plan.reviewer_actor_id === identity.id))));
@@ -65,10 +65,11 @@ export function CommercialCollectionsPanel({ locale, session, scope, identity, t
   const select = (key: "journal_code" | "period_id" | "debit_account_code", label: keyof typeof words, choices: { code: string; name: string }[]) => <label>{t(label)}<select required value={fields[key]} disabled={!writable} onChange={(event) => setFields({ ...fields, [key]: event.target.value })}><option value="">—</option>{choices.map((choice) => <option key={choice.code} value={choice.code}>{choice.name}</option>)}</select></label>;
   return <section aria-label={t("title")} dir={locale === "ar" ? "rtl" : "ltr"}>
     <h4>{t("title")}</h4><p>{t("balance")}: <strong>{tranche.outstanding_minor}</strong></p>
+    {claimed && <p role="status"><code dir="ltr">{tranche.credit_memo_id ?? tranche.pending_return_id}</code> · {tranche.invoice_status}</p>}
     {error && <div role="alert" tabIndex={-1} ref={alert}>{t(error)}</div>}
     {pending && !busy && <button disabled={busy} onClick={() => void send(pending)}>{t("retry")}</button>}
     {posted && <p role="status">{t(posted.status === "Cancelled" ? "cancelled" : "posted")} · <code>{posted.status === "Cancelled" ? posted.id : posted.receipt_id}</code> · <code>{posted.status === "Cancelled" ? posted.cancelled_actor_id : posted.posting_effect_id}</code></p>}
-    {(plan || tranche.outstanding_minor !== "0") && <form onSubmit={submit} aria-label={t(action)}>
+    {!claimed && (plan || tranche.outstanding_minor !== "0") && <form onSubmit={submit} aria-label={t(action)}>
       {!plan && <>{input("amount_minor", "amount")}{input("receipt_number", "receipt")}{input("posting_date", "date", "date")}
         {select("period_id", "period", options?.periods.map((row) => ({ code: row.id, name: row.name })) || [])}
         {select("journal_code", "journal", options?.journals.map((row) => ({ code: row.journal_code, name: row.name })) || [])}

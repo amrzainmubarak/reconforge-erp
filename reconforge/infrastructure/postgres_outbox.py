@@ -11,7 +11,6 @@ from reconforge.application.outbox import OutboxError, OutboxEvent, OutboxReposi
 from reconforge.domain.outbox_fencing import OutboxEvidenceIntegrityError, validate_outbox_fencing_storage
 from reconforge.infrastructure.postgres import (
     PostgresConfigurationError,
-    normalize_scope_id,
     validate_legal_entity_id,
     validate_organization_id,
     validate_tenant_id,
@@ -23,7 +22,7 @@ from reconforge.io.persisted import (
     encode_postgres_outbox_payload,
 )
 
-_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 _STATUSES = ("Pending", "Claimed", "Published", "Dead")
 _LIST_STATUSES = {"pending", "claimed", "published", "dead", "all"}
 _LIST_OUTBOX_EVENT_QUERIES: dict[str, str] = {
@@ -117,14 +116,23 @@ def _tenant_id(value: object) -> str:
         raise PostgresOutboxValidationError(str(exc)) from exc
 
 
+def validate_postgres_outbox_event_id(value: object) -> str:
+    """Validate opaque retained event identity without case-folding it.
+
+    Financial producers persist OBX-/LCOUT- identifiers. They are distinct
+    primary keys, not tenant or consumer aliases, and delivery must use the
+    exact identity returned by claim. Existing lowercase keys stay unchanged.
+    """
+    if not isinstance(value, str):
+        raise PostgresOutboxValidationError("event_id has an invalid identifier.")
+    identifier = value.strip()
+    if not _ID_PATTERN.fullmatch(identifier):
+        raise PostgresOutboxValidationError("event_id has an invalid identifier.")
+    return identifier
+
+
 def _identifier(value: object, field_name: str) -> str:
-    try:
-        normalized = normalize_scope_id(str(value), field_name=field_name)
-    except PostgresConfigurationError as exc:
-        raise PostgresOutboxValidationError(str(exc)) from exc
-    if not _ID_PATTERN.fullmatch(normalized):
-        raise PostgresOutboxValidationError(f"{field_name} has an invalid identifier.")
-    return normalized
+    return validate_postgres_outbox_event_id(value)
 
 
 def _text(value: object, field_name: str, *, maximum: int = 160) -> str:

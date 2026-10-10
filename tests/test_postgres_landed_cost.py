@@ -289,9 +289,12 @@ def test_legacy_worker_evidence_needs_no_landed_owner_read(runtime: ReceiptRunti
     try:
         with worker() as connection:
             identifier = evidence(connection)
-            connection.execute("UPDATE reconforge.outbox_events SET event_type='reconciliation.run_requeued',aggregate_id='legacy-retry' WHERE tenant_id=%s AND event_id=%s", (runtime.tenant,identifier))
+            changed = connection.execute("""UPDATE reconforge.outbox_events SET status='Claimed',claimed_by='legacy-worker',
+                claimed_at=clock_timestamp()+interval '60 seconds',attempt_count=attempt_count+1,lease_generation=lease_generation+1
+                WHERE tenant_id=%s AND event_id=%s RETURNING event_id""", (runtime.tenant,identifier)).fetchall()
+            assert len(changed) == 1
         with worker() as connection:
-            assert connection.execute("SELECT event_type,aggregate_id FROM reconforge.outbox_events WHERE tenant_id=%s AND event_id=%s", (runtime.tenant,identifier)).fetchone() == ("reconciliation.run_requeued", "legacy-retry")
+            assert connection.execute("SELECT status,claimed_by,lease_generation FROM reconforge.outbox_events WHERE tenant_id=%s AND event_id=%s", (runtime.tenant,identifier)).fetchone() == ("Claimed", "legacy-worker", 1)
         # Each retained LC discriminator independently prevents the shortcut.
         for marker in ({"object_type": "landed_cost"}, {"object_id": "LC1-reserved"}, {"action": "landed_cost_prepared"}):
             with pytest.raises(psycopg.errors.InsufficientPrivilege, match="landed_cost_plans"), worker() as connection:
@@ -306,11 +309,11 @@ def test_legacy_worker_evidence_needs_no_landed_owner_read(runtime: ReceiptRunti
             admin.execute(sql.SQL("DROP ROLE {}").format(sql.Identifier(role)))
 
 
-def test_renamed_landed_outbox_image_still_closes_original_owner(runtime: ReceiptRuntime) -> None:
+def test_landed_outbox_identity_cannot_be_renamed_out_of_owner_closure(runtime: ReceiptRuntime) -> None:
     import psycopg
 
     plan = prepare(runtime, create_order(runtime))
-    with pytest.raises(psycopg.errors.CheckViolation), runtime.actor(MAKER) as (connection, _, _):
+    with pytest.raises(psycopg.errors.RaiseException, match="outbox event identity and payload are immutable"), runtime.actor(MAKER) as (connection, _, _):
         changed = connection.execute("""UPDATE reconforge.outbox_events SET aggregate_type='reconciliation_run',
             aggregate_id='legacy-matcher',event_type='reconciliation.run_completed' WHERE tenant_id=%s AND aggregate_type='landed_cost'
             AND aggregate_id=%s RETURNING event_id""", (runtime.tenant,plan["id"])).fetchall()

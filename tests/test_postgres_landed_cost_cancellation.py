@@ -285,10 +285,8 @@ def test_ordinary_multiline_receipt_role_needs_no_landed_owner_privilege(runtime
                 admin.execute(sql.SQL("GRANT SELECT ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(app_user)))
 
 
-def test_lost_native_charge_participant_cannot_prepare_uncapitalized_bundle(runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch) -> None:
-    """All original native rows/commands can be valid while the cost is wrong."""
+def assert_lost_native_charge_rollback(runtime: ReceiptRuntime, source: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
     import psycopg
-    source = create_order(runtime)
     before = all_state(runtime)
     original = PostgresProcurementPartialRepository.prepare_receipt_line
     def lose_charge(self: PostgresProcurementPartialRepository, *args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -298,6 +296,11 @@ def test_lost_native_charge_participant_cannot_prepare_uncapitalized_bundle(runt
     with pytest.raises(psycopg.errors.CheckViolation, match="conserved bundle|capitalized"), runtime.actor(MAKER) as (connection, _, actor):
         PostgresLandedCostRepository(connection, runtime.tenant).prepare(request(source), command_id="faulty-native-cost", actor=actor)
     assert all_state(runtime) == before
+
+
+def test_lost_native_charge_participant_cannot_prepare_uncapitalized_bundle(runtime: ReceiptRuntime, monkeypatch: pytest.MonkeyPatch) -> None:
+    """All original native rows/commands can be valid while the cost is wrong."""
+    assert_lost_native_charge_rollback(runtime, create_order(runtime), monkeypatch)
 
 
 def insert_memberless_owner(runtime: ReceiptRuntime, source: dict[str, Any], shape: str) -> None:
@@ -355,3 +358,50 @@ def test_raw_sql_cannot_seal_charge_owner_without_receiving_members(runtime: Rec
     with pytest.raises(psycopg.errors.CheckViolation, match="Allocations must conserve"):
         insert_memberless_owner(runtime, source, shape)
     assert all_state(runtime) == before
+
+
+def test_ordered_upgrade_refreshes_frozen_0123_owner_on_populated_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Real 0125 downgrade/upgrade preserves source and rejects both old gaps."""
+    import hashlib
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    import psycopg
+    from psycopg import sql
+
+    isolated = _base_receipt_database.__wrapped__()
+    try:
+        database = next(isolated)
+        runtime = create_multiline_runtime(database)
+        retained = prepare(runtime, create_order(runtime, "RETAINED-0123"))
+        source = create_order(runtime, "MIGRATED-FAULT-SOURCE")
+        before = all_state(runtime)
+        root = Path(__file__).resolve().parents[1]
+        fixture = root / "tests/fixtures/landed_cost_owner_0123_69951414.sql"
+        frozen = fixture.read_text(encoding="utf-8")
+        assert hashlib.sha256(frozen.encode("utf-8")).hexdigest() == "ab5733882cc1c323fadf9bd29f7adf370c9cc262f9eeb650653153d31d05756f"
+        assert "native_cost" not in frozen and "COALESCE(jsonb_array_length(allocations),0)" not in frozen
+        environment = {**os.environ, "RECONFORGE_POSTGRES_DSN": runtime.admin_dsn}
+        subprocess.run([sys.executable, "-m", "alembic", "downgrade", "0124_pg_collection_cancellation"],
+            cwd=root, env=environment, check=True, capture_output=True, text=True, timeout=180)
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            assert admin.execute("SELECT to_regclass('reconforge.landed_cost_cancellations')").fetchone()[0] is None
+            admin.execute(frozen)
+        subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"],
+            cwd=root, env=environment, check=True, capture_output=True, text=True, timeout=180)
+        with psycopg.connect(runtime.admin_dsn) as admin:
+            app_user = psycopg.conninfo.conninfo_to_dict(database[1])["user"]
+            admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.landed_cost_cancellations TO {}").format(sql.Identifier(app_user)))
+            original = admin.execute("SELECT pg_get_functiondef('reconforge.landed_cost_close_pre_cancel(text,text)'::regprocedure)").fetchone()[0]
+            assert "native_cost" not in original and "COALESCE(jsonb_array_length(allocations),0)" not in original
+        assert all_state(runtime) == before
+        with runtime.actor(MAKER) as (connection, _, actor):
+            assert PostgresLandedCostRepository(connection, runtime.tenant).get(retained["id"], actor=actor) == retained
+        assert_lost_native_charge_rollback(runtime, source, monkeypatch)
+        with pytest.raises(psycopg.errors.CheckViolation, match="Allocations must conserve"):
+            insert_memberless_owner(runtime, source, "missing")
+        assert all_state(runtime) == before
+    finally:
+        isolated.close()

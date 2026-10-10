@@ -40,6 +40,15 @@ admits the charged allocation lookup when the bundle first prepares its receipts
 database closure independently verifies the exact allocation.
 
 The additive migration refreshes installed owner dispatch and capacity closure.
+Its wrapper independently requires 1–128 receiving members, exact freight/duty
+conservation and exact native capitalized costs. SQL NULL aggregates cannot create
+a paid-charge cash draft without receiving members. The ordered upgrade regression
+retains a populated bundle, downgrades empty cancellation storage to 0124, replaces
+only the original 0123 owner function with the frozen function from `69951414`,
+and upgrades through Alembic. It verifies unchanged source/financial fingerprints
+and rejection of lost capitalization and memberless direct SQL owners. The shared
+dispatcher remains the compatibility-corrected implementation during this focused
+historical-function test.
 Empty cancellation storage can downgrade; retained cancellations refuse downgrade.
 Restore must include cancellation records together with their original native
 sources, audit, outbox, quantities and financial evidence. API, Studio in English

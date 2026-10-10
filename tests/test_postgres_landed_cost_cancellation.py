@@ -79,7 +79,12 @@ def test_cancel_releases_exact_mixed_unit_capacity_and_preserves_acknowledgement
         assert connection.execute("SELECT count(*) FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 0
         assert connection.execute("SELECT count(*) FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()[0] == 0
         replacement = owner.prepare(request(fresh, "CORRECTED-LANDED"), command_id="replacement", actor=actor)
-    posted = phase(runtime, phase(runtime, replacement, "review", CHECKER), "post", POSTER)
+    posted = replacement
+    for operation, name in (("review", CHECKER), ("post", POSTER)):
+        with runtime.actor(name) as (connection, _, actor):
+            posted = PostgresLandedCostRepository(connection, runtime.tenant).act(replacement["id"], operation,
+                expected_plan_digest=replacement["plan_digest"], command_id="replacement-" + operation,
+                reason="Independent corrected source review and receiving", actor=actor)
     assert posted["amount_minor"] == "1001"
     with runtime.actor(POSTER) as (connection, _, actor):
         final = PostgresProcurementPartialRepository(connection, runtime.tenant).get(view["order"]["id"], actor=actor)

@@ -298,7 +298,7 @@ DO $lc$ DECLARE definition TEXT;needle TEXT:='OR r.total_value_minor<>d.total_mi
  definition:=pg_get_functiondef('reconforge.pp_verify_multiline_pre_landed(text,text)'::regprocedure);
  IF length(definition)-length(replace(definition,needle,''))<>length(needle) THEN RAISE EXCEPTION 'Unsupported prior receipt closure'; END IF;
  definition:=replace(definition,'reconforge.pp_verify_multiline_pre_landed','reconforge.pp_verify_multiline');
- definition:=replace(definition,needle,'OR r.total_value_minor::numeric<>d.total_minor::numeric+CASE WHEN r.total_value_minor=d.total_minor THEN 0 ELSE COALESCE((SELECT freight_minor::numeric+duty_minor FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=d.id),0) END');
+ definition:=replace(definition,needle,'OR r.total_value_minor::numeric<>d.total_minor::numeric+(CASE WHEN r.total_value_minor=d.total_minor THEN 0 ELSE COALESCE((SELECT freight_minor::numeric+duty_minor FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=d.id),0) END)');
  EXECUTE definition;
 END $lc$;
 """

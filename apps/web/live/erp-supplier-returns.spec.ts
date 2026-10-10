@@ -85,10 +85,10 @@ test("actual HTTPS original supplier debit removes charged FIFO, credits unpaid 
       expect(detail.invoices.find((i: { id: string }) => i.id === originalInvoice.id).supplier_return_owner_id).toBeFalsy();
       // A replacement is a fresh complete request; retain every original field.
       await form.getByLabel("Supplier return number", { exact: true }).fill(returnNumber);
-      await form.getByLabel("Whole original receipt", { exact: true }).selectOption(originalReceipt.id);
-      await form.getByLabel("Exact unpaid supplier invoice", { exact: true }).selectOption(originalInvoice.id);
+      await form.getByRole("combobox", { name: "Whole original receipt", exact: true }).selectOption(originalReceipt.id);
+      await form.getByRole("combobox", { name: "Exact unpaid supplier invoice", exact: true }).selectOption(originalInvoice.id);
       await form.getByLabel("Supplier return posting date", { exact: true }).fill("2026-10-13");
-      await form.getByLabel("Supplier return fiscal period", { exact: true }).selectOption("period");
+      await form.getByRole("combobox", { name: "Supplier return fiscal period", exact: true }).selectOption("period");
       await form.getByLabel("Paid charge expense account", { exact: true }).fill("ADJUSTMENT");
       const supplierPrepared = maker.waitForResponse(reply => reply.url().endsWith("/supplier-returns/plans") && reply.request().method() === "POST");
       await expect(form.getByRole("button", { name: "Prepare original supplier debit", exact: true })).toBeEnabled();

@@ -10,7 +10,8 @@ from reconforge.domain.finance_posting import FinancePostingError
 from reconforge.domain.operational_fx_tax import HistoricalRate
 from reconforge.infrastructure.postgres_finance_posting import PostgresFinancePostingRepository
 from reconforge.infrastructure.postgres_operational_fx_revaluation_schema import DOWNGRADE_SQL
-from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository
+from reconforge.infrastructure.postgres_operational_fx_tax import PostgresOperationalFxTaxRepository, _FxPostingParticipant
+from reconforge.platform.common import platform_id
 from tests.test_postgres_inventory_receipt_posting import ReceiptRuntime
 from tests.test_postgres_operational_fx_tax import (
     finish_fx,
@@ -66,6 +67,22 @@ def test_partial_native_ar_closing_gain_loss_and_explicit_inverse_before_final_s
         with pytest.raises(FinancePostingError, match="source-owned inverse"):
             PostgresFinancePostingRepository(connection, runtime.tenant).prepare_reversal(valuation["posting_effect_id"],
                 command_id="detached-inverse", entry_number="DETACHED-FX-INVERSE", period_id="period", posting_date="2026-10-04", reason="Detached inverse", actor=actor)
+        # Even a live private participant cannot use a recognition effect as
+        # the original of a closing-valuation inverse or invent another target.
+        target = "FX1-" + "f" * 32
+        participant = _FxPostingParticipant(repository, initial["entry_id"], reversal={"kind": "reverse_revaluation",
+            "source_id": initial["source_id"], "workspace_id": "work", "original_plan_id": initial["id"],
+            "original_plan_digest": initial["plan_digest"], "original_effect_id": initial["posting_effect_id"],
+            "target_plan_id": target, "target_number": target.upper(), "target_entry_id": platform_id("GLE", "work", target.upper())})
+        repository._participant = participant
+        try:
+            with pytest.raises(FinancePostingError, match="source-owned inverse"):
+                PostgresFinancePostingRepository(connection, runtime.tenant).prepare_reversal(initial["posting_effect_id"],
+                    command_id="wrong-kind-inverse", entry_number=target, period_id="period", posting_date="2026-10-04", reason="Wrong original kind", actor=actor,
+                    _source_owner=participant)
+            assert not participant.admits_reversal(connection, runtime.tenant, initial["entry_id"], initial["posting_effect_id"], "FX1-ARBITRARY")
+        finally:
+            repository._participant = None
     with pytest.raises(FinancePostingError, match="reverse"):
         settle_fx(runtime, initial["source_id"], 7401, "1.2", "2026-10-05")
     inverse = finish_fx(runtime, reverse_fx(runtime, initial["source_id"], valuation["id"]))
@@ -115,7 +132,7 @@ def test_closing_valuation_sql_phase_bypass_late_failure_and_current_inverse_per
     inverse = reverse_fx(runtime, initial["source_id"], posted["id"])
     with runtime.actor("maker") as (connection, _, _):
         connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE,lifecycle_version=lifecycle_version+1,revoked_at=now(),revoked_by='maker',revocation_reason_code='access_change' WHERE tenant_id=%s AND permission_name='finance_core.reverse'", (runtime.tenant,))
-    with runtime.actor("maker") as (connection, _, actor), pytest.raises(FinancePostingError, match="permission|authorization"):
+    with runtime.actor("maker") as (connection, _, actor), pytest.raises(FinancePostingError, match="(?i)permission|authorization"):
         PostgresOperationalFxTaxRepository(connection, runtime.tenant).prepare_revaluation_reversal(initial["source_id"],
             original_revaluation_id=posted["id"], period_id="period", posting_date="2026-10-04", reason="Exact reviewed original closing valuation inverse",
             command_id="reverse-closing", actor=actor)

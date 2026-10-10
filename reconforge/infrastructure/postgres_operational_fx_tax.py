@@ -1,5 +1,6 @@
 """Historical foreign AR, effective tax and realized FX in one native transaction."""
 
+import re
 from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
@@ -20,16 +21,40 @@ from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
 from reconforge.infrastructure.postgres_finance_posting import posting_entry, posting_snapshot, records
 from reconforge.infrastructure.postgres_operational_finance import PostgresOperationalFinanceRepository
 from reconforge.infrastructure.postgres_receivables import PostgresReceivablesRepository
+from reconforge.platform.common import platform_id
 from reconforge.platform.receivables import ReceiptAllocationInput, ReceivableInvoiceLineInput
 
 
 class _FxPostingParticipant:
-    def __init__(self, owner: "PostgresOperationalFxTaxRepository", entry_id: str) -> None:
+    def __init__(self, owner: "PostgresOperationalFxTaxRepository", entry_id: str,
+                 *, reversal: Mapping[str, Any] | None = None) -> None:
         self.owner, self.entry_id = owner, entry_id
+        self.reversal = dict(reversal) if reversal else None
 
     def admits(self, connection: Any, tenant_id: str, entry_id: str) -> bool:
         return (self.owner._participant is self and self.owner.connection is connection
                 and self.owner.tenant_id == tenant_id and self.entry_id == entry_id)
+
+    def admits_reversal(self, connection: Any, tenant_id: str, entry_id: str,
+                        original_effect_id: str, target_number: str) -> bool:
+        context = self.reversal
+        if (not self.admits(connection, tenant_id, entry_id) or not context or context["kind"] != "reverse_revaluation"
+                or context["original_effect_id"] != original_effect_id or context["target_number"] != target_number
+                or re.fullmatch(r"FX1-[0-9a-f]{32}", context["target_plan_id"]) is None
+                or context["target_number"] != context["target_plan_id"].upper()
+                or context["target_entry_id"] != platform_id("GLE", context["workspace_id"], target_number)):
+            return False
+        return connection.execute("""SELECT p.id FROM reconforge.operational_fx_plans p
+            JOIN reconforge.operational_fx_links l ON l.tenant_id=p.tenant_id AND l.plan_id=p.id
+            JOIN reconforge.finance_posting_effects f ON f.tenant_id=l.tenant_id AND f.id=l.posting_effect_id
+            WHERE p.tenant_id=%s AND p.id=%s AND p.source_id=%s AND p.entry_id=%s AND p.workspace_id=%s AND p.phase=2 AND p.kind='revalue'
+            AND p.payload->>'plan_digest'=%s AND f.id=%s AND f.entry_id=p.entry_id AND f.reverses_effect_id IS NULL
+            AND f.snapshot_json=p.payload->'snapshot' AND f.validation_digest=p.payload->>'validation_digest'
+            AND NOT EXISTS(SELECT 1 FROM reconforge.operational_fx_plans inverse WHERE inverse.tenant_id=p.tenant_id
+                AND inverse.source_id=p.source_id AND inverse.kind='reverse_revaluation' AND inverse.phase=2
+                AND inverse.payload->'equation'->>'original_revaluation_id'=p.id)""",
+            (tenant_id, context["original_plan_id"], context["source_id"], entry_id, context["workspace_id"],
+             context["original_plan_digest"], original_effect_id)).fetchone() is not None
 
 
 class PostgresOperationalFxTaxRepository:
@@ -167,13 +192,19 @@ class PostgresOperationalFxTaxRepository:
                         "amount_minor": burden, "currency_precision": precision})
         if reverses_posting_id:
             original = self.owner.posting._get_effect(reverses_posting_id)
-            self._participant = _FxPostingParticipant(self, original["entry_id"])
+            self._participant = _FxPostingParticipant(self, original["entry_id"], reversal={"kind": kind,
+                "source_id": source["id"], "workspace_id": source["workspace_id"],
+                "original_plan_id": equation["original_revaluation_id"], "original_plan_digest": equation["original_plan_digest"],
+                "original_effect_id": reverses_posting_id, "target_plan_id": plan_id, "target_number": plan_id.upper(),
+                "target_entry_id": platform_id("GLE", source["workspace_id"], plan_id.upper())})
             try:
                 reversed_entry = self.owner.posting.prepare_reversal(reverses_posting_id, command_id="FX1:inverse:" + command_id,
                     entry_number=plan_id.upper(), period_id=period_id, posting_date=posting_date, reason=reason,
                     actor=actor, _source_owner=self._participant)
             finally:
                 self._participant = None
+            if reversed_entry["entry_id"] != platform_id("GLE", source["workspace_id"], plan_id.upper()):
+                fail("Native inverse must create the exact prospective retained owner entry.", "fx_state_conflict")
             entry = {"id": reversed_entry["entry_id"]}
         else:
             entry = self.owner.finance.create_entry(entry_number=plan_id.upper(),

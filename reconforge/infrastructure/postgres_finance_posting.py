@@ -621,9 +621,9 @@ class PostgresFinancePostingRepository:
             if source["entry_number"].upper().startswith("FX1-") or source["id"].upper().startswith("FX1-"):
                 from reconforge.infrastructure.postgres_operational_fx_tax import _FxPostingParticipant
 
-                if not isinstance(_source_owner, _FxPostingParticipant) or not _source_owner.admits(
-                    self.connection, self.tenant_id, source["id"]
-                ) or not number.upper().startswith("FX1-"):
+                if not isinstance(_source_owner, _FxPostingParticipant) or not _source_owner.admits_reversal(
+                    self.connection, self.tenant_id, source["id"], original["id"], number
+                ):
                     raise FinancePostingError("posting_source_unsupported", "Foreign sources require their exact reviewed source-owned inverse.")
             if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-")):
                 raise FinancePostingError(

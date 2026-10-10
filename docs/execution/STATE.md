@@ -1,5 +1,32 @@
 # Execution State
 
+## Current successor: governed abandonment and verified evidence (2026-10-10; ADR0845/0846)
+
+Active branch: `amr/global-integrity-wave3-20261010`, clean integration worktree
+separate from the dirty primary checkout. Three agents own managed commercial,
+supply and finance worktrees. All new commits use Amr's existing author identity.
+Main remains `b61ea56b`; no merge or main update is authorized. Verified PR127
+head remains `34b9e7a5`, with PR126/125/124 ancestry. Existing PR128 actual head
+`69951414` is an open draft with failed hosted security/receivables/parity gates;
+it supplies the existing owners, not an inferred accepted integrated release.
+
+CA1 unposted claim cancellation, LC1 unreceived charged-plan cancellation and
+FA1 source/native-ledger evidence drill-down now compose existing posting,
+inventory, AR/AP, policy and audit/outbox engines. Additive0124/0125 retain
+abandoned preparation/review evidence and refuse destructive populated rollback.
+Cross-review additionally fixes current original-cost/history-turnover read
+authority, ordinary-role protected-table query planning and exact charged receipt
+capitalization. Every new native file is mandatory in configured CI, not skipped.
+
+Source-bound intermediate `fed54dbc` gate passed6/6 with zero skips: normal and
+cancel/replacement mixed financial oracle,1000-line snapshot digest/RLS parity,
+ordinary AR HTTP lifecycle and both native draft-scope races. Later hardening
+requires a new final fixed-source gate. Integration acceptance, actual browser
+recovery and matched benchmarks are **in progress**; development failures remain
+retained. See `GLOBAL_CAPABILITY_COVERAGE_WAVE3_2026-10-10.md` and ADR0845/0846.
+
+## Preserved PR128 publication snapshot
+
 Publication snapshot: this file is frozen before the successor hosted gate.
 Current integrated acceptance is recorded by Draft PR128 required checks and
 its source-bound acceptance packet; prior failed/source-specific evidence stays

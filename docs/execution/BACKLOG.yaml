@@ -1,7 +1,7 @@
 schema_version: 2
 updated_at: "2026-10-10"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Native Commercial, Landed Cost and Asset Cycles — ADR0844"
+active_sprint: "Governed Abandonment, Verified Asset Evidence and Native Snapshot Profiling — ADR0845/0846"
 snapshot:
   evidence_base_commit: "34b9e7a5b2a7c4d8ae49b641a36de030a878d507"
   policy_change_commit: "the commit containing this file"
@@ -11,6 +11,41 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-WAVE3-001
+    priority: P0
+    area: commercial-collections
+    title: Cancel unposted reviewed claims without deleting financial or command evidence
+    status: in_progress
+    depends_on: [AMR-GLOBAL-001]
+    exit_evidence: Current authority, independent cancellation, SQL closure, race/replay/rollback, Studio lost response replacement and populated restore at a fixed integrated source.
+  - id: AMR-WAVE3-002
+    priority: P0
+    area: landed-cost-receiving
+    title: Release unreceived mixed-unit PO claims while retaining exact capitalized source evidence
+    status: in_progress
+    depends_on: [AMR-GLOBAL-002]
+    exit_evidence: Exact quantities and native per-line capitalized cost; NULL/cardinality refusal; ordinary-role compatibility; cancellation/post races; replacement wire and populated restore.
+  - id: AMR-WAVE3-003
+    priority: P0
+    area: fixed-assets
+    title: Authorized verifiable source-to-ledger lifecycle proof in Studio
+    status: in_progress
+    depends_on: [AMR-GLOBAL-003]
+    exit_evidence: Exact integer canonical source/plan/effect seals; original-cost and retained-turnover ABAC; three actors and audit/outbox; API, real browser and restored evidence.
+  - id: AMR-WAVE3-004
+    priority: P0
+    area: reproducible-measurement
+    title: Profile native phases and batch snapshot dimensions without changing the financial digest
+    status: in_progress
+    depends_on: [AMR-GLOBAL-004]
+    exit_evidence:1000-line independent legacy parity; same-fixture alternating warmed read samples; matched native posting retest; raw resource and failure evidence; no unmeasured scale or competitor claims.
+  - id: AMR-WAVE3-005
+    priority: P1
+    area: commercial-source-inverses
+    title: Original invoice credit and FIFO-consumption restitution before refunds
+    status: planned
+    depends_on: [AMR-WAVE3-001, AMR-WAVE3-002]
+    exit_evidence: Complete bounded source credit, original FIFO cost restitution, revenue inverse and refund allocation contracts with SQL/API/Studio conservation; no generic reversal shortcut.
   - id: AMR-GLOBAL-001
     priority: P0
     area: commercial-collections

@@ -1,5 +1,25 @@
 # ReconForge Execution Evidence Log
 
+- WAVE3-20261010 intermediate integration `fed54dbc`: pinned PostgreSQL17.10,
+  source unchanged/clean,6 tests passed, zero failures/errors/skips. Normal and
+  abandoned/replaced reviewed LC1/CA1 branches retain the independent18-effect
+  oracle184156minor debit=credit, cash45898, inventory11648 and original reports.
+  A1000-line journal matches the legacy canonical snapshot/digest with2 scoped
+  calls; ordinary AR HTTP and both scope-reparent races pass. Raw native packet:
+  `output/global-operating-platform-20261009/commercial/native-1791600389692895000`.
+  Earlier misnamed test-selector attempt executed no cases and was rejected;
+  it remains retained at `native-1791600359467147400`. Later production hardening
+  requires a final fixed-source gate; this entry is not its acceptance.
+- Pre-change audit: full Ruff, mypy677 files,55 focused domain/evidence cases,
+  Studio342 tests/50 files/typecheck/build and Python wheel/sdist pass. Bandit
+  reports4 static SQL assembly B608 findings in inherited LC/FA schema files;
+  byte-identical constant factoring addresses them without suppressions.
+  First dependency audit timed out;60-second retry reports no known dependency
+  vulnerabilities, excluding only the local non-PyPI ReconForge distribution.
+  CLI doctor/validate/demo pass via `python -m reconforge.cli`; the missing
+  `reconforge.__main__` invocation error is retained, not accepted. Raw logs are
+  under `output/wave3-audit` and `output/wave3-baseline-demo`.
+
 - GLOBAL-20261010 final corrective benchmark, unchangedcfd30de7/full123,
   PostgreSQL17.10/nonowner false,false,1000 native three-human cycles/4workers:
   all completed,0errors/nonadmissions, independent493671004minor oracle passes.

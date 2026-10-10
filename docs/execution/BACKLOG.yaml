@@ -1,7 +1,7 @@
 schema_version: 2
 updated_at: "2026-10-10"
 phase: "Phase 4 — Global Capability Expansion"
-active_sprint: "Governed Abandonment, Verified Asset Evidence and Native Snapshot Profiling — ADR0845/0846"
+active_sprint: "Wave4 Original Returns, Native Appropriations, Historical FX/Tax and Measured Posting — ADR0847-0851"
 snapshot:
   evidence_base_commit: "34b9e7a5b2a7c4d8ae49b641a36de030a878d507"
   policy_change_commit: "the commit containing this file"
@@ -11,6 +11,41 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-WAVE4-001
+    priority: P0
+    area: original-customer-returns
+    title: Preserve original FIFO and financial history through governed credit and partial refund
+    status: in_progress
+    depends_on: [AMR-WAVE3-001]
+    exit_evidence: Whole original source inverse, cash liability conservation, current whole-turnover authority, SQL bypass and race/rollback, three-human Studio lost responses and populated restore.
+  - id: AMR-WAVE4-002
+    priority: P0
+    area: purchase-appropriation
+    title: Bind approved budget to native partial purchase receipt and AP accrual
+    status: in_progress
+    depends_on: [AMR-WAVE3-001]
+    exit_evidence: Frozen native/API24 passed at7f72c770; actual HTTPS master-only seeded purchase/budget cycle and populated restore remain required.
+  - id: AMR-WAVE4-003
+    priority: P0
+    area: historical-fx-tax
+    title: Native foreign taxed AR invoice and partial functional settlement with realized FX
+    status: in_progress
+    depends_on: [AMR-WAVE3-001]
+    exit_evidence: Independent cumulative historical release across0/2/3 precision, current revoked grant/retry, original native receipt and exact functional GL, browser cryptographic seals and close/report restore.
+  - id: AMR-WAVE4-004
+    priority: P0
+    area: posting-performance
+    title: Reduce measured CPU and planning cost while preserving financial and RLS controls
+    status: in_progress
+    depends_on: [AMR-WAVE3-001]
+    exit_evidence: Baseline profiling and9-case read-policy correctness done; three alternating fresh warmed1K financial populations per source, raw p50/p95/p99, client/containerCPU/RAM/IO and independent oracles required.
+  - id: AMR-WAVE4-005
+    priority: P1
+    area: supplier-return
+    title: Exact unpaid original AP debit plus unissued FIFO supplier restitution
+    status: in_progress
+    depends_on: [AMR-WAVE4-002]
+    exit_evidence: SR1 source0130 uses original native reversal, no paid/pending/BPC1 source admission until accounting conservation supports it; full native/API/Studio/SQL/race/restore gate required.
   - id: AMR-WAVE3-001
     priority: P0
     area: commercial-collections

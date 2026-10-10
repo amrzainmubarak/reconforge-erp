@@ -1,5 +1,29 @@
 # ReconForge Execution Decisions Log
 
+## Wave4 native ownership and measured planning (2026-10-10)
+
+Retain e07bff2a and the accepted PR chain without changing main or the primary's
+uncommitted schema files. CR1/CRF1 owns original whole delivered stock return and
+governed partial refund; BPC1 reuses budget reserve/consume/release against native
+purchase/AP state; FX1 reuses original registry/AR/GL for historical foreign invoice
+and partial realized settlement. No alternate ledger, currency engine or permission
+system. Root orders0126→0127→0128→0129; SR1 reserves0130 after0129.
+
+Every source namespace is admitted only through its private participant and native
+database closure. Ordinary namespaces must exit before querying unrelated owner
+tables, even if SELECT was revoked. Historical ACK replay still requires current
+whole-source authority after waiting on a lock. Retained precision defines prior
+turnover; incompatible current policy must not reinterpret history.
+
+ADR0850 reduces read-policy planning using actual scoped IDs and invoker parent
+helpers, while retaining write checks/FORCE RLS. Do not reduce password hashing,
+durability, audit evidence or current authorization to gain throughput. Measure
+three genuine warm fresh populations per variant, alternating order, with process
+CPU confined to posting and Linux cgroup CPU counters at matching boundaries.
+The independently implemented verifier imports no ReconForge financial logic.
+New capabilities remain candidates until native/API/actual HTTPS/restore and
+integrated exact-source gates pass; retain initial failures without added skips.
+
 ## Wave3 final integration decisions (2026-10-10)
 
 Retain original unposted claim evidence and immutable acknowledgements;

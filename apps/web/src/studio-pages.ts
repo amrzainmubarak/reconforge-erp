@@ -9,6 +9,8 @@ const operationalLabels: Partial<Record<StudioPage, MessageKey>> = {
   procurementPartial: "procurementPartial",
   financialReporting: "financialReporting",
   fixedAssets: "fixedAssets",
+  customerReturns: "customerReturns",
+  operationalFxTax: "operationalFxTax",
   receivables: "receivables",
   notifications: "notifications",
   budgetControl: "budgetControl",

@@ -6,7 +6,7 @@ from alembic import op
 from reconforge.infrastructure.postgres_operational_fx_tax_schema import DOWNGRADE_SQL, UPGRADE_SQL
 
 revision = "0128_pg_operational_fx_tax"
-down_revision = "0125_pg_landed_cost_cancellation"
+down_revision = "0127_pg_procurement_commitments"
 branch_labels = None
 depends_on = None
 

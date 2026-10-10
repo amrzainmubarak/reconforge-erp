@@ -1,5 +1,34 @@
 # Execution State
 
+## Wave4 active integration (2026-10-10)
+
+Actual start is open DraftPR129 e07bff2a2e8197b052d53454ea85c727f7c7518e.
+Branch amr/global-enterprise-wave4-20261010 stacks above129→128→127→126→125→124.
+Main b61ea56b and both pre-existing primary schema edits are protected; all new
+commits are authored/committed by Amr. Three independent commercial/supply/finance
+worktrees implement CR1/CRF1, BPC1 and FX1; root owns contracts, ordered migrations,
+API/Studio integration, CI/package closure and performance profiling.
+
+Current candidate chain0126 customer returns→0127 procurement commitments→0128
+historical foreign AR/tax→0129 invoker read planning has one Alembic head. BPC1
+has a frozen24-case native/API acceptance at7f72c770 with no skips. Root read
+planning/tuple+dict-row gate has9 native cases passing at a4ffa822. CR1 and FX1
+expanded owner gates are still being repaired/re-run; unsuccessful source-bound
+packets are retained. Actual three new HTTPS/populated restore journeys and
+fixed-source integrated CI/full gates are pending. New SR1 supplier-return source
+is actively under construction, reserved0130/ADR0851; manufacturing is not complete.
+
+The diagnostic profile attributes PostgreSQL CPU to repeated financial RLS query
+planning. Identity PBKDF2 remains unchanged. Smaller join-collapse settings were
+rejected; scoped line-ID reads plus SECURITY INVOKER parent helpers are candidate
+optimizations only until three alternating independent1K posting populations
+per variant establish wall/latency/client+databaseCPU/resource results.
+
+See [baseline and protected provenance](WAVE4_BASELINE_2026-10-10.md),
+[current functional gaps](GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md) and
+[read-policy design](../adr/0850-invoker-financial-read-policy-planning.md).
+Historical accepted snapshots below retain their original source scope.
+
 ## Successor publication snapshot: locally verified operating integrity (2026-10-10)
 
 Branch `amr/global-integrity-wave3-20261010` remains above PR128699→PR12734b9→

@@ -6,8 +6,7 @@ from reconforge.infrastructure.postgres_financial_read_plans import (
 )
 
 revision = "0129_pg_financial_read_plans"
-# Isolated performance experiment; root integration chains this after0128.
-down_revision = "0125_pg_landed_cost_cancellation"
+down_revision = "0128_pg_operational_fx_tax"
 branch_labels = None
 depends_on = None
 UPGRADE_SQL = POSTGRES_FINANCIAL_READ_PLANS_SQL

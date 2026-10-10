@@ -1,5 +1,29 @@
 # ReconForge Execution Evidence Log
 
+## Wave4 rolling evidence (2026-10-10)
+
+Protected source/head hashes and original e07 acceptance are recorded in
+WAVE4_BASELINE_2026-10-10.md. No full integrated Wave4 acceptance exists yet.
+
+- BPC1 native/API at7f72c770:24 executed/pass,0skip/fail/error,498.809s;
+  raw native-1791617140219984300, exact clean source9ed45d1a82731f2b6563c81034b4062ce5c9ce71f0d7be6df2d43dfe8b0d69ce.
+- Core scoped-dimension gate:36 native cases/0skip at30a+c5f; planning gate9/0skip
+  at a4ffa822 in native-1791616869150302400, including prepared scope/revoke/rollback
+  and required dimension tuple/dict modes. Initial4failed/5passed packet retained.
+- FX first actual native cycle+HTTP at9cea6a86:2/0skip,73.248s. Expanded7a4d gate
+  executes15:11pass/4fixture failures; subsequent current-grant/rollback and actual
+  restricted unrelated native master/event dispatch targeted packets pass after
+  fixes. Full16-case cohesive583c gate is running; no final acceptance claim yet.
+- CR1 first frozen5e4 gate7pass/1downgrade failure; e33 full11-case attempt exposes
+  an injected SQL alias collision; failures retained and owner correcting it.
+- Independent pair verifier accepted a real20-cycle+20warm-up baseline probe;
+  this overlaps correctness runs and is not quiet repeated performance acceptance.
+
+All raw packets remain in output/global-operating-platform-20261009/commercial
+under their source-specific native-* directories. Warm/profile evidence is in
+output/wave4-* in the measured root/baseline/experimental worktrees. The source-
+bound final handoff will publish gate hashes and measured packets after completion.
+
 ## Retained first publication CI failure and strict contract correction (2026-10-10)
 
 Run38025608155 at5c01896a is unaccepted: Python3.12 executes4718passed,

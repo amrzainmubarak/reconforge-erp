@@ -51,6 +51,8 @@ export const navigationGroups: NavigationGroup[] = [
       { key: "enterprise-finance", label: "enterpriseFinance", icon: Landmark, page: "enterpriseFinance" },
       { key: "financial-reporting", label: "financialReporting", icon: FileChartColumn, page: "financialReporting" },
       { key: "fixed-assets", label: "fixedAssets", icon: Landmark, page: "fixedAssets" },
+      { key: "customer-returns", label: "customerReturns", icon: Landmark, page: "customerReturns" },
+      { key: "operational-fx-tax", label: "operationalFxTax", icon: Landmark, page: "operationalFxTax" },
       { key: "stock-sales", label: "stockSales", icon: Boxes, page: "stockSales" },
       { key: "procurement-partial", label: "procurementPartial", icon: Boxes, page: "procurementPartial" },
       { key: "sales-revenue", label: "salesRevenue", icon: FileChartColumn, page: "salesRevenue" },

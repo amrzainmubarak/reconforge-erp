@@ -5,7 +5,7 @@ from alembic import op
 from reconforge.infrastructure.postgres_procurement_commitments_schema import DOWNGRADE_SQL, UPGRADE_SQL
 
 revision = "0127_pg_procurement_commitments"
-down_revision = "0125_pg_landed_cost_cancellation"
+down_revision = "0126_pg_customer_returns"
 branch_labels = None
 depends_on = None
 

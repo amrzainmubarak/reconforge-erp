@@ -16,6 +16,8 @@ from pathlib import Path, PurePosixPath
 HELPERS = (
     "commercial_collections_browser", "erp_landed_cost_browser", "stock_commerce_browser_seed",
     "fixed_assets_browser_seed", "erp_procurement_enterprise_browser", "enterprise_financial_snapshot_browser",
+    "customer_returns_browser", "erp_procurement_commitments_browser",
+    "operational_fx_tax_browser_seed",
 )
 PREFIX20_SHA = "3f1ecffac62b7cc3cbea41264f2a61b7948d9875c87dd32f7eddf7f51238be41"
 INDEX_PATH = "docs/execution/benchmarks/INDEX.v1.json"
@@ -184,6 +186,17 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/benchmark_enterprise_finance.py", "tests/fixtures/landed_cost_owner_0123_69951414.sql",
         ".github/scripts/verify_global_integrity_archive.py", ".github/scripts/verify_native_posting_pair.py",
         "tests/test_native_posting_pair_verifier.py",
+        "tests/test_container_resource_counters.py", "tests/test_postgres_financial_read_plans.py",
+        "tests/test_customer_returns.py", "tests/test_customer_returns_api.py", "tests/test_postgres_customer_returns.py",
+        "tests/test_procurement_commitments.py", "tests/test_postgres_procurement_commitments.py", "tests/test_postgres_procurement_commitments_api.py",
+        "tests/test_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax_api.py",
+        "tests/test_postgres_operational_fx_tax_migration.py", ".github/scripts/benchmark_global_engineering_pair.py",
+        "apps/web/src/operational-fx-tax-fixture.json", "modules/customer-returns.yaml",
+        "docs/modules/procurement-commitments.yaml", "docs/modules/operational-fx-tax.yaml",
+        "docs/operator/customer-returns.md", "docs/operator/procurement-commitments.md", "docs/operator/operational-fx-tax.md",
+        "docs/adr/0847-original-customer-source-credits-and-partial-refunds.md",
+        "docs/adr/0848-native-purchase-appropriation-closure.md", "docs/adr/0849-historical-foreign-ar-effective-tax-and-realized-fx.md",
+        "docs/adr/0850-invoker-financial-read-policy-planning.md", "docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md",
         "apps/web/src/fixed-asset-evidence-fixture.json", "docs/adr/0845-governed-abandonment-and-native-evidence-performance.md",
         "docs/adr/0846-retained-unreceived-landed-cost-cancellation.md", "docs/operator/commercial-collections.md",
         "docs/operator/landed-cost.md", "docs/operator/fixed-assets.md", "docs/execution/GLOBAL_ENGINEERING_BENCHMARK_2026-10-10.md",

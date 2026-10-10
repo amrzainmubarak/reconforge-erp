@@ -15,8 +15,9 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 432
-EXPECTED_DIGEST = "1444692a691300fa3bd63fef6ab70f1c02d195a0b1b9b15b7673b58c847beb76"
+EXPECTED_ROUTE_COUNT = 451
+EXPECTED_DIGEST = "90780f19dac4f8111b65b0f4a08e28a96f2ff19bf558724a6d9dddbb87cc4667"
+WAVE4_PREFIXES = ("/api/v1/customer-returns/", "/api/v1/procurement-commitments/", "/api/v1/operational-fx-tax/")
 ROUTES_ROOT = Path(__file__).parents[1] / "reconforge" / "api" / "routes"
 SPECIAL_ROUTE_MODULES = frozenset(
     {
@@ -59,6 +60,9 @@ HANDLER_BOUNDARY_HELPERS = {
     "commercial_collections.py": frozenset({"execute", "_authority"}),
     "landed_cost.py": frozenset({"execute"}),
     "fixed_assets.py": frozenset({"execute", "_authority"}),
+    "customer_returns.py": frozenset({"execute", "_authority"}),
+    "procurement_commitments.py": frozenset({"_execute", "_authority"}),
+    "operational_fx_tax.py": frozenset({"execute", "_authority"}),
     "identity_administration.py": frozenset({"_service"}),
     "inventory_core.py": frozenset({"_server_call"}),
     "inventory_planning.py": frozenset({"_server_call"}),
@@ -154,7 +158,8 @@ def test_api_authorization_inventory_is_closed_and_digest_addressed(tmp_path: Pa
 
 def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_contracts(tmp_path: Path) -> None:
     """Bind the three added dependencies without weakening the retained 429 routes."""
-    contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    contracts = tuple(contract for contract in create_api_app(tmp_path / "unused.db").state.authorization_contracts
+                      if not contract.path.startswith(WAVE4_PREFIXES))
     expected = (
         RouteAuthorizationContract(
             "GET", "/api/v1/fixed-assets/plans/{plan_id}/evidence", "all", ("finance_core.read",),
@@ -176,6 +181,42 @@ def test_wave3_routes_require_exact_authority_and_preserve_all_accepted_route_co
     assert len(retained) == 429
     assert authorization_inventory_digest(retained) == "1c1581c2a7d8baf52e80253d5c5e8d026f09de431b250efdb4c89ea1bfd4232d"
     validate_authorization_surface(contracts, require_critical_routes=True)
+
+
+def test_wave4_source_routes_preserve_accepted_authority_and_require_exact_permissions(tmp_path: Path) -> None:
+    contracts = create_api_app(tmp_path / "unused.db").state.authorization_contracts
+    retained = tuple(contract for contract in contracts if not contract.path.startswith(WAVE4_PREFIXES))
+    assert len(retained) == 432
+    assert authorization_inventory_digest(retained) == "1444692a691300fa3bd63fef6ab70f1c02d195a0b1b9b15b7673b58c847beb76"
+    read = ("finance_core.read", "inventory.read", "receivables.read", "sales.read")
+    prepare = ("finance_core.manage", "finance_core.read", "finance_core.reverse", "inventory.read",
+               "inventory.valuation.manage", "receivables.manage", "receivables.read", "sales.manage", "sales.read")
+    expected = [RouteAuthorizationContract("GET", "/api/v1/customer-returns/" + path, "all", read)
+                for path in ("plans", "plans/{plan_id}", "plans/{plan_id}/balance")]
+    expected += [RouteAuthorizationContract("POST", "/api/v1/customer-returns/" + path, "all", prepare)
+                 for path in ("plans", "plans/{return_id}/refunds")]
+    expected += [RouteAuthorizationContract("POST", "/api/v1/customer-returns/plans/{plan_id}/" + action, "all", permissions)
+                 for action, permissions in (
+                     ("cancel", ("finance_core.read", "finance_core.validate", "inventory.read", "receivables.read", "sales.approve", "sales.read")),
+                     ("post", ("finance_core.post", "finance_core.read", "finance_core.reverse", "inventory.post", "inventory.read",
+                               "inventory.valuation.approve", "receivables.manage", "receivables.read", "sales.manage", "sales.read")),
+                     ("review", ("finance_core.read", "finance_core.reverse", "finance_core.validate", "inventory.read",
+                                 "inventory.valuation.approve", "receivables.read", "sales.approve", "sales.read")),
+                 )]
+    expected += [RouteAuthorizationContract("GET", "/api/v1/operational-fx-tax/" + path, "all", ("finance_core.read",))
+                 for path in ("invoices", "invoices/{source_id}", "plans/{plan_id}/evidence")]
+    expected += [RouteAuthorizationContract("POST", "/api/v1/operational-fx-tax/" + path, "all", (permission,))
+                 for path, permission in (("invoices", "finance_core.manage"), ("invoices/{source_id}/settlements", "finance_core.manage"),
+                                          ("plans/{plan_id}/post", "finance_core.post"), ("plans/{plan_id}/review", "finance_core.validate"))]
+    expected += [RouteAuthorizationContract(method, "/api/v1/procurement-commitments/" + path, "all", permissions)
+                 for method, path, permissions in (
+                     ("GET", "orders/{order_id}", ("budget_control.read", "finance_core.read", "inventory.read", "payables.read")),
+                     ("POST", "orders", ("budget_control.manage", "budget_control.read", "finance_core.read", "inventory.read", "payables.manage", "payables.read")),
+                     ("POST", "orders/{order_id}/consume", ("budget_control.manage", "budget_control.read", "finance_core.post", "finance_core.read", "inventory.read", "payables.approve", "payables.read")),
+                     ("POST", "orders/{order_id}/release", ("budget_control.manage", "budget_control.read", "finance_core.read", "inventory.read", "payables.approve", "payables.read")),
+                 )]
+    added = [contract for contract in contracts if contract.path.startswith(WAVE4_PREFIXES)]
+    assert sorted(added, key=lambda item: (item.method, item.path)) == sorted(expected, key=lambda item: (item.method, item.path))
 
 
 def test_mutating_route_modules_declare_a_server_boundary_or_explicit_protocol_classification() -> None:

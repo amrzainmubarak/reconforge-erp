@@ -1378,3 +1378,34 @@ include docs/execution/GLOBAL_ENGINEERING_BENCHMARK_2026-10-10.md
 include docs/execution/GLOBAL_NEXT_PHASE_2026-10-10.md
 include docs/execution/benchmarks/enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json
 include docs/execution/benchmarks/enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json
+
+# Wave4 native source ownership, integration and independent performance tooling.
+include tests/customer_returns_browser.py
+include tests/erp_procurement_commitments_browser.py
+include tests/operational_fx_tax_browser_seed.py
+include tests/test_postgres_customer_returns.py
+include tests/test_customer_returns.py
+include tests/test_customer_returns_api.py
+include tests/test_procurement_commitments.py
+include tests/test_postgres_procurement_commitments.py
+include tests/test_postgres_procurement_commitments_api.py
+include tests/test_operational_fx_tax.py
+include tests/test_postgres_operational_fx_tax.py
+include tests/test_postgres_operational_fx_tax_api.py
+include tests/test_postgres_operational_fx_tax_migration.py
+include tests/test_postgres_financial_read_plans.py
+include tests/test_container_resource_counters.py
+include .github/scripts/benchmark_global_engineering_pair.py
+include apps/web/src/operational-fx-tax-fixture.json
+include modules/customer-returns.yaml
+include docs/modules/procurement-commitments.yaml
+include docs/modules/operational-fx-tax.yaml
+include docs/adr/0847-original-customer-source-credits-and-partial-refunds.md
+include docs/adr/0848-native-purchase-appropriation-closure.md
+include docs/adr/0849-historical-foreign-ar-effective-tax-and-realized-fx.md
+include docs/operator/customer-returns.md
+include docs/operator/procurement-commitments.md
+include docs/operator/operational-fx-tax.md
+include docs/adr/0850-invoker-financial-read-policy-planning.md
+include docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE4_2026-10-10.md
+include docs/execution/WAVE4_BASELINE_2026-10-10.md

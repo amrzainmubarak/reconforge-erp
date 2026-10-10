@@ -364,10 +364,11 @@ boundaries:
   - {file: stock_sales.py, service: StockSalesApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_stock_sales.PostgresStockSalesRepository, test: tests/test_postgres_stock_sales.py, additional_tests: [tests/test_postgres_stock_sales_api.py], ci_shard: erp-expansion, risk: untracked_single_line_functional_currency_full_stock_to_cash}
   - {file: procurement_partial.py, service: ProcurementPartialApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_procurement_partial.PostgresProcurementPartialRepository, test: tests/test_postgres_procurement_partial.py, additional_tests: [tests/test_postgres_procurement_partial_api.py, tests/test_postgres_procurement_multiline.py, tests/test_postgres_procurement_multiline_api.py, tests/test_postgres_procurement_multiline_migrations.py], ci_shard: erp-expansion, risk: immutable_mixed_unit_multiline_zero_variance_partial_receipts_invoices_and_payments}
   - {file: stock_commerce.py, service: StockCommerceApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_stock_commerce.PostgresStockCommerceRepository, test: tests/test_postgres_stock_commerce.py, additional_tests: [tests/test_postgres_stock_commerce_api.py, tests/test_postgres_stock_commerce_migrations.py], ci_shard: erp-expansion, risk: functional_currency_untracked_products_full_payment_per_tranche_no_customer_return}
+  - {file: supplier_returns.py, service: SupplierReturnsService, status: live_test_available, adapter: reconforge.infrastructure.postgres_supplier_returns.PostgresSupplierReturnsRepository, test: tests/test_postgres_supplier_returns.py, additional_tests: [tests/test_postgres_supplier_returns_api.py], ci_shard: supplier-returns, risk: whole_original_unissued_receipt_unpaid_single_line_ap_debit_with_exact_original_fifo_and_optional_landed_charge_expense_no_partial_quantity_or_paid_invoice}
 summary:
-  total: 60
+  total: 61
   live_verified_current: 20
-  live_test_available: 36
+  live_test_available: 37
   absent: 0
   contract_only: 1
   not_applicable: 3

@@ -31,6 +31,7 @@ INTEGRITY_FILES = {
         "tests/test_postgres_fixed_assets.py", "tests/test_postgres_fixed_assets_evidence.py",
         "tests/test_postgres_global_operating_cycles.py", "tests/test_postgres_native_event_dispatch_migration.py",
         "tests/test_postgres_posting_snapshot_profile.py",
+        "tests/test_postgres_stock_sales_reversal_dispatch.py",
         "tests/test_postgres_operational_fx_tax.py", "tests/test_postgres_operational_fx_tax_api.py",
         "tests/test_postgres_operational_fx_tax_migration.py", "tests/test_postgres_financial_read_plans.py",
     ),
@@ -119,7 +120,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 51  # Retain 46 original commands and all five complete Wave4 owner commands.
+    assert len(commands) == 52  # Retain 46 original commands, five complete Wave4 owner commands, and corrective dispatch.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)

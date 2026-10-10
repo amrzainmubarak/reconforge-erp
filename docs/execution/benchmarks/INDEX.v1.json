@@ -258,6 +258,21 @@
       "profile_id": "native-enterprise-finance/1000-three-human-v1@post-repair-cfd30de7",
       "status": "verified",
       "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/native-dimensional-snapshot-1000-wave3-2026-10-10.json",
+      "artifact_sha256": "edd68a9bea8436836aefd06c79f03cf63989f135e1ddb1af3639ff528277c289",
+      "claim_boundary": "One warmed 1000-line journal on a scoped authenticated nonowner PostgreSQL17 connection; three alternating samples per reader with identical independent line totals and reviewed digest. No posting, HTTP, mixed ERP, production sizing or competitor throughput claim.",
+      "digest_fields": [
+        "source_sha256",
+        "validation_digest",
+        "original_report_sha256",
+        "failed_attempt_original_report_sha256"
+      ],
+      "engine": "postgresql17-native-dimensional-snapshot",
+      "profile_id": "native-dimensional-snapshot/1000-alternating-v1@13191719",
+      "status": "verified",
+      "workload_family": "native_snapshot"
     }
   ],
   "index_id": "benchmark-evidence-index-v1",

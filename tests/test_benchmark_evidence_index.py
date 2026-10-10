@@ -19,7 +19,7 @@ def test_benchmark_evidence_index_verifies_checked_in_artifacts() -> None:
     report = verify_benchmark_index(INDEX)
 
     assert report["index_id"] == "benchmark-evidence-index-v1"
-    assert len(report["verified_entries"]) == 19
+    assert len(report["verified_entries"]) == 20
     assert {entry["status"] for entry in report["verified_entries"]} == {"verified", "partial"}
     assert all(entry["digests"] for entry in report["verified_entries"])
 
@@ -51,6 +51,30 @@ def _retained_report(packet: dict[str, object]) -> dict[str, object]:
         assert serialization["line_endings"] == "LF"
     assert hashlib.sha256(text.encode("utf-8")).hexdigest() == packet["original_report_sha256"]
     return measurement
+
+
+def test_dimensional_snapshot_packet_preserves_raw_success_failure_and_independent_oracle() -> None:
+    packet = json.loads((INDEX.parent / "native-dimensional-snapshot-1000-wave3-2026-10-10.json").read_text(encoding="utf-8"))
+    report = _retained_report(packet)
+    failed = _retained_report({"measurement": packet["failed_attempt"],
+        "original_report_serialization": packet["failed_attempt_serialization"],
+        "original_report_sha256": packet["failed_attempt_original_report_sha256"]})
+    assert failed["status"] == "failed" and failed["owned_container_removed"] is True
+    assert report["status"] == "passed" and report["source_unchanged"] is True
+    assert report["owned_container_removed"] is True and report["runtime_role_flags"] == [False, False]
+    assert report["source_commit"] == report["source_commit_after"] == "1319171964cbde85c1ec0be995d786a19fe02b20"
+    assert report["source_sha256"] == report["source_sha256_after"] == packet["source_sha256"]
+    assert report["posting"]["completed_cycles"] == 1  # This is not a1,000-posting throughput packet.
+    comparison = report["snapshot_reads"]
+    assert comparison["line_count"] == 1000 and comparison["expected_total_minor"] == "500"
+    for name, count in (("per_line_baseline", 1002), ("joined_snapshot", 2)):
+        assert len(comparison["samples"][name]) == 3
+        for sample in comparison["samples"][name]:
+            assert sample["status"] == "complete" and sample["client_execute_calls"] == count
+            assert sample["lines"] == 1000 and sample["dimension_links"] == 668
+            assert sample["debit_minor"] == sample["credit_minor"] == "500"
+            assert sample["validation_digest"] == comparison["expected_validation_digest"] == packet["validation_digest"]
+    assert comparison["median_seconds_baseline"] / comparison["median_seconds_optimized"] == comparison["measured_speedup"]
 
 
 @pytest.mark.parametrize(

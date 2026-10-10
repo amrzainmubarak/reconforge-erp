@@ -2,7 +2,7 @@
 from collections.abc import Mapping
 from typing import Any
 
-from reconforge.infrastructure.postgres_landed_cost_schema import REVERSE_CLOSE_SQL
+from reconforge.infrastructure.postgres_landed_cost_schema import RECEIPT_CHARGE_SQL, REVERSE_CLOSE_SQL
 
 _TABLE_SQL = r"""
 DO $lc$ BEGIN
@@ -95,13 +95,13 @@ DO $lc$ DECLARE definition TEXT;needle TEXT:='SELECT COALESCE(sum(quantity),0) I
  IF length(definition)-length(replace(definition,needle,''))<>length(needle) THEN RAISE EXCEPTION 'Unsupported prior multiline capacity closure'; END IF;
  definition:=replace(definition,'reconforge.pp_verify_multiline_pre_cancel','reconforge.pp_verify_multiline');
  definition:=replace(definition,'OR r.total_value_minor::numeric<>d.total_minor::numeric+COALESCE((SELECT freight_minor::numeric+duty_minor FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=d.id),0)',
- 'OR r.total_value_minor::numeric<>d.total_minor::numeric+(CASE WHEN r.total_value_minor=d.total_minor THEN 0 ELSE COALESCE((SELECT freight_minor::numeric+duty_minor FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=d.id),0) END)');
+ 'OR r.total_value_minor::numeric<>d.total_minor::numeric+reconforge.landed_cost_receipt_charge(t,d.id,r.total_value_minor,d.total_minor)');
  definition:=replace(definition,needle,'SELECT COALESCE(sum(quantity),0) INTO received FROM reconforge.procurement_partial_receipts WHERE tenant_id=t AND order_id=c.id AND order_line_id=ol.id AND NOT reconforge.pp_receipt_cancelled(t,id);');
  EXECUTE definition;
 END $lc$;
 """
 
-UPGRADE_SQL = REVERSE_CLOSE_SQL + _TABLE_SQL
+UPGRADE_SQL = RECEIPT_CHARGE_SQL + REVERSE_CLOSE_SQL + _TABLE_SQL
 
 DOWNGRADE_SQL = r"""
 DO $lc$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.landed_cost_cancellations) THEN

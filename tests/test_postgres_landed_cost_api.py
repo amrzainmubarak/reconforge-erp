@@ -72,7 +72,7 @@ def test_real_api_independent_cancel_retains_evidence_and_reprepares_released_qu
         assert [line["reserved_receipt_quantity"] for line in fresh["lines"]] == ["0", "0"]
         assert all(part["cancellation_plan_id"] == cancelled["id"] for part in fresh["receipts"])
         blocked = checker[0].post(LANDED + "/plans/" + prepared["id"] + "/review", headers=checker[1], json={**cancellation, "command_id": "blocked-review"})
-        assert blocked.status_code == 409 and blocked.json()["error"]["code"] == "landed_cost_cancelled"
+        assert blocked.status_code == 409 and blocked.json()["error"]["code"] == "landed_cost_cancelled_conflict"
         replacement = post(maker, LANDED + "/plans", {**payload, "number": "HTTP-CORRECTED-COST", "expected_version": fresh["order"]["row_version"], "command_id": "http-corrected-prepare"})
         assert replacement["phase"] == 0 and replacement["allocations"] != prepared["allocations"]
         retained = maker[0].get(LANDED + "/plans/" + prepared["id"], headers=maker[1]).json()

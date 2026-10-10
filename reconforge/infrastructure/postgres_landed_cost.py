@@ -256,7 +256,7 @@ class PostgresLandedCostRepository:
             if replay is not None:
                 return replay
             if self._cancellation(plan_id=identifier) is not None:
-                raise ProcurementPartialError("landed_cost_cancelled", "Retained cancelled receiving cannot progress to review or publication.")
+                raise ProcurementPartialError("landed_cost_cancelled_conflict", "Retained cancelled receiving cannot progress to review or publication.")
             if plan["phase"] != (0 if operation == "review" else 1) or plan["plan_digest"] != expected_plan_digest:
                 raise ProcurementPartialError("landed_cost_phase_conflict", "The current retained bundle stage and digest are required.")
             payload = plan["payload"]

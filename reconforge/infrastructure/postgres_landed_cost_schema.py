@@ -2,6 +2,18 @@
 from collections.abc import Mapping
 from typing import Any
 
+RECEIPT_CHARGE_SQL = r"""CREATE OR REPLACE FUNCTION reconforge.landed_cost_receipt_charge(t TEXT,i TEXT,native BIGINT,merchandise BIGINT)
+ RETURNS NUMERIC LANGUAGE plpgsql STABLE SET search_path=pg_catalog AS $lc$
+DECLARE charge NUMERIC;
+BEGIN
+ -- A separate PL/pgSQL statement is essential: SQL CASE still plans the
+ -- protected table and its RLS policy even when the ordinary branch wins.
+ IF native=merchandise THEN RETURN 0; END IF;
+ SELECT freight_minor::numeric+duty_minor INTO charge FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=i;
+ RETURN COALESCE(charge,0);
+END $lc$;
+"""
+
 REVERSE_CLOSE_SQL = r"""CREATE OR REPLACE FUNCTION reconforge.landed_cost_reverse_close() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $lc$
 DECLARE j JSONB;changed JSONB[];p RECORD;native_entry TEXT;number TEXT;receipt TEXT;parent TEXT;
 BEGIN
@@ -298,7 +310,7 @@ DO $lc$ DECLARE definition TEXT;needle TEXT:='OR r.total_value_minor<>d.total_mi
  definition:=pg_get_functiondef('reconforge.pp_verify_multiline_pre_landed(text,text)'::regprocedure);
  IF length(definition)-length(replace(definition,needle,''))<>length(needle) THEN RAISE EXCEPTION 'Unsupported prior receipt closure'; END IF;
  definition:=replace(definition,'reconforge.pp_verify_multiline_pre_landed','reconforge.pp_verify_multiline');
- definition:=replace(definition,needle,'OR r.total_value_minor::numeric<>d.total_minor::numeric+(CASE WHEN r.total_value_minor=d.total_minor THEN 0 ELSE COALESCE((SELECT freight_minor::numeric+duty_minor FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND receipt_id=d.id),0) END)');
+ definition:=replace(definition,needle,'OR r.total_value_minor::numeric<>d.total_minor::numeric+reconforge.landed_cost_receipt_charge(t,d.id,r.total_value_minor,d.total_minor)');
  EXECUTE definition;
 END $lc$;
 """
@@ -321,7 +333,7 @@ _UPGRADE_TRIGGER_SQL = r"""DO $lc$ DECLARE n TEXT; BEGIN
 END $lc$;
 """
 
-UPGRADE_SQL = _UPGRADE_DEFINITION_SQL + REVERSE_CLOSE_SQL + _UPGRADE_TRIGGER_SQL
+UPGRADE_SQL = RECEIPT_CHARGE_SQL + _UPGRADE_DEFINITION_SQL + REVERSE_CLOSE_SQL + _UPGRADE_TRIGGER_SQL
 
 DOWNGRADE_SQL = r"""
 DO $lc$ BEGIN IF EXISTS(SELECT 1 FROM reconforge.landed_cost_plans) THEN
@@ -340,6 +352,7 @@ DROP FUNCTION reconforge.landed_cost_event(TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT);
 DROP TABLE reconforge.landed_cost_commands,reconforge.landed_cost_links,reconforge.landed_cost_reviews,reconforge.landed_cost_allocations,reconforge.landed_cost_plans;
 DROP FUNCTION reconforge.landed_cost_protect();
 DROP FUNCTION reconforge.landed_cost_command_admit();
+DROP FUNCTION reconforge.landed_cost_receipt_charge(TEXT,TEXT,BIGINT,BIGINT);
 """
 
 

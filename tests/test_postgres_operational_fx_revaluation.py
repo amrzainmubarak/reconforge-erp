@@ -171,10 +171,6 @@ def test_closing_position_and_inverse_require_original_precision_current_amount_
 
     runtime = fx_runtime
     initial = finish_fx(runtime, prepare_fx(runtime))
-    valuation = revalue_fx(runtime, initial["source_id"], "1.8")
-    # Independent half-up rational result: 11401 * 18 / 10 -> 20522.
-    assert initial["amount_minor"] == 14251 and valuation["amount_minor"] == 6271
-    assert valuation["equation"]["valued_outstanding_minor"] == 20522
     ceiling = Decimal("150.00")
     observed: list[Decimal | None] = []
 
@@ -183,6 +179,16 @@ def test_closing_position_and_inverse_require_original_precision_current_amount_
         return evaluate_principal_access(principal, maximum_amount=ceiling, **context)
 
     monkeypatch.setattr(authority, "evaluate_principal_access", governed)
+    # Fresh preparation must be tested before a pending plan reserves the
+    # source; an occupied source correctly refuses any second preparation.
+    with pytest.raises(FinancePostingError, match="authorization"):
+        revalue_fx(runtime, initial["source_id"], "1.8", "fresh-narrow-closing")
+    ceiling = Decimal("300.00")
+    valuation = revalue_fx(runtime, initial["source_id"], "1.8")
+    # Independent half-up rational result: 11401 * 18 / 10 -> 20522.
+    assert initial["amount_minor"] == 14251 and valuation["amount_minor"] == 6271
+    assert valuation["equation"]["valued_outstanding_minor"] == 20522
+    ceiling = Decimal("150.00")
 
     def refuse(plan: dict[str, Any], *, inverse: bool) -> None:
         with runtime.actor("poster") as (connection, _, actor):
@@ -200,9 +206,8 @@ def test_closing_position_and_inverse_require_original_precision_current_amount_
             with pytest.raises(FinancePostingError, match="authorization"):
                 reverse_fx(runtime, initial["source_id"], valuation["id"])
         else:
-            for command in ("closing", "new-narrow-closing"):
-                with pytest.raises(FinancePostingError, match="authorization"):
-                    revalue_fx(runtime, initial["source_id"], "1.8", command)
+            with pytest.raises(FinancePostingError, match="authorization"):
+                revalue_fx(runtime, initial["source_id"], "1.8")
 
     refuse(valuation, inverse=False)
     # Administrator corruption of the current master cannot reinterpret a

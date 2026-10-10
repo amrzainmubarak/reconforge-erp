@@ -1380,6 +1380,7 @@ include docs/execution/benchmarks/enterprise-native-finance-wave3-baseline-806a0
 include docs/execution/benchmarks/enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json
 
 # Wave4 native source ownership, integration and independent performance tooling.
+recursive-include tests *.py
 include tests/customer_returns_browser.py
 include tests/erp_procurement_commitments_browser.py
 include tests/operational_fx_tax_browser_seed.py

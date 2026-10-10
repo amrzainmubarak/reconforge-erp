@@ -248,7 +248,7 @@ BEGIN
  SELECT jsonb_agg(to_jsonb(x)-ARRAY['tenant_id','plan_id','order_id'] ORDER BY sequence) INTO allocations
  FROM reconforge.landed_cost_allocations x WHERE tenant_id=t AND plan_id=i;
  IF allocations IS DISTINCT FROM p.payload->'allocations' OR COALESCE(jsonb_array_length(allocations),0) NOT BETWEEN 1 AND 128
- OR CASE WHEN jsonb_typeof(p.payload#>'{request,lines}')='array' THEN jsonb_array_length(p.payload#>'{request,lines}') ELSE 0 END<>jsonb_array_length(allocations)
+ OR (CASE WHEN jsonb_typeof(p.payload#>'{request,lines}')='array' THEN jsonb_array_length(p.payload#>'{request,lines}') ELSE 0 END)<>jsonb_array_length(allocations)
  OR (SELECT sum(freight_minor) FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i) IS DISTINCT FROM (p.payload#>>'{request,freight_minor}')::numeric
  OR (SELECT sum(duty_minor) FROM reconforge.landed_cost_allocations WHERE tenant_id=t AND plan_id=i) IS DISTINCT FROM (p.payload#>>'{request,duty_minor}')::numeric THEN
  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='landed_cost_owner_phase',MESSAGE='Allocations must conserve all paid charges and source members'; END IF;

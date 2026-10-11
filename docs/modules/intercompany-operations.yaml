@@ -25,13 +25,17 @@ cli_commands: []
 ui_routes: [/intercompany-operations]
 import_schemas: []
 export_schemas: [intercompany-native-evidence-v1, intercompany-native-group-report-v1]
-synthetic_fixtures: [tests/test_postgres_intercompany_operations.py]
+synthetic_fixtures: [tests/test_postgres_intercompany_operations.py, tests/intercompany_operations_browser_seed.py]
 threat_model: docs/operator/intercompany-operations.md
 benchmarks: []
 rollback_plan: Empty additive owner tables may downgrade; retained financial sources refuse destructive downgrade and require populated restore.
 test_matrix:
   exact_domain: tests/test_intercompany_operations.py
   native_database: tests/test_postgres_intercompany_operations.py
+  api_contract: tests/test_api_intercompany_operations.py
+  studio_contract: apps/web/src/intercompany-operations-data.test.ts
+  studio_workflow: apps/web/src/components/IntercompanyOperationsPage.test.tsx
+  actual_https_restore: apps/web/live/intercompany-operations-cycles.spec.ts
 runtime_acceptance: Pending fixed-source native and actual HTTPS/Studio/restore acceptance. No inherited throughput or release claim.
 limitations:
   - PostgreSQL-only bounded native service charges; no SQLite adapter

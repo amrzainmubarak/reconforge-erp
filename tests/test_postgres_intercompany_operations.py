@@ -168,7 +168,7 @@ def test_direct_sql_half_review_and_public_native_post_or_inverse_refused(runtim
     with runtime.actor("poster") as (_, repository, actor):
         with pytest.raises(FinancePostingError, match="complete|source|owner"):
             repository.owner.posting.post(plan["entries"][0]["entry_id"], command_id="manual", expected_validation_digest=plan["entries"][0]["validation_digest"], reason="Detached", actor=actor)
-        with pytest.raises(FinancePostingError, match="intercompany|Intercompany|source-owned"):
+        with pytest.raises(FinancePostingError, match="reviewed native source inverse"):
             repository.owner.posting.prepare_reversal(next(iter(posted["posting_effect_ids"].values())), command_id="inverse", entry_number="DETACHED",
                 period_id="period", posting_date="2026-10-04", reason="Detached", actor=actor)
 

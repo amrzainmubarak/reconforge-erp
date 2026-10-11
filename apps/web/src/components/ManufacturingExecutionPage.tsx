@@ -30,6 +30,7 @@ function ProductionSession({ locale }: { locale: Locale }) {
   const [identity, setIdentity] = useState<BudgetIdentity | null>(null), [login, setLogin] = useState({ tenant: "local", username: "", password: "" });
   const [scopeInput, setScopeInput] = useState<FinanceScope>({ workspace_id: "", organization_id: "", legal_entity_id: "" }), [scope, setScope] = useState<FinanceScope | null>(null);
   const [boms, setBoms] = useState<ManufacturingSource[]>([]), [orders, setOrders] = useState<ManufacturingSource[]>([]), [bom, setBom] = useState<ManufacturingSource | null>(null), [order, setOrder] = useState<ManufacturingSource | null>(null), [child, setChild] = useState<ManufacturingSource | null>(null);
+  const orderRef = useRef<ManufacturingSource | null>(null); orderRef.current = order;
   const [recipe, setRecipe] = useState({ number: "", version: "1", output_item_code: "", output_quantity: "", reason: "" }), [components, setComponents] = useState([{ item_code: "", quantity: "" }]);
   const [fields, setFields] = useState({ number: "", output_quantity: "", component_location_code: "", finished_location_code: "", component_policy_code: "", finished_policy_code: "", journal_code: "", wip_account_code: "", scrap_account_code: "", period_id: "", posting_date: "", reason: "" });
   const [output, setOutput] = useState({ good_quantity: "", scrap_quantity: "0", period_id: "", posting_date: "", reason: "" }), [reason, setReason] = useState("");
@@ -81,9 +82,11 @@ function ProductionSession({ locale }: { locale: Locale }) {
       if (!current()) return;
       if (value.id.startsWith("ME1B-")) { setBom(value); setBoms(old => [value, ...old.filter(row => row.id !== value.id)]); }
       else if (value.id.startsWith("ME1C-")) {
-        if (!order) throw new Error("parent_missing");
-        const parent = applyManufacturingCompletion(order, value);
-        setChild(parent.completions?.find(row => row.id === value.id) ?? value); setOrder(parent); setOrders(old => [parent, ...old.filter(row => row.id !== parent.id)]);
+        if (!orderRef.current) throw new Error("parent_missing");
+        const parent = applyManufacturingCompletion(orderRef.current, value);
+        setChild(parent.completions?.find(row => row.id === value.id) ?? value);
+        setOrder(old => old?.id === parent.id ? applyManufacturingCompletion(old, value) : old);
+        setOrders(old => old.some(row => row.id === parent.id) ? old.map(row => row.id === parent.id ? applyManufacturingCompletion(row, value) : row) : [parent, ...old]);
       }
       else { setOrder(value); setOrders(old => [value, ...old.filter(row => row.id !== value.id)]); }
       setPending(null); setReason(""); setRefresh(old => old + 1);

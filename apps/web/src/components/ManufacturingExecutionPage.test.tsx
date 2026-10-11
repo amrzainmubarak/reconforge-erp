@@ -72,3 +72,35 @@ it("retains final posted output ACK, zero WIP and terminal parent when follow-up
   expect(screen.queryByRole("button", { name: "Post complete native effects" })).not.toBeInTheDocument();
   expect(screen.getAllByText(/effect-output/).length).toBeGreaterThan(0);
 });
+it("keeps newer terminal GET conservation when an older partial post ACK arrives later", async () => {
+  const parent = await manufacturingFixture(3), reviewed = await manufacturingCompletionFixture(1, "4", "3600000000000000000"), posted = await manufacturingCompletionFixture(2, "4", "3600000000000000000"), final = await manufacturingCompletionFixture(2, "6", "5400000000000000000", "C", "4", "3600000000000000000");
+  const terminal = { ...parent, phase: 4, disposed_quantity_scaled: "10", released_cost_minor: "9000000000000000000", completions: [posted, final] };
+  let resolveRefresh!: (value: Response) => void, resolvePost!: (value: Response) => void, reads = 0;
+  vi.stubGlobal("fetch", vi.fn((_url: unknown, init?: RequestInit) => {
+    if (init?.method === "POST") return new Promise<Response>(resolve => { resolvePost = resolve; });
+    if (++reads === 1) return Promise.resolve(new Response(JSON.stringify({ boms: [], orders: [{ ...parent, completions: [reviewed] }] })));
+    if (reads === 2) return new Promise<Response>(resolve => { resolveRefresh = resolve; });
+    return Promise.resolve(new Response("unavailable", { status: 503 }));
+  }));
+  render(<ManufacturingExecutionPage locale="en" />);
+  await waitFor(() => expect(screen.getByLabelText("Workspace ID")).toHaveValue("work"));
+  fireEvent.click(screen.getByRole("button", { name: "Apply scope" }));
+  const select = screen.getByRole("combobox", { name: "Retained production order" });
+  await waitFor(() => expect(select.querySelectorAll("option")).toHaveLength(2));
+  fireEvent.change(select, { target: { value: parent.id } });
+  fireEvent.change(screen.getByRole("combobox", { name: "Retained output disposition" }), { target: { value: reviewed.id } });
+  fireEvent.click(screen.getByRole("button", { name: "Refresh native production evidence" }));
+  await waitFor(() => expect(reads).toBe(2));
+  const form = screen.getByRole("form", { name: "Post complete native effects" });
+  fireEvent.change(within(form).getByLabelText("Reason"), { target: { value: "Retained partial native posting" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Post complete native effects" }));
+  await waitFor(() => expect(resolvePost).toBeTypeOf("function"));
+  await act(async () => resolveRefresh(new Response(JSON.stringify({ boms: [], orders: [terminal] }))));
+  await waitFor(() => expect(screen.getByText("0", { selector: "bdi" })).toBeInTheDocument());
+  await act(async () => resolvePost(new Response(JSON.stringify({ completion: posted }))));
+  await screen.findByRole("alert");
+  expect(screen.getByText("0", { selector: "bdi" })).toBeInTheDocument();
+  expect(screen.queryByRole("form", { name: "Prepare partial good output and abnormal scrap" })).not.toBeInTheDocument();
+  fireEvent.change(select, { target: { value: "" } }); fireEvent.change(select, { target: { value: parent.id } });
+  expect(screen.getByText("0", { selector: "bdi" })).toBeInTheDocument();
+});

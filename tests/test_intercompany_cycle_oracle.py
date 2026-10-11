@@ -117,7 +117,7 @@ def test_independent_original_partial_and_group_journals_are_exact() -> None:
     assert len(result["native_effects"]) == 5 and not result["external_attestation"]
 
 
-@pytest.mark.parametrize("attack", ["half_pair", "same_human", "runtime_effect", "native_money", "group_line", "noncanonical", "duplicate_report_line", "party_position", "party_effect"])
+@pytest.mark.parametrize("attack", ["half_pair", "same_human", "runtime_effect", "native_money", "group_line", "noncanonical", "duplicate_report_line", "duplicate_empty_account", "party_position", "party_effect"])
 def test_financial_or_population_tampering_is_rejected(attack: str) -> None:
     proofs, report = packets()
     if attack == "half_pair":
@@ -136,6 +136,9 @@ def test_financial_or_population_tampering_is_rejected(attack: str) -> None:
         proofs[0]["source"]["request"]["amount_minor"] = "010001"
     elif attack == "duplicate_report_line":
         report["trial_balance"][0]["postings"].append(copy.deepcopy(report["trial_balance"][0]["postings"][0]))
+        report["report_digest"] = oracle.sha(oracle.canonical({k: v for k, v in report.items() if k != "report_digest"}))
+    elif attack == "duplicate_empty_account":
+        report["trial_balance"].append({**copy.deepcopy(report["trial_balance"][0]), "postings": []})
         report["report_digest"] = oracle.sha(oracle.canonical({k: v for k, v in report.items() if k != "report_digest"}))
     else:
         party = report["entity_reports"][0]

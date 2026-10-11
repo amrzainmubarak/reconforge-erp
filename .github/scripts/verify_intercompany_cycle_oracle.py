@@ -169,9 +169,15 @@ def verify(proofs: list[dict[str, Any]], report: dict[str, Any]) -> dict[str, An
             and type(report["effect_count"]) is int and report["effect_count"] == 5 and report["currency_policy"] == policy, "Actual native group report binding differs")
     require(all(report[k] == request[k] for k in ("workspace_id", "organization_id")), "Report canonical scope differs")
     observed: dict[tuple[str, int], tuple[str, str, int, int]] = {}
+    seen_group_codes: set[str] = set()
+    seen_group_ids: set[str] = set()
     for account in report["trial_balance"]:
         code = account["account_code"]
-        require(code in account_ids and account["account_id"] == account_ids[code] and money(account["closing"]["balance_minor"], signed=True) == 0, "Group original account or zero net position differs")
+        require(code in account_ids and code not in seen_group_codes and account["account_id"] not in seen_group_ids
+                and account["account_id"] == account_ids[code] and money(account["closing"]["balance_minor"], signed=True) == 0,
+                "Group original account or unique zero net position differs")
+        seen_group_codes.add(code)
+        seen_group_ids.add(account["account_id"])
         total = 0
         for line in account["postings"]:
             key = (line["effect_id"], line["line_number"])
@@ -181,7 +187,8 @@ def verify(proofs: list[dict[str, Any]], report: dict[str, Any]) -> dict[str, An
             observed[key] = row
             total += row[2] - row[3]
         require(total == 0, "Independent group account net differs")
-    require(observed == native_lines, "Group report must include exactly all original five-effect lines")
+    require(observed == native_lines and seen_group_codes == set(account_ids) and seen_group_ids == set(account_ids.values()),
+            "Group report must include exactly all original accounts and five-effect lines")
     parties = report["entity_reports"]
     require(len(parties) == 3 and {party["legal_entity_id"] for party in parties} == set(entities.values())
             and len({party["map_id"] for party in parties}) == 3, "Three distinct original reviewed-map report scopes required")

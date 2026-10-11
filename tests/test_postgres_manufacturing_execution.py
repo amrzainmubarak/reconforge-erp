@@ -379,6 +379,8 @@ def test_competing_partial_outputs_retain_one_original_claim_and_no_new_effect(m
 def test_native_stock_sale_and_material_order_cannot_overreserve_shared_physical_stock(manufacturing_database: tuple[str, str]) -> None:
     import threading
 
+    import psycopg
+
     from tests.test_postgres_stock_sales import create_reserved_order, create_stock_runtime
     system = runtime(manufacturing_database)
     create_stock_runtime(manufacturing_database, base_runtime=system, seed_stock=False)
@@ -389,7 +391,7 @@ def test_native_stock_sale_and_material_order_cannot_overreserve_shared_physical
         barrier.wait(timeout=20)
         try:
             return reserved_order(system, bom=recipe) if manufacturing else create_reserved_order(system, quantity="9")
-        except FinancePostingError as exc:
+        except (FinancePostingError, psycopg.errors.CheckViolation) as exc:
             return exc
 
     with ThreadPoolExecutor(max_workers=2) as workers:

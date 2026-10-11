@@ -93,7 +93,7 @@ CREATE TRIGGER current_actor BEFORE INSERT ON reconforge.intercompany_operation_
 CREATE FUNCTION reconforge.ic_operation_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog AS $ic$
 DECLARE p RECORD;s RECORD;r RECORD;l RECORD;f RECORD;e RECORD;j RECORD;post_event RECORD;command RECORD;prior RECORD;
  a JSONB;v JSONB;q JSONB;eq JSONB;books JSONB;lines JSONB;expected JSONB;item JSONB;head JSONB;native_lines JSONB;
- book_name TEXT;field TEXT;entity TEXT;account TEXT;account_type TEXT;cash TEXT;ar TEXT;ap TEXT;income TEXT;expense TEXT;
+ book_name TEXT;field TEXT;entity TEXT;account TEXT;expected_account_type TEXT;cash TEXT;ar TEXT;ap TEXT;income TEXT;expense TEXT;
  gross NUMERIC;paid NUMERIC:=0;installment NUMERIC;outstanding NUMERIC;burden NUMERIC;turnover NUMERIC;
  count_entries INTEGER;count_links INTEGER;sequence INTEGER:=0;last_day TEXT;closed BOOLEAN:=FALSE;
 BEGIN
@@ -197,9 +197,9 @@ BEGIN
   PERFORM reconforge.ic_operation_assert(native_lines=books->book_name AND e.total_debit_minor=(SELECT sum((row->>'debit_minor')::numeric) FROM jsonb_array_elements(books->book_name) row)
   AND e.total_debit_minor=e.total_credit_minor, 'Both original native journals must conserve their exact reviewed equations');
   FOR lines IN SELECT value FROM jsonb_array_elements(books->book_name) LOOP
-   account:=lines->>'account_code';account_type:=CASE WHEN account IN(ar,cash) THEN 'Asset' WHEN account=ap THEN 'Liability' WHEN account=income THEN 'Income' ELSE 'Expense' END;
+   account:=lines->>'account_code';expected_account_type:=CASE WHEN account IN(ar,cash) THEN 'Asset' WHEN account=ap THEN 'Liability' WHEN account=income THEN 'Income' ELSE 'Expense' END;
    PERFORM reconforge.ic_operation_assert(EXISTS(SELECT 1 FROM reconforge.finance_accounts ac JOIN reconforge.finance_entry_lines nl ON nl.tenant_id=ac.tenant_id AND nl.account_id=ac.id
-    WHERE ac.tenant_id=t AND nl.entry_id=e.id AND ac.account_code=account AND ac.account_type=account_type AND ac.chart_id=j.chart_id), 'Retained native account semantics differ from reviewed service charge mapping');
+    WHERE ac.tenant_id=t AND nl.entry_id=e.id AND ac.account_code=account AND ac.account_type=expected_account_type AND ac.chart_id=j.chart_id), 'Retained native account semantics differ from reviewed service charge mapping');
   END LOOP;
   head:=item->'snapshot'->'entry';
   PERFORM reconforge.ic_operation_assert(head->>'id'=e.id AND head->>'workspace_id'=s.workspace_id AND head->>'organization_id'=s.organization_id AND head->>'legal_entity_id'=entity

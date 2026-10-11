@@ -109,7 +109,7 @@ def harness(monkeypatch: pytest.MonkeyPatch, *, damage: str | None = None, leak_
     monkeypatch.setattr(restore, "PostgresTenantBoundary", Boundary)
     monkeypatch.setattr(restore, "PostgresConnectionFactory", lambda settings: SimpleNamespace(settings=settings))
     monkeypatch.setattr(restore.psycopg, "connect", lambda dsn, **kwargs: Connection(
-        leak_table=unbound_leak_table if "app@" in dsn else None))
+        leak_table=unbound_leak_table if psycopg.conninfo.conninfo_to_dict(dsn).get("user") == "app" else None))
     monkeypatch.setattr(restore.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout=b"PGDMPoriginal-native-dump"))
     return Runtime(), calls, restored
 

@@ -14,13 +14,14 @@ def test_current_postgres_policy_preserves_historical_evidence_and_binds_live_de
     assert VALIDATOR["validate"](ROOT)["accepted"] is True
 
 
-@pytest.mark.parametrize("mutation", ["policy_image", "undeclared", "historical", "ci_image", "native_image"])
+@pytest.mark.parametrize("mutation", ["policy_image", "undeclared", "historical", "ci_image", "native_image", "api_image"])
 def test_current_postgres_policy_rejects_pin_and_source_drift(tmp_path: Path, mutation: str) -> None:
     paths = [
         POLICY, "docs/security/supply-chain-policy.v1.json", ".github/workflows/ci.yml",
         ".github/scripts/verify_commercial_collections.py",
         ".github/scripts/verify_erp_expansion_browser.py",
         ".github/scripts/benchmark_enterprise_finance.py",
+        ".github/scripts/benchmark_native_api_runtime.py",
     ]
     for relative in paths:
         destination = tmp_path / relative
@@ -39,6 +40,7 @@ def test_current_postgres_policy_rejects_pin_and_source_drift(tmp_path: Path, mu
             "historical": "docs/security/supply-chain-policy.v1.json",
             "ci_image": ".github/workflows/ci.yml",
             "native_image": ".github/scripts/verify_commercial_collections.py",
+            "api_image": ".github/scripts/benchmark_native_api_runtime.py",
         }[mutation]
         path = tmp_path / relative
         text = path.read_text(encoding="utf-8")

@@ -52,6 +52,7 @@ def validate(root: Path) -> dict[str, object]:
         ".github/scripts/verify_commercial_collections.py",
         ".github/scripts/verify_erp_expansion_browser.py",
         ".github/scripts/benchmark_enterprise_finance.py",
+        ".github/scripts/benchmark_native_api_runtime.py",
     ):
         tree = ast.parse((root / relative).read_text(encoding="utf-8"))
         definitions = [

@@ -65,6 +65,9 @@ def verify_procurement_sourcing_browser(runtime: ReceiptRuntime) -> dict[str, An
             "Exactly five original source-owned GL effects are required.")
         require(tuple(connection.execute("SELECT sum(debit_minor),sum(credit_minor) FROM reconforge.finance_entry_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone())
             == (3 * (2 * 1200 + 250 * 2000 // 100),) * 2, "Independent inventory/AP/cash turnover oracle differs.")
+        from tests.procurement_sourcing_oracle import independent_sourcing_oracle
+        oracle = independent_sourcing_oracle(connection, runtime.tenant, head["id"])
         return {"source_id": head["id"], "source_digest": head["source_digest"], "order_id": head["order_id"], "budget_id": head["budget_id"],
             "retained_offers": 2, "selected_supplier": "SUP", "three_independent_humans": True, "original_minor": "17000", "consumed_minor": "7400",
-            "released_minor": "9600", "available_minor": "12600", "remaining_inventory_minor": "7400", "posting_effects": 5, "turnover_minor": "22200"}
+            "released_minor": "9600", "available_minor": "12600", "remaining_inventory_minor": "7400", "posting_effects": 5, "turnover_minor": "22200",
+            "independent_oracle": oracle}

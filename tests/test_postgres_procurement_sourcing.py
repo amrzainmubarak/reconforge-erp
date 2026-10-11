@@ -143,6 +143,10 @@ def test_actual_sourcing_award_native_partial_receipts_ap_payments_and_budget_re
         assert tuple(connection.execute("SELECT sum(debit_minor),sum(credit_minor) FROM reconforge.finance_entry_lines WHERE tenant_id=%s", (runtime.tenant,)).fetchone()) == (22200, 22200)
         assert connection.execute("SELECT sum(remaining_value_minor) n FROM reconforge.inventory_cost_layers WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 7400
         assert repository.get(head["id"], actor=actor)["head"]["status"] == "Awarded"
+        from tests.procurement_sourcing_oracle import independent_sourcing_oracle
+        oracle = independent_sourcing_oracle(connection, runtime.tenant, head["id"])
+        assert {key: oracle[key] for key in ("awarded_minor", "received_minor", "consumed_minor", "paid_minor", "released_minor", "budget_available_minor", "effect_count")} == {
+            "awarded_minor": "17000", "received_minor": "7400", "consumed_minor": "7400", "paid_minor": "7400", "released_minor": "9600", "budget_available_minor": "12600", "effect_count": 5}
 
 
 @pytest.mark.parametrize("operation,name", [("open-rfq", MAKER), ("review-selection", MAKER), ("award", MAKER), ("award", CHECKER)])

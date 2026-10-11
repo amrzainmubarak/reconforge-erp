@@ -35,7 +35,7 @@ api_routes:
 cli_commands: []
 ui_routes: [/procurement-sourcing, /procurement-partial, /budget-control]
 import_schemas: []
-export_schemas: [procurement-sourcing-v1, supplier-quotation-v1]
+export_schemas: [procurement-sourcing-v1, supplier-quotation-v1, sourcing-oracle-v1, sourcing-oracle-result-v1]
 synthetic_fixtures: [tests/test_procurement_sourcing.py, tests/test_postgres_procurement_sourcing.py, tests/test_postgres_manufacturing_sourcing.py, tests/procurement_sourcing_browser.py]
 threat_model:
   - Four FORCE RLS tables bind the original canonical tenant and hierarchy
@@ -51,6 +51,7 @@ test_matrix:
   domain: tests/test_procurement_sourcing.py
   postgres: tests/test_postgres_procurement_sourcing.py
   manufacturing_provenance: tests/test_postgres_manufacturing_sourcing.py
+  independent_oracle: tests/test_procurement_sourcing_oracle.py
   api: tests/test_postgres_procurement_sourcing_api.py
   web: apps/web/src/procurement-sourcing-data.test.ts
   web_lifecycle: apps/web/src/components/ProcurementSourcingPage.test.tsx
@@ -58,7 +59,7 @@ test_matrix:
 adapter_matrix:
   postgres: Composes sole native budget, procurement, AP, FIFO, cash installment and GL engines
   sqlite: No sourcing operational fallback; existing Community modules remain available
-runtime_acceptance: Incremental26 native/API and12 React cases passed; whole-offer financial-cap corrective gate and six actual ME1-to-SRC5-to-BPC cases passed, with independent posted GL/stock/budget and stale-principal revocation corrective checks. Final clean integrated HTTPS, PostgreSQL17.11 and populated restore acceptance remain required.
+runtime_acceptance: Incremental26 native/API and12 React cases passed; whole-offer financial-cap corrective gate and six actual ME1-to-SRC5-to-BPC cases passed, with independent posted GL/stock/budget and stale-principal revocation corrective checks. The separate stdlib raw-evidence oracle has21 passing adversarial cases and an actual restricted-role full-cycle golden; the locale main-landmark correction has4 passing React cases. Final clean integrated HTTPS, PostgreSQL17.11 and populated restore acceptance remain required.
 limitations:
   - Original functional currency, zero tax and exact base units; no new FX, tax or currency engine
   - One approved appropriation in the original fiscal period

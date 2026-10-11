@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from reconforge.api.routes import intercompany_operations as api
 from reconforge.api.routes.intercompany_operations import router
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
@@ -86,3 +87,28 @@ def test_actual_cached_http_source_read_and_lost_ack_refuse_revoked_group_grant(
         assert replay.status_code == 403, replay.text
     with runtime.actor("poster") as (_, repository, actor):
         assert repository.get_plan(plan["id"], actor=actor)["phase"] == 0
+
+
+def test_actual_http_catalog_contains_three_current_books_and_native_master_shapes(runtime: IntercompanyRuntime, intercompany_database: tuple[str, str], tmp_path: Path, monkeypatch) -> None:
+    failures = []
+    original = api.execute_postgres_finance_core_scoped
+
+    def observe(request, operation):
+        def invoke(*args):
+            try:
+                return operation(*args)
+            except Exception as exc:
+                failures.append((type(exc).__name__, str(exc)))
+                raise
+        return original(request, invoke)
+
+    # Preserve the actual executor/admission; only retain the synthetic failure cause.
+    monkeypatch.setattr(api, "execute_postgres_finance_core_scoped", observe)
+    with client(runtime, intercompany_database, tmp_path, "maker") as (session, headers):
+        response = session.get(ROOT + "/catalog", headers=headers)
+        assert response.status_code == 200, (response.text, failures)
+        masters = response.json()["catalog"]
+        assert {row["id"] for row in masters["entities"]} == {"entity", "buyer", "group"}
+        assert {row["account_code"] for row in masters["accounts"]} >= {"IC_AR", "IC_AP", "IC_REVENUE", "IC_EXPENSE", "CASH"}
+        assert "STOCK" in {row["journal_code"] for row in masters["journals"]}
+        assert {row["id"] for row in masters["periods"]} == {"period"}

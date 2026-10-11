@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import subprocess  # nosec B404
 from collections.abc import Callable, Sequence
+from contextlib import AbstractContextManager
 from typing import Any
 from uuid import uuid4
 
@@ -60,9 +61,13 @@ def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str, *,
             "UPDATE reconforge.stock_sales_orders SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
             "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
             "UPDATE reconforge.financial_opening_links SET posted_actor_id='maker' WHERE tenant_id=%s",
-        )) -> dict[str, Any]:
+        ),
+        tamper_actor: Callable[[ReceiptRuntime], AbstractContextManager[tuple[Any, Any, Any]]] | None = None) -> dict[str, Any]:
     effects = verify_cycles(runtime)
-    protected = FINANCIAL_TABLES + extension_tables
+    # Module proof populations include native financial tables as well as
+    # owned relations. Require every relation exactly once, preserving all
+    # row/catalog/ACL/FORCE RLS checks over the complete union.
+    protected = tuple(dict.fromkeys(FINANCIAL_TABLES + extension_tables))
     before = database_snapshot(runtime.admin_dsn, financial_tables=protected)
     require(before["head"] == POSTGRES_MIGRATION_REVISIONS[-1], "Expansion restore is not current migration head.")
     dump = subprocess.run(["docker", "exec", container, "pg_dump", "--username=postgres", "--dbname=postgres", "--format=custom"], capture_output=True, check=True, timeout=120)  # nosec B603 B607
@@ -88,7 +93,7 @@ def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str, *,
             for table in extension_tables:
                 require(connection.execute(sql.SQL("SELECT count(*) n FROM reconforge.{}").format(sql.Identifier(table))).fetchone()["n"] == 0, "Sibling workspace leaked after restore.")
         refused = 0
-        with restored.actor("browser-poster") as (connection, _, _actor):
+        with (tamper_actor(restored) if tamper_actor is not None else restored.actor("browser-poster")) as (connection, _, _actor):
             checkpoint = database_snapshot(admin_dsn, financial_tables=protected)
             for statement in tamper_statements:
                 try:

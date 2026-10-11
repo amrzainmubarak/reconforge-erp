@@ -15,8 +15,8 @@ from reconforge.api.authorization import (
 )
 from reconforge.api.dependencies import require_any_permission, require_permission
 
-EXPECTED_ROUTE_COUNT = 470
-EXPECTED_DIGEST = "6e52445c5af2f70f0f2b484c4fe7ed1dc6d974097b469e731831a40ceb7e905b"
+EXPECTED_ROUTE_COUNT = 492
+EXPECTED_DIGEST = "14b516ccedc6622f05971c891af1ab1764ca1c31994aa5c22855b939c074cf83"
 WAVE5_PREFIXES = ("/api/v1/manufacturing-execution/", "/api/v1/intercompany-operations/", "/api/v1/procurement-sourcing/")
 WAVE4_PREFIXES = (
     "/api/v1/customer-returns/", "/api/v1/procurement-commitments/",
@@ -53,6 +53,8 @@ HANDLER_BOUNDARY_HELPERS = {
     "durable_job_operations.py": frozenset({"_command"}),
     "inventory_receipt_posting.py": frozenset({"_execute"}),
     "intercompany_operations.py": frozenset({"authority", "execute"}),
+    "manufacturing_execution.py": frozenset({"execute", "order_phase", "completion_phase"}),
+    "procurement_sourcing.py": frozenset({"_execute"}),
     "operational_finance.py": frozenset({"_authority", "_execute"}),
     "sales_revenue.py": frozenset({"_execute", "_transition"}),
     "procurement_operations.py": frozenset({"execute"}),

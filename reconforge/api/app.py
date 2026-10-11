@@ -74,6 +74,7 @@ from reconforge.api.routes import (
     inventory_valuation_reversal,
     landed_cost,
     manufacturing_cost_control,
+    manufacturing_execution,
     master_data,
     metrics,
     notification_inbox,
@@ -84,6 +85,7 @@ from reconforge.api.routes import (
     procurement_commitments,
     procurement_operations,
     procurement_partial,
+    procurement_sourcing,
     professional_invoice_payment,
     receivables,
     reconciliation,
@@ -442,6 +444,8 @@ def create_api_app(
     app.include_router(commercial_collections.router, prefix="/api/v1")
     app.include_router(customer_returns.router, prefix="/api/v1")
     app.include_router(intercompany_operations.router, prefix="/api/v1")
+    app.include_router(manufacturing_execution.router, prefix="/api/v1")
+    app.include_router(procurement_sourcing.router, prefix="/api/v1")
     app.include_router(procurement_commitments.router, prefix="/api/v1")
     app.include_router(supplier_returns.router, prefix="/api/v1")
     app.include_router(operational_fx_tax.router, prefix="/api/v1")
@@ -509,6 +513,8 @@ def create_api_app(
         commercial_collections.router,
         customer_returns.router,
         intercompany_operations.router,
+        manufacturing_execution.router,
+        procurement_sourcing.router,
         procurement_commitments.router,
         supplier_returns.router,
         operational_fx_tax.router,

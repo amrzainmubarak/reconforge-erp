@@ -104,6 +104,18 @@ class PostgresInventoryReceiptPostingRepository:
             self._rollback_only = True
             raise
 
+    def _manufacturing_source(self, identifier: str, number: str, participant: object | None) -> None:
+        """Admit only the exact live completion owner, before receipt row locks."""
+        if not number.upper().startswith("ME1C-"):
+            return
+        from reconforge.infrastructure.postgres_manufacturing_execution import _ManufacturingReceiptParticipant
+
+        if not isinstance(participant, _ManufacturingReceiptParticipant) or not participant.admits(
+            self.connection, self.tenant_id, identifier
+        ):
+            fail("Manufacturing receipts require their complete production completion owner.",
+                 "inventory_receipt_owner_required")
+
     def _actor(self, actor: PostingActor, permissions: frozenset[str], *, mutation: bool = True) -> None:
         principal = current_server_principal()
         if (principal is None or principal.principal_type != "user"
@@ -326,9 +338,10 @@ class PostgresInventoryReceiptPostingRepository:
                   "total_value_minor": exact_int(request.total_value_minor)}
         return scope, source, mapping, {"currency_code": captured.currency_code, **captured.metadata()}
 
-    def prepare_receipt(self, request: ReceiptPreparation, *, command_id: str, actor: PostingActor) -> ReceiptPlan:
+    def prepare_receipt(self, request: ReceiptPreparation, *, command_id: str, actor: PostingActor, _source_owner: object | None = None) -> ReceiptPlan:
         with self._transaction():
             self._actor(actor, PREPARE_PERMISSIONS)
+            self._manufacturing_source(request.receipt_number, request.receipt_number, _source_owner)
             # Resolve scope before key lookup; retries never take authority from cached IDs.
             workspace = self.inventory._workspace_id(request.workspace)
             org = self._one("SELECT id,organization_code FROM reconforge.organizations WHERE tenant_id=%s AND application_workspace_id=%s AND organization_code=%s",
@@ -450,9 +463,11 @@ class PostgresInventoryReceiptPostingRepository:
         if {"currency_code": captured.currency_code, **captured.metadata()} != plan["currency_policy"]:
             fail("Current monetary policy changed after receipt preparation; prepare and review a new source.")
 
-    def review(self, plan_id: str, *, command_id: str, expected_plan_digest: str, reason: str, actor: PostingActor) -> ReceiptReview:
+    def review(self, plan_id: str, *, command_id: str, expected_plan_digest: str, reason: str, actor: PostingActor, _source_owner: object | None = None) -> ReceiptReview:
         with self._transaction():
             self._actor(actor, REVIEW_PERMISSIONS)
+            initial = self._plan(plan_id)
+            self._manufacturing_source(plan_id, initial["source"]["number"], _source_owner)
             plan = self._plan(plan_id, lock=True)
             self._independent(plan, actor, stage="review")
             reason = exact_text(reason, maximum=500)
@@ -530,6 +545,7 @@ class PostgresInventoryReceiptPostingRepository:
         with self._transaction():
             self._actor(actor, PREPARE_PERMISSIONS | frozenset({"inventory.valuation.reverse.manage", "finance_core.reverse"}))
             original = self._plan(request.original_plan_id)
+            self._manufacturing_source(request.original_plan_id, original["source"]["number"], None)
             self._effect(original)
             if original["operation"] != "Receipt":
                 fail("A receipt inverse cannot itself be reversed.")
@@ -558,9 +574,11 @@ class PostgresInventoryReceiptPostingRepository:
             self._remember(plan, "prepare_reversal", command_id, digest, actor, plan)
             return plan
 
-    def commit(self, plan_id: str, *, command_id: str, expected_review_digest: str, reason: str, actor: PostingActor) -> ReceiptEffect:
+    def commit(self, plan_id: str, *, command_id: str, expected_review_digest: str, reason: str, actor: PostingActor, _source_owner: object | None = None) -> ReceiptEffect:
         with self._transaction():
             self._actor(actor, COMMIT_PERMISSIONS)
+            initial = self._plan(plan_id)
+            self._manufacturing_source(plan_id, initial["source"]["number"], _source_owner)
             plan = self._plan(plan_id, lock=True)
             self._independent(plan, actor, stage="commit")
             review = cast(ReceiptReview, self._review(plan))
@@ -756,10 +774,11 @@ class PostgresInventoryReceiptPostingRepository:
         finance = self.finance._get_effect(cast(str, plan["artifacts"]["posting_effect_id"]))
         return self._backing(plan, review, finance)
 
-    def get_plan(self, plan_id: str, *, actor: PostingActor) -> ReceiptPlanView:
+    def get_plan(self, plan_id: str, *, actor: PostingActor, _source_owner: object | None = None) -> ReceiptPlanView:
         with self._transaction(write=False):
             self._actor(actor, READ_PERMISSIONS, mutation=False)
             plan = self._plan(plan_id)
+            self._manufacturing_source(plan_id, plan["source"]["number"], _source_owner)
             review = self._review(plan, required=False)
             exists = self.connection.execute("SELECT 1 FROM reconforge.inventory_receipt_links WHERE tenant_id=%s AND plan_id=%s", (self.tenant_id, plan_id)).fetchone()
             return {"plan": plan, "review": review, "effect": self._effect(plan) if exists else None}
@@ -769,6 +788,7 @@ class PostgresInventoryReceiptPostingRepository:
         with self._transaction(write=False):
             self._actor(actor, READ_PERMISSIONS, mutation=False)
             plan = self._plan(plan_id)
+            self._manufacturing_source(plan_id, plan["source"]["number"], None)
             installed = self._one(
                 "SELECT to_regclass('reconforge.procurement_cycles') AS owner_index", ()
             )
@@ -809,7 +829,9 @@ class PostgresInventoryReceiptPostingRepository:
     def get_effect(self, plan_id: str, *, actor: PostingActor) -> ReceiptEffect:
         with self._transaction(write=False):
             self._actor(actor, READ_PERMISSIONS, mutation=False)
-            return self._effect(self._plan(plan_id))
+            plan = self._plan(plan_id)
+            self._manufacturing_source(plan_id, plan["source"]["number"], None)
+            return self._effect(plan)
 
 
 class _ReceiptFinanceParticipant:

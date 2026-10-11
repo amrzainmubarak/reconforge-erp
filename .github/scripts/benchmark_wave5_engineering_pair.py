@@ -48,10 +48,19 @@ def observe() -> dict[str, Any]:
     return result
 
 
+def frozen_source(root: Path) -> str:
+    commit = power.source_state(root)
+    untracked = subprocess.check_output(
+        ["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd=root, timeout=30,
+    )  # nosec B603 B607
+    require(not untracked, "Nonignored untracked files can replace benchmark runtime imports")
+    return commit
+
+
 def run_pair(roots: dict[str, Path], output: Path, *, count: int, max_seconds: int,
              postgres_image: str = "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3",
              launch: Any = subprocess.run, environment: Any = observe,
-             source: Any = power.source_state) -> dict[str, Any]:
+             source: Any = frozen_source) -> dict[str, Any]:
     require(not output.exists(), "Preserve previous evidence; use a fresh output directory")
     output.mkdir(parents=True)
     commits = {label: source(root) for label, root in roots.items()}

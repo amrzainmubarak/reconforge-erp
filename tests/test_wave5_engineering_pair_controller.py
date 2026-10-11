@@ -20,6 +20,20 @@ CONTROLLER = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(CONTROLLER)
 
 
+def test_frozen_pair_refuses_untracked_runtime_shadow_but_allows_ignored_evidence(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
+    (tmp_path / ".gitignore").write_text("output/\n", encoding="utf-8")
+    subprocess.run(["git", "add", ".gitignore"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "-c", "user.name=Amr", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "Synthetic source freeze"], cwd=tmp_path, check=True)
+    (tmp_path / "output").mkdir()
+    (tmp_path / "output/raw.json").write_text("{}", encoding="utf-8")
+    assert CONTROLLER.frozen_source(tmp_path)
+    (tmp_path / "reconforge").mkdir()
+    (tmp_path / "reconforge/shadow.py").write_text("raise RuntimeError('untrusted runtime')\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Nonignored untracked"):
+        CONTROLLER.frozen_source(tmp_path)
+
+
 @pytest.mark.parametrize("damage", [None, "power_parameters", "battery", "financial", "child", "timeout"])
 def test_fresh_populations_and_power_gates_retain_adverse_raw_evidence(tmp_path: Path, damage: str | None) -> None:
     roots = {label: (tmp_path / label).resolve() for label in COMMITS}

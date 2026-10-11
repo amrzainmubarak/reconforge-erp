@@ -6,10 +6,11 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from reconforge.api.dependencies import enforce_server_scoped_permissions, require_permission
+from reconforge.api.dependencies import enforce_server_scoped_permissions
 from reconforge.api.errors import APIError
 from reconforge.api.routes.finance_posting import _actor
 from reconforge.api.routes.fixed_assets import project
+from reconforge.api.routes.procurement_operations import required
 from reconforge.api.server_finance_core import (
     FinanceCoreExecutionScope,
     execute_postgres_finance_core_scoped,
@@ -24,10 +25,10 @@ from reconforge.infrastructure.postgres_intercompany_operations import PostgresI
 from reconforge.platform.common import PlatformError, current_server_principal
 
 router = APIRouter(prefix="/intercompany-operations", tags=["intercompany-operations"])
-Read = Annotated[LocalUser, Depends(require_permission("intercompany_operations.read"))]
-Prepare = Annotated[LocalUser, Depends(require_permission("intercompany_operations.prepare"))]
-Review = Annotated[LocalUser, Depends(require_permission("intercompany_operations.review"))]
-Post = Annotated[LocalUser, Depends(require_permission("intercompany_operations.post"))]
+Read = Annotated[LocalUser, Depends(required(frozenset({"intercompany_operations.read", "finance_core.read"})))]
+Prepare = Annotated[LocalUser, Depends(required(frozenset({"intercompany_operations.prepare", "finance_core.manage"})))]
+Review = Annotated[LocalUser, Depends(required(frozenset({"intercompany_operations.review", "finance_core.validate"})))]
+Post = Annotated[LocalUser, Depends(required(frozenset({"intercompany_operations.post", "finance_core.post"})))]
 
 
 class StrictModel(BaseModel):
@@ -118,7 +119,9 @@ def catalog(request: Request, user: Read) -> dict[str, Any]:
         return {"catalog": {"entities": entities,
             "accounts": repository.owner.finance.list_accounts(workspace=scope.workspace_id),
             "journals": repository.owner.finance.list_journals(workspace=scope.workspace_id, organization_code=scope.organization_code),
-            "periods": records(repository.connection.execute("SELECT id,name,status,start_date,end_date FROM reconforge.fiscal_periods WHERE tenant_id=%s AND application_workspace_id=%s ORDER BY start_date,id LIMIT 100", (scope.tenant_id, scope.workspace_id)))}}
+            "periods": records(repository.connection.execute("SELECT id,name,status,start_date,end_date FROM reconforge.fiscal_periods WHERE tenant_id=%s AND application_workspace_id=%s ORDER BY start_date,id LIMIT 100", (scope.tenant_id, scope.workspace_id))),
+            "maps": records(repository.connection.execute("SELECT id,legal_entity_id,payload->>'name' AS name FROM reconforge.financial_reporting_maps WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=ANY(%s) AND status='Reviewed' ORDER BY legal_entity_id,id LIMIT 100",
+                (scope.tenant_id, scope.workspace_id, scope.organization_id, sorted(principal.authorized_legal_entity_ids))))}}
 
     return execute(request, user, collect)
 

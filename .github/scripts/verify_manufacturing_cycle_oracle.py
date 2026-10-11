@@ -51,6 +51,20 @@ def integer(value: Any, *, positive: bool = False) -> int:
     return value
 
 
+def exact_native_numbers(value: Any, key: str = "") -> None:
+    """Raw PostgreSQL BIGINT/policy JSON must retain exact JSON integer types."""
+    if key.endswith(("_minor", "_scaled")) or key in {"phase", "version", "line_number", "precision", "quantity_precision", "currency_precision"}:
+        integer(value)
+        if key in {"precision", "quantity_precision", "currency_precision"}:
+            require(value <= 8, "Original exact retained policy precision required")
+    elif type(value) is dict:
+        for name, part in value.items():
+            exact_native_numbers(part, name)
+    elif type(value) is list:
+        for part in value:
+            exact_native_numbers(part)
+
+
 def even(value: Fraction) -> int:
     base, rest = divmod(value.numerator, value.denominator)
     return base + int(rest * 2 > value.denominator or rest * 2 == value.denominator and base % 2 == 1)
@@ -99,6 +113,7 @@ def historical_ack(row: dict[str, Any], kind: str, operation: str) -> dict[str, 
 
 
 def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
+    exact_native_numbers(proof)
     require(proof.get("schema_version") == "manufacturing-execution-proof-v1", "Unsupported manufacturing proof")
     tables, tenant = proof["populations"], proof["tenant_id"]
     require(type(tables) is dict and type(tenant) is str and bool(tenant), "Original tenant/populations required")

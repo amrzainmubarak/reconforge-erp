@@ -232,6 +232,32 @@ def test_independent_rounding_and_final_residual_conservation() -> None:
             oracle.disposition(*args)
 
 
+@pytest.mark.parametrize("target", ["fg_value_float", "fg_quantity_float", "header_totals_float", "precision_float", "line_bool", "ack_phase_bool"])
+def test_numerically_equal_noninteger_native_proof_is_refused(target: str) -> None:
+    proof = proof_fixture()
+    rows = proof["populations"]
+    if target == "fg_value_float":
+        layer = rows["inventory_cost_layers"][-1]
+        for key in ("original_value_minor", "remaining_value_minor"):
+            layer[key] = float(layer[key])
+    elif target == "fg_quantity_float":
+        layer = rows["inventory_cost_layers"][-1]
+        for key in ("original_quantity_scaled", "remaining_quantity_scaled"):
+            layer[key] = float(layer[key])
+    elif target == "header_totals_float":
+        entry = rows["finance_entries"][0]
+        for key in ("total_debit_minor", "total_credit_minor"):
+            entry[key] = float(entry[key])
+    elif target == "precision_float":
+        rows["inventory_cost_layers"][-1]["quantity_precision"] = 0.0
+    elif target == "line_bool":
+        rows["finance_entry_lines"][0]["credit_minor"] = False
+    else:
+        rows["manufacturing_execution_commands"][0]["response_json"]["phase"] = False
+    with pytest.raises(ValueError, match="Exact bounded source integer"):
+        oracle.verify_proof(proof)
+
+
 @pytest.mark.parametrize("optimized", [False, True])
 def test_outside_checkout_isolated_cli_and_separately_trusted_raw_bytes(tmp_path: Path, optimized: bool) -> None:
     raw = json.dumps(proof_fixture(), indent=2).encode()

@@ -39,8 +39,10 @@ def raw_projection(value: Any, key: str = "") -> Any:
         return {name: raw_projection(part, name) for name, part in value.items()}
     if type(value) is list:
         return [raw_projection(part) for part in value]
-    if (key.endswith("_minor") or key.endswith("_scaled")) and type(value) is str:
-        if not value.isascii() or not value.isdecimal() or str(int(value)) != value or int(value) > 9_000_000_000_000_000_000:
+    if key.endswith("_minor") or key.endswith("_scaled"):
+        if type(value) is int and 0 <= value <= 9_000_000_000_000_000_000:
+            return value
+        if type(value) is not str or not value.isascii() or not value.isdecimal() or str(int(value)) != value or int(value) > 9_000_000_000_000_000_000:
             raise ValueError("Exact original API money/quantity required")
         return int(value)
     return value
@@ -93,7 +95,9 @@ def execute_cycle(client: ApiClient, runtime: Any, index: int, directory: Path, 
     expected_public = {**native["payload"], **{key: native[key] for key in ("phase", "source_digest", "issue_plan", "issue_digest", "issue_reviewer_id", "issue_effect_id", "valuation_id", "disposed_quantity_scaled", "released_cost_minor")},
                        "completions": [{**child["payload"], **{key: child[key] for key in ("phase", "source_digest", "reviewer_id", "receipt_effect", "scrap_effect_id")}}
                                        for child in sorted(proof["populations"]["manufacturing_execution_completions"], key=lambda row: row["id"])], "wip_minor": 0}
-    if proof["tenant_id"] != runtime.tenant or decoded != expected_public:
+    canonical_decoded = json.dumps(decoded, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    canonical_native = json.dumps(expected_public, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    if proof["tenant_id"] != runtime.tenant or canonical_decoded != canonical_native:
         raise ValueError("Final HTTPS original order/financial projection differs from native proof")
     original = [row["posting_effect_id"] for row in proof["populations"]["inventory_receipt_plans"] if not row["source_number"].startswith("ME1C-")]
     timed = [native["issue_effect_id"]]

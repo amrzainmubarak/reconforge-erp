@@ -26,8 +26,9 @@ def public_order(proof: dict[str, Any]) -> dict[str, Any]:
 
 
 class SyntheticClient:
-    def __init__(self, proof: dict[str, Any], *, corrupted_public: bool = False) -> None:
+    def __init__(self, proof: dict[str, Any], *, corrupted_public: bool = False, malformed_number: str | None = None) -> None:
         self.proof, self.corrupted_public, self.output = proof, corrupted_public, 0
+        self.malformed_number = malformed_number
         self.calls: list[tuple[str, str]] = []
 
     def login(self, tenant: str, username: str, password: str, *, entity_id: str | None = None) -> dict[str, str]:
@@ -39,9 +40,17 @@ class SyntheticClient:
         self.calls.append((path, headers["actor"]))
         rows = self.proof["populations"]
         if body is None:
-            result = public_order(self.proof)
+            result = copy.deepcopy(public_order(self.proof))
             if self.corrupted_public:
                 result["completions"][0]["phase"] = 999
+            if self.malformed_number == "float":
+                result["released_cost_minor"] = float(result["released_cost_minor"])
+            elif self.malformed_number == "bool":
+                result["completions"][0]["scrap_quantity_scaled"] = True
+            elif self.malformed_number == "policy_float":
+                result["monetary_policy"]["precision"] = float(result["monetary_policy"]["precision"])
+            elif self.malformed_number == "phase_bool":
+                result["completions"][0]["phase"] = True
             return {"order": result}
         if "/boms" in path:
             return {"bom": {"id": rows["manufacturing_execution_boms"][0]["id"], "source_digest": rows["manufacturing_execution_boms"][0]["source_digest"]}}
@@ -55,9 +64,9 @@ class SyntheticClient:
         return {"order": {"id": rows["manufacturing_execution_orders"][0]["id"], "source_digest": rows["manufacturing_execution_orders"][0]["source_digest"]}}
 
 
-def cycle(tmp_path: Path, *, corrupted_public: bool = False) -> tuple[dict[str, Any], SyntheticClient]:
+def cycle(tmp_path: Path, *, corrupted_public: bool = False, malformed_number: str | None = None) -> tuple[dict[str, Any], SyntheticClient]:
     proof = proof_fixture()
-    client = SyntheticClient(proof, corrupted_public=corrupted_public)
+    client = SyntheticClient(proof, corrupted_public=corrupted_public, malformed_number=malformed_number)
     result = driver.execute_cycle(client, SimpleNamespace(tenant="synthetic", password="never-exported"), 0, tmp_path / "cycle", oracle, lambda runtime: copy.deepcopy(proof))
     return result, client
 
@@ -77,6 +86,18 @@ def test_actual_callback_actions_are_full_three_human_cycle_and_separate_preseed
 def test_public_child_population_must_equal_native_source_proof(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="projection"):
         cycle(tmp_path, corrupted_public=True)
+
+
+@pytest.mark.parametrize("malformed_number", ["float", "bool"])
+def test_public_numeric_projection_requires_exact_original_types(tmp_path: Path, malformed_number: str) -> None:
+    with pytest.raises(ValueError, match="Exact original API money/quantity"):
+        cycle(tmp_path, malformed_number=malformed_number)
+
+
+@pytest.mark.parametrize("malformed_number", ["policy_float", "phase_bool"])
+def test_public_metadata_json_types_match_original_native_source(tmp_path: Path, malformed_number: str) -> None:
+    with pytest.raises(ValueError, match="projection"):
+        cycle(tmp_path, malformed_number=malformed_number)
 
 
 @pytest.mark.parametrize("mutation", ["missing_cycle", "reused_population", "timed_preseed", "wrong_cost", "same_tenant", "missing_proof", "missing_search", "invalid_time"])
@@ -110,7 +131,8 @@ def test_incomplete_financial_acceptance_is_refused(tmp_path: Path, mutation: st
 
 def test_monies_are_never_implicitly_coerced_from_float_or_noncanonical_text() -> None:
     assert driver.raw_projection({"cost_minor": "9000000000000000000"})["cost_minor"] == 9_000_000_000_000_000_000
-    for value in ("01", "1.0", "1e2", "-1", "١", "9000000000000000001"):
+    assert driver.raw_projection({"quantity_scaled": 1})["quantity_scaled"] == 1
+    for value in ("01", "1.0", "1e2", "-1", "١", "9000000000000000001", 2900.0, True, False, None, -1, 9_000_000_000_000_000_001):
         with pytest.raises(ValueError):
             driver.raw_projection({"cost_minor": value})
 

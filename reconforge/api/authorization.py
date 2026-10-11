@@ -317,7 +317,7 @@ for _method, _path, _operation in (
 
 
 _SOURCING_READ = frozenset({"procurement_sourcing.read", "budget_control.read", "payables.read", "inventory.read", "finance_core.read"})
-for _method, _path, _permissions in (
+for _method, _path, _sourcing_permissions in (
     ("GET", "/requisitions", frozenset()), ("GET", "/requisitions/{identifier}", frozenset()),
     ("POST", "/requisitions", frozenset({"procurement_sourcing.manage"})),
     ("POST", "/requisitions/{identifier}/quotes", frozenset({"procurement_sourcing.manage"})),
@@ -327,7 +327,7 @@ for _method, _path, _permissions in (
     ("POST", "/requisitions/{identifier}/cancel", frozenset({"procurement_sourcing.approve"})),
 ):
     _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/procurement-sourcing" + _path)] = (
-        "all", tuple(sorted(_SOURCING_READ | _permissions)))
+        "all", tuple(sorted(_SOURCING_READ | _sourcing_permissions)))
 
 
 def _dependency_contract(route: APIRoute) -> tuple[str, tuple[str, ...]] | None:

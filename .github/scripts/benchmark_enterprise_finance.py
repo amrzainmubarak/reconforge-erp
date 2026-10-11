@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import secrets
 import subprocess  # nosec B404
 import sys
@@ -24,7 +25,11 @@ from uuid import uuid4
 import psycopg
 from psycopg import sql
 
-ROOT = Path(__file__).resolve().parents[2]
+HARNESS = Path(__file__).resolve()
+_runtime_arguments = argparse.ArgumentParser(add_help=False)
+_runtime_arguments.add_argument("--runtime-root", type=Path, default=HARNESS.parents[2])
+_runtime_options, _ = _runtime_arguments.parse_known_args()
+ROOT = _runtime_options.runtime_root.resolve()
 sys.path.insert(0, str(ROOT))
 
 from reconforge.benchmark.container_resource_counters import PATHS, parse_counters  # noqa: E402
@@ -46,7 +51,7 @@ from reconforge.infrastructure.postgres_finance_posting import (  # noqa: E402
 )
 from tests.erp_expansion_browser_seed import seed_expansion_browser  # noqa: E402
 
-IMAGE = "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+IMAGE = "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"
 
 
 def main() -> int:
@@ -66,7 +71,13 @@ def main() -> int:
                         help="Owned subquery planner experiment only; current PostgreSQL default is 8")
     parser.add_argument("--snapshot-lines", type=int, default=0, help="Optional separate balanced 2..1000-line dimensional snapshot profile")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--runtime-root", type=Path, default=ROOT,
+                        help="External common harness against an unchanged committed application checkout")
+    parser.add_argument("--postgres-image", default=IMAGE,
+                        help="Explicit immutable PostgreSQL image; use exactly the same digest for both versions")
     args = parser.parse_args()
+    if not re.fullmatch(r"postgres:[0-9]+\.[0-9]+-alpine@sha256:[a-f0-9]{64}", args.postgres_image):
+        parser.error("PostgreSQL image requires an exact official version and SHA256 digest")
     if args.profile_cpu and args.workers != 1:
         parser.error("Function discovery requires --workers 1; use --profile-stages for concurrent phase CPU measurements")
     counts = sorted(set(args.counts))
@@ -110,7 +121,8 @@ def main() -> int:
         "planner_experiment": {"join_collapse_limit": args.join_collapse_limit,
                                "from_collapse_limit": args.from_collapse_limit},
         "snapshot_lines": args.snapshot_lines,
-        "image": IMAGE, "python": sys.version, "platform": platform.platform(), "logical_cpus": os.cpu_count(),
+        "image": args.postgres_image, "python": sys.version, "platform": platform.platform(), "logical_cpus": os.cpu_count(),
+        "harness_path": str(HARNESS), "harness_sha256": hashlib.sha256(HARNESS.read_bytes()).hexdigest(),
         "processor": platform.processor(), "architecture": platform.machine(),
         "docker_version": run(["docker", "version", "--format", "{{.Server.Version}}"]).stdout.strip(),
         "limits": ["single entity and USD", "native repository latency includes synthetic identity authentication",
@@ -139,7 +151,7 @@ def main() -> int:
         server_options.extend(["-c", f"join_collapse_limit={args.join_collapse_limit}",
                                "-c", f"from_collapse_limit={args.from_collapse_limit}"])
         container = run(["docker", "run", "--detach", "--rm", "--name", "reconforge-enterprise-finance-" + uuid4().hex[:12],
-            "--label", "reconforge.owner=enterprise-finance-benchmark", "-e", "POSTGRES_PASSWORD", "-p", "127.0.0.1::5432", IMAGE,
+            "--label", "reconforge.owner=enterprise-finance-benchmark", "-e", "POSTGRES_PASSWORD", "-p", "127.0.0.1::5432", args.postgres_image,
             *server_options], environment=environment).stdout.strip()
         port = run(["docker", "port", container, "5432/tcp"]).stdout.strip().rsplit(":", 1)[1]
         admin_dsn = f"postgresql://postgres:{admin_password}@127.0.0.1:{port}/postgres?connect_timeout=5"
@@ -350,8 +362,10 @@ def main() -> int:
         report["container_resources_final_sample"] = run(["docker", "stats", "--no-stream", "--format", "{{json .}}", container]).stdout.strip()
         report["source_commit_after"] = run(["git", "rev-parse", "HEAD"]).stdout.strip()
         report["source_sha256_after"] = tracked_source_sha256()
+        report["harness_sha256_after"] = hashlib.sha256(HARNESS.read_bytes()).hexdigest()
         report["source_unchanged"] = (report["source_commit"] == report["source_commit_after"]
-            and report["source_sha256"] == report["source_sha256_after"])
+            and report["source_sha256"] == report["source_sha256_after"]
+            and report["harness_sha256"] == report["harness_sha256_after"])
         if run(["git", "status", "--porcelain", "--untracked-files=no"]).stdout or not report["source_unchanged"]:
             raise AssertionError("Tracked source changed during benchmark")
         report["status"] = "passed"

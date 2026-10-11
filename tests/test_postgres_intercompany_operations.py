@@ -72,7 +72,10 @@ def intercompany_database(receipt_database: tuple[str, str]) -> tuple[str, str]:
 
 @pytest.fixture
 def runtime(intercompany_database: tuple[str, str]) -> IntercompanyRuntime:
-    base = create_receipt_runtime(intercompany_database)
+    return seed_intercompany_masters(create_receipt_runtime(intercompany_database))
+
+
+def seed_intercompany_masters(base: ReceiptRuntime) -> IntercompanyRuntime:
     with PostgresTenantBoundary(base.factory).transaction(base.tenant) as connection:
         for identifier, code in (("buyer", "BUYER"), ("group", "GROUP")):
             connection.execute("INSERT INTO reconforge.legal_entities(tenant_id,id,organization_id,entity_code,name,currency_code) VALUES(%s,%s,'org',%s,%s,'USD')",

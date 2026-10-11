@@ -192,11 +192,16 @@ BEGIN
    PERFORM reconforge.ps_assert(part IS NOT NULL AND part->>'requirement_digest'=source->'manufacturing_requirements'->position->>'requirement_digest',
     'A manufacturing-linked demand requires its exact immutable requirement evidence');
    -- Dynamic guarded SQL preserves ordinary-source roles and independent installations.
-   EXECUTE 'SELECT requirement_json,requirement_digest,required_quantity_scaled,quantity_precision FROM reconforge.manufacturing_execution_requirements WHERE tenant_id=$1 AND id=$2'
+   EXECUTE 'SELECT requirement_json,requirement_digest,required_quantity_scaled,quantity_precision,item_id,uom_id,workspace_id,organization_id,legal_entity_id FROM reconforge.manufacturing_execution_requirements WHERE tenant_id=$1 AND id=$2'
     INTO x USING t,part->>'requirement_id';
    PERFORM reconforge.ps_assert(x.requirement_digest=part->>'requirement_digest' AND reconforge.irp_digest(x.requirement_json)=x.requirement_digest
     AND (source->'manufacturing_requirements'->position)-'requirement_digest'=x.requirement_json
     AND x.requirement_json->>'item_code'=line->>'item_code'
+    AND(x.item_id,x.uom_id,x.quantity_precision)=(source->'demand_masters'->position->>'item_id',source->'demand_masters'->position->>'uom_id',
+      (source->'demand_masters'->position->>'quantity_precision')::integer)
+    AND(x.workspace_id,x.organization_id,x.legal_entity_id)=(p.workspace_id,p.organization_id,p.legal_entity_id)
+    AND(x.requirement_json->>'item_id',x.requirement_json->>'uom_id',x.requirement_json->>'quantity_precision',x.requirement_json->>'required_quantity_scaled')
+      =(x.item_id,x.uom_id,x.quantity_precision::text,x.required_quantity_scaled::text)
     AND(x.requirement_json#>>'{scope,workspace_id}',x.requirement_json#>>'{scope,organization_id}',x.requirement_json#>>'{scope,legal_entity_id}')=(p.workspace_id,p.organization_id,p.legal_entity_id)
     AND(line->>'quantity')::numeric*power(10::numeric,x.quantity_precision)=trunc((line->>'quantity')::numeric*power(10::numeric,x.quantity_precision))
     AND(line->>'quantity')::numeric*power(10::numeric,x.quantity_precision)<=x.required_quantity_scaled,

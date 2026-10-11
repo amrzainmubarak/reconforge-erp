@@ -100,7 +100,7 @@ def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str, *,
         with psycopg.connect(app_dsn) as connection:
             flags = connection.execute("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetchone()
             require(flags is not None and list(flags) == [False, False], "Restore role bypasses isolation.")
-            for table in extension_tables:
+            for table in protected:
                 rows = connection.execute(sql.SQL("SELECT count(*) FROM reconforge.{}").format(sql.Identifier(table))).fetchone()
                 require(rows is not None and rows[0] == 0, "Unbound native read leaked: " + table)
         with PostgresTenantBoundary(restored.factory).transaction(runtime.tenant, workspace_id="foreign", organization_id="org", legal_entity_id="entity") as connection:
@@ -119,9 +119,13 @@ def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str, *,
         require(refused == len(tamper_statements) and checkpoint == database_snapshot(admin_dsn, financial_tables=protected), "Restored immutable guards or exact rollback are absent.")
         return {"status": "passed", "dump_sha256": hashlib.sha256(dump.stdout).hexdigest(), "snapshot": after,
                 "probe_checkpoint": checkpoint, "verified_effects": effects, "tamper_refusals": refused,
-                "unbound_tenant_probe_tables": list(dict.fromkeys(extension_tables)),
+                "protected_financial_tables": list(protected),
+                "unbound_tenant_probe_tables": list(protected),
                 "sibling_workspace_probe_tables": list(dict.fromkeys(workspace_probes)),
-                "tenant_global_audit_tables": sorted(set(extension_tables) - set(workspace_probes))}
+                "tenant_global_audit_tables": sorted(set(extension_tables) - set(workspace_probes)),
+                "scope_probe_counts": {"protected": len(protected), "unbound_tenant": len(protected),
+                    "sibling_workspace": len(set(workspace_probes)),
+                    "tenant_global_audit": len(set(extension_tables) - set(workspace_probes))}}
     finally:
         with psycopg.connect(runtime.admin_dsn, autocommit=True) as admin:
             admin.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(database)))

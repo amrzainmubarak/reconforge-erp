@@ -42,8 +42,8 @@ class Connection:
             return Rows([(False, False)])
         if isinstance(statement, str) and "pg_database" in statement:
             return Rows([])
-        if self.foreign and self.leak_table is not None and self.leak_table in str(statement):
-            return Rows([{"n": 1}])
+        if self.leak_table is not None and self.leak_table in str(statement):
+            return Rows([{"n": 1}] if self.foreign else [(1,)])
         return Rows([{"n": 0}] if self.foreign else [(0,)])
 
     @contextmanager
@@ -70,7 +70,8 @@ class Runtime:
         yield Connection(), None, None
 
 
-def harness(monkeypatch: pytest.MonkeyPatch, *, damage: str | None = None, leak_table: str | None = None) -> tuple[Runtime, list[tuple[str, ...]], list[Runtime]]:
+def harness(monkeypatch: pytest.MonkeyPatch, *, damage: str | None = None, leak_table: str | None = None,
+            unbound_leak_table: str | None = None) -> tuple[Runtime, list[tuple[str, ...]], list[Runtime]]:
     protected = tuple(dict.fromkeys(restore.FINANCIAL_TABLES + restore.EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES))
     calls: list[tuple[str, ...]] = []
     restored: list[Runtime] = []
@@ -107,7 +108,8 @@ def harness(monkeypatch: pytest.MonkeyPatch, *, damage: str | None = None, leak_
     monkeypatch.setattr(restore, "ReceiptRuntime", receipt_runtime)
     monkeypatch.setattr(restore, "PostgresTenantBoundary", Boundary)
     monkeypatch.setattr(restore, "PostgresConnectionFactory", lambda settings: SimpleNamespace(settings=settings))
-    monkeypatch.setattr(restore.psycopg, "connect", lambda *args, **kwargs: Connection())
+    monkeypatch.setattr(restore.psycopg, "connect", lambda dsn, **kwargs: Connection(
+        leak_table=unbound_leak_table if "app@" in dsn else None))
     monkeypatch.setattr(restore.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(stdout=b"PGDMPoriginal-native-dump"))
     return Runtime(), calls, restored
 
@@ -136,7 +138,10 @@ def test_explicit_workspace_contract_excludes_only_original_tenant_global_audit_
     assert set(MANUFACTURING_EXECUTION_TABLES) - set(MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES) == {"domain_audit_events"}
     assert result["tenant_global_audit_tables"] == ["domain_audit_events"]
     assert set(result["sibling_workspace_probe_tables"]) == set(probes)
-    assert set(result["unbound_tenant_probe_tables"]) == set(restore.EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES)
+    assert set(result["unbound_tenant_probe_tables"]) == set(restore.FINANCIAL_TABLES + restore.EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES)
+    assert result["protected_financial_tables"] == list(calls[0]) == result["unbound_tenant_probe_tables"]
+    assert result["scope_probe_counts"] == {"protected": 48, "unbound_tenant": 48,
+                                             "sibling_workspace": len(probes), "tenant_global_audit": 1}
     assert "domain_audit_events" in calls[0] and "domain_audit_events" in result["snapshot"]["tables"]
     assert all(name in probes for name in ("inventory_movements", "inventory_movement_lines", "inventory_valuation_documents",
                                           "inventory_valuation_lines", "inventory_cost_layers", "inventory_layer_consumptions",
@@ -169,6 +174,14 @@ def test_any_native_or_owned_sibling_row_still_fails_with_actual_relation_name(m
     runtime, _, _ = harness(monkeypatch, leak_table=table)
     probes = tuple(dict.fromkeys(restore.EXPANSION_TABLES + MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES))
     with pytest.raises(AssertionError, match="Sibling workspace leaked after restore: " + table):
+        execute(runtime, workspace_probe_tables=probes)
+
+
+@pytest.mark.parametrize("table", ["domain_audit_events", "currency_registry_snapshots", "inventory_cost_layers"])
+def test_unbound_tenant_probe_still_covers_full_protected_union_and_global_audit(monkeypatch: pytest.MonkeyPatch, table: str) -> None:
+    runtime, _, _ = harness(monkeypatch, unbound_leak_table=table)
+    probes = tuple(dict.fromkeys(restore.EXPANSION_TABLES + MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES))
+    with pytest.raises(AssertionError, match="Unbound native read leaked: " + table):
         execute(runtime, workspace_probe_tables=probes)
 
 

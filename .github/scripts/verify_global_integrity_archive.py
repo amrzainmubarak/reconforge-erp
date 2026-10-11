@@ -416,6 +416,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/test_manufacturing_execution.py", "tests/test_postgres_manufacturing_execution.py",
         "tests/manufacturing_execution_browser.py", "tests/intercompany_operations_browser_seed.py",
         "tests/procurement_sourcing_browser.py", "tests/test_intercompany_cycle_oracle.py",
+        "tests/test_erp_expansion_browser_restore_contract.py", "tests/test_intercompany_browser_restore_actor.py",
         ".github/scripts/verify_intercompany_cycle_oracle.py",
         ".github/scripts/verify_procurement_sourcing_oracle.py", "tests/procurement_sourcing_oracle.py",
         "tests/test_procurement_sourcing_oracle.py",

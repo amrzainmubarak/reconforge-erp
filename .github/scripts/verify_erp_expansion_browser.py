@@ -18,8 +18,10 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import psycopg
@@ -83,6 +85,7 @@ def main() -> int:
     verify_cycles = verify_expansion_cycles
     configuration = "apps/web/live/erp-expansion.playwright.config.ts"
     extension_tables = EXPANSION_TABLES
+    tamper_actor: Callable[..., Any] | None = None
     tamper_statements = (
         "UPDATE reconforge.stock_sales_orders SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
         "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
@@ -140,17 +143,16 @@ def main() -> int:
     elif args.scenario == "intercompany-operations":
         from tests.intercompany_operations_browser_seed import (
             INTERCOMPANY_BROWSER_TABLES,
+            INTERCOMPANY_RESTORE_TAMPER,
+            intercompany_restore_tamper_actor,
             seed_intercompany_browser,
             verify_intercompany_browser,
         )
         seed, verify_cycles = seed_intercompany_browser, verify_intercompany_browser
         configuration = "apps/web/live/intercompany-operations.playwright.config.ts"
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + INTERCOMPANY_BROWSER_TABLES))
-        tamper_statements = (
-            "UPDATE reconforge.intercompany_operation_sources SET payload=payload||'{\"amount_minor\":1}'::jsonb WHERE tenant_id=%s",
-            "UPDATE reconforge.intercompany_operation_plans SET phase=0 WHERE tenant_id=%s AND kind='eliminate'",
-            "UPDATE reconforge.intercompany_operation_links SET posted_actor_id='maker' WHERE tenant_id=%s",
-        )
+        tamper_statements = INTERCOMPANY_RESTORE_TAMPER
+        tamper_actor = intercompany_restore_tamper_actor
     elif args.scenario == "procurement-sourcing":
         from tests.procurement_sourcing_browser import (
             PROCUREMENT_SOURCING_BROWSER_TABLES,
@@ -410,7 +412,8 @@ def main() -> int:
             report["persisted_effects"] = verify_cycles(runtime)
             if args.verify_native_restore:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,
-                    verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements)
+                    verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements,
+                    tamper_actor=tamper_actor)
         report["built_web_unchanged"] = built_web_digest(args.web_root.resolve()) == report["built_web_sha256"]
         report["source_unchanged"] = source_digest(runtime_root) == report["source_sha256"]
         report["source_commit_after"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip()

@@ -996,18 +996,30 @@ class PostgresFinanceCoreRepository:
             }
             prepared_lines: list[dict[str, Any]] = []
             total_debit = total_credit = 0
+            account_codes = []
+            for line in lines:
+                if not isinstance(line, Mapping):
+                    raise PlatformError("Each ledger line must be an object.")
+                account_codes.append(_code(line.get("account_code"), "Account code"))
+            accounts = {
+                str(row["account_code"]): row
+                for row in (
+                    _row(value, ("account_code", "id", "active", "allow_posting", "allow_manual_posting"))
+                    for value in self.connection.execute(
+                        """SELECT account_code,id,active,allow_posting,allow_manual_posting
+                           FROM reconforge.finance_accounts
+                           WHERE tenant_id=%s AND chart_id=%s AND account_code=ANY(%s)""",
+                        (self.tenant_id, journal_data["chart_id"], sorted(set(account_codes))),
+                    ).fetchall()
+                )
+            }
             for line_number, line in enumerate(lines, start=1):
                 if not isinstance(line, Mapping):
                     raise PlatformError("Each ledger line must be an object.")
                 account_code = _code(line.get("account_code"), "Account code")
-                account = self.connection.execute(
-                    """SELECT id,active,allow_posting,allow_manual_posting FROM reconforge.finance_accounts
-                       WHERE tenant_id=%s AND chart_id=%s AND account_code=%s""",
-                    (self.tenant_id, journal_data["chart_id"], account_code),
-                ).fetchone()
-                if account is None:
+                account_data = accounts.get(account_code)
+                if account_data is None:
                     raise PlatformError("Financial account was not found in the selected chart.")
-                account_data = _row(account, ("id", "active", "allow_posting", "allow_manual_posting"))
                 if not bool(account_data["active"]) or not bool(account_data["allow_posting"]):
                     raise PlatformError("Ledger lines require an active posting-enabled account.")
                 if selected_source == "Manual" and not bool(account_data["allow_manual_posting"]):
@@ -1114,13 +1126,11 @@ class PostgresFinanceCoreRepository:
             if provenance:
                 insert_parameters += (authenticated_actor,)
             self.connection.execute(insert_sql, insert_parameters)
+            line_rows: list[tuple[object, ...]] = []
+            dimension_rows: list[tuple[object, ...]] = []
             for prepared in prepared_lines:
                 line_id = platform_id("GLL", entry_id, prepared["line_number"])
-                self.connection.execute(
-                    """INSERT INTO reconforge.finance_entry_lines
-                       (tenant_id,id,entry_id,line_number,account_id,description,debit_minor,credit_minor,currency_code)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                    (
+                line_rows.append((
                         self.tenant_id,
                         line_id,
                         entry_id,
@@ -1130,14 +1140,18 @@ class PostgresFinanceCoreRepository:
                         prepared["debit_minor"],
                         prepared["credit_minor"],
                         currency_code,
-                    ),
-                )
+                    ))
                 for dimension_id, value_id in prepared["dimensions"].items():
-                    self.connection.execute(
-                        """INSERT INTO reconforge.finance_entry_line_dimensions
-                           (tenant_id,entry_line_id,dimension_id,dimension_value_id) VALUES (%s,%s,%s,%s)""",
-                        (self.tenant_id, line_id, dimension_id, value_id),
-                    )
+                    dimension_rows.append((self.tenant_id, line_id, dimension_id, value_id))
+            self._insert_entry_rows(
+                "INSERT INTO reconforge.finance_entry_lines "
+                "(tenant_id,id,entry_id,line_number,account_id,description,debit_minor,credit_minor,currency_code)",
+                line_rows, width=9,
+            )
+            self._insert_entry_rows(
+                "INSERT INTO reconforge.finance_entry_line_dimensions "
+                "(tenant_id,entry_line_id,dimension_id,dimension_value_id)", dimension_rows, width=4,
+            )
             self._validate_entry_integrity(entry_id)
             self._event(
                 actor_label=actor_label,
@@ -1153,6 +1167,14 @@ class PostgresFinanceCoreRepository:
                 },
             )
             return self._get_entry_in_transaction(entry_id)
+
+    def _insert_entry_rows(self, statement: str, rows: Sequence[tuple[object, ...]], *, width: int) -> None:
+        """Bound wire batches; PostgreSQL still evaluates every RLS policy and row trigger."""
+        for offset in range(0, len(rows), 128):
+            batch = rows[offset:offset + 128]
+            placeholders = ",".join("(" + ",".join(["%s"] * width) + ")" for _ in batch)
+            self.connection.execute(statement + " VALUES " + placeholders,
+                tuple(value for row in batch for value in row))
 
     def validate_entry(self, entry_id: str, *, reason: str, actor_label: str = "local-cli") -> dict[str, Any]:
         identifier = _text(entry_id, "Ledger-entry identifier")

@@ -24,8 +24,9 @@ __all__ = ["finance_database", "isolated_postgres_migration_dsn", "posting_datab
 def test_thousand_line_snapshot_matches_legacy_per_line_oracle_under_rls(posting_database: dict[str, Any]) -> None:
     db = posting_database
     with db["boundary"].transaction("finance_scope", **SCOPE) as connection:
+        measured_creation = MeasuredConnection(connection)
         with server_principal_context(principal(MAKER)):
-            entry = PostgresFinanceCoreRepository(connection, "finance_scope").create_entry(
+            entry = PostgresFinanceCoreRepository(measured_creation, "finance_scope").create_entry(
                 entry_number="SNAPSHOT-1000", organization_code="ORG_A", entity_code="A1", period_id="period",
                 journal_code="J_A", posting_date="2026-07-28", description="Synthetic 1,000-line dimension parity",
                 workspace="Shared", actor_label="maker", lines=[
@@ -33,6 +34,9 @@ def test_thousand_line_snapshot_matches_legacy_per_line_oracle_under_rls(posting
                      "debit" if index % 2 == 0 else "credit": "0.01",
                      "dimensions": {"D_SHARED": "V", "D_A": "V"} if index % 3 == 0 else {}}
                     for index in range(1000)])
+        # Dimension resolution remains current for each line; account reads and
+        # writes are bounded batches while all row/deferred guards remain active.
+        assert measured_creation.execute_calls < 2_000
         header = posting_entry(connection, "finance_scope", entry["id"])
         old_rows = records(connection.execute(
             "SELECT id,line_number,account_id,description,debit_minor,credit_minor FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s ORDER BY line_number",
@@ -55,6 +59,20 @@ def test_thousand_line_snapshot_matches_legacy_per_line_oracle_under_rls(posting
     with db["boundary"].transaction("finance_scope", workspace_id="other") as connection:
         assert not connection.execute("SELECT 1 FROM reconforge.finance_entry_lines WHERE entry_id=%s", (entry["id"],)).fetchall()
         assert not connection.execute("SELECT 1 FROM reconforge.finance_entry_line_dimensions").fetchall()
+
+
+def test_batched_creation_rejects_a_missing_last_account_without_financial_writes(posting_database: dict[str, Any]) -> None:
+    db = posting_database
+    with db["boundary"].transaction("finance_scope", **SCOPE) as connection:
+        with server_principal_context(principal(MAKER)), pytest.raises(PlatformError, match="account was not found"):
+            PostgresFinanceCoreRepository(connection, "finance_scope").create_entry(
+                entry_number="BATCH-INVALID-LAST", organization_code="ORG_A", entity_code="A1", period_id="period",
+                journal_code="J_A", posting_date="2026-07-28", description="Last-line atomic refusal",
+                workspace="Shared", actor_label="maker", lines=[
+                    {"account_code": "UNKNOWN" if index == 999 else "A_CASH" if index % 2 == 0 else "A_CAPITAL",
+                     "debit" if index % 2 == 0 else "credit": "0.01"} for index in range(1000)])
+        assert connection.execute("SELECT count(*) FROM reconforge.finance_entries WHERE tenant_id=%s AND entry_number=%s",
+            ("finance_scope", "BATCH-INVALID-LAST")).fetchone()[0] == 0
 
 
 @pytest.mark.parametrize("linked_lines", [4, 3, 0])

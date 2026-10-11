@@ -295,7 +295,7 @@ BEGIN
  END LOOP;
 END $me$;
 CREATE FUNCTION reconforge.me1_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE d RECORD;b RECORD;r RECORD;m RECORD;c RECORD;x JSONB;a JSONB;v RECORD;l RECORD;total NUMERIC:=0;qty NUMERIC;disposed NUMERIC;released NUMERIC;maker TEXT;reviewer TEXT;poster TEXT;
+DECLARE d RECORD;b RECORD;r RECORD;m RECORD;c RECORD;x JSONB;a JSONB;v RECORD;l RECORD;total NUMERIC:=0;qty NUMERIC;disposed NUMERIC;released NUMERIC;maker TEXT;reviewer TEXT;poster TEXT;digits TEXT;quantity_text TEXT;
 BEGIN
  PERFORM reconforge.me1_history(t,i);
  IF left(i,5)='ME1B-' THEN
@@ -359,11 +359,19 @@ BEGIN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Production requires exact distinct native WIP, scrap and finished receipt policy'; END IF;
  FOR x IN SELECT value FROM jsonb_array_elements(d.payload->'requirements') LOOP
   SELECT * INTO r FROM reconforge.manufacturing_execution_requirements WHERE tenant_id=t AND id=x->>'requirement_id';
+  digits:=lpad(r.required_quantity_scaled::text,greatest(length(r.required_quantity_scaled::text),r.quantity_precision+1),'0');
+  quantity_text:=CASE WHEN r.quantity_precision=0 THEN digits ELSE left(digits,length(digits)-r.quantity_precision)||'.'||right(digits,r.quantity_precision) END;
   IF r IS NULL OR reconforge.irp_digest(r.requirement_json) IS DISTINCT FROM r.requirement_digest
   OR(r.order_id,r.bom_version_id,r.workspace_id,r.organization_id,r.legal_entity_id,r.item_id,r.uom_id,r.required_quantity_scaled,r.quantity_precision)
    IS DISTINCT FROM(d.id,b.id,d.workspace_id,d.organization_id,d.legal_entity_id,x->>'item_id',x->>'uom_id',(x->>'required_quantity_scaled')::bigint,(x->>'quantity_precision')::integer)
-  OR r.requirement_json->>'order_source_digest' IS DISTINCT FROM d.source_digest OR r.requirement_json->>'bom_digest' IS DISTINCT FROM b.source_digest
+  OR x->>'required_quantity' IS DISTINCT FROM quantity_text
+  OR r.requirement_json IS DISTINCT FROM jsonb_build_object('schema_version','manufacturing-requirement-v1','requirement_id',r.id,
+   'order_id',d.id,'bom_version_id',b.id,'order_source_digest',d.source_digest,'bom_digest',b.source_digest,
+   'scope',jsonb_build_object('workspace_id',d.workspace_id,'organization_id',d.organization_id,'legal_entity_id',d.legal_entity_id),
+   'item_id',r.item_id,'item_code',x->>'item_code','uom_id',r.uom_id,'uom_code',x->>'uom_code','quantity_precision',r.quantity_precision,
+   'required_quantity_scaled',r.required_quantity_scaled,'required_quantity',quantity_text)
   OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(b.payload->'components') z WHERE z->>'item_id'=r.item_id AND z->>'uom_id'=r.uom_id
+   AND z=x-ARRAY['requirement_id','required_quantity_scaled','required_quantity']
    AND(z->>'quantity_scaled')::numeric*(d.payload->>'output_quantity_scaled')::numeric
     =r.required_quantity_scaled::numeric*(b.payload->>'output_quantity_scaled')::numeric)
   OR NOT EXISTS(SELECT 1 FROM reconforge.inventory_movement_lines ml WHERE ml.tenant_id=t AND ml.movement_id=m.id

@@ -228,7 +228,7 @@ def test_cancel_reviewed_completion_retains_receipt_draft_and_exact_ack_but_no_e
         owner = PostgresManufacturingExecutionRepository(connection, system.tenant)
         assert owner.prepare_completion(order["id"], good_quantity="3", scrap_quantity="1", period_id="period", posting_date="2026-10-05",
             command_id="partial-create", reason="Partial good output and explicit abnormal loss", actor=actor) == prepared
-        with pytest.raises(FinancePostingError, match="manufacturing"):
+        with pytest.raises(FinancePostingError, match="Manufacturing receipts require"):
             receipts.get_plan(prepared["receipt_plan"]["plan_id"], actor=actor)
         assert connection.execute("SELECT status FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s", (system.tenant, prepared["scrap_entry"]["entry_id"])).fetchone()["status"] == "Voided"
         assert connection.execute("SELECT count(*) count FROM reconforge.inventory_receipt_links WHERE tenant_id=%s AND plan_id=%s", (system.tenant, prepared["receipt_plan"]["plan_id"])).fetchone()["count"] == 0
@@ -303,6 +303,7 @@ def test_bounded_same_date_native_receipt_search_exhaustion_is_atomic(manufactur
 
 def test_orphan_phase_event_and_outbox_cannot_forge_bom_review(manufacturing_database: tuple[str, str]) -> None:
     import psycopg
+
     from reconforge.domain.finance_posting import canonical_json
     from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
     system = runtime(manufacturing_database)
@@ -322,4 +323,23 @@ def test_orphan_phase_event_and_outbox_cannot_forge_bom_review(manufacturing_dat
         connection.execute("""INSERT INTO reconforge.manufacturing_execution_events(tenant_id,object_id,operation,actor_id,reason,audit_event_id,outbox_event_id,metadata)
             VALUES(%s,%s,'approve-bom',%s,'Forged approval evidence',%s,'OBX-ORPHAN',%s::jsonb)""",
             (system.tenant, source["id"], actor.user_id, audit.id, canonical_json(metadata)))
+    assert retained_digest(system) == before
+
+
+def test_requirement_json_cannot_mislabel_native_scalar_item_or_uom(manufacturing_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch) -> None:
+    import psycopg
+
+    import reconforge.infrastructure.postgres_manufacturing_execution as module
+    system = runtime(manufacturing_database)
+    bom = approved_bom(system)
+    before = retained_digest(system)
+    original = module.requirement_payload
+
+    def misleading(**kwargs: Any) -> dict[str, Any]:
+        return {**original(**kwargs), "item_code": "WRONG-ITEM", "uom_code": "WRONG-UOM"}
+
+    with monkeypatch.context() as patch:
+        patch.setattr(module, "requirement_payload", misleading)
+        with pytest.raises(psycopg.errors.CheckViolation, match="immutable exact BOM demand"):
+            reserved_order(system, bom=bom)
     assert retained_digest(system) == before

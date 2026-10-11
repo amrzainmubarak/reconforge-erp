@@ -425,6 +425,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/benchmark_intercompany_api.py", "tests/test_intercompany_api_benchmark.py",
         ".github/scripts/benchmark_native_api_runtime.py",
         ".github/scripts/benchmark_manufacturing_api.py", "tests/test_manufacturing_api_benchmark.py",
+        ".github/scripts/benchmark_mixed_native_api.py", "tests/test_mixed_native_api_benchmark.py",
         "docs/operator/intercompany-operations.md", "docs/adr/0854-source-owned-production-intercompany-and-sourcing.md",
         "docs/execution/WAVE5_CONTRACTS_2026-10-11.md",
         "docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md",

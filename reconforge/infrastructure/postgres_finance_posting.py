@@ -430,6 +430,24 @@ class PostgresFinancePostingRepository:
         reason = text(reason, "reason", maximum=500)
         with self._transaction(write=True):
             entry = posting_entry(self.connection, self.tenant_id, text(entry_id, "entry_id"))
+            if entry["entry_number"].upper().startswith(("ME1-", "ME1C-")) or entry["id"].upper().startswith(("ME1-", "ME1C-")):
+                from reconforge.infrastructure.postgres_manufacturing_execution import _ManufacturingPostingParticipant
+
+                if not isinstance(_source_owner, _ManufacturingPostingParticipant) or not _source_owner.admits(
+                    self.connection, self.tenant_id, entry["id"]
+                ):
+                    raise FinancePostingError(
+                        "posting_source_unsupported", "Manufacturing entries require their complete reviewed production owner."
+                    )
+            if entry["entry_number"].upper().startswith("IC1-") or entry["id"].upper().startswith("IC1-"):
+                from reconforge.infrastructure.postgres_intercompany_operations import _IntercompanyPostingParticipant
+
+                if not isinstance(_source_owner, _IntercompanyPostingParticipant) or not _source_owner.admits(
+                    self.connection, self.tenant_id, entry["id"]
+                ):
+                    raise FinancePostingError(
+                        "posting_source_unsupported", "Intercompany entries require their complete reviewed group owner."
+                    )
             if entry["entry_number"].upper().startswith(("CR1-", "CRF1-")) or entry["id"].upper().startswith(("CR1-", "CRF1-")):
                 from reconforge.infrastructure.postgres_customer_returns import _CustomerReturnPostingParticipant
 
@@ -625,7 +643,7 @@ class PostgresFinancePostingRepository:
                     self.connection, self.tenant_id, source["id"], original["id"], number
                 ):
                     raise FinancePostingError("posting_source_unsupported", "Foreign sources require their exact reviewed source-owned inverse.")
-            if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-")):
+            if source["entry_number"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-")) or source["id"].upper().startswith(("OPS1-", "OB1-", "FI1-", "CA1-", "LC1-", "FA1-", "CR1-", "CRF1-", "SR1-", "ME1-", "ME1C-", "IC1-")):
                 raise FinancePostingError(
                     "posting_source_unsupported", "Operational sources require a reviewed native source inverse."
                 )

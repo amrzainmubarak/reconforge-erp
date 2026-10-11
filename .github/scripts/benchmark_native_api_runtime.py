@@ -218,6 +218,7 @@ class NativeApiScenario(Protocol):
     schema_version: str
     tool_path: Path
     oracle_path: Path
+    oracle_paths: tuple[Path, ...]
     expected_requests_per_cycle: int
     measurement_scope: str
 
@@ -226,6 +227,16 @@ class NativeApiScenario(Protocol):
     def execute_cycle(self, client: Client, runtime: Any, index: int, directory: Path) -> dict[str, Any]: ...
     def require_financial_completion(self, report: dict[str, Any]) -> None: ...
     def financial_summary(self, report: dict[str, Any]) -> dict[str, Any]: ...
+
+
+def oracle_provenance(scenario: NativeApiScenario, runtime_root: Path) -> list[dict[str, str]]:
+    paths = scenario.oracle_paths
+    if not isinstance(paths, tuple) or not 1 <= len(paths) <= 10 or any(not isinstance(path, Path) for path in paths):
+        raise ValueError("Explicit bounded original oracle paths required")
+    resolved = tuple(path.resolve() for path in paths)
+    if len(set(resolved)) != len(resolved) or resolved[0] != scenario.oracle_path.resolve() or any(not path.is_relative_to(runtime_root) for path in resolved):
+        raise ValueError("Unique original oracles within the frozen runtime checkout required")
+    return [{"path": path.relative_to(runtime_root).as_posix(), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in resolved]
 
 
 def require_server_identity(identity: dict[str, Any], root: Path, run_id: str) -> int:
@@ -390,6 +401,7 @@ def run(scenario: NativeApiScenario, argv: list[str] | None = None) -> int:
         report["source_before"] = source_state(runtime_root)
         if report["source_before"]["tracked_status"] or report["source_before"]["nonignored_untracked_files"]:
             raise ValueError("Frozen clean runtime checkout required")
+        report["declared_oracles"] = oracle_provenance(scenario, runtime_root)
         password, app_password = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
         secrets_to_redact.extend((password, app_password))
         environment["POSTGRES_PASSWORD"] = password

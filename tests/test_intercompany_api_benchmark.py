@@ -1,5 +1,6 @@
 """Bounded driver contracts; synthetic independent financial proof, no runtime jobs."""
 import copy
+import hashlib
 import importlib.util
 import io
 import json
@@ -143,6 +144,21 @@ def test_tracked_clean_checkout_cannot_import_nonignored_untracked_source(tmp_pa
     report["source_before"] = report["source_after"] = state
     with pytest.raises(ValueError, match="clean source"):
         common.require_common_completion(report, 20)
+
+
+def test_mixed_scenario_names_both_original_oracles_without_duplicate_or_foreign_provenance(tmp_path: Path) -> None:
+    original = tmp_path / "original_ic_oracle.py"
+    second = tmp_path / "original_me_oracle.py"
+    original.write_bytes(b"independent first owner\n")
+    second.write_bytes(b"independent second owner\n")
+    scenario = SimpleNamespace(oracle_path=original, oracle_paths=(original, second))
+    result = common.oracle_provenance(scenario, tmp_path)
+    assert result == [{"path": original.name, "sha256": hashlib.sha256(original.read_bytes()).hexdigest()},
+                      {"path": second.name, "sha256": hashlib.sha256(second.read_bytes()).hexdigest()}]
+    for paths in ((), (original, original), (second, original), (original, tmp_path.parent / "foreign.py")):
+        scenario.oracle_paths = paths
+        with pytest.raises(ValueError):
+            common.oracle_provenance(scenario, tmp_path)
 
 
 def test_exited_launcher_still_closes_owned_child_but_never_reused_pid(monkeypatch: pytest.MonkeyPatch) -> None:

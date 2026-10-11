@@ -83,6 +83,7 @@ class IntercompanyScenario:
     schema_version = "intercompany-https-benchmark-v1"
     tool_path = Path(__file__).resolve()
     oracle_path = tool_path.with_name("verify_intercompany_cycle_oracle.py")
+    oracle_paths: tuple[Path, ...] = (oracle_path,)
     expected_requests_per_cycle = 20
     measurement_scope = "Sequential fresh synthetic tenant per cycle; masters/reviewed maps seeded before timing; login+step-up+three-human business+proof/report HTTPS timed; urllib opens fresh connections; no retries"
 

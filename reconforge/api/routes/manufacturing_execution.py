@@ -1,6 +1,6 @@
 """Scoped real BOM, material issue and finished output commands."""
 from collections.abc import Callable
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, TypedDict
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -103,7 +103,15 @@ def execute(request: Request, user: LocalUser,
     return execute_postgres_finance_core_scoped(request, invoke)
 
 
-def scope_fields(scope: FinanceCoreExecutionScope) -> dict[str, str]:
+class ManufacturingScope(TypedDict):
+    workspace_id: str
+    organization_id: str
+    legal_entity_id: str
+    organization_code: str
+    entity_code: str
+
+
+def scope_fields(scope: FinanceCoreExecutionScope) -> ManufacturingScope:
     return {"workspace_id": scope.workspace_id, "organization_id": str(scope.organization_id), "legal_entity_id": str(scope.legal_entity_id),
             "organization_code": scope.organization_code, "entity_code": scope.entity_code}
 

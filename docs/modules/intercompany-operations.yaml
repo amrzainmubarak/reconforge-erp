@@ -33,6 +33,8 @@ test_matrix:
   exact_domain: tests/test_intercompany_operations.py
   native_database: tests/test_postgres_intercompany_operations.py
   api_contract: tests/test_api_intercompany_operations.py
+  native_http: tests/test_postgres_intercompany_operations_api.py
+  independent_integer_oracle: tests/test_intercompany_cycle_oracle.py
   studio_contract: apps/web/src/intercompany-operations-data.test.ts
   studio_workflow: apps/web/src/components/IntercompanyOperationsPage.test.tsx
   actual_https_restore: apps/web/live/intercompany-operations-cycles.spec.ts

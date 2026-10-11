@@ -1,5 +1,9 @@
 # ReconForge Execution Evidence Log
 
+## Wave5 actual636 profile and incremental gates (2026-10-11)
+
+Fresh rapidbaseline: Ruff passed;61 targeted Python tests passed without skips. Exact accepted636 hosted38-job acceptance is reused as historical full baseline, explicitly distinguished from fresh commands. New raw100cycle profile and migration log are copied byte-exact at wave5-evidence/baseline-profile-6362724f/ with SHA256 index in summary.json. Client50.34375CPU seconds, identity phases46.8125threadCPU seconds including5warmups;0errors/46669102minor measured oracle. This profile is descriptive, not an accepted improvement or a power-equivalent comparison. Initial owner-source sourcing and IC1 golden outcomes exist; all final-source gates and benchmarks remain pending.
+
 ## Wave4 source-bound runtime and portable proof publication (2026-10-10)
 
 [Incremental acceptance](WAVE4_ACCEPTANCE_2026-10-10.md) and its

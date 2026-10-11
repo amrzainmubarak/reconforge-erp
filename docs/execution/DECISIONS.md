@@ -1,5 +1,9 @@
 # ReconForge Execution Decisions Log
 
+## Wave5 source-owned industrial and group transactions (2026-10-11)
+
+Start exact accepted636 in four managed worktrees; preserve primary dirty files and main. Migrations133–135 are additive. ME1 reuses native inventory/FIFO/IRP and GL; IC1 pairs original books and places eliminations in an explicit third authorized adjustment scope; sourcing awards into BPC1. No parallel ledger or implicit foreign/tax/statutory support. New permission catalogs grant no existing role automatically; sensitive mutations are human-only and require step-up. Draft batching candidate4102b039 retains each native row and deferred guard. See WAVE5_CONTRACTS_2026-10-11.md.
+
 ## Wave4 native ownership and measured planning (2026-10-10)
 
 Retain e07bff2a and the accepted PR chain without changing main or the primary's

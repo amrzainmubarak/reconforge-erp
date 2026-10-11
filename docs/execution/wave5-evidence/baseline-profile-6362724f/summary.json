@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "source_commit": "6362724f2337a79c3d7569574f7bf9591a018524",
+  "source_unchanged": true,
+  "scope": "100 genuine native posting cycles plus5 warmup; opt-in profiling, single worker; descriptive baseline, no performance comparison acceptance",
+  "posting": {
+    "completed_cycles": 100,
+    "error_count": 0,
+    "seconds": 153.28722160001053,
+    "native_postings_per_second": 0.6523700994525243,
+    "cycle_latency_seconds": {
+      "p50": 1.5147213000018382,
+      "p95": 1.6319236999988789,
+      "p99": 1.805311599993729
+    },
+    "client_process_cpu_seconds": 50.34375
+  },
+  "identity_thread_cpu_seconds": 46.8125,
+  "all_phase_thread_cpu_seconds": 52.5,
+  "phases": {
+    "prepare.identity_enter": {
+      "observations": 105,
+      "seconds": 20.090625699958764,
+      "thread_cpu_seconds": 15.640625,
+      "failures": 0
+    },
+    "prepare.business": {
+      "observations": 105,
+      "seconds": 26.81054850007058,
+      "thread_cpu_seconds": 1.875,
+      "failures": 0
+    },
+    "prepare.transaction_exit": {
+      "observations": 105,
+      "seconds": 8.379475300011109,
+      "thread_cpu_seconds": 0.015625,
+      "failures": 0
+    },
+    "review.identity_enter": {
+      "observations": 105,
+      "seconds": 20.66427429995383,
+      "thread_cpu_seconds": 15.59375,
+      "failures": 0
+    },
+    "review.business": {
+      "observations": 105,
+      "seconds": 26.941490300028818,
+      "thread_cpu_seconds": 2.171875,
+      "failures": 0
+    },
+    "review.transaction_exit": {
+      "observations": 105,
+      "seconds": 2.667133599999943,
+      "thread_cpu_seconds": 0.015625,
+      "failures": 0
+    },
+    "post.identity_enter": {
+      "observations": 105,
+      "seconds": 20.433362999989185,
+      "thread_cpu_seconds": 15.578125,
+      "failures": 0
+    },
+    "post.business": {
+      "observations": 105,
+      "seconds": 28.286338199919555,
+      "thread_cpu_seconds": 1.609375,
+      "failures": 0
+    },
+    "post.transaction_exit": {
+      "observations": 105,
+      "seconds": 6.2551487001619535,
+      "thread_cpu_seconds": 0.0,
+      "failures": 0
+    }
+  },
+  "root_cause_candidates": [
+    "Current PBKDF2 authentication dominates client CPU; strength unchanged.",
+    "Repeated native account queries and per-line INSERT planning/round trips: candidate batches retain PostgreSQL row/deferred guards.",
+    "Entry snapshot/group dimension query planning remains measured follow-up, not optimized without native parity."
+  ],
+  "candidate_commit": "4102b039",
+  "performance_accepted": false,
+  "files": {
+    "result.json": {
+      "bytes": 1024150,
+      "sha256": "abbac3be6cc531732663c451c5aa6a6de831cb06a0c990070d4e1f3926af35fe"
+    },
+    "migration.log": {
+      "bytes": 22876,
+      "sha256": "b2f8b856f7d5850299991f692aa25ba1caab23ad6bbf43adb6429b88eca9584b"
+    }
+  }
+}

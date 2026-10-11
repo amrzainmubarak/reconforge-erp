@@ -1,5 +1,18 @@
 # Execution State
 
+## Wave5 active implementation (2026-10-11)
+
+Actual accepted base is DraftPR130 `6362724f2337a79c3d7569574f7bf9591a018524`.
+The primary checkout, main and original uncommitted edits are preserved. Four new
+managed worktrees separate root integration from manufacturing, intercompany
+finance and procurement sourcing. Fresh targeted baseline61/0skip and Ruff pass;
+exact-source full hosted38-job Wave4 acceptance is reused explicitly. Native ME1
+production/WIP/FG, paired IC1 and native group eliminations, and sourcing→BPC1
+are in implementation, not accepted capability claims. Root owns shared migrations
+133–135, permissions, dispatch, API/UI integration, CI and measured resource work.
+See [Wave5 contracts](WAVE5_CONTRACTS_2026-10-11.md). Prior Wave4 raw evidence,
+failures and false resource/program acceptance remain unchanged and source-bound.
+
 ## Wave4 active integration (2026-10-10)
 
 Actual start is DraftPR129 e07bff2a2e8197b052d53454ea85c727f7c7518e.

@@ -1,5 +1,5 @@
 schema_version: 2
-updated_at: "2026-10-10"
+updated_at: "2026-10-11"
 phase: "Phase 4 — Global Capability Expansion"
 active_sprint: "Wave4 Original Returns, Native Appropriations, Historical FX/Tax and Measured Posting — ADR0847-0851"
 snapshot:
@@ -11,6 +11,34 @@ status_values: [planned, in_progress, blocked, deferred, completed]
 release_requirement_values: [required, optional_assurance]
 
 tasks:
+  - id: AMR-WAVE5-001
+    priority: P0
+    area: native-manufacturing
+    title: Versioned BOM and reserved FIFO component issue to WIP and partial finished goods
+    status: in_progress
+    depends_on: [AMR-GLOBAL-001]
+    exit_evidence: Native golden and adversarial owner gates running; integrated HTTPS and restore pending.
+  - id: AMR-WAVE5-002
+    priority: P0
+    area: native-intercompany
+    title: Atomic paired books and settlement with native group elimination and reviewed report maps
+    status: in_progress
+    depends_on: [AMR-WAVE4-003]
+    exit_evidence: Five-effect golden passed at a711e682; integrated final source API/Studio/adversarial/restore pending.
+  - id: AMR-WAVE5-003
+    priority: P0
+    area: procurement-sourcing
+    title: Frozen RFQ quotations and independent selection to native budget purchase award
+    status: in_progress
+    depends_on: [AMR-WAVE4-002]
+    exit_evidence: First real PR/RFQ/award/receiving/AP/payment/budget release cycle passed; final source gates pending. BPC returns remain a dependency.
+  - id: AMR-WAVE5-004
+    priority: P0
+    area: measured-native-throughput
+    title: Optimize profiled native posting under unchanged financial and identity controls
+    status: in_progress
+    depends_on: [AMR-WAVE4-004]
+    exit_evidence: Actual636 descriptive100cycle CPU/SQL profile retained. Candidate4102b039 batches native scoped account reads and128row writes; finalhead quiet six alternating1K runs and new ERP loads pending.
   - id: AMR-WAVE4-001
     priority: P0
     area: original-customer-returns

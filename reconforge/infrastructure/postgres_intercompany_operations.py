@@ -66,6 +66,14 @@ class PostgresIntercompanyOperationsRepository:
                 scope.update(amount_minor=amount, currency_precision=precision)
             for permission in ("intercompany_operations." + operation, PERMISSIONS[operation]):
                 self.owner._actor(actor, permission, scope, mutation=operation != "read")
+        grants = self.connection.execute("""SELECT count(DISTINCT(scope_type,scope_id)) AS n
+            FROM reconforge.principal_scope_grants WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s
+            AND revoked_at IS NULL AND((scope_type='workspace' AND scope_id=%s) OR(scope_type='organization' AND scope_id=%s)
+            OR(scope_type='legal_entity' AND scope_id=ANY(%s)))""",
+            (self.tenant_id, actor.user_id, request["workspace_id"], request["organization_id"],
+             [request[book + "_entity_id"] for book in BOOKS])).fetchone()
+        if grants["n"] != 5:
+            fail("All three current persisted entity grants and their parent scopes are required.", "intercompany_scope_denied")
 
     def _parents(self, request: Mapping[str, Any], period_id: str) -> None:
         if self.connection.execute("SELECT id FROM reconforge.fiscal_periods WHERE tenant_id=%s AND id=%s AND application_workspace_id=%s FOR SHARE",

@@ -77,6 +77,14 @@ BEGIN
  PERFORM reconforge.ic_operation_assert(reconforge.sales_revenue_actor(NEW.tenant_id,NEW.actor_id,permission)
  AND reconforge.sales_revenue_actor(NEW.tenant_id,NEW.actor_id,'intercompany_operations.'||NEW.operation),
  'Intercompany commands require current persisted human finance and operation permissions');
+ PERFORM 1 FROM reconforge.principal_scope_grants WHERE tenant_id=NEW.tenant_id AND principal_type='user' AND principal_id=NEW.actor_id
+ AND revoked_at IS NULL AND((scope_type='workspace' AND scope_id=NEW.workspace_id) OR(scope_type='organization' AND scope_id=NEW.organization_id)
+ OR(scope_type='legal_entity' AND scope_id IN(NEW.seller_entity_id,NEW.buyer_entity_id,NEW.adjustment_entity_id))) ORDER BY scope_type,scope_id FOR SHARE;
+ PERFORM reconforge.ic_operation_assert((SELECT count(DISTINCT(scope_type,scope_id)) FROM reconforge.principal_scope_grants
+ WHERE tenant_id=NEW.tenant_id AND principal_type='user' AND principal_id=NEW.actor_id AND revoked_at IS NULL
+ AND((scope_type='workspace' AND scope_id=NEW.workspace_id) OR(scope_type='organization' AND scope_id=NEW.organization_id)
+ OR(scope_type='legal_entity' AND scope_id IN(NEW.seller_entity_id,NEW.buyer_entity_id,NEW.adjustment_entity_id))))=5,
+ 'Intercompany command requires all three current persisted entity grants and parent scopes');
  SELECT * INTO p FROM reconforge.intercompany_operation_plans WHERE tenant_id=NEW.tenant_id AND id=NEW.plan_id;
  SELECT * INTO period FROM reconforge.fiscal_periods WHERE tenant_id=NEW.tenant_id AND id=p.payload->>'period_id' FOR SHARE;
  PERFORM reconforge.ic_operation_assert(period.id IS NOT NULL AND period.status='Open' AND period.application_workspace_id=NEW.workspace_id

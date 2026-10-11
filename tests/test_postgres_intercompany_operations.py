@@ -20,6 +20,7 @@ from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreR
 from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.postgres_intercompany_operations import PostgresIntercompanyOperationsRepository
+from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from reconforge.platform.common import ServerPrincipal, server_principal_context
 from tests.test_postgres_inventory_receipt_posting import (
     ReceiptRuntime,
@@ -89,6 +90,13 @@ def seed_intercompany_masters(base: ReceiptRuntime) -> IntercompanyRuntime:
                            "intercompany_operations.review", "intercompany_operations.post"):
             identities.create_permission(tenant_id=base.tenant, permission_name=permission)
             identities.grant_permission(tenant_id=base.tenant, role_name="receipt-operator", permission_name=permission)
+        authority = PostgresScopeAuthorityRepository(connection)
+        for person in ("maker", "checker", "poster"):
+            for kind, identifier in (("workspace", "work"), ("organization", "org"), *( ("legal_entity", entity) for entity in sorted(ENTITIES))):
+                if connection.execute("SELECT 1 FROM reconforge.principal_scope_grants WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s AND scope_type=%s AND scope_id=%s AND revoked_at IS NULL",
+                                      (base.tenant, person, kind, identifier)).fetchone() is None:
+                    authority.grant(tenant_id=base.tenant, grant_id=f"ic-{person}-{identifier}", principal_type="user", principal_id=person,
+                                    scope_type=kind, scope_id=identifier, actor_id=person)
     return IntercompanyRuntime(base)
 
 
@@ -237,3 +245,43 @@ def test_all_three_current_scope_grants_and_retained_group_turnover_are_required
             repository.prepare_elimination(original["source_id"], period_id="period", posting_date="2026-10-04", reason="Group", command_id="prepare-group", actor=actor)
     with runtime.actor("maker") as (_, repository, actor):
         assert repository.get_plan(group["id"], actor=actor)["plan_digest"] == group["plan_digest"]
+
+
+def test_current_group_grant_revocation_after_source_wait_rejects_native_review(runtime: IntercompanyRuntime) -> None:
+    from queue import Queue
+    from time import monotonic, sleep
+
+    with runtime.actor("maker") as (_, repository, actor):
+        plan = repository.prepare(preparation(), command_id="prepare-original", actor=actor)
+    pids: Queue[int] = Queue()
+    def review() -> Any:
+        try:
+            with runtime.actor("checker") as (connection, repository, actor):
+                pids.put(connection.execute("SELECT pg_backend_pid() AS pid").fetchone()["pid"])
+                return repository.review(plan["id"], expected_plan_digest=plan["plan_digest"], reason="Wait then admit current group", command_id="blocked-review", actor=actor)
+        except FinancePostingError as exc:
+            return exc
+    blocker = runtime.base.factory.connect()
+    blocker.execute("SELECT set_config('app.tenant_id',%s,true),set_config('app.workspace_id','work',true),set_config('app.organization_id','org',true)", (runtime.base.tenant,))
+    blocker_pid = blocker.execute("SELECT pg_backend_pid() AS pid").fetchone()["pid"]
+    blocker.execute("SELECT id FROM reconforge.intercompany_operation_sources WHERE tenant_id=%s AND id=%s FOR UPDATE", (runtime.base.tenant, plan["source_id"]))
+    try:
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            future = workers.submit(review)
+            pid = pids.get(timeout=10)
+            with PostgresTenantBoundary(runtime.base.factory).transaction(runtime.base.tenant) as connection:
+                deadline = monotonic() + 10
+                while blocker_pid not in connection.execute("SELECT pg_blocking_pids(%s) AS pids", (pid,)).fetchone()["pids"]:
+                    assert monotonic() < deadline, "Actual source-row lock wait was not established"
+                    sleep(.02)
+                PostgresScopeAuthorityRepository(connection).revoke(tenant_id=runtime.base.tenant, grant_id="ic-checker-group", actor_id="maker", reason="Withdraw group authority during actual source lock wait")
+            blocker.rollback()
+            result = future.result(timeout=15)
+            assert isinstance(result, FinancePostingError) and result.code == "intercompany_scope_denied"
+    finally:
+        blocker.rollback()
+        blocker.close()
+    with runtime.actor("poster") as (connection, repository, actor):
+        assert repository.get_plan(plan["id"], actor=actor)["phase"] == 0
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.base.tenant,)).fetchone()["n"] == 0
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.intercompany_operation_commands WHERE tenant_id=%s AND command_id='blocked-review'", (runtime.base.tenant,)).fetchone()["n"] == 0

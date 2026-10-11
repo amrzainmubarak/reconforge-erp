@@ -134,6 +134,16 @@ def test_actual_manufacturing_requirement_to_reviewed_sourcing_budget_receipt_an
         native = repository.purchase.get(head["order_id"], actor=actor)["invoices"][-1]["native_invoice_id"]
         assert connection.execute("SELECT total_minor,status FROM reconforge.ap_supplier_invoices WHERE tenant_id=%s AND id=%s", (runtime.tenant, native)).fetchone()["total_minor"] == 7400
         assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (runtime.tenant,)).fetchone()["n"] == 5
+        # Oracle inputs are the original independent receipt values and the demanded base quantities.
+        # Manufacturing cost preparation is unposted; new purchase receiving adds 7400 and AP posts7400.
+        balances = connection.execute("""SELECT sum((line->>'debit_minor')::numeric) debit,sum((line->>'credit_minor')::numeric) credit
+            FROM reconforge.finance_posting_effects effect,jsonb_array_elements(effect.snapshot_json->'lines') line WHERE effect.tenant_id=%s""",
+            (runtime.tenant,)).fetchone()
+        assert (int(balances["debit"]), int(balances["credit"])) == (12000 + 3333 + 2 * 7400,) * 2
+        assert connection.execute("SELECT sum(remaining_value_minor) value FROM reconforge.inventory_cost_layers WHERE tenant_id=%s",
+            (runtime.tenant,)).fetchone()["value"] == 12000 + 3333 + 7400
+        envelope = repository.budgets.get(repository._scope(repository._row(head["id"])), budget["id"])
+        assert (envelope["reserved_minor"], envelope["consumed_minor"], envelope["available_minor"]) == ("0", "7400", "12600")
 
 
 @pytest.mark.parametrize("mismatch", ("item", "quantity", "digest", "scope"))
@@ -191,13 +201,15 @@ def test_linked_source_read_and_lost_ack_recheck_current_parent_permission_and_f
                     repository.create(request, command_id="linked-source-create", actor=actor)
         assert any(amount == Decimal(production["issue_plan"]["total_cost_minor"]) / 100 for amount in observed)
     assert source_digest(runtime) == before
-    with runtime.actor(CHECKER) as (connection, _, _):
+    with runtime.actor(MAKER) as (connection, _, actor):
+        # Preserve the already authenticated principal/actor snapshot across persisted revocation.
+        assert "manufacturing_execution.read" in actor.permissions
         connection.execute("UPDATE reconforge.identity_role_permissions SET active=FALSE,lifecycle_version=lifecycle_version+1,revoked_at=now(),revoked_by=%s,revocation_reason_code='access_change' WHERE tenant_id=%s AND permission_name='manufacturing_execution.read'",
-            ("id-" + CHECKER, runtime.tenant))
-    for operation in ("read", "replay"):
-        with runtime.actor(MAKER) as (connection, _, actor), pytest.raises(FinancePostingError):
-            repository = PostgresProcurementSourcingRepository(connection, runtime.tenant)
-            if operation == "read":
-                repository.get(head["id"], actor=actor)
-            else:
-                repository.create(request, command_id="linked-source-create", actor=actor)
+            (actor.user_id, runtime.tenant))
+        for operation in ("read", "replay"):
+            with pytest.raises(FinancePostingError):
+                repository = PostgresProcurementSourcingRepository(connection, runtime.tenant)
+                if operation == "read":
+                    repository.get(head["id"], actor=actor)
+                else:
+                    repository.create(request, command_id="linked-source-create", actor=actor)

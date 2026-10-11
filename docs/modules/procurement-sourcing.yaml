@@ -20,6 +20,7 @@ domain_invariants:
   - Source award and existing native budget Reserve and native purchase creation commit atomically
   - Existing inventory receiving, payable accrual and native budget Consume remain the sole financial owners
   - Current persisted human identity, roles, all three hierarchy grants, original precision and source authorization apply to lost acknowledgments
+  - Financial authorization admits the maximum original ceiling, all retained supplier offers and any proposed offer under the retained currency precision
   - SQL closure verifies every original demand, offer, approval, audit, outbox and exact historical replay response
   - Optional manufacturing provenance binds its actual immutable original requirement, canonical scope, exact base-unit quantity and current retained source authority
 domain_events: [procurement_sourcing_create, procurement_sourcing_open-rfq, procurement_sourcing_quote, procurement_sourcing_review-selection, procurement_sourcing_award, procurement_sourcing_cancel]
@@ -35,7 +36,7 @@ cli_commands: []
 ui_routes: [/procurement-sourcing, /procurement-partial, /budget-control]
 import_schemas: []
 export_schemas: [procurement-sourcing-v1, supplier-quotation-v1]
-synthetic_fixtures: [tests/test_procurement_sourcing.py, tests/test_postgres_procurement_sourcing.py, tests/procurement_sourcing_browser.py]
+synthetic_fixtures: [tests/test_procurement_sourcing.py, tests/test_postgres_procurement_sourcing.py, tests/test_postgres_manufacturing_sourcing.py, tests/procurement_sourcing_browser.py]
 threat_model:
   - Four FORCE RLS tables bind the original canonical tenant and hierarchy
   - Direct SQL mutations require current live persisted humans, all hierarchy grants and operation permissions
@@ -49,6 +50,7 @@ rollback_plan: Empty rollback only; retained original business history requires 
 test_matrix:
   domain: tests/test_procurement_sourcing.py
   postgres: tests/test_postgres_procurement_sourcing.py
+  manufacturing_provenance: tests/test_postgres_manufacturing_sourcing.py
   api: tests/test_postgres_procurement_sourcing_api.py
   web: apps/web/src/procurement-sourcing-data.test.ts
   web_lifecycle: apps/web/src/components/ProcurementSourcingPage.test.tsx
@@ -56,7 +58,7 @@ test_matrix:
 adapter_matrix:
   postgres: Composes sole native budget, procurement, AP, FIFO, cash installment and GL engines
   sqlite: No sourcing operational fallback; existing Community modules remain available
-runtime_acceptance: 26 actual native/API cases and 12 React data/lifecycle cases passed; final clean integrated HTTPS, linked-manufacturing and populated restore acceptance must be bound to the frozen integration source.
+runtime_acceptance: Incremental26 native/API and12 React cases passed; whole-offer financial-cap corrective gate and six actual ME1-to-SRC5-to-BPC cases passed, with independent posted GL/stock/budget and stale-principal revocation corrective checks. Final clean integrated HTTPS, PostgreSQL17.11 and populated restore acceptance remain required.
 limitations:
   - Original functional currency, zero tax and exact base units; no new FX, tax or currency engine
   - One approved appropriation in the original fiscal period

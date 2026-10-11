@@ -39,3 +39,15 @@ zero final WIP, exact native posting populations and snapshot seals, and retaine
 three-person source/effect identities. It does not authorize data writes, measure
 manufacturing throughput, or supply an external attestation. The caller must retain
 the original raw digest separately; hashing a replacement file is not sufficient.
+
+The optional bounded driver `.github/scripts/benchmark_manufacturing_api.py` uses
+the shared native HTTPS runtime. For each fresh synthetic tenant, it seeds the
+masters and two original material receipt postings before timing. It then times
+22 real API requests, including login/step-up, governed BOM and material issue,
+reviewed output cancellation, two partial good/scrap dispositions and the final
+native order read. Four manufacturing postings occur inside that business window;
+the independent oracle verifies those four and the two original input postings.
+Read-only native proof export and oracle latency are reported separately. Overall
+resource counters include the proof work; business-cycle latency excludes it.
+No output number from this driver establishes MRP coverage, concurrent production
+capacity, high-volume same-date receipt acceptance, or competitor superiority.

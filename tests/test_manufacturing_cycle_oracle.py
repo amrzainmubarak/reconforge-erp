@@ -128,6 +128,7 @@ def proof_fixture() -> dict[str, Any]:
                                                     "required_quantity_scaled": required, "requirement_json": payload, "requirement_digest": oracle.sha(payload)})
     for identifier, phase, good, scrap, before_q, before_v, good_v, scrap_v in (("ME1C-cancelled", 3, 3, 1, 0, 0, 870, 290), ("ME1C-first", 2, 3, 1, 0, 0, 870, 290), ("ME1C-final", 2, 6, 0, 4, 1160, 1740, 0)):
         child = {"id": identifier, "order_id": order["id"], **scope, "order_digest": source_digest, "issue_digest": order["issue_digest"], "preparer_actor_id": "maker",
+                 "receipt_identity_candidates": 1 if identifier != "ME1C-final" else 2,
                  "command_request": {"id": order["id"], "good": good, "scrap": scrap, "reason": "Synthetic lifecycle"}, "good_quantity_scaled": good, "scrap_quantity_scaled": scrap,
                  "stage_quantity_scaled": good + scrap, "disposed_before_scaled": before_q, "released_before_minor": before_v,
                  "good_cost_minor": good_v, "scrap_cost_minor": scrap_v, "released_cost_minor": good_v + scrap_v, "wip_after_minor": 2900 - before_v - good_v - scrap_v,

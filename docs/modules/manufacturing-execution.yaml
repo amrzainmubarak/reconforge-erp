@@ -60,11 +60,19 @@ threat_model:
   - concurrent sales and material reservations or overlapping output claims
   - late native effect failure, lost response and authority revoked during lock wait
   - detached public native receipt progression or original effect reversal
-benchmarks: []
+benchmarks:
+  - script: .github/scripts/benchmark_manufacturing_api.py
+    workload: bounded sequential fresh synthetic tenant cycles through normal verified HTTPS
+    timed_requests_per_cycle: 22
+    original_native_effects_verified_per_cycle: 6
+    preseeded_material_effects_outside_timing: 2
+    timed_manufacturing_effects_per_cycle: 4
+    acceptance: pending actual source-bound runtime; no manufacturing scale or performance superiority claim
 rollback_plan: empty owner data only; populated downgrade refuses atomically and retains native claim column and original history
 test_matrix:
   pure: tests/test_manufacturing_execution.py
   independent_oracle: tests/test_manufacturing_cycle_oracle.py
+  benchmark_contract: tests/test_manufacturing_api_benchmark.py
   native: tests/test_postgres_manufacturing_execution.py
   studio:
     - apps/web/src/manufacturing-execution-data.test.ts

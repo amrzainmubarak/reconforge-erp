@@ -67,4 +67,3 @@ limitations:
   - Manufacturing references retain original demand provenance, not net shortages or a complete MRP planning engine
   - Existing SR1 whole unissued unpaid zero-tax supplier returns do not accept budget-backed BPC orders; appropriation reinstatement and replacement capacity remain a separate source-owned extension
   - No throughput improvement, worldwide tax compliance or production-readiness claim
-

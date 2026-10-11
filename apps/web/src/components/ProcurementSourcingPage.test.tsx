@@ -58,4 +58,3 @@ it("ignores a command acknowledgment and following reads after its page is unmou
   view.unmount(); await act(async () => { finish(open.head); });
   expect(screen.queryByText("OpenRFQ")).toBeNull();
 });
-

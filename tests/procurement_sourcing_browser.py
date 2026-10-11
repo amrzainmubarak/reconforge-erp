@@ -68,4 +68,3 @@ def verify_procurement_sourcing_browser(runtime: ReceiptRuntime) -> dict[str, An
         return {"source_id": head["id"], "source_digest": head["source_digest"], "order_id": head["order_id"], "budget_id": head["budget_id"],
             "retained_offers": 2, "selected_supplier": "SUP", "three_independent_humans": True, "original_minor": "17000", "consumed_minor": "7400",
             "released_minor": "9600", "available_minor": "12600", "remaining_inventory_minor": "7400", "posting_effects": 5, "turnover_minor": "22200"}
-

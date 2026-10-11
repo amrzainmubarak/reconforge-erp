@@ -289,3 +289,55 @@ def test_populated_sourcing_migration_refuses_destructive_downgrade(sourcing_run
         admin.execute(DOWNGRADE_SQL)
     assert source_digest(runtime) == before
 
+
+@pytest.mark.parametrize("candidate", ("retained", "proposed"))
+def test_whole_offer_set_and_new_quote_obey_current_financial_cap(
+    sourcing_runtime: tuple[Any, dict[str, Any]], monkeypatch: pytest.MonkeyPatch, candidate: str,
+) -> None:
+    from decimal import Decimal
+
+    from reconforge.auth.policy import evaluate_principal_access
+    from reconforge.infrastructure import budget_control_repository
+
+    runtime, budget = sourcing_runtime
+    head = quoted(runtime, budget) if candidate == "retained" else stage(runtime, requisition(runtime, budget), "open-rfq", CHECKER)
+    before = source_digest(runtime)
+    observed: list[Decimal] = []
+
+    def bounded_policy(*args: Any, **kwargs: Any) -> Any:
+        observed.append(kwargs["amount"])
+        return evaluate_principal_access(*args, **kwargs, maximum_amount=Decimal("175.00"))
+
+    monkeypatch.setattr(budget_control_repository, "evaluate_principal_access", bounded_policy)
+    if candidate == "retained":
+        # A 170.00 winning offer cannot authorize disclosure of a rejected 180.00 offer.
+        for operation in ("read", "page", "create-replay", "quote-replay", "review", "cancel"):
+            observed.clear()
+            with runtime.actor(CHECKER if operation in {"review", "cancel"} else MAKER) as (connection, _, actor):
+                repository = PostgresProcurementSourcingRepository(connection, runtime.tenant)
+                with pytest.raises(BudgetControlError, match="current policy"):
+                    if operation == "read":
+                        repository.get(head["id"], actor=actor)
+                    elif operation == "page":
+                        repository.list_requisitions("work", actor=actor)
+                    elif operation == "create-replay":
+                        repository.create(RequisitionPreparation(budget_id=budget["id"], order=enterprise_request("SRC5-1"),
+                            reason="Actual source-owned mixed-unit demand"), command_id="source-create", actor=actor)
+                    elif operation == "quote-replay":
+                        repository.record_quotation(head["id"], SupplierQuotationPreparation(supplier_code="ALT",
+                            unit_prices_minor=(1300, 2000), valid_until="2026-10-31", reason="Retained supplier original commercial offer"),
+                            expected_version=2, command_id="quote-ALT", actor=actor)
+                    else:
+                        repository.act(head["id"], "review-selection" if operation == "review" else "cancel",
+                            expected_version=head["row_version"], command_id="cap-" + operation, reason="Cannot exceed retained evidence authority", actor=actor)
+            assert observed[-1] == Decimal("180.00")
+    else:
+        with runtime.actor(MAKER) as (connection, _, actor):
+            repository = PostgresProcurementSourcingRepository(connection, runtime.tenant)
+            assert repository.get(head["id"], actor=actor)["head"] == head
+            with pytest.raises(BudgetControlError, match="current policy"):
+                repository.record_quotation(head["id"], SupplierQuotationPreparation(supplier_code="ALT",
+                    unit_prices_minor=(1300, 2000), valid_until="2026-10-31", reason="A proposed offer also requires its full financial authority"),
+                    expected_version=head["row_version"], command_id="cap-new-quote", actor=actor)
+        assert observed[-1] == Decimal("180.00")
+    assert source_digest(runtime) == before

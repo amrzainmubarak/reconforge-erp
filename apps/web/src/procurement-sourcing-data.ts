@@ -145,4 +145,3 @@ export async function sourcingList(session: BrowserAdminSession, scope: Procurem
 export async function sourcingCommand(session: BrowserAdminSession, scope: ProcurementScope, command: PreparedScopedCommand): Promise<SourcingHead> {
   return parseSourcingAcknowledgement(await procurementFetch(session, scope.workspace_id, scope, command.path, { body: command.body }), scope, command);
 }
-

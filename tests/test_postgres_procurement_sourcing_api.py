@@ -79,4 +79,3 @@ def test_actual_api_requires_step_up_and_canonical_hierarchy(
         body["lines"] = [{**line, "unit_price_minor": str(line["unit_price_minor"])} for line in body["lines"]]
         response = client[0].post(ROOT, headers=client[1], json={**body, "budget_id": budget["id"], "reason": "Unassured actor", "command_id": "unassured"})
         assert response.status_code == 403 and response.json()["error"]["code"] == "step_up_required", response.text
-

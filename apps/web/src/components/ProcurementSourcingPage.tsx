@@ -181,4 +181,3 @@ function SourcingSession({ locale }: { locale: Locale }) {
     </>}
   </section>;
 }
-

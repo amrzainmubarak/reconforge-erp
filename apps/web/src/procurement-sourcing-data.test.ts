@@ -63,4 +63,3 @@ describe("actual retained source financial and evidence contract", () => {
     expect(() => parseSourcingAcknowledgement({ ...value.head, id: "foreign" }, scope, command)).toThrow();
   });
 });
-

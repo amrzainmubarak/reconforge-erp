@@ -102,4 +102,3 @@ def deterministic_winner(offers: tuple[tuple[str, str, int], ...], ceiling_minor
     if winner[2] > ceiling_minor:
         raise ProcurementPartialError("procurement_sourcing_ceiling_exceeded", "No retained offer meets the original independently approved demand ceiling.")
     return winner[0]
-

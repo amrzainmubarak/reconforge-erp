@@ -51,14 +51,17 @@ class PostgresProcurementSourcingRepository:
         order["lines"] = tuple(ProcurementOrderLine(**line) for line in order["lines"])
         return MultilineProcurementPreparation(**order)
 
-    def _row(self, identifier: str, *, lock: bool = False) -> dict[str, Any]:
-        query = ("SELECT * FROM reconforge.procurement_sourcing_requisitions WHERE tenant_id=%s AND id=%s FOR UPDATE" if lock
-                 else "SELECT * FROM reconforge.procurement_sourcing_requisitions WHERE tenant_id=%s AND id=%s")
+    def _row(self, identifier: str, *, lock: bool = False, read_lock: bool = False) -> dict[str, Any]:
+        query = "SELECT * FROM reconforge.procurement_sourcing_requisitions WHERE tenant_id=%s AND id=%s"
+        query += " FOR UPDATE" if lock else " FOR SHARE" if read_lock else ""
         return self.purchase._one(query, (self.tenant_id, exact_text(identifier)))
 
-    def _actor(self, row: Mapping[str, Any], actor: PostingActor, operation: str) -> None:
+    def _actor(self, row: Mapping[str, Any], actor: PostingActor, operation: str, *, proposed_minor: int = 0) -> None:
         scope = self._scope(row)
-        amount = Decimal((0, tuple(map(int, str(int(row["ceiling_minor"])))), -int(row["payload"]["currency_precision"])))
+        retained = self.connection.execute("SELECT coalesce(max(total_minor),0) highest FROM reconforge.procurement_sourcing_quotes WHERE tenant_id=%s AND requisition_id=%s",
+            (self.tenant_id, row["id"])).fetchone()["highest"]
+        exposed_minor = max(int(row["ceiling_minor"]), int(retained), proposed_minor)
+        amount = Decimal((0, tuple(map(int, str(exposed_minor))), -int(row["payload"]["currency_precision"])))
         for permission in sorted(PERMISSIONS["read"] | PERMISSIONS.get(operation, frozenset())):
             live = self.budgets._actor(scope, permission, write=operation != "read", amount=amount)
             if live.id != actor.user_id:
@@ -92,7 +95,7 @@ class PostgresProcurementSourcingRepository:
             return digest, None
         if (retained["requisition_id"], retained["actor_id"], retained["request_digest"]) != (row["id"], actor.user_id, digest):
             raise ProcurementPartialError("procurement_sourcing_command_conflict", "The command identifies another exact request, original source or human.")
-        self._actor(self._row(row["id"]), actor, operation)
+        self._actor(self._row(row["id"], read_lock=True), actor, operation)
         self.connection.execute("SELECT reconforge.ps_close(%s,%s)", (self.tenant_id, row["id"]))
         return digest, dict(retained["response_json"])
 
@@ -221,6 +224,7 @@ class PostgresProcurementSourcingRepository:
             if row["phase"] != 1:
                 raise ProcurementPartialError("procurement_sourcing_quote_conflict", "Only an independently opened RFQ may retain supplier offers.")
             order, total = quotation_order(self._order(row["payload"]), quote)
+            self._actor(row, actor, "quote", proposed_minor=total)
             count = self.connection.execute("SELECT count(*) n FROM reconforge.procurement_sourcing_quotes WHERE tenant_id=%s AND requisition_id=%s",
                 (self.tenant_id, identifier)).fetchone()["n"]
             if count >= MAX_QUOTES:
@@ -292,7 +296,7 @@ class PostgresProcurementSourcingRepository:
     def get(self, identifier: str, *, actor: PostingActor) -> dict[str, Any]:
         with self.connection.transaction():
             self.purchase._scope_transaction()
-            row = self._row(identifier)
+            row = self._row(identifier, read_lock=True)
             self._actor(row, actor, "read")
             self.connection.execute("SELECT reconforge.ps_close(%s,%s)", (self.tenant_id, identifier))
             head = self.connection.execute("SELECT reconforge.ps_public(%s,%s,%s) value",
@@ -315,4 +319,3 @@ class PostgresProcurementSourcingRepository:
             rows = self.connection.execute("SELECT id FROM reconforge.procurement_sourcing_requisitions WHERE tenant_id=%s AND workspace_id=%s ORDER BY id LIMIT 25",
                 (self.tenant_id, exact_text(workspace_id))).fetchall()
             return {"records": [self.get(row["id"], actor=actor)["head"] for row in rows]}
-

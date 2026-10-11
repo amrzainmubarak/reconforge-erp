@@ -113,8 +113,8 @@ function SourcingSession({ locale }: { locale: Locale }) {
   const independent = !!detail && identity?.id !== detail.head.creator_actor_id;
   const reviewer = independent && !detail?.quotations.some(q => q.payload.registrar_actor_id === identity?.id);
   const awarder = independent && ![detail?.head.rfq_approver_actor_id, detail?.head.selection_reviewer_actor_id, detail?.quotations.find(q => q.id === detail.head.selected_quote_id)?.payload.registrar_actor_id].includes(identity?.id);
-  return <section className="procurement-sourcing-page" aria-label={say("Procurement sourcing", "طلبات الشراء والمنافسات")}>
-    <h2>{say("Procurement sourcing", "طلبات الشراء والمنافسات")}</h2>
+  return <main id="main-content" className="procurement-sourcing-page" dir={ar ? "rtl" : "ltr"}>
+    <h1>{say("Procurement sourcing", "طلبات الشراء والمنافسات")}</h1>
     <p>{say("Retain exact demand, supplier offers and an independently reviewed lowest-cost selection. A third human publishes the existing budget-backed purchase order.", "احفظ الاحتياج وعروض الموردين واختيار أقل تكلفة بمراجعة مستقلة. ينشر شخص ثالث أمر الشراء المرتبط بالاعتماد القائم.")}</p>
     <p>{say("Scope: functional currency, zero tax, base units, 128 lines and 32 retained suppliers. Sourcing creates no stock or payable until native receiving and accrual. Manufacturing links refer to original requirements, without asserting a net shortage.", "النطاق: العملة الوظيفية وضريبة صفر والوحدات الأساسية و١٢٨ بندًا و٣٢ موردًا. لا ينشأ مخزون أو التزام مورد قبل الاستلام والاستحقاق القائمين. تشير روابط التصنيع إلى الاحتياجات الأصلية دون ادعاء عجز صافٍ.")}</p>
     {error && <p role="alert">{error}</p>}
@@ -160,7 +160,7 @@ function SourcingSession({ locale }: { locale: Locale }) {
           <button>{say("Create requisition", "إنشاء طلب الشراء")}</button>
         </fieldset></form>
       </details>}
-      {detail && <section aria-label={say("Original sourcing evidence", "أدلة مصدر الشراء")}><h3>{detail.head.number}</h3>
+      {detail && <section aria-label={say("Original sourcing evidence", "أدلة مصدر الشراء")}><h2>{detail.head.number}</h2>
         <p role="status">{say(detail.head.status, { Draft: "مسودة", OpenRFQ: "المنافسة مفتوحة", SelectionReviewed: "تمت مراجعة الاختيار", Awarded: "تمت الترسية", Cancelled: "ملغى" }[detail.head.status])}</p>
         <dl><div><dt>{say("Original ceiling in minor units", "السقف الأصلي بأصغر وحدة نقدية")}</dt><dd><bdi>{detail.head.ceiling_minor} {detail.head.currency_code}</bdi></dd></div><div><dt>{say("Original source digest", "بصمة المصدر الأصلي")}</dt><dd><code>{detail.head.source_digest}</code></dd></div><div><dt>{say("Audit event", "حدث المراجعة")}</dt><dd><code>{detail.head.evidence.audit_event_id}</code></dd></div><div><dt>{say("Outbox event", "حدث النشر")}</dt><dd><code>{detail.head.evidence.outbox_event_id}</code></dd></div></dl>
         <button disabled={locked} onClick={() => void inspect(detail.head.id)}>{say("Refresh this requisition", "تحديث هذا الطلب")}</button>
@@ -179,5 +179,5 @@ function SourcingSession({ locale }: { locale: Locale }) {
         {detail.head.order_id && <p>{say("Native purchase order", "أمر الشراء القائم")}: <code>{detail.head.order_id}</code> · <bdi>{"BPC1-" + detail.head.number}</bdi><br />{say("Open Partial procurement to submit, approve, receive, accrue, consume the appropriation and settle this original order.", "افتح المشتريات الجزئية لإرسال الأمر والموافقة والاستلام والترحيل واستهلاك الاعتماد وتسوية الأمر الأصلي.")}</p>}
       </section>}
     </>}
-  </section>;
+  </main>;
 }

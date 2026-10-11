@@ -40,6 +40,15 @@ it("reads native budgets with only canonical hierarchy IDs and exposes original 
   expect(vi.mocked(loadBudgetPage).mock.calls[0][1]).toEqual({ workspace_id: "work", organization_id: "org", legal_entity_id: "entity" });
   expect(screen.getByText("source-audit")).toBeVisible(); expect(screen.getByRole("button", { name: "Open RFQ independently" })).toBeEnabled();
 });
+it("provides the skip-link main target and changes direction while preserving inspected evidence", async () => {
+  const view = render(<ProcurementSourcingPage locale="en" />); await inspected();
+  expect(screen.getByRole("main")).toHaveAttribute("id", "main-content");
+  expect(screen.getByRole("main")).toHaveAttribute("dir", "ltr");
+  view.rerender(<ProcurementSourcingPage locale="ar" />);
+  expect(screen.getByRole("main")).toHaveAttribute("dir", "rtl");
+  expect(screen.getByRole("heading", { level: 1, name: "طلبات الشراء والمنافسات" })).toBeVisible();
+  expect(screen.getByText("source-audit")).toBeVisible();
+});
 it("retains exactly one original pending command and blocks new operations after lost response", async () => {
   vi.mocked(sourcingCommand).mockRejectedValueOnce(new Error("lost acknowledgment")).mockImplementationOnce(async () => { vi.mocked(sourcingGet).mockResolvedValue(open); return open.head; });
   render(<ProcurementSourcingPage locale="en" />); await inspected();

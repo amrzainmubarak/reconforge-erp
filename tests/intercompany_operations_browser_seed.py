@@ -1,11 +1,15 @@
 """Configure three native books; every IC1 source/effect is made by real Studio."""
 
 import hashlib
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 
+from reconforge.domain.finance_posting import PostingActor
 from reconforge.domain.financial_reporting import AccountClassification, ReportingScope
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
+from reconforge.infrastructure.postgres_intercompany_operations import PostgresIntercompanyOperationsRepository
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from tests.erp_browser_seed import seed_erp_browser_principals
 from tests.gfo_browser_restore import require
@@ -23,6 +27,28 @@ INTERCOMPANY_BROWSER_TABLES = (
     "intercompany_operation_links", "intercompany_operation_post_evidence", "intercompany_operation_commands",
     "financial_reporting_maps", "financial_reporting_map_reviews", "financial_reporting_commands",
 )
+
+INTERCOMPANY_RESTORE_TAMPER = (
+    "UPDATE reconforge.intercompany_operation_sources SET payload=payload||'{\"amount_minor\":1}'::jsonb WHERE tenant_id=%s",
+    "UPDATE reconforge.intercompany_operation_plans SET phase=0 WHERE tenant_id=%s AND kind='eliminate'",
+    "UPDATE reconforge.intercompany_operation_links SET posted_actor_id='maker' WHERE tenant_id=%s",
+)
+
+
+@contextmanager
+def intercompany_restore_tamper_actor(base: ReceiptRuntime) -> Iterator[tuple[Any, PostgresIntercompanyOperationsRepository, PostingActor]]:
+    """Probe retained IC1 rows through its existing authorized three-book context."""
+    with IntercompanyRuntime(base).actor("browser-poster") as (connection, repository, actor):
+        sources = connection.execute("SELECT id FROM reconforge.intercompany_operation_sources WHERE tenant_id=%s", (base.tenant,)).fetchall()
+        require(len(sources) == 1, "Restored tamper actor must see the actual original intercompany source.")
+        source = repository.get_source(sources[0]["id"], actor=actor)
+        require(source["closed"] and len(source["plans"]) == 3 and all(plan["phase"] == 2 for plan in source["plans"]),
+                "Restored tamper actor requires current whole-source authority over all three posted plans.")
+        plans = connection.execute("SELECT count(*) n FROM reconforge.intercompany_operation_plans WHERE tenant_id=%s AND phase=2", (base.tenant,)).fetchone()
+        links = connection.execute("SELECT count(*) n FROM reconforge.intercompany_operation_links WHERE tenant_id=%s", (base.tenant,)).fetchone()
+        require(plans is not None and plans["n"] == 3 and links is not None and links["n"] == 5,
+                "Restored tamper actor must see three posted plans and five exact native links.")
+        yield connection, repository, actor
 
 
 def seed_intercompany_browser(admin_dsn: str, app_dsn: str) -> ReceiptRuntime:

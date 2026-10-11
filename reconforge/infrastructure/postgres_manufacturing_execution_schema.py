@@ -85,7 +85,7 @@ BEGIN
  RETURN d.id IS NOT NULL AND reconforge.irp_scope(t,d.workspace_id,d.organization_id,d.legal_entity_id);
 END $me$;
 CREATE FUNCTION reconforge.me1_protect() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE a TEXT:=current_setting('app.manufacturing_execution_actor_id',true);p TEXT;d RECORD;
+DECLARE a TEXT:=current_setting('app.manufacturing_execution_actor_id',true);p TEXT;d RECORD;w TEXT;o TEXT;e TEXT;
 BEGIN
  IF TG_OP='DELETE' THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Manufacturing source history is immutable'; END IF;
  IF TG_TABLE_NAME IN('manufacturing_execution_events','manufacturing_execution_commands') THEN p:=reconforge.me1_permission(NEW.operation);
@@ -99,6 +99,16 @@ BEGIN
  END IF;
  IF NOT reconforge.sales_revenue_actor(NEW.tenant_id,a,p) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Manufacturing requires current persisted human authority'; END IF;
+ IF TG_TABLE_NAME IN('manufacturing_execution_events','manufacturing_execution_commands') THEN
+  IF left(NEW.object_id,5)='ME1B-' THEN SELECT workspace_id,organization_id,legal_entity_id INTO w,o,e FROM reconforge.manufacturing_execution_boms WHERE tenant_id=NEW.tenant_id AND id=NEW.object_id;
+  ELSIF left(NEW.object_id,5)='ME1C-' THEN SELECT workspace_id,organization_id,legal_entity_id INTO w,o,e FROM reconforge.manufacturing_execution_completions WHERE tenant_id=NEW.tenant_id AND id=NEW.object_id;
+  ELSE SELECT workspace_id,organization_id,legal_entity_id INTO w,o,e FROM reconforge.manufacturing_execution_orders WHERE tenant_id=NEW.tenant_id AND id=NEW.object_id;END IF;
+ ELSE w:=NEW.workspace_id;o:=NEW.organization_id;e:=NEW.legal_entity_id;END IF;
+ PERFORM 1 FROM reconforge.principal_scope_grants WHERE tenant_id=NEW.tenant_id AND principal_type='user' AND principal_id=a
+  AND revoked_at IS NULL AND((scope_type='workspace' AND scope_id=w) OR(scope_type='organization' AND scope_id=o) OR(scope_type='legal_entity' AND scope_id=e)) ORDER BY scope_type,scope_id FOR SHARE;
+ IF(SELECT count(DISTINCT(scope_type,scope_id)) FROM reconforge.principal_scope_grants WHERE tenant_id=NEW.tenant_id AND principal_type='user' AND principal_id=a
+  AND revoked_at IS NULL AND((scope_type='workspace' AND scope_id=w) OR(scope_type='organization' AND scope_id=o) OR(scope_type='legal_entity' AND scope_id=e)))<>3 THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Manufacturing requires all current persisted parent scopes';END IF;
  IF TG_OP='INSERT' THEN
   IF TG_TABLE_NAME IN('manufacturing_execution_boms','manufacturing_execution_orders','manufacturing_execution_completions') THEN
    IF NEW.phase<>0 THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Manufacturing sources are born unposted'; END IF;

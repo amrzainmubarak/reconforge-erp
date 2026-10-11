@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
 from typing import Any
 
@@ -21,6 +22,7 @@ from reconforge.infrastructure.postgres_manufacturing_execution_schema import (
     UPGRADE_SQL,
     install_postgres_manufacturing_execution_schema,
 )
+from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from tests.test_postgres_inventory_receipt_posting import (
     ReceiptRuntime,
     create_receipt_runtime,
@@ -49,6 +51,11 @@ def runtime(database: tuple[str, str], *, stock: bool = True) -> ReceiptRuntime:
     # Synthetic canonical master seeding uses the same broad fixture scope as the original IRP runtime.
     with PostgresTenantBoundary(result.factory).transaction(result.tenant) as connection:
         identity = PostgresIdentityRepository(connection)
+        authority = PostgresScopeAuthorityRepository(connection)
+        for person in ("maker", "checker", "poster"):
+            for kind, identifier in (("workspace", "work"), ("organization", "org"), ("legal_entity", "entity")):
+                authority.grant(tenant_id=result.tenant, grant_id=f"me1-{person}-{identifier}", principal_type="user",
+                    principal_id=person, scope_type=kind, scope_id=identifier, actor_id=person)
         for permission in sorted(set().union(*PERMISSIONS.values()) | {"inventory.manage", "inventory.post"}):
             identity.create_permission(tenant_id=result.tenant, permission_name=permission)
             identity.grant_permission(tenant_id=result.tenant, role_name="receipt-operator", permission_name=permission)
@@ -343,3 +350,146 @@ def test_requirement_json_cannot_mislabel_native_scalar_item_or_uom(manufacturin
         with pytest.raises(psycopg.errors.CheckViolation, match="immutable exact BOM demand"):
             reserved_order(system, bom=bom)
     assert retained_digest(system) == before
+
+
+def test_competing_partial_outputs_retain_one_original_claim_and_no_new_effect(manufacturing_database: tuple[str, str]) -> None:
+    import threading
+    system = runtime(manufacturing_database)
+    order = complete_issue(system)
+    barrier = threading.Barrier(2)
+
+    def claim(command: str) -> Any:
+        barrier.wait(timeout=20)
+        try:
+            return completion(system, order, command)
+        except FinancePostingError as exc:
+            return exc
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        attempts = [workers.submit(claim, "competing-" + str(index)) for index in range(2)]
+        results = [attempt.result(timeout=90) for attempt in attempts]
+    assert sum(isinstance(result, dict) for result in results) == 1
+    assert sum(isinstance(result, FinancePostingError) for result in results) == 1
+    with system.actor("poster") as (connection, _, actor):
+        source = PostgresManufacturingExecutionRepository(connection, system.tenant).get_order(order["id"], actor=actor)
+        assert len(source["completions"]) == 1 and source["wip_minor"] == 2900
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (system.tenant,)).fetchone()["n"] == 3
+
+
+def test_native_stock_sale_and_material_order_cannot_overreserve_shared_physical_stock(manufacturing_database: tuple[str, str]) -> None:
+    import threading
+
+    from tests.test_postgres_stock_sales import create_reserved_order, create_stock_runtime
+    system = runtime(manufacturing_database)
+    create_stock_runtime(manufacturing_database, base_runtime=system, seed_stock=False)
+    recipe = approved_bom(system)
+    barrier = threading.Barrier(2)
+
+    def reserve(manufacturing: bool) -> Any:
+        barrier.wait(timeout=20)
+        try:
+            return reserved_order(system, bom=recipe) if manufacturing else create_reserved_order(system, quantity="9")
+        except FinancePostingError as exc:
+            return exc
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        attempts = [workers.submit(reserve, value) for value in (True, False)]
+        results = [attempt.result(timeout=120) for attempt in attempts]
+    assert sum(isinstance(result, dict) for result in results) == 1
+    with system.actor("poster") as (connection, _, _):
+        total = connection.execute("""SELECT COALESCE(sum(q),0) q FROM(
+            SELECT quantity_scaled q FROM reconforge.stock_sales_reservations WHERE tenant_id=%s AND state='Active'
+            UNION ALL SELECT r.quantity_scaled FROM reconforge.manufacturing_execution_reservations r
+            JOIN reconforge.inventory_items i ON i.tenant_id=r.tenant_id AND i.id=r.item_id
+            WHERE r.tenant_id=%s AND r.state='Active' AND i.item_code='ITEM') x""", (system.tenant, system.tenant)).fetchone()["q"]
+        assert int(total) in {2, 9}
+        assert connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s", (system.tenant,)).fetchone()["n"] == 2
+
+
+def _actually_blocked(admin_dsn: str, pids: dict[str, int], key: str, holder: int) -> None:
+    import time
+
+    import psycopg
+    deadline = time.monotonic() + 20
+    with psycopg.connect(admin_dsn, autocommit=True) as observer:
+        while time.monotonic() < deadline:
+            if key in pids and holder in observer.execute("SELECT pg_blocking_pids(%s)", (pids[key],)).fetchone()[0]:
+                return
+            time.sleep(.025)
+    raise AssertionError("The command must actually block on its native lock before authority is withdrawn")
+
+
+def test_replay_rechecks_persisted_scope_after_actual_command_wait(manufacturing_database: tuple[str, str]) -> None:
+    from reconforge.domain.finance_posting import canonical_json
+    system = runtime(manufacturing_database)
+    order = reserved_order(system)
+    prepared = phase(system, order, "prepare")
+    before = retained_digest(system)
+    pids: dict[str, int] = {}
+
+    def replay() -> Any:
+        with system.actor("maker") as (connection, _, actor):
+            pids["retry"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            return PostgresManufacturingExecutionRepository(connection, system.tenant).act(order["id"], "prepare",
+                expected_digest=order["source_digest"], command_id=order["id"] + "-prepare", reason="Independent actual prepare", actor=actor)
+
+    assert replay() == prepared
+    with ThreadPoolExecutor(max_workers=1) as workers:
+        with PostgresTenantBoundary(system.factory).transaction(system.tenant) as holder:
+            holder_pid = holder.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            holder.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))", (canonical_json([system.tenant, "work", "manufacturing-execution", order["id"] + "-prepare"]),))
+            attempt = workers.submit(replay)
+            _actually_blocked(system.admin_dsn, pids, "retry", holder_pid)
+            with PostgresTenantBoundary(system.factory).transaction(system.tenant) as connection:
+                PostgresScopeAuthorityRepository(connection).revoke(tenant_id=system.tenant, grant_id="me1-maker-entity", actor_id="poster", reason="Withdraw exact entity during lost-response wait")
+        with pytest.raises(FinancePostingError, match="persisted.*grants"):
+            attempt.result(timeout=60)
+    assert retained_digest(system) == before
+
+
+def test_requirement_read_waits_for_parent_and_rechecks_current_source_scope(manufacturing_database: tuple[str, str]) -> None:
+    system = runtime(manufacturing_database)
+    order = reserved_order(system)
+    before = retained_digest(system)
+    pids: dict[str, int] = {}
+
+    def read() -> Any:
+        with system.actor("maker") as (connection, _, actor):
+            pids["read"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            return PostgresManufacturingExecutionRepository(connection, system.tenant).get_requirement(order["requirements"][0]["requirement_id"], actor=actor)
+
+    with ThreadPoolExecutor(max_workers=1) as workers:
+        with PostgresTenantBoundary(system.factory).transaction(system.tenant) as holder:
+            holder_pid = holder.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            holder.execute("SELECT id FROM reconforge.manufacturing_execution_orders WHERE tenant_id=%s AND id=%s FOR UPDATE", (system.tenant, order["id"]))
+            attempt = workers.submit(read)
+            _actually_blocked(system.admin_dsn, pids, "read", holder_pid)
+            with PostgresTenantBoundary(system.factory).transaction(system.tenant) as connection:
+                PostgresScopeAuthorityRepository(connection).revoke(tenant_id=system.tenant, grant_id="me1-maker-entity", actor_id="poster", reason="Withdraw source scope while requirement waits")
+        with pytest.raises(FinancePostingError, match="persisted.*grants"):
+            attempt.result(timeout=60)
+    assert retained_digest(system) == before
+
+
+def test_ordinary_native_receipt_needs_no_manufacturing_table_privilege(manufacturing_database: tuple[str, str]) -> None:
+    import psycopg
+    from psycopg import sql
+
+    from tests.test_postgres_inventory_receipt_posting import prepare_and_review
+    admin_dsn, app_dsn = manufacturing_database
+    ordinary = create_receipt_runtime(manufacturing_database)
+    user = psycopg.conninfo.conninfo_to_dict(app_dsn)["user"]
+    tables = ["manufacturing_execution_" + name for name in ("boms", "orders", "requirements", "reservations", "completions", "events", "commands")]
+    try:
+        with psycopg.connect(admin_dsn) as admin:
+            for table in tables:
+                admin.execute(sql.SQL("REVOKE ALL ON reconforge.{} FROM {}").format(sql.Identifier(table), sql.Identifier(user)))
+        plan, review = prepare_and_review(ordinary)
+        with ordinary.actor("poster") as (_, receipts, actor):
+            effect = receipts.commit(plan["plan_id"], command_id="commit-1", expected_review_digest=review["review_digest"], reason="Publish", actor=actor)
+            assert effect["effect_id"] == plan["artifacts"]["posting_effect_id"]
+            assert receipts.get_plan(plan["plan_id"], actor=actor)["effect"] == effect
+    finally:
+        with psycopg.connect(admin_dsn) as admin:
+            for table in tables:
+                admin.execute(sql.SQL("GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{} TO {}").format(sql.Identifier(table), sql.Identifier(user)))

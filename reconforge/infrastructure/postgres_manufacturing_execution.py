@@ -108,6 +108,13 @@ class PostgresManufacturingExecutionRepository:
             financial.update(amount_minor=cost["total_cost_minor"], currency_precision=source["monetary_policy"]["precision"])
         for permission in sorted(PERMISSIONS.get(operation, READ)):
             self.owner._actor(actor, permission, financial, mutation=operation != "read")
+        grants = self.connection.execute("""SELECT count(DISTINCT(scope_type,scope_id)) AS n
+            FROM reconforge.principal_scope_grants WHERE tenant_id=%s AND principal_type='user' AND principal_id=%s
+            AND revoked_at IS NULL AND((scope_type='workspace' AND scope_id=%s) OR(scope_type='organization' AND scope_id=%s)
+            OR(scope_type='legal_entity' AND scope_id=%s))""", (self.tenant_id, actor.user_id,
+            source["workspace_id"], source["organization_id"], source["legal_entity_id"])).fetchone()
+        if grants["n"] != 3:
+            fail("Current persisted workspace, organization and entity grants are required.", "manufacturing_execution_scope_denied")
         if operation != "read":
             self.connection.execute("SELECT set_config('app.manufacturing_execution_actor_id',%s,true)", (actor.user_id,))
 
@@ -117,9 +124,10 @@ class PostgresManufacturingExecutionRepository:
         row = self._one(query, (self.tenant_id, text(identifier, "bom_id")))
         return {**row["payload"], "phase": row["phase"], "source_digest": row["source_digest"], "reviewer_id": row["reviewer_id"]}
 
-    def _order(self, identifier: str, *, lock: bool = False) -> dict[str, Any]:
+    def _order(self, identifier: str, *, lock: bool = False, read_lock: bool = False) -> dict[str, Any]:
         query = ("SELECT * FROM reconforge.manufacturing_execution_orders WHERE tenant_id=%s AND id=%s FOR UPDATE"
-                 if lock else "SELECT * FROM reconforge.manufacturing_execution_orders WHERE tenant_id=%s AND id=%s")
+                 if lock else "SELECT * FROM reconforge.manufacturing_execution_orders WHERE tenant_id=%s AND id=%s FOR SHARE"
+                 if read_lock else "SELECT * FROM reconforge.manufacturing_execution_orders WHERE tenant_id=%s AND id=%s")
         row = self._one(query, (self.tenant_id, text(identifier, "order_id")))
         return {**row["payload"], **{key: row[key] for key in ("phase", "source_digest", "issue_plan", "issue_digest",
                 "issue_reviewer_id", "issue_effect_id", "valuation_id", "disposed_quantity_scaled", "released_cost_minor")}}
@@ -624,7 +632,7 @@ class PostgresManufacturingExecutionRepository:
 
     def get_order(self, order_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self._transaction(write=False):
-            order = self._order(order_id)
+            order = self._order(order_id, read_lock=True)
             self._actor(actor, "read", order)
             self.connection.execute("SELECT reconforge.me1_close(%s,%s)", (self.tenant_id, order_id))
             completions = records(self.connection.execute("SELECT id FROM reconforge.manufacturing_execution_completions WHERE tenant_id=%s AND order_id=%s ORDER BY id COLLATE \"C\"", (self.tenant_id, order_id)))
@@ -644,7 +652,7 @@ class PostgresManufacturingExecutionRepository:
     def get_requirement(self, requirement_id: str, *, actor: PostingActor) -> dict[str, Any]:
         with self._transaction(write=False):
             row = self._one("SELECT * FROM reconforge.manufacturing_execution_requirements WHERE tenant_id=%s AND id=%s", (self.tenant_id, requirement_id))
-            order = self._order(row["order_id"])
+            order = self._order(row["order_id"], read_lock=True)
             self._actor(actor, "read", order)
             self.connection.execute("SELECT reconforge.me1_close(%s,%s)", (self.tenant_id, order["id"]))
             if digest_payload(row["requirement_json"]) != row["requirement_digest"]:

@@ -131,6 +131,20 @@ def test_server_identity_binds_actual_child_run_and_module_origin(tmp_path: Path
                          {"status": "available", "pid": 123, "cpu_seconds": 2., "birth_identity": "new"})
 
 
+def test_tracked_clean_checkout_cannot_import_nonignored_untracked_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "tracked.py").write_text("retained = True\n", encoding="utf-8")
+    answers = {("ls-files", "-z"): "tracked.py\0", ("rev-parse", "HEAD"): "fixed-commit\n",
+               ("status", "--porcelain", "--untracked-files=no"): "",
+               ("ls-files", "--others", "--exclude-standard", "-z"): "reconforge/untracked_extension.py\0"}
+    monkeypatch.setattr(common, "command", lambda args, **kwargs: SimpleNamespace(stdout=answers[tuple(args[1:])]))
+    state = common.source_state(tmp_path)
+    assert state["tracked_status"] == "" and state["nonignored_untracked_files"] == ["reconforge/untracked_extension.py"]
+    report = accepted()
+    report["source_before"] = report["source_after"] = state
+    with pytest.raises(ValueError, match="clean source"):
+        common.require_common_completion(report, 20)
+
+
 def test_exited_launcher_still_closes_owned_child_but_never_reused_pid(monkeypatch: pytest.MonkeyPatch) -> None:
     commands = []
     server = SimpleNamespace(pid=123, poll=lambda: 0)

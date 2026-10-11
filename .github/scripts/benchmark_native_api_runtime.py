@@ -68,7 +68,8 @@ def source_state(root: Path) -> dict[str, Any]:
         digest.update(hashlib.sha256((root / name).read_bytes()).digest())
     return {"commit": command(["git", "rev-parse", "HEAD"], cwd=root).stdout.strip(),
             "tracked_sha256": digest.hexdigest(),
-            "tracked_status": command(["git", "status", "--porcelain", "--untracked-files=no"], cwd=root).stdout}
+            "tracked_status": command(["git", "status", "--porcelain", "--untracked-files=no"], cwd=root).stdout,
+            "nonignored_untracked_files": list(filter(None, command(["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd=root).stdout.split("\0")))}
 
 
 def summary(values: list[float]) -> dict[str, Any]:
@@ -314,7 +315,7 @@ def require_common_completion(report: dict[str, Any], expected_requests_per_cycl
         raise ValueError("Explicit bounded scenario request contract required")
     if len(requests) != count * expected_requests_per_cycle or any(type(row["cycle"]) is not int or row["cycle"] not in range(count) or row["status"] != 200 or "exception_type" in row for row in requests) or any(sum(row["cycle"] == index for row in requests) != expected_requests_per_cycle for index in range(count)):
         raise ValueError("Every declared actual HTTPS request must complete successfully")
-    if report["resource_samples"]["status"] != "complete" or report["source_before"] != report["source_after"] or report["source_after"]["tracked_status"]:
+    if report["resource_samples"]["status"] != "complete" or report["source_before"] != report["source_after"] or report["source_after"]["tracked_status"] or report["source_after"].get("nonignored_untracked_files"):
         raise ValueError("Complete resource observation and unchanged clean source required")
     if not report["owned_container_removed"] or not report["owned_https_process_stopped"]:
         raise ValueError("Owned process and container cleanup required")
@@ -386,7 +387,7 @@ def run(scenario: NativeApiScenario, argv: list[str] | None = None) -> int:
 
     try:
         report["source_before"] = source_state(runtime_root)
-        if report["source_before"]["tracked_status"]:
+        if report["source_before"]["tracked_status"] or report["source_before"]["nonignored_untracked_files"]:
             raise ValueError("Frozen clean runtime checkout required")
         password, app_password = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
         secrets_to_redact.extend((password, app_password))

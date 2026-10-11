@@ -39,7 +39,7 @@ export async function parseManufacturing(value: unknown, scope: FinanceScope): P
     if (!integer(value.output_quantity_scaled) || !Array.isArray(value.components) || value.components.length < 1 || value.components.length > 100 ||
         value.phase === 1 && (!text(value.reviewer_id) || value.reviewer_id === value.creator_id)) invalid();
   } else if (child) {
-    for (const key of ["good_quantity_scaled", "scrap_quantity_scaled", "stage_quantity_scaled", "good_cost_minor", "scrap_cost_minor", "released_cost_minor"]) if (!integer(value[key])) invalid();
+    for (const key of ["good_quantity_scaled", "scrap_quantity_scaled", "stage_quantity_scaled", "good_cost_minor", "scrap_cost_minor", "released_cost_minor", "disposed_before_scaled", "released_before_minor", "wip_after_minor"]) if (!integer(value[key])) invalid();
     if (BigInt(String(value.good_quantity_scaled)) + BigInt(String(value.scrap_quantity_scaled)) !== BigInt(String(value.stage_quantity_scaled)) ||
         BigInt(String(value.good_cost_minor)) + BigInt(String(value.scrap_cost_minor)) !== BigInt(String(value.released_cost_minor))) invalid();
     if ([1, 2].includes(Number(value.phase)) && (!text(value.reviewer_id) || value.reviewer_id === value.preparer_actor_id)) invalid();
@@ -75,6 +75,25 @@ export async function parseManufacturing(value: unknown, scope: FinanceScope): P
         posted.reduce((sum, part) => sum + BigInt(String(part.released_cost_minor)), 0n) !== BigInt(String(value.released_cost_minor))) invalid();
   }
   return value as ManufacturingSource;
+}
+export function applyManufacturingCompletion(order: ManufacturingSource, child: ManufacturingSource): ManufacturingSource {
+  if (!child.id.startsWith("ME1C-") || child.order_id !== order.id || child.order_digest !== order.source_digest || child.issue_digest !== order.issue_digest || !order.issue_plan) invalid();
+  const retained = order.completions?.find(row => row.id === child.id);
+  if (retained && retained.source_digest !== child.source_digest) invalid();
+  const terminal = retained && retained.phase >= 2 && child.phase < 2 ? retained : child;
+  if (retained && retained.phase >= 2 && child.phase >= 2 && retained.phase !== child.phase) invalid();
+  const completions = [terminal, ...(order.completions ?? []).filter(row => row.id !== child.id)];
+  if (child.phase !== 2) return { ...order, completions };
+  const disposed = BigInt(String(child.disposed_before_scaled)) + BigInt(String(child.stage_quantity_scaled));
+  const released = BigInt(String(child.released_before_minor)) + BigInt(String(child.released_cost_minor));
+  const originalQuantity = BigInt(String(order.output_quantity_scaled)), originalCost = BigInt(order.issue_plan.total_cost_minor);
+  if (disposed > originalQuantity || released > originalCost || originalCost - released !== BigInt(String(child.wip_after_minor))) invalid();
+  // Historical ACKs cannot reduce a later retained parent projection.
+  const currentDisposed = BigInt(String(order.disposed_quantity_scaled)), currentReleased = BigInt(String(order.released_cost_minor));
+  if ((disposed < currentDisposed) !== (released < currentReleased)) invalid();
+  const finalDisposed = disposed > currentDisposed ? disposed : currentDisposed, finalReleased = released > currentReleased ? released : currentReleased;
+  if ((finalDisposed === originalQuantity) !== (finalReleased === originalCost)) invalid();
+  return { ...order, completions, disposed_quantity_scaled: finalDisposed.toString(), released_cost_minor: finalReleased.toString(), wip_minor: (originalCost - finalReleased).toString(), phase: finalDisposed === originalQuantity ? 4 : 3 };
 }
 export async function manufacturingRequest(session: BrowserAdminSession, scope: FinanceScope, path: string, command?: PreparedScopedCommand, signal?: AbortSignal): Promise<Record<string, unknown>> {
   const result = await financeRequest(session, scope, path, command?.body, signal); if (!record(result)) invalid(); return result;

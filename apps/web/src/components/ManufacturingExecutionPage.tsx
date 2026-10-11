@@ -3,7 +3,7 @@ import { useBrowserSession } from "../browserSession";
 import { loadBudgetIdentity, type BudgetIdentity } from "../budget-control-data";
 import { AdminApiError, beginBrowserAdminSession, endBrowserAdminSession, stepUpBrowserAdminSession } from "../data";
 import type { FinanceScope } from "../enterprise-finance-data";
-import { manufacturingRequest, parseManufacturing, type ManufacturingSource } from "../manufacturing-execution-data";
+import { applyManufacturingCompletion, manufacturingRequest, parseManufacturing, type ManufacturingSource } from "../manufacturing-execution-data";
 import { prepareScopedCommand, type PreparedScopedCommand, type ScopedJsonValue } from "../scoped-command";
 import type { Locale } from "../types";
 import "./FinancialReportingPage.css";
@@ -80,7 +80,11 @@ function ProductionSession({ locale }: { locale: Locale }) {
         if (command.path.endsWith(`/${action}`) && value.phase !== expected) throw new Error("phase_mismatch");
       if (!current()) return;
       if (value.id.startsWith("ME1B-")) { setBom(value); setBoms(old => [value, ...old.filter(row => row.id !== value.id)]); }
-      else if (value.id.startsWith("ME1C-")) { setChild(value); setOrder(old => old ? { ...old, completions: [value, ...(old.completions ?? []).filter(row => row.id !== value.id)] } : old); }
+      else if (value.id.startsWith("ME1C-")) {
+        if (!order) throw new Error("parent_missing");
+        const parent = applyManufacturingCompletion(order, value);
+        setChild(parent.completions?.find(row => row.id === value.id) ?? value); setOrder(parent); setOrders(old => [parent, ...old.filter(row => row.id !== parent.id)]);
+      }
       else { setOrder(value); setOrders(old => [value, ...old.filter(row => row.id !== value.id)]); }
       setPending(null); setReason(""); setRefresh(old => old + 1);
     } catch (caught) { if (current()) { if (!(caught instanceof AdminApiError) || caught.status >= 500) setError("unknown"); else { setPending(null); fail(caught); } } }

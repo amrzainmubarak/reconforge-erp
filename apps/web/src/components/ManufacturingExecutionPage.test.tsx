@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { loadBudgetIdentity } from "../budget-control-data";
-import { manufacturingFixture } from "../manufacturing-execution-test-fixtures";
+import { manufacturingCompletionFixture, manufacturingFixture } from "../manufacturing-execution-test-fixtures";
 import { ManufacturingExecutionPage } from "./ManufacturingExecutionPage";
 const session = { tenantId: "synthetic", csrfToken: "csrf", expiresAt: "2099-01-01T00:00:00Z" };
 vi.mock("../browserSession", () => ({ useBrowserSession: () => ({ session, revision: 1, username: "poster", isCurrent: () => true }) }));
@@ -48,4 +48,27 @@ it("renders explicit manufacturing bounds with Arabic RTL", () => {
   const view = render(<ManufacturingExecutionPage locale="ar" />);
   expect(view.container.querySelector("main")).toHaveAttribute("dir", "rtl");
   expect(screen.getByRole("heading", { name: "التنفيذ الصناعي بالتكلفة الفعلية" })).toBeInTheDocument();
+});
+it("retains final posted output ACK, zero WIP and terminal parent when follow-up native GET fails", async () => {
+  const parent = await manufacturingFixture(3), reviewed = await manufacturingCompletionFixture(1), posted = await manufacturingCompletionFixture(2);
+  let committed = false;
+  vi.stubGlobal("fetch", vi.fn(async (_url: unknown, init?: RequestInit) => {
+    if (init?.method === "POST") { committed = true; return new Response(JSON.stringify({ completion: posted })); }
+    return committed ? new Response("unavailable", { status: 503 }) : new Response(JSON.stringify({ boms: [], orders: [{ ...parent, completions: [reviewed] }] }));
+  }));
+  render(<ManufacturingExecutionPage locale="en" />);
+  await waitFor(() => expect(screen.getByLabelText("Workspace ID")).toHaveValue("work"));
+  fireEvent.click(screen.getByRole("button", { name: "Apply scope" }));
+  const select = screen.getByRole("combobox", { name: "Retained production order" });
+  await waitFor(() => expect(select.querySelectorAll("option")).toHaveLength(2));
+  fireEvent.change(select, { target: { value: parent.id } });
+  fireEvent.change(screen.getByRole("combobox", { name: "Retained output disposition" }), { target: { value: reviewed.id } });
+  const form = screen.getByRole("form", { name: "Post complete native effects" });
+  fireEvent.change(within(form).getByLabelText("Reason"), { target: { value: "Final exact native production disposition" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Post complete native effects" }));
+  await screen.findByRole("alert");
+  expect(screen.getByText("0", { selector: "bdi" })).toBeInTheDocument();
+  expect(screen.queryByRole("form", { name: "Prepare partial good output and abnormal scrap" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Post complete native effects" })).not.toBeInTheDocument();
+  expect(screen.getAllByText(/effect-output/).length).toBeGreaterThan(0);
 });

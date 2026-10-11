@@ -27,7 +27,7 @@ import_schemas: []
 export_schemas: [intercompany-native-evidence-v1, intercompany-native-group-report-v1]
 synthetic_fixtures: [tests/test_postgres_intercompany_operations.py, tests/intercompany_operations_browser_seed.py]
 threat_model: docs/operator/intercompany-operations.md
-benchmarks: []
+benchmarks: [.github/scripts/benchmark_intercompany_api.py]
 rollback_plan: Empty additive owner tables may downgrade; retained financial sources refuse destructive downgrade and require populated restore.
 test_matrix:
   exact_domain: tests/test_intercompany_operations.py
@@ -35,6 +35,7 @@ test_matrix:
   api_contract: tests/test_api_intercompany_operations.py
   native_http: tests/test_postgres_intercompany_operations_api.py
   independent_integer_oracle: tests/test_intercompany_cycle_oracle.py
+  bounded_https_benchmark_contract: tests/test_intercompany_api_benchmark.py
   studio_contract: apps/web/src/intercompany-operations-data.test.ts
   studio_workflow: apps/web/src/components/IntercompanyOperationsPage.test.tsx
   actual_https_restore: apps/web/live/intercompany-operations-cycles.spec.ts

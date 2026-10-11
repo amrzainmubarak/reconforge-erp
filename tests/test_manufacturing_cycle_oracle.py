@@ -28,7 +28,7 @@ def proof_fixture() -> dict[str, Any]:
              "manufacturing_execution_completions", "manufacturing_execution_commands", "manufacturing_execution_events",
              "inventory_cost_layers", "inventory_layer_consumptions", "inventory_receipt_plans", "inventory_receipt_links",
              "finance_entries", "finance_entry_lines", "finance_entry_line_dimensions", "finance_posting_effects",
-             "finance_accounts", "domain_audit_events", "outbox_events"]
+             "finance_accounts", "domain_audit_events", "outbox_events", "inventory_valuation_documents", "inventory_valuation_lines", "inventory_movements", "inventory_movement_lines"]
     tables: dict[str, list[dict[str, Any]]] = {name: [] for name in names}
 
     def add(name: str, row: dict[str, Any]) -> dict[str, Any]:
@@ -63,19 +63,28 @@ def proof_fixture() -> dict[str, Any]:
                 "finance_snapshot": entry["snapshot"] if entry else {}, "artifacts": {"posting_effect_id": "effect-entry-" + identifier}}
         plan["plan_digest"] = oracle.sha(plan)
         add("inventory_receipt_plans", {"id": plan["plan_id"], "source_number": identifier, "operation": "Receipt", "plan_json": plan,
+                                      **scope, "location_id": "location", "valuation_line_id": "vl-" + identifier, "valuation_document_id": "vd-" + identifier,
+                                      "movement_id": "move-" + identifier, "movement_line_id": "ml-" + identifier,
                                       "plan_digest": plan["plan_digest"], "cost_layer_id": "layer-" + identifier, "item_id": item, "uom_id": uom,
                                       "quantity_scaled": quantity, "total_value_minor": cost, "inventory_account_id": inventory,
                                       "receipt_clearing_account_id": offset, "posting_effect_id": "effect-entry-" + identifier, "finance_entry_id": "entry-" + identifier})
         if posted:
             add("inventory_receipt_links", {"id": plan["plan_id"], "plan_id": plan["plan_id"], "posting_effect_id": "effect-entry-" + identifier, "finance_entry_id": "entry-" + identifier})
             add("inventory_cost_layers", {"id": "layer-" + identifier, "item_id": item, "uom_id": uom, "created_at": "2026-10-03",
+                                         "workspace_id": scope["workspace_id"], "legal_entity_id": scope["legal_entity_id"], "source_valuation_line_id": "vl-" + identifier,
                                          "original_quantity_scaled": quantity, "remaining_quantity_scaled": quantity,
                                          "original_value_minor": cost, "remaining_value_minor": cost})
+            add("inventory_valuation_documents", {"id": "vd-" + identifier, **scope, "movement_id": "move-" + identifier, "status": "Approved"})
+            add("inventory_valuation_lines", {"id": "vl-" + identifier, "valuation_document_id": "vd-" + identifier, "item_id": item, "uom_id": uom,
+                                              "quantity_scaled": quantity, "value_minor": cost, "flow_direction": "Inbound", "inventory_account_id": inventory, "offset_account_id": offset})
+            add("inventory_movements", {"id": "move-" + identifier, **scope, "status": "Posted", "movement_type": "Receipt"})
+            add("inventory_movement_lines", {"id": "ml-" + identifier, "movement_id": "move-" + identifier, "item_id": item, "uom_id": uom,
+                                            "quantity_scaled": quantity, "from_location_id": None, "to_location_id": "location"})
         return plan
 
     source = {"id": "ME1-order", **scope, "organization_code": "ORG", "entity_code": "ENTITY", "currency_code": "USD", "monetary_policy": policy,
               "bom_version_id": "ME1B-recipe", "output_quantity_scaled": 10, "output_item_id": "PRODUCT", "wip_account_id": "WIP", "scrap_account_id": "SCRAP",
-              "command_request": {"number": "PRODUCTION-1"}}
+              "command_request": {"number": "PRODUCTION-1", "reason": "Synthetic lifecycle"}}
     components, issue_components = [], []
     for item, uom, precision, original_q, original_v, required_q in (("ITEM", "EA", 0, 10, 12000, 2), ("MATERIAL", "KG", 3, 20000, 3333, 3000)):
         receipt(item, item, uom, original_q, original_v, "INVENTORY", "CLEARING")
@@ -88,15 +97,15 @@ def proof_fixture() -> dict[str, Any]:
         layer = tables["inventory_cost_layers"][-1]
         layer.update(remaining_quantity_scaled=original_q - required_q, remaining_value_minor=original_v - cost)
         add("inventory_layer_consumptions", {"id": "consumed-" + item, "cost_layer_id": layer["id"], "quantity_scaled": required_q, "value_minor": cost})
-    recipe = {"id": "ME1B-recipe", **scope, "components": components, "output_quantity_scaled": 10, "command_request": {"number": "BOM-1"}}
-    bom = add("manufacturing_execution_boms", {"id": recipe["id"], "payload": recipe, "phase": 1, "source_digest": oracle.sha(recipe)})
+    recipe = {"id": "ME1B-recipe", **scope, "components": components, "output_quantity_scaled": 10, "command_request": {"number": "BOM-1", "reason": "Synthetic lifecycle"}}
+    bom = add("manufacturing_execution_boms", {"id": recipe["id"], "payload": recipe, "phase": 1, "source_digest": oracle.sha(recipe), "reviewer_id": "checker"})
     source["bom_digest"] = bom["source_digest"]
     source_digest = oracle.sha(source)
     issue = {"source_digest": source_digest, "components": issue_components, "total_cost_minor": 2900, "preparer_actor_id": "maker",
              "entry": journal("issue", [("WIP", 2900, 0), ("INVENTORY", 0, 2900)])}
     order = add("manufacturing_execution_orders", {"id": source["id"], "payload": source, "phase": 4, "source_digest": source_digest,
                                                   "issue_plan": issue, "issue_digest": oracle.sha(issue), "issue_effect_id": "effect-issue", "issue_reviewer_id": "checker",
-                                                  "disposed_quantity_scaled": 10, "released_cost_minor": 2900})
+                                                  "disposed_quantity_scaled": 10, "released_cost_minor": 2900, "valuation_id": "issued-valuation"})
     for component in components:
         identifier, required = "require-" + component["item_id"], component["quantity_scaled"]
         payload = {"schema_version": "manufacturing-requirement-v1", "requirement_id": identifier, "order_id": order["id"], "bom_version_id": bom["id"],
@@ -107,7 +116,7 @@ def proof_fixture() -> dict[str, Any]:
                                                     "required_quantity_scaled": required, "requirement_json": payload, "requirement_digest": oracle.sha(payload)})
     for identifier, phase, good, scrap, before_q, before_v, good_v, scrap_v in (("ME1C-cancelled", 3, 3, 1, 0, 0, 870, 290), ("ME1C-first", 2, 3, 1, 0, 0, 870, 290), ("ME1C-final", 2, 6, 0, 4, 1160, 1740, 0)):
         child = {"id": identifier, "order_id": order["id"], **scope, "order_digest": source_digest, "issue_digest": order["issue_digest"], "preparer_actor_id": "maker",
-                 "command_request": {"id": order["id"], "good": good, "scrap": scrap}, "good_quantity_scaled": good, "scrap_quantity_scaled": scrap,
+                 "command_request": {"id": order["id"], "good": good, "scrap": scrap, "reason": "Synthetic lifecycle"}, "good_quantity_scaled": good, "scrap_quantity_scaled": scrap,
                  "stage_quantity_scaled": good + scrap, "disposed_before_scaled": before_q, "released_before_minor": before_v,
                  "good_cost_minor": good_v, "scrap_cost_minor": scrap_v, "released_cost_minor": good_v + scrap_v, "wip_after_minor": 2900 - before_v - good_v - scrap_v,
                  "receipt_plan": receipt(identifier, "PRODUCT", "EA", good, good_v, "FG", "WIP", posted=phase == 2),
@@ -123,14 +132,16 @@ def proof_fixture() -> dict[str, Any]:
             event_id = row["id"] + operation
             request = row["payload"]["command_request"] if operation == "create" else {"id": row["id"], "expected_digest": row["source_digest"], "reason": "Synthetic lifecycle"}
             wire = {"operation": operation, "actor_id": actor, "request": request}
-            metadata = {"source_digest": row["source_digest"]}
+            kind = "bom" if row is bom else "order" if row is order else "completion"
+            ack = oracle.historical_ack(row, kind, operation)
+            metadata = {"source_digest": row["source_digest"], "phase": ack["phase"], "reason": "Synthetic lifecycle"}
             add("manufacturing_execution_commands", {"id": event_id, "object_id": row["id"], "operation": operation, "actor_id": actor,
-                                                     "request_json": wire, "request_digest": oracle.sha(wire), "response_json": {"id": row["id"], "source_digest": row["source_digest"]}})
+                                                     "workspace_id": "work", "request_json": wire, "request_digest": oracle.sha(wire), "response_json": ack})
             add("manufacturing_execution_events", {"id": event_id, "object_id": row["id"], "operation": operation, "actor_id": actor, "reason": "Synthetic lifecycle",
                                                    "metadata": metadata, "audit_event_id": "audit-" + event_id, "outbox_event_id": "outbox-" + event_id})
-            add("domain_audit_events", {"id": "audit-" + event_id, "actor_user_id": actor, "object_id": row["id"], "action": "manufacturing_execution." + operation, "metadata_json": metadata})
+            add("domain_audit_events", {"id": "audit-" + event_id, "actor_user_id": actor, "object_id": row["id"], "object_type": "manufacturing_execution", "action": "manufacturing_execution." + operation, "metadata_json": metadata})
             add("outbox_events", {"event_id": "outbox-" + event_id, "aggregate_id": row["id"], "event_type": "manufacturing_execution." + operation,
-                                  "payload": {**metadata, "audit_event_id": "audit-" + event_id}, **scope})
+                                  "aggregate_type": "manufacturing_execution", "payload": {**metadata, "audit_event_id": "audit-" + event_id}, **scope})
     return {"schema_version": "manufacturing-execution-proof-v1", "tenant_id": "synthetic", "populations": tables}
 
 
@@ -141,7 +152,7 @@ def test_complete_native_population_golden() -> None:
     assert result["performance_accepted"] is False and result["external_attestation"] is False
 
 
-@pytest.mark.parametrize("target", ["cost", "quantity", "effect", "header", "dimension", "requirement", "orphan", "cancel", "line", "link", "actor", "tenant"])
+@pytest.mark.parametrize("target", ["cost", "quantity", "effect", "header", "dimension", "requirement", "orphan", "cancel", "line", "link", "actor", "tenant", "ack", "orphan_pair", "layer_scope", "component_duplicate"])
 def test_rehashed_financial_or_source_population_adversaries_refused(target: str) -> None:
     proof = proof_fixture()
     rows = proof["populations"]
@@ -169,6 +180,19 @@ def test_rehashed_financial_or_source_population_adversaries_refused(target: str
         rows["inventory_receipt_links"][0]["posting_effect_id"] = "unique-invented-effect"
     elif target == "actor":
         rows["finance_posting_effects"][-1]["posted_actor_id"] = "maker"
+    elif target == "ack":
+        rows["manufacturing_execution_commands"][0]["response_json"].update(phase=999, wip_minor=999999999)
+    elif target == "orphan_pair":
+        for name in ("manufacturing_execution_commands", "manufacturing_execution_events"):
+            row = copy.deepcopy(rows[name][0])
+            row.update(id="orphan", object_id="ME1-orphan-owner")
+            rows[name].append(row)
+    elif target == "layer_scope":
+        rows["inventory_cost_layers"][0].update(workspace_id="foreign", legal_entity_id="foreign")
+    elif target == "component_duplicate":
+        order = rows["manufacturing_execution_orders"][0]
+        order["issue_plan"]["components"].append(copy.deepcopy(order["issue_plan"]["components"][0]))
+        order["issue_digest"] = oracle.sha(order["issue_plan"])
     else:
         rows["finance_accounts"][0]["tenant_id"] = "foreign"
     with pytest.raises((ValueError, KeyError)):

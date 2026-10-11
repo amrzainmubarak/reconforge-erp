@@ -78,6 +78,26 @@ def _map(rows: Any, field: str = "id") -> dict[str, dict[str, Any]]:
     return result
 
 
+def historical_ack(row: dict[str, Any], kind: str, operation: str) -> dict[str, Any]:
+    """Reconstruct immutable historical response rather than trust a replay seal."""
+    phases = {"bom": {"create": 0, "approve-bom": 1}, "order": {"create": 0, "prepare": 1, "review": 2, "post": 3},
+              "completion": {"create": 0, "review": 1, "post": 2, "cancel": 3}}
+    phase = phases[kind][operation]
+    response = {**row["payload"], "source_digest": row["source_digest"], "phase": phase}
+    if kind == "bom":
+        response["reviewer_id"] = row["reviewer_id"] if phase == 1 else None
+    elif kind == "completion":
+        response.update(reviewer_id=row["reviewer_id"] if phase else None,
+                        receipt_effect=row["receipt_effect"] if phase == 2 else None,
+                        scrap_effect_id=row["scrap_effect_id"] if phase == 2 else None)
+    else:
+        response.update(issue_plan=row["issue_plan"] if phase else None, issue_digest=row["issue_digest"] if phase else None,
+                        issue_reviewer_id=row["issue_reviewer_id"] if phase >= 2 else None,
+                        issue_effect_id=row["issue_effect_id"] if phase == 3 else None,
+                        valuation_id=row["valuation_id"] if phase == 3 else None, disposed_quantity_scaled=0, released_cost_minor=0)
+    return response
+
+
 def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
     require(proof.get("schema_version") == "manufacturing-execution-proof-v1", "Unsupported manufacturing proof")
     tables, tenant = proof["populations"], proof["tenant_id"]
@@ -98,9 +118,26 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
     require(tables["finance_entry_line_dimensions"] == [], "Required or retained financial dimensions are outside this explicit oracle scope")
     layers, entries, effects = (_map(tables[name]) for name in ("inventory_cost_layers", "finance_entries", "finance_posting_effects"))
     receipts = _map(tables["inventory_receipt_plans"])
+    valuations, valuation_lines, movements, movement_lines = (_map(tables[name]) for name in
+        ("inventory_valuation_documents", "inventory_valuation_lines", "inventory_movements", "inventory_movement_lines"))
     links = {row["plan_id"]: row for row in tables["inventory_receipt_links"]}
     require(len(links) == len(tables["inventory_receipt_links"]), "Duplicate native receipt effect")
     expected_effects: dict[str, tuple[str, list[tuple[str, int, int]], dict[str, Any]]] = {}
+
+    def verify_receipt_layer(row: dict[str, Any], layer: dict[str, Any]) -> None:
+        require(all(row[key] == value for key, value in scope.items()) and layer["workspace_id"] == scope["workspace_id"]
+                and layer["legal_entity_id"] == scope["legal_entity_id"], "Native original layer/receipt hierarchy differs")
+        value = valuation_lines[row["valuation_line_id"]]
+        document, movement, line = valuations[row["valuation_document_id"]], movements[row["movement_id"]], movement_lines[row["movement_line_id"]]
+        require(layer["source_valuation_line_id"] == value["id"] and value["valuation_document_id"] == document["id"]
+                and document["movement_id"] == movement["id"] and line["movement_id"] == movement["id"]
+                and all(document[key] == movement[key] == selected for key, selected in scope.items())
+                and document["status"] == "Approved" and movement["status"] == "Posted" and movement["movement_type"] == "Receipt",
+                "Native original layer valuation/movement lineage differs")
+        require((value["item_id"], value["uom_id"], value["quantity_scaled"], value["value_minor"], value["flow_direction"], value["inventory_account_id"], value["offset_account_id"])
+                == (row["item_id"], row["uom_id"], row["quantity_scaled"], row["total_value_minor"], "Inbound", row["inventory_account_id"], row["receipt_clearing_account_id"])
+                and (line["item_id"], line["uom_id"], line["quantity_scaled"], line["from_location_id"], line["to_location_id"])
+                == (row["item_id"], row["uom_id"], row["quantity_scaled"], None, row["location_id"]), "Native original receipt item/UOM/quantity/cost/location differs")
 
     def retain(effect_id: str, entry_id: str, lines: list[tuple[str, int, int]], snapshot: dict[str, Any]) -> None:
         require(effect_id not in expected_effects, "Native effect population reused")
@@ -114,6 +151,7 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
         require(row["id"] in links and row["operation"] == "Receipt", "Original input must have native receipt effect")
         require(sha({k: v for k, v in plan.items() if k not in {"plan_digest", "preparation_audit_event_id", "preparation_outbox_event_id"}}) == plan["plan_digest"] == row["plan_digest"], "Original input plan seal differs")
         layer = layers[row["cost_layer_id"]]
+        verify_receipt_layer(row, layer)
         require((layer["original_quantity_scaled"], layer["original_value_minor"], layer["item_id"])
                 == (integer(row["quantity_scaled"], positive=True), integer(row["total_value_minor"], positive=True), row["item_id"]), "Original native layer input differs")
         initial_layers.add(layer["id"])
@@ -122,7 +160,7 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
     requirements = {row["item_id"]: row for row in tables["manufacturing_execution_requirements"]}
     components = {line["item_id"]: line for line in recipe["components"]}
     issued = {line["item_id"]: line for line in issue["components"]}
-    require(1 <= len(components) <= 100 and len(components) == len(recipe["components"])
+    require(1 <= len(components) <= 100 and len(components) == len(recipe["components"]) == len(issue["components"])
             and set(requirements) == set(components) == set(issued) and len(requirements) == len(tables["manufacturing_execution_requirements"]), "Complete unique BOM/input population required")
     planned = integer(source["output_quantity_scaled"], positive=True)
     consumed_expected: Counter[tuple[str, int, int]] = Counter()
@@ -186,21 +224,28 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
     events = {(row["object_id"], row["operation"]): row for row in tables["manufacturing_execution_events"]}
     require(len(commands) == len(tables["manufacturing_execution_commands"]) == len(events) == len(tables["manufacturing_execution_events"])
             and set(commands) == set(events), "Original owner command/event bijection differs")
+    expected_command_keys: set[tuple[str, str]] = set()
     audits, outbox = _map(tables["domain_audit_events"]), _map(tables["outbox_events"], "event_id")
     for identifier, row in owner_rows.items():
         expected_operations = {"create", "approve-bom"} if identifier == bom["id"] else {"create", "prepare", "review", "post"} if identifier == order["id"] else {"create", "review", "post" if row["phase"] == 2 else "cancel"}
+        expected_command_keys.update((identifier, operation) for operation in expected_operations)
         require({operation for selected, operation in commands if selected == identifier} == expected_operations, "Original retained lifecycle command population differs")
         for operation in expected_operations:
             command, event = commands[(identifier, operation)], events[(identifier, operation)]
             request = row["payload"]["command_request"] if operation == "create" else {"id": identifier, "expected_digest": row["source_digest"], "reason": event["reason"]}
+            ack = historical_ack(row, "bom" if identifier == bom["id"] else "order" if identifier == order["id"] else "completion", operation)
             require(command["request_json"] == {"operation": operation, "actor_id": command["actor_id"], "request": request}
                     and sha(command["request_json"]) == command["request_digest"] and command["actor_id"] == event["actor_id"]
-                    and command["response_json"]["id"] == identifier and command["response_json"]["source_digest"] == row["source_digest"], "Original owner request/ACK actor or seal differs")
+                    and request["reason"] == event["reason"] and command["response_json"] == ack
+                    and command["workspace_id"] == scope["workspace_id"]
+                    and event["metadata"] == {"source_digest": row["source_digest"], "phase": ack["phase"], "reason": event["reason"]}, "Complete original owner historical request/ACK actor or seal differs")
             audit, message = audits[event["audit_event_id"]], outbox[event["outbox_event_id"]]
             require(audit["actor_user_id"] == command["actor_id"] and audit["object_id"] == message["aggregate_id"] == identifier
+                    and audit["object_type"] == message["aggregate_type"] == "manufacturing_execution"
                     and audit["action"] == message["event_type"] == "manufacturing_execution." + operation
                     and audit["metadata_json"] == event["metadata"] and message["payload"] == {**event["metadata"], "audit_event_id": audit["id"]}
                     and all(message[key] == scope[key] for key in scope), "Original owner native audit/outbox differs")
+    require(set(commands) == set(events) == expected_command_keys, "Every retained command/event must belong to an exact original source operation")
     issue_actors = [commands[(order["id"], operation)]["actor_id"] for operation in ("prepare", "review", "post")]
     require(len(set(issue_actors)) == 3 and issue_actors[0] == issue["preparer_actor_id"] and issue_actors[1] == order["issue_reviewer_id"]
             and issue_actors[2] == effects[order["issue_effect_id"]]["posted_actor_id"], "Original issue requires three distinct actual native humans")
@@ -245,6 +290,7 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
                     and links[plan["plan_id"]]["posting_effect_id"] == native["posting_effect_id"] and links[plan["plan_id"]]["finance_entry_id"] == native["finance_entry_id"], "Native finished receipt quantity/cost/WIP differs")
             output_layers.add(native["cost_layer_id"])
             layer = layers[native["cost_layer_id"]]
+            verify_receipt_layer(native, layer)
             require((layer["original_quantity_scaled"], layer["remaining_quantity_scaled"], layer["original_value_minor"], layer["remaining_value_minor"])
                     == (child["good_quantity_scaled"], child["good_quantity_scaled"], expected["good_cost_minor"], expected["good_cost_minor"]), "Native finished FIFO differs")
             retain(effect["effect_id"], effect["entry_id"], [(native["inventory_account_id"], expected["good_cost_minor"], 0), (source["wip_account_id"], 0, expected["good_cost_minor"])], plan["finance_snapshot"])

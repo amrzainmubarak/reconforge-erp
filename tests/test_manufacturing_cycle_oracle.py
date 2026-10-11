@@ -63,6 +63,7 @@ def proof_fixture() -> dict[str, Any]:
                 "finance_snapshot": entry["snapshot"] if entry else {}, "artifacts": {"posting_effect_id": "effect-entry-" + identifier}}
         plan["plan_digest"] = oracle.sha(plan)
         add("inventory_receipt_plans", {"id": plan["plan_id"], "source_number": identifier, "operation": "Receipt", "plan_json": plan,
+                                      "quantity_precision": 3 if uom == "KG" else 0,
                                       **scope, "location_id": "location", "valuation_line_id": "vl-" + identifier, "valuation_document_id": "vd-" + identifier,
                                       "movement_id": "move-" + identifier, "movement_line_id": "ml-" + identifier,
                                       "plan_digest": plan["plan_digest"], "cost_layer_id": "layer-" + identifier, "item_id": item, "uom_id": uom,
@@ -72,17 +73,19 @@ def proof_fixture() -> dict[str, Any]:
             add("inventory_receipt_links", {"id": plan["plan_id"], "plan_id": plan["plan_id"], "posting_effect_id": "effect-entry-" + identifier, "finance_entry_id": "entry-" + identifier})
             add("inventory_cost_layers", {"id": "layer-" + identifier, "item_id": item, "uom_id": uom, "created_at": "2026-10-03",
                                          "workspace_id": scope["workspace_id"], "legal_entity_id": scope["legal_entity_id"], "source_valuation_line_id": "vl-" + identifier,
+                                         "quantity_precision": 3 if uom == "KG" else 0, "currency_code": "USD", "inventory_lot_id": None,
                                          "original_quantity_scaled": quantity, "remaining_quantity_scaled": quantity,
                                          "original_value_minor": cost, "remaining_value_minor": cost})
-            add("inventory_valuation_documents", {"id": "vd-" + identifier, **scope, "movement_id": "move-" + identifier, "status": "Approved"})
+            add("inventory_valuation_documents", {"id": "vd-" + identifier, **scope, "movement_id": "move-" + identifier, "status": "Approved", "finance_entry_id": "entry-" + identifier, "total_value_minor": cost, "currency_code": "USD"})
             add("inventory_valuation_lines", {"id": "vl-" + identifier, "valuation_document_id": "vd-" + identifier, "item_id": item, "uom_id": uom,
-                                              "quantity_scaled": quantity, "value_minor": cost, "flow_direction": "Inbound", "inventory_account_id": inventory, "offset_account_id": offset})
+                                              "quantity_scaled": quantity, "quantity_precision": 3 if uom == "KG" else 0, "value_minor": cost, "flow_direction": "Inbound", "inventory_account_id": inventory, "offset_account_id": offset})
             add("inventory_movements", {"id": "move-" + identifier, **scope, "status": "Posted", "movement_type": "Receipt"})
             add("inventory_movement_lines", {"id": "ml-" + identifier, "movement_id": "move-" + identifier, "item_id": item, "uom_id": uom,
                                             "quantity_scaled": quantity, "from_location_id": None, "to_location_id": "location"})
         return plan
 
     source = {"id": "ME1-order", **scope, "organization_code": "ORG", "entity_code": "ENTITY", "currency_code": "USD", "monetary_policy": policy,
+              "movement_id": "issued-movement", "component_location_id": "location",
               "bom_version_id": "ME1B-recipe", "output_quantity_scaled": 10, "output_item_id": "PRODUCT", "wip_account_id": "WIP", "scrap_account_id": "SCRAP",
               "command_request": {"number": "PRODUCTION-1", "reason": "Synthetic lifecycle"}}
     components, issue_components = [], []
@@ -96,7 +99,8 @@ def proof_fixture() -> dict[str, Any]:
                                                   "remaining_quantity_scaled": original_q, "remaining_value_minor": original_v}]})
         layer = tables["inventory_cost_layers"][-1]
         layer.update(remaining_quantity_scaled=original_q - required_q, remaining_value_minor=original_v - cost)
-        add("inventory_layer_consumptions", {"id": "consumed-" + item, "cost_layer_id": layer["id"], "quantity_scaled": required_q, "value_minor": cost})
+        add("inventory_layer_consumptions", {"id": "consumed-" + item, "cost_layer_id": layer["id"], "quantity_scaled": required_q, "value_minor": cost,
+                                            "workspace_id": "work", "valuation_line_id": "issue-vl-" + item})
     recipe = {"id": "ME1B-recipe", **scope, "components": components, "output_quantity_scaled": 10, "command_request": {"number": "BOM-1", "reason": "Synthetic lifecycle"}}
     bom = add("manufacturing_execution_boms", {"id": recipe["id"], "payload": recipe, "phase": 1, "source_digest": oracle.sha(recipe), "reviewer_id": "checker"})
     source["bom_digest"] = bom["source_digest"]
@@ -106,6 +110,14 @@ def proof_fixture() -> dict[str, Any]:
     order = add("manufacturing_execution_orders", {"id": source["id"], "payload": source, "phase": 4, "source_digest": source_digest,
                                                   "issue_plan": issue, "issue_digest": oracle.sha(issue), "issue_effect_id": "effect-issue", "issue_reviewer_id": "checker",
                                                   "disposed_quantity_scaled": 10, "released_cost_minor": 2900, "valuation_id": "issued-valuation"})
+    add("inventory_movements", {"id": "issued-movement", **scope, "status": "Posted", "movement_type": "Delivery", "manufacturing_claim_state": "Issued", "source_reference": order["id"]})
+    add("inventory_valuation_documents", {"id": "issued-valuation", **scope, "status": "Approved", "movement_id": "issued-movement", "finance_entry_id": "issue", "total_value_minor": 2900})
+    for component in issue_components:
+        add("inventory_valuation_lines", {"id": "issue-vl-" + component["item_id"], "valuation_document_id": "issued-valuation", "movement_line_id": "issue-ml-" + component["item_id"],
+                                          "item_id": component["item_id"], "uom_id": component["uom_id"], "quantity_scaled": component["required_quantity_scaled"], "value_minor": component["value_minor"],
+                                          "flow_direction": "Outbound", "inventory_account_id": "INVENTORY", "offset_account_id": "WIP"})
+        add("inventory_movement_lines", {"id": "issue-ml-" + component["item_id"], "movement_id": "issued-movement", "item_id": component["item_id"], "uom_id": component["uom_id"],
+                                        "quantity_scaled": component["required_quantity_scaled"], "from_location_id": "location", "to_location_id": None})
     for component in components:
         identifier, required = "require-" + component["item_id"], component["quantity_scaled"]
         payload = {"schema_version": "manufacturing-requirement-v1", "requirement_id": identifier, "order_id": order["id"], "bom_version_id": bom["id"],
@@ -152,7 +164,7 @@ def test_complete_native_population_golden() -> None:
     assert result["performance_accepted"] is False and result["external_attestation"] is False
 
 
-@pytest.mark.parametrize("target", ["cost", "quantity", "effect", "header", "dimension", "requirement", "orphan", "cancel", "line", "link", "actor", "tenant", "ack", "orphan_pair", "layer_scope", "component_duplicate"])
+@pytest.mark.parametrize("target", ["cost", "quantity", "effect", "header", "dimension", "requirement", "orphan", "cancel", "line", "link", "actor", "tenant", "ack", "orphan_pair", "layer_scope", "component_duplicate", "fg_item", "consumption_custody", "fg_policy"])
 def test_rehashed_financial_or_source_population_adversaries_refused(target: str) -> None:
     proof = proof_fixture()
     rows = proof["populations"]
@@ -193,6 +205,12 @@ def test_rehashed_financial_or_source_population_adversaries_refused(target: str
         order = rows["manufacturing_execution_orders"][0]
         order["issue_plan"]["components"].append(copy.deepcopy(order["issue_plan"]["components"][0]))
         order["issue_digest"] = oracle.sha(order["issue_plan"])
+    elif target == "fg_item":
+        rows["inventory_cost_layers"][-1].update(item_id="FOREIGN-ITEM", uom_id="FOREIGN-UOM")
+    elif target == "consumption_custody":
+        rows["inventory_layer_consumptions"][0].update(workspace_id="foreign", valuation_line_id="unrelated")
+    elif target == "fg_policy":
+        rows["inventory_cost_layers"][-1].update(currency_code="FOREIGN", inventory_lot_id="invented")
     else:
         rows["finance_accounts"][0]["tenant_id"] = "foreign"
     with pytest.raises((ValueError, KeyError)):

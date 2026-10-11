@@ -126,16 +126,20 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
 
     def verify_receipt_layer(row: dict[str, Any], layer: dict[str, Any]) -> None:
         require(all(row[key] == value for key, value in scope.items()) and layer["workspace_id"] == scope["workspace_id"]
-                and layer["legal_entity_id"] == scope["legal_entity_id"], "Native original layer/receipt hierarchy differs")
+                and layer["legal_entity_id"] == scope["legal_entity_id"]
+                and (layer["item_id"], layer["uom_id"], layer["quantity_precision"], layer["currency_code"], layer["inventory_lot_id"])
+                == (row["item_id"], row["uom_id"], row["quantity_precision"], source["currency_code"], None), "Native original layer/receipt hierarchy or item/UOM/policy differs")
         value = valuation_lines[row["valuation_line_id"]]
         document, movement, line = valuations[row["valuation_document_id"]], movements[row["movement_id"]], movement_lines[row["movement_line_id"]]
         require(layer["source_valuation_line_id"] == value["id"] and value["valuation_document_id"] == document["id"]
                 and document["movement_id"] == movement["id"] and line["movement_id"] == movement["id"]
                 and all(document[key] == movement[key] == selected for key, selected in scope.items())
+                and document["finance_entry_id"] == row["finance_entry_id"] and document["total_value_minor"] == row["total_value_minor"]
+                and document["currency_code"] == source["currency_code"]
                 and document["status"] == "Approved" and movement["status"] == "Posted" and movement["movement_type"] == "Receipt",
                 "Native original layer valuation/movement lineage differs")
-        require((value["item_id"], value["uom_id"], value["quantity_scaled"], value["value_minor"], value["flow_direction"], value["inventory_account_id"], value["offset_account_id"])
-                == (row["item_id"], row["uom_id"], row["quantity_scaled"], row["total_value_minor"], "Inbound", row["inventory_account_id"], row["receipt_clearing_account_id"])
+        require((value["item_id"], value["uom_id"], value["quantity_scaled"], value["quantity_precision"], value["value_minor"], value["flow_direction"], value["inventory_account_id"], value["offset_account_id"])
+                == (row["item_id"], row["uom_id"], row["quantity_scaled"], row["quantity_precision"], row["total_value_minor"], "Inbound", row["inventory_account_id"], row["receipt_clearing_account_id"])
                 and (line["item_id"], line["uom_id"], line["quantity_scaled"], line["from_location_id"], line["to_location_id"])
                 == (row["item_id"], row["uom_id"], row["quantity_scaled"], None, row["location_id"]), "Native original receipt item/UOM/quantity/cost/location differs")
 
@@ -162,8 +166,19 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
     issued = {line["item_id"]: line for line in issue["components"]}
     require(1 <= len(components) <= 100 and len(components) == len(recipe["components"]) == len(issue["components"])
             and set(requirements) == set(components) == set(issued) and len(requirements) == len(tables["manufacturing_execution_requirements"]), "Complete unique BOM/input population required")
+    issue_document, issue_movement = valuations[order["valuation_id"]], movements[source["movement_id"]]
+    require(all(issue_document[key] == issue_movement[key] == value for key, value in scope.items())
+            and issue_document["status"] == "Approved" and issue_document["movement_id"] == source["movement_id"]
+            and issue_document["finance_entry_id"] == issue["entry"]["entry_id"] and issue_document["total_value_minor"] == issue["total_cost_minor"]
+            and (issue_movement["status"], issue_movement["movement_type"], issue_movement["manufacturing_claim_state"], issue_movement["source_reference"])
+            == ("Posted", "Delivery", "Issued", order["id"]), "Native issued movement/valuation custody differs")
+    issue_values = {row["item_id"]: row for row in valuation_lines.values() if row["valuation_document_id"] == issue_document["id"]}
+    issue_physical = {row["item_id"]: row for row in movement_lines.values() if row["movement_id"] == issue_movement["id"]}
+    require(set(issue_values) == set(issue_physical) == set(components)
+            and len(issue_values) == sum(row["valuation_document_id"] == issue_document["id"] for row in valuation_lines.values())
+            and len(issue_physical) == sum(row["movement_id"] == issue_movement["id"] for row in movement_lines.values()), "Complete unique native issued component population differs")
     planned = integer(source["output_quantity_scaled"], positive=True)
-    consumed_expected: Counter[tuple[str, int, int]] = Counter()
+    consumed_expected: Counter[tuple[str, str, int, int]] = Counter()
     layer_totals: dict[str, list[int]] = {}
     inventory_credits: dict[str, int] = {}
     total = 0
@@ -171,6 +186,11 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
         demand = Fraction(integer(component["quantity_scaled"], positive=True) * planned, integer(recipe["output_quantity_scaled"], positive=True))
         require(demand.denominator == 1, "Original base UOM expansion is fractional")
         requirement, material = requirements[item], issued[item]
+        native_value, native_physical = issue_values[item], issue_physical[item]
+        require((native_value["item_id"], native_value["uom_id"], native_value["quantity_scaled"], native_value["value_minor"], native_value["flow_direction"], native_value["inventory_account_id"], native_value["offset_account_id"], native_value["movement_line_id"])
+                == (item, material["uom_id"], demand.numerator, material["value_minor"], "Outbound", material["inventory_account_id"], source["wip_account_id"], native_physical["id"])
+                and (native_physical["item_id"], native_physical["uom_id"], native_physical["quantity_scaled"], native_physical["from_location_id"], native_physical["to_location_id"])
+                == (item, material["uom_id"], demand.numerator, source["component_location_id"], None), "Native original issued item/UOM/quantity/cost/location differs")
         require(integer(requirement["required_quantity_scaled"], positive=True) == integer(material["required_quantity_scaled"], positive=True) == demand.numerator
                 and requirement["item_id"] == material["item_id"] and requirement["uom_id"] == component["uom_id"] == material["uom_id"]
                 and sha(requirement["requirement_json"]) == requirement["requirement_digest"], "Original exact BOM demand differs")
@@ -202,7 +222,7 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
             require(0 < taken <= original_q and (allocation["remaining_quantity_scaled"], allocation["remaining_value_minor"]) == (original_q, original_v), "Independent original residual input differs")
             cost = original_v if taken == original_q else even(Fraction(original_v * taken, original_q))
             require(allocation["value_minor"] == cost, "Independent original FIFO cost differs")
-            consumed_expected[(identifier, taken, cost)] += 1
+            consumed_expected[(native_value["id"], identifier, taken, cost)] += 1
             layer_totals[identifier] = [taken, cost]
             quantity += taken
             value += cost
@@ -210,7 +230,9 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
         inventory_credits[material["inventory_account_id"]] = inventory_credits.get(material["inventory_account_id"], 0) + value
         total += value
     require(integer(issue["total_cost_minor"], positive=True) == total, "Independent original WIP differs")
-    observed_consumptions = Counter((row["cost_layer_id"], row["quantity_scaled"], row["value_minor"]) for row in tables["inventory_layer_consumptions"])
+    consumptions = _map(tables["inventory_layer_consumptions"])
+    require(all(row["workspace_id"] == scope["workspace_id"] for row in consumptions.values()), "Native material consumption workspace differs")
+    observed_consumptions = Counter((row["valuation_line_id"], row["cost_layer_id"], row["quantity_scaled"], row["value_minor"]) for row in consumptions.values())
     require(observed_consumptions == consumed_expected, "Native material consumption population differs")
     for identifier in initial_layers:
         layer = layers[identifier]
@@ -300,6 +322,12 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
     require(disposed == planned == order["disposed_quantity_scaled"] and released == total == order["released_cost_minor"] and total == good_total + scrap_total, "Complete quantity/WIP conservation differs")
     require(set(layers) == initial_layers | output_layers and set(effects) == set(expected_effects), "All and only original native effects/layers required")
     require(set(receipts) == expected_receipts and set(links) == expected_links, "All and only original posted/cancelled native receipt plans and links required")
+    posted_receipts = [receipts[identifier] for identifier in expected_links]
+    require(set(valuations) == {row["valuation_document_id"] for row in posted_receipts} | {issue_document["id"]}
+            and set(valuation_lines) == {row["valuation_line_id"] for row in posted_receipts} | {row["id"] for row in issue_values.values()}
+            and set(movements) == {row["movement_id"] for row in posted_receipts} | {issue_movement["id"]}
+            and set(movement_lines) == {row["movement_line_id"] for row in posted_receipts} | {row["id"] for row in issue_physical.values()},
+            "All and only original physical/valuation input, issue and finished output populations required")
     require(set(entries) == {value[0] for value in expected_effects.values()} | cancelled_entries, "All and only posted or cancelled source native entries required")
     positions: Counter[str] = Counter()
     turnover = 0

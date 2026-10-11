@@ -557,4 +557,3 @@ def run(scenario: NativeApiScenario, argv: list[str] | None = None) -> int:
         print(json.dumps({"status": report["status"], "report": str(output / "result.json"), "sha256": digest,
                           "completed_cycles": len(report["cycles"]), "elapsed_seconds": report["elapsed_seconds"]}))
     return 0 if report["status"] == "passed" else 1
-

@@ -27,6 +27,27 @@ concurrency acceptance are pending. Common external benchmark controller passes
 its adversarial financial/power/failure tests; no Wave5 improvement is claimed
 until six fresh alternating final-source populations and resource review finish.
 
+Correction checkpoint: [DraftPR131](https://github.com/amrzainmubarak/reconforge-erp/pull/131)
+is stacked directly on130. Initial hosted source3e34a1a9 failed exact application
+inventory, asynchronous UI verification, ordinary deferred finance-to-IC dispatch
+and two SQL-composition security findings. Original failed logs remain retained;
+dependent browser jobs did not execute. Those causes are corrected without
+blanket grants, weakened financial assertions or test skips. Root Studio447 tests,
+TypeScript/build, Ruff and production mypy726 passed before the final two UI
+corrections; targeted current UI regressions pass. Native ME15/0skip at the owner
+and SRC34/0skip in initial hosted CI remain historical source-bound packets.
+
+Root ca7f891f actual sourcing HTTPS/RTL/Axe and native populated restore passed on
+immutable PostgreSQL17.11:270-table snapshot, five original effects, independent
+isolated sourcing oracle, three direct tamper refusals and owned cleanup. The same
+source's manufacturing browser passed but its nested authenticated proof export
+self-blocked; IC completed financial actions but failed the missing main landmark.
+Both failures remain preserved and their causes are corrected. Standalone stdlib
+manufacturing verification now binds original BOM/FIFO/native layer custody,
+historical acknowledgements and complete command/event membership; reciprocal
+file-only counterexamples were repaired. Final integrated native, HTTPS/restore,
+package, security and measured performance acceptance is still pending.
+
 ## Wave4 active integration (2026-10-10)
 
 Actual start is DraftPR129 e07bff2a2e8197b052d53454ea85c727f7c7518e.

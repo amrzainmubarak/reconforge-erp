@@ -1455,3 +1455,4 @@ include docs/architecture/PROCUREMENT_SOURCING.md
 include docs/operator/intercompany-operations.md
 recursive-include docs/execution/wave5-evidence *.json *.log *.xml
 include .github/scripts/verify_procurement_sourcing_oracle.py
+include .github/scripts/verify_manufacturing_cycle_oracle.py

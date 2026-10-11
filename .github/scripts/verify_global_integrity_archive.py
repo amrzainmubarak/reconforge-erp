@@ -419,6 +419,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/verify_intercompany_cycle_oracle.py",
         ".github/scripts/verify_procurement_sourcing_oracle.py", "tests/procurement_sourcing_oracle.py",
         "tests/test_procurement_sourcing_oracle.py",
+        ".github/scripts/verify_manufacturing_cycle_oracle.py", "tests/test_manufacturing_cycle_oracle.py",
         "docs/modules/intercompany-operations.yaml", "docs/modules/procurement-sourcing.yaml",
         "docs/modules/manufacturing-execution.yaml", "docs/operator/manufacturing-execution.md",
         ".github/scripts/benchmark_intercompany_api.py", "tests/test_intercompany_api_benchmark.py",

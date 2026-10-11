@@ -96,6 +96,9 @@ class IntercompanyScenario:
     def seed(self, admin_dsn: str, app_dsn: str) -> Any:
         return importlib.import_module("tests.intercompany_operations_browser_seed").seed_intercompany_browser(admin_dsn, app_dsn)
 
+    def redaction_secrets(self, runtime: Any) -> list[str]:
+        return [runtime.password]
+
     def execute_cycle(self, client: Client, runtime: Any, index: int, directory: Path) -> dict[str, Any]:
         return execute_cycle(client, runtime, index, directory, self.oracle)
 

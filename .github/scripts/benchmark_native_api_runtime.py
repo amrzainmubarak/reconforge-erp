@@ -222,6 +222,7 @@ class NativeApiScenario(Protocol):
     measurement_scope: str
 
     def seed(self, admin_dsn: str, app_dsn: str) -> Any: ...
+    def redaction_secrets(self, runtime: Any) -> list[str]: ...
     def execute_cycle(self, client: Client, runtime: Any, index: int, directory: Path) -> dict[str, Any]: ...
     def require_financial_completion(self, report: dict[str, Any]) -> None: ...
     def financial_summary(self, report: dict[str, Any]) -> dict[str, Any]: ...
@@ -442,7 +443,11 @@ def run(scenario: NativeApiScenario, argv: list[str] | None = None) -> int:
             raise ValueError("Non-superuser, non-bypass-RLS application required")
         seed_started = time.perf_counter()
         runtimes = [scenario.seed(admin_dsn, app_dsn) for _ in range(args.cycles)]
-        secrets_to_redact.extend(runtime.password for runtime in runtimes)
+        for runtime in runtimes:
+            redactions = scenario.redaction_secrets(runtime)
+            if not isinstance(redactions, list) or not 1 <= len(redactions) <= 20 or any(not isinstance(value, str) or not 1 <= len(value) <= 4096 for value in redactions):
+                raise ValueError("Bounded scenario-owned seed credential redactions required")
+            secrets_to_redact.extend(redactions)
         report["master_seed_seconds"] = time.perf_counter() - seed_started
         with (output / "https-runtime.log").open("w", encoding="utf-8") as log:
             temporary = Path(temporary_directory.name)

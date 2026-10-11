@@ -1453,4 +1453,5 @@ include docs/execution/WAVE5_CONTRACTS_2026-10-11.md
 include docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md
 include docs/architecture/PROCUREMENT_SOURCING.md
 include docs/operator/intercompany-operations.md
-recursive-include docs/execution/wave5-evidence *.json *.log
+recursive-include docs/execution/wave5-evidence *.json *.log *.xml
+include .github/scripts/verify_procurement_sourcing_oracle.py

@@ -51,6 +51,9 @@ jobs:
       - name: Verify checked-in benchmark evidence index
         run: uv run --no-sync python .github/scripts/verify_benchmark_index.py --root .
 
+      - name: Verify current PostgreSQL pins and retained historical policy
+        run: uv run --no-sync python .github/scripts/validate_current_postgres_images.py --root .
+
       - name: Ruff
         run: uv run --no-sync ruff check .
 
@@ -62,6 +65,13 @@ jobs:
         # execution is mandatory in the configured native shards below.
         run: >-
           uv run --no-sync pytest
+          --ignore=tests/test_postgres_manufacturing_execution.py
+          --ignore=tests/test_postgres_intercompany_operations.py
+          --ignore=tests/test_postgres_intercompany_operations_api.py
+          --ignore=tests/test_postgres_wave5_migrations.py
+          --ignore=tests/test_postgres_manufacturing_sourcing.py
+          --ignore=tests/test_postgres_procurement_sourcing.py
+          --ignore=tests/test_postgres_procurement_sourcing_api.py
           --ignore=tests/test_postgres_commercial_collections.py
           --ignore=tests/test_postgres_commercial_collection_cancellation.py
           --ignore=tests/test_postgres_customer_returns.py
@@ -212,7 +222,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax]
+        scenario: [commerce, procurement, snapshots, collections, landed-cost, fixed-assets, procurement-commitments, customer-returns, supplier-returns, operational-fx-tax, manufacturing-execution, intercompany-operations, procurement-sourcing]
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -375,6 +385,9 @@ jobs:
           - supply-integrity
           - finance-integrity
           - supplier-returns
+          - manufacturing-execution
+          - intercompany-operations
+          - procurement-sourcing
           - fx-revaluation
           - writeback
           - native
@@ -389,7 +402,7 @@ jobs:
           - finance-reporting
     services:
       postgres:
-        image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+        image: postgres:16.15-alpine@sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551
         env:
           POSTGRES_PASSWORD: postgres
         ports:
@@ -664,6 +677,15 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_posting_snapshot_profile.py -q
               uv run --no-sync pytest tests/test_postgres_stock_sales_reversal_dispatch.py -q
               uv run --no-sync pytest tests/test_postgres_operational_fx_tax.py tests/test_postgres_operational_fx_tax_api.py tests/test_postgres_operational_fx_tax_migration.py tests/test_postgres_financial_read_plans.py -q
+              ;;
+            manufacturing-execution)
+              uv run --no-sync pytest tests/test_postgres_manufacturing_execution.py tests/test_postgres_wave5_migrations.py -q
+              ;;
+            intercompany-operations)
+              uv run --no-sync pytest tests/test_postgres_intercompany_operations.py tests/test_postgres_intercompany_operations_api.py -q
+              ;;
+            procurement-sourcing)
+              uv run --no-sync pytest tests/test_postgres_procurement_sourcing.py tests/test_postgres_procurement_sourcing_api.py tests/test_postgres_manufacturing_sourcing.py -q
               ;;
             supplier-returns)
               uv run --no-sync pytest tests/test_postgres_supplier_returns.py tests/test_postgres_supplier_returns_api.py -q

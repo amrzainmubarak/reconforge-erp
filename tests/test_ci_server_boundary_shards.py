@@ -16,6 +16,7 @@ SHARDS = {
     "industry-close", "receivables", "finance-posting", "inventory-payables", "erp-expansion", "finance-reporting",
     "commercial-integrity", "supply-integrity", "finance-integrity",
     "supplier-returns", "fx-revaluation",
+    "manufacturing-execution", "intercompany-operations", "procurement-sourcing",
 }
 INTEGRITY_FILES = {
     "commercial-integrity": (
@@ -37,6 +38,9 @@ INTEGRITY_FILES = {
     ),
     "supplier-returns": ("tests/test_postgres_supplier_returns.py", "tests/test_postgres_supplier_returns_api.py"),
     "fx-revaluation": ("tests/test_postgres_operational_fx_revaluation.py", "tests/test_postgres_operational_fx_revaluation_migration.py"),
+    "manufacturing-execution": ("tests/test_postgres_manufacturing_execution.py", "tests/test_postgres_wave5_migrations.py"),
+    "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py"),
+    "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py", "tests/test_postgres_procurement_sourcing_api.py", "tests/test_postgres_manufacturing_sourcing.py"),
 }
 PROOF_OWNERS = {
     "verify_postgres_writeback_identity_migration_matrix.py": "writeback",
@@ -120,7 +124,7 @@ def test_every_live_command_has_one_shard_and_proof_owner() -> None:
     assert groups["writeback"] == []  # Its five standalone proof runners precede this step.
     assert all(groups[shard] for shard in SHARDS - {"writeback"})
     commands = [command for group in groups.values() for command in group]
-    assert len(commands) == 52  # Retain 46 original commands, five complete Wave4 owner commands, and corrective dispatch.
+    assert len(commands) == 55  # Retain all52 original commands plus three complete Wave5 owner commands.
     assert all(count == 1 for count in Counter(commands).values())
     declared = [line.strip() for line in run.splitlines() if line.strip().startswith("uv run --no-sync ")]
     assert Counter(commands) == Counter(declared)
@@ -218,6 +222,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
     assert job["strategy"]["matrix"]["scenario"] == [
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
+        "manufacturing-execution", "intercompany-operations", "procurement-sourcing",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job

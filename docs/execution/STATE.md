@@ -13,6 +13,20 @@ are in implementation, not accepted capability claims. Root owns shared migratio
 See [Wave5 contracts](WAVE5_CONTRACTS_2026-10-11.md). Prior Wave4 raw evidence,
 failures and false resource/program acceptance remain unchanged and source-bound.
 
+Integration checkpoint: native133–135 ordered migrations,12 least-privilege
+catalog permissions and492 exact API route contracts are integrated. Native
+17.11 empty migration roundtrip and retained-grant atomic downgrade refusal
+passed2/0skip. IC1 current persisted five-scope grants passed8 actual owner/HTTP
+cases at21404b78; ME1→SRC5→BPC1 six native linking cases passed at the owner's
+fixed source. These owner packets remain source-bound and precede final gates.
+Integrated Studio typecheck and444 tests pass. Current PostgreSQL16.15/17.11
+image policy is additive; historical v1 policy and report source fingerprints
+remain unchanged.19 native CI partitions and13 enterprise HTTPS scenarios retain
+all previous coverage. Actual new HTTPS/populated restoration and final-source
+concurrency acceptance are pending. Common external benchmark controller passes
+its adversarial financial/power/failure tests; no Wave5 improvement is claimed
+until six fresh alternating final-source populations and resource review finish.
+
 ## Wave4 active integration (2026-10-10)
 
 Actual start is DraftPR129 e07bff2a2e8197b052d53454ea85c727f7c7518e.

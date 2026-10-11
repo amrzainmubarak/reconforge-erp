@@ -140,8 +140,8 @@ def test_server_boundary_service_images_are_immutable_and_subject_bound() -> Non
     redis_image = str(services["redis"]["image"])
 
     assert postgres_image == (
-        "postgres:16-alpine@sha256:"
-        "57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777"
+        "postgres:16.15-alpine@sha256:"
+        "1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551"
     )
     assert redis_image == (
         "redis:7.4-alpine@sha256:"

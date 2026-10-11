@@ -1444,3 +1444,13 @@ include .gitleaks.toml
 include .gitleaksignore
 include .github/scripts/validate_supply_chain_policy.py
 include docs/adr/0853-reviewed-public-digest-scanning-and-explicit-evidence-completion.md
+include .github/scripts/benchmark_wave5_engineering_pair.py
+include .github/scripts/validate_current_postgres_images.py
+include docs/security/postgres-current-images.wave5.v1.json
+include .github/scripts/verify_intercompany_cycle_oracle.py
+include docs/adr/0854-source-owned-production-intercompany-and-sourcing.md
+include docs/execution/WAVE5_CONTRACTS_2026-10-11.md
+include docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md
+include docs/architecture/PROCUREMENT_SOURCING.md
+include docs/operator/intercompany-operations.md
+recursive-include docs/execution/wave5-evidence *.json *.log

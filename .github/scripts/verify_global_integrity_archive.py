@@ -18,6 +18,7 @@ HELPERS = (
     "fixed_assets_browser_seed", "erp_procurement_enterprise_browser", "enterprise_financial_snapshot_browser",
     "customer_returns_browser", "erp_procurement_commitments_browser",
     "operational_fx_tax_browser_seed", "erp_supplier_returns_browser",
+    "manufacturing_execution_browser", "intercompany_operations_browser_seed", "procurement_sourcing_browser",
 )
 PREFIX20_SHA = "3f1ecffac62b7cc3cbea41264f2a61b7948d9875c87dd32f7eddf7f51238be41"
 INDEX_PATH = "docs/execution/benchmarks/INDEX.v1.json"
@@ -417,6 +418,8 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         "tests/procurement_sourcing_browser.py", "tests/test_intercompany_cycle_oracle.py",
         ".github/scripts/verify_intercompany_cycle_oracle.py",
         "docs/modules/intercompany-operations.yaml", "docs/modules/procurement-sourcing.yaml",
+        "docs/modules/manufacturing-execution.yaml", "docs/operator/manufacturing-execution.md",
+        ".github/scripts/benchmark_intercompany_api.py", "tests/test_intercompany_api_benchmark.py",
         "docs/operator/intercompany-operations.md", "docs/adr/0854-source-owned-production-intercompany-and-sourcing.md",
         "docs/execution/WAVE5_CONTRACTS_2026-10-11.md",
         "docs/execution/GLOBAL_CAPABILITY_COVERAGE_WAVE5_2026-10-11.md",

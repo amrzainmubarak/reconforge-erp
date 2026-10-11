@@ -1,0 +1,16 @@
+"""The sourcing owner awards through the existing budget-backed native PO."""
+from typing import Any, Protocol
+
+from reconforge.domain.finance_posting import PostingActor
+from reconforge.domain.procurement_sourcing import RequisitionPreparation, SupplierQuotationPreparation
+
+
+class ProcurementSourcingRepository(Protocol):
+    def create(self, request: RequisitionPreparation, *, command_id: str, actor: PostingActor) -> dict[str, Any]: ...
+    def get(self, identifier: str, *, actor: PostingActor) -> dict[str, Any]: ...
+    def list_requisitions(self, workspace_id: str, *, actor: PostingActor) -> dict[str, Any]: ...
+    def record_quotation(self, identifier: str, quote: SupplierQuotationPreparation, *, expected_version: int,
+                         command_id: str, actor: PostingActor) -> dict[str, Any]: ...
+    def act(self, identifier: str, operation: str, *, expected_version: int, command_id: str,
+            reason: str, actor: PostingActor, expected_budget_version: int | None = None) -> dict[str, Any]: ...
+

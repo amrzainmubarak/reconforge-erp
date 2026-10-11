@@ -1,0 +1,70 @@
+id: procurement-sourcing
+name: Retained requisitions, supplier quotations and atomic native purchase awards
+version: 0.1.0
+maturity: experimental
+owner: supply-operations
+dependencies: [budget-control, procurement-commitments, procurement-partial, inventory-receipt-posting, finance-core, postgres-identity]
+incompatible_versions: []
+data_classification: confidential-financial
+retention_policy: Immutable original demand, supplier offers, actor decisions, command responses, audit and outbox
+permissions: [procurement_sourcing.read, procurement_sourcing.manage, procurement_sourcing.approve, procurement_sourcing.award, budget_control.read, payables.read, inventory.read, finance_core.read]
+default_roles: []
+migrations: [0135_pg_procurement_sourcing]
+domain_invariants:
+  - Original exact multiline demand, unit precision, warehouse, FIFO policy and scope remain immutable
+  - Each supplier can retain one complete immutable quoted price vector over the original demand
+  - Supplier selection orders original offers by exact total then canonical supplier code without arrival-time ties
+  - The selected complete offer must fit the original demand ceiling and current approved native budget
+  - Creator and quotation registrar cannot approve their own candidate set; publication requires a third independent human
+  - Native BPC1-SRC5 purchase exists if and only if its reviewed sourcing award has committed
+  - Source award and existing native budget Reserve and native purchase creation commit atomically
+  - Existing inventory receiving, payable accrual and native budget Consume remain the sole financial owners
+  - Current persisted human identity, roles, all three hierarchy grants, original precision and source authorization apply to lost acknowledgments
+  - SQL closure verifies every original demand, offer, approval, audit, outbox and exact historical replay response
+  - Optional manufacturing provenance binds its actual immutable original requirement, canonical scope, exact base-unit quantity and current retained source authority
+domain_events: [procurement_sourcing_create, procurement_sourcing_open-rfq, procurement_sourcing_quote, procurement_sourcing_review-selection, procurement_sourcing_award, procurement_sourcing_cancel]
+api_routes:
+  - /api/v1/procurement-sourcing/requisitions
+  - /api/v1/procurement-sourcing/requisitions/{identifier}
+  - /api/v1/procurement-sourcing/requisitions/{identifier}/quotes
+  - /api/v1/procurement-sourcing/requisitions/{identifier}/open-rfq
+  - /api/v1/procurement-sourcing/requisitions/{identifier}/review-selection
+  - /api/v1/procurement-sourcing/requisitions/{identifier}/award
+  - /api/v1/procurement-sourcing/requisitions/{identifier}/cancel
+cli_commands: []
+ui_routes: [/procurement-sourcing, /procurement-partial, /budget-control]
+import_schemas: []
+export_schemas: [procurement-sourcing-v1, supplier-quotation-v1]
+synthetic_fixtures: [tests/test_procurement_sourcing.py, tests/test_postgres_procurement_sourcing.py, tests/procurement_sourcing_browser.py]
+threat_model:
+  - Four FORCE RLS tables bind the original canonical tenant and hierarchy
+  - Direct SQL mutations require current live persisted humans, all hierarchy grants and operation permissions
+  - Immutable source and offer seals plus consecutive phase commands prevent detached or repriced native awards
+  - Guarded native purchase-prefix closure prevents bypass through ordinary existing purchase creation
+  - Advisory command lock and budget-before-source award lock preserve safe replay and appropriation capacity
+  - Ordinary empty manufacturing references never load or plan protected manufacturing objects
+  - Canonical evidence with exact numeric minor-unit serialization is verified asynchronously in Studio
+benchmarks: []
+rollback_plan: Empty rollback only; retained original business history requires forward correction or verified pre-upgrade restore. Recreated tables require existing application ACL restoration.
+test_matrix:
+  domain: tests/test_procurement_sourcing.py
+  postgres: tests/test_postgres_procurement_sourcing.py
+  api: tests/test_postgres_procurement_sourcing_api.py
+  web: apps/web/src/procurement-sourcing-data.test.ts
+  web_lifecycle: apps/web/src/components/ProcurementSourcingPage.test.tsx
+  browser: apps/web/live/procurement-sourcing.spec.ts
+adapter_matrix:
+  postgres: Composes sole native budget, procurement, AP, FIFO, cash installment and GL engines
+  sqlite: No sourcing operational fallback; existing Community modules remain available
+runtime_acceptance: 26 actual native/API cases and 12 React data/lifecycle cases passed; final clean integrated HTTPS, linked-manufacturing and populated restore acceptance must be bound to the frozen integration source.
+limitations:
+  - Original functional currency, zero tax and exact base units; no new FX, tax or currency engine
+  - One approved appropriation in the original fiscal period
+  - 128 original demand lines and 32 original suppliers; the list exposes 25 sources in stable identifier order
+  - Lowest complete exact cost only; no weighted supplier ranking, negotiated quote amendment, split award or electronic supplier portal
+  - Native existing partial receiving/invoicing/installment ceilings apply after publication
+  - Awarded sources preserve their original selection and cannot be cancelled through sourcing
+  - Manufacturing references retain original demand provenance, not net shortages or a complete MRP planning engine
+  - Existing SR1 whole unissued unpaid zero-tax supplier returns do not accept budget-backed BPC orders; appropriation reinstatement and replacement capacity remain a separate source-owned extension
+  - No throughput improvement, worldwide tax compliance or production-readiness claim
+

@@ -1,0 +1,9 @@
+.procurement-sourcing-page { display: grid; gap: 1rem; min-width: 0; }
+.procurement-sourcing-page form, .procurement-sourcing-page fieldset, .procurement-sourcing-page section, .procurement-sourcing-page dl { display: grid; gap: .75rem; min-width: 0; }
+.procurement-sourcing-page label { display: grid; gap: .3rem; min-width: 0; }
+.procurement-sourcing-page input, .procurement-sourcing-page select, .procurement-sourcing-page button { max-width: 100%; min-width: 0; box-sizing: border-box; }
+.procurement-sourcing-page code, .procurement-sourcing-page dd { overflow-wrap: anywhere; word-break: break-word; margin-inline-start: 0; }
+.procurement-sourcing-page ul { padding-inline-start: 1.2rem; }
+.procurement-sourcing-page li { overflow-wrap: anywhere; }
+.procurement-sourcing-page li code { display: block; }
+.procurement-sourcing-page button { white-space: normal; }

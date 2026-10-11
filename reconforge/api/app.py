@@ -66,6 +66,7 @@ from reconforge.api.routes import (
     health,
     identity_administration,
     individual_cashflow,
+    intercompany_operations,
     inventory_core,
     inventory_planning,
     inventory_receipt_posting,
@@ -440,6 +441,7 @@ def create_api_app(
     app.include_router(financial_installments.router, prefix="/api/v1")
     app.include_router(commercial_collections.router, prefix="/api/v1")
     app.include_router(customer_returns.router, prefix="/api/v1")
+    app.include_router(intercompany_operations.router, prefix="/api/v1")
     app.include_router(procurement_commitments.router, prefix="/api/v1")
     app.include_router(supplier_returns.router, prefix="/api/v1")
     app.include_router(operational_fx_tax.router, prefix="/api/v1")
@@ -506,6 +508,7 @@ def create_api_app(
         financial_installments.router,
         commercial_collections.router,
         customer_returns.router,
+        intercompany_operations.router,
         procurement_commitments.router,
         supplier_returns.router,
         operational_fx_tax.router,

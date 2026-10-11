@@ -281,6 +281,17 @@ for _path, _permissions in {
 
 
 
+for _method, _path, _operation in (
+    ("GET", "/catalog", "read"), ("POST", "/sources", "prepare"), ("GET", "/sources", "read"),
+    ("GET", "/sources/{source_id}", "read"), ("POST", "/sources/{source_id}/settlements", "prepare"),
+    ("POST", "/sources/{source_id}/eliminations", "prepare"), ("GET", "/plans/{plan_id}", "read"),
+    ("POST", "/plans/{plan_id}/review", "review"), ("POST", "/plans/{plan_id}/post", "post"),
+    ("GET", "/plans/{plan_id}/evidence", "read"), ("GET", "/sources/{source_id}/report", "read"),
+):
+    _CRITICAL_ROUTE_CONTRACTS[(_method, "/api/v1/intercompany-operations" + _path)] = (
+        "all", ("intercompany_operations." + _operation,))
+
+
 def _dependency_contract(route: APIRoute) -> tuple[str, tuple[str, ...]] | None:
     found: set[tuple[str, tuple[str, ...]]] = set()
     pending = list(route.dependant.dependencies)

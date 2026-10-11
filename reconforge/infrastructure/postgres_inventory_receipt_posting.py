@@ -116,6 +116,11 @@ class PostgresInventoryReceiptPostingRepository:
             fail("Manufacturing receipts require their complete production completion owner.",
                  "inventory_receipt_owner_required")
 
+    def _manufacturing_plan_source(self, plan_id: str, participant: object | None) -> None:
+        row = self._one("SELECT source_number FROM reconforge.inventory_receipt_plans WHERE tenant_id=%s AND id=%s",
+                        (self.tenant_id, plan_id))
+        self._manufacturing_source(plan_id, row["source_number"], participant)
+
     def _actor(self, actor: PostingActor, permissions: frozenset[str], *, mutation: bool = True) -> None:
         principal = current_server_principal()
         if (principal is None or principal.principal_type != "user"
@@ -466,8 +471,7 @@ class PostgresInventoryReceiptPostingRepository:
     def review(self, plan_id: str, *, command_id: str, expected_plan_digest: str, reason: str, actor: PostingActor, _source_owner: object | None = None) -> ReceiptReview:
         with self._transaction():
             self._actor(actor, REVIEW_PERMISSIONS)
-            initial = self._plan(plan_id)
-            self._manufacturing_source(plan_id, initial["source"]["number"], _source_owner)
+            self._manufacturing_plan_source(plan_id, _source_owner)
             plan = self._plan(plan_id, lock=True)
             self._independent(plan, actor, stage="review")
             reason = exact_text(reason, maximum=500)
@@ -577,8 +581,7 @@ class PostgresInventoryReceiptPostingRepository:
     def commit(self, plan_id: str, *, command_id: str, expected_review_digest: str, reason: str, actor: PostingActor, _source_owner: object | None = None) -> ReceiptEffect:
         with self._transaction():
             self._actor(actor, COMMIT_PERMISSIONS)
-            initial = self._plan(plan_id)
-            self._manufacturing_source(plan_id, initial["source"]["number"], _source_owner)
+            self._manufacturing_plan_source(plan_id, _source_owner)
             plan = self._plan(plan_id, lock=True)
             self._independent(plan, actor, stage="commit")
             review = cast(ReceiptReview, self._review(plan))

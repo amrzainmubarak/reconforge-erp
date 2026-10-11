@@ -171,8 +171,8 @@ class PostgresIntercompanyOperationsRepository:
             entry = self.owner.finance.create_entry(entry_number=identifier.upper() + "-" + SUFFIXES[book], organization_code=req["organization_code"],
                 entity_code=req[book + "_entity_code"], period_id=period_id, journal_code=req["journal_code"], posting_date=posting_date,
                 description=reason, workspace=req["workspace_id"], external_reference="IC:" + source["id"] + ":" + kind,
-                actor_label=actor.username, lines=[{"account_code": row["account_code"], "debit": exact_minor_text(row["debit_minor"], precision),
-                    "credit": exact_minor_text(row["credit_minor"], precision), "description": reason} for row in lines])
+                actor_label=actor.username, lines=[{"account_code": row["account_code"], "debit": exact_minor_text(row["debit_minor"], precision) if row["debit_minor"] else "0",
+                    "credit": exact_minor_text(row["credit_minor"], precision) if row["credit_minor"] else "0", "description": reason} for row in lines])
             snapshot = posting_snapshot(self.connection, self.tenant_id, posting_entry(self.connection, self.tenant_id, entry["id"]))
             if any(snapshot["entry"][key] != value for key, value in source["monetary_policy"].items()):
                 fail("Every native entry must retain the original monetary policy.", "intercompany_policy_mismatch")

@@ -206,7 +206,7 @@ class PostgresManufacturingExecutionRepository:
                                    "quantity": scaled_to_text(quantity(line["quantity"], item["quantity_precision"]), decimal_places=item["quantity_precision"])})
             output_quantity = quantity(request.output_quantity, output["quantity_precision"])
             expand_requirements(components, output_quantity, output_quantity)
-            source = {**args, "id": "ME1B-" + uuid4().hex.upper(), "creator_id": actor.user_id,
+            source = {**args, "command_request": args, "id": "ME1B-" + uuid4().hex.upper(), "creator_id": actor.user_id,
                       "output": output, "output_quantity_scaled": output_quantity,
                       "components": sorted(components, key=lambda component: component["item_id"])}
             digest = digest_payload(source)
@@ -314,7 +314,7 @@ class PostgresManufacturingExecutionRepository:
             mapping = self._mapping(args)
             currency = self._one("SELECT minor_units FROM reconforge.currencies WHERE tenant_id=%s AND code=%s AND active", (self.tenant_id, mapping["currency_code"]))
             monetary, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).capture(workspace_id=args["workspace_id"], currency_code=mapping["currency_code"], minor_units=currency["minor_units"], actor_label=actor.username)
-            source = {**args, **mapping, **locations, "id": identifier, "creator_id": actor.user_id, "bom_digest": bom["source_digest"],
+            source = {**args, "command_request": args, **mapping, **locations, "id": identifier, "creator_id": actor.user_id, "bom_digest": bom["source_digest"],
                       "output": output, "output_item_id": output["item_id"], "output_quantity_scaled": planned,
                       "requirements": requirements, "monetary_policy": asdict(monetary), "movement_id": platform_id("MOV", args["workspace_id"], identifier)}
             digest = digest_payload(source)
@@ -516,8 +516,9 @@ class PostgresManufacturingExecutionRepository:
             identifier = self._completion_identifier(order, posting_date, count, good)
             source = {key: order[key] for key in ("workspace_id", "organization_id", "legal_entity_id", "organization_code", "entity_code", "journal_code",
                                                  "currency_code", "monetary_policy", "wip_account_code", "scrap_account_code")}
-            source.update(schema_version="manufacturing-completion-v1", id=identifier, **args, **allocation,
-                          order_digest=order["source_digest"], issue_digest=order["issue_digest"], preparer_actor_id=actor.user_id)
+            source.update(schema_version="manufacturing-completion-v1", id=identifier, command_request=args, **args, **allocation,
+                          order_digest=order["source_digest"], issue_digest=order["issue_digest"], preparer_actor_id=actor.user_id,
+                          receipt_identity_candidates=self._chronology_candidates)
             receipt = None
             self.connection.execute("SELECT set_config('app.manufacturing_execution_completion_id',%s,true)", (identifier,))
             if good:
@@ -545,6 +546,7 @@ class PostgresManufacturingExecutionRepository:
         # number. Select a bounded source identity that respects that existing order;
         # never weaken native chronology or rewrite a previously posted receipt.
         latest = None
+        self._chronology_candidates = 0
         if good:
             row = self.connection.execute("""SELECT max(m.movement_number) number
                 FROM reconforge.inventory_movements m JOIN reconforge.inventory_valuation_documents v
@@ -559,6 +561,7 @@ class PostgresManufacturingExecutionRepository:
         for candidate in range(4096):
             identifier = "ME1C-" + digest_payload([self.tenant_id, order["id"], count, candidate])[:32].upper()
             if latest is None or artifact_id(source_plan_id(order, identifier), "MOV").upper() > latest:
+                self._chronology_candidates = candidate + 1 if good else 0
                 return identifier
         fail("This posting date has exhausted bounded receipt chronology identities; select a later business date.")
 

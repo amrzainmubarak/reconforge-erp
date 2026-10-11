@@ -131,19 +131,51 @@ BEGIN
  ELSE RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Manufacturing source and evidence are immutable'; END IF;
  RETURN NEW;
 END $me$;
+CREATE FUNCTION reconforge.me1_ack(t TEXT,i TEXT,op TEXT) RETURNS JSONB LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
+DECLARE d RECORD;phase INTEGER;response JSONB;
+BEGIN
+ IF left(i,5)='ME1B-' THEN
+  SELECT * INTO d FROM reconforge.manufacturing_execution_boms WHERE tenant_id=t AND id=i;
+  phase:=CASE op WHEN 'create' THEN 0 WHEN 'approve-bom' THEN 1 ELSE NULL END;
+  response:=d.payload||jsonb_build_object('source_digest',d.source_digest,'phase',phase,'reviewer_id',CASE WHEN phase=1 THEN d.reviewer_id ELSE NULL END);
+ ELSIF left(i,5)='ME1C-' THEN
+  SELECT * INTO d FROM reconforge.manufacturing_execution_completions WHERE tenant_id=t AND id=i;
+  phase:=CASE op WHEN 'create' THEN 0 WHEN 'review' THEN 1 WHEN 'post' THEN 2 WHEN 'cancel' THEN 3 ELSE NULL END;
+  response:=d.payload||jsonb_build_object('source_digest',d.source_digest,'phase',phase,
+   'reviewer_id',CASE WHEN phase IN(1,2,3) THEN d.reviewer_id ELSE NULL END,
+   'receipt_effect',CASE WHEN phase=2 THEN d.receipt_effect ELSE NULL END,
+   'scrap_effect_id',CASE WHEN phase=2 THEN d.scrap_effect_id ELSE NULL END);
+ ELSE
+  SELECT * INTO d FROM reconforge.manufacturing_execution_orders WHERE tenant_id=t AND id=i;
+  phase:=CASE op WHEN 'create' THEN 0 WHEN 'prepare' THEN 1 WHEN 'review' THEN 2 WHEN 'post' THEN 3 WHEN 'cancel' THEN 5 ELSE NULL END;
+  response:=d.payload||jsonb_build_object('source_digest',d.source_digest,'phase',phase,
+   'issue_plan',CASE WHEN phase<>0 THEN d.issue_plan ELSE NULL END,'issue_digest',CASE WHEN phase<>0 THEN d.issue_digest ELSE NULL END,
+   'issue_reviewer_id',CASE WHEN phase IN(2,3,5) THEN d.issue_reviewer_id ELSE NULL END,
+   'issue_effect_id',CASE WHEN phase=3 THEN d.issue_effect_id ELSE NULL END,'valuation_id',CASE WHEN phase=3 THEN d.valuation_id ELSE NULL END,
+   'disposed_quantity_scaled',0,'released_cost_minor',0);
+ END IF;
+ IF d.id IS NULL OR phase IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Historical manufacturing acknowledgement needs an exact owner operation'; END IF;
+ RETURN response;
+END $me$;
 CREATE FUNCTION reconforge.me1_evidence(t TEXT,i TEXT,op TEXT,digest TEXT) RETURNS TEXT LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE e RECORD;c RECORD;
+DECLARE e RECORD;c RECORD;response JSONB;request JSONB;
 BEGIN
  SELECT * INTO e FROM reconforge.manufacturing_execution_events WHERE tenant_id=t AND object_id=i AND operation=op;
  SELECT * INTO c FROM reconforge.manufacturing_execution_commands WHERE tenant_id=t AND object_id=i AND operation=op;
+ response:=reconforge.me1_ack(t,i,op);
+ request:=CASE WHEN op='create' THEN response->'command_request' ELSE jsonb_build_object('id',i,'expected_digest',digest,'reason',e.reason) END;
  IF e IS NULL OR c IS NULL OR c.actor_id IS DISTINCT FROM e.actor_id OR reconforge.irp_digest(c.request_json) IS DISTINCT FROM c.request_digest
  OR c.request_json->>'actor_id' IS DISTINCT FROM e.actor_id OR c.request_json->>'operation' IS DISTINCT FROM op
- OR c.response_json->>'id' IS DISTINCT FROM i OR c.response_json->>'source_digest' IS DISTINCT FROM digest
+ OR c.request_json IS DISTINCT FROM jsonb_build_object('actor_id',e.actor_id,'operation',op,'request',request)
+ OR request->>'reason' IS DISTINCT FROM e.reason OR c.response_json IS DISTINCT FROM response
+ OR c.workspace_id IS DISTINCT FROM response->>'workspace_id'
+ OR e.metadata IS DISTINCT FROM jsonb_build_object('source_digest',digest,'phase',response->'phase','reason',e.reason)
  OR NOT EXISTS(SELECT 1 FROM reconforge.domain_audit_events a JOIN reconforge.outbox_events o ON o.tenant_id=a.tenant_id
   WHERE a.tenant_id=t AND a.id=e.audit_event_id AND a.actor_user_id=e.actor_id AND a.object_type='manufacturing_execution'
   AND a.object_id=i AND a.action='manufacturing_execution.'||op AND a.metadata_json=e.metadata
   AND o.event_id=e.outbox_event_id AND o.aggregate_type='manufacturing_execution' AND o.aggregate_id=i
-  AND o.event_type=a.action AND o.payload=e.metadata||jsonb_build_object('audit_event_id',a.id)) THEN
+  AND o.event_type=a.action AND o.payload=e.metadata||jsonb_build_object('audit_event_id',a.id)
+  AND(o.workspace_id,o.organization_id,o.legal_entity_id) IS NOT DISTINCT FROM(response->>'workspace_id',response->>'organization_id',response->>'legal_entity_id')) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Every manufacturing phase requires exact command, audit and outbox evidence'; END IF;
  RETURN e.actor_id;
 END $me$;
@@ -210,8 +242,8 @@ END $me$;
 """
 
 _CLOSURE_SQL = r"""
-CREATE FUNCTION reconforge.me1_entry(t TEXT,p JSONB,reviewer TEXT,posted BOOLEAN) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE e RECORD;f RECORD;l JSONB;
+CREATE FUNCTION reconforge.me1_entry(t TEXT,p JSONB,reviewer TEXT,posted BOOLEAN,cancelled BOOLEAN DEFAULT FALSE) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
+DECLARE e RECORD;f RECORD;l JSONB;head JSONB;native_lines JSONB;
 BEGIN
  SELECT * INTO e FROM reconforge.finance_entries WHERE tenant_id=t AND id=p->>'entry_id';
  SELECT * INTO f FROM reconforge.finance_posting_effects WHERE tenant_id=t AND entry_id=p->>'entry_id';
@@ -220,12 +252,26 @@ BEGIN
  OR e.preparer_actor_id IS DISTINCT FROM p->'snapshot'->'entry'->>'preparer_actor_id'
  OR e.currency_registry_digest IS DISTINCT FROM p->'snapshot'->'entry'->>'currency_registry_digest'
  OR e.currency_precision IS DISTINCT FROM(p->'snapshot'->'entry'->>'currency_precision')::integer
- OR(reviewer IS NOT NULL AND(e.validator_actor_id IS DISTINCT FROM reviewer OR reviewer=e.preparer_actor_id OR e.status<>'Validated'))
- OR(reviewer IS NULL AND e.status NOT IN('Draft','Voided'))
+ OR(reviewer IS NOT NULL AND(e.validator_actor_id IS DISTINCT FROM reviewer OR reviewer=e.preparer_actor_id))
+ OR e.status IS DISTINCT FROM(CASE WHEN cancelled THEN 'Voided' WHEN reviewer IS NULL THEN 'Draft' ELSE 'Validated' END)
  OR posted IS DISTINCT FROM(f.id IS NOT NULL) OR(f.id IS NOT NULL AND(f.snapshot_json IS DISTINCT FROM p->'snapshot'
  OR f.validation_digest IS DISTINCT FROM p->>'validation_digest' OR f.posted_actor_id IN(e.preparer_actor_id,reviewer)))
  OR(SELECT count(*) FROM reconforge.finance_entry_lines WHERE tenant_id=t AND entry_id=e.id)<>jsonb_array_length(p->'snapshot'->'lines') THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Manufacturing native financial source must preserve exact prepared/reviewed/posted evidence'; END IF;
+ SELECT jsonb_object_agg(key,value) INTO head FROM jsonb_each(to_jsonb(e))
+  WHERE key=ANY(ARRAY['id','workspace_id','journal_id','period_id','entry_number','posting_date','description','external_reference','source_type','currency_code',
+   'currency_precision','currency_rounding_policy','currency_registry_version','currency_registry_digest','preparer_actor_id','reverses_posting_id']);
+ head:=head||jsonb_build_object('organization_id',p->'snapshot'->'entry'->'organization_id','legal_entity_id',p->'snapshot'->'entry'->'legal_entity_id');
+ SELECT jsonb_agg(jsonb_build_object('line_number',nl.line_number,'account_id',nl.account_id,'description',nl.description,
+  'debit_minor',nl.debit_minor,'credit_minor',nl.credit_minor,'dimensions',COALESCE((SELECT jsonb_object_agg(d.dimension_id,d.dimension_value_id)
+   FROM reconforge.finance_entry_line_dimensions d WHERE d.tenant_id=nl.tenant_id AND d.entry_line_id=nl.id),'{}'::jsonb)) ORDER BY nl.line_number)
+  INTO native_lines FROM reconforge.finance_entry_lines nl WHERE nl.tenant_id=t AND nl.entry_id=e.id;
+ IF p->>'validation_digest' IS DISTINCT FROM reconforge.irp_digest(p->'snapshot')
+  OR p->'snapshot' IS DISTINCT FROM jsonb_build_object('schema_version','finance-entry-review-v1','entry',head,'lines',native_lines)
+  OR NOT EXISTS(SELECT 1 FROM reconforge.legal_entities z JOIN reconforge.organizations o ON o.tenant_id=z.tenant_id AND o.id=z.organization_id
+   WHERE z.tenant_id=t AND z.id=head->>'legal_entity_id' AND o.id=head->>'organization_id' AND z.entity_code=e.entity_code
+    AND o.organization_code=e.organization_code AND o.application_workspace_id=e.workspace_id AND z.currency_code=e.currency_code) THEN
+  RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Complete original native manufacturing entry snapshot must remain byte-canonical'; END IF;
  FOR l IN SELECT value FROM jsonb_array_elements(p->'snapshot'->'lines') LOOP
   IF l->'dimensions'<>'{}'::jsonb OR NOT EXISTS(SELECT 1 FROM reconforge.finance_entry_lines x WHERE x.tenant_id=t AND x.entry_id=e.id
    AND x.line_number=(l->>'line_number')::integer AND x.account_id=l->>'account_id'
@@ -235,8 +281,11 @@ BEGIN
  END LOOP;
 END $me$;
 CREATE FUNCTION reconforge.me1_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE d RECORD;b RECORD;r RECORD;m RECORD;c RECORD;x JSONB;a JSONB;v RECORD;l RECORD;total NUMERIC:=0;qty NUMERIC;disposed NUMERIC;released NUMERIC;maker TEXT;reviewer TEXT;poster TEXT;
+DECLARE d RECORD;b RECORD;r RECORD;m RECORD;c RECORD;command RECORD;x JSONB;a JSONB;v RECORD;l RECORD;total NUMERIC:=0;qty NUMERIC;disposed NUMERIC;released NUMERIC;maker TEXT;reviewer TEXT;poster TEXT;
 BEGIN
+ FOR command IN SELECT * FROM reconforge.manufacturing_execution_commands WHERE tenant_id=t AND object_id=i LOOP
+  PERFORM reconforge.me1_evidence(t,i,command.operation,command.response_json->>'source_digest');
+ END LOOP;
  IF left(i,5)='ME1B-' THEN
   SELECT * INTO b FROM reconforge.manufacturing_execution_boms WHERE tenant_id=t AND id=i;
   IF b IS NULL OR NOT reconforge.irp_scope(t,b.workspace_id,b.organization_id,b.legal_entity_id)
@@ -320,9 +369,9 @@ BEGIN
   maker:=reconforge.me1_evidence(t,i,'prepare',d.source_digest);
   IF maker IS DISTINCT FROM d.issue_plan->>'preparer_actor_id' OR d.issue_plan->>'source_digest' IS DISTINCT FROM d.source_digest THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Issue retains the actual material cost preparer'; END IF;
-  reviewer:=CASE WHEN d.phase IN(2,3,4) THEN reconforge.me1_evidence(t,i,'review',d.source_digest) ELSE NULL END;
-  IF d.phase IN(2,3,4) AND(reviewer IS DISTINCT FROM d.issue_reviewer_id OR reviewer=maker) THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Issue requires independent review'; END IF;
-  PERFORM reconforge.me1_entry(t,d.issue_plan->'entry',reviewer,d.phase IN(3,4));
+  reviewer:=CASE WHEN d.issue_reviewer_id IS NOT NULL THEN reconforge.me1_evidence(t,i,'review',d.source_digest) ELSE NULL END;
+  IF(d.phase IN(2,3,4) OR d.issue_reviewer_id IS NOT NULL) AND(reviewer IS DISTINCT FROM d.issue_reviewer_id OR reviewer=maker) THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Issue requires independent review'; END IF;
+  PERFORM reconforge.me1_entry(t,d.issue_plan->'entry',reviewer,d.phase IN(3,4),d.phase=5);
   IF jsonb_array_length(d.issue_plan->'components')<>jsonb_array_length(d.payload->'requirements')
    OR EXISTS(SELECT 1 FROM jsonb_array_elements(d.issue_plan->'components') z GROUP BY z->>'item_id' HAVING count(*)>1)
    OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(d.issue_plan->'entry'->'snapshot'->'lines') z WHERE z->>'account_id'=d.payload->>'wip_account_id'
@@ -368,8 +417,8 @@ BEGIN
   IF d.phase NOT IN(3,4) OR reconforge.irp_digest(c.payload) IS DISTINCT FROM c.source_digest OR c.payload->>'order_digest' IS DISTINCT FROM d.source_digest
    OR c.payload->>'issue_digest' IS DISTINCT FROM d.issue_digest THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Completion must retain its original posted component cost'; END IF;
   maker:=reconforge.me1_evidence(t,c.id,'create',c.source_digest);
-  reviewer:=CASE WHEN c.phase IN(1,2) THEN reconforge.me1_evidence(t,c.id,'review',c.source_digest) ELSE NULL END;
-  IF maker IS DISTINCT FROM c.payload->>'preparer_actor_id' OR(c.phase IN(1,2) AND(reviewer IS DISTINCT FROM c.reviewer_id OR maker=reviewer)) THEN
+  reviewer:=CASE WHEN c.reviewer_id IS NOT NULL THEN reconforge.me1_evidence(t,c.id,'review',c.source_digest) ELSE NULL END;
+  IF maker IS DISTINCT FROM c.payload->>'preparer_actor_id' OR((c.phase IN(1,2) OR c.reviewer_id IS NOT NULL) AND(reviewer IS DISTINCT FROM c.reviewer_id OR maker=reviewer)) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Completion retains independent actual source preparation and review'; END IF;
   IF c.phase<>3 THEN
    IF(c.payload->>'disposed_before_scaled')::numeric<>disposed OR(c.payload->>'released_before_minor')::numeric<>released
@@ -382,19 +431,34 @@ BEGIN
   IF((c.payload->>'scrap_quantity_scaled')::numeric>0) IS DISTINCT FROM(c.payload->'scrap_entry'<>'null'::jsonb)
    OR((c.payload->>'good_quantity_scaled')::numeric>0) IS DISTINCT FROM(c.payload->'receipt_plan'<>'null'::jsonb) THEN
    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Every positive good or scrap quantity needs its actual native financial source'; END IF;
+  poster:=CASE WHEN c.phase=2 THEN reconforge.me1_evidence(t,c.id,'post',c.source_digest) ELSE NULL END;
+  IF c.phase<>2 AND(COALESCE(c.receipt_effect,'null'::jsonb)<>'null'::jsonb OR c.scrap_effect_id IS NOT NULL)
+   OR(c.payload->'receipt_plan'='null'::jsonb AND COALESCE(c.receipt_effect,'null'::jsonb)<>'null'::jsonb)
+   OR(c.payload->'scrap_entry'='null'::jsonb AND c.scrap_effect_id IS NOT NULL) THEN
+   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Unposted or absent dispositions cannot retain financial effects'; END IF;
   IF c.payload->'scrap_entry'<>'null'::jsonb THEN
-   PERFORM reconforge.me1_entry(t,c.payload->'scrap_entry',reviewer,c.phase=2);
+   PERFORM reconforge.me1_entry(t,c.payload->'scrap_entry',reviewer,c.phase=2,c.phase=3);
    IF jsonb_array_length(c.payload->'scrap_entry'->'snapshot'->'lines')<>2 OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(c.payload->'scrap_entry'->'snapshot'->'lines') z
     WHERE z->>'account_id'=d.payload->>'scrap_account_id' AND(z->>'debit_minor')::numeric=(c.payload->>'scrap_cost_minor')::numeric AND(z->>'credit_minor')::numeric=0)
     OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(c.payload->'scrap_entry'->'snapshot'->'lines') z
     WHERE z->>'account_id'=d.payload->>'wip_account_id' AND(z->>'credit_minor')::numeric=(c.payload->>'scrap_cost_minor')::numeric AND(z->>'debit_minor')::numeric=0) THEN
     RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Abnormal material scrap must expense the exact released WIP'; END IF;
+   IF c.phase=2 AND NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects f WHERE f.tenant_id=t AND f.id=c.scrap_effect_id
+    AND f.entry_id=c.payload->'scrap_entry'->>'entry_id' AND f.posted_actor_id=poster) THEN
+    RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Scrap effect identity must name the exact third-human native expense'; END IF;
   END IF;
   IF c.payload->'receipt_plan'<>'null'::jsonb THEN
    IF NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_plans p WHERE p.tenant_id=t AND p.id=c.payload->'receipt_plan'->>'plan_id'
     AND p.plan_json IS NOT DISTINCT FROM c.payload->'receipt_plan' AND p.operation='Receipt'
     AND p.quantity_scaled=(c.payload->>'good_quantity_scaled')::bigint AND p.total_value_minor=(c.payload->>'good_cost_minor')::bigint
     AND p.item_id=d.payload->>'output_item_id' AND p.receipt_clearing_account_id=d.payload->>'wip_account_id'
+    AND p.source_number=c.id AND p.period_id=c.payload->>'period_id' AND p.posting_date::text=c.payload->>'posting_date'
+    AND(p.workspace_id,p.organization_id,p.legal_entity_id)=(d.workspace_id,d.organization_id,d.legal_entity_id)
+    AND p.preparer_actor_id=maker
+    AND(c.reviewer_id IS NULL) IS NOT DISTINCT FROM NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_reviews review WHERE review.tenant_id=t AND review.plan_id=p.id)
+    AND(c.reviewer_id IS NULL OR EXISTS(SELECT 1 FROM reconforge.inventory_receipt_reviews review WHERE review.tenant_id=t AND review.plan_id=p.id AND review.reviewer_actor_id=c.reviewer_id))
+    AND(c.phase<>2 OR EXISTS(SELECT 1 FROM reconforge.inventory_receipt_commands command WHERE command.tenant_id=t AND command.plan_id=p.id
+      AND command.operation='commit' AND command.actor_user_id=poster AND command.result_json=c.receipt_effect))
     AND(c.phase=2) IS NOT DISTINCT FROM EXISTS(SELECT 1 FROM reconforge.inventory_receipt_links link WHERE link.tenant_id=t AND link.plan_id=p.id)) THEN
     RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Finished goods require the exact original native receipt engine, cost and WIP offset'; END IF;
   END IF;
@@ -444,9 +508,10 @@ BEGIN
   END IF;i:=NEW.external_reference;
  ELSIF TG_TABLE_NAME='finance_entry_lines' THEN SELECT external_reference INTO i FROM reconforge.finance_entries WHERE tenant_id=NEW.tenant_id AND id=NEW.entry_id AND(left(entry_number,4)='ME1-' OR left(entry_number,5)='ME1C-');
  ELSIF TG_TABLE_NAME='finance_posting_effects' THEN SELECT external_reference INTO i FROM reconforge.finance_entries WHERE tenant_id=NEW.tenant_id AND id=NEW.entry_id AND(left(entry_number,4)='ME1-' OR left(entry_number,5)='ME1C-');
- ELSIF TG_TABLE_NAME='inventory_receipt_links' THEN
-  IF NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_plans p WHERE p.tenant_id=NEW.tenant_id AND p.id=NEW.plan_id AND left(p.source_number,5)='ME1C-') THEN RETURN NEW; END IF;
-  SELECT id INTO i FROM reconforge.manufacturing_execution_completions WHERE tenant_id=NEW.tenant_id AND payload->'receipt_plan'->>'plan_id'=NEW.plan_id;
+ ELSIF TG_TABLE_NAME IN('inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_commands','inventory_receipt_links') THEN
+  IF TG_TABLE_NAME='inventory_receipt_plans' THEN ref:=NEW.id;ELSE ref:=NEW.plan_id;END IF;
+  IF NOT EXISTS(SELECT 1 FROM reconforge.inventory_receipt_plans p WHERE p.tenant_id=NEW.tenant_id AND p.id=ref AND left(p.source_number,5)='ME1C-') THEN RETURN NEW; END IF;
+  SELECT id INTO i FROM reconforge.manufacturing_execution_completions WHERE tenant_id=NEW.tenant_id AND payload->'receipt_plan'->>'plan_id'=ref;
   IF i IS NULL THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Reserved finished receipt requires its exact manufacturing completion'; END IF;
  ELSE RETURN NEW;
  END IF;
@@ -467,7 +532,7 @@ DO $me$ DECLARE n TEXT; BEGIN
  END LOOP;
  FOREACH n IN ARRAY ARRAY['inventory_movements','inventory_movement_lines'] LOOP EXECUTE format('CREATE TRIGGER manufacturing_native_immutable BEFORE DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.me1_native_immutable()',n);END LOOP;
  FOREACH n IN ARRAY ARRAY['finance_entry_lines','finance_entry_line_dimensions'] LOOP EXECUTE format('CREATE TRIGGER manufacturing_native_immutable BEFORE UPDATE OR DELETE ON reconforge.%I FOR EACH ROW EXECUTE FUNCTION reconforge.me1_native_immutable()',n);END LOOP;
- FOREACH n IN ARRAY ARRAY['inventory_movements','inventory_movement_lines','finance_entries','finance_entry_lines','finance_posting_effects','inventory_receipt_links'] LOOP
+ FOREACH n IN ARRAY ARRAY['inventory_movements','inventory_movement_lines','finance_entries','finance_entry_lines','finance_posting_effects','inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_commands','inventory_receipt_links'] LOOP
   EXECUTE format('CREATE CONSTRAINT TRIGGER manufacturing_native_close AFTER INSERT OR UPDATE ON reconforge.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION reconforge.me1_deferred()',n);
  END LOOP;
 END $me$;
@@ -483,7 +548,7 @@ END $me$;
 DO $me$ DECLARE n TEXT; BEGIN
  FOREACH n IN ARRAY ARRAY['inventory_movements','inventory_movement_lines','finance_entry_lines','finance_entry_line_dimensions'] LOOP EXECUTE format('DROP TRIGGER manufacturing_native_immutable ON reconforge.%I',n);END LOOP;
  FOREACH n IN ARRAY ARRAY['inventory_movements','inventory_movement_lines','inventory_cost_layers','inventory_layer_consumptions'] LOOP EXECUTE format('DROP TRIGGER aa_manufacturing_native_guard ON reconforge.%I',n);END LOOP;
- FOREACH n IN ARRAY ARRAY['inventory_movements','inventory_movement_lines','finance_entries','finance_entry_lines','finance_posting_effects','inventory_receipt_links'] LOOP EXECUTE format('DROP TRIGGER manufacturing_native_close ON reconforge.%I',n);END LOOP;
+ FOREACH n IN ARRAY ARRAY['inventory_movements','inventory_movement_lines','finance_entries','finance_entry_lines','finance_posting_effects','inventory_receipt_plans','inventory_receipt_reviews','inventory_receipt_commands','inventory_receipt_links'] LOOP EXECUTE format('DROP TRIGGER manufacturing_native_close ON reconforge.%I',n);END LOOP;
 END $me$;
 DROP TABLE reconforge.manufacturing_execution_commands;
 DROP TABLE reconforge.manufacturing_execution_events;
@@ -492,8 +557,8 @@ DROP TABLE reconforge.manufacturing_execution_reservations;
 DROP TABLE reconforge.manufacturing_execution_requirements;
 DROP TABLE reconforge.manufacturing_execution_orders;
 DROP TABLE reconforge.manufacturing_execution_boms;
-DROP FUNCTION reconforge.me1_deferred();DROP FUNCTION reconforge.me1_close(TEXT,TEXT);DROP FUNCTION reconforge.me1_entry(TEXT,JSONB,TEXT,BOOLEAN);
-DROP FUNCTION reconforge.me1_native_guard();DROP FUNCTION reconforge.me1_native_immutable();DROP FUNCTION reconforge.me1_evidence(TEXT,TEXT,TEXT,TEXT);DROP FUNCTION reconforge.me1_protect();DROP FUNCTION reconforge.me1_permission(TEXT);DROP FUNCTION reconforge.me1_visible(TEXT,TEXT);
+DROP FUNCTION reconforge.me1_deferred();DROP FUNCTION reconforge.me1_close(TEXT,TEXT);DROP FUNCTION reconforge.me1_entry(TEXT,JSONB,TEXT,BOOLEAN,BOOLEAN);
+DROP FUNCTION reconforge.me1_native_guard();DROP FUNCTION reconforge.me1_native_immutable();DROP FUNCTION reconforge.me1_evidence(TEXT,TEXT,TEXT,TEXT);DROP FUNCTION reconforge.me1_ack(TEXT,TEXT,TEXT);DROP FUNCTION reconforge.me1_protect();DROP FUNCTION reconforge.me1_permission(TEXT);DROP FUNCTION reconforge.me1_visible(TEXT,TEXT);
 DROP FUNCTION reconforge.stock_sales_capacity(TEXT,TEXT,TEXT,TEXT,TEXT);
 ALTER FUNCTION reconforge.stock_sales_capacity_pre_me1(TEXT,TEXT,TEXT,TEXT,TEXT) RENAME TO stock_sales_capacity;
 ALTER TABLE reconforge.inventory_movements DROP COLUMN manufacturing_claim_state;

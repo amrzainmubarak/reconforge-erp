@@ -243,6 +243,7 @@ def test_cancel_reviewed_completion_retains_receipt_draft_and_exact_ack_but_no_e
 
 
 def test_forged_historical_response_refused_by_sql_and_source_transaction_rollback(manufacturing_database: tuple[str, str], monkeypatch: pytest.MonkeyPatch) -> None:
+    import psycopg
     system = runtime(manufacturing_database)
     before = retained_digest(system)
     original = PostgresManufacturingExecutionRepository._remember
@@ -252,7 +253,7 @@ def test_forged_historical_response_refused_by_sql_and_source_transaction_rollba
 
     with monkeypatch.context() as patch:
         patch.setattr(PostgresManufacturingExecutionRepository, "_remember", forge)
-        with pytest.raises(FinancePostingError, match="retained financial"):
+        with pytest.raises(psycopg.errors.CheckViolation, match="exact command"):
             approved_bom(system)
     assert retained_digest(system) == before
     assert approved_bom(system)["phase"] == 1
@@ -298,3 +299,27 @@ def test_bounded_same_date_native_receipt_search_exhaustion_is_atomic(manufactur
         with pytest.raises(FinancePostingError, match="exhausted bounded"):
             completion(system, order, "same-date-rejected")
     assert attempts == 4096 and retained_digest(system) == before
+
+
+def test_orphan_phase_event_and_outbox_cannot_forge_bom_review(manufacturing_database: tuple[str, str]) -> None:
+    import psycopg
+    from reconforge.domain.finance_posting import canonical_json
+    from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+    system = runtime(manufacturing_database)
+    with system.actor("maker") as (connection, _, actor):
+        source = PostgresManufacturingExecutionRepository(connection, system.tenant).prepare_bom(BomPreparation(number="UNREVIEWED", version=1,
+            output_item_code="PRODUCT", output_quantity="10", components=[{"item_code": "ITEM", "quantity": "2"}], workspace_id="work",
+            organization_id="org", legal_entity_id="entity", organization_code="ORG", entity_code="ENTITY", reason="Unreviewed exact recipe"), command_id="unreviewed-create", actor=actor)
+    before = retained_digest(system)
+    with pytest.raises(psycopg.errors.CheckViolation, match="exact owner operation"), system.actor("checker") as (connection, _, actor):
+        connection.execute("SELECT set_config('app.manufacturing_execution_actor_id',%s,true)", (actor.user_id,))
+        metadata = {"source_digest": source["source_digest"], "phase": 1, "reason": "Forged approval evidence"}
+        audit = PostgresAuditEventRepository(connection, system.tenant).append(actor_user_id=actor.user_id, actor_label=actor.username,
+            object_type="manufacturing_execution", object_id=source["id"], action="manufacturing_execution.approve-bom", metadata=metadata)
+        connection.execute("""INSERT INTO reconforge.outbox_events(tenant_id,event_id,event_type,aggregate_type,aggregate_id,workspace_id,organization_id,legal_entity_id,payload)
+            VALUES(%s,'OBX-ORPHAN','manufacturing_execution.approve-bom','manufacturing_execution',%s,'work','org','entity',%s::jsonb)""",
+            (system.tenant, source["id"], canonical_json({**metadata, "audit_event_id": audit.id})))
+        connection.execute("""INSERT INTO reconforge.manufacturing_execution_events(tenant_id,object_id,operation,actor_id,reason,audit_event_id,outbox_event_id,metadata)
+            VALUES(%s,%s,'approve-bom',%s,'Forged approval evidence',%s,'OBX-ORPHAN',%s::jsonb)""",
+            (system.tenant, source["id"], actor.user_id, audit.id, canonical_json(metadata)))
+    assert retained_digest(system) == before

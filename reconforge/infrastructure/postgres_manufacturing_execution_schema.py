@@ -3,6 +3,7 @@
 Revision 0133 imports these static statements. Earlier published migrations and
 their native definitions remain unchanged; the capacity wrapper is reversible.
 """
+from collections.abc import Mapping
 from typing import Any
 
 _TABLES_SQL = r"""
@@ -137,10 +138,12 @@ BEGIN
  IF left(i,5)='ME1B-' THEN
   SELECT * INTO d FROM reconforge.manufacturing_execution_boms WHERE tenant_id=t AND id=i;
   phase:=CASE op WHEN 'create' THEN 0 WHEN 'approve-bom' THEN 1 ELSE NULL END;
+  IF op='approve-bom' AND d.phase<>1 THEN phase:=NULL;END IF;
   response:=d.payload||jsonb_build_object('source_digest',d.source_digest,'phase',phase,'reviewer_id',CASE WHEN phase=1 THEN d.reviewer_id ELSE NULL END);
  ELSIF left(i,5)='ME1C-' THEN
   SELECT * INTO d FROM reconforge.manufacturing_execution_completions WHERE tenant_id=t AND id=i;
   phase:=CASE op WHEN 'create' THEN 0 WHEN 'review' THEN 1 WHEN 'post' THEN 2 WHEN 'cancel' THEN 3 ELSE NULL END;
+  IF(op='review' AND d.reviewer_id IS NULL) OR(op='post' AND d.phase<>2) OR(op='cancel' AND d.phase<>3) THEN phase:=NULL;END IF;
   response:=d.payload||jsonb_build_object('source_digest',d.source_digest,'phase',phase,
    'reviewer_id',CASE WHEN phase IN(1,2,3) THEN d.reviewer_id ELSE NULL END,
    'receipt_effect',CASE WHEN phase=2 THEN d.receipt_effect ELSE NULL END,
@@ -148,6 +151,8 @@ BEGIN
  ELSE
   SELECT * INTO d FROM reconforge.manufacturing_execution_orders WHERE tenant_id=t AND id=i;
   phase:=CASE op WHEN 'create' THEN 0 WHEN 'prepare' THEN 1 WHEN 'review' THEN 2 WHEN 'post' THEN 3 WHEN 'cancel' THEN 5 ELSE NULL END;
+  IF(op='prepare' AND d.issue_plan IS NULL) OR(op='review' AND d.issue_reviewer_id IS NULL)
+   OR(op='post' AND d.phase NOT IN(3,4)) OR(op='cancel' AND d.phase<>5) THEN phase:=NULL;END IF;
   response:=d.payload||jsonb_build_object('source_digest',d.source_digest,'phase',phase,
    'issue_plan',CASE WHEN phase<>0 THEN d.issue_plan ELSE NULL END,'issue_digest',CASE WHEN phase<>0 THEN d.issue_digest ELSE NULL END,
    'issue_reviewer_id',CASE WHEN phase IN(2,3,5) THEN d.issue_reviewer_id ELSE NULL END,
@@ -178,6 +183,15 @@ BEGIN
   AND(o.workspace_id,o.organization_id,o.legal_entity_id) IS NOT DISTINCT FROM(response->>'workspace_id',response->>'organization_id',response->>'legal_entity_id')) THEN
   RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Every manufacturing phase requires exact command, audit and outbox evidence'; END IF;
  RETURN e.actor_id;
+END $me$;
+CREATE FUNCTION reconforge.me1_history(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
+DECLARE phase RECORD;seal TEXT;
+BEGIN
+ FOR phase IN SELECT operation FROM reconforge.manufacturing_execution_commands WHERE tenant_id=t AND object_id=i
+  UNION SELECT operation FROM reconforge.manufacturing_execution_events WHERE tenant_id=t AND object_id=i LOOP
+  seal:=reconforge.me1_ack(t,i,phase.operation)->>'source_digest';
+  PERFORM reconforge.me1_evidence(t,i,phase.operation,seal);
+ END LOOP;
 END $me$;
 """
 
@@ -281,11 +295,9 @@ BEGIN
  END LOOP;
 END $me$;
 CREATE FUNCTION reconforge.me1_close(t TEXT,i TEXT) RETURNS VOID LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE d RECORD;b RECORD;r RECORD;m RECORD;c RECORD;command RECORD;x JSONB;a JSONB;v RECORD;l RECORD;total NUMERIC:=0;qty NUMERIC;disposed NUMERIC;released NUMERIC;maker TEXT;reviewer TEXT;poster TEXT;
+DECLARE d RECORD;b RECORD;r RECORD;m RECORD;c RECORD;x JSONB;a JSONB;v RECORD;l RECORD;total NUMERIC:=0;qty NUMERIC;disposed NUMERIC;released NUMERIC;maker TEXT;reviewer TEXT;poster TEXT;
 BEGIN
- FOR command IN SELECT * FROM reconforge.manufacturing_execution_commands WHERE tenant_id=t AND object_id=i LOOP
-  PERFORM reconforge.me1_evidence(t,i,command.operation,command.response_json->>'source_digest');
- END LOOP;
+ PERFORM reconforge.me1_history(t,i);
  IF left(i,5)='ME1B-' THEN
   SELECT * INTO b FROM reconforge.manufacturing_execution_boms WHERE tenant_id=t AND id=i;
   IF b IS NULL OR NOT reconforge.irp_scope(t,b.workspace_id,b.organization_id,b.legal_entity_id)
@@ -414,6 +426,7 @@ BEGIN
  IF d.phase=5 THEN PERFORM reconforge.me1_evidence(t,i,'cancel',d.source_digest); END IF;
  disposed:=0;released:=0;
  FOR c IN SELECT * FROM reconforge.manufacturing_execution_completions WHERE tenant_id=t AND order_id=i ORDER BY (payload->>'disposed_before_scaled')::bigint,id LOOP
+  PERFORM reconforge.me1_history(t,c.id);
   IF d.phase NOT IN(3,4) OR reconforge.irp_digest(c.payload) IS DISTINCT FROM c.source_digest OR c.payload->>'order_digest' IS DISTINCT FROM d.source_digest
    OR c.payload->>'issue_digest' IS DISTINCT FROM d.issue_digest THEN RAISE EXCEPTION USING ERRCODE='23514',CONSTRAINT='manufacturing_execution_owner',MESSAGE='Completion must retain its original posted component cost'; END IF;
   maker:=reconforge.me1_evidence(t,c.id,'create',c.source_digest);
@@ -558,7 +571,7 @@ DROP TABLE reconforge.manufacturing_execution_requirements;
 DROP TABLE reconforge.manufacturing_execution_orders;
 DROP TABLE reconforge.manufacturing_execution_boms;
 DROP FUNCTION reconforge.me1_deferred();DROP FUNCTION reconforge.me1_close(TEXT,TEXT);DROP FUNCTION reconforge.me1_entry(TEXT,JSONB,TEXT,BOOLEAN,BOOLEAN);
-DROP FUNCTION reconforge.me1_native_guard();DROP FUNCTION reconforge.me1_native_immutable();DROP FUNCTION reconforge.me1_evidence(TEXT,TEXT,TEXT,TEXT);DROP FUNCTION reconforge.me1_ack(TEXT,TEXT,TEXT);DROP FUNCTION reconforge.me1_protect();DROP FUNCTION reconforge.me1_permission(TEXT);DROP FUNCTION reconforge.me1_visible(TEXT,TEXT);
+DROP FUNCTION reconforge.me1_native_guard();DROP FUNCTION reconforge.me1_native_immutable();DROP FUNCTION reconforge.me1_history(TEXT,TEXT);DROP FUNCTION reconforge.me1_evidence(TEXT,TEXT,TEXT,TEXT);DROP FUNCTION reconforge.me1_ack(TEXT,TEXT,TEXT);DROP FUNCTION reconforge.me1_protect();DROP FUNCTION reconforge.me1_permission(TEXT);DROP FUNCTION reconforge.me1_visible(TEXT,TEXT);
 DROP FUNCTION reconforge.stock_sales_capacity(TEXT,TEXT,TEXT,TEXT,TEXT);
 ALTER FUNCTION reconforge.stock_sales_capacity_pre_me1(TEXT,TEXT,TEXT,TEXT,TEXT) RENAME TO stock_sales_capacity;
 ALTER TABLE reconforge.inventory_movements DROP COLUMN manufacturing_claim_state;
@@ -566,4 +579,25 @@ ALTER TABLE reconforge.inventory_movements DROP COLUMN manufacturing_claim_state
 
 
 def install_postgres_manufacturing_execution_schema(connection: Any) -> None:
+    row = connection.execute("SELECT to_regclass('reconforge.manufacturing_execution_orders') installed").fetchone()
+    installed = row["installed"] if isinstance(row, Mapping) else row[0]
+    if installed is not None:
+        # A fixture also runs after the real migration chain. Never reinstall its
+        # wrapper or silently accept an interrupted/older partial owner catalog.
+        row = connection.execute("""SELECT
+            to_regclass('reconforge.manufacturing_execution_boms') IS NOT NULL
+            AND to_regclass('reconforge.manufacturing_execution_requirements') IS NOT NULL
+            AND to_regclass('reconforge.manufacturing_execution_reservations') IS NOT NULL
+            AND to_regclass('reconforge.manufacturing_execution_completions') IS NOT NULL
+            AND to_regclass('reconforge.manufacturing_execution_events') IS NOT NULL
+            AND to_regclass('reconforge.manufacturing_execution_commands') IS NOT NULL
+            AND to_regprocedure('reconforge.me1_history(text,text)') IS NOT NULL
+            AND to_regprocedure('reconforge.me1_entry(text,jsonb,text,boolean,boolean)') IS NOT NULL
+            AND to_regprocedure('reconforge.stock_sales_capacity_pre_me1(text,text,text,text,text)') IS NOT NULL
+            AND EXISTS(SELECT 1 FROM pg_catalog.pg_attribute WHERE attrelid='reconforge.inventory_movements'::regclass
+                AND attname='manufacturing_claim_state' AND NOT attisdropped) complete""").fetchone()
+        complete = row["complete"] if isinstance(row, Mapping) else row[0]
+        if complete is not True:
+            raise RuntimeError("Existing manufacturing schema is incomplete; apply its exact ordered migration.")
+        return
     connection.execute(UPGRADE_SQL)

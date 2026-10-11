@@ -21,3 +21,21 @@ Limits are 100 components and 200 retained output attempts per order, with exact
 Required GL dimensions, alternative UOMs, lot/serial tracking, partial component issue, normal yield/standard costing, labor, overhead, routing, quality-control release, FX/tax and MRP remain unsupported. Their omission is an explicit scope boundary.
 
 Migration `0133_pg_manufacturing_execution` adds immutable FORCE RLS owner tables and the native claim marker without rewriting previous migrations. Downgrade is permitted only with no retained manufacturing owner data. Populated downgrade refuses atomically, keeping the source, native column, function bodies and commands intact. Use a verified PostgreSQL backup/restore and the actual ordered migration gate before an operational upgrade or rollback; an empty catalog proof does not substitute for populated restore.
+# Independent financial reproduction
+
+The file-only verifier `.github/scripts/verify_manufacturing_cycle_oracle.py` uses
+the Python standard library and independent integer/Fraction calculations. Run it
+outside the checkout with `python -I` (and repeat with `-I -O`) over the original
+`manufacturing-execution-proof-v1` JSON and the separately retained original raw
+SHA-256:
+
+```powershell
+python -I .github/scripts/verify_manufacturing_cycle_oracle.py --proof original-proof.json --proof-sha256 ORIGINAL_64_HEX_SHA --output verified-proof.json
+```
+
+It verifies the original BOM/UOM demands, original receipt quantities and costs,
+whole FIFO allocations and residuals, partial good and abnormal-scrap cost,
+zero final WIP, exact native posting populations and snapshot seals, and retained
+three-person source/effect identities. It does not authorize data writes, measure
+manufacturing throughput, or supply an external attestation. The caller must retain
+the original raw digest separately; hashing a replacement file is not sufficient.

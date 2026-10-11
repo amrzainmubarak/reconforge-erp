@@ -64,11 +64,16 @@ benchmarks: []
 rollback_plan: empty owner data only; populated downgrade refuses atomically and retains native claim column and original history
 test_matrix:
   pure: tests/test_manufacturing_execution.py
+  independent_oracle: tests/test_manufacturing_cycle_oracle.py
   native: tests/test_postgres_manufacturing_execution.py
   studio:
     - apps/web/src/manufacturing-execution-data.test.ts
     - apps/web/src/components/ManufacturingExecutionPage.test.tsx
   https_restore: apps/web/live/manufacturing-execution.playwright.config.ts
+independent_verification:
+  script: .github/scripts/verify_manufacturing_cycle_oracle.py
+  input: original manufacturing-execution-proof-v1 population JSON
+  trust_boundary: caller supplies separately retained original raw SHA; internal seals alone are not independent attestation
 supported_limits:
   components: 100
   retained_output_attempts_per_order: 200

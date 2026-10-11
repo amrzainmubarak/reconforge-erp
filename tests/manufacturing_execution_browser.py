@@ -16,7 +16,7 @@ MANUFACTURING_EXECUTION_TABLES = (
     "manufacturing_execution_commands", "inventory_receipt_plans", "inventory_receipt_reviews", "inventory_receipt_commands",
     "inventory_receipt_links", "inventory_movements", "inventory_movement_lines", "inventory_valuation_documents",
     "inventory_valuation_lines", "inventory_cost_layers", "inventory_layer_consumptions", "finance_entries",
-    "finance_entry_lines", "finance_posting_effects", "domain_audit_events", "outbox_events",
+    "finance_entry_lines", "finance_entry_line_dimensions", "finance_posting_effects", "domain_audit_events", "outbox_events",
 )
 MANUFACTURING_EXECUTION_TAMPER = (
     "UPDATE reconforge.manufacturing_execution_orders SET released_cost_minor=released_cost_minor+1 WHERE tenant_id=%s",

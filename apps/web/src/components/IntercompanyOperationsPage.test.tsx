@@ -14,10 +14,11 @@ function BeginSession() { const auth = useBrowserSession(); return <button onCli
 function renderSession(locale: "en" | "ar" = "en") { render(<BrowserSessionProvider><BeginSession /><IntercompanyOperationsPage locale={locale} /></BrowserSessionProvider>); fireEvent.click(screen.getByRole("button", { name: "Begin session" })); }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 describe("real intercompany Studio controls", () => {
-  it("renders Arabic login and no fabricated ledger", () => {
-    const { container } = render(<BrowserSessionProvider><IntercompanyOperationsPage locale="ar" /></BrowserSessionProvider>);
-    expect(screen.getByRole("form", { name: "تسجيل الدخول" })).toBeInTheDocument(); expect(container.querySelector("main")).toHaveAttribute("dir", "rtl");
-    expect(screen.getByLabelText("كلمة المرور")).toHaveAttribute("type", "password"); expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  it.each(["en", "ar"] as const)("exposes the actual accessibility and skip-navigation main landmark in %s", locale => {
+    render(<BrowserSessionProvider><IntercompanyOperationsPage locale={locale} /></BrowserSessionProvider>);
+    expect(screen.getByRole("form", { name: icTranslate(locale, "login") })).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveAttribute("id", "main-content"); expect(screen.getByRole("main")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+    expect(screen.getByLabelText(icTranslate(locale, "password"))).toHaveAttribute("type", "password"); expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
   it("holds scope edits until deferred identity has populated both fields", async () => {
     const pending = deferred<Response>(); vi.stubGlobal("fetch", vi.fn(() => pending.promise)); renderSession();

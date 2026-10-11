@@ -299,9 +299,15 @@ BEGIN
    PERFORM reconforge.ic_operation_assert(NOT EXISTS(SELECT 1 FROM reconforge.finance_posting_effects f JOIN reconforge.finance_entries e ON e.tenant_id=f.tenant_id AND e.id=f.entry_id
     WHERE f.tenant_id=selected AND f.id=original AND upper(left(e.entry_number,4))='IC1-'), 'Intercompany sources cannot be inverted through a detached native journal');
   END IF;
-  IF entry IS NOT NULL THEN
+  IF TG_TABLE_NAME IN('finance_entries','finance_entry_lines','finance_entry_line_dimensions','finance_posting_effects') THEN
+   -- A deferred dimension event can outlive its deleted native line. The
+   -- native line/header events independently close an owned IC1 parent.
+   IF entry IS NULL THEN CONTINUE;END IF;
    SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=selected AND id=entry;
-   IF upper(left(number,4)) IS DISTINCT FROM 'IC1-' THEN CONTINUE;END IF;
+   -- Retain OLD header relevance too: renaming/deleting an IC1 draft must
+   -- still close its original owner, even when the current header is gone.
+   IF upper(left(number,4)) IS DISTINCT FROM 'IC1-'
+    AND NOT(TG_TABLE_NAME='finance_entries' AND upper(left(coalesce(changed->>'entry_number',''),4))='IC1-') THEN CONTINUE;END IF;
    SELECT p.* INTO plan FROM reconforge.intercompany_operation_plans p WHERE p.tenant_id=selected AND EXISTS(SELECT 1 FROM jsonb_array_elements(p.payload->'entries') x WHERE x->>'entry_id'=entry);
    PERFORM reconforge.ic_operation_assert(plan.id IS NOT NULL,'IC1 namespace native entry requires its complete source owner');
    PERFORM reconforge.ic_operation_close(selected,plan.id);CONTINUE;

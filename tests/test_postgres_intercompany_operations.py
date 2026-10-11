@@ -181,6 +181,25 @@ def test_direct_sql_half_review_and_public_native_post_or_inverse_refused(runtim
                 period_id="period", posting_date="2026-10-04", reason="Detached", actor=actor)
 
 
+@pytest.mark.parametrize("mutation", ["rename", "delete"])
+def test_original_ic_header_relevance_survives_direct_sql_rename_or_delete(runtime: IntercompanyRuntime, mutation: str) -> None:
+    import psycopg
+
+    with runtime.actor("maker") as (_, repository, actor):
+        plan = repository.prepare(preparation(), command_id="prepare-original", actor=actor)
+    with pytest.raises(psycopg.errors.CheckViolation) as denied, runtime.actor("maker") as (connection, _, _):
+        entry_id = plan["entries"][0]["entry_id"]
+        if mutation == "rename":
+            connection.execute("UPDATE reconforge.finance_entries SET entry_number='ORDINARY-LAUNDERED' WHERE tenant_id=%s AND id=%s", (runtime.base.tenant, entry_id))
+        else:
+            connection.execute("DELETE FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s", (runtime.base.tenant, entry_id))
+            connection.execute("DELETE FROM reconforge.finance_entries WHERE tenant_id=%s AND id=%s", (runtime.base.tenant, entry_id))
+        connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert denied.value.diag.constraint_name == "intercompany_operation_owner"
+    with runtime.actor("maker") as (_, repository, actor):
+        assert repository.get_plan(plan["id"], actor=actor) == plan
+
+
 def test_late_second_effect_failure_rolls_back_whole_pair_and_exact_retry(runtime: IntercompanyRuntime, monkeypatch: pytest.MonkeyPatch) -> None:
     with runtime.actor("maker") as (_, repository, actor):
         plan = repository.prepare(preparation(), command_id="prepare-original", actor=actor)

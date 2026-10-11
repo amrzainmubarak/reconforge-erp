@@ -16,6 +16,7 @@ from reconforge.domain.procurement_sourcing import (
     RequisitionPreparation,
     SupplierQuotationPreparation,
 )
+from reconforge.infrastructure.postgres import PostgresTenantBoundary
 from reconforge.infrastructure.postgres_finance_core import PostgresFinanceCoreRepository
 from reconforge.infrastructure.postgres_identity import PostgresIdentityRepository
 from reconforge.infrastructure.postgres_inventory_core import PostgresInventoryCoreRepository
@@ -31,7 +32,9 @@ __all__ = ["receipt_database", "sourcing_runtime"]
 
 
 def manufacturing_requirement_source(runtime: Any) -> tuple[dict[str, Any], dict[str, Any]]:
-    with runtime.actor(MAKER) as (connection, _, _):
+    # Only synthetic master creation uses the accepted tenant master fixture boundary.
+    # Every actual stock/BOM/order/source/financial command below uses a scoped human.
+    with PostgresTenantBoundary(runtime.factory).transaction(runtime.tenant) as connection:
         identity = PostgresIdentityRepository(connection)
         for permission in sorted(set().union(*MANUFACTURING_PERMISSIONS.values())):
             identity.create_permission(tenant_id=runtime.tenant, permission_name=permission)

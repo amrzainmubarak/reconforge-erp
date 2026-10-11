@@ -25,6 +25,12 @@ EXPANSION_TABLES = (
     "financial_opening_links", "financial_reporting_commands",
 )
 
+# This append-only chain has one sequence/previous-hash lineage per tenant and
+# no workspace/entity columns (postgres_domain.py). It remains in the complete
+# row/catalog/FORCE RLS snapshot and unbound tenant probe, not the workspace
+# concealment claim. No operational inventory or financial table is exempt.
+TENANT_GLOBAL_AUDIT_TABLES = ("domain_audit_events",)
+
 
 def verify_expansion_cycles(runtime: ReceiptRuntime) -> dict[str, Any]:
     with runtime.actor("browser-poster") as (connection, _, actor):
@@ -62,12 +68,20 @@ def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str, *,
             "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
             "UPDATE reconforge.financial_opening_links SET posted_actor_id='maker' WHERE tenant_id=%s",
         ),
-        tamper_actor: Callable[[ReceiptRuntime], AbstractContextManager[tuple[Any, Any, Any]]] | None = None) -> dict[str, Any]:
-    effects = verify_cycles(runtime)
+        tamper_actor: Callable[[ReceiptRuntime], AbstractContextManager[tuple[Any, Any, Any]]] | None = None,
+        workspace_probe_tables: tuple[str, ...] | None = None) -> dict[str, Any]:
     # Module proof populations include native financial tables as well as
     # owned relations. Require every relation exactly once, preserving all
     # row/catalog/ACL/FORCE RLS checks over the complete union.
     protected = tuple(dict.fromkeys(FINANCIAL_TABLES + extension_tables))
+    workspace_probes = extension_tables if workspace_probe_tables is None else workspace_probe_tables
+    if workspace_probe_tables is not None:
+        require(type(workspace_probe_tables) is tuple and all(type(name) is str for name in workspace_probe_tables)
+                and len(set(workspace_probe_tables)) == len(workspace_probe_tables)
+                and set(workspace_probe_tables).issubset(protected), "Workspace probe relations must be a unique known protected subset.")
+        require(set(extension_tables) - set(workspace_probe_tables) <= set(TENANT_GLOBAL_AUDIT_TABLES),
+                "Every operational/native relation must retain its workspace probe.")
+    effects = verify_cycles(runtime)
     before = database_snapshot(runtime.admin_dsn, financial_tables=protected)
     require(before["head"] == POSTGRES_MIGRATION_REVISIONS[-1], "Expansion restore is not current migration head.")
     dump = subprocess.run(["docker", "exec", container, "pg_dump", "--username=postgres", "--dbname=postgres", "--format=custom"], capture_output=True, check=True, timeout=120)  # nosec B603 B607
@@ -88,10 +102,11 @@ def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str, *,
             require(flags is not None and list(flags) == [False, False], "Restore role bypasses isolation.")
             for table in extension_tables:
                 rows = connection.execute(sql.SQL("SELECT count(*) FROM reconforge.{}").format(sql.Identifier(table))).fetchone()
-                require(rows is not None and rows[0] == 0, "Unbound native read leaked.")
+                require(rows is not None and rows[0] == 0, "Unbound native read leaked: " + table)
         with PostgresTenantBoundary(restored.factory).transaction(runtime.tenant, workspace_id="foreign", organization_id="org", legal_entity_id="entity") as connection:
-            for table in extension_tables:
-                require(connection.execute(sql.SQL("SELECT count(*) n FROM reconforge.{}").format(sql.Identifier(table))).fetchone()["n"] == 0, "Sibling workspace leaked after restore.")
+            for table in workspace_probes:
+                require(connection.execute(sql.SQL("SELECT count(*) n FROM reconforge.{}").format(sql.Identifier(table))).fetchone()["n"] == 0,
+                        "Sibling workspace leaked after restore: " + table)
         refused = 0
         with (tamper_actor(restored) if tamper_actor is not None else restored.actor("browser-poster")) as (connection, _, _actor):
             checkpoint = database_snapshot(admin_dsn, financial_tables=protected)
@@ -103,7 +118,10 @@ def verify_expansion_native_restore(runtime: ReceiptRuntime, container: str, *,
                     refused += 1
         require(refused == len(tamper_statements) and checkpoint == database_snapshot(admin_dsn, financial_tables=protected), "Restored immutable guards or exact rollback are absent.")
         return {"status": "passed", "dump_sha256": hashlib.sha256(dump.stdout).hexdigest(), "snapshot": after,
-                "probe_checkpoint": checkpoint, "verified_effects": effects, "tamper_refusals": refused}
+                "probe_checkpoint": checkpoint, "verified_effects": effects, "tamper_refusals": refused,
+                "unbound_tenant_probe_tables": list(dict.fromkeys(extension_tables)),
+                "sibling_workspace_probe_tables": list(dict.fromkeys(workspace_probes)),
+                "tenant_global_audit_tables": sorted(set(extension_tables) - set(workspace_probes))}
     finally:
         with psycopg.connect(runtime.admin_dsn, autocommit=True) as admin:
             admin.execute(sql.SQL("DROP DATABASE {} WITH (FORCE)").format(sql.Identifier(database)))

@@ -21,6 +21,17 @@ Limits are 100 components and 200 retained output attempts per order, with exact
 Required GL dimensions, alternative UOMs, lot/serial tracking, partial component issue, normal yield/standard costing, labor, overhead, routing, quality-control release, FX/tax and MRP remain unsupported. Their omission is an explicit scope boundary.
 
 Migration `0133_pg_manufacturing_execution` adds immutable FORCE RLS owner tables and the native claim marker without rewriting previous migrations. Downgrade is permitted only with no retained manufacturing owner data. Populated downgrade refuses atomically, keeping the source, native column, function bodies and commands intact. Use a verified PostgreSQL backup/restore and the actual ordered migration gate before an operational upgrade or rollback; an empty catalog proof does not substitute for populated restore.
+
+The populated restore gate retains all 23 original manufacturing proof tables in
+the complete row/catalog/ACL/FORCE RLS comparison and unbound tenant probe. Its
+sibling-workspace probe must conceal all seven manufacturing owner tables and
+all native inventory, FIFO, receipt, GL and outbox consequences. The sole separate
+contract is `domain_audit_events`: the existing append-only audit chain has one
+sequence and previous hash per tenant, with no workspace or entity columns.
+That chain remains fully fingerprinted and tenant isolated; the workspace
+concealment claim does not include it. Native inventory or financial rows cannot
+be removed from the workspace probe to satisfy a failed gate.
+
 # Independent financial reproduction
 
 The file-only verifier `.github/scripts/verify_manufacturing_cycle_oracle.py` uses

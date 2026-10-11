@@ -18,6 +18,13 @@ MANUFACTURING_EXECUTION_TABLES = (
     "inventory_valuation_lines", "inventory_cost_layers", "inventory_layer_consumptions", "finance_entries",
     "finance_entry_lines", "finance_entry_line_dimensions", "finance_posting_effects", "domain_audit_events", "outbox_events",
 )
+# Native inventory/FIFO/GL/IRP and all seven ME1 source relations remain in the
+# direct SQL sibling-workspace probe. Only the original tenant-global audit
+# hash chain has a different scope contract; its rows and FORCE RLS remain
+# covered by the full native snapshot and unbound tenant probe.
+MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES = tuple(
+    name for name in MANUFACTURING_EXECUTION_TABLES if name != "domain_audit_events"
+)
 MANUFACTURING_EXECUTION_TAMPER = (
     "UPDATE reconforge.manufacturing_execution_orders SET released_cost_minor=released_cost_minor+1 WHERE tenant_id=%s",
     "UPDATE reconforge.manufacturing_execution_requirements SET requirement_json=jsonb_set(requirement_json,'{item_code}','\"FORGED\"'::jsonb) WHERE tenant_id=%s",

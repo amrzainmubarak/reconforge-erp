@@ -182,6 +182,51 @@ def verify(proofs: list[dict[str, Any]], report: dict[str, Any]) -> dict[str, An
             total += row[2] - row[3]
         require(total == 0, "Independent group account net differs")
     require(observed == native_lines, "Group report must include exactly all original five-effect lines")
+    parties = report["entity_reports"]
+    require(len(parties) == 3 and {party["legal_entity_id"] for party in parties} == set(entities.values())
+            and len({party["map_id"] for party in parties}) == 3, "Three distinct original reviewed-map report scopes required")
+    classification = {accounts["receivable"]: ("Asset", "CurrentAsset", False), accounts["cash"]: ("Asset", "CurrentAsset", True),
+                      accounts["payable"]: ("Liability", "CurrentLiability", False), accounts["revenue"]: ("Income", "Income", False),
+                      accounts["expense"]: ("Expense", "Expense", False)}
+    for party in parties:
+        seal(party, "report_digest")
+        entity = party["legal_entity_id"]
+        require(party["contract_version"] == "financial-reporting-v1"
+                and all(party[k] == report[k] for k in ("workspace_id", "organization_id", "period_id", "period_start", "period_end", "as_of_date", "currency_policy")), "Original native party report policy/cutoff differs")
+        expected_party = {key: value for key, value in native_lines.items() if value[0] == entity}
+        party_effects = {key[0] for key in expected_party}
+        require(type(party["effect_count"]) is int and party["effect_count"] == len(party_effects), "Original party effect count differs")
+        retained: dict[tuple[str, int], tuple[str, str, int, int]] = {}
+        seen_accounts: set[str] = set()
+        for account in party["trial_balance"]["accounts"]:
+            code = account["account_code"]
+            require(code in account_ids and account["account_id"] == account_ids[code] and code not in seen_accounts
+                    and (account["account_type"], account["section"], account["is_cash"]) == classification[code], "Original reviewed party account classification differs")
+            seen_accounts.add(code)
+            debit = credit = 0
+            for line in account["postings"]:
+                key = (line["effect_id"], line["line_number"])
+                row = (entity, account["account_id"], money(line["debit_minor"]), money(line["credit_minor"]))
+                require(key in expected_party and key not in retained and row == expected_party[key]
+                        and line["entry_id"] == native[key[0]]["entry_id"] and line["phase"] == "activity", "Original party native line membership differs")
+                retained[key] = row
+                debit += row[2]
+                credit += row[3]
+            for phase in ("opening", "activity", "closing"):
+                dr, cr = (0, 0) if phase == "opening" else (debit, credit)
+                expected_position = {"debit_minor": dr, "credit_minor": cr, "balance_minor": dr - cr,
+                                     "debit_balance_minor": max(dr - cr, 0), "credit_balance_minor": max(cr - dr, 0)}
+                require(normalize(account[phase]) == expected_position, "Independent original party position differs")
+        require(retained == expected_party, "Original party report must include all and only its native source lines")
+        def amount(code: str, selected_entity: str = entity) -> int:
+            return party_balances.get((selected_entity, code), 0)
+        income, expense, cash = -amount(accounts["revenue"]), amount(accounts["expense"]), amount(accounts["cash"])
+        expected_sheet = {"assets_minor": amount(accounts["receivable"]) + cash, "liabilities_minor": -amount(accounts["payable"]),
+                          "equity_minor": 0, "accumulated_unclosed_result_minor": income - expense, "balanced": True}
+        require(normalize(party["balance_sheet"]) == expected_sheet
+                and normalize(party["income_statement"]) == {"income_minor": income, "expense_minor": expense, "result_minor": income - expense}
+                and {key: money(party["cash_movements"][key], signed=True) for key in ("opening_minor", "activity_minor", "closing_minor")}
+                    == {"opening_minor": 0, "activity_minor": cash, "closing_minor": cash}, "Independent original party financial statement differs")
     require(normalize(report["income_statement"]) == {"income_minor": 0, "expense_minor": 0, "result_minor": 0}
             and normalize(report["cash_net_movements"]) == {"opening_minor": 0, "activity_minor": 0, "closing_minor": 0}
             and report["balance_sheet"]["balanced"] is True

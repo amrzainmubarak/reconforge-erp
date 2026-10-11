@@ -16,3 +16,5 @@ Makefile text eol=lf
 # Retain the licensed upstream fixture's original bytes for SHA-256 verification.
 tests/fixtures/amlsim/LICENSE -text
 docs/security/gitleaks-public-source-digests-wave4.v1.json -text -eol
+# Preserve original benchmark and failure packets across Windows/Linux checkouts.
+docs/execution/wave5-evidence/** -text -eol

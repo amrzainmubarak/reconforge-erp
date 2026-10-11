@@ -35,7 +35,7 @@ describe("real intercompany Studio controls", () => {
     await screen.findByRole("form", { name: icTranslate(locale, "prepare") }); fireEvent.change(screen.getByLabelText(icTranslate(locale, "sources")), { target: { value: proof.source.id } });
     await screen.findByRole("region", { name: icTranslate(locale, "plan") });
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: icTranslate(locale, "verify") })); await complete.promise; });
-    expect(screen.getByRole("status")).toHaveTextContent(icTranslate(locale, "verified")); expect(screen.getByRole("button", { name: icTranslate(locale, "download") })).toBeEnabled();
+    expect(await screen.findByRole("status")).toHaveTextContent(icTranslate(locale, "verified")); expect(screen.getByRole("button", { name: icTranslate(locale, "download") })).toBeEnabled();
     expect(screen.getByText("effect-buyer")).toBeInTheDocument(); expect(screen.getByText("effect-seller")).toBeInTheDocument();
   });
   it("retains exact route, command and digest after a lost review acknowledgement", async () => {

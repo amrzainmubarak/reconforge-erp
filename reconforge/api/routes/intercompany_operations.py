@@ -120,7 +120,11 @@ def catalog(request: Request, user: Read) -> dict[str, Any]:
             "accounts": repository.owner.finance.list_accounts(workspace=scope.workspace_id),
             "journals": repository.owner.finance.list_journals(workspace=scope.workspace_id, organization_code=scope.organization_code),
             "periods": records(repository.connection.execute("SELECT id,name,status,start_date,end_date FROM reconforge.fiscal_periods WHERE tenant_id=%s AND application_workspace_id=%s ORDER BY start_date,id LIMIT 100", (scope.tenant_id, scope.workspace_id))),
-            "maps": records(repository.connection.execute("SELECT id,legal_entity_id,payload->>'name' AS name FROM reconforge.financial_reporting_maps WHERE tenant_id=%s AND workspace_id=%s AND organization_id=%s AND legal_entity_id=ANY(%s) AND status='Reviewed' ORDER BY legal_entity_id,id LIMIT 100",
+            "maps": records(repository.connection.execute("""SELECT m.id,m.legal_entity_id,m.payload->>'name' AS name
+                FROM reconforge.financial_reporting_maps m JOIN reconforge.financial_reporting_map_reviews r
+                ON r.tenant_id=m.tenant_id AND r.map_id=m.id AND r.map_digest=m.map_digest
+                WHERE m.tenant_id=%s AND m.workspace_id=%s AND m.organization_id=%s AND m.legal_entity_id=ANY(%s)
+                ORDER BY m.legal_entity_id,m.id LIMIT 100""",
                 (scope.tenant_id, scope.workspace_id, scope.organization_id, sorted(principal.authorized_legal_entity_ids))))}}
 
     return execute(request, user, collect)

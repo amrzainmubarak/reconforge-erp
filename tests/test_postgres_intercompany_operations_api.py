@@ -7,9 +7,12 @@ from fastapi.testclient import TestClient
 
 from reconforge.api.routes import intercompany_operations as api
 from reconforge.api.routes.intercompany_operations import router
+from reconforge.domain.financial_reporting import AccountClassification, ReportingScope
 from reconforge.infrastructure.postgres import PostgresTenantBoundary
+from reconforge.infrastructure.postgres_financial_reporting import PostgresFinancialReportingRepository
 from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 from tests.test_postgres_intercompany_operations import (
+    ACCOUNTS,
     IntercompanyRuntime,
     intercompany_database,
     pytestmark,
@@ -104,6 +107,17 @@ def test_actual_http_catalog_contains_three_current_books_and_native_master_shap
 
     # Preserve the actual executor/admission; only retain the synthetic failure cause.
     monkeypatch.setattr(api, "execute_postgres_finance_core_scoped", observe)
+    reviewed_maps = {}
+    for entity in ("entity", "buyer", "group"):
+        with runtime.actor("maker") as (connection, _, actor):
+            mapping = PostgresFinancialReportingRepository(connection, runtime.base.tenant).prepare_map(ReportingScope("work", "org", entity),
+                name="Actual HTTP map " + entity, accounts=[AccountClassification(code, section, code == "CASH") for code, _, section in ACCOUNTS],
+                command_id="http-map-" + entity, actor=actor)
+        if entity != "group":
+            with runtime.actor("checker") as (connection, _, actor):
+                PostgresFinancialReportingRepository(connection, runtime.base.tenant).review_map(mapping["id"], expected_digest=mapping["map_digest"],
+                    reason="Actual independent map review", command_id="http-map-review-" + entity, actor=actor)
+            reviewed_maps[entity] = mapping["id"]
     with client(runtime, intercompany_database, tmp_path, "maker") as (session, headers):
         response = session.get(ROOT + "/catalog", headers=headers)
         assert response.status_code == 200, (response.text, failures)
@@ -112,3 +126,4 @@ def test_actual_http_catalog_contains_three_current_books_and_native_master_shap
         assert {row["account_code"] for row in masters["accounts"]} >= {"IC_AR", "IC_AP", "IC_REVENUE", "IC_EXPENSE", "CASH"}
         assert "STOCK" in {row["journal_code"] for row in masters["journals"]}
         assert {row["id"] for row in masters["periods"]} == {"period"}
+        assert {row["legal_entity_id"]: row["id"] for row in masters["maps"]} == reviewed_maps

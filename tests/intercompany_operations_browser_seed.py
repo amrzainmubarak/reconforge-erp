@@ -74,7 +74,9 @@ def verify_intercompany_browser(base: ReceiptRuntime) -> dict[str, Any]:
                 require(hashlib.sha256(raw.encode()).hexdigest() == entry["validation_digest"] and native["validation_digest"] == entry["validation_digest"]
                         and native["id"] == plan["posting_effect_ids"][entry["book"]] and native["posted_actor_id"] == "erp-poster", "Native book seal or third human differs.")
                 effects.append({"kind": plan["kind"], "book": entry["book"], "plan_id": plan["id"], "entry_id": entry["entry_id"], "effect_id": native["id"]})
-        mappings = connection.execute("SELECT id,legal_entity_id FROM reconforge.financial_reporting_maps WHERE tenant_id=%s AND status='Reviewed'", (base.tenant,)).fetchall()
+        mappings = connection.execute("""SELECT m.id,m.legal_entity_id FROM reconforge.financial_reporting_maps m
+            JOIN reconforge.financial_reporting_map_reviews r ON r.tenant_id=m.tenant_id AND r.map_id=m.id AND r.map_digest=m.map_digest
+            WHERE m.tenant_id=%s""", (base.tenant,)).fetchall()
         by_entity = {row["legal_entity_id"]: row["id"] for row in mappings}
         report = repository.report(source["id"], seller_map_id=by_entity["entity"], buyer_map_id=by_entity["buyer"], adjustment_map_id=by_entity["group"],
             period_id="period", as_of_date="2026-10-05", actor=actor)

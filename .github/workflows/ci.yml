@@ -71,7 +71,7 @@ jobs:
           --ignore=tests/test_postgres_intercompany_fx_api.py
           --ignore=tests/test_postgres_people_project_payroll.py
           --ignore=tests/test_postgres_people_project_payroll_api.py
-          --ignore=tests/test_postgres_people_project_payroll_restore.py
+          --ignore=tests/test_postgres_people_project_payroll_restore.py --ignore=tests/test_postgres_people_project_dimension_pins.py
           --ignore=tests/test_postgres_enterprise_migrations.py
           --ignore=tests/test_postgres_inventory_scope.py
           --ignore=tests/test_postgres_intercompany_operations.py
@@ -583,6 +583,7 @@ jobs:
           RECONFORGE_TEST_POSTGRES_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_DSN: postgresql://reconforge_app:reconforge_app@localhost:5432/postgres
           RECONFORGE_TEST_POSTGRES_APP_USER: reconforge_app
+          RECONFORGE_TEST_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
           RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE: reconforge_ci_source
           RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE: reconforge_ci_admin
           RECONFORGE_AR_INVOICE_REPLAY_NATIVE_REPORT: ${{ runner.temp }}/reconforge-ar-invoice-recovery-native.json
@@ -694,7 +695,7 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_intercompany_operations.py tests/test_postgres_intercompany_operations_api.py tests/test_postgres_intercompany_fx.py tests/test_postgres_intercompany_fx_api.py -q
               ;;
             people-project-payroll)
-              uv run --no-sync pytest tests/test_postgres_people_project_payroll.py tests/test_postgres_people_project_payroll_api.py tests/test_postgres_people_project_payroll_restore.py -q
+              uv run --no-sync pytest tests/test_postgres_people_project_payroll.py tests/test_postgres_people_project_payroll_api.py tests/test_postgres_people_project_payroll_restore.py tests/test_postgres_people_project_dimension_pins.py -q
               ;;
             procurement-sourcing)
               uv run --no-sync pytest tests/test_postgres_procurement_sourcing.py tests/test_postgres_procurement_sourcing_api.py tests/test_postgres_manufacturing_sourcing.py -q

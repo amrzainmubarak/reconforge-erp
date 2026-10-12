@@ -46,7 +46,7 @@ INTEGRITY_FILES = {
     ),
     "intercompany-operations": ("tests/test_postgres_intercompany_operations.py", "tests/test_postgres_intercompany_operations_api.py",
                                "tests/test_postgres_intercompany_fx.py", "tests/test_postgres_intercompany_fx_api.py"),
-    "people-project-payroll": ("tests/test_postgres_people_project_payroll.py", "tests/test_postgres_people_project_payroll_api.py", "tests/test_postgres_people_project_payroll_restore.py"),
+    "people-project-payroll": ("tests/test_postgres_people_project_payroll.py", "tests/test_postgres_people_project_payroll_api.py", "tests/test_postgres_people_project_payroll_restore.py", "tests/test_postgres_people_project_dimension_pins.py"),
     "procurement-sourcing": ("tests/test_postgres_procurement_sourcing.py", "tests/test_postgres_procurement_sourcing_api.py", "tests/test_postgres_manufacturing_sourcing.py"),
 }
 PROOF_OWNERS = {
@@ -229,7 +229,7 @@ def test_enterprise_browser_matrix_requires_every_real_https_and_populated_resto
     assert job["strategy"]["matrix"]["scenario"] == [
         "commerce", "procurement", "snapshots", "collections", "landed-cost", "fixed-assets",
         "procurement-commitments", "customer-returns", "supplier-returns", "operational-fx-tax",
-        "manufacturing-execution", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing",
+        "manufacturing-execution", "manufacturing-execution-v2", "intercompany-operations", "intercompany-fx", "people-project-payroll", "procurement-sourcing",
     ]
     assert job["strategy"]["fail-fast"] is False
     assert "continue-on-error" not in job

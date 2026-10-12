@@ -1,8 +1,10 @@
 """Synthetic masters and dual-role evidence for the real HC1 browser gate."""
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import date, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -89,6 +91,12 @@ def people_project_payroll_restore_tamper_actor(base: ReceiptRuntime) -> Iterato
         yield values
 
 
+def _proof_scalar(value: Any) -> str:
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    raise TypeError("Unsupported authorized workforce evidence scalar")
+
+
 def verify_people_project_payroll_browser(base: ReceiptRuntime) -> dict[str,Any]:
     from psycopg import sql
     people=private_runtime(base)
@@ -106,6 +114,7 @@ def verify_people_project_payroll_browser(base: ReceiptRuntime) -> dict[str,Any]
         evidence["observed_budget"]=PostgresBudgetControlRepository(connection,base.tenant).get(BudgetScope("work","org","entity"),evidence["payrun"]["budget_id"])
         balances=connection.execute("SELECT a.account_code,sum(l.debit_minor-l.credit_minor) AS amount FROM reconforge.finance_entry_lines l JOIN reconforge.finance_posting_effects p ON p.tenant_id=l.tenant_id AND p.entry_id=l.entry_id JOIN reconforge.finance_accounts a ON a.tenant_id=l.tenant_id AND a.id=l.account_id WHERE l.tenant_id=%s GROUP BY a.account_code",(base.tenant,)).fetchall()
         evidence["observed_native_balances"]={row["account_code"]:int(row["amount"]) for row in balances}
+    evidence=json.loads(json.dumps(evidence,default=_proof_scalar,allow_nan=False))
     independent=verify(evidence)
     if independent["gross_minor"]!=2501 or independent["settled_minor"]!=2501 or independent["native_effects"]!=3:
         raise ValueError("Browser native financial cycle differs from exact synthetic fixture")

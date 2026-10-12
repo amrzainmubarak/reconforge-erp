@@ -120,6 +120,7 @@ BEGIN
  ELSIF TG_TABLE_NAME='manufacturing_execution_v2_cost_releases' THEN op:='cancel';
  ELSE op:=CASE WHEN NEW.phase=0 THEN'create' WHEN NEW.phase=1 THEN CASE WHEN TG_TABLE_NAME='manufacturing_execution_v2_definitions' THEN'approve' WHEN TG_TABLE_NAME='manufacturing_execution_v2_orders' THEN'prepare' ELSE'review' END
   WHEN TG_TABLE_NAME='manufacturing_execution_v2_orders' AND NEW.phase=2 THEN'review'
+  WHEN TG_TABLE_NAME='manufacturing_execution_v2_orders' AND NEW.phase=4 THEN'post'
   WHEN NEW.phase IN(4,5) OR(TG_TABLE_NAME='manufacturing_execution_v2_inspections' AND NEW.phase=3) THEN'cancel' ELSE'post' END;END IF;END IF;
  p:=reconforge.me2_permission(op);
  PERFORM reconforge.me2_assert(reconforge.sales_revenue_actor(NEW.tenant_id,a,p),'ME2 needs current persisted human role permission');

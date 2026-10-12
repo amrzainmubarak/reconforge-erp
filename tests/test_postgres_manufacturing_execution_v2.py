@@ -1,7 +1,9 @@
 """Actual nonowner ME2 stock/WIP, original expense claims and quality disposition."""
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from fractions import Fraction
+from threading import Event
 from typing import Any
 
 import pytest
@@ -23,6 +25,7 @@ from reconforge.infrastructure.postgres_manufacturing_execution_v2_schema import
     install_postgres_manufacturing_execution_v2_schema,
 )
 from tests.test_postgres_manufacturing_execution import (
+    _actually_blocked,
     approved_bom,
     baseline_receipt_database,
     financial_oracle,
@@ -74,8 +77,8 @@ def original_expense(result: Any, account: str, number: str, amount: str) -> tup
         return effect["id"], original["id"]
 
 
-def owner_phase(result: Any, source: dict[str, Any], operation: str, kind: str = "order") -> dict[str, Any]:
-    person = {"prepare": "maker", "approve": "checker", "review": "checker", "post": "poster", "cancel": "checker"}[operation]
+def owner_phase(result: Any, source: dict[str, Any], operation: str, kind: str = "order", *, name: str | None = None) -> dict[str, Any]:
+    person = name or {"prepare": "maker", "approve": "checker", "review": "checker", "post": "poster", "cancel": "checker"}[operation]
     with result.actor(person) as (connection, _, actor):
         owner = PostgresManufacturingExecutionV2Repository(connection, result.tenant)
         method = {"order": owner.act_order, "production": owner.act_production, "inspection": owner.act_inspection, "definition": owner.approve_definition}[kind]
@@ -114,9 +117,24 @@ def half_even(value: Fraction) -> int:
 
 
 def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_fg_and_abnormal_loss(manufacturing_v2_database: tuple[str, str]) -> None:
+    from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
+
     result = system(manufacturing_v2_database)
     source = order(result)
-    posted = owner_phase(result, owner_phase(result, owner_phase(result, source, "prepare"), "review"), "post")
+    with PostgresTenantBoundary(result.factory).transaction(result.tenant) as connection:
+        identity = PostgresIdentityRepository(connection)
+        identity.create_role(tenant_id=result.tenant, role_name="me2-post-only")
+        for permission in PERMISSIONS["post"]:
+            identity.grant_permission(tenant_id=result.tenant, role_name="me2-post-only", permission_name=permission)
+        identity.create_user(tenant_id=result.tenant, user_id="restricted-poster", username="restricted-poster",
+            password=result.password, role_name="me2-post-only")
+        authority = PostgresScopeAuthorityRepository(connection)
+        for kind, identifier in (("workspace", "work"), ("organization", "org"), ("legal_entity", "entity")):
+            authority.grant(tenant_id=result.tenant, grant_id="restricted-" + identifier, principal_type="user",
+                principal_id="restricted-poster", scope_type=kind, scope_id=identifier, actor_id="poster")
+    with result.actor("restricted-poster") as (_, _, actor):
+        assert "manufacturing_execution_v2.approve" not in actor.permissions
+    posted = owner_phase(result, owner_phase(result, owner_phase(result, source, "prepare"), "review"), "post", name="restricted-poster")
     total = half_even(Fraction(12000 * 2, 10)) + half_even(Fraction(3333 * 3000, 20000)) + 600 + 300
     assert posted["total_cost_minor"] == total == 3800
     assert financial_oracle(result)["WIP"] == 3800
@@ -125,7 +143,7 @@ def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_
             held = PostgresManufacturingExecutionV2Repository(connection, result.tenant).produce(source["id"], output_quantity=produced,
                 operations=[{"sequence": 1, "minutes": 24 if index == 1 else 36, "evidence_reference": "SYN-RUN-" + str(index)}],
                 period_id="period", posting_date=f"2026-10-0{4 + index}", command_id=f"produce-{index}", reason="Actual partial production awaiting inspection", actor=actor)
-        held = owner_phase(result, owner_phase(result, held, "review", "production"), "post", "production")
+        held = owner_phase(result, owner_phase(result, held, "review", "production"), "post", "production", name="restricted-poster")
         with result.actor("poster") as (connection, _, actor):
             view = PostgresManufacturingExecutionV2Repository(connection, result.tenant).get_order(source["id"], actor=actor)
             assert view["held_quantity_scaled"] == int(produced)
@@ -137,7 +155,7 @@ def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_
             inspection = PostgresManufacturingExecutionV2Repository(connection, result.tenant).inspect(held["id"], accepted_quantity=accepted,
                 rejected_quantity=rejected, inspection_reference=f"SYN-QC-{index}", period_id="period", posting_date=f"2026-10-0{4 + index}",
                 command_id=f"inspect-{index}", reason="Complete independent held tranche acceptance and rejection", actor=actor)
-        inspection = owner_phase(result, owner_phase(result, inspection, "review", "inspection"), "post", "inspection")
+        inspection = owner_phase(result, owner_phase(result, inspection, "review", "inspection"), "post", "inspection", name="restricted-poster")
         assert inspection["phase"] == 2
     with result.actor("poster") as (connection, _, actor):
         final = PostgresManufacturingExecutionV2Repository(connection, result.tenant).get_order(source["id"], actor=actor)
@@ -274,6 +292,123 @@ def test_late_abnormal_loss_failure_rolls_back_completed_fg_participant_then_exa
             command_id=inspection["id"] + "-post", reason="Independent actual post", actor=actor)
         assert canonical_json(replay) == canonical_json(posted)
     assert financial_oracle(result)["WIP"] == 2280
+
+
+@pytest.mark.parametrize("isolation", ["READ COMMITTED", "REPEATABLE READ"])
+@pytest.mark.parametrize("claim_first", [False, True])
+def test_actual_claim_and_original_expense_posted_inverse_serialize_without_stale_snapshot_admission(
+    manufacturing_v2_database: tuple[str, str], isolation: str, claim_first: bool,
+) -> None:
+    import psycopg
+
+    from reconforge.infrastructure.postgres import set_local_tenant_scope
+    from reconforge.infrastructure.postgres_inventory_receipt_posting import PostgresInventoryReceiptPostingRepository
+    from reconforge.platform.common import current_server_principal, server_principal_context
+
+    result = system(manufacturing_v2_database)
+    source = order(result)
+    owner_phase(result, source, "cancel")
+    labor = next(value for value in source["claims"] if value["kind"] == "Labor")
+    with result.actor("checker") as (_, receipts, actor):
+        inverse = receipts.finance.prepare_reversal(labor["effect_id"], command_id="source-inverse-prepare",
+            entry_number="ORIGINAL-COST-INVERSE", period_id="period", posting_date="2026-10-08",
+            reason="Actual source inverse racing a newly reserved production claim", actor=actor)
+    with result.actor("maker") as (_, receipts, actor):
+        receipts.finance.finance.validate_entry(inverse["entry_id"], reason="Independent native inverse review", actor_label=actor.username)
+        reviewed = receipts.finance.preview(inverse["entry_id"], actor=actor)
+    ready, continue_command = Event(), Event()
+    pids: dict[str, int] = {}
+
+    def command(connection: Any, receipts: Any, actor: Any, claiming: bool) -> Any:
+        if claiming:
+            return PostgresManufacturingExecutionV2Repository(connection, result.tenant).create_order(
+                clone_request(source, "RACED-SOURCE-CLAIM"), command_id="raced-source-claim", actor=actor)
+        return receipts.finance.post(inverse["entry_id"], command_id="raced-source-inverse-post",
+            expected_validation_digest=reviewed["validation_digest"], reason="Actual independently posted original inverse", actor=actor)
+
+    def follower() -> Any:
+        with result.actor("poster" if claim_first else "maker") as (_, _, actor):
+            principal = current_server_principal()
+        assert principal is not None
+        with closing(result.factory.connect()) as connection, connection.transaction(), server_principal_context(principal):
+            # Begin a fresh transaction after the real password authentication;
+            # never rollback inside ReceiptRuntime's explicit transaction context.
+            statement = "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ" if isolation == "REPEATABLE READ" else "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"
+            connection.execute(statement)
+            set_local_tenant_scope(connection, result.tenant, workspace_id="work", organization_id="org", legal_entity_id="entity")
+            connection.execute("SELECT version FROM reconforge.financial_effect_claim_gates WHERE tenant_id=%s AND source_effect_id=%s",
+                (result.tenant, labor["effect_id"])).fetchone()
+            pids["follower"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            ready.set()
+            assert continue_command.wait(20)
+            if isolation == "REPEATABLE READ":
+                # Public financial mutations already require READ COMMITTED.
+                # Exercise the additional native directory fence itself under an
+                # actual stale RR snapshot; its version UPDATE must serialize.
+                guard = "SELECT reconforge.refuse_claimed_financial_effect(%s,%s)" if claim_first else "SELECT reconforge.touch_financial_effect_claim_gate(%s,%s)"
+                return connection.execute(guard, (result.tenant, labor["effect_id"])).fetchone()
+            receipts = PostgresInventoryReceiptPostingRepository(connection, result.tenant)
+            return command(connection, receipts, actor, not claim_first)
+
+    with ThreadPoolExecutor(max_workers=1) as workers:
+        future = workers.submit(follower)
+        if not ready.wait(20):
+            future.result(timeout=1)  # Retain the actual early failure rather than mask it with a readiness assertion.
+            raise AssertionError("The actual authenticated follower failed to establish its source snapshot")
+        try:
+            with result.actor("maker" if claim_first else "poster") as (connection, receipts, actor):
+                holder_pid = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+                winner = command(connection, receipts, actor, claim_first)
+                assert winner["id"]
+                continue_command.set()
+                _actually_blocked(result.admin_dsn, pids, "follower", holder_pid)
+        finally:
+            continue_command.set()
+        with pytest.raises((FinancePostingError, psycopg.errors.CheckViolation, psycopg.errors.SerializationFailure)) as refused:
+            future.result(timeout=90)
+    if isolation == "REPEATABLE READ":
+        assert isinstance(refused.value, psycopg.errors.SerializationFailure)
+    with result.actor("checker") as (connection, _, actor):
+        active = connection.execute("SELECT count(*) n FROM reconforge.manufacturing_execution_v2_cost_claims WHERE tenant_id=%s AND effect_id=%s AND state<>'Released'",
+            (result.tenant, labor["effect_id"])).fetchone()["n"]
+        reversed_count = connection.execute("SELECT count(*) n FROM reconforge.finance_posting_effects WHERE tenant_id=%s AND reverses_effect_id=%s",
+            (result.tenant, labor["effect_id"])).fetchone()["n"]
+        assert (active, reversed_count) == ((1, 0) if claim_first else (0, 1))
+        assert connection.execute("SELECT count(*) n FROM reconforge.manufacturing_execution_v2_orders WHERE tenant_id=%s", (result.tenant,)).fetchone()["n"] == (2 if claim_first else 1)
+        # Both retained cancelled history and the winning current source still close.
+        PostgresManufacturingExecutionV2Repository(connection, result.tenant).get_order(source["id"], actor=actor)
+        if claim_first:
+            PostgresManufacturingExecutionV2Repository(connection, result.tenant).get_order(winner["id"], actor=actor)
+
+
+def test_old_prepare_ack_rechecks_persisted_scope_after_actual_command_wait(manufacturing_v2_database: tuple[str, str]) -> None:
+    from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
+    result = system(manufacturing_v2_database)
+    source = order(result)
+    prepared = owner_phase(result, source, "prepare")
+    before = business_snapshot(result)
+    pids: dict[str, int] = {}
+
+    def replay() -> Any:
+        with result.actor("maker") as (connection, _, actor):
+            pids["retry"] = connection.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            return PostgresManufacturingExecutionV2Repository(connection, result.tenant).act_order(source["id"], "prepare",
+                expected_digest=source["source_digest"], command_id=source["id"] + "-prepare", reason="Independent actual prepare", actor=actor)
+
+    assert replay() == prepared
+    with ThreadPoolExecutor(max_workers=1) as workers:
+        with PostgresTenantBoundary(result.factory).transaction(result.tenant) as holder:
+            holder_pid = holder.execute("SELECT pg_backend_pid() pid").fetchone()["pid"]
+            holder.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
+                (canonical_json([result.tenant, "work", "manufacturing-execution-v2", source["id"] + "-prepare"]),))
+            future = workers.submit(replay)
+            _actually_blocked(result.admin_dsn, pids, "retry", holder_pid)
+            with PostgresTenantBoundary(result.factory).transaction(result.tenant) as connection:
+                PostgresScopeAuthorityRepository(connection).revoke(tenant_id=result.tenant, grant_id="me1-maker-entity",
+                    actor_id="poster", reason="Current manufacturing grant withdrawn while lost-response command blocks")
+        with pytest.raises(FinancePostingError, match="persisted.*scope"):
+            future.result(timeout=60)
+    assert business_snapshot(result) == before
 
 
 def test_reserved_order_and_held_names_cannot_become_standalone_fg_receipts_or_extra_wip_journals(manufacturing_v2_database: tuple[str, str]) -> None:

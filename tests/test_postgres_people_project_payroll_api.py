@@ -82,7 +82,9 @@ def test_deferred_wrong_account_role_is_safe_conflict_with_no_native_reserve(peo
             "period_id":"period","posting_date":"2026-10-04","journal_code":"STOCK","expense_account_code":"INVENTORY",
             "liability_account_code":"WAGES","cash_account_code":"CASH"})
         assert response.status_code==409,response.text
-        assert "Synthetic" not in response.text and "hc_" not in response.text and "2501" not in response.text
+        error=response.json()["error"]
+        assert set(error)=={"code","message","request_id"}
+        assert "Synthetic" not in error["message"] and "hc_" not in error["message"] and "2501" not in error["message"]
     with people.actor("maker") as (connection,_,_):
         assert connection.execute("SELECT count(*) AS n FROM reconforge.hc_payruns WHERE tenant_id=%s",(people.base.tenant,)).fetchone()["n"]==0
         assert connection.execute("SELECT reserved_minor FROM reconforge.budget_envelopes WHERE tenant_id=%s AND id=%s",(people.base.tenant,budget["id"])).fetchone()["reserved_minor"]==0

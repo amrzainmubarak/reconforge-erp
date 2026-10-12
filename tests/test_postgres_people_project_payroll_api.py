@@ -71,3 +71,18 @@ def test_missing_private_pool_is_explicit_unavailable_after_auth_admission(peopl
         assert response.status_code==503
         assert response.json()["error"]["code"]=="personnel_backend_unavailable"
         assert client.post("/api/v1/people-project-payroll/employees",headers=headers["maker"],json={**body,"database_factory":"ordinary"}).status_code==422
+
+
+def test_deferred_wrong_account_role_is_safe_conflict_with_no_native_reserve(people: PeopleRuntime,tmp_path: Path) -> None:
+    budget,times=approved_budget(people),approved_time(people)
+    with TestClient(application(people,tmp_path),base_url="https://testserver") as client:
+        headers=sessions(client,people)
+        response=client.post("/api/v1/people-project-payroll/payruns",headers=headers["maker"],json={
+            "command_id":"http-wrong-role","time_ids":times,"budget_id":budget["id"],"expected_budget_version":budget["row_version"],
+            "period_id":"period","posting_date":"2026-10-04","journal_code":"STOCK","expense_account_code":"INVENTORY",
+            "liability_account_code":"WAGES","cash_account_code":"CASH"})
+        assert response.status_code==409,response.text
+        assert "Synthetic" not in response.text and "hc_" not in response.text and "2501" not in response.text
+    with people.actor("maker") as (connection,_,_):
+        assert connection.execute("SELECT count(*) AS n FROM reconforge.hc_payruns WHERE tenant_id=%s",(people.base.tenant,)).fetchone()["n"]==0
+        assert connection.execute("SELECT reserved_minor FROM reconforge.budget_envelopes WHERE tenant_id=%s AND id=%s",(people.base.tenant,budget["id"])).fetchone()["reserved_minor"]==0

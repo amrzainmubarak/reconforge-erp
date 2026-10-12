@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useBrowserSession } from "../browserSession";
 import { loadBudgetIdentity, type BudgetIdentity } from "../budget-control-data";
 import { AdminApiError, beginBrowserAdminSession, endBrowserAdminSession, stepUpBrowserAdminSession } from "../data";
@@ -28,6 +28,9 @@ function FxSession({ locale }: { locale: Locale }) {
   const [valuation, setValuation] = useState({ posting_date: "", period_id: "", reason: "", unrealized_gain_account_code: "", unrealized_loss_account_code: "" }), [closingRate, setClosingRate] = useState({ rate: "", source: "", effective_at: "" });
   const [busy, setBusy] = useState(false), [pending, setPending] = useState<PreparedScopedCommand | null>(null), [error, setError] = useState<FxMessage | null>(null), [refresh, setRefresh] = useState(0);
   const mounted = useRef(true), lock = useRef(false), alert = useRef<HTMLParagraphElement>(null), proofEpoch = useRef(0), downloadUrl = useRef<string | null>(null);
+  const proofSubject = JSON.stringify([auth.revision, scope?.workspace_id, scope?.organization_id, scope?.legal_entity_id,
+    plan?.source_id, plan?.id, plan?.phase, plan?.plan_digest, plan?.validation_digest, plan?.posting_effect_id, plan?.receipt_id]);
+  const committedProofSubject = useRef(proofSubject);
   const current = () => mounted.current && auth.isCurrent(auth.revision), locked = busy || Boolean(pending), can = (permission: string) => Boolean(identity?.human && identity.permissions.includes(permission));
   const mutation = Boolean(scope && identity?.stepUp), money = (value: string, policy: Pick<FxPolicy, "currency_precision" | "currency_code">) => `${formatExactDecimal(financeMoney(value, policy.currency_precision), locale)} ${policy.currency_code}`;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; if (downloadUrl.current) URL.revokeObjectURL(downloadUrl.current); }; }, []);
@@ -56,7 +59,12 @@ function FxSession({ locale }: { locale: Locale }) {
       setPlan(old => { const retained = old ? value.plans.find(row => row.id === old.id) : null; return retained ? mergeFxPlan(old, retained) : value.plans.find(row => row.phase < 2) ?? value.plans.at(-1) ?? null; });
     }).catch(caught => { if (!controller.signal.aborted) fail(caught); }); return () => controller.abort();
   }, [scope, selected, refresh, auth.session]);
-  useEffect(() => { setProof(null); proofEpoch.current++; }, [plan?.id, plan?.phase, scope, auth.revision]);
+  // Synchronize the exact subject before its DOM can accept a verification click.
+  // Equivalent refreshed objects retain proof; a changed scope or native seal invalidates it.
+  useLayoutEffect(() => {
+    if (committedProofSubject.current === proofSubject) return;
+    committedProofSubject.current = proofSubject; setProof(null); proofEpoch.current++;
+  }, [proofSubject]);
   async function authenticate(event: FormEvent, stepUp = false) {
     event.preventDefault(); if (lock.current) return; lock.current = true; setBusy(true); setError(null);
     try { if (stepUp && auth.session) { await stepUpBrowserAdminSession(auth.session, login.password); const value = await loadBudgetIdentity(auth.session); if (current()) setIdentity(value); }
@@ -95,10 +103,11 @@ function FxSession({ locale }: { locale: Locale }) {
       reverse ? { posting_date, period_id, reason, original_revaluation_id: detail.active_revaluation_plan_id } : { ...valuation, closing_rate: { ...closingRate } }));
   }
   async function verify() {
-    if (!auth.session || !scope || !plan || lock.current || locked) return; const epoch = ++proofEpoch.current; lock.current = true; setBusy(true); setProof(null);
+    if (!auth.session || !scope || !plan || lock.current || locked || proofSubject !== committedProofSubject.current) return;
+    const subject = proofSubject, epoch = ++proofEpoch.current; lock.current = true; setBusy(true); setProof(null);
     try { const raw = await fxRequest(auth.session, scope, `${root}/plans/${encodeURIComponent(plan.id)}/evidence`); const evidence = await verifyFxEvidence(raw.evidence, scope, plan);
-      if (current() && epoch === proofEpoch.current) setProof(evidence); }
-    catch (caught) { if (current() && epoch === proofEpoch.current) fail(caught); } finally { lock.current = false; if (current()) setBusy(false); }
+      if (current() && epoch === proofEpoch.current && subject === committedProofSubject.current) setProof(evidence); }
+    catch (caught) { if (current() && epoch === proofEpoch.current && subject === committedProofSubject.current) fail(caught); } finally { lock.current = false; if (current()) setBusy(false); }
   }
   function download() { if (!proof || !current()) return; if (downloadUrl.current) URL.revokeObjectURL(downloadUrl.current); downloadUrl.current = URL.createObjectURL(new Blob([JSON.stringify(proof, null, 2) + "\n"], { type: "application/json" })); const link = document.createElement("a"); link.href = downloadUrl.current; link.download = proof.plan.id + "-fx-evidence.json"; link.click(); }
   async function nextPage() {

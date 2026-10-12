@@ -50,13 +50,13 @@ describe("actual foreign receivable Studio workflow", () => {
       return response(String(url).endsWith("/catalog") ? { api_contract_version: "financial-reporting-api-v1", catalog } : String(url).endsWith("/evidence") ? { evidence: fixture } : String(url).endsWith("/invoices") ? { invoices: [fixture.source], next_after: null } : { invoice: detail() });
     }));
     await open(locale);
-    // Commit the real asynchronous three-seal verification before inspecting React's result.
+    // The verifier's completion promise is independent of React's committed DOM.
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: fxTranslate(locale, "verify") }));
       await verification.promise;
     });
     expect(verification.verifier).toHaveBeenCalledExactlyOnceWith(fixture, scope, expect.objectContaining({ id: fixture.plan.id }));
-    expect(screen.getByRole("status")).toHaveTextContent(fxTranslate(locale, "verified"));
+    expect(await screen.findByRole("status")).toHaveTextContent(fxTranslate(locale, "verified"));
     expect(screen.getByRole("button", { name: fxTranslate(locale, "download") })).toBeEnabled();
     expect(screen.getByText("2026-v1")).toBeInTheDocument(); expect(screen.getAllByText("poster")).toHaveLength(3);
     for (const headers of reads) { expect(headers.get("X-ReconForge-Workspace")).toBe("work"); expect(headers.get("X-ReconForge-Legal-Entity")).toBe("entity"); }
@@ -91,14 +91,77 @@ describe("actual foreign receivable Studio workflow", () => {
       else await verification.promise;
     });
     if (corrupt) {
-      expect(screen.getByRole("alert")).toHaveTextContent(fxTranslate("en", "unavailable"));
+      expect(await screen.findByRole("alert")).toHaveTextContent(fxTranslate("en", "unavailable"));
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: fxTranslate("en", "download") })).not.toBeInTheDocument();
     } else {
-      expect(screen.getByRole("status")).toHaveTextContent(fxTranslate("en", "verified"));
+      expect(await screen.findByRole("status")).toHaveTextContent(fxTranslate("en", "verified"));
       expect(screen.getByRole("button", { name: fxTranslate("en", "download") })).toBeEnabled();
       expect(screen.getAllByText("poster")).toHaveLength(3);
     }
+  });
+  it("retains actual verification started immediately when its original plan appears", async () => {
+    const verification = evidenceCompletion(), clicked = deferred<void>();
+    let detailReads = 0;
+    vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).endsWith("/auth/me")) return response(identity);
+      if (String(url).endsWith(`/invoices/${fixture.source.id}`)) detailReads++;
+      return response(String(url).endsWith("/catalog") ? { api_contract_version: "financial-reporting-api-v1", catalog } : String(url).endsWith("/evidence") ? { evidence: fixture } : String(url).endsWith("/invoices") ? { invoices: [fixture.source], next_after: null } : { invoice: detail() });
+    }));
+    const observer = new MutationObserver(() => {
+      const verify = screen.queryByRole("button", { name: fxTranslate("en", "verify") });
+      if (verify) { observer.disconnect(); fireEvent.click(verify); clicked.resolve(); }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    try {
+      await open(); await clicked.promise;
+      await act(async () => { await verification.promise; });
+      expect(await screen.findByRole("status")).toHaveTextContent(fxTranslate("en", "verified"));
+      expect(screen.getByRole("button", { name: fxTranslate("en", "download") })).toBeEnabled();
+      fireEvent.click(screen.getByRole("button", { name: fxTranslate("en", "refresh") }));
+      await waitFor(() => expect(detailReads).toBe(2));
+      expect(await screen.findByRole("status")).toHaveTextContent(fxTranslate("en", "verified"));
+      expect(screen.getByRole("button", { name: fxTranslate("en", "download") })).toBeEnabled();
+    } finally { observer.disconnect(); }
+  });
+  it.each(["plan", "scope"] as const)("discards actual late verification after a current %s replacement", async replacement => {
+    const verification = evidenceCompletion(), finalDigest = deferred<void>(), release = deferred<void>();
+    const refreshed = deferred<Response>(), originalDigest = crypto.subtle.digest.bind(crypto.subtle);
+    let digests = 0, detailReads = 0;
+    vi.spyOn(crypto.subtle, "digest").mockImplementation(async (algorithm, data) => {
+      const value = await originalDigest(algorithm, data);
+      if (++digests === 3) { finalDigest.resolve(); await release.promise; }
+      return value;
+    });
+    vi.stubGlobal("fetch", vi.fn(async (url: RequestInfo | URL) => {
+      if (String(url).endsWith("/auth/me")) return response(identity);
+      if (String(url).endsWith(`/invoices/${fixture.source.id}`) && ++detailReads === 2) return refreshed.promise;
+      return response(String(url).endsWith("/catalog") ? { api_contract_version: "financial-reporting-api-v1", catalog } : String(url).endsWith("/evidence") ? { evidence: fixture } : String(url).endsWith("/invoices") ? { invoices: [fixture.source], next_after: null } : { invoice: detail() });
+    }));
+    await open();
+    if (replacement === "plan") {
+      fireEvent.click(screen.getByRole("button", { name: fxTranslate("en", "refresh") }));
+      await waitFor(() => expect(detailReads).toBe(2));
+    }
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: fxTranslate("en", "verify") }));
+      await finalDigest.promise;
+    });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: fxTranslate("en", "download") })).not.toBeInTheDocument();
+    if (replacement === "plan") {
+      await act(async () => { refreshed.resolve(response({ invoice: detail({ ...fixture.plan, id: "FX1-another", plan_digest: "b".repeat(64) }) })); });
+      await screen.findByText("b".repeat(64));
+    } else {
+      // A programmatic context replacement must revoke an in-flight proof too.
+      fireEvent.change(screen.getByLabelText(fxTranslate("en", "workspace")), { target: { value: "another-workspace" } });
+    }
+    await act(async () => { release.resolve(); await verification.promise; });
+    expect(verification.verifier).toHaveBeenCalledExactlyOnceWith(fixture, scope, expect.objectContaining({ id: fixture.plan.id }));
+    await waitFor(() => expect(screen.getByRole("button", { name: fxTranslate("en", "apply") })).toBeEnabled());
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: fxTranslate("en", "download") })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
   it("preserves exact post command after malformed acknowledgement and locks editing until its same-command retry", async () => {
     const reviewed = { ...fixture.plan, phase: 1, status: "Reviewed", posting_effect_id: null } as unknown as typeof fixture.plan;

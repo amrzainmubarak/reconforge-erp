@@ -106,6 +106,25 @@ def test_latest_postgres_ha_dr_artifact_is_schema_valid_and_reproducible() -> No
     ).read_text(encoding="utf-8")
 
 
+def test_current_postgres_ha_dr_artifact_is_schema_valid_and_bounded() -> None:
+    artifact_path = ROOT / "docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json"
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    schema = json.loads(
+        (ROOT / "docs/schemas/ha_dr_repeated_drill_report.schema.json").read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(artifact)
+    assert artifact["executed_at"] == "2026-08-26"
+    assert artifact["summary"]["all_runs_passed"] is True
+    assert artifact["summary"]["zero_acknowledged_transaction_loss_runs"] == 3
+    assert artifact["summary"]["failover_rto_max_seconds"] == 11.721
+    assert artifact["summary"]["failback_rto_max_seconds"] == 1.316
+    assert "single_host_not_host_loss" in artifact["limitations"]
+    assert "no_enterprise_ready_claim" in artifact["limitations"]
+    assert "include docs/execution/POSTGRES_HA_DR_REPEATED_VERIFICATION_2026-08-26.json" in (
+        ROOT / "MANIFEST.in"
+    ).read_text(encoding="utf-8")
+
+
 def test_ci_runs_the_repeated_postgres_ha_dr_drill_and_uploads_its_report() -> None:
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
     job = workflow["jobs"]["postgres-ha-dr"]

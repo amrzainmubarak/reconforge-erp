@@ -15,6 +15,8 @@ from fastapi.testclient import TestClient
 from reconforge.api import create_api_app
 from reconforge.api.routes import operations
 from reconforge.application.jobs import DurableJobApplicationService, JobSubmission
+from reconforge.auth.models import LocalUser
+from reconforge.auth.policy import PolicyEvaluationContext
 from reconforge.auth.service import LocalAuthService
 from reconforge.db import connect, run_migrations
 from reconforge.domain.jobs import DurableJobQueueSnapshot
@@ -29,11 +31,15 @@ from reconforge.infrastructure.postgres_jobs import (
     PostgresDurableJobRepository,
     install_postgres_durable_job_schema,
 )
-from reconforge.infrastructure.postgres_scope_authority import POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL
+from reconforge.infrastructure.postgres_scope_authority import (
+    POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL,
+    PostgresScopeAuthorityRepository,
+)
 from reconforge.infrastructure.postgres_service_accounts import (
     POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL,
     PostgresServiceAccountRepository,
 )
+from reconforge.platform.common import ServerPrincipal
 
 
 def test_local_durable_job_queue_route_is_sanitized_and_authenticated(tmp_path: Path) -> None:
@@ -71,6 +77,44 @@ def test_local_durable_job_queue_route_is_sanitized_and_authenticated(tmp_path: 
     assert "input_digest" not in response.text
 
 
+def test_local_durable_job_queue_route_uses_governed_application_facade(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    database_path = tmp_path / "governed-operations.db"
+    run_migrations(database_path)
+    connection = connect(database_path)
+    LocalAuthService(connection).init_admin(username="admin", password="Secret-123")
+    connection.close()
+    calls: list[dict[str, object]] = []
+
+    class GovernedFacade:
+        def __init__(self, _service: object) -> None:
+            pass
+
+        def queue_snapshot(self, **kwargs: object) -> DurableJobQueueSnapshot:
+            calls.append(kwargs)
+            return DurableJobQueueSnapshot(tenant_id="tenant-api", workspace_id="workspace-a", queued_count=0)
+
+    monkeypatch.setattr(operations, "GovernedDurableJobApplicationService", GovernedFacade)
+    client = TestClient(create_api_app(database_path))
+    login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Secret-123"})
+    response = client.get(
+        "/api/v1/ops/durable-jobs/queue",
+        params={"tenant_id": "tenant-api", "workspace_id": "workspace-a"},
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+
+    assert response.status_code == 200
+    assert len(calls) == 1
+    assert calls[0]["required_permission"] == "ops.read"
+    assert calls[0]["actor_id"]
+    context = calls[0]["policy_context"]
+    assert isinstance(context, PolicyEvaluationContext)
+    assert context.tenant_id == "tenant-api"
+    assert context.workspace_id == "workspace-a"
+    assert context.action is None
+
+
 def test_server_durable_job_queue_route_rechecks_tenant_policy_and_rls_scope(monkeypatch: Any) -> None:
     request = Request(
         {
@@ -84,6 +128,7 @@ def test_server_durable_job_queue_route_rechecks_tenant_policy_and_rls_scope(mon
     connection = object()
     policy_calls: list[tuple[str, str]] = []
     boundary_calls: list[tuple[object, str, str | None, str | None]] = []
+    audit_evidence: list[object] = []
 
     monkeypatch.setattr(operations, "server_identity_enabled", lambda _request: True)
     monkeypatch.setattr(operations, "request_tenant_id", lambda _request: "tenant-a")
@@ -92,6 +137,22 @@ def test_server_durable_job_queue_route_rechecks_tenant_policy_and_rls_scope(mon
         operations,
         "enforce_server_tenant_permission",
         lambda _request, *, permission, tenant_id: policy_calls.append((permission, tenant_id)),
+    )
+    monkeypatch.setattr(
+        operations,
+        "current_server_principal",
+        lambda: ServerPrincipal(
+            user=LocalUser(id="server-operator", username="server-operator", display_name="Server Operator"),
+            permissions=frozenset({"ops.read"}),
+            authorized_workspace_ids=frozenset({"workspace-a"}),
+            authorized_organization_ids=frozenset({"organization-a"}),
+            authorized_legal_entity_ids=frozenset({"entity-a"}),
+        ),
+    )
+    monkeypatch.setattr(
+        operations,
+        "_server_policy_audit_sink",
+        lambda _request, *, actor_id: audit_evidence.append,
     )
 
     class Boundary:
@@ -141,6 +202,7 @@ def test_server_durable_job_queue_route_rechecks_tenant_policy_and_rls_scope(mon
     assert result["queue"]["queue_depth"] == 2
     assert policy_calls == [("ops.read", "tenant-a")]
     assert boundary_calls == [(factory, "tenant-a", "organization-a", "workspace-a")]
+    assert len(audit_evidence) == 1
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL service")
@@ -173,6 +235,9 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
             admin.execute(POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL)
             install_postgres_durable_job_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT ON reconforge.domain_audit_events TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT, UPDATE ON reconforge.domain_audit_ledger_state TO {app_user}")
+            admin.execute(f"GRANT SELECT ON reconforge.domain_workspaces,reconforge.organizations,reconforge.legal_entities TO {app_user}")
             admin.execute(
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.tenants, reconforge.identity_permissions, "
                 f"reconforge.service_accounts, reconforge.service_account_permissions, "
@@ -191,6 +256,10 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
                 "INSERT INTO reconforge.identity_permissions(tenant_id,name,description) VALUES (%s,'ops.read','Queue health')",
                 (tenant_a,),
             )
+            admin.execute("INSERT INTO reconforge.domain_workspaces(tenant_id,id,name) VALUES(%s,'workspace-a','Synthetic workspace')", (tenant_a,))
+            admin.execute("INSERT INTO reconforge.currencies(tenant_id,code,name,minor_units) VALUES(%s,'USD','Synthetic',2)", (tenant_a,))
+            admin.execute("INSERT INTO reconforge.organizations(tenant_id,id,name,organization_code,application_workspace_id) VALUES(%s,'organization-a','Synthetic organization','ORG-A','workspace-a')", (tenant_a,))
+            admin.execute("INSERT INTO reconforge.legal_entities(tenant_id,id,organization_id,entity_code,name,currency_code) VALUES(%s,'entity-a','organization-a','ENTITY-A','Synthetic entity','USD')", (tenant_a,))
 
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
             account_repository = PostgresServiceAccountRepository(connection)
@@ -208,6 +277,9 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
                 actor_id="security-admin",
                 ttl=timedelta(hours=1),
             )
+            authority = PostgresScopeAuthorityRepository(connection)
+            for scope_type, scope_id in (("workspace", "workspace-a"), ("legal_entity", "entity-a")):
+                authority.grant(tenant_id=tenant_a, grant_id="ops-grant-" + scope_id, principal_type="service_account", principal_id="svc-ops-api", scope_type=scope_type, scope_id=scope_id, actor_id="security-admin")
             DurableJobApplicationService(PostgresDurableJobRepository(connection)).submit(
                 JobSubmission(
                     job_id="ops-api-queued-" + uuid4().hex[:8],
@@ -249,15 +321,29 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
             assert "ops-api-queued" not in response.text
             assert "input_digest" not in response.text
 
+            for denied_scope in ({"workspace_id": "ungranted-workspace"}, {"workspace_id": "workspace-a", "entity_id": "ungranted-entity"}):
+                denied = client.get("/api/v1/ops/durable-jobs/queue", params=denied_scope, headers=headers)
+                assert denied.status_code == 403, denied.text
+                assert denied.json()["error"]["code"] == "durable_job_queue_scope_denied"
+                assert "ops-api-queued" not in denied.text
+
             cross_tenant = client.get(
                 "/api/v1/ops/durable-jobs/queue",
                 params={"tenant_id": tenant_b},
                 headers={"X-ReconForge-Tenant": tenant_b, "Authorization": f"Bearer {credential.token}"},
             )
             assert cross_tenant.status_code == 401
+            with admin.transaction():
+                assert admin.execute("SELECT count(*) FROM reconforge.domain_audit_events WHERE tenant_id=%s", (tenant_a,)).fetchone()[0] > 0
     finally:
         try:
             with admin.transaction():
+                admin.execute("ALTER TABLE reconforge.domain_audit_events DISABLE TRIGGER domain_audit_events_immutable")
+                admin.execute("DELETE FROM reconforge.domain_audit_events WHERE tenant_id IN (%s,%s)", (tenant_a, tenant_b))
+                # Drain deferred FK trigger events before changing trigger state.
+                admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
+                admin.execute("ALTER TABLE reconforge.domain_audit_events ENABLE TRIGGER domain_audit_events_immutable")
+                admin.execute("ALTER TABLE reconforge.principal_scope_grants DISABLE TRIGGER principal_scope_grants_guard")
                 admin.execute(
                     "ALTER TABLE reconforge.service_account_events DISABLE TRIGGER trg_service_account_events_append_only"
                 )
@@ -275,6 +361,10 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
                     "durable_job_partition_effects",
                     "durable_jobs",
                     "identity_permissions",
+                    "legal_entities",
+                    "organizations",
+                    "currencies",
+                    "domain_workspaces",
                 ):
                     admin.execute(
                         f"DELETE FROM reconforge.{table} WHERE tenant_id IN (%s, %s)",  # nosec B608 - fixed allowlist
@@ -283,10 +373,13 @@ def test_live_server_durable_job_queue_http_route_is_rls_scoped_and_sanitized(tm
                 admin.execute(
                     "ALTER TABLE reconforge.service_account_events ENABLE TRIGGER trg_service_account_events_append_only"
                 )
+                admin.execute("ALTER TABLE reconforge.principal_scope_grants ENABLE TRIGGER principal_scope_grants_guard")
                 admin.execute(
                     "DELETE FROM reconforge.tenants WHERE id IN (%s, %s)",
                     (tenant_a, tenant_b),
                 )
+                assert admin.execute("SELECT count(*) FROM reconforge.tenants WHERE id IN (%s,%s)", (tenant_a, tenant_b)).fetchone()[0] == 0
+                assert admin.execute("SELECT tgenabled FROM pg_trigger WHERE tgname='domain_audit_events_immutable'").fetchone()[0] == "O"
         finally:
             try:
                 with admin.transaction():

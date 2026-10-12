@@ -15,6 +15,7 @@ permissions:
 jobs:
   docker-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -22,7 +23,9 @@ jobs:
           persist-credentials: false
 
       - name: Build image
-        run: docker build -t reconforge-erp .
+        run: docker build --pull --no-cache --platform linux/amd64 -t reconforge-erp .
 
-      - name: Container doctor
-        run: docker run --rm -v "$PWD/output:/app/output" reconforge-erp reconforge doctor
+      - name: Hardened container doctor
+        run: >-
+          docker run --rm --network=none --read-only --cap-drop=ALL
+          --security-opt=no-new-privileges reconforge-erp reconforge doctor

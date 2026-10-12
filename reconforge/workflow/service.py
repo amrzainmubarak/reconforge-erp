@@ -210,16 +210,17 @@ class WorkflowService:
         )
         action = _STATUS_TO_ACTION.get(transition.to_status)
         prior_actions = self._prior_actions(workflow_object) if transition.sod_rule and action else []
+        policy_context = PolicyEvaluationContext(
+            user_id=actor_user.id,
+            username=actor_user.username,
+            user_permissions=permissions,
+            object_type=workflow_object.object_type,
+            object_id=workflow_object.object_id,
+            action=action,
+            prior_actions=prior_actions,
+        )
         decision = CentralPolicyEngine().evaluate(
-            PolicyEvaluationContext(
-                user_id=actor_user.id,
-                username=actor_user.username,
-                user_permissions=permissions,
-                object_type=workflow_object.object_type,
-                object_id=workflow_object.object_id,
-                action=action,
-                prior_actions=prior_actions,
-            ),
+            policy_context,
             required_permission=transition.required_permission,
             enforce_sod=bool(transition.sod_rule and action),
             enforce_ownership=False,
@@ -229,6 +230,8 @@ class WorkflowService:
             actor_id=actor_user.id,
             required_permissions=frozenset({transition.required_permission}),
             surface=f"workflow:{workflow_object.object_type}:{action or 'transition'}",
+            context=policy_context,
+            audit_connection=self.connection,
         )
         if not decision.allowed:
             raise WorkflowServiceError(decision.reason)

@@ -107,6 +107,7 @@ def require_service_worker_policy(
         surface=surface,
         request_id=request_id,
         principal_type=context.principal_type,
+        context=context,
     )
     if not decision.allowed:
         raise error_factory(f"Worker policy denied: {decision.reason_code}")

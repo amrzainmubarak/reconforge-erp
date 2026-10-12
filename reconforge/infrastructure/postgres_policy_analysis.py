@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
 
 from reconforge.auth.policy_analysis import (
@@ -16,6 +16,7 @@ from reconforge.auth.policy_analysis import (
     PolicyScope,
 )
 from reconforge.infrastructure.postgres import PostgresConfigurationError, normalize_scope_id
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 
 class PostgresPolicyAnalysisError(PolicyAnalysisError):
@@ -51,11 +52,9 @@ def _optional_scope_amount(row: Any, key: str, index: int, field_name: str) -> D
     if value is None:
         return None
     try:
-        parsed = value if isinstance(value, Decimal) else Decimal(str(value))
-    except (InvalidOperation, TypeError, ValueError) as exc:
+        parsed = parse_exact_amount(value)
+    except InvalidAmountError as exc:
         raise PostgresPolicyAnalysisError(f"{field_name} is invalid.") from exc
-    if not parsed.is_finite():
-        raise PostgresPolicyAnalysisError(f"{field_name} is invalid.")
     return parsed
 
 

@@ -1,0 +1,335 @@
+{
+  "schema_version": "finance-posting-acceptance-v1",
+  "executed_at": "2026-10-03T09:13:57.325771+00:00",
+  "status": "passed-bounded-manual-posting-contract",
+  "source_base_commit": "f3d6482f290477ac80b1c06b0e3f1fd783ad2340",
+  "source_binding": "canonical UTF-8 LF hashes; acceptance on frozen materialized sources before slice commit",
+  "sources": {
+    "alembic/versions/0098_postgres_finance_posting.py": "a7813a79b7996e57541dafebb5cb5faaea377ba9363fe445109847a025bedb8b",
+    "reconforge/api/app.py": "c1558c017558742194bb2c298a84a86d861aa59e3441d54e61f2a3bbfda7d8a6",
+    "reconforge/api/authorization.py": "5584dd2d5e56b5410602307db393240516166b98b26de7646602608de1be8297",
+    "reconforge/api/finance_posting_contract.py": "56a62710825d7ab19633c557190e16f3a6682a58daa1f645d07b676f6c25d99a",
+    "reconforge/api/routes/finance_posting.py": "99f3ef6e04976183250eee3b772e5e2522a71f45eb077c8ca4fb0164ccbf9c57",
+    "reconforge/application/finance_posting.py": "92f328863b917ba07501209634603147dd60795765023089e7509a2f07dda05f",
+    "reconforge/auth/policy.py": "5133553fd8ee00ef3d575a49e107072d3499d154339c744e808957dd8a44523d",
+    "reconforge/cli.py": "c89ad9ea0b81d69e645dacc82b3189dfa1c83060e4e26a8d7dd069ff138f8fd6",
+    "reconforge/cli_finance_posting.py": "e3e968600d759599d963124b21a334a5ca7037eeef18d6acd8407ca14412f60b",
+    "reconforge/db/backup.py": "6c367c6737462e034b564c453165196709662544559532ad8c10471483cb882e",
+    "reconforge/db/exporter.py": "3be9d757c78990c36135e011c105dcb86a4ed86f2d3f5aedf61c8b54b29196ee",
+    "reconforge/db/migrations.py": "9f2a57f712e05d3c1496461580c55f07263e544a7d9d2ba5021db550e263d84e",
+    "reconforge/domain/finance_posting.py": "bc574f47416abc01b5a2b00ce3ab9021ea5a6ad177f68d6b9fe10becdf70e933",
+    "reconforge/infrastructure/postgres_finance_core.py": "d9c45e976175ceec6ae206cf761d2d3543884642bbbc4350f82a3a0e6503f29e",
+    "reconforge/infrastructure/postgres_finance_posting.py": "63d72c98d38035f65606a4343e9893fec71de434386ecc10d680e68d2858e6a4",
+    "reconforge/infrastructure/postgres_finance_posting_schema.py": "3df879ce3d55853d67382af4c2b90b59a5c697cf77508219ed14fb8ffab05aed",
+    "reconforge/infrastructure/sqlite_finance_core.py": "b85ae7817e17ce3f85b531dd7d27024b2d8909d784048d0aad5ba747a6751365",
+    "reconforge/infrastructure/sqlite_finance_posting.py": "7bc5f0a01ac40b5fe255b703c9cec4f6788e23d4974072b46c40178852642273",
+    "reconforge/infrastructure/sqlite_finance_posting_schema.py": "49d09c52f9090a8edf77bf72b47c7865d236d6406c29d2e236889006612b23db",
+    "reconforge/io/finance_posting.py": "8ae2f39f8e473385e10b82da5a063f5fb2c37a889c2014352989abaf3ce55c02",
+    "tests/test_finance_posting_api_contract.py": "911b0b52ae5be411a16b5da7e7a0868bde8ac9671b7da3dbec23f6845186d7b0",
+    "tests/test_finance_posting_cli.py": "3ecbf599984236e15d44e23c383f62ed4b0afbd5cd0c2c4066e995ee5cd4a72b",
+    "tests/test_finance_posting_domain.py": "5b53710abf65e16c506257fc82287c3db5aea592be08071bb05bd537c3160850",
+    "tests/test_postgres_finance_core.py": "3bdb9001a9ca4156c10f5cf0b057e9317d4c93b9982005c6da462b52469d4c37",
+    "tests/test_postgres_finance_posting.py": "9aef3e34114fd202a62e0893c9e923d1ebe461003820f15ed6100bdd590880ff",
+    "tests/test_postgres_finance_posting_api.py": "c1ea9250da3fe8dd869bb09247cb224bf94241fc5d64023cce38da03ba75a1a7",
+    "tests/test_postgres_finance_posting_concurrency.py": "c19cde7fc0044228747c91ab0b880a33e58b3c558bd045f0255060d13385eca4",
+    "tests/test_postgres_finance_posting_restore.py": "1218af2d8f430d7f0baf3a4fa14371aebf9747466b232159fdecb26f38044d8e",
+    "tests/test_postgres_finance_scope.py": "17fd185978527f3115c952140fd8d1be0ee751af86334cbf14cfa7a81a2fa884"
+  },
+  "money_contract": "finance-entry-review-v1 / finance-posting-api-v1; exact minor-unit strings and original snapshot_json",
+  "sqlite": {
+    "migration": 48,
+    "gate": {
+      "tests": 101,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 101,
+      "seconds": 130.088,
+      "path": "output/verification-2026-10-03/prod009-sqlite-accepted.xml",
+      "sha256": "d1014c5f5b42fddef63b0004ae95692bd38dadd5c9f8c92bf05063787f15c9a5"
+    },
+    "source_unchanged": true,
+    "owner_manifest": {
+      "path": "output/verification-2026-10-03/PROD009-SQLITE-FROZEN.json",
+      "sha256": "c41b224b75ae64766a05875fb01a3a60d5495f8ca5f65a6e50e8d10ca63b2d89"
+    }
+  },
+  "postgres": {
+    "migration": "0098_pg_finance_posting",
+    "affected_final_gate": {
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 7,
+      "seconds": 108.086,
+      "path": "output/verification-2026-10-03/prod009-final-affinity.xml",
+      "sha256": "484b19268a6cec6747a3779a7faab6c94ab18d18c665184bd1a550732ab36767"
+    },
+    "earlier_broad_gate": {
+      "tests": 82,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "passed": 81,
+      "seconds": 651.422,
+      "path": "output/verification-2026-10-03/prod009-pg-regression-final/results.xml",
+      "sha256": "f312d721c713dba9682a4b18cbfb902c1992ce8ddb292ca7614d539d5b5982b8",
+      "limitations": [
+        "approved Core SoD change during run; subsequent evidence affinity repair not included"
+      ]
+    },
+    "owner_manifest": {
+      "path": "output/verification-2026-10-03/PROD009-PG-FROZEN.json",
+      "sha256": "2bc0ff606f5b904a6c3734dfe4dec74ce4c744501769a54b7796a8d1e239c476"
+    }
+  },
+  "actual_http": {
+    "gate": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 2,
+      "seconds": 50.139,
+      "path": "output/verification-2026-10-03/posting-api-final.xml",
+      "sha256": "6880910921b22ee80d03395c81abc1388164181220450d3891812e9d3b220833"
+    },
+    "sources_unchanged": true,
+    "harness": {
+      "path": "output/verification-2026-10-03/posting-api-final.json",
+      "sha256": "4203d9df51aa0c3da628becd2d03374fb11c1d4a9bf2fff9a0b20c3862d5a10c"
+    },
+    "behaviors": [
+      "actual password identities and configured session assurance",
+      "own maker/read-only posting denied",
+      "stale review seal and changed command denied",
+      "exact same command replays one effect",
+      "full reversal independently reviewed and posted",
+      "sibling scope hidden",
+      "cookie CSRF and missing recent method denied",
+      "caller actor/assurance input rejected",
+      "minor units9007199254740993 retained exactly"
+    ]
+  },
+  "native_populated_restore": {
+    "started_at": "2026-10-03T09:03:20.088038+00:00",
+    "status": "passed",
+    "synthetic_only": true,
+    "transport": "Docker native pg_dump/pg_restore",
+    "source_scope": "frozen native Finance posting exercise; concurrent cash/UI and SQLite development is not certified",
+    "postgres_version": "16.14",
+    "revision": "0098_pg_finance_posting",
+    "dump_sha256": "f3a7afb3a978916601c45706e6886d284b009e94cc36ffa646b45dda25e35a35",
+    "dump_bytes": 1174349,
+    "effects": 2,
+    "command_receipts": 3,
+    "legacy_null_count": 4,
+    "policies_equal": true,
+    "exact_replay": true,
+    "scoped_denials": true,
+    "immutability": true,
+    "balance_scope": "selected-period-net-activity",
+    "selected_period_net_balance_zero": true,
+    "absent_effect_receipt_denied": true,
+    "cross_source_receipt_replay_denied": true,
+    "review_and_reversal_provenance_retained": true,
+    "audit_and_outbox_reference_substitution_denied": true,
+    "source_unchanged": true,
+    "restored_database_removed": true,
+    "source_database_removed": true,
+    "elapsed_seconds": 33.297,
+    "report_digest": "5f337c044488517a8cc2054d4b9c64985f7820559ea20446cc624ca09c54759b"
+  },
+  "native_restore_artifact": {
+    "path": "output/verification-2026-10-03/POSTING_NATIVE_RESTORE_0098.json",
+    "sha256": "7cb3f24139de2bd13dfbf7708907644cc208517b376e7a278c3c8d452c8ae807"
+  },
+  "native_chain": {
+    "versions": [
+      "16.14",
+      "17.10"
+    ],
+    "sources_unchanged": true,
+    "runs": [
+      {
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "F:\\reconforge-erp\\.github\\scripts\\verify_postgres_writeback_identity_migration.py",
+          "--output",
+          "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0098_2026-10-03.json"
+        ],
+        "exit_code": 0,
+        "seconds": 29.25,
+        "log": "native-chain-drill-0098-final.log",
+        "log_sha256": "31f11eee47a8a9ffa06dd61762ea5aba6730cd77cd7b9e3df3fc8096550f34c0",
+        "report": "POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0098_2026-10-03.json",
+        "report_sha256": "265ce879571b867170cf60665305195fcaea1ad3c7cd6db3aa8df922df2628ec"
+      },
+      {
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "F:\\reconforge-erp\\.github\\scripts\\verify_postgres_writeback_identity_migration_matrix.py",
+          "--output",
+          "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0098_2026-10-03.json"
+        ],
+        "exit_code": 0,
+        "seconds": 55.922,
+        "log": "native-chain-matrix-0098-final.log",
+        "log_sha256": "b3deb7500db58bcc5da7fc7b3a084bf44303d17ab9a4d74d58e3f9adacc1512c",
+        "report": "POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0098_2026-10-03.json",
+        "report_sha256": "224964820e70fa6f8aa355b35446bf2add16dd12e615850e07c99b1bcd0eded6"
+      }
+    ],
+    "artifact": {
+      "path": "output/verification-2026-10-03/POSTING_NATIVE_CHAIN_FINAL.json",
+      "sha256": "509677bd5f2fd07b4f3a11750601e3dcc5156493136d2805694204ede8690a9f"
+    }
+  },
+  "before_failures": {
+    "partial_downgrade": "Three actual populated provenance-only downgrade paths silently discarded historical fields before conservative five-column refusal.",
+    "receipt": "Actual raw INSERT could claim a missing effect or missing reversal draft; real same-actor effect could acknowledge another source. DB backing-result guard plus application requested-source binding close these.",
+    "maker_replacement": "Actual checker replaced maker draft content, validated and posted their own changed content under retained maker identity. Authenticated draft replacement now requires stable captured preparer identity.",
+    "evidence_affinity": "Two actual admin-corrupted synthetic restore references redirected an effect to another real audit or outbox row. Runtime read accepted both before exact affinity check; final INSERT/read verify exact actor/action/source/digest/JSON/scope.",
+    "fixture_grants": "Initial broad four failures were missing app grants for two new posting tables after historical0094-to0098 fixture upgrade; focused fixture grants changed only, no scope weakening."
+  },
+  "retained_failures": [
+    {
+      "path": "output/verification-2026-10-03/prod009-pg-partial-red.xml",
+      "sha256": "702df70f482b2f3556bcbf9cb7b0d697798bc1354fe5537ad4eb75f5ee0045e7"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod009-receipt-red.xml",
+      "sha256": "627ba3b82467b223f40fcaf430f44420acab7e902b0ef602c0e1d89315beef87"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod009-receipt-source-red.xml",
+      "sha256": "0993cfc0063656c930f9811a4c1bd12fae676782fb6ec59229bcbd2ab2982eb2"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod009-maker-edit-red.xml",
+      "sha256": "d0dc2a29122b0969857243b972d1ccf92b7d8b00a8f95fb50cb5c0e05c69b928"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod009-evidence-red.xml",
+      "sha256": "6c5372ee342756be1e2bcdd75a9af71ea9e9e103b401b76e3cf4e0245c4425aa"
+    }
+  ],
+  "limitations": [
+    "Manual operational effects and full kernel reversal only",
+    "selected-period-net-activity; no cumulative opening/as-of balance",
+    "no automatic Inventory/AP/AR/Cash source effects",
+    "legacy missing actor/review/currency policy never inferred",
+    "SQLite HTTP posting needs a recent-session assurance adapter; authenticated CLI is implemented",
+    "SQL access is not a human authorization ceremony; privileged owner is trusted",
+    "full audit-chain verification is separate from exact evidence affinity",
+    "whole-repository final immutable regression recorded separately",
+    "synthetic data; no customer ROI, external-auditor acceptance or scale claim"
+  ],
+  "final_interface_and_static_gate": {
+    "tests": 75,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 75,
+    "seconds": 41.999,
+    "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "runtime_sources_unchanged": true,
+    "runs": [
+      {
+        "name": "ruff",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "ruff",
+          "check",
+          "."
+        ],
+        "exit_code": 0,
+        "seconds": 1.031,
+        "log": "posting-cash-final-ruff.log",
+        "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+      },
+      {
+        "name": "mypy",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "mypy",
+          "reconforge"
+        ],
+        "exit_code": 0,
+        "seconds": 20.297,
+        "log": "posting-cash-final-mypy.log",
+        "log_sha256": "f0fdfa8c1281acf8e2d3281f5f560fa53db703eb9da2075ad6c3ec0d67139c4d"
+      },
+      {
+        "name": "bandit",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "bandit",
+          "-q",
+          "-r",
+          "reconforge"
+        ],
+        "exit_code": 0,
+        "seconds": 31.703,
+        "log": "posting-cash-final-bandit.log",
+        "log_sha256": "f388f7e286034b2c19684a9edf5478de1ab9e79606bfbbb71d1053f4adc67b99"
+      },
+      {
+        "name": "cli-static",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "pytest",
+          "tests/test_finance_posting_cli.py",
+          "tests/test_finance_posting_api_contract.py",
+          "tests/test_repository_boundary_inventory.py",
+          "tests/test_postgres_parity_inventory.py",
+          "tests/test_api_authorization_inventory.py",
+          "tests/test_module_registry.py",
+          "tests/test_postgres_writeback_identity_migration_drill.py",
+          "tests/test_postgres_writeback_identity_migration_matrix.py",
+          "-ra",
+          "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\posting-cash-final-cli-static.xml"
+        ],
+        "exit_code": 0,
+        "seconds": 47.985,
+        "log": "posting-cash-final-cli-static.log",
+        "log_sha256": "585f04dde058f9f6f15ed3b5c52c8596b64b62f0d239cb9f85c27ca716b975ce"
+      },
+      {
+        "name": "build",
+        "command": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "build",
+          "--no-isolation",
+          "--outdir",
+          "F:\\reconforge-erp\\output\\verification-2026-10-03\\posting-cash-final-dist"
+        ],
+        "exit_code": 0,
+        "seconds": 56.578,
+        "log": "posting-cash-final-build.log",
+        "log_sha256": "d3e387d14b6ed5da30d313a725a5201ff179b2f45e546b91cacc0aa61f1762c9"
+      },
+      {
+        "name": "diff-check",
+        "command": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "exit_code": 0,
+        "seconds": 0.547,
+        "log": "posting-cash-final-diff-check.log",
+        "log_sha256": "5670f000616641a163854243692ca4c99298a09a8d06a14db523febba1013250"
+      }
+    ],
+    "artifact_path": "output/verification-2026-10-03/POSTING_CASH_FINAL_QUALITY.json",
+    "artifact_sha256": "2066cc81aed00ea41e27b6c6ef601672b0c930c5b16f0f59a884f40614eba4a6"
+  },
+  "report_digest": "815b3342b749887c7b9c8439dba6578199169b61f4f224561c1e21352c89e689"
+}

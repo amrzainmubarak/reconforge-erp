@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal
 from typing import Annotated, Literal
 
@@ -12,6 +13,7 @@ from reconforge.api.dependencies import enforce_server_scoped_permissions, requi
 from reconforge.api.errors import APIError
 from reconforge.api.server_consolidation_ppa import execute_postgres_ppa, server_ppa_enabled
 from reconforge.application.consolidation_ppa import AcquisitionPpaApplicationService
+from reconforge.auth.field_access import project_consolidation_ppa_response
 from reconforge.auth.models import LocalUser
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.consolidation_ppa import (
@@ -79,7 +81,7 @@ class PpaPrepareRequest(BaseModel):
     @staticmethod
     def _money(value: CanonicalMoneyRequest) -> Money:
         try:
-            return Money.from_canonical_dict(value.model_dump(mode="python"))
+            return Money.from_strict_canonical_dict(value.model_dump(mode="python"))
         except (TypeError, ValueError, KeyError) as exc:
             raise APIError(
                 status_code=400,
@@ -168,6 +170,14 @@ def _enforce_server_policy(
     )
 
 
+def _project_artifact_response(
+    artifact: Mapping[str, object], source: Mapping[str, object]
+) -> dict[str, object]:
+    return project_consolidation_ppa_response(
+        {"artifact": artifact, "source": source}
+    ).visible
+
+
 @router.post("")
 def prepare_ppa(
     request: Request,
@@ -191,7 +201,9 @@ def prepare_ppa(
             actor_label=current_user.id,
         ),
     )
-    return {"artifact": artifact, "source": {"kind": "postgresql-consolidation-ppa", "server_mode": True}}
+    return _project_artifact_response(
+        artifact, {"kind": "postgresql-consolidation-ppa", "server_mode": True}
+    )
 
 
 @router.get("/{artifact_id}")
@@ -208,7 +220,9 @@ def get_ppa(
         request,
         lambda repository, _tenant: repository.get(artifact_id, actor_label=current_user.id),
     )
-    return {"artifact": artifact, "source": {"kind": "postgresql-consolidation-ppa", "server_mode": True}}
+    return _project_artifact_response(
+        artifact, {"kind": "postgresql-consolidation-ppa", "server_mode": True}
+    )
 
 
 __all__ = ["CanonicalMoneyRequest", "PpaItemRequest", "PpaPrepareRequest", "get_ppa", "prepare_ppa", "router"]

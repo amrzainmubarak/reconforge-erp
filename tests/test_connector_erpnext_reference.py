@@ -63,6 +63,7 @@ def test_erpnext_gl_entry_read_uses_token_auth_cursor_query_and_company_guard() 
 
     assert [entry.entry_id for entry in result.page.entries] == ["GL-2", "GL-1"]
     assert result.page.next_cursor == "50"
+    assert [(entry.debit, entry.credit) for entry in result.page.entries] == [("0", "20"), ("10", "0")]
     assert result.page.entries[0].signed_amount == -20
     assert transport.calls[0][0] == (
         ERP_NEXT_ENDPOINT
@@ -79,6 +80,8 @@ def test_erpnext_gl_entry_read_uses_token_auth_cursor_query_and_company_guard() 
     [
         b'{"data":[{"name":"GL-1","company":"Acme","account":"4000","debit":"1","credit":"2","account_currency":"USD","posting_date":"2026-01-01"}]}',
         b'{"data":[{"name":"GL-1","company":"Acme","account":"4000","debit":"NaN","credit":"0","account_currency":"USD","posting_date":"2026-01-01"}]}',
+        b'{"data":[{"name":"GL-1","company":"Acme","account":"4000","debit":"1e2","credit":"0","account_currency":"USD","posting_date":"2026-01-01"}]}',
+        b'{"data":[{"name":"GL-1","company":"Acme","account":"4000","debit":"-1","credit":"0","account_currency":"USD","posting_date":"2026-01-01"}]}',
         b'{"data":[{"name":"GL-1","company":"Acme","account":"4000","debit":"1","credit":"0","account_currency":"USD","posting_date":"2026-01-01"},{"name":"GL-2","company":"Other","account":"4000","debit":"1","credit":"0","account_currency":"USD","posting_date":"2026-01-01"}]}',
     ],
 )

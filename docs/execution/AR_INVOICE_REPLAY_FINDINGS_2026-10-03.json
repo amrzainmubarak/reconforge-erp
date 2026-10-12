@@ -1,0 +1,1025 @@
+{
+  "schema_version": 1,
+  "status": "confirmed_before_fix_not_repaired",
+  "assigned_work_item": "PROD-039",
+  "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+  "sqlite": "3.53.1",
+  "postgresql": "16.14",
+  "seconds": 34.052,
+  "source_file_count": 670,
+  "source_changed": [],
+  "backends": [
+    {
+      "backend": "sqlite",
+      "cases": [
+        {
+          "case": "exact_retry",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_invoice_number",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_amount",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_customer",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_currency_and_customer",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "nonexistent_customer",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_invoice_date",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_due_date",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_authenticated_human",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "readonly_actor",
+          "classification": "current authority",
+          "http_status": 403,
+          "state_unchanged": true,
+          "error": {
+            "error": {
+              "code": "permission_denied",
+              "message": "Permission denied.",
+              "request_id": "56317604c332499c98c65e4485f481a7"
+            }
+          },
+          "before_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "after_evidence_counts": {
+            "audit": 4,
+            "outbox": 4
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {}
+        },
+        {
+          "case": "exact_retry_after_submit",
+          "classification": "historical acknowledgement vs current aggregate",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 5,
+            "outbox": 5
+          },
+          "after_evidence_counts": {
+            "audit": 5,
+            "outbox": 5
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "cached_response_redirected_to_other_valid_invoice",
+          "classification": "owned raw persisted-response corruption; no HTTP write access claim",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": false,
+          "before_evidence_counts": {
+            "audit": 6,
+            "outbox": 6
+          },
+          "after_evidence_counts": {
+            "audit": 6,
+            "outbox": 6
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-6929793571773594",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-0e2d6c41e0bf007c",
+            "invoice_number": "OTHER-SOURCE",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "cached_response_fabricated_amount_same_valid_source",
+          "classification": "owned raw persisted-response corruption, policy and source ID unchanged",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": false,
+          "before_evidence_counts": {
+            "audit": 6,
+            "outbox": 6
+          },
+          "after_evidence_counts": {
+            "audit": 6,
+            "outbox": 6
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-b1a9d46f20bd6b9d",
+            "workspace_id": "WS-37a8eec1ce19687d",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-20a70b040e6c4740",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 2345,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "same_key_in_other_authorized_workspace",
+          "classification": "expected independently scoped new effect",
+          "http_status": 200,
+          "state_unchanged": false,
+          "returned_original_ack": false,
+          "before_evidence_counts": {
+            "audit": 7,
+            "outbox": 7
+          },
+          "after_evidence_counts": {
+            "audit": 8,
+            "outbox": 8
+          },
+          "business_digests_equal": false,
+          "evidence_digests_equal": false,
+          "returned_invoice": {
+            "id": "ARINV-c9aedc62a13c90a1",
+            "workspace_id": "WS-8425c815ac4db866",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-aaad0fb0b65cc963",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "maker",
+            "status": "Draft",
+            "row_version": 1
+          }
+        }
+      ]
+    },
+    {
+      "backend": "postgres",
+      "cases": [
+        {
+          "case": "exact_retry",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_invoice_number",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_amount",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_customer",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_currency_and_customer",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "nonexistent_customer",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_invoice_date",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_due_date",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "different_authenticated_human",
+          "classification": "request identity",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "readonly_actor",
+          "classification": "current authority",
+          "http_status": 403,
+          "state_unchanged": true,
+          "error": {
+            "error": {
+              "code": "permission_denied",
+              "message": "Permission denied.",
+              "request_id": "3439f5cf54e246c3ae5c3f934653f167"
+            }
+          },
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {}
+        },
+        {
+          "case": "body_workspace_spoof",
+          "classification": "expected header-authoritative workspace normalization",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "narrowed_sibling_entity",
+          "classification": "current source scope",
+          "http_status": 400,
+          "state_unchanged": true,
+          "error": {
+            "error": {
+              "code": "receivables_request_invalid",
+              "message": "Customer invoice not found.",
+              "request_id": "d6d9bacad7e542c8885c89627b45bf5a"
+            }
+          },
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {}
+        },
+        {
+          "case": "ungranted_workspace",
+          "classification": "current authority",
+          "http_status": 403,
+          "state_unchanged": true,
+          "error": {
+            "error": {
+              "code": "workspace_scope_denied",
+              "message": "Workspace scope is not authorized.",
+              "request_id": "ffaf0d29604940b4af2ab595a7929a98"
+            }
+          },
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {}
+        },
+        {
+          "case": "different_tenant_same_session",
+          "classification": "current authority",
+          "http_status": 401,
+          "state_unchanged": true,
+          "error": {
+            "error": {
+              "code": "invalid_token",
+              "message": "Invalid or expired token.",
+              "request_id": "5595732f77f0472a8d8e8ab98c47ba3b"
+            }
+          },
+          "before_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "after_evidence_counts": {
+            "audit": 12,
+            "outbox": 12
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {}
+        },
+        {
+          "case": "exact_retry_after_submit",
+          "classification": "historical acknowledgement vs current aggregate",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": true,
+          "before_evidence_counts": {
+            "audit": 13,
+            "outbox": 13
+          },
+          "after_evidence_counts": {
+            "audit": 13,
+            "outbox": 13
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "cached_response_redirected_to_other_valid_invoice",
+          "classification": "owned raw persisted-response corruption; no HTTP write access claim",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": false,
+          "before_evidence_counts": {
+            "audit": 14,
+            "outbox": 14
+          },
+          "after_evidence_counts": {
+            "audit": 14,
+            "outbox": 14
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-753623c64efeaa75",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-b",
+            "customer_id": "ARCUS-f6ed586ee33e0cff",
+            "invoice_number": "OTHER-SOURCE",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "redirected_cache_narrowed_original_entity",
+          "classification": "RLS prevents reading hidden redirected source",
+          "http_status": 400,
+          "state_unchanged": true,
+          "error": {
+            "error": {
+              "code": "receivables_request_invalid",
+              "message": "Customer invoice not found.",
+              "request_id": "b5258f318904410dbf1e972fc821b0fc"
+            }
+          },
+          "before_evidence_counts": {
+            "audit": 14,
+            "outbox": 14
+          },
+          "after_evidence_counts": {
+            "audit": 14,
+            "outbox": 14
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {}
+        },
+        {
+          "case": "redirected_cache_narrowed_foreign_entity",
+          "classification": "authorized cached object differs from requested hidden customer",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": false,
+          "before_evidence_counts": {
+            "audit": 14,
+            "outbox": 14
+          },
+          "after_evidence_counts": {
+            "audit": 14,
+            "outbox": 14
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-753623c64efeaa75",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-b",
+            "customer_id": "ARCUS-f6ed586ee33e0cff",
+            "invoice_number": "OTHER-SOURCE",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "cached_response_fabricated_amount_same_valid_source",
+          "classification": "owned raw persisted-response corruption, policy and source ID unchanged",
+          "http_status": 200,
+          "state_unchanged": true,
+          "returned_original_ack": false,
+          "before_evidence_counts": {
+            "audit": 14,
+            "outbox": 14
+          },
+          "after_evidence_counts": {
+            "audit": 14,
+            "outbox": 14
+          },
+          "business_digests_equal": true,
+          "evidence_digests_equal": true,
+          "returned_invoice": {
+            "id": "ARINV-ec9dbbdcb4ecf8ed",
+            "workspace_id": "cash-work",
+            "organization_id": "cash-org",
+            "legal_entity_id": "cash-entity-a",
+            "customer_id": "ARCUS-88072ec21ae01ae0",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 2345,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        },
+        {
+          "case": "same_key_in_other_authorized_workspace",
+          "classification": "expected independently scoped new effect",
+          "http_status": 200,
+          "state_unchanged": false,
+          "returned_original_ack": false,
+          "before_evidence_counts": {
+            "audit": 15,
+            "outbox": 15
+          },
+          "after_evidence_counts": {
+            "audit": 16,
+            "outbox": 16
+          },
+          "business_digests_equal": false,
+          "evidence_digests_equal": false,
+          "returned_invoice": {
+            "id": "ARINV-f18d915c476b2e92",
+            "workspace_id": "cash-other",
+            "organization_id": null,
+            "legal_entity_id": null,
+            "customer_id": "ARCUS-0f4c5c2109ca6280",
+            "invoice_number": "ORIGINAL",
+            "currency_code": "USD",
+            "total_minor": 1234,
+            "created_by": "cash-cashier",
+            "status": "Draft",
+            "row_version": 1
+          }
+        }
+      ]
+    }
+  ],
+  "cleanup": {
+    "remaining_databases": [],
+    "sqlite_removed": true
+  },
+  "raw_report": {
+    "artifact": "output\\verification-2026-10-03\\AR-INVOICE-REPLAY-VERIFIED-EVIDENCE-BEFORE.json",
+    "sha256": "8c68a1a75dbb426e6983caee8d0ed07f9af4525e164779ae37fdbb2d7720d6ab"
+  },
+  "raw_manifest": {
+    "artifact": "output\\verification-2026-10-03\\AR-INVOICE-REPLAY-REVIEW-MANIFEST.json",
+    "sha256": "f428ab778bbf1d4e8cc9f4bf72c0af78eaef108f99f25881ffb5ee3531a57065"
+  },
+  "limits": [
+    "Cache corruption simulated administratively in own synthetic databases; no HTTP cache-edit ability or cross-tenant disclosure demonstrated",
+    "Earlier PG Outbox filter weakness explicitly superseded by exact positive row evidence",
+    "Historical Draft and workspace-global authorized recovery compatibility must survive repair",
+    "Omitted legacy due-date intent is unresolved; current customer terms cannot reconstruct it"
+  ]
+}

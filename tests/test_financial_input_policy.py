@@ -12,7 +12,9 @@ from reconforge.io.readers import coerce_dataset_types
 from reconforge.schemas import DatasetName
 from reconforge.utils.money import (
     CURRENT_FINANCIAL_INPUT_POLICY,
+    HISTORICAL_FINANCIAL_REPLAY,
     LEGACY_FINANCIAL_INPUT_POLICY,
+    NEW_FINANCIAL_WRITE,
     STRICT_FINANCIAL_INPUT_POLICY,
     InvalidAmountError,
     LegacyFinancialInputWarning,
@@ -23,6 +25,8 @@ from reconforge.utils.money import (
     parse_amount_for_currency_precision,
     parse_exact_amount,
     parse_exact_amount_for_currency_precision,
+    resolve_historical_financial_replay_policy,
+    resolve_new_financial_write_policy,
     round_exact_money,
     round_money,
     within_exact_tolerance,
@@ -36,6 +40,35 @@ def test_current_financial_input_policy_is_strict_v2() -> None:
     assert CURRENT_FINANCIAL_INPUT_POLICY == "strict-financial-input-v2"
     assert LEGACY_FINANCIAL_INPUT_POLICY == "legacy-financial-input-v1"
     assert STRICT_FINANCIAL_INPUT_POLICY == CURRENT_FINANCIAL_INPUT_POLICY
+
+
+def test_new_writes_require_strict_policy_and_historical_legacy_fallback_is_observable() -> None:
+    strict = resolve_new_financial_write_policy(STRICT_FINANCIAL_INPUT_POLICY)
+
+    assert strict.policy == STRICT_FINANCIAL_INPUT_POLICY
+    assert strict.use == NEW_FINANCIAL_WRITE
+    assert strict.legacy_compatibility is False
+    assert strict.audit_metadata() == {
+        "financial_input_policy": STRICT_FINANCIAL_INPUT_POLICY,
+        "financial_input_policy_use": NEW_FINANCIAL_WRITE,
+        "financial_input_policy_origin": "explicit-policy",
+        "legacy_financial_input_compatibility": False,
+    }
+    with pytest.raises(InvalidAmountError, match="new financial writes require strict-financial-input-v2"):
+        resolve_new_financial_write_policy(LEGACY_FINANCIAL_INPUT_POLICY)
+
+    with pytest.raises(InvalidAmountError, match="historical financial replay requires"):
+        resolve_historical_financial_replay_policy(None)
+    historical = resolve_historical_financial_replay_policy(
+        None,
+        missing_policy_is_legacy_v1=True,
+    )
+
+    assert historical.policy == LEGACY_FINANCIAL_INPUT_POLICY
+    assert historical.use == HISTORICAL_FINANCIAL_REPLAY
+    assert historical.origin == "implicit-missing-historical-policy"
+    assert historical.legacy_compatibility is True
+    assert historical.audit_metadata()["legacy_financial_input_compatibility"] is True
 
 
 def test_legacy_v1_warns_and_preserves_documented_finite_float_compatibility() -> None:
@@ -174,6 +207,12 @@ def test_production_code_cannot_call_legacy_scalar_helpers_or_implicit_money_rea
             ):
                 violations.append(
                     f"{path.relative_to(ROOT)}:{node.lineno}:implicit-Money-input-policy"
+                )
+            if called_name == "Money" and not any(
+                keyword.arg == "strict_precision" for keyword in node.keywords
+            ):
+                violations.append(
+                    f"{path.relative_to(ROOT)}:{node.lineno}:implicit-Money-precision-policy"
                 )
             if called_name == "_filter_exceptions" and not any(
                 keyword.arg == "financial_input_policy" for keyword in node.keywords

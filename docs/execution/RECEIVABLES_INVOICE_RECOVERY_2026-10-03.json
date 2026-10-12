@@ -1,0 +1,313 @@
+{
+  "slice": "PROD039",
+  "status": "accepted_bounded_local_slice_new_whole_and_hosted_pending",
+  "synthetic_only": true,
+  "branch": "amr/verified-ar-invoice-recovery",
+  "base_commit": "4629a64baeb4c1e127dd13afdb5024ac3e2205d8",
+  "base_provenance": "parent/root supplied after metadata-only rename; source proof uses exact hashes, no subagent Git operations",
+  "previous_tree_equivalent_base": "e63859d7",
+  "runtime_file_count": 3,
+  "test_file_count": 6,
+  "schema_change": false,
+  "receipt_allocation_codec_changed": false,
+  "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+  "versions": {
+    "ruff": "0.16.0",
+    "mypy": "2.3.0",
+    "bandit": "1.9.4",
+    "pytest": "9.1.1",
+    "psycopg": "3.3.4",
+    "pydantic": "2.13.4",
+    "SQLite": "3.53.1",
+    "PostgreSQL": "16.14"
+  },
+  "gates": {
+    "prod039-expanded-both-engines": {
+      "commands": [
+        {
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "tests/test_receivables_invoice_replay.py",
+            "tests/test_receivables_invoice_replay_domain.py",
+            "tests/test_receivables_invoice_recovery.py",
+            "tests/test_receivables_invoice_replay_api.py",
+            "tests/test_receivables_policy_capture.py",
+            "tests/test_receivables_credit_integrity.py",
+            "tests/test_receivables.py",
+            "tests/test_postgres_receivables.py",
+            "-q",
+            "--tb=short",
+            "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod039-expanded-both-engines\\results.xml"
+          ],
+          "exit_code": 0,
+          "seconds": 111.601
+        }
+      ],
+      "elapsed_seconds": 121.818,
+      "owned_database": "reconforge_cash_cd5767750082",
+      "owned_database_cleanup": true,
+      "source_changed": [],
+      "suites": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "0",
+          "tests": "183",
+          "time": "109.297",
+          "timestamp": "2026-10-03T16:35:07.835007+03:00",
+          "hostname": "DESKTOP-FDO3RD5"
+        }
+      ]
+    },
+    "prod039-native-restore": {
+      "commands": [
+        {
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "tests/test_postgres_invoice_recovery_restore.py",
+            "-q",
+            "--tb=short",
+            "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod039-native-restore\\results.xml"
+          ],
+          "exit_code": 0,
+          "seconds": 12.681
+        }
+      ],
+      "elapsed_seconds": 21.656,
+      "owned_database": "reconforge_cash_d4be97a70cfe",
+      "owned_database_cleanup": true,
+      "source_changed": [],
+      "suites": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "0",
+          "tests": "1",
+          "time": "10.761",
+          "timestamp": "2026-10-03T16:38:26.943799+03:00",
+          "hostname": "DESKTOP-FDO3RD5"
+        }
+      ]
+    },
+    "prod039-final-ar-regression": {
+      "commands": [
+        {
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "tests/test_receivables_invoice_replay.py",
+            "tests/test_receivables_invoice_replay_domain.py",
+            "tests/test_receivables_invoice_recovery.py",
+            "tests/test_receivables_invoice_replay_api.py",
+            "tests/test_receivables_policy_capture.py",
+            "tests/test_receivables_credit_integrity.py",
+            "tests/test_receivables.py",
+            "tests/test_postgres_receivables.py",
+            "tests/test_application_receivables.py",
+            "tests/test_api_server_receivables.py",
+            "tests/test_receivables_policy_api.py",
+            "tests/test_receivables_money_api_contract.py",
+            "tests/test_receivables_monetary_policy.py",
+            "tests/test_receivables_cli.py",
+            "tests/test_receivables_cash_policy.py",
+            "tests/test_receivables_cash_contract.py",
+            "tests/test_receivables_api.py",
+            "tests/test_receivables_aging_integrity.py",
+            "tests/test_db_export_persisted_json.py",
+            "-q",
+            "--tb=short",
+            "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod039-final-ar-regression\\results.xml"
+          ],
+          "exit_code": 0,
+          "seconds": 248.947
+        }
+      ],
+      "elapsed_seconds": 258.779,
+      "owned_database": "reconforge_cash_b90ba4d97373",
+      "owned_database_cleanup": true,
+      "source_changed": [],
+      "suites": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "0",
+          "tests": "331",
+          "time": "245.781",
+          "timestamp": "2026-10-03T16:39:31.955162+03:00",
+          "hostname": "DESKTOP-FDO3RD5"
+        }
+      ]
+    },
+    "prod039-final-quality": {
+      "results": [
+        {
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "ruff",
+            "check",
+            "."
+          ],
+          "exit_code": 0,
+          "seconds": 0.201,
+          "log": "output/verification-2026-10-03/prod039-final-quality/ruff.log"
+        },
+        {
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "mypy",
+            "reconforge"
+          ],
+          "exit_code": 0,
+          "seconds": 0.978,
+          "log": "output/verification-2026-10-03/prod039-final-quality/mypy.log"
+        },
+        {
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "bandit",
+            "-q",
+            "-r",
+            "reconforge"
+          ],
+          "exit_code": 0,
+          "seconds": 16.421,
+          "log": "output/verification-2026-10-03/prod039-final-quality/bandit.log"
+        }
+      ],
+      "source_changed": []
+    }
+  },
+  "final_all_runtime_migration_test_hash_count": 1208,
+  "native_restore": {
+    "schema": "0099_pg_receivables_policy",
+    "source": "reconforge_cash_d4be97a70cfe",
+    "target": "reconforge_invoice_restore_b73e366978aa4693",
+    "dump_sha256": "0a260d1aeacd3a5490b37fbd9f38cc8d885516d6637526a1b16f1e560d3d4fb9",
+    "dump_bytes": 1188108,
+    "financial_history_sha256": "b68fcd0009c9e3a95c23d92275ac7cd88f866ddc26975a081f5435b4e06d6cd6",
+    "cleanup": true,
+    "restored_history_equal": true,
+    "source_unchanged": true,
+    "versioned_and_legacy_recovered": true,
+    "inactive_customer_and_registry_rebind_recovered": true,
+    "ambiguous_legacy_refused": true,
+    "runtime_role_nonowner": true
+  },
+  "contract": [
+    "New invoice-only closed schema1 envelope retains canonical request digest and unchanged original Draft/version1 acknowledgement.",
+    "Requested customer and canonical hierarchy resolve under current authority before independently deterministic invoice ID selects source; cached source ID never establishes authority.",
+    "Complete immutable header, ordered line identities/content/creation timestamps and retained policy must agree. PostgreSQL dual numeric/text quantity must agree under parent/line locks.",
+    "Historical acknowledgement stays Draft/version1 after current Submitted/Approved/Paid/Cancelled lifecycle; authorized GET exposes current state. Cancellation is pure-contract proof, not a newly added endpoint.",
+    "Customer inactivity, changed payment terms and registry rebind do not obstruct exact verified recovery. Normal creation retains current Active and policy prerequisites.",
+    "Legacy raw explicit-due-date recovery requires complete backing proof. Omitted legacy due_date is refused with authorized GET fallback; no inference from current customer terms.",
+    "PostgreSQL scoped JSON-encoded advisory key serialization, customer-first/source locks and transaction encompass complete effects. SQLite BEGIN IMMEDIATE and existing atomic finalization retained.",
+    "Workspace-global recovery remains available to currently authorized other humans, without replacing original attribution or promoting legacy labels."
+  ],
+  "limits": [
+    "Existing canonical organization/entity resolvers still require Active; only customer Active is bypassed for verified recovery.",
+    "Transparent two-connection concurrent replay measured under PostgreSQL READ COMMITTED. A pre-established REPEATABLE READ snapshot may fail safely on conflict; no broader liveness claim.",
+    "Synthetic administrative cache/source corruption is distinct from ordinary HTTP permissions; no ordinary HTTP cache-writing capability was demonstrated.",
+    "No AR receipt/allocation retry repair, generated GL, complete trade workflow, global transaction refactor or new policy-digest request field.",
+    "Public DB export does not currently include AR tables/idempotency. SQLite backup/restore and PostgreSQL native dump/restore are proven; no AR public-export replay claim.",
+    "Rollback to an older reader requires compatibility handling for the new internal envelope; retain command history and GET fallback, never reissue uncertain legacy command under a new key."
+  ],
+  "retained_failures": [
+    "Two original SQLite regressions failed DID NOT RAISE before repair.",
+    "Initial SQLite green attempt had fixture counts including unrelated authorization audits; exact AR predicate correction retained.",
+    "First two-engine gate 93passed/3failed: expected PlatformError did not include existing distinct PostgresReceivablesError for injected SQL faults; fixture corrected without weakening refusal.",
+    "Numeric storage red SQLite passed/PostgreSQL failed: raw NUMERIC9 retained text2 was accepted; recovery source numeric/text locking guard added, two-engine regression and physical races passed6."
+  ],
+  "artifact_sha256": {
+    "output/verification-2026-10-03/AR-INVOICE-REPLAY-VERIFIED-EVIDENCE-BEFORE.json": "8c68a1a75dbb426e6983caee8d0ed07f9af4525e164779ae37fdbb2d7720d6ab",
+    "output/verification-2026-10-03/AR-INVOICE-REPLAY-RECOVERY-CONTRACT.md": "471601b57b56e376cec451b915a74c3a2db7f267933a08563f8b22faf40733af",
+    "output/verification-2026-10-03/PROD039-INVOICE-RED.log": "a81a5903ce53faf96cac29506a28b6de590eec4996b7f965acc01eb58aca288b",
+    "output/verification-2026-10-03/PROD039-INVOICE-RED.xml": "bbe7e3b3366cba1ff6022ec929ad34886e896548b05bd0827928418270720059",
+    "output/verification-2026-10-03/PROD039-INVOICE-FIRST-GREEN.log": "2c8600a594015a3974c663a9a0366e418dee4bf85c56599762fb70635c7f0c97",
+    "output/verification-2026-10-03/prod039-first-both-engines/report.json": "44edd38a1aba0c85e7a8e075787db610d09ac52be7e43c12c0d46317c3a7f026",
+    "output/verification-2026-10-03/prod039-first-both-engines/pytest.log": "f473be130183059bb7c9bdc8780f0700b3f26c6b843017893d1e00724b3075ab",
+    "output/verification-2026-10-03/prod039-numeric-storage-red/report.json": "bd3fcf756c6ff384a3a4415e424a4efe19958749f797c9536355a8b83a7e1441",
+    "output/verification-2026-10-03/prod039-numeric-storage-red/pytest.log": "e97db8263847faf5bb555f40c79f41b2612ccbbe872653bf67943de1aff17ba8",
+    "output/verification-2026-10-03/prod039-numeric-storage-green/report.json": "8d0faa092077363992fc0b29bc56081c854a4502aae0ce1baf6067298932c230",
+    "output/verification-2026-10-03/prod039-expanded-both-engines/report.json": "a500b32956c6d483134d5e13e23bb9af529c3dd4e47d17b2221be2d2e2f67fac",
+    "output/verification-2026-10-03/prod039-native-restore/report.json": "223c8a12bcc2c47d85087b099001d1586f620ccd0423b4cefda96aa3271bd51a",
+    "output/verification-2026-10-03/PROD039-NATIVE-RESTORE.json": "885315bcdf7ce41b5d32375a2f40f9e6c435d3e26299f40c3ef7612782ad06ad",
+    "output/verification-2026-10-03/prod039-final-ar-regression/report.json": "b84107971b6a27d04988471c3317a147ad5084414586283caf19c93e0cb1c043",
+    "output/verification-2026-10-03/prod039-final-ar-regression/pytest.log": "874fcd4a21270c9a47ec6474991b81591c4abf4abab4691d10ea533aeedb2284",
+    "output/verification-2026-10-03/prod039-final-ar-regression/results.xml": "4462c807f1eb27e1495f3cc615090d3ade9b6fb0619b0a0a241c5eca6bc0aebe",
+    "output/verification-2026-10-03/prod039-final-quality/report.json": "80da37bc51ec75bb4b728dda305a6c8cfe48dbbade8320acf3642e77e339aaf1",
+    "output/verification-2026-10-03/prod039-final-quality/ruff.log": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+    "output/verification-2026-10-03/prod039-final-quality/mypy.log": "c25dcef4a733f219564cb690baa7fe1e277532c2fefe4be407a3d2bd903422d9",
+    "output/verification-2026-10-03/prod039-final-quality/bandit.log": "333497e37a41d213f0cbb24ee4451bf17bea751f0a656a0cea9493f11f9eee8f",
+    "output/verification-2026-10-03/run_prod039_gate.py": "4557b875a10d936bb4d8c13cabfb0b99dc12b98b3a05a0f76b3b70b839155d12",
+    "output/verification-2026-10-03/run_prod039_quality.py": "7b4d5fc944462fa4b4838a021160d5f29ebcec39619bddef3dab9e02bd08f16a"
+  },
+  "owned_files": [
+    {
+      "path": "reconforge/domain/receivables_replay.py",
+      "sha256": "9920861f3b10270ea2ad4da4aee94f5ca50a303a2a17e9895d83758f7869bf60"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_receivables.py",
+      "sha256": "a69604db51e25a260ac94a9ad85362858b08cf123b8f62b955dc174b2f766d25"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_receivables.py",
+      "sha256": "8e3813b69110d6d9c943c548f56f06c45c5de1b2817e7b005bc52029a395b1dc"
+    },
+    {
+      "path": "tests/test_receivables_invoice_replay.py",
+      "sha256": "a8278aecd8e7382a3be09cd0e0665c93b6f87ff328f0ef1c6fd6777abd56f29e"
+    },
+    {
+      "path": "tests/test_receivables_invoice_replay_domain.py",
+      "sha256": "b5a5cda6d84c622c62af128cdd644b80848eeb578891d3d298a0e06013abbec1"
+    },
+    {
+      "path": "tests/test_receivables_invoice_recovery.py",
+      "sha256": "4cae060e4b1eaee635057545646026c5d8e05def9df440078b788aa977505a65"
+    },
+    {
+      "path": "tests/test_receivables_invoice_replay_api.py",
+      "sha256": "81fe9777dcec1d19ccf903273de2ea152400943943355bf84b68cc80a88cffa1"
+    },
+    {
+      "path": "tests/test_postgres_invoice_recovery_restore.py",
+      "sha256": "d5405cbbd3e10a0ca28c0fa5e19ed606024cf9b9f91c7d7aed1b1064ed6d5e0c"
+    },
+    {
+      "path": "tests/test_receivables_policy_capture.py",
+      "sha256": "89808c55942fda818e48ffa5e2a869f4d11f0e51737590277f0bd7f9f775b4fb"
+    }
+  ],
+  "parent_integration_review": {
+    "all_nine_frozen_hashes_equal": true,
+    "independent_source_review": "No blocker in declared request/source/ordered-line/policy/original-ack contract; no broad test rerun or altered assertion.",
+    "parent_source_review": "Pure verifier and both adapter diffs reviewed; source selection and current authority precede cache acknowledgement; only declared initial workflow fields reset.",
+    "independent_owned_database_absence": [
+      "reconforge_cash_b90ba4d97373",
+      "reconforge_cash_cd5767750082",
+      "reconforge_cash_d4be97a70cfe",
+      "reconforge_invoice_restore_b73e366978aa4693"
+    ],
+    "original_report": {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\PROD039-FINAL-ACCEPTANCE.json",
+      "sha256": "9491800d545b1830d7df331ea5a44c7a92d25913d56ddb2724e9aac56d27059c"
+    },
+    "original_handoff": {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\PROD039-FINAL-HANDOFF.md",
+      "sha256": "c74f3d80d4f611fa4ae7e879488f9c7f70f3300a8576aa2b8fedc26cf55e8b66"
+    },
+    "counts_not_summed": true
+  }
+}

@@ -48,7 +48,7 @@ def _read_ledger_records(path: Path) -> tuple[tuple[BankLedgerRecord, ...], str]
                     record_id=_required(record, "record_id"),
                     account_id=_required(record, "account_id"),
                     booking_date=_required(record, "booking_date"),
-                    amount=Money.from_exact(_required(record, "amount"), currency),
+                    amount=Money.from_exact(_required(record, "amount"), currency, strict_precision=True),
                     reference=_required(record, "reference"),
                     source_reference=_required(record, "source_reference"),
                 )
@@ -66,7 +66,7 @@ def _statement_records(path: Path) -> tuple[tuple[BankStatementRecord, ...], str
     records: list[BankStatementRecord] = []
     for line in statement.lines:
         try:
-            amount = Money.from_exact(line.signed_amount, line.currency)
+            amount = Money.from_exact(line.signed_amount, line.currency, strict_precision=True)
             records.append(
                 BankStatementRecord(
                     line_id=line.line_id,
@@ -99,7 +99,7 @@ def run_bank_statement_control_files(
     bank_lines, statement_digest = _statement_records(statement_path)
     ledger_records, ledger_digest = _read_ledger_records(ledger_path)
     try:
-        amount_tolerance = Money.from_exact(tolerance, currency)
+        amount_tolerance = Money.from_exact(tolerance, currency, strict_precision=True)
     except Exception as exc:
         raise BankStatementControlError("bank statement amount tolerance is invalid.") from exc
     return run_bank_statement_control(

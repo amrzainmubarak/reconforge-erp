@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "source_commit": "8c0951273c6eb6b0e395f12ffe5626821c2f9814",
+  "environment": {
+    "python": "3.12.13",
+    "node": "26.3.0",
+    "npm": "11.16.0",
+    "uv": "0.11.32",
+    "operating_system": "Windows 11 build 26200",
+    "locked_environment": true
+  },
+  "full_regression": {
+    "passed": 3412,
+    "skipped": 167,
+    "failed": 0,
+    "warnings": 24,
+    "pytest_seconds": 900.79
+  },
+  "previous_failed_regression": {
+    "passed": 3402,
+    "skipped": 164,
+    "failed": 5,
+    "log": "output/verification-2026-10-03/final-pytest.log",
+    "sha256": "5ed0c1c093978b0a98a98413d7136257d6231d655e0602a41a5cc076bf18bb22"
+  },
+  "checks": [
+    {
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-ra",
+        "--tb=short",
+        "-o",
+        "addopts="
+      ],
+      "source_commit": "8c0951273c6eb6b0e395f12ffe5626821c2f9814",
+      "started_at": "2026-10-03T02:22:28.582556+00:00",
+      "duration_seconds": 907.825,
+      "exit_code": 0,
+      "log": "output/verification-2026-10-03/foundation-pytest.log",
+      "log_sha256": "8af14df1008e54bab2cdf4fa43b756f65e8aefb8c6aba671b6b63f5fd1e19529"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "source_commit": "8c0951273c6eb6b0e395f12ffe5626821c2f9814",
+      "started_at": "2026-10-03T02:22:28.582556+00:00",
+      "duration_seconds": 0.531,
+      "exit_code": 0,
+      "log": "output/verification-2026-10-03/foundation-ruff.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "source_commit": "8c0951273c6eb6b0e395f12ffe5626821c2f9814",
+      "started_at": "2026-10-03T02:22:29.114047+00:00",
+      "duration_seconds": 39.692,
+      "exit_code": 0,
+      "log": "output/verification-2026-10-03/foundation-mypy.log",
+      "log_sha256": "8f0a1e79ffd5f826f6a0393c144823fdd743e13f245eb15c2ddccb8ff739d643"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "source_commit": "8c0951273c6eb6b0e395f12ffe5626821c2f9814",
+      "started_at": "2026-10-03T02:23:08.808896+00:00",
+      "duration_seconds": 26.72,
+      "exit_code": 0,
+      "log": "output/verification-2026-10-03/foundation-bandit.log",
+      "log_sha256": "44bf91253aed587a37eeb57b48a7fc1dfc52665f279f268072900aa5a0d7df14"
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "output/foundation-dist"
+      ],
+      "source_commit": "8c0951273c6eb6b0e395f12ffe5626821c2f9814",
+      "started_at": "2026-10-03T02:23:35.530133+00:00",
+      "duration_seconds": 28.335,
+      "exit_code": 0,
+      "log": "output/verification-2026-10-03/foundation-build.log",
+      "log_sha256": "b7cff7265c85d5b1ad9cad44bf5585f88e4a2901bf3aed16e8ba38e401e8c432"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "source_commit": "8c0951273c6eb6b0e395f12ffe5626821c2f9814",
+      "started_at": "2026-10-03T02:24:03.867629+00:00",
+      "duration_seconds": 0.174,
+      "exit_code": 0,
+      "log": "output/verification-2026-10-03/foundation-diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "docker",
+        "build",
+        "-t",
+        "reconforge:foundation-20261003",
+        "."
+      ],
+      "source_commit": "8c0951273c6eb6b0e395f12ffe5626821c2f9814",
+      "started_at": "2026-10-03T02:22:28.586099+00:00",
+      "duration_seconds": 197.709,
+      "exit_code": 0,
+      "log": "output/verification-2026-10-03/foundation-docker-build.log",
+      "log_sha256": "4ef09b418094ad62ab0e2436b2b26218120a4779793cbdde6297820ca9fe261f"
+    },
+    {
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "reconforge:foundation-20261003",
+        "reconforge",
+        "doctor"
+      ],
+      "source_commit": "8c0951273c6eb6b0e395f12ffe5626821c2f9814",
+      "started_at": "2026-10-03T02:25:46.296097+00:00",
+      "duration_seconds": 11.673,
+      "exit_code": 0,
+      "log": "output/verification-2026-10-03/foundation-docker-doctor.log",
+      "log_sha256": "011c4651aee4407ec9aced841e5bb39ac2770c016405627628712a6720ab108f"
+    }
+  ],
+  "live_postgres_ci": {
+    "selected": 410,
+    "passed": 409,
+    "failed": 0,
+    "skipped": 1,
+    "pytest_seconds": 119.681,
+    "postgresql": "16.14",
+    "migration_head": "0093_pg_metrics",
+    "application_role": "non-owner, NOSUPERUSER, NOBYPASSRLS",
+    "skipped_prerequisite": "native PostgreSQL client tools absent from host PATH",
+    "redis": "dedicated digest-pinned container",
+    "cleanup_complete": true,
+    "log": "output/verification-2026-10-03/ci-general-final/pytest.log",
+    "sha256": "1b0bba08ab79f8b8d717c474eb4f011134d20772469ab77c666a0268c1e220a7"
+  },
+  "focused_live": {
+    "payables_passed": 78,
+    "runtime_role_passed": 37,
+    "existing_workers_passed": 65,
+    "metrics_migration_passed": 3,
+    "all_listed_skipped": 0
+  },
+  "web": {
+    "unit_passed": 120,
+    "typecheck": "passed",
+    "build": "passed",
+    "standard_e2e_passed": 16,
+    "standard_e2e_opt_in_skipped": 6,
+    "separate_existing_live_admin_passed": 4,
+    "separate_live_metrics_passed": 1,
+    "separate_hosted_https_passed": 1
+  },
+  "security_audit": {
+    "locked_python_3_11_findings": 0,
+    "locked_python_3_12_findings": 0,
+    "npm_all_findings": 0,
+    "npm_production_findings": 0,
+    "limitation": "time-bound advisory checks; unpublished ReconForge itself has no PyPI advisory result"
+  },
+  "writeback_reports": [
+    "POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_2026-10-03.json",
+    "POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_2026-10-03.json",
+    "POSTGRES_WRITEBACK_RECEIVER_FAILOVER_MATRIX_2026-10-03.json",
+    "POSTGRES_WRITEBACK_RECEIVER_IDEMPOTENCY_MATRIX_2026-10-03.json",
+    "POSTGRES_WRITEBACK_RECOVERY_COMPENSATION_MATRIX_2026-10-03.json"
+  ],
+  "limitations": [
+    "Synthetic local execution; no company deployment or independent reviewer acceptance.",
+    "Full-suite capability skips are explicit and are not passes.",
+    "Separate live focused selections cover specified surfaces, not universal isolation.",
+    "Current source files in the primary checkout may be newer; this report binds the isolated stated commit.",
+    "Complete PostgreSQL production mode, immutable operational GL and integrated sales/purchase cycles remain open.",
+    "Financial React write journeys remain incomplete."
+  ]
+}

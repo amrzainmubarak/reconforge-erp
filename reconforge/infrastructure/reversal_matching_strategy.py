@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import asdict
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import InvalidOperation
 
 from reconforge.application.matching_strategies import (
     MatchingStrategyContractError,
@@ -23,6 +23,7 @@ from reconforge.domain.reversal_matching import (
     ReversalRecord,
     pair_reversals,
 )
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 
 REVERSAL_PAIRING_MANIFEST = MatchingStrategyManifest(
     id="bounded-reversal-pairing",
@@ -57,7 +58,7 @@ class ReversalPairingStrategy:
         if isinstance(request.date_window_days, bool) or not 0 <= request.date_window_days <= limits.max_date_window_days:
             raise MatchingStrategyContractError("Reversal strategy date-window limit exceeded.")
         try:
-            tolerance = Decimal(request.amount_tolerance)
+            tolerance = parse_exact_amount(request.amount_tolerance)
             originals = tuple(self._record(item, request, request.left_id_field) for item in request.left_records)
             reversals = tuple(self._record(item, request, request.right_id_field) for item in request.right_records)
             decision = pair_reversals(
@@ -70,6 +71,8 @@ class ReversalPairingStrategy:
                     max_search_evaluations=limits.max_total_candidate_evaluations,
                 ),
             )
+        except InvalidAmountError as exc:
+            raise MatchingStrategyContractError(str(exc)) from exc
         except (ReversalMatchingError, KeyError, TypeError, ValueError, InvalidOperation) as exc:
             raise MatchingStrategyContractError(str(exc)) from exc
         results = (asdict(decision),)
@@ -94,11 +97,13 @@ class ReversalPairingStrategy:
         try:
             return ReversalRecord(
                 record_id=str(item[id_field]),
-                amount=Decimal(str(item[request.amount_field])),
+                amount=parse_exact_amount(item[request.amount_field]),
                 currency=str(item.get(request.currency_field, "")),
                 business_date=date.fromisoformat(str(item[request.date_field])),
                 partition_key=str(item.get(request.partition_field, "")),
                 reversal_of=str(item.get("reversal_of", "")),
             )
+        except InvalidAmountError as exc:
+            raise MatchingStrategyContractError(str(exc)) from exc
         except (KeyError, TypeError, ValueError, InvalidOperation) as exc:
             raise MatchingStrategyContractError("Reversal record fields are invalid.") from exc

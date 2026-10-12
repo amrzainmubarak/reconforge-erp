@@ -1,0 +1,64 @@
+{
+  "schema_version": "wave4-ci-archive-path-map-v1",
+  "head_sha": "b6e9dcf608df2885b61a2846a4edc8df783db72d",
+  "original_index_sha256": "43be73b8695a5e01c103d8aed192716204530642e120bda2ea6145b994a586e1",
+  "locally_embedded": [
+    {
+      "original_owner_relative_path": "customer-returns-artifact/report.json",
+      "archive_relative_path": "customer-returns-report.json",
+      "sha256": "feb6b75e3fe0f6aa9ce9d2d862a8388e54bc7eeb232112ce82f86d0fc4560a9e",
+      "bytes": 87484
+    },
+    {
+      "original_owner_relative_path": "procurement-commitments-artifact/report.json",
+      "archive_relative_path": "procurement-commitments-report.json",
+      "sha256": "0e39bdc0486f69c6757d476700c756fc6f1f5688d9fbc91137962087abd46b66",
+      "bytes": 87062
+    },
+    {
+      "original_owner_relative_path": "supplier-returns-artifact/report.json",
+      "archive_relative_path": "supplier-returns-report.json",
+      "sha256": "1c754eaa81931fbe07c999ee689c3c9aef8f28eb91092871ffa4bfb59ccc54c5",
+      "bytes": 87285
+    },
+    {
+      "original_owner_relative_path": "operational-fx-tax-artifact/report.json",
+      "archive_relative_path": "operational-fx-tax-report.json",
+      "sha256": "10c2f707a49aefacdce510dde9b1e3fbfdf619d1a13bd835b6780738946cdd83",
+      "bytes": 87773
+    },
+    {
+      "original_owner_relative_path": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-0.json",
+      "archive_relative_path": "fx-proof-0.json",
+      "sha256": "4fc77d0ec30d1db5944b1f494daeb57099248f66f45e2e69fe2354bbabbff35a",
+      "bytes": 17419
+    },
+    {
+      "original_owner_relative_path": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-1.json",
+      "archive_relative_path": "fx-proof-1.json",
+      "sha256": "b91008403ec105f7d347b14906a4a834d1edc110280329f490a841d6f76c3aa1",
+      "bytes": 16487
+    },
+    {
+      "original_owner_relative_path": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-2.json",
+      "archive_relative_path": "fx-proof-2.json",
+      "sha256": "fd3b3e92957031c8aaab163d514d34738ce058910cdb9395497129c1d0946091",
+      "bytes": 15897
+    },
+    {
+      "original_owner_relative_path": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-3.json",
+      "archive_relative_path": "fx-proof-3.json",
+      "sha256": "443a567f9a4a486af67d349167c8e064bee2f7170c82e6bb077a64caa2d0daff",
+      "bytes": 15594
+    },
+    {
+      "original_owner_relative_path": "operational-fx-tax-artifact/playwright-artifacts/fx-proof-4.json",
+      "archive_relative_path": "fx-proof-4.json",
+      "sha256": "569c857e0b12fe993a9a8777891c32e38b0783b22942738d5f610e8e481767b8",
+      "bytes": 16505
+    }
+  ],
+  "original_index_preserved_byte_exact": true,
+  "availability_boundary": "Original owner-relative references in the retained index preserve acquisition provenance. Only locally_embedded paths and terminal/source-binding JSON are shipped here; referenced native raw logs, original ZIPs, general Python logs and some original GitHub API snapshots remain in the owner evidence directory and GitHub artifacts. Their index hashes are not a claim of local replayability. Financial offline replay uses separately pinned original FX and posting manifests.",
+  "run_url": "https://github.com/amrzainmubarak/reconforge-erp/actions/runs/38059696904"
+}

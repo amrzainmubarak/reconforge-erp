@@ -22,7 +22,24 @@ from reconforge.db.exporter import (
     write_json_file,
 )
 from reconforge.db.migrations import MIGRATIONS, database_status, run_migrations
+from reconforge.domain.budget_control import BudgetControlError
 from reconforge.domain.models import utc_now_text
+from reconforge.domain.notification_inbox import InboxPersistenceError
+from reconforge.domain.outbox_fencing import OutboxEvidenceIntegrityError, validate_outbox_fencing_storage
+from reconforge.infrastructure.budget_control_verification import verify_sqlite_budget_storage
+from reconforge.infrastructure.notification_inbox_verification import verify_sqlite_inbox_storage
+from reconforge.infrastructure.outbox_fencing_schema import (
+    SQLITE_OUTBOX_FENCING_GUARD_SQL,
+    SQLITE_OUTBOX_FENCING_RESTORE_TRIGGER_NAMES,
+)
+from reconforge.infrastructure.sqlite_budget_control_schema import BUDGET_52_RESTORE_ADMISSION_TRIGGERS
+from reconforge.infrastructure.sqlite_inventory_receipt_posting_schema import (
+    RECEIPT_BACKUP_COLUMNS,
+    RECEIPT_RESTORE_ADMISSION_TRIGGERS,
+    RECEIPT_TABLES,
+)
+from reconforge.infrastructure.sqlite_payables_payment_link import verify_sqlite_payment_link_storage
+from reconforge.io.persisted import PersistedJsonError, decode_financial_idempotency_response
 from reconforge.io.structured import (
     StructuredDocumentError,
     StructuredDocumentPolicy,
@@ -52,6 +69,13 @@ BACKUP_JSON_POLICY = StructuredDocumentPolicy(
     max_yaml_aliases=1,
 )
 _BACKUP_READ_CHUNK_BYTES = 1024 * 1024
+_OUTBOX_FENCING_SCHEMA_VERSION = 53
+_PAYABLES_PAYMENT_LINK_SCHEMA_VERSION = 54
+_PAYABLES_PAYMENT_LINK_REVERSAL_SCHEMA_VERSION = 55
+_OUTBOX_FENCING_EVENT_COLUMNS = frozenset({"lease_generation", "lease_generation_floor"})
+_OUTBOX_FENCING_EVIDENCE_COLUMNS = frozenset(
+    {"evidence_id", "event_id", "lease_generation", "action", "worker_id", "occurred_at", "attempts"}
+)
 
 BACKUP_TABLES = [
     "workspaces",
@@ -84,6 +108,8 @@ BACKUP_TABLES = [
     "permissions",
     "user_roles",
     "role_permissions",
+    "notification_inbox",
+    "notification_inbox_reads",
     "accounts",
     "ap_suppliers",
     "ap_purchase_orders",
@@ -149,6 +175,7 @@ BACKUP_TABLES = [
     "match_rules",
     "match_results",
     "outbox_events",
+    "outbox_delivery_evidence",
     "exceptions_queue",
     "metric_definitions",
     "metric_snapshots",
@@ -166,7 +193,17 @@ BACKUP_TABLES = [
     "workflow_transition_events",
     "legacy_import_records",
     "audit_events",
+    "budget_envelopes",
+    "budget_commitment_events",
+    "budget_commands",
     "audit_ledger_state",
+    "finance_posting_effects",
+    "finance_posting_commands",
+    "ap_payment_links",
+    "ap_payment_link_commands",
+    "ap_payment_link_reversals",
+    "ap_payment_link_reversal_commands",
+    *RECEIPT_TABLES,
 ]
 
 CONSOLIDATION_BACKUP_TABLES = (
@@ -238,6 +275,14 @@ BACKUP_SELECT_QUERIES = {
     "permissions": "SELECT * FROM permissions ORDER BY name",
     "user_roles": "SELECT * FROM user_roles ORDER BY user_id, role_id",
     "role_permissions": "SELECT * FROM role_permissions ORDER BY role_id, permission_name",
+    "notification_inbox": (
+        "SELECT * FROM notification_inbox "
+        "ORDER BY tenant_id, workspace_id, recipient_id, created_at, id"
+    ),
+    "notification_inbox_reads": (
+        "SELECT * FROM notification_inbox_reads "
+        "ORDER BY tenant_id, workspace_id, recipient_id, notification_id"
+    ),
     "accounts": "SELECT * FROM accounts ORDER BY account_code, id",
     "ap_suppliers": "SELECT * FROM ap_suppliers ORDER BY workspace_id, supplier_code, id",
     "ap_purchase_orders": "SELECT * FROM ap_purchase_orders ORDER BY workspace_id, po_number, id",
@@ -258,6 +303,24 @@ BACKUP_SELECT_QUERIES = {
     "inventory_lots": "SELECT * FROM inventory_lots ORDER BY item_id, organization_id, lot_serial_code",
     "finance_journals": "SELECT * FROM finance_journals ORDER BY workspace_id, organization_id, journal_code",
     "ledger_entries": "SELECT * FROM ledger_entries ORDER BY workspace_id, posting_date, entry_number",
+    "finance_posting_effects": "SELECT * FROM finance_posting_effects ORDER BY reverses_effect_id IS NOT NULL, id",
+    "finance_posting_commands": "SELECT * FROM finance_posting_commands ORDER BY workspace_id, command_id",
+    "ap_payment_links": (
+        "SELECT * FROM ap_payment_links ORDER BY supplier_invoice_id, invoice_version_before, id"
+    ),
+    "ap_payment_link_commands": (
+        "SELECT * FROM ap_payment_link_commands ORDER BY workspace_id, command_id"
+    ),
+    "ap_payment_link_reversals": (
+        "SELECT * FROM ap_payment_link_reversals ORDER BY supplier_invoice_id, invoice_version_before, id"
+    ),
+    "ap_payment_link_reversal_commands": (
+        "SELECT * FROM ap_payment_link_reversal_commands ORDER BY workspace_id, command_id"
+    ),
+    "inventory_receipt_plans": "SELECT * FROM inventory_receipt_plans ORDER BY original_plan_id IS NOT NULL,id",
+    "inventory_receipt_reviews": "SELECT * FROM inventory_receipt_reviews ORDER BY id",
+    "inventory_receipt_links": "SELECT * FROM inventory_receipt_links ORDER BY original_plan_id IS NOT NULL,id",
+    "inventory_receipt_commands": "SELECT * FROM inventory_receipt_commands ORDER BY workspace_id,operation,command_id",
     "ledger_lines": "SELECT * FROM ledger_lines ORDER BY entry_id, line_number",
     "ledger_line_dimensions": "SELECT * FROM ledger_line_dimensions ORDER BY line_id, dimension_value_id",
     "inventory_movements": "SELECT * FROM inventory_movements ORDER BY workspace_id, movement_date, movement_number",
@@ -303,6 +366,7 @@ BACKUP_SELECT_QUERIES = {
     "match_rules": "SELECT * FROM match_rules ORDER BY job_id, rule_name",
     "match_results": "SELECT * FROM match_results ORDER BY job_id, left_id, right_id, match_type",
     "outbox_events": "SELECT * FROM outbox_events ORDER BY created_at, id",
+    "outbox_delivery_evidence": "SELECT * FROM outbox_delivery_evidence ORDER BY event_id, evidence_id",
     "exceptions_queue": "SELECT * FROM exceptions_queue ORDER BY status, risk_rating, created_at, id",
     "metric_definitions": "SELECT * FROM metric_definitions ORDER BY metric_key",
     "metric_snapshots": "SELECT * FROM metric_snapshots ORDER BY workspace_id, period_name, metric_key",
@@ -322,6 +386,9 @@ BACKUP_SELECT_QUERIES = {
     "workflow_transition_events": "SELECT * FROM workflow_transition_events ORDER BY created_at, id",
     "legacy_import_records": "SELECT * FROM legacy_import_records ORDER BY source_type, object_type, object_id",
     "audit_events": "SELECT * FROM audit_events ORDER BY sequence",
+    "budget_envelopes": "SELECT * FROM budget_envelopes ORDER BY workspace_id, organization_id, legal_entity_id, created_at, id",
+    "budget_commitment_events": "SELECT * FROM budget_commitment_events ORDER BY budget_id, budget_version, id",
+    "budget_commands": "SELECT * FROM budget_commands ORDER BY workspace_id, command_id",
     "audit_ledger_state": "SELECT * FROM audit_ledger_state ORDER BY id",
 }
 
@@ -356,6 +423,8 @@ BACKUP_DELETE_QUERIES = {
     "permissions": "DELETE FROM permissions",
     "user_roles": "DELETE FROM user_roles",
     "role_permissions": "DELETE FROM role_permissions",
+    "notification_inbox": "DELETE FROM notification_inbox",
+    "notification_inbox_reads": "DELETE FROM notification_inbox_reads",
     "accounts": "DELETE FROM accounts",
     "ap_suppliers": "DELETE FROM ap_suppliers",
     "ap_purchase_orders": "DELETE FROM ap_purchase_orders",
@@ -376,6 +445,16 @@ BACKUP_DELETE_QUERIES = {
     "inventory_lots": "DELETE FROM inventory_lots",
     "finance_journals": "DELETE FROM finance_journals",
     "ledger_entries": "DELETE FROM ledger_entries",
+    "finance_posting_effects": "DELETE FROM finance_posting_effects",
+    "finance_posting_commands": "DELETE FROM finance_posting_commands",
+    "ap_payment_links": "DELETE FROM ap_payment_links",
+    "ap_payment_link_commands": "DELETE FROM ap_payment_link_commands",
+    "ap_payment_link_reversals": "DELETE FROM ap_payment_link_reversals",
+    "ap_payment_link_reversal_commands": "DELETE FROM ap_payment_link_reversal_commands",
+    "inventory_receipt_plans": "DELETE FROM inventory_receipt_plans",
+    "inventory_receipt_reviews": "DELETE FROM inventory_receipt_reviews",
+    "inventory_receipt_links": "DELETE FROM inventory_receipt_links",
+    "inventory_receipt_commands": "DELETE FROM inventory_receipt_commands",
     "ledger_lines": "DELETE FROM ledger_lines",
     "ledger_line_dimensions": "DELETE FROM ledger_line_dimensions",
     "inventory_movements": "DELETE FROM inventory_movements",
@@ -421,6 +500,7 @@ BACKUP_DELETE_QUERIES = {
     "match_rules": "DELETE FROM match_rules",
     "match_results": "DELETE FROM match_results",
     "outbox_events": "DELETE FROM outbox_events",
+    "outbox_delivery_evidence": "DELETE FROM outbox_delivery_evidence",
     "exceptions_queue": "DELETE FROM exceptions_queue",
     "metric_definitions": "DELETE FROM metric_definitions",
     "metric_snapshots": "DELETE FROM metric_snapshots",
@@ -438,6 +518,9 @@ BACKUP_DELETE_QUERIES = {
     "workflow_transition_events": "DELETE FROM workflow_transition_events",
     "legacy_import_records": "DELETE FROM legacy_import_records",
     "audit_events": "DELETE FROM audit_events",
+    "budget_envelopes": "DELETE FROM budget_envelopes",
+    "budget_commitment_events": "DELETE FROM budget_commitment_events",
+    "budget_commands": "DELETE FROM budget_commands",
     "audit_ledger_state": "DELETE FROM audit_ledger_state",
 }
 
@@ -719,6 +802,14 @@ BACKUP_INSERT_COLUMNS = {
     "permissions": ("name", "description"),
     "user_roles": ("user_id", "role_id"),
     "role_permissions": ("role_id", "permission_name"),
+    "notification_inbox": (
+        "id", "tenant_id", "workspace_id", "organization_id", "legal_entity_id",
+        "recipient_id", "publisher_id", "topic", "resource_type", "resource_id",
+        "idempotency_key", "payload_digest", "created_at",
+    ),
+    "notification_inbox_reads": (
+        "tenant_id", "workspace_id", "notification_id", "recipient_id", "read_at",
+    ),
     "accounts": (
         "id",
         "workspace_id",
@@ -857,6 +948,10 @@ BACKUP_INSERT_COLUMNS = {
         "created_at",
         "updated_at",
         "row_version",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
     ),
     "ar_invoices": (
         "id",
@@ -882,6 +977,10 @@ BACKUP_INSERT_COLUMNS = {
         "created_at",
         "updated_at",
         "row_version",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
     ),
     "ar_invoice_lines": (
         "id",
@@ -911,6 +1010,10 @@ BACKUP_INSERT_COLUMNS = {
         "created_at",
         "updated_at",
         "row_version",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
     ),
     "ar_receipt_allocations": ("id", "workspace_id", "receipt_id", "invoice_id", "amount_minor", "created_at"),
     "ar_idempotency_keys": ("scope", "idempotency_key", "response_json", "created_at"),
@@ -979,6 +1082,15 @@ BACKUP_INSERT_COLUMNS = {
         "void_reason",
         "created_at",
         "updated_at",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
+        "preparer_actor_id",
+        "validator_actor_id",
+        "validation_digest",
+        "validation_contract_version",
+        "reverses_posting_id",
     ),
     "ledger_lines": (
         "id",
@@ -1126,6 +1238,10 @@ BACKUP_INSERT_COLUMNS = {
         "cancel_reason",
         "created_at",
         "updated_at",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
     ),
     "inventory_valuation_input_costs": (
         "id",
@@ -1305,6 +1421,8 @@ BACKUP_INSERT_COLUMNS = {
         "readiness_score",
         "locked_at",
         "reopened_at",
+        "locked_by",
+        "reopened_by",
         "created_at",
         "updated_at",
     ),
@@ -1368,6 +1486,7 @@ BACKUP_INSERT_COLUMNS = {
         "content_type",
         "byte_size",
         "retention_until",
+        "retention_version",
         "registered_by",
         "created_at",
         "updated_at",
@@ -1531,6 +1650,17 @@ BACKUP_INSERT_COLUMNS = {
         "locked_at",
         "locked_by",
         "dead_lettered_at",
+        "lease_generation",
+        "lease_generation_floor",
+    ),
+    "outbox_delivery_evidence": (
+        "evidence_id",
+        "event_id",
+        "lease_generation",
+        "action",
+        "worker_id",
+        "occurred_at",
+        "attempts",
     ),
     "exceptions_queue": (
         "id",
@@ -1700,6 +1830,61 @@ BACKUP_INSERT_COLUMNS = {
         "metadata_json",
         "created_at",
     ),
+    "budget_envelopes": (
+        "id",
+        "workspace_id",
+        "organization_id",
+        "legal_entity_id",
+        "period_id",
+        "budget_code",
+        "name",
+        "currency_code",
+        "limit_minor",
+        "reserved_minor",
+        "consumed_minor",
+        "currency_precision",
+        "currency_rounding_policy",
+        "currency_registry_version",
+        "currency_registry_digest",
+        "status",
+        "created_by",
+        "submitted_by",
+        "approved_by",
+        "reason",
+        "created_at",
+        "updated_at",
+        "row_version",
+    ),
+    "budget_commitment_events": (
+        "id",
+        "budget_id",
+        "commitment_id",
+        "operation",
+        "amount_minor",
+        "remaining_minor",
+        "operation_date",
+        "source_reference",
+        "reason",
+        "actor_id",
+        "created_at",
+        "budget_version",
+        "audit_event_id",
+        "outbox_event_id",
+        "request_digest",
+    ),
+    "budget_commands": (
+        "workspace_id",
+        "organization_id",
+        "legal_entity_id",
+        "command_id",
+        "request_digest",
+        "budget_id",
+        "actor_id",
+        "request_json",
+        "result_json",
+        "result_digest",
+        "created_at",
+    ),
     "audit_ledger_state": ("id", "last_sequence", "last_event_hash", "updated_at"),
 }
 
@@ -1860,6 +2045,16 @@ BACKUP_INSERT_QUERIES = {
     "permissions": "INSERT INTO permissions (name, description) VALUES (?, ?)",
     "user_roles": "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
     "role_permissions": "INSERT INTO role_permissions (role_id, permission_name) VALUES (?, ?)",
+    "notification_inbox": (
+        "INSERT INTO notification_inbox "
+        "(id,tenant_id,workspace_id,organization_id,legal_entity_id,recipient_id,publisher_id,topic,"
+        "resource_type,resource_id,idempotency_key,payload_digest,created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    ),
+    "notification_inbox_reads": (
+        "INSERT INTO notification_inbox_reads "
+        "(tenant_id,workspace_id,notification_id,recipient_id,read_at) VALUES (?,?,?,?,?)"
+    ),
     "accounts": """
         INSERT INTO accounts (
             id, workspace_id, account_code, account_name, created_at, chart_id,
@@ -1924,16 +2119,16 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO ar_customers (
             id, workspace_id, organization_id, legal_entity_id, customer_code, name,
             currency_code, tax_identifier, payment_terms_days, credit_limit_minor, credit_hold,
-            status, created_at, updated_at, row_version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            status, created_at, updated_at, row_version, currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "ar_invoices": """
         INSERT INTO ar_invoices (
             id, workspace_id, organization_id, legal_entity_id, customer_id, invoice_number,
             invoice_date, due_date, currency_code, subtotal_minor, tax_minor, total_minor,
             status, created_by, approved_by, approved_at, credit_override_reason, cancelled_by, cancelled_at, cancel_reason,
-            created_at, updated_at, row_version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, updated_at, row_version, currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "ar_invoice_lines": """
         INSERT INTO ar_invoice_lines (
@@ -1945,8 +2140,8 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO ar_receipts (
             id, workspace_id, organization_id, legal_entity_id, customer_id, receipt_number,
             receipt_date, currency_code, amount_minor, status, created_by, posted_by, posted_at,
-            created_at, updated_at, row_version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, updated_at, row_version, currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "ar_receipt_allocations": """
         INSERT INTO ar_receipt_allocations (id, workspace_id, receipt_id, invoice_id, amount_minor, created_at)
@@ -1981,8 +2176,10 @@ BACKUP_INSERT_QUERIES = {
             finance_journal_id, entry_number, posting_date, currency_code, description,
             external_reference, source_type, status, created_by, validated_by,
             validated_at, validation_reason, voided_by, voided_at, void_reason,
-            created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, updated_at, currency_precision, currency_rounding_policy,
+            currency_registry_version, currency_registry_digest, preparer_actor_id, validator_actor_id,
+            validation_digest, validation_contract_version, reverses_posting_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "ledger_lines": """
         INSERT INTO ledger_lines (
@@ -2046,8 +2243,8 @@ BACKUP_INSERT_QUERIES = {
             movement_id, policy_id, valuation_number, valuation_date, currency_code,
             status, total_value_minor, finance_entry_id, created_by, approved_by,
             approved_at, approval_reason, cancelled_by, cancelled_at, cancel_reason,
-            created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, updated_at, currency_precision, currency_rounding_policy, currency_registry_version, currency_registry_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "inventory_valuation_input_costs": """
         INSERT INTO inventory_valuation_input_costs (
@@ -2144,9 +2341,9 @@ BACKUP_INSERT_QUERIES = {
     "close_periods": """
         INSERT INTO close_periods (
             id, workspace_id, period_name, start_date, end_date, status,
-            readiness_score, locked_at, reopened_at, created_at, updated_at
+            readiness_score, locked_at, reopened_at, locked_by, reopened_by, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "close_tasks_db": """
         INSERT INTO close_tasks_db (
@@ -2179,9 +2376,9 @@ BACKUP_INSERT_QUERIES = {
         id, workspace_id, evidence_code, source_path, checksum_sha256,
             provenance_type, redaction_status, evidence_status, storage_backend,
             storage_tenant_id, storage_key, storage_version_id, content_type, byte_size,
-            retention_until, registered_by, created_at, updated_at
+            retention_until, retention_version, registered_by, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
     "evidence_requirements": """
         INSERT INTO evidence_requirements (
@@ -2279,8 +2476,15 @@ BACKUP_INSERT_QUERIES = {
         INSERT INTO outbox_events (
             id, event_type, aggregate_type, aggregate_id, payload_json,
             created_at, published_at, attempts, last_error, available_at,
-            locked_at, locked_by, dead_lettered_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            locked_at, locked_by, dead_lettered_at, lease_generation,
+            lease_generation_floor
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "outbox_delivery_evidence": """
+        INSERT INTO outbox_delivery_evidence (
+            evidence_id, event_id, lease_generation, action, worker_id,
+            occurred_at, attempts
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
     """,
     "exceptions_queue": """
         INSERT INTO exceptions_queue (
@@ -2379,8 +2583,171 @@ BACKUP_INSERT_QUERIES = {
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
+    "budget_envelopes": """
+        INSERT INTO budget_envelopes (
+            id, workspace_id, organization_id, legal_entity_id, period_id, budget_code, name, currency_code,
+            limit_minor, reserved_minor, consumed_minor, currency_precision, currency_rounding_policy,
+            currency_registry_version, currency_registry_digest, status, created_by, submitted_by, approved_by,
+            reason, created_at, updated_at, row_version
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "budget_commitment_events": """
+        INSERT INTO budget_commitment_events (
+            id, budget_id, commitment_id, operation, amount_minor, remaining_minor, operation_date,
+            source_reference, reason, actor_id, created_at, budget_version, audit_event_id, outbox_event_id,
+            request_digest
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
+    "budget_commands": """
+        INSERT INTO budget_commands (
+            workspace_id, organization_id, legal_entity_id, command_id, request_digest, budget_id, actor_id,
+            request_json, result_json, result_digest, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """,
     "audit_ledger_state": "INSERT INTO audit_ledger_state (id, last_sequence, last_event_hash, updated_at) VALUES (?, ?, ?, ?)",
 }
+
+
+# Closed additive posting backup schema; identifiers never come from backup input.
+BACKUP_INSERT_COLUMNS['finance_posting_effects'] = ('id', 'workspace_id', 'organization_id', 'legal_entity_id', 'entry_id', 'source_kind', 'source_id', 'purpose', 'reverses_effect_id', 'validation_digest', 'validation_contract_version', 'currency_code', 'currency_precision', 'currency_rounding_policy', 'currency_registry_version', 'currency_registry_digest', 'snapshot_json', 'posted_actor_id', 'posted_at', 'reason', 'audit_event_id', 'outbox_event_id')
+BACKUP_INSERT_QUERIES['finance_posting_effects'] = 'INSERT INTO finance_posting_effects (id,workspace_id,organization_id,legal_entity_id,entry_id,source_kind,source_id,purpose,reverses_effect_id,validation_digest,validation_contract_version,currency_code,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest,snapshot_json,posted_actor_id,posted_at,reason,audit_event_id,outbox_event_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+BACKUP_INSERT_COLUMNS['finance_posting_commands'] = ('workspace_id', 'command_id', 'operation', 'actor_id', 'request_digest', 'result_json', 'created_at')
+BACKUP_INSERT_QUERIES['finance_posting_commands'] = 'INSERT INTO finance_posting_commands (workspace_id,command_id,operation,actor_id,request_digest,result_json,created_at) VALUES (?,?,?,?,?,?,?)'
+BACKUP_INSERT_COLUMNS['ap_payment_links'] = (
+    'id', 'workspace_id', 'organization_id', 'legal_entity_id', 'supplier_invoice_id',
+    'finance_effect_id', 'finance_entry_id', 'ap_account_id', 'cash_account_id',
+    'amount_minor', 'currency_code', 'payment_date', 'finance_validation_digest',
+    'finance_posted_actor_id', 'settlement_actor_id', 'invoice_version_before',
+    'audit_event_id', 'outbox_event_id', 'created_at',
+)
+BACKUP_INSERT_QUERIES['ap_payment_links'] = (
+    'INSERT INTO ap_payment_links '
+    '(id,workspace_id,organization_id,legal_entity_id,supplier_invoice_id,finance_effect_id,'
+    'finance_entry_id,ap_account_id,cash_account_id,amount_minor,currency_code,payment_date,'
+    'finance_validation_digest,finance_posted_actor_id,settlement_actor_id,invoice_version_before,'
+    'audit_event_id,outbox_event_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+)
+BACKUP_INSERT_COLUMNS['ap_payment_link_commands'] = (
+    'workspace_id', 'command_id', 'settlement_actor_id', 'request_digest', 'result_json', 'created_at',
+)
+BACKUP_INSERT_QUERIES['ap_payment_link_commands'] = (
+    'INSERT INTO ap_payment_link_commands '
+    '(workspace_id,command_id,settlement_actor_id,request_digest,result_json,created_at) VALUES (?,?,?,?,?,?)'
+)
+BACKUP_INSERT_COLUMNS['ap_payment_link_reversals'] = (
+    'id', 'workspace_id', 'organization_id', 'legal_entity_id', 'supplier_invoice_id',
+    'payment_link_id', 'reversal_finance_effect_id', 'reversal_finance_entry_id',
+    'amount_minor', 'currency_code', 'reversal_date', 'finance_validation_digest',
+    'finance_posted_actor_id', 'reversal_actor_id', 'invoice_version_before',
+    'audit_event_id', 'outbox_event_id', 'created_at',
+)
+BACKUP_INSERT_QUERIES['ap_payment_link_reversals'] = (
+    'INSERT INTO ap_payment_link_reversals '
+    '(id,workspace_id,organization_id,legal_entity_id,supplier_invoice_id,payment_link_id,'
+    'reversal_finance_effect_id,reversal_finance_entry_id,amount_minor,currency_code,reversal_date,'
+    'finance_validation_digest,finance_posted_actor_id,reversal_actor_id,invoice_version_before,'
+    'audit_event_id,outbox_event_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+)
+BACKUP_INSERT_COLUMNS['ap_payment_link_reversal_commands'] = (
+    'workspace_id', 'command_id', 'reversal_actor_id', 'request_digest', 'result_json', 'created_at',
+)
+BACKUP_INSERT_QUERIES['ap_payment_link_reversal_commands'] = (
+    'INSERT INTO ap_payment_link_reversal_commands '
+    '(workspace_id,command_id,reversal_actor_id,request_digest,result_json,created_at) VALUES (?,?,?,?,?,?)'
+)
+for _receipt_table, _receipt_columns in RECEIPT_BACKUP_COLUMNS.items():
+    BACKUP_INSERT_COLUMNS[_receipt_table] = _receipt_columns
+    # The names are a closed versioned schema tuple, never backup-provided SQL.
+    BACKUP_INSERT_QUERIES[_receipt_table] = (
+        f"INSERT INTO {_receipt_table} ({','.join(_receipt_columns)}) VALUES ({','.join('?' for _ in _receipt_columns)})"  # nosec B608
+    )
+
+
+def _require_outbox_fencing_schema(
+    connection: sqlite3.Connection,
+    *,
+    require_guards: bool = False,
+) -> None:
+    required = {
+        "outbox_events": _OUTBOX_FENCING_EVENT_COLUMNS,
+        "outbox_delivery_evidence": _OUTBOX_FENCING_EVIDENCE_COLUMNS,
+    }
+    for table, columns in required.items():
+        if not _table_exists(connection, table):
+            raise DBBridgeError("Outbox fencing backup schema is unavailable.")
+        if not columns <= _table_info_columns(connection, table):
+            raise DBBridgeError("Outbox fencing backup schema omits required columns.")
+    if require_guards:
+        installed = {
+            str(row["name"])
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()
+        }
+        if not set(SQLITE_OUTBOX_FENCING_RESTORE_TRIGGER_NAMES) <= installed:
+            raise DBBridgeError("Outbox fencing backup guard is unavailable.")
+
+
+def _outbox_fencing_delivery_state(event: dict[str, Any]) -> str:
+    published = event["published_at"] is not None
+    locked = event["locked_at"] is not None
+    owner = event["locked_by"] is not None
+    dead = event["dead_lettered_at"] is not None
+    if published:
+        return "invalid" if locked or owner or dead else "published"
+    if dead:
+        return "invalid" if locked or owner else "dead"
+    if locked != owner:
+        return "invalid"
+    return "claimed" if locked else "pending"
+
+
+def _verify_outbox_fencing_storage(
+    connection: sqlite3.Connection,
+    *,
+    require_guards: bool = False,
+) -> None:
+    """Validate retained fenced history in a source or temporary restore database."""
+
+    _require_outbox_fencing_schema(connection, require_guards=require_guards)
+    try:
+        events: list[dict[str, Any]] = []
+        for row in connection.execute(
+            """SELECT id AS event_id, lease_generation, lease_generation_floor,
+            published_at, locked_at, locked_by, dead_lettered_at
+            FROM outbox_events ORDER BY id"""
+        ).fetchall():
+            event = dict(row)
+            event["delivery_state"] = _outbox_fencing_delivery_state(event)
+            events.append(event)
+        evidence = [
+            dict(row)
+            for row in connection.execute(
+                """SELECT event_id, lease_generation, action, worker_id, attempts
+                FROM outbox_delivery_evidence ORDER BY event_id, evidence_id"""
+            ).fetchall()
+        ]
+        validate_outbox_fencing_storage(events=events, evidence=evidence)
+    except (OutboxEvidenceIntegrityError, sqlite3.DatabaseError, KeyError, TypeError) as exc:
+        raise DBBridgeError("Outbox fencing backup evidence verification failed.") from exc
+
+
+def _verify_outbox_fencing_backup(connection: sqlite3.Connection, *, schema_version: int) -> None:
+    if schema_version >= _OUTBOX_FENCING_SCHEMA_VERSION:
+        _verify_outbox_fencing_storage(connection, require_guards=True)
+
+
+def _drop_outbox_fencing_restore_guards(connection: sqlite3.Connection) -> None:
+    """Disable the guard bundle only within an unpublished temporary database."""
+
+    _require_outbox_fencing_schema(connection, require_guards=True)
+    for trigger_name in SQLITE_OUTBOX_FENCING_RESTORE_TRIGGER_NAMES:
+        connection.execute(f"DROP TRIGGER {_quote_identifier(trigger_name, kind='trigger')}")  # nosec B608
+
+
+def _reinstall_outbox_fencing_restore_guards(connection: sqlite3.Connection) -> None:
+    """Reinstall canonical guards after exact evidence verification in the temp database."""
+
+    connection.executescript(SQLITE_OUTBOX_FENCING_GUARD_SQL)
+    _require_outbox_fencing_schema(connection, require_guards=True)
 
 
 @dataclass(frozen=True)
@@ -2587,7 +2954,328 @@ def _validate_backup_document(backup: dict[str, Any]) -> int:
     return schema_version
 
 
+def _validate_outbox_fencing_backup_document(tables: dict[str, Any]) -> None:
+    required = {
+        "outbox_events": _OUTBOX_FENCING_EVENT_COLUMNS,
+        "outbox_delivery_evidence": _OUTBOX_FENCING_EVIDENCE_COLUMNS,
+    }
+    for table, columns in required.items():
+        rows = tables.get(table)
+        if not isinstance(rows, list):
+            raise DBBridgeError("Backup omits required outbox fencing tables.")
+        for row in rows:
+            if not isinstance(row, dict) or not columns <= set(row):
+                raise DBBridgeError("Backup omits required outbox fencing columns.")
+
+
+def _verify_receivables_policy_backup(connection: sqlite3.Connection) -> None:
+    from reconforge.infrastructure.receivables_policy_storage import verify_sqlite_receivables_policy_storage
+
+    try:
+        verify_sqlite_receivables_policy_storage(connection)
+    except (TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup AR monetary-policy integrity verification failed.") from exc
+
+
+def _verify_posting_backup(connection: sqlite3.Connection) -> None:
+    from reconforge.infrastructure.sqlite_finance_posting import verify_posting_storage
+    from reconforge.infrastructure.sqlite_inventory_receipt_posting import verify_receipt_storage
+
+    try:
+        verify_posting_storage(connection)
+        verify_receipt_storage(connection)
+    except (TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup operational posting integrity verification failed.") from exc
+
+
+def _verify_payables_payment_link_backup(
+    connection: sqlite3.Connection,
+    *,
+    required: bool,
+) -> None:
+    """Replay retained AP settlement evidence when this schema owns it."""
+
+    tables = ("ap_payment_links", "ap_payment_link_commands")
+    present = tuple(_table_exists(connection, table) for table in tables)
+    if not any(present):
+        if required:
+            raise DBBridgeError("Backup payables payment-link tables are unavailable.")
+        return
+    if not all(present):
+        raise DBBridgeError("Backup payables payment-link schema is incomplete.")
+    try:
+        verify_sqlite_payment_link_storage(connection)
+    except (PlatformError, TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup payables payment-link integrity verification failed.") from exc
+
+
+def _payment_link_restore_initial_versions(tables: dict[str, Any]) -> dict[str, int]:
+    """Stage each AP invoice at the first retained link/reversal history version."""
+
+    links = tables.get("ap_payment_links")
+    invoices = tables.get("ap_supplier_invoices")
+    if not isinstance(links, list) or not isinstance(invoices, list):
+        raise DBBridgeError("Backup payment-link rows are invalid.")
+    invoice_rows: dict[str, dict[str, Any]] = {}
+    for row in invoices:
+        if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+            raise DBBridgeError("Backup supplier-invoice rows are invalid.")
+        invoice_rows[row["id"]] = row
+    grouped: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    for row in links:
+        if not isinstance(row, dict):
+            raise DBBridgeError("Backup payment-link rows are invalid.")
+        invoice_id = row.get("supplier_invoice_id")
+        version = row.get("invoice_version_before")
+        amount = row.get("amount_minor")
+        if (
+            not isinstance(invoice_id, str)
+            or not invoice_id
+            or isinstance(version, bool)
+            or not isinstance(version, int)
+            or version < 1
+            or isinstance(amount, bool)
+            or not isinstance(amount, int)
+            or amount < 1
+        ):
+            raise DBBridgeError("Backup payment-link allocation history is invalid.")
+        grouped.setdefault(invoice_id, []).append(("link", row))
+    reversals = tables.get("ap_payment_link_reversals", [])
+    if not isinstance(reversals, list):
+        raise DBBridgeError("Backup payment-link reversal rows are invalid.")
+    for row in reversals:
+        if not isinstance(row, dict):
+            raise DBBridgeError("Backup payment-link reversal rows are invalid.")
+        invoice_id = row.get("supplier_invoice_id")
+        version = row.get("invoice_version_before")
+        amount = row.get("amount_minor")
+        link_id = row.get("payment_link_id")
+        if (
+            not isinstance(invoice_id, str)
+            or not invoice_id
+            or not isinstance(link_id, str)
+            or not link_id
+            or isinstance(version, bool)
+            or not isinstance(version, int)
+            or version < 1
+            or isinstance(amount, bool)
+            or not isinstance(amount, int)
+            or amount < 1
+        ):
+            raise DBBridgeError("Backup payment-link reversal history is invalid.")
+        grouped.setdefault(invoice_id, []).append(("reversal", row))
+    initial_versions: dict[str, int] = {}
+    for invoice_id, events in grouped.items():
+        invoice = invoice_rows.get(invoice_id)
+        if invoice is None:
+            raise DBBridgeError("Backup payment link references a missing supplier invoice.")
+        total = invoice.get("total_minor")
+        final_version = invoice.get("row_version")
+        if (
+            isinstance(total, bool)
+            or not isinstance(total, int)
+            or total < 1
+            or isinstance(final_version, bool)
+            or not isinstance(final_version, int)
+        ):
+            raise DBBridgeError("Backup supplier-invoice payment state is invalid.")
+        ordered = sorted(
+            events,
+            key=lambda item: (
+                int(item[1]["invoice_version_before"]), item[0], str(item[1].get("id", ""))
+            ),
+        )
+        next_version = int(ordered[0][1]["invoice_version_before"])
+        allocated = 0
+        active_links: dict[str, int] = {}
+        for event_type, row in ordered:
+            if int(row["invoice_version_before"]) != next_version:
+                raise DBBridgeError("Backup payment-link evidence versions are not contiguous.")
+            if event_type == "link":
+                link_id = str(row.get("id", ""))
+                if not link_id or link_id in active_links:
+                    raise DBBridgeError("Backup payment-link allocation identifiers are invalid.")
+                amount = int(row["amount_minor"])
+                active_links[link_id] = amount
+                allocated += amount
+            else:
+                link_id = str(row["payment_link_id"])
+                amount = active_links.pop(link_id, None)
+                if amount is None or amount != int(row["amount_minor"]):
+                    raise DBBridgeError("Backup payment-link reversal does not match an active allocation.")
+                allocated -= amount
+            next_version += 1
+        expected_status = "Paid" if allocated == total else "Approved"
+        if allocated > total or invoice.get("status") != expected_status or final_version != next_version:
+            raise DBBridgeError("Backup supplier-invoice payment state differs from allocation history.")
+        initial_versions[invoice_id] = int(ordered[0][1]["invoice_version_before"])
+    return initial_versions
+
+
+def _payment_link_restore_timeline(
+    tables: dict[str, Any],
+    *,
+    includes_reversals: bool,
+) -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
+    """Pair every immutable AP evidence row with its command in version order.
+
+    Restore cannot bulk-insert all links ahead of reversals: each insert advances
+    the supplier invoice through a guarded version transition. Replaying the
+    retained timeline also validates that every command receipt points to one
+    and only one evidence node before any row reaches the temporary database.
+    """
+
+    links = tables.get("ap_payment_links")
+    link_commands = tables.get("ap_payment_link_commands")
+    if not isinstance(links, list) or not isinstance(link_commands, list):
+        raise DBBridgeError("Backup payment-link rows are invalid.")
+    reversals = tables.get("ap_payment_link_reversals", []) if includes_reversals else []
+    reversal_commands = (
+        tables.get("ap_payment_link_reversal_commands", []) if includes_reversals else []
+    )
+    if not isinstance(reversals, list) or not isinstance(reversal_commands, list):
+        raise DBBridgeError("Backup payment-link reversal rows are invalid.")
+
+    def commands_by_evidence(
+        rows: list[object],
+        *,
+        result_field: str,
+        label: str,
+    ) -> dict[str, dict[str, Any]]:
+        mapped: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                raise DBBridgeError(f"Backup {label} command rows are invalid.")
+            try:
+                result = decode_financial_idempotency_response(row.get("result_json")).payload
+            except PersistedJsonError as exc:
+                raise DBBridgeError(f"Backup {label} command receipt is invalid.") from exc
+            evidence_id = result.get(result_field)
+            if not isinstance(evidence_id, str) or not evidence_id or evidence_id in mapped:
+                raise DBBridgeError(f"Backup {label} command receipt mapping is invalid.")
+            mapped[evidence_id] = row
+        return mapped
+
+    link_command_by_id = commands_by_evidence(
+        link_commands,
+        result_field="payment_link_id",
+        label="payment-link",
+    )
+    reversal_command_by_id = commands_by_evidence(
+        reversal_commands,
+        result_field="payment_link_reversal_id",
+        label="payment-link reversal",
+    )
+
+    events: list[tuple[str, dict[str, Any], dict[str, Any]]] = []
+    for link in links:
+        if not isinstance(link, dict):
+            raise DBBridgeError("Backup payment-link rows are invalid.")
+        link_id = link.get("id")
+        if not isinstance(link_id, str) or not link_id or link_id not in link_command_by_id:
+            raise DBBridgeError("Backup payment-link evidence is missing its idempotency command.")
+        events.append(("link", link, link_command_by_id.pop(link_id)))
+    if link_command_by_id:
+        raise DBBridgeError("Backup payment-link command does not identify retained evidence.")
+    for reversal in reversals:
+        if not isinstance(reversal, dict):
+            raise DBBridgeError("Backup payment-link reversal rows are invalid.")
+        reversal_id = reversal.get("id")
+        if (
+            not isinstance(reversal_id, str)
+            or not reversal_id
+            or reversal_id not in reversal_command_by_id
+        ):
+            raise DBBridgeError("Backup payment-link reversal evidence is missing its idempotency command.")
+        events.append(("reversal", reversal, reversal_command_by_id.pop(reversal_id)))
+    if reversal_command_by_id:
+        raise DBBridgeError("Backup payment-link reversal command does not identify retained evidence.")
+
+    try:
+        events.sort(
+            key=lambda item: (
+                str(item[1]["supplier_invoice_id"]),
+                int(item[1]["invoice_version_before"]),
+                0 if item[0] == "link" else 1,
+                str(item[1]["id"]),
+            )
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise DBBridgeError("Backup payment-link timeline is invalid.") from exc
+    return events
+
+
+def _restore_payables_payment_link_timeline(
+    connection: sqlite3.Connection,
+    *,
+    tables: dict[str, Any],
+    includes_reversals: bool,
+) -> None:
+    """Replay link/reversal evidence and receipts in their guarded order."""
+
+    for kind, evidence_row, command_row in _payment_link_restore_timeline(
+        tables,
+        includes_reversals=includes_reversals,
+    ):
+        if kind == "link":
+            _insert_rows(connection, table="ap_payment_links", rows=[evidence_row])
+            _insert_rows(connection, table="ap_payment_link_commands", rows=[command_row])
+        else:
+            _insert_rows(connection, table="ap_payment_link_reversals", rows=[evidence_row])
+            _insert_rows(connection, table="ap_payment_link_reversal_commands", rows=[command_row])
+
+
+def _verify_notification_inbox_backup(
+    connection: sqlite3.Connection,
+    *,
+    required: bool,
+) -> None:
+    """Verify retained inbox evidence only when the version owns its tables."""
+
+    tables = ("notification_inbox", "notification_inbox_reads")
+    present = tuple(_table_exists(connection, table) for table in tables)
+    if not any(present):
+        if required:
+            raise DBBridgeError("Backup notification inbox tables are unavailable.")
+        return
+    if not all(present):
+        raise DBBridgeError("Backup notification inbox schema is incomplete.")
+    try:
+        verify_sqlite_inbox_storage(connection)
+    except (InboxPersistenceError, TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup notification inbox integrity verification failed.") from exc
+
+
+def _verify_budget_control_backup(
+    connection: sqlite3.Connection,
+    *,
+    required: bool,
+) -> None:
+    """Verify immutable budget evidence only when its schema owns the tables."""
+
+    tables = ("budget_envelopes", "budget_commitment_events", "budget_commands")
+    present = tuple(_table_exists(connection, table) for table in tables)
+    if not any(present):
+        if required:
+            raise DBBridgeError("Backup budget-control tables are unavailable.")
+        return
+    if not all(present):
+        raise DBBridgeError("Backup budget-control schema is incomplete.")
+    try:
+        verify_sqlite_budget_storage(connection)
+    except (BudgetControlError, TypeError, ValueError, sqlite3.DatabaseError) as exc:
+        raise DBBridgeError("Backup budget-control integrity verification failed.") from exc
+
+
 def _backup_payload(connection: sqlite3.Connection, *, created_at: str, schema_version: int) -> dict[str, Any]:
+    _verify_posting_backup(connection)
+    _verify_payables_payment_link_backup(
+        connection, required=schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION
+    )
+    _verify_receivables_policy_backup(connection)
+    _verify_notification_inbox_backup(connection, required=schema_version >= 51)
+    _verify_budget_control_backup(connection, required=schema_version >= 52)
+    _verify_outbox_fencing_backup(connection, schema_version=schema_version)
     return {
         "backup_format_version": BACKUP_FORMAT_VERSION,
         "created_at": created_at,
@@ -2610,12 +3298,21 @@ def create_backup(
 
     resolved_db_path = resolve_db_path(db_path)
     schema_version = _schema_version(resolved_db_path)
-    resolved_output_dir = resolve_output_dir(output_dir)
+    resolved_output_dir = resolve_local_path(output_dir)
     created_at = utc_now_text()
     backup_path = resolved_output_dir / "backup.json"
     manifest_path = resolved_output_dir / "manifest.json"
     connection = connect(resolved_db_path, require_exists=True)
     try:
+        _verify_posting_backup(connection)
+        _verify_payables_payment_link_backup(
+            connection, required=schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION
+        )
+        _verify_receivables_policy_backup(connection)
+        _verify_notification_inbox_backup(connection, required=schema_version >= 51)
+        _verify_budget_control_backup(connection, required=schema_version >= 52)
+        _verify_outbox_fencing_backup(connection, schema_version=schema_version)
+        resolve_output_dir(resolved_output_dir)
         ensure_outbox_schema(connection)
         append_audit_event(
             connection,
@@ -2694,6 +3391,11 @@ def _validate_backup(input_path: Path | str) -> tuple[Path, dict[str, Any], dict
         or backup["privacy_warning"] != manifest["privacy_warning"]
     ):
         raise DBBridgeError("Backup manifest does not match the backup document.")
+    # Verify the signed bundle header before version-specific table semantics.
+    # This preserves the closed manifest contract while still refusing a v53+
+    # snapshot that omits the fencing evidence needed for restore verification.
+    if schema_version >= _OUTBOX_FENCING_SCHEMA_VERSION:
+        _validate_outbox_fencing_backup_document(backup["tables"])
     return backup_path, manifest, backup
 
 
@@ -3161,19 +3863,128 @@ def restore_backup(
     reversal_statuses: list[tuple[str, str, object, object, str, str]] = []
     try:
         backup_schema_version = int(backup["schema_version"])
+        restoring_outbox_fencing = backup_schema_version >= _OUTBOX_FENCING_SCHEMA_VERSION
         run_migrations(temp_path, target_version=backup_schema_version)
         connection = connect(temp_path, require_exists=True)
         try:
             ensure_outbox_schema(connection)
+            if restoring_outbox_fencing:
+                _drop_outbox_fencing_restore_guards(connection)
             _clear_restore_tables(connection)
+            policy_insert_guards: list[str] = []
+            posting_insert_guards: list[str] = []
+            receipt_insert_guards: list[str] = []
+            budget_insert_guards: list[str] = []
+            if backup_schema_version >= 50:
+                for trigger_name in RECEIPT_RESTORE_ADMISSION_TRIGGERS:
+                    guard = connection.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("Inventory receipt restore guard is unavailable.")
+                    receipt_insert_guards.append(str(guard["sql"]))
+                    # Only the unpublished target permits historical source assembly.
+                    connection.execute(f"DROP TRIGGER {trigger_name}")  # nosec B608
+            if backup_schema_version >= 48:
+                for trigger_name in ("finance_posting_open_period", "finance_posting_receipt_backing_guard"):
+                    guard = connection.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("Posting restore guard is unavailable.")
+                    posting_insert_guards.append(str(guard["sql"]))
+                # Only this unpublished database may restore historical closed periods and advanced reversal receipts.
+                connection.execute("DROP TRIGGER finance_posting_open_period")
+                connection.execute("DROP TRIGGER finance_posting_receipt_backing_guard")
+            if backup_schema_version >= 47:
+                for trigger_name in ("ledger_currency_policy_required", "valuation_currency_policy_required"):
+                    guard = connection.execute(
+                        "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)
+                    ).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("Currency-policy restore guard is unavailable.")
+                    policy_insert_guards.append(str(guard["sql"]))
+                # The unpublished temporary database alone accepts retained legacy NULL policy rows.
+                connection.execute("DROP TRIGGER ledger_currency_policy_required")
+                connection.execute("DROP TRIGGER valuation_currency_policy_required")
+            if backup_schema_version >= 49:
+                # Only the unpublished restore database accepts retained unresolved rows.
+                ar_restore_guards = (
+                    "ar_customers_currency_policy_required", "ar_invoices_currency_policy_required",
+                    "ar_receipts_currency_policy_required", "ar_invoices_customer_policy_affinity",
+                    "ar_receipts_customer_policy_affinity", "ar_allocation_policy_affinity",
+                    "ar_line_policy_insert_new",
+                )
+                for trigger_name in ar_restore_guards:
+                    guard = connection.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("AR policy restore guard is unavailable.")
+                    policy_insert_guards.append(str(guard["sql"]))
+                    # Trigger names come only from the closed restore-guard tuple above.
+                    connection.execute(f"DROP TRIGGER {trigger_name}")
+            if backup_schema_version >= 52:
+                for trigger_name in BUDGET_52_RESTORE_ADMISSION_TRIGGERS:
+                    guard = connection.execute(
+                        "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger_name,)
+                    ).fetchone()
+                    if guard is None:
+                        raise DBBridgeError("Budget-control restore guard is unavailable.")
+                    budget_insert_guards.append(str(guard["sql"]))
+                    # Only the unpublished target permits exact retained state assembly.
+                    connection.execute(f"DROP TRIGGER {trigger_name}")  # nosec B608
             tables = backup["tables"]
             if not isinstance(tables, dict):
                 raise DBBridgeError("Backup table payload is invalid.")
+            if backup_schema_version >= 51 and any(
+                table not in tables for table in ("notification_inbox", "notification_inbox_reads")
+            ):
+                raise DBBridgeError("Backup omits retained notification inbox tables.")
+            if backup_schema_version >= 52 and any(
+                table not in tables for table in ("budget_envelopes", "budget_commitment_events", "budget_commands")
+            ):
+                raise DBBridgeError("Backup omits retained budget-control tables.")
+            if backup_schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION and any(
+                table not in tables for table in ("ap_payment_links", "ap_payment_link_commands")
+            ):
+                raise DBBridgeError("Backup omits retained payables payment-link tables.")
+            if backup_schema_version >= _PAYABLES_PAYMENT_LINK_REVERSAL_SCHEMA_VERSION and any(
+                table not in tables
+                for table in ("ap_payment_link_reversals", "ap_payment_link_reversal_commands")
+            ):
+                raise DBBridgeError("Backup omits retained payables payment-link reversal tables.")
+            if restoring_outbox_fencing and any(
+                table not in tables for table in ("outbox_events", "outbox_delivery_evidence")
+            ):
+                raise DBBridgeError("Backup omits required outbox fencing tables.")
+            payment_link_initial_versions = (
+                _payment_link_restore_initial_versions(tables)
+                if backup_schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION
+                else {}
+            )
             for table in BACKUP_TABLES:
                 rows = tables.get(table, [])
+                if table in {
+                    "finance_posting_effects",
+                    "finance_posting_commands",
+                    "ap_payment_links",
+                    "ap_payment_link_commands",
+                    "ap_payment_link_reversals",
+                    "ap_payment_link_reversal_commands",
+                    *RECEIPT_TABLES,
+                }:
+                    restored_tables.append(table)
+                    continue
                 if table in CONSOLIDATION_BACKUP_TABLES:
                     restored_tables.append(table)
                     continue
+                if table == "ap_supplier_invoices" and isinstance(rows, list):
+                    staged_rows: list[object] = []
+                    for row in rows:
+                        if not isinstance(row, dict):
+                            raise DBBridgeError("Backup table row is invalid.")
+                        initial_version = payment_link_initial_versions.get(str(row.get("id", "")))
+                        staged_rows.append(
+                            row
+                            if initial_version is None
+                            else {**row, "status": "Approved", "row_version": initial_version}
+                        )
+                    rows = staged_rows
                 if table == "ledger_entries" and isinstance(rows, list):
                     draft_rows: list[object] = []
                     for row in rows:
@@ -3467,6 +4278,36 @@ def restore_backup(
                     ).fetchone()
                 if layer_balance_issue is not None:
                     raise DBBridgeError("Backup contains inconsistent FIFO layer balances.")
+            if backup_schema_version >= 48:
+                if backup_schema_version >= 50:
+                    if any(table not in tables for table in RECEIPT_TABLES):
+                        raise DBBridgeError("Backup omits reviewed Inventory source tables.")
+                    for table in RECEIPT_TABLES[:3]:
+                        _insert_rows(connection, table=table, rows=tables[table])
+                effects = tables.get("finance_posting_effects", [])
+                if not isinstance(effects, list) or any(not isinstance(row, dict) for row in effects):
+                    raise DBBridgeError("Backup posting effects are invalid.")
+                effects.sort(key=lambda row: (row.get("reverses_effect_id") is not None, str(row.get("id", ""))))
+                _insert_rows(connection, table="finance_posting_effects", rows=effects)
+                _insert_rows(connection, table="finance_posting_commands", rows=tables.get("finance_posting_commands", []))
+                if backup_schema_version >= _PAYABLES_PAYMENT_LINK_SCHEMA_VERSION:
+                    _restore_payables_payment_link_timeline(
+                        connection,
+                        tables=tables,
+                        includes_reversals=(
+                            backup_schema_version >= _PAYABLES_PAYMENT_LINK_REVERSAL_SCHEMA_VERSION
+                        ),
+                    )
+                    _verify_payables_payment_link_backup(connection, required=True)
+                if backup_schema_version >= 50:
+                    _insert_rows(connection, table="inventory_receipt_commands", rows=tables["inventory_receipt_commands"])
+                _verify_posting_backup(connection)
+            if restoring_outbox_fencing:
+                _verify_outbox_fencing_storage(connection)
+                _reinstall_outbox_fencing_restore_guards(connection)
+            for guard_sql in policy_insert_guards + posting_insert_guards + receipt_insert_guards + budget_insert_guards:
+                connection.execute(guard_sql)
+            _verify_budget_control_backup(connection, required=backup_schema_version >= 52)
             connection.commit()
             connection.execute("PRAGMA foreign_keys = ON")
         finally:
@@ -3477,6 +4318,28 @@ def restore_backup(
             foreign_key_issues = connection.execute("PRAGMA foreign_key_check").fetchall()
             if foreign_key_issues:
                 raise DBBridgeError("Backup restore contains invalid table relationships.")
+            if MIGRATIONS[-1].version >= _OUTBOX_FENCING_SCHEMA_VERSION:
+                _verify_outbox_fencing_storage(connection, require_guards=True)
+            _verify_posting_backup(connection)
+            _verify_payables_payment_link_backup(connection, required=True)
+            _verify_receivables_policy_backup(connection)
+            _verify_notification_inbox_backup(connection, required=True)
+            _verify_budget_control_backup(connection, required=True)
+            from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+
+            policies = FinancePolicyStore(connection)
+            for policy_row in connection.execute(
+                "SELECT DISTINCT currency_code,currency_precision,currency_rounding_policy,"
+                "currency_registry_version,currency_registry_digest FROM ledger_entries "
+                "UNION SELECT DISTINCT currency_code,currency_precision,currency_rounding_policy,"
+                "currency_registry_version,currency_registry_digest FROM inventory_valuation_documents"
+            ).fetchall():
+                values = dict(policy_row)
+                if all(values[column] is None for column in (
+                    "currency_precision", "currency_rounding_policy", "currency_registry_version", "currency_registry_digest"
+                )):
+                    continue
+                policies.entry(values)
             append_audit_event(
                 connection,
                 actor_label=actor_label,

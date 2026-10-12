@@ -4,20 +4,8 @@ import { useEffect, useState } from "react";
 import { loadLiveStudioContract } from "../data";
 import type { MessageKey } from "../i18n";
 import type { Locale, LiveStudioContract } from "../types";
-import { formatDate, localeFormatProfiles } from "../locale-format";
-
-function formatMetricValue(valueText: string, locale: Locale): string {
-  const normalized = valueText.trim();
-  const raw = Number(normalized);
-  if (!Number.isFinite(raw)) {
-    return normalized;
-  }
-  const decimals = normalized.includes(".") ? normalized.split(".")[1]?.length ?? 0 : 0;
-  return new Intl.NumberFormat(localeFormatProfiles[locale].numberLocale, {
-    minimumFractionDigits: decimals > 0 ? Math.min(6, decimals) : 0,
-    maximumFractionDigits: Math.min(6, decimals),
-  }).format(raw);
-}
+import { formatDate, formatExactDecimal } from "../locale-format";
+import { useBrowserSession } from "../browserSession";
 
 function formatLocaleDate(value: string, locale: Locale): string {
   const parsed = new Date(value);
@@ -27,7 +15,13 @@ function formatLocaleDate(value: string, locale: Locale): string {
   return formatDate(value, locale);
 }
 
-export function LiveStudio({ translate, locale }: { locale: Locale; translate: (key: MessageKey) => string }) {
+export function LiveStudio({ translate, locale, onSignIn }: { locale: Locale; translate: (key: MessageKey) => string; onSignIn?: () => void }) {
+  const { revision } = useBrowserSession();
+  return <LiveStudioView key={revision} translate={translate} locale={locale} onSignIn={onSignIn} />;
+}
+
+function LiveStudioView({ translate, locale, onSignIn }: { locale: Locale; translate: (key: MessageKey) => string; onSignIn?: () => void }) {
+  const { session, revision, notice, recover, isCurrent } = useBrowserSession();
   const [contract, setContract] = useState<LiveStudioContract | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -36,14 +30,19 @@ export function LiveStudio({ translate, locale }: { locale: Locale; translate: (
     const controller = new AbortController();
     setContract(null);
     setError("");
-    loadLiveStudioContract({ signal: controller.signal })
-      .then(setContract)
+    if (notice && !(session && notice === "adminStepUpRequired")) {
+      setError(translate(notice));
+      return () => controller.abort();
+    }
+    loadLiveStudioContract({ signal: controller.signal, session })
+      .then((value) => { if (!controller.signal.aborted && isCurrent(revision)) setContract(value); })
       .catch((reason: unknown) => {
-        if (reason instanceof DOMException && reason.name === "AbortError") return;
+        if (controller.signal.aborted || !isCurrent(revision)) return;
+        recover(reason, revision);
         setError(reason instanceof Error ? reason.message : translate("liveUnavailable"));
       });
     return () => controller.abort();
-  }, [attempt, translate]);
+  }, [attempt, translate, session, revision, notice, recover, isCurrent]);
 
   return <main id="main-content" className="workbench-content live-studio">
     <section className="workbench-hero workbench-hero--live" aria-labelledby="live-title">
@@ -52,8 +51,9 @@ export function LiveStudio({ translate, locale }: { locale: Locale; translate: (
     </section>
 
     <p className="live-boundary"><Database size={17} aria-hidden="true" />{translate("liveBoundary")}</p>
+    {session ? <p className="live-boundary">{translate("adminTenant")}: <strong>{session.tenantId}</strong></p> : null}
     {!contract && !error ? <section className="panel live-state" role="status" aria-live="polite"><RefreshCw className="live-spinner" size={22} aria-hidden="true" /><h2>{translate("liveLoading")}</h2></section> : null}
-    {error ? <section className="panel live-state live-state--error" role="alert"><AlertTriangle size={24} aria-hidden="true" /><h2>{translate("liveUnavailable")}</h2><p>{error}</p><button type="button" className="primary-button" onClick={() => setAttempt((value) => value + 1)}><RefreshCw size={16} aria-hidden="true" />{translate("liveRetry")}</button></section> : null}
+    {error ? <section className="panel live-state live-state--error" role="alert"><AlertTriangle size={24} aria-hidden="true" /><h2>{translate("liveUnavailable")}</h2><p>{error}</p>{notice ? (onSignIn ? <button type="button" className="primary-button" onClick={onSignIn}>{translate("adminSignIn")}</button> : <a className="primary-button" href={`${import.meta.env.BASE_URL}admin-audit`}>{translate("adminSignIn")}</a>) : <button type="button" className="primary-button" onClick={() => setAttempt((value) => value + 1)}><RefreshCw size={16} aria-hidden="true" />{translate("liveRetry")}</button>}</section> : null}
     {contract?.empty ? <section className="panel live-state" role="status"><Database size={24} aria-hidden="true" /><h2>{translate("liveEmpty")}</h2><p>{contract.endpoint}</p></section> : null}
     {contract && !contract.empty ? <>
       <section className={`live-freshness ${contract.stale ? "live-freshness--stale" : ""}`} role={contract.stale ? "alert" : "status"}>
@@ -62,7 +62,7 @@ export function LiveStudio({ translate, locale }: { locale: Locale; translate: (
         <span>{contract.generated_at ? formatLocaleDate(contract.generated_at, locale) : "—"}</span>
       </section>
       <section className="panel live-table-panel" aria-label={translate("liveTitle")}>
-        <div className="table-scroll"><table className="live-table"><thead><tr><th>{translate("liveMetric")}</th><th>{translate("period")}</th><th>{translate("liveValue")}</th><th>{translate("liveComputed")}</th><th>{translate("liveLineage")}</th></tr></thead><tbody>{contract.metrics.map((metric) => <tr key={`${metric.period_name}:${metric.metric_key}`}><th scope="row"><strong>{metric.name}</strong><code>{metric.metric_key}</code></th><td>{metric.period_name}</td><td><code>{formatMetricValue(metric.value_text, locale)}</code></td><td>{formatLocaleDate(metric.computed_at, locale)}</td><td>{metric.lineage}</td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="live-table"><thead><tr><th>{translate("liveMetric")}</th><th>{translate("period")}</th><th>{translate("liveValue")}</th><th>{translate("liveComputed")}</th><th>{translate("liveLineage")}</th></tr></thead><tbody>{contract.metrics.map((metric) => <tr key={`${metric.period_name}:${metric.metric_key}`}><th scope="row"><strong>{metric.name}</strong><code>{metric.metric_key}</code></th><td>{metric.period_name}</td><td><code>{formatExactDecimal(metric.value_text, locale)}</code></td><td>{formatLocaleDate(metric.computed_at, locale)}</td><td>{metric.lineage}</td></tr>)}</tbody></table></div>
       </section>
     </> : null}
   </main>;

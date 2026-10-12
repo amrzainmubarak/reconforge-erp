@@ -1,0 +1,358 @@
+{
+  "schema_version": "posted-balances-evidence-v1",
+  "status": "passed",
+  "synthetic_only": true,
+  "observed_at": "2026-10-03",
+  "source_commit": "866d943a5715099843a70a85d697593e4d672653",
+  "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+  "contract": "finance-posted-balances-v1",
+  "balance_scope": "recorded-postings-business-date-as-of",
+  "adr": "0817",
+  "runtime_and_test_sources": [
+    {
+      "path": "reconforge/domain/finance_balances.py",
+      "sha256": "871747a54477bddba182f694e1b5d75291028ffdbfcdbfc34e8300dbec6b1f52"
+    },
+    {
+      "path": "reconforge/application/finance_posting.py",
+      "sha256": "41b56a2553d9a8ca26509887c4393321ee4359995b210e653f6b82d6ef0b509f"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_finance_posting.py",
+      "sha256": "d2bcd5cb0897e516c77ab1267add51cad65b913497835cfa4ac6e9e51eaaa46e"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_finance_posting.py",
+      "sha256": "2206ac32ba4c576b8c447dbeef552f097a7075ff8723849e086141370d8584dc"
+    },
+    {
+      "path": "reconforge/api/finance_posting_contract.py",
+      "sha256": "e4bfb21a022641b0bc5d0e080e6a1b345c9d8d71e63e3aab43a6b1185b2031e3"
+    },
+    {
+      "path": "reconforge/api/routes/finance_posting.py",
+      "sha256": "3aa7348dbb764bddcb4782849d11bfb84942f7df8d910504458481378a8626e8"
+    },
+    {
+      "path": "reconforge/cli_finance_posting.py",
+      "sha256": "fe951a7597af756943a44fdf51132b8801496ce80c82b3f1cc2b01a2f7ec4aaa"
+    },
+    {
+      "path": "tests/test_finance_balances.py",
+      "sha256": "60a199f2e67ddc4a21dae6357bdd491fa9a31db286b7b4d9da19a3aa36c67e6f"
+    },
+    {
+      "path": "tests/test_sqlite_finance_balances.py",
+      "sha256": "9eb79edf8af1a3f81e601da8f4f5a23d33bcba92f2ccd6ba33f6de4559078048"
+    },
+    {
+      "path": "tests/test_postgres_finance_balances.py",
+      "sha256": "026d2641d94a93a1178e93919a6ae83548af9e0d9c06babbff8864fe22500baf"
+    },
+    {
+      "path": "tests/test_postgres_finance_posting_api.py",
+      "sha256": "8d1a34deae315480a9de2caa9dd99b77b5503733ee8e5cf58e5c41891d622f03"
+    },
+    {
+      "path": "tests/test_postgres_finance_posting_restore.py",
+      "sha256": "ed0951adfab7253a86dd7c41f2f405f398201f04d0e2c19e2276192f81f3eb91"
+    }
+  ],
+  "gates": {
+    "local": {
+      "commands": [
+        {
+          "source_commit": "866d943a5715099843a70a85d697593e4d672653",
+          "tracked_tree_clean": true,
+          "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+          "python_version": "Python 3.12.13",
+          "interpreter": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "tests/test_finance_balances.py",
+            "tests/test_sqlite_finance_balances.py",
+            "tests/test_finance_posting_cli.py",
+            "tests/test_finance_posting_domain.py",
+            "tests/test_finance_posting_api_contract.py",
+            "tests/test_sqlite_finance_posting.py",
+            "tests/test_api_authorization_inventory.py",
+            "tests/test_module_registry.py",
+            "tests/test_threat_model_index.py",
+            "tests/test_file_ingestion_inventory.py",
+            "-ra",
+            "--tb=short",
+            "-o",
+            "addopts=",
+            "--junitxml",
+            "F:\\reconforge-erp\\output\\verification-2026-10-03\\exact-trade-866-local.xml"
+          ],
+          "started_at": "2026-10-03T10:38:51.784097+00:00",
+          "duration_seconds": 162.625,
+          "exit_code": 0,
+          "log": "exact-trade-866-local.log",
+          "log_sha256": "7458409ff5dba144bc475ad4e6e7f31d86b8cf5a2cdbfd9e317d35f302691a19"
+        }
+      ],
+      "artifact": {
+        "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\exact-trade-866-local.json",
+        "sha256": "1835dd9519a8ec01d5cdd1c053af75b0f71bdf60e80a5074d9d0343c90b8147c"
+      },
+      "counts": {
+        "tests": 127,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "pytest_duration_seconds": 158.723,
+      "junit": {
+        "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\exact-trade-866-local.xml",
+        "sha256": "1735da475eb72e7bba62cf2f01535bacd2eec47c09468ccc3ba267a240128ad8"
+      }
+    },
+    "live": {
+      "commands": [
+        {
+          "source_commit": "866d943a5715099843a70a85d697593e4d672653",
+          "tracked_tree_clean": true,
+          "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+          "python_version": "Python 3.12.13",
+          "interpreter": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "pytest",
+            "tests/test_postgres_finance_balances.py",
+            "tests/test_postgres_finance_posting_api.py",
+            "-ra",
+            "--tb=short",
+            "-o",
+            "addopts=",
+            "--junitxml",
+            "F:\\reconforge-erp\\output\\verification-2026-10-03\\exact-trade-866-live.xml"
+          ],
+          "started_at": "2026-10-03T10:38:51.852875+00:00",
+          "duration_seconds": 103.333,
+          "exit_code": 0,
+          "log": "exact-trade-866-live.log",
+          "log_sha256": "b2ee051573d738f75e9cab936287ae3988f3622a2655812ee486e538027a8aa9"
+        }
+      ],
+      "artifact": {
+        "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\exact-trade-866-live.json",
+        "sha256": "75c7e3250d0876462261b659055100bf910991f78d94ea94ca06bfe61c99c9ef"
+      },
+      "counts": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "pytest_duration_seconds": 99.095,
+      "junit": {
+        "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\exact-trade-866-live.xml",
+        "sha256": "826864a7d6bbf05acd587d1bb7e96695c7e57564e35b64aa8ecdaa1b2b49a71c"
+      }
+    },
+    "native": {
+      "commands": [
+        {
+          "source_commit": "866d943a5715099843a70a85d697593e4d672653",
+          "tracked_tree_clean": true,
+          "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+          "python_version": "Python 3.12.13",
+          "interpreter": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "F:\\reconforge-erp\\output\\verification-2026-10-03\\run_exact_trade_866_native.py"
+          ],
+          "started_at": "2026-10-03T10:38:51.852875+00:00",
+          "duration_seconds": 35.505,
+          "exit_code": 0,
+          "log": "exact-trade-866-native.log",
+          "log_sha256": "a5c13bf777211a75d4b99192791cb326b84411ba931abf2b1aa9828b3400e265"
+        }
+      ],
+      "artifact": {
+        "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\exact-trade-866-native.json",
+        "sha256": "278cacfbe84d3fec8f895fe6a58a418c313d612894b5e55f69dd77c047c01e89"
+      }
+    },
+    "quality": {
+      "commands": [
+        {
+          "source_commit": "866d943a5715099843a70a85d697593e4d672653",
+          "tracked_tree_clean": true,
+          "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+          "python_version": "Python 3.12.13",
+          "interpreter": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "ruff",
+            "check",
+            "."
+          ],
+          "started_at": "2026-10-03T10:38:51.848605+00:00",
+          "duration_seconds": 0.708,
+          "exit_code": 0,
+          "log": "exact-trade-866-ruff.log",
+          "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+        },
+        {
+          "source_commit": "866d943a5715099843a70a85d697593e4d672653",
+          "tracked_tree_clean": true,
+          "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+          "python_version": "Python 3.12.13",
+          "interpreter": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "mypy",
+            "reconforge"
+          ],
+          "started_at": "2026-10-03T10:38:52.773618+00:00",
+          "duration_seconds": 8.672,
+          "exit_code": 0,
+          "log": "exact-trade-866-mypy.log",
+          "log_sha256": "505626768ff4fafb4e3d92679e3077b7e5620ec379b1c37a6a27ae766a6be8d1"
+        },
+        {
+          "source_commit": "866d943a5715099843a70a85d697593e4d672653",
+          "tracked_tree_clean": true,
+          "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+          "python_version": "Python 3.12.13",
+          "interpreter": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "bandit",
+            "-q",
+            "-r",
+            "reconforge"
+          ],
+          "started_at": "2026-10-03T10:39:01.721154+00:00",
+          "duration_seconds": 38.116,
+          "exit_code": 0,
+          "log": "exact-trade-866-bandit.log",
+          "log_sha256": "f388f7e286034b2c19684a9edf5478de1ab9e79606bfbbb71d1053f4adc67b99"
+        },
+        {
+          "source_commit": "866d943a5715099843a70a85d697593e4d672653",
+          "tracked_tree_clean": true,
+          "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+          "python_version": "Python 3.12.13",
+          "interpreter": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "command": [
+            "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+            "-m",
+            "build",
+            "--no-isolation",
+            "--outdir",
+            "F:\\reconforge-erp\\output\\verification-2026-10-03\\exact-trade-866-dist"
+          ],
+          "started_at": "2026-10-03T10:39:40.045561+00:00",
+          "duration_seconds": 45.732,
+          "exit_code": 0,
+          "log": "exact-trade-866-build.log",
+          "log_sha256": "7af3b319abfa2a01fc1c12185d9753e099814a201a128d641bc530fe758387d6"
+        },
+        {
+          "source_commit": "866d943a5715099843a70a85d697593e4d672653",
+          "tracked_tree_clean": true,
+          "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+          "python_version": "Python 3.12.13",
+          "interpreter": "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "command": [
+            "git",
+            "diff",
+            "--check"
+          ],
+          "started_at": "2026-10-03T10:40:25.957987+00:00",
+          "duration_seconds": 0.313,
+          "exit_code": 0,
+          "log": "exact-trade-866-diff-check.log",
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "artifact": {
+        "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\exact-trade-866-quality.json",
+        "sha256": "fa6a6f1e28d03b33a5909fd48eb0b2088f8c4e089c515f062b2146c9e6fac83c"
+      }
+    }
+  },
+  "native_restore": {
+    "postgres_version": "16.14",
+    "revision": "0098_pg_finance_posting",
+    "elapsed_seconds": 31.297,
+    "dump_bytes": 1174355,
+    "dump_sha256": "8930195c59d48190a3a555df640f47282e22484e9b7ebdbd6a1cfbbcbaaac75b",
+    "business_date_as_of_reports_preserved": true,
+    "as_of_early_report_digest": "e85d86b90e1c20d7597bbafc0622ea604a2cd7f3593ee04bc82d69836d76d1a2",
+    "as_of_final_report_digest": "795b296bed8ce7a71e6d63e979a92068b79899cecade25de70b742619319ef93",
+    "source_unchanged": true,
+    "source_database_removed": true,
+    "restored_database_removed": true,
+    "report_digest": "240564e11de97ec125b0d892e32a05a9820cd135a98dfec7f011e29fec5e3a5e"
+  },
+  "native_artifact": {
+    "path": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\output\\verification-2026-10-03\\EXACT_TRADE_866_NATIVE_RESTORE.json",
+    "sha256": "6009441932da13205e8a30a34e063f5bdbdc90b855311194fa522e6c8c0305e4"
+  },
+  "independent_financial_answers": {
+    "sqlite_and_postgres_closing_minor": [
+      10000,
+      0,
+      2500
+    ],
+    "cross_period_cash_opening_activity_closing_minor": [
+      10000,
+      -7500,
+      2500
+    ],
+    "http_opening_large_minor_string": "9007199254740993",
+    "http_full_reversal_net_closing_minor": "0",
+    "sqlite_multi_period_backup_restore": "equal verified report digests",
+    "native_postgres_restore": "equal early and final selected-period as-of digests"
+  },
+  "retained_review_and_superseded_artifacts": [
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\PROD032-PEER-REVIEW-PROBES.json",
+      "sha256": "3a3412f58780261a86ad464ea51464e37665f0a17c48b809d3233eac14f9e140"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\PROD032-PEER-REVIEW-PROBES-AFTER.json",
+      "sha256": "b1a869dc9878c349ffb8092e92fa060ab99e479fbf70f720995ec68d356a4a98"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\PROD032-PEER-NESTED-IDENTIFIERS.json",
+      "sha256": "25477c70818f4730c314684fdc08212514bc0ed270344410e8ddaef5decec2fd"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod032-local-peer-final.json",
+      "sha256": "8230abfdfc63eb86b6302a3b302444ef1b1af72cc41fbdbd1abe8139f331039b"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod032-pg-peer-final.json",
+      "sha256": "95c4cbec8dc8e4ad6f4e1737199cdc31dbb7e624ab7a1c13439aebd0638179c7"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod032-sqlite-first.xml",
+      "sha256": "f033d2117586becab9ad3a4e32a9593c8741d40cf89c8bb72d336d158418602f"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod032-sqlite-second.xml",
+      "sha256": "e28b76a8979f42549206064c565a8b867c790203a9bc906fee0dbb2b336eb227"
+    }
+  ],
+  "limits": [
+    "1000 effects",
+    "10000 lines",
+    "2MiB combined verified snapshots and final canonical report",
+    "currently recorded business-date history; later backdated effects can change later reports",
+    "no historical knowledge-time, automatic opening import or statutory close",
+    "manual reviewed operational effects only; generated trade posting remains separate"
+  ],
+  "report_digest": "b740df8baaecc2ce558eb208b1ffd026829b0bb6b2bccfa7ddf984460f18dc5d"
+}

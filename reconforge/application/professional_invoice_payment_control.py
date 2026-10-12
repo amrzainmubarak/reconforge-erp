@@ -50,7 +50,11 @@ def _read_invoices(path: Path) -> tuple[tuple[ProfessionalInvoiceRecord, ...], s
                 client_id=_required(record, "client_id"),
                 issue_date=_required(record, "issue_date"),
                 due_date=_required(record, "due_date"),
-                amount=Money.from_exact(_required(record, "amount"), _required(record, "currency")),
+                amount=Money.from_exact(
+                    _required(record, "amount"),
+                    _required(record, "currency"),
+                    strict_precision=True,
+                ),
                 reference=_required(record, "reference"),
                 source_reference=_required(record, "source_reference"),
             )
@@ -69,7 +73,11 @@ def _read_payments(path: Path) -> tuple[tuple[ProfessionalPaymentRecord, ...], s
                 payment_id=_required(record, "payment_id"),
                 client_id=_required(record, "client_id"),
                 payment_date=_required(record, "payment_date"),
-                amount=Money.from_exact(_required(record, "amount"), _required(record, "currency")),
+                amount=Money.from_exact(
+                    _required(record, "amount"),
+                    _required(record, "currency"),
+                    strict_precision=True,
+                ),
                 reference=_required(record, "reference"),
                 source_reference=_required(record, "source_reference"),
             )
@@ -93,7 +101,7 @@ def run_professional_invoice_payment_control_files(
     invoices, invoices_digest = _read_invoices(invoices_path)
     payments, payments_digest = _read_payments(payments_path)
     try:
-        amount_tolerance = Money.from_exact(tolerance, currency)
+        amount_tolerance = Money.from_exact(tolerance, currency, strict_precision=True)
     except Exception as exc:
         raise ProfessionalInvoicePaymentError("professional invoice/payment control policy is invalid.") from exc
     return run_professional_invoice_payment_control(

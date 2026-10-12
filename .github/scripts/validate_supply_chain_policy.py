@@ -27,6 +27,25 @@ _ISSUE_URL = re.compile(r"^https://github\.com/amrzainmubarak/reconforge-erp/iss
 _GITLEAKS_FINGERPRINT = re.compile(
     r"^(?:[0-9a-f]{40}:)?[A-Za-z0-9_.\-/]+:[a-z0-9-]+:[1-9][0-9]*$"
 )
+_GITLEAKS_REVIEW_REGISTRY = "docs/security/gitleaks-public-source-digests-wave4.v1.json"
+_GITLEAKS_REVIEW_SHA256 = "7249b31b34b7fccfb420d455e9134b2e827c00877c4c01652382e41c11b5827e"
+_GITLEAKS_REVIEW_REPORTS = {
+    "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+    "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+}
+_GITLEAKS_WAVE5_REGISTRY = "docs/security/gitleaks-public-source-digests-wave5.v1.json"
+_GITLEAKS_WAVE5_REGISTRY_SHA256 = "771a95202b271d3c15cd58a8f69c9dae6e403c745c19194efdb3c78f397f07ca"
+_GITLEAKS_COMPLETE_IGNORE_SHA256 = "8b58ab3f98d251a2e77c95e5569baf4f5ab2cb37fc12780486f61778a8e71460"
+_GITLEAKS_COMPLETE_CONFIG_SHA256 = "b7034f7bc41782964e2345d03fd271e3c873414bbf4bd6c8eb2045f9d4845be8"
+_GITLEAKS_WAVE5_REPORTS = {
+    "docs/execution/wave5-evidence/sourcing-oracle/accepted/report.json",
+    "docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json",
+}
+_PUBLIC_DIGEST_LINE = re.compile(r'\s*"([^"\n]+)": "([a-f0-9]{64})",?\s*')
+_RELEASE_ACTION_REFERENCE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}$")
+_RELEASE_ACTION_USE = re.compile(r"(?m)^[ \t]*uses:[ \t]*([^\s#]+)")
+_RELEASE_STEP = re.compile(r"(?m)^[ \t]*-[ \t]+name:[ \t]*([^\r\n#]+?)[ \t]*$")
+_RELEASE_VERSION = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 _ALLOWED_GITLEAKS_PATHS = {
     "'''(^|[\\\\/])\\.git[\\\\/]'''",
     "'''(^|[\\\\/])\\.venv[\\\\/]'''",
@@ -61,6 +80,7 @@ _DOCKER_CONTEXT_ALLOWLIST = {
     "!reconforge/",
     "!reconforge/**",
 }
+_DOCKER_CONTEXT_CACHE_EXCLUSIONS = ("**/__pycache__", "**/*.pyc", "**/*.pyo")
 
 
 def _require_keys(value: object, expected: set[str], label: str) -> dict[str, Any]:
@@ -591,6 +611,160 @@ def _validate_dependabot(root: Path, policy: dict[str, Any]) -> None:
             raise SupplyChainPolicyError("Dependabot schema version must be 2")
 
 
+def _validate_reviewed_gitleaks_hashes(root: Path, ignore_lines: list[str]) -> None:
+    """Bind precise ignores to independently reviewed public source digests.
+
+    The immutable historical fingerprints cover the introduced Git commit.
+    Current-tree fingerprints additionally require exact complete report bytes;
+    a replacement secret at the same ignored path/line must fail before scanning.
+    The registry itself is pinned independently here, not by a self-checksum.
+    """
+    registry_path = _required_path(root, _GITLEAKS_REVIEW_REGISTRY)
+    if hashlib.sha256(registry_path.read_bytes()).hexdigest() != _GITLEAKS_REVIEW_SHA256:
+        raise SupplyChainPolicyError("reviewed Gitleaks registry bytes drifted")
+    registry = _load_json(registry_path)
+    records = registry["records"]
+    if len(records) != 260 or registry["finding_count"] != 260:
+        raise SupplyChainPolicyError("reviewed Gitleaks population drifted")
+    report_lines: dict[str, list[str]] = {}
+    for report in registry["reports"]:
+        path = report["path"]
+        if path not in _GITLEAKS_REVIEW_REPORTS:
+            raise SupplyChainPolicyError("reviewed Gitleaks report path drifted")
+        raw = _required_path(root, path).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != report["sha256"]:
+            raise SupplyChainPolicyError("reviewed Gitleaks report bytes drifted")
+        report_lines[path] = raw.decode("utf-8").splitlines()
+    if set(report_lines) != _GITLEAKS_REVIEW_REPORTS:
+        raise SupplyChainPolicyError("reviewed Gitleaks report inventory drifted")
+    expected: set[str] = set()
+    for record in records:
+        path = record["path"]
+        number = record["line"]
+        lines = report_lines[path]
+        if type(number) is not int or not 1 <= number <= len(lines):
+            raise SupplyChainPolicyError("reviewed Gitleaks line is invalid")
+        line = lines[number - 1]
+        match = _PUBLIC_DIGEST_LINE.fullmatch(line)
+        if (
+            match is None
+            or match.group(1) != record["public_source_path"]
+            or hashlib.sha256(match.group(2).encode("utf-8")).hexdigest()
+            != record["expected_value_sha256"]
+            or hashlib.sha256(line.encode("utf-8")).hexdigest()
+            != record["source_line_sha256"]
+        ):
+            raise SupplyChainPolicyError("reviewed Gitleaks source member or digest drifted")
+        current = f"{path}:generic-api-key:{number}"
+        historical = f"{registry['introduced_commit']}:{current}"
+        if (
+            record["rule_id"] != "generic-api-key"
+            or record["current_fingerprint"] != current
+            or record["history_fingerprint"] != historical
+        ):
+            raise SupplyChainPolicyError("reviewed Gitleaks fingerprint identity drifted")
+        expected.update((current, historical))
+    actual = {
+        fingerprint
+        for fingerprint in ignore_lines
+        if any(f"{path}:" in fingerprint for path in _GITLEAKS_REVIEW_REPORTS)
+    }
+    if len(expected) != 520 or actual != expected:
+        raise SupplyChainPolicyError("reviewed Gitleaks ignores must match the exact 520 fingerprints")
+
+
+def _validate_wave5_reviewed_gitleaks_hashes(root: Path, ignore_lines: list[str]) -> None:
+    """Close reviewed source hashes without trusting replaceable ignored lines.
+
+    Original Git blobs were independently verified during review. Their immutable
+    proof registry is pinned here; runtime/archive validation requires the exact
+    retained reports, JSON members, original line bytes and full ignore/config
+    bytes. No Git installation or mutable current source version is required.
+    """
+    registry_path = _required_path(root, _GITLEAKS_WAVE5_REGISTRY)
+    if hashlib.sha256(registry_path.read_bytes()).hexdigest() != _GITLEAKS_WAVE5_REGISTRY_SHA256:
+        raise SupplyChainPolicyError("reviewed Wave5 Gitleaks registry bytes drifted")
+    registry = _load_json(registry_path)
+    ignore_raw = _required_path(root, ".gitleaksignore").read_bytes()
+    config_raw = _required_path(root, ".gitleaks.toml").read_bytes()
+    if hashlib.sha256(ignore_raw).hexdigest() != _GITLEAKS_COMPLETE_IGNORE_SHA256:
+        raise SupplyChainPolicyError("reviewed complete Gitleaks ignore bytes drifted")
+    if hashlib.sha256(config_raw).hexdigest() != _GITLEAKS_COMPLETE_CONFIG_SHA256:
+        raise SupplyChainPolicyError("reviewed complete Gitleaks config bytes drifted")
+    if (
+        registry["complete_ignore_sha256"] != _GITLEAKS_COMPLETE_IGNORE_SHA256
+        or registry["complete_config_sha256"] != _GITLEAKS_COMPLETE_CONFIG_SHA256
+        or registry["scanner"] != _load_json(_required_path(root, "docs/security/supply-chain-policy.v1.json"))["secret_scanning"]
+        or registry["finding_count"] != 166
+        or registry["distinct_original_sources"] != 83
+        or registry["history_fingerprint_count"] != 166
+        or registry["current_fingerprint_count"] != 166
+        or registry["introduced_commit"] != "b7801291b182fd11f4e22b1e7994461e0c4fecc0"
+        or registry["original_source_commit"] != "57ead9e9f5489328751910edde3be759ab27a4ab"
+    ):
+        raise SupplyChainPolicyError("reviewed Wave5 Gitleaks identity or scanner drifted")
+    baseline = registry["baseline_ignore"]
+    if (
+        baseline["bytes"] != 78266
+        or baseline["sha256"] != "f2093164734067159dc12e849aa9fd24380b91a5a8e643a833d98ca759f4eade"
+        or hashlib.sha256(ignore_raw[:78266]).hexdigest() != baseline["sha256"]
+    ):
+        raise SupplyChainPolicyError("reviewed historical ignore prefix drifted")
+    reports: dict[str, tuple[list[str], dict[str, Any]]] = {}
+    for report in registry["reports"]:
+        path = report["path"]
+        if path not in _GITLEAKS_WAVE5_REPORTS or path in reports or report["finding_count"] != 83:
+            raise SupplyChainPolicyError("reviewed Wave5 report population drifted")
+        raw = _required_path(root, path).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != report["sha256"]:
+            raise SupplyChainPolicyError("reviewed Wave5 report bytes drifted")
+        document = json.loads(raw)
+        if document["source_head"] != registry["original_source_commit"]:
+            raise SupplyChainPolicyError("reviewed original source commit drifted")
+        reports[path] = (raw.decode("utf-8").splitlines(), document["runtime_sources_before"])
+    if set(reports) != _GITLEAKS_WAVE5_REPORTS or len(registry["records"]) != 166:
+        raise SupplyChainPolicyError("reviewed Wave5 report or record inventory drifted")
+    expected: set[str] = set()
+    population = dict.fromkeys(_GITLEAKS_WAVE5_REPORTS, 0)
+    sources: set[str] = set()
+    for record in registry["records"]:
+        path, number = record["path"], record["line"]
+        if path not in reports or type(number) is not int:
+            raise SupplyChainPolicyError("reviewed Wave5 report line is invalid")
+        lines, members = reports[path]
+        if not 1 <= number <= len(lines) or record["end_line"] != number:
+            raise SupplyChainPolicyError("reviewed Wave5 report line is invalid")
+        line = lines[number - 1]
+        match = _PUBLIC_DIGEST_LINE.fullmatch(line)
+        source = record["public_source_path"]
+        pointer = "/runtime_sources_before/" + source.replace("~", "~0").replace("/", "~1")
+        if (
+            match is None or match.group(1) != source
+            or members.get(source) != match.group(2)
+            or record["json_member_path"] != pointer
+            or record["source_head"] != registry["original_source_commit"]
+            or record["original_git_blob_sha256"] != match.group(2)
+            or hashlib.sha256(match.group(2).encode()).hexdigest() != record["expected_value_sha256"]
+            or hashlib.sha256(line.encode()).hexdigest() != record["source_line_sha256"]
+        ):
+            raise SupplyChainPolicyError("reviewed Wave5 source member, line or digest drifted")
+        current = f"{path}:generic-api-key:{number}"
+        history = f"{registry['introduced_commit']}:{current}"
+        if (
+            record["rule_id"] != "generic-api-key"
+            or record["current_fingerprint"] != current
+            or record["history_fingerprint"] != history
+            or current in expected or history in expected
+        ):
+            raise SupplyChainPolicyError("reviewed Wave5 fingerprint identity drifted")
+        expected.update((current, history))
+        population[path] += 1
+        sources.add(source)
+    actual = {value for value in ignore_lines if any(f"{path}:" in value for path in _GITLEAKS_WAVE5_REPORTS)}
+    if len(expected) != 332 or actual != expected or set(population.values()) != {83} or len(sources) != 83:
+        raise SupplyChainPolicyError("reviewed Wave5 ignores must match the exact 332 fingerprints")
+
+
 def _validate_gitleaks_config(root: Path) -> None:
     text = _required_path(root, ".gitleaks.toml").read_text(encoding="utf-8")
     if text.count("useDefault = true") != 1:
@@ -609,6 +783,8 @@ def _validate_gitleaks_config(root: Path) -> None:
         raise SupplyChainPolicyError("Gitleaks ignore fingerprints must be non-empty and unique")
     if any(_GITLEAKS_FINGERPRINT.fullmatch(line) is None for line in ignore_lines):
         raise SupplyChainPolicyError("Gitleaks ignores must be exact commit/path/rule/line fingerprints")
+    _validate_reviewed_gitleaks_hashes(root, ignore_lines)
+    _validate_wave5_reviewed_gitleaks_hashes(root, ignore_lines)
 
 
 def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
@@ -635,8 +811,16 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
         for line in _required_path(root, ".dockerignore").read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     ]
-    if not context_rules or context_rules[0] != "*" or set(context_rules[1:]) != _DOCKER_CONTEXT_ALLOWLIST:
-        raise SupplyChainPolicyError("Docker build context must match the closed deny-by-default allowlist")
+    if (
+        not context_rules
+        or context_rules[0] != "*"
+        or len(context_rules) != 1 + len(_DOCKER_CONTEXT_ALLOWLIST) + len(_DOCKER_CONTEXT_CACHE_EXCLUSIONS)
+        or set(context_rules[1:-3]) != _DOCKER_CONTEXT_ALLOWLIST
+        or tuple(context_rules[-3:]) != _DOCKER_CONTEXT_CACHE_EXCLUSIONS
+    ):
+        raise SupplyChainPolicyError(
+            "Docker build context must match the closed deny-by-default allowlist and final Python cache exclusions"
+        )
 
     service_images = docker_policy["service_images"]
     expected = {
@@ -678,7 +862,242 @@ def _validate_dockerfile(root: Path, policy: dict[str, Any]) -> None:
                 raise SupplyChainPolicyError(f"PostgreSQL matrix image drifted in {relative}")
 
 
-def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:
+def _release_step_blocks(workflow: str) -> dict[str, tuple[int, str]]:
+    matches = list(_RELEASE_STEP.finditer(workflow))
+    if not matches:
+        raise SupplyChainPolicyError("release workflow has no named steps")
+
+    steps: dict[str, tuple[int, str]] = {}
+    for index, match in enumerate(matches):
+        name = match.group(1).strip()
+        if not name or name in steps:
+            raise SupplyChainPolicyError("release workflow step names must be present and unique")
+        next_start = matches[index + 1].start() if index + 1 < len(matches) else len(workflow)
+        steps[name] = (match.start(), workflow[match.end() : next_start])
+    return steps
+
+
+def _required_release_step(steps: dict[str, tuple[int, str]], name: str) -> tuple[int, str]:
+    step = steps.get(name)
+    if step is None:
+        raise SupplyChainPolicyError(f"release workflow is missing required step: {name}")
+    return step
+
+
+def _non_comment_lines(text: str) -> list[str]:
+    return [line for line in text.splitlines() if not line.lstrip().startswith("#")]
+
+
+def _require_release_fragment(step: str, fragment: str, gate: str) -> None:
+    if not any(fragment in line for line in _non_comment_lines(step)):
+        raise SupplyChainPolicyError(f"release workflow is missing {gate}")
+
+
+def _release_action_references(text: str) -> list[str]:
+    return [reference.strip("\"'") for reference in _RELEASE_ACTION_USE.findall(text)]
+
+
+def _require_release_step_action(step: str, action: str, gate: str) -> None:
+    for reference in _release_action_references(step):
+        if reference.split("@", 1)[0] == action:
+            return
+    raise SupplyChainPolicyError(f"release workflow is missing {gate}")
+
+
+def _validate_release_action_pins(release: str) -> None:
+    references = _release_action_references(release)
+    if not references:
+        raise SupplyChainPolicyError("release workflow has no third-party GitHub Actions")
+    for reference in references:
+        if reference.startswith("./"):
+            continue
+        if _RELEASE_ACTION_REFERENCE.fullmatch(reference) is None:
+            raise SupplyChainPolicyError(
+                f"release workflow third-party GitHub Action is not pinned to a full SHA: {reference}"
+            )
+
+
+def _release_attestation_commands(step: str) -> list[str]:
+    lines = _non_comment_lines(step)
+    commands: list[str] = []
+    index = 0
+    while index < len(lines):
+        current = lines[index].lstrip()
+        if not current.startswith("gh attestation verify "):
+            index += 1
+            continue
+        command = [current]
+        while command[-1].rstrip().endswith("\\"):
+            index += 1
+            if index >= len(lines):
+                raise SupplyChainPolicyError("release provenance verification command is truncated")
+            command.append(lines[index].strip())
+        commands.append("\n".join(command))
+        index += 1
+    return commands
+
+
+def _validate_release_source_identity(steps: dict[str, tuple[int, str]]) -> int:
+    source_index, source = _required_release_step(steps, "Verify immutable source and signed annotated tag")
+    _, checkout = _required_release_step(steps, "Check out the signed tag")
+    _require_release_step_action(checkout, "actions/checkout", "signed-tag checkout action")
+    for fragment, gate in (
+        ("fetch-depth: 0", "full Git history for signed-tag verification"),
+        ("persist-credentials: false", "credential-free signed-tag checkout"),
+    ):
+        _require_release_fragment(checkout, fragment, gate)
+
+    for fragment, gate in (
+        ('[[ "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\\.[0-9]+\\.[0-9]+$ ]]', "release tag reference check"),
+        ('[[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]', "release commit digest check"),
+        ("git status --porcelain=v1 --untracked-files=all", "clean tree check"),
+        ('tomllib.loads(pathlib.Path("pyproject.toml").read_text', "package version source"),
+        ('test "$GITHUB_REF_NAME" = "v${version}"', "tag/package version alignment"),
+        ('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"', "checked-out commit identity check"),
+        ('git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main', "main ancestry check"),
+        ("git/ref/tags/${GITHUB_REF_NAME}", "annotated tag object lookup"),
+        ('test "$tag_type" = "tag"', "annotated tag type check"),
+        (".verification.verified", "signed annotated tag verification"),
+        (".verification.reason", "signed annotated tag verification"),
+        ('= "true"', "signed annotated tag verification"),
+        ('= "valid"', "signed annotated tag verification"),
+    ):
+        _require_release_fragment(source, fragment, gate)
+    return source_index
+
+
+def _validate_release_attestations(steps: dict[str, tuple[int, str]]) -> None:
+    file_index, files = _required_release_step(steps, "Attest source and Python release files")
+    image_index, image = _required_release_step(steps, "Attest the image manifest digest")
+    sbom_specs = (
+        (
+            "Attest the source archive SBOM",
+            "release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.tar.gz",
+            "release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.cdx.json",
+        ),
+        (
+            "Attest the wheel SBOM",
+            "release/reconforge_erp-${{ env.RELEASE_VERSION }}-py3-none-any.whl",
+            "release/reconforge_erp-${{ env.RELEASE_VERSION }}-py3-none-any.cdx.json",
+        ),
+        (
+            "Attest the sdist SBOM",
+            "release/reconforge_erp-${{ env.RELEASE_VERSION }}.tar.gz",
+            "release/reconforge_erp-${{ env.RELEASE_VERSION }}-sdist.cdx.json",
+        ),
+        (
+            "Attest the image SBOM",
+            "${{ env.IMAGE_NAME }}",
+            "release/reconforge-erp-${{ env.RELEASE_VERSION }}-image.cdx.json",
+        ),
+    )
+
+    for step, gate in ((files, "release file provenance attestation"), (image, "image provenance attestation")):
+        _require_release_step_action(step, "actions/attest", gate)
+        _require_release_fragment(step, "create-storage-record: false", gate)
+    for fragment in (
+        "release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.tar.gz",
+        "release/reconforge_erp-${{ env.RELEASE_VERSION }}-py3-none-any.whl",
+        "release/reconforge_erp-${{ env.RELEASE_VERSION }}.tar.gz",
+        "release/release-manifest.v1.json",
+        "release/SHA256SUMS",
+        "release/sbom-manifest.v1.json",
+        "release/SBOM_SHA256SUMS",
+    ):
+        _require_release_fragment(files, fragment, "complete release file provenance subjects")
+    for fragment in (
+        "subject-name: ${{ env.IMAGE_NAME }}",
+        "subject-digest: ${{ steps.image.outputs.digest }}",
+        "push-to-registry: true",
+    ):
+        _require_release_fragment(image, fragment, "image provenance identity binding")
+
+    attestation_indices = [file_index, image_index]
+    for name, subject, sbom in sbom_specs:
+        sbom_index, step = _required_release_step(steps, name)
+        attestation_indices.append(sbom_index)
+        _require_release_step_action(step, "actions/attest", f"{name} action")
+        for fragment, gate in (
+            ("create-storage-record: false", f"{name} storage policy"),
+            ("subject-name:" if name == "Attest the image SBOM" else "subject-path:", f"{name} subject"),
+            (subject, f"{name} subject"),
+            ("sbom-path:", f"{name} SBOM attestation"),
+            (sbom, f"{name} SBOM attestation"),
+        ):
+            _require_release_fragment(step, fragment, gate)
+
+    provenance_index, provenance = _required_release_step(steps, "Preserve and independently verify provenance bundles")
+    if provenance_index <= max(attestation_indices):
+        raise SupplyChainPolicyError("release provenance verification must follow every attestation")
+    for fragment in (
+        "sha256sum --check SHA256SUMS",
+        "sha256sum --check SBOM_SHA256SUMS",
+        "release/files-provenance.sigstore.json",
+        "release/image-provenance.sigstore.json",
+        "release/source-sbom.sigstore.json",
+        "release/wheel-sbom.sigstore.json",
+        "release/sdist-sbom.sigstore.json",
+        "release/image-sbom.sigstore.json",
+    ):
+        _require_release_fragment(provenance, fragment, "provenance bundle preservation")
+
+    commands = _release_attestation_commands(provenance)
+    if len(commands) != 6:
+        raise SupplyChainPolicyError("release workflow must independently verify six provenance attestations")
+    for command in commands:
+        for fragment in (
+            '--repo "$GITHUB_REPOSITORY"',
+            '--signer-workflow "$SIGNER_WORKFLOW"',
+            '--signer-digest "$GITHUB_SHA"',
+            '--source-ref "$GITHUB_REF"',
+            '--source-digest "$GITHUB_SHA"',
+            "--deny-self-hosted-runners",
+            "--bundle release/",
+        ):
+            if fragment not in command:
+                raise SupplyChainPolicyError("release provenance verification lacks an identity constraint")
+    for bundle in (
+        "release/files-provenance.sigstore.json",
+        "release/image-provenance.sigstore.json",
+        "release/source-sbom.sigstore.json",
+        "release/wheel-sbom.sigstore.json",
+        "release/sdist-sbom.sigstore.json",
+        "release/image-sbom.sigstore.json",
+    ):
+        if not any(bundle in command for command in commands):
+            raise SupplyChainPolicyError(f"release provenance verification is missing bundle: {bundle}")
+    if sum('--predicate-type "$SBOM_PREDICATE_TYPE"' in command for command in commands) != 4:
+        raise SupplyChainPolicyError("release workflow must verify four SBOM attestations")
+
+
+def _validate_release_candidate_contract(release: str, pyproject: dict[str, Any]) -> None:
+    project = pyproject.get("project")
+    version = project.get("version") if isinstance(project, dict) else None
+    if not isinstance(version, str) or _RELEASE_VERSION.fullmatch(version) is None:
+        raise SupplyChainPolicyError("release project version must use the X.Y.Z tag-compatible form")
+    for fragment, gate in (
+        ("name: Signed Release Candidate", "signed release candidate identity"),
+        ('tags:\n      - "v*"', "tag-only release trigger"),
+        ("permissions: {}", "least-privilege workflow permissions"),
+        ("environment: release-candidate", "release candidate environment"),
+    ):
+        if fragment not in release:
+            raise SupplyChainPolicyError(f"release workflow is missing {gate}")
+    if "continue-on-error" in release:
+        raise SupplyChainPolicyError("release workflow must not continue after a failed gate")
+
+    _validate_release_action_pins(release)
+    steps = _release_step_blocks(release)
+    source_index = _validate_release_source_identity(steps)
+    build_index, _ = _required_release_step(steps, "Build source, wheel, and sdist candidates")
+    container_gate_index, _ = _required_release_step(steps, "Build and enforce the local container security gate")
+    registry_index, _ = _required_release_step(steps, "Log in to the candidate image registry")
+    if not source_index < build_index < registry_index or container_gate_index >= registry_index:
+        raise SupplyChainPolicyError("release identity and local security gates must precede registry authentication")
+    _validate_release_attestations(steps)
+
+
+def _validate_workflows(root: Path, policy: dict[str, Any], pyproject: dict[str, Any]) -> None:
     release = _required_path(root, policy["release_gate"]["workflow"]).read_text(encoding="utf-8")
     security = _required_path(root, ".github/workflows/security.yml").read_text(encoding="utf-8")
     audit_runner = _required_path(root, ".github/scripts/run_locked_python_audit.py").read_text(
@@ -691,6 +1110,7 @@ def _validate_workflows(root: Path, policy: dict[str, Any]) -> None:
     secret_policy = policy["secret_scanning"]
     sbom_policy = policy["container_audits"]["sbom"]
     vulnerability_policy = policy["container_audits"]["vulnerability"]
+    _validate_release_candidate_contract(release, pyproject)
     shared_fragments = (
         "astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9",
         f'version: "{python_policy["manager_version"]}"',
@@ -791,7 +1211,7 @@ def validate_project(root: Path, as_of: date) -> tuple[dict[str, Any], list[dict
     _validate_dependabot(root, policy)
     _validate_gitleaks_config(root)
     _validate_dockerfile(root, policy)
-    _validate_workflows(root, policy)
+    _validate_workflows(root, policy, pyproject)
     return policy, active, python_packages, npm_packages, npm_gap
 
 

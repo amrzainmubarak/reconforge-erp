@@ -31,6 +31,7 @@ from reconforge.infrastructure.postgres_service_accounts import (
     POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL,
     PostgresServiceAccountRepository,
 )
+from tests.postgres_audit_fixture import delete_owned_policy_audit
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -70,6 +71,8 @@ def test_live_server_consolidation_close_http_routes_are_rls_scoped(tmp_path: Pa
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_SCOPE_AUTHORITY_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT ON reconforge.domain_audit_events TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT, UPDATE ON reconforge.domain_audit_ledger_state TO {app_user}")
             admin.execute(
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.tenants, reconforge.identity_permissions, "
                 f"reconforge.service_accounts, reconforge.service_account_permissions, "
@@ -215,6 +218,7 @@ def test_live_server_consolidation_close_http_routes_are_rls_scoped(tmp_path: Pa
         if admin is not None:
             try:
                 with admin.transaction():
+                    delete_owned_policy_audit(admin, (tenant_a, tenant_b))
                     for table in (
                         "consolidation_close_effect_lines",
                         "consolidation_close_effects",

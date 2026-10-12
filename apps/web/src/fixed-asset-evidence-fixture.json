@@ -1,0 +1,110 @@
+{
+  "schema_version": "fixed-asset-native-evidence-v1",
+  "asset_definition": {
+    "workspace_id": "work",
+    "organization_id": "org",
+    "legal_entity_id": "entity",
+    "id": "asset",
+    "cost_minor": "9007199254740993",
+    "currency_code": "USD",
+    "currency_precision": 2,
+    "asset_digest": "628e9afdf0b6149d7e57ae88b6d14f1e6ad23e9e9a0f43dd62a44c22683b23bb"
+  },
+  "plan": {
+    "workspace_id": "work",
+    "organization_id": "org",
+    "legal_entity_id": "entity",
+    "id": "plan",
+    "asset_id": "asset",
+    "asset_digest": "628e9afdf0b6149d7e57ae88b6d14f1e6ad23e9e9a0f43dd62a44c22683b23bb",
+    "entry_id": "entry",
+    "kind": "acquire",
+    "posting_date": "2026-10-01",
+    "period_id": "period",
+    "amount_minor": "9007199254740993",
+    "accumulated_before_minor": "0",
+    "proceeds_minor": "0",
+    "months_after": 0,
+    "sequence": 0,
+    "currency_code": "USD",
+    "currency_precision": 2,
+    "preparer_actor_id": "maker",
+    "snapshot": {
+      "entry": {
+        "workspace_id": "work",
+        "organization_id": "org",
+        "legal_entity_id": "entity",
+        "id": "entry",
+        "currency_code": "USD",
+        "currency_precision": 2,
+        "posting_date": "2026-10-01",
+        "period_id": "period",
+        "preparer_actor_id": "maker"
+      },
+      "lines": [
+        {
+          "line_number": 1,
+          "account_id": "fixed",
+          "debit_minor": "9007199254740993",
+          "credit_minor": "0",
+          "description": "Synthetic asset"
+        },
+        {
+          "line_number": 2,
+          "account_id": "cash",
+          "debit_minor": "0",
+          "credit_minor": "9007199254740993",
+          "description": "Synthetic asset"
+        }
+      ]
+    },
+    "plan_digest": "f53c711b3e7ed82f442bcfb09511e9f9ea4a316c164f179a400babf077393c56",
+    "validation_digest": "2fae83f7bd6b0ebc7e08a724d87a232e1727afa8259f838660caeb3c4b933454",
+    "phase": 2,
+    "status": "Posted",
+    "reviewer_actor_id": "checker",
+    "posting_effect_id": "effect"
+  },
+  "canonical_asset_json": "{\"cost_minor\":9007199254740993,\"currency_code\":\"USD\",\"currency_precision\":2,\"id\":\"asset\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"workspace_id\":\"work\"}",
+  "canonical_plan_json": "{\"accumulated_before_minor\":0,\"amount_minor\":9007199254740993,\"asset_digest\":\"628e9afdf0b6149d7e57ae88b6d14f1e6ad23e9e9a0f43dd62a44c22683b23bb\",\"asset_id\":\"asset\",\"currency_code\":\"USD\",\"currency_precision\":2,\"entry_id\":\"entry\",\"id\":\"plan\",\"kind\":\"acquire\",\"legal_entity_id\":\"entity\",\"months_after\":0,\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"preparer_actor_id\":\"maker\",\"proceeds_minor\":0,\"sequence\":0,\"snapshot\":{\"entry\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"id\":\"entry\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"preparer_actor_id\":\"maker\",\"workspace_id\":\"work\"},\"lines\":[{\"account_id\":\"fixed\",\"credit_minor\":0,\"debit_minor\":9007199254740993,\"description\":\"Synthetic asset\",\"line_number\":1},{\"account_id\":\"cash\",\"credit_minor\":9007199254740993,\"debit_minor\":0,\"description\":\"Synthetic asset\",\"line_number\":2}]},\"workspace_id\":\"work\"}",
+  "canonical_snapshot_json": "{\"entry\":{\"currency_code\":\"USD\",\"currency_precision\":2,\"id\":\"entry\",\"legal_entity_id\":\"entity\",\"organization_id\":\"org\",\"period_id\":\"period\",\"posting_date\":\"2026-10-01\",\"preparer_actor_id\":\"maker\",\"workspace_id\":\"work\"},\"lines\":[{\"account_id\":\"fixed\",\"credit_minor\":0,\"debit_minor\":9007199254740993,\"description\":\"Synthetic asset\",\"line_number\":1},{\"account_id\":\"cash\",\"credit_minor\":9007199254740993,\"debit_minor\":0,\"description\":\"Synthetic asset\",\"line_number\":2}]}",
+  "native_effect": {
+    "id": "effect",
+    "entry_id": "entry",
+    "validation_digest": "2fae83f7bd6b0ebc7e08a724d87a232e1727afa8259f838660caeb3c4b933454",
+    "posted_actor_id": "poster",
+    "posted_at": "2026-10-10T00:00:00+00:00",
+    "audit_event_id": "audit-3",
+    "outbox_event_id": "outbox-3"
+  },
+  "phases": [
+    {
+      "action": "fixed_asset_prepared",
+      "actor_id": "maker",
+      "audit_event_id": "audit-0",
+      "outbox_event_id": "outbox-0"
+    },
+    {
+      "action": "fixed_asset_reviewed",
+      "actor_id": "checker",
+      "audit_event_id": "audit-1",
+      "outbox_event_id": "outbox-1"
+    },
+    {
+      "action": "fixed_asset_posted",
+      "actor_id": "poster",
+      "audit_event_id": "audit-2",
+      "outbox_event_id": "outbox-2"
+    },
+    {
+      "action": "finance_entry_posted",
+      "actor_id": "poster",
+      "audit_event_id": "audit-3",
+      "outbox_event_id": "outbox-3"
+    }
+  ],
+  "totals": {
+    "debit_minor": "9007199254740993",
+    "credit_minor": "9007199254740993"
+  }
+}

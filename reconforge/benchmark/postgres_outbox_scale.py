@@ -147,6 +147,7 @@ def run_postgres_outbox_scale_profile(
                 max_attempts=2,
                 lease_seconds=declared.lease_seconds,
                 retry_base_seconds=0,
+                allow_unbound_hosted_policy=True,
             ),
         )
         deadline = time.perf_counter() + 120

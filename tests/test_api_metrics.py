@@ -28,6 +28,7 @@ from reconforge.infrastructure.postgres_service_accounts import (
     POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL,
     PostgresServiceAccountRepository,
 )
+from tests.postgres_audit_fixture import delete_owned_policy_audit
 
 
 def _client(tmp_path: Path) -> tuple[TestClient, dict[str, str]]:
@@ -51,7 +52,26 @@ def test_server_metrics_routes_bind_tenant_policy_without_workspace(
         calls.append((permissions, tenant_id, workspace_id))
 
     monkeypatch.setattr(routes, "server_metrics_enabled", lambda _request: True)
-    monkeypatch.setattr(routes, "execute_postgres_metrics", lambda _request, _operation: {"bounded": True})
+    monkeypatch.setattr(
+        routes,
+        "execute_postgres_metrics",
+        lambda _request, _operation: [
+            {
+                "id": "metric-a",
+                "workspace_id": "workspace-a",
+                "metric_key": "match_rate",
+                "period_name": "2026-08",
+                "value": "100.00",
+                "value_text": "100.00",
+                "lineage": "reconciliation_results",
+                "computed_at": "2026-08-27T00:00:00Z",
+                "name": "Match rate",
+                "description": "Matched results percentage",
+                "future_metric_field": "must-not-escape",
+                "future_lineage_field": "must-not-escape",
+            }
+        ],
+    )
     monkeypatch.setattr(routes, "enforce_server_scoped_permissions", enforce)
     headers = {**headers, "X-ReconForge-Tenant": "tenant-a"}
 
@@ -60,6 +80,8 @@ def test_server_metrics_routes_bind_tenant_policy_without_workspace(
 
     assert dashboard.status_code == 200
     assert lineage.status_code == 200
+    assert "future_metric_field" not in dashboard.text
+    assert "future_lineage_field" not in lineage.text
     assert calls == [
         (frozenset({"metrics.read"}), "tenant-a", None),
         (frozenset({"metrics.read"}), "tenant-a", None),
@@ -134,6 +156,8 @@ def test_live_server_metrics_http_routes_use_postgres_identity_and_rls(
             admin.execute(POSTGRES_SERVICE_ACCOUNT_SCHEMA_SQL)
             install_postgres_metrics_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT ON reconforge.domain_audit_events TO {app_user}")
+            admin.execute(f"GRANT SELECT, INSERT, UPDATE ON reconforge.domain_audit_ledger_state TO {app_user}")
             admin.execute(
                 f"GRANT SELECT, INSERT, UPDATE ON reconforge.tenants, reconforge.identity_permissions, "
                 f"reconforge.service_accounts, reconforge.service_account_permissions, "
@@ -196,6 +220,7 @@ def test_live_server_metrics_http_routes_use_postgres_identity_and_rls(
     finally:
         try:
             with admin.transaction():
+                delete_owned_policy_audit(admin, (tenant_a, tenant_b))
                 admin.execute(
                     "ALTER TABLE reconforge.service_account_events "
                     "DISABLE TRIGGER trg_service_account_events_append_only"

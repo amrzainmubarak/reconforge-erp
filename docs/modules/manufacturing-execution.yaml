@@ -1,0 +1,95 @@
+id: manufacturing-execution
+name: Governed actual-material manufacturing execution
+version: 1.0.0
+maturity: experimental
+owner: ReconForge maintainers
+dependencies:
+  - native inventory and FIFO valuation
+  - inventory-receipt-posting
+  - native finance posting and original currency policy
+  - central identity, scope grants, audit and outbox
+incompatible_versions: []
+data_classification: confidential operational and financial evidence
+retention_policy: immutable source and audit; no owner history deletion
+permissions:
+  - manufacturing_execution.read
+  - manufacturing_execution.manage
+  - manufacturing_execution.approve
+  - manufacturing_execution.post
+default_roles: []
+migrations:
+  - 0133_pg_manufacturing_execution
+domain_invariants:
+  - independently approved immutable BOM version with exact original base UOMs
+  - physical stock covers combined native sales and manufacturing reservations
+  - whole actual material FIFO issue equals native inventory credit and WIP debit
+  - issued material cost equals good-output cost plus abnormal scrap expense plus remaining WIP
+  - cumulative good and scrap quantity cannot exceed the original planned quantity
+  - three distinct current authorized humans prepare, review and post each issue or output
+  - complete original request and historical ACK equal immutable native source evidence
+  - native finished receipts and source-owned GL cannot be progressed or reversed outside the owner
+domain_events:
+  - manufacturing_execution.create
+  - manufacturing_execution.approve-bom
+  - manufacturing_execution.prepare
+  - manufacturing_execution.review
+  - manufacturing_execution.post
+  - manufacturing_execution.cancel
+api_routes:
+  - GET /api/v1/manufacturing-execution/orders
+  - POST /api/v1/manufacturing-execution/boms
+  - POST /api/v1/manufacturing-execution/boms/{id}/approve
+  - POST /api/v1/manufacturing-execution/orders
+  - GET /api/v1/manufacturing-execution/orders/{id}
+  - GET /api/v1/manufacturing-execution/orders/{id}/requirements
+  - POST /api/v1/manufacturing-execution/orders/{id}/{prepare|review|post|cancel}
+  - POST /api/v1/manufacturing-execution/orders/{id}/completions
+  - POST /api/v1/manufacturing-execution/completions/{id}/{review|post|cancel}
+cli_commands: []
+ui_routes:
+  - /manufacturing-execution
+import_schemas: []
+export_schemas:
+  - manufacturing-requirement-v1
+  - manufacturing-execution-proof-v1
+synthetic_fixtures:
+  - tests/test_postgres_manufacturing_execution.py
+  - tests/manufacturing_execution_browser.py
+threat_model:
+  - direct SQL bypass of original movement, costs, source phases or historical acknowledgements
+  - concurrent sales and material reservations or overlapping output claims
+  - late native effect failure, lost response and authority revoked during lock wait
+  - detached public native receipt progression or original effect reversal
+benchmarks:
+  - script: .github/scripts/benchmark_manufacturing_api.py
+    workload: bounded sequential fresh synthetic tenant cycles through normal verified HTTPS
+    timed_requests_per_cycle: 22
+    original_native_effects_verified_per_cycle: 6
+    preseeded_material_effects_outside_timing: 2
+    timed_manufacturing_effects_per_cycle: 4
+    acceptance: pending actual source-bound runtime; no manufacturing scale or performance superiority claim
+rollback_plan: empty owner data only; populated downgrade refuses atomically and retains native claim column and original history
+test_matrix:
+  pure: tests/test_manufacturing_execution.py
+  independent_oracle: tests/test_manufacturing_cycle_oracle.py
+  benchmark_contract: tests/test_manufacturing_api_benchmark.py
+  native: tests/test_postgres_manufacturing_execution.py
+  studio:
+    - apps/web/src/manufacturing-execution-data.test.ts
+    - apps/web/src/components/ManufacturingExecutionPage.test.tsx
+  https_restore: apps/web/live/manufacturing-execution.playwright.config.ts
+independent_verification:
+  script: .github/scripts/verify_manufacturing_cycle_oracle.py
+  input: original manufacturing-execution-proof-v1 population JSON
+  trust_boundary: caller supplies separately retained original raw SHA; internal seals alone are not independent attestation
+supported_limits:
+  components: 100
+  retained_output_attempts_per_order: 200
+  exact_minor_or_scaled_units_max: 9000000000000000000
+  same_date_native_receipt_identity_candidates: 4096
+unsupported:
+  - SQLite financial execution
+  - partial material issue, alternative UOM conversion, lot or serial tracking
+  - labor, overhead, normal yield costing, routing, quality disposition or MRP
+  - foreign currency, tax, required GL dimensions or distributed manufacturing
+  - high-volume manufacturing throughput acceptance

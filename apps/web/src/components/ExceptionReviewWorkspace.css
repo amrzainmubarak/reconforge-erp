@@ -1,0 +1,278 @@
+.exception-review-workspace {
+  display: grid;
+  gap: 1rem;
+}
+
+.exception-review-hero {
+  margin-block-end: 0;
+}
+
+.exception-review-toolbar {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1.5fr) repeat(3, minmax(9rem, 1fr)) auto auto;
+  align-items: end;
+  gap: .8rem;
+}
+
+.exception-review-toolbar p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.exception-review-toolbar label,
+.exception-review-form label {
+  display: grid;
+  gap: .35rem;
+  color: var(--text-secondary);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.exception-review-toolbar select,
+.exception-review-form input,
+.exception-review-form select,
+.exception-review-form textarea {
+  inline-size: 100%;
+  min-block-size: var(--control-height);
+  border: 1px solid var(--border);
+  border-radius: .6rem;
+  background: var(--surface);
+  color: var(--text);
+  padding: .55rem .65rem;
+}
+
+.exception-review-form textarea {
+  min-block-size: 6rem;
+  resize: vertical;
+}
+
+.exception-review-toolbar select:focus-visible,
+.exception-review-form input:focus-visible,
+.exception-review-form select:focus-visible,
+.exception-review-form textarea:focus-visible,
+.exception-review-table:focus-visible,
+.exception-review-history-table:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.exception-review-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(24rem, 1.2fr);
+  align-items: start;
+  gap: 1rem;
+}
+
+.exception-review-list,
+.exception-review-detail,
+.exception-review-history {
+  display: grid;
+  gap: .85rem;
+}
+
+.exception-review-section-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.exception-review-section-heading h2,
+.exception-review-section-heading h3,
+.exception-review-description h3,
+.exception-review-form h3 {
+  margin: 0;
+}
+
+.exception-review-section-heading p,
+.exception-review-form p,
+.exception-review-description p {
+  margin: .35rem 0 0;
+  color: var(--text-secondary);
+}
+
+.exception-review-table,
+.exception-review-history-table {
+  max-inline-size: 100%;
+}
+
+.exception-review-table table,
+.exception-review-history-table table {
+  inline-size: 100%;
+  min-inline-size: 48rem;
+  border-collapse: collapse;
+}
+
+.exception-review-table th,
+.exception-review-table td,
+.exception-review-history-table th,
+.exception-review-history-table td {
+  border-block-end: 1px solid var(--border-subtle);
+  padding: .7rem;
+  text-align: start;
+  vertical-align: top;
+}
+
+.exception-review-table th,
+.exception-review-history-table th {
+  color: var(--text-secondary);
+  font-size: .76rem;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+
+.exception-review-table tr[data-selected="true"] {
+  background: color-mix(in srgb, var(--brand) 10%, transparent);
+}
+
+.exception-review-risk {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 1.65rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding-inline: .55rem;
+  font-size: .78rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.exception-review-risk--critical { color: var(--critical, #b42318); }
+.exception-review-risk--high { color: var(--warning, #a15c00); }
+.exception-review-risk--medium { color: var(--brand); }
+.exception-review-risk--low { color: var(--positive, #137a54); }
+
+.exception-review-pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+}
+
+.exception-review-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem .9rem;
+  margin: 0;
+}
+
+.exception-review-facts div,
+.exception-review-evidence div {
+  min-inline-size: 0;
+}
+
+.exception-review-facts dt,
+.exception-review-evidence dt {
+  color: var(--text-secondary);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.exception-review-facts dd,
+.exception-review-evidence dd {
+  margin: .15rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.exception-review-description {
+  border-block: 1px solid var(--border-subtle);
+  padding-block: .85rem;
+}
+
+.exception-review-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .85rem;
+}
+
+.exception-review-form {
+  display: grid;
+  align-content: start;
+  gap: .65rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: .75rem;
+  padding: .9rem;
+}
+
+.exception-review-form .primary-button {
+  justify-self: start;
+}
+
+.exception-review-read-only,
+.exception-review-error,
+.exception-review-stale,
+.exception-review-saved {
+  border: 1px solid var(--border);
+  border-radius: .7rem;
+  padding: .8rem 1rem;
+}
+
+.exception-review-error,
+.exception-review-stale {
+  border-color: var(--warning, #a15c00);
+  background: color-mix(in srgb, var(--warning, #a15c00) 10%, var(--surface));
+}
+
+.exception-review-error p,
+.exception-review-stale,
+.exception-review-saved,
+.exception-review-read-only {
+  margin: 0;
+}
+
+.exception-review-error .secondary-button {
+  margin-block-start: .65rem;
+}
+
+.exception-review-saved {
+  border-color: var(--positive, #137a54);
+  background: color-mix(in srgb, var(--positive, #137a54) 9%, var(--surface));
+}
+
+.exception-review-evidence {
+  display: grid;
+  gap: .35rem;
+  margin: 0;
+}
+
+@media (max-width: 1180px) {
+  .exception-review-toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .exception-review-toolbar p {
+    grid-column: 1 / -1;
+  }
+
+  .exception-review-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .exception-review-toolbar,
+  .exception-review-actions,
+  .exception-review-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .exception-review-toolbar .secondary-button,
+  .exception-review-form .primary-button {
+    inline-size: 100%;
+    justify-content: center;
+  }
+
+  .exception-review-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .exception-review-section-heading > .secondary-button {
+    inline-size: 100%;
+    justify-content: center;
+  }
+
+  .exception-review-table table,
+  .exception-review-history-table table {
+    min-inline-size: 42rem;
+  }
+}

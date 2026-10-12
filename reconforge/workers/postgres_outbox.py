@@ -7,6 +7,7 @@ from threading import Event
 from typing import Any
 
 from reconforge.infrastructure.postgres import (
+    PostgresRuntimeConnectionFactory,
     PostgresTenantBoundary,
     validate_legal_entity_id,
     validate_organization_id,
@@ -34,7 +35,7 @@ class PostgresOutboxWorker:
         publisher: Callable[[PostgresOutboxEvent], None] | Any,
         settings: OutboxWorkerSettings,
     ) -> None:
-        self.connection_factory = connection_factory
+        self.connection_factory = PostgresRuntimeConnectionFactory(connection_factory)
         self.tenant_supplier = tenant_supplier
         self.publisher = publisher
         self.settings = settings
@@ -46,7 +47,28 @@ class PostgresOutboxWorker:
         workspace_id: str | None = None,
         organization_id: str | None = None,
         legal_entity_id: str | None = None,
+        policy_permission: str | None = None,
+        surface: str = "postgres-outbox.worker.claim",
     ) -> None:
+        if (
+            self.settings.policy_context_supplier is None
+            and self.settings.policy_context_scope_supplier is None
+            and self.settings.policy_context_hierarchy_supplier is None
+            and not self.settings.allow_unbound_hosted_policy
+        ):
+            raise PostgresOutboxWorkerError(
+                "PostgreSQL outbox worker requires an explicit service-account policy supplier."
+            )
+        if (
+            self.settings.policy_context_supplier is not None
+            or self.settings.policy_context_scope_supplier is not None
+            or self.settings.policy_context_hierarchy_supplier is not None
+        ) and self.settings.permission_manifest is None:
+            raise PostgresOutboxWorkerError(
+                "PostgreSQL outbox worker requires a verified worker permission manifest."
+            )
+        requested_permission = policy_permission or self.settings.policy_permission
+        self._validate_permission_manifest(requested_permission)
         require_service_worker_policy(
             tenant_id=tenant_id,
             worker_id=self.settings.worker_id,
@@ -57,10 +79,25 @@ class PostgresOutboxWorker:
             workspace_id=workspace_id,
             organization_id=organization_id,
             entity_id=legal_entity_id,
-            policy_permission=self.settings.policy_permission,
-            surface="postgres-outbox.worker.claim",
+            policy_permission=requested_permission,
+            surface=surface,
             error_factory=PostgresOutboxWorkerError,
         )
+
+    def _validate_permission_manifest(self, requested_permission: str) -> None:
+        """Keep claim and publish checks inside the reviewed grant pair."""
+
+        manifest = self.settings.permission_manifest
+        if manifest is None:
+            return
+        permission = requested_permission.strip()
+        if permission not in {
+            manifest.discovery_permission.strip(),
+            manifest.execution_permission.strip(),
+        }:
+            raise PostgresOutboxWorkerError(
+                "Outbox worker policy permission does not match the verified permission manifest."
+            )
 
     def _authorize_tenant(self, tenant_id: str) -> None:
         """Backward-compatible tenant-lane policy entry point."""
@@ -145,6 +182,7 @@ class PostgresOutboxWorker:
                     workspace_id=workspace_id,
                     organization_id=organization_id,
                     legal_entity_id=legal_entity_id,
+                    policy_permission=self.settings.discovery_authorization_permission,
                 )
                 with PostgresTenantBoundary(self.connection_factory).transaction(
                     tenant_id,
@@ -176,6 +214,8 @@ class PostgresOutboxWorker:
                         workspace_id=workspace_id,
                         organization_id=organization_id,
                         legal_entity_id=legal_entity_id,
+                        policy_permission=self.settings.policy_permission,
+                        surface="postgres-outbox.worker.publish",
                     )
                     self._assert_event_scope(
                         event,
@@ -183,10 +223,26 @@ class PostgresOutboxWorker:
                         organization_id=organization_id,
                         legal_entity_id=legal_entity_id,
                     )
+                    with PostgresTenantBoundary(self.connection_factory).transaction(
+                        tenant_id, organization_id=organization_id, workspace_id=workspace_id,
+                        legal_entity_id=legal_entity_id,
+                    ) as connection:
+                        PostgresOutboxRepository(connection).assert_claim(
+                            tenant_id=tenant_id, event_id=event.id, worker_id=self.settings.worker_id,
+                            lease_generation=event.lease_generation,
+                        )
                     try:
                         self._publish(event)
                     except Exception as exc:  # noqa: BLE001 - publisher failures become retry state.
                         failed_count += 1
+                        self._authorize_scope(
+                            tenant_id,
+                            workspace_id=workspace_id,
+                            organization_id=organization_id,
+                            legal_entity_id=legal_entity_id,
+                            policy_permission=self.settings.policy_permission,
+                            surface="postgres-outbox.worker.mark-failed",
+                        )
                         with PostgresTenantBoundary(self.connection_factory).transaction(
                             tenant_id,
                             organization_id=organization_id,
@@ -200,9 +256,18 @@ class PostgresOutboxWorker:
                                 error=str(exc),
                                 max_attempts=self.settings.max_attempts,
                                 retry_base_seconds=self.settings.retry_base_seconds,
+                                lease_generation=event.lease_generation,
                             )
                         dead_lettered_count += int(dead_lettered)
                     else:
+                        self._authorize_scope(
+                            tenant_id,
+                            workspace_id=workspace_id,
+                            organization_id=organization_id,
+                            legal_entity_id=legal_entity_id,
+                            policy_permission=self.settings.policy_permission,
+                            surface="postgres-outbox.worker.mark-published",
+                        )
                         with PostgresTenantBoundary(self.connection_factory).transaction(
                             tenant_id,
                             organization_id=organization_id,
@@ -213,6 +278,7 @@ class PostgresOutboxWorker:
                                 tenant_id=tenant_id,
                                 event_id=event.id,
                                 worker_id=self.settings.worker_id,
+                                lease_generation=event.lease_generation,
                             )
                         published_count += 1
             except PostgresOutboxWorkerError:

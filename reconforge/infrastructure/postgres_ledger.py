@@ -25,6 +25,7 @@ from reconforge.io.persisted import (
     encode_audit_metadata,
     encode_postgres_outbox_payload,
 )
+from reconforge.utils.money import InvalidAmountError, parse_exact_amount
 from reconforge.utils.time import utc_now_text
 
 _ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
@@ -160,11 +161,12 @@ def _amount(value: object, field_name: str) -> tuple[Decimal, str]:
 
 
 def _minor_amount(value: object, minor_units: int, field_name: str) -> int:
+    raw_value = "0" if value is None else value
     try:
-        amount = Decimal(str(value or "0"))
-    except InvalidOperation as exc:
+        amount = parse_exact_amount(raw_value)
+    except InvalidAmountError as exc:
         raise PostgresLedgerValidationError(f"{field_name} is not an exact numeric amount.") from exc
-    if not amount.is_finite():
+    if amount < 0:
         raise PostgresLedgerValidationError(f"{field_name} is not an exact numeric amount.")
     scaled = amount * (Decimal(10) ** minor_units)
     if scaled != scaled.to_integral_value():

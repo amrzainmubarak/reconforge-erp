@@ -2,6 +2,32 @@ export type Locale = "en" | "ar";
 export type ThemePreference = "light" | "dark" | "system";
 export type Density = "comfortable" | "compact";
 
+/**
+ * Identifies what the Studio client can prove about the source it rendered.
+ * A `live` response describes the transport boundary only; it is not, by
+ * itself, independent proof that the response is operational evidence.
+ */
+export type StudioDataProvenance =
+  | {
+      state: "synthetic_demo";
+      source: "bundled_local_fixture";
+      operational_evidence: false;
+    }
+  | {
+      state: "live";
+      source: "same_origin_authorized_api";
+      operational_evidence: "unverified";
+    }
+  | {
+      state: "unknown";
+      source: "unknown";
+      operational_evidence: "unknown";
+    };
+
+export type StudioContractWithProvenance<T> = T & {
+  provenance: StudioDataProvenance;
+};
+
 export interface StudioMetric {
   key: string;
   label: string;
@@ -454,7 +480,7 @@ export interface IndividualCashflowStudioContract {
   notices: string[];
 }
 
-export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "professionalInvoicePayment" | "individualCashflow" | "mapping" | "rules" | "live" | "adminAudit";
+export type StudioPage = "dashboard" | "exceptions" | "evidence" | "inventory" | "retailSettlement" | "bankStatement" | "manufacturingCost" | "professionalInvoicePayment" | "individualCashflow" | "mapping" | "rules" | "live" | "adminAudit" | "notifications" | "receivables" | "budgetControl" | "inventoryReceipt" | "durableJobs" | "salesRevenue" | "procurementOperations" | "enterpriseFinance" | "stockSales" | "procurementPartial" | "financialReporting" | "fixedAssets" | "customerReturns" | "operationalFxTax" | "manufacturingExecution" | "intercompanyOperations" | "procurementSourcing";
 
 export interface StudioOverview {
   schema_version: 1;
@@ -485,6 +511,8 @@ export interface StudioOverview {
   notices: string[];
 }
 
+export type StudioOverviewWithProvenance = StudioContractWithProvenance<StudioOverview>;
+
 export interface AccessibilityPreferences {
   largerText: boolean;
   highContrast: boolean;
@@ -505,6 +533,7 @@ export interface LiveStudioMetric {
 
 export interface LiveStudioContract {
   mode: "live";
+  provenance: Extract<StudioDataProvenance, { state: "live" }>;
   endpoint: "/api/v1/metrics/dashboard";
   fetched_at: string;
   generated_at: string | null;

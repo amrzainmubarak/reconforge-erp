@@ -23,6 +23,7 @@
     "status": {"const": "verified"},
     "provider": {"const": "minio"},
     "image_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "image_digest_kind": {"enum": ["oci-manifest", "oci-config"]},
     "endpoint": {"type": "string", "pattern": "^https?://[^/:]+:[0-9]{1,5}$"},
     "bucket_profile": {"const": "synthetic-disposable-normal-and-object-lock-buckets"},
     "observed": {

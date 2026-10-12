@@ -14,6 +14,7 @@ import http.client
 import json
 import re
 import ssl
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -71,6 +72,12 @@ class WritebackNetworkRegistration(BaseModel):
 
     registration_schema: Literal["writeback-network-registration-v1"]
     connector_id: str = Field(pattern=_ID_PATTERN)
+    # A registration is reusable configuration, but a server-side provider
+    # boundary must never be reusable across tenant/workspace scopes.  Keep
+    # these fields optional for construction-time compatibility; execution
+    # rejects an unbound registration.
+    tenant_id: str | None = Field(default=None, min_length=1, max_length=256)
+    workspace_id: str | None = Field(default=None, min_length=1, max_length=256)
     version: str = Field(pattern=r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
     endpoint: str = Field(min_length=1, max_length=2_048)
     recovery_endpoint: str | None = Field(default=None, min_length=1, max_length=2_048)
@@ -89,6 +96,8 @@ class WritebackNetworkRegistration(BaseModel):
 
     @model_validator(mode="after")
     def validate_boundary(self) -> WritebackNetworkRegistration:
+        if (self.tenant_id is None) != (self.workspace_id is None):
+            raise ValueError("tenant_id and workspace_id must be provided together")
         if any(_OPERATION_RE.fullmatch(operation) is None for operation in self.allowed_operations):
             raise ValueError("allowed_operations contains invalid operation")
         if any(_OPERATION_RE.fullmatch(operation) is None for operation in self.allowed_compensation_operations):
@@ -152,6 +161,11 @@ class WritebackNetworkRegistration(BaseModel):
         # replay-compatible. A non-default scheme remains digest-bound.
         if self.credential_auth_scheme == "bearer":
             payload.pop("credential_auth_scheme", None)
+        # Preserve the digest of legacy unbound registrations while making a
+        # bound registration's scope part of the immutable transport contract.
+        if self.tenant_id is None and self.workspace_id is None:
+            payload.pop("tenant_id", None)
+            payload.pop("workspace_id", None)
         encoded = json.dumps(
             payload,
             ensure_ascii=True,
@@ -512,6 +526,7 @@ class WritebackNetworkExecutor:
     sleeper: Sleeper = field(default=lambda _seconds: None, repr=False)
     clock: Clock = field(default=time.monotonic, repr=False)
     _next_allowed_at: dict[str, float] = field(default_factory=dict, init=False, repr=False)
+    _rate_limit_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
 
     def dispatch(
         self,
@@ -527,6 +542,7 @@ class WritebackNetworkExecutor:
             raise WritebackNetworkError("writeback_network_dispatch_requires_dispatched")
         if intent.connector_id != registration.connector_id:
             raise WritebackNetworkError("writeback_connector_not_allowed")
+        self._authorize_registration_scope(intent, registration)
         if intent.operation not in registration.allowed_operations:
             raise WritebackNetworkError("writeback_operation_not_allowed")
         try:
@@ -612,6 +628,7 @@ class WritebackNetworkExecutor:
             raise WritebackNetworkError("writeback_network_recovery_requires_dispatched")
         if intent.connector_id != registration.connector_id:
             raise WritebackNetworkError("writeback_connector_not_allowed")
+        self._authorize_registration_scope(intent, registration)
         if intent.operation not in registration.allowed_operations:
             raise WritebackNetworkError("writeback_operation_not_allowed")
         if observation.idempotency_key != intent.idempotency_key:
@@ -679,6 +696,7 @@ class WritebackNetworkExecutor:
             raise WritebackNetworkError("writeback_recovery_requires_dispatched")
         if intent.connector_id != registration.connector_id:
             raise WritebackNetworkError("writeback_connector_not_allowed")
+        self._authorize_registration_scope(intent, registration)
         if intent.operation not in registration.allowed_operations:
             raise WritebackNetworkError("writeback_operation_not_allowed")
         credential = _resolve_credential(self.secret_resolver, registration.credential_reference)
@@ -729,6 +747,7 @@ class WritebackNetworkExecutor:
             raise WritebackNetworkError("writeback_compensation_requires_requested")
         if intent.connector_id != registration.connector_id:
             raise WritebackNetworkError("writeback_connector_not_allowed")
+        self._authorize_registration_scope(intent, registration)
         if intent.operation not in registration.allowed_compensation_operations:
             raise WritebackNetworkError("writeback_compensation_operation_not_allowed")
         if not isinstance(payload, bytes):
@@ -899,11 +918,30 @@ class WritebackNetworkExecutor:
 
     def _apply_rate_limit(self, registration: WritebackNetworkRegistration) -> None:
         now = self.clock()
-        allowed_at = self._next_allowed_at.get(registration.connector_id, now)
-        if allowed_at > now:
-            self.sleeper(allowed_at - now)
-            now = allowed_at
-        self._next_allowed_at[registration.connector_id] = now + (60.0 / registration.rate_limit_per_minute)
+        # Reserve the next slot while holding the lock, but sleep after
+        # releasing it.  Without the reservation, concurrent workers can all
+        # observe the same deadline and collectively exceed the declared
+        # provider rate.  The immutable registration digest keeps tenants and
+        # separately configured endpoints from sharing a throttle lane merely
+        # because they reuse a connector id.
+        rate_limit_key = registration.digest
+        with self._rate_limit_lock:
+            allowed_at = self._next_allowed_at.get(rate_limit_key, now)
+            reservation_at = max(now, allowed_at)
+            self._next_allowed_at[rate_limit_key] = reservation_at + (60.0 / registration.rate_limit_per_minute)
+            wait_seconds = max(0.0, allowed_at - now)
+        if wait_seconds:
+            self.sleeper(wait_seconds)
+
+    @staticmethod
+    def _authorize_registration_scope(
+        intent: WritebackIntent,
+        registration: WritebackNetworkRegistration,
+    ) -> None:
+        if registration.tenant_id is None or registration.workspace_id is None:
+            raise WritebackNetworkError("writeback_connector_scope_not_configured")
+        if registration.tenant_id != intent.tenant_id or registration.workspace_id != intent.workspace_id:
+            raise WritebackNetworkError("writeback_connector_scope_mismatch")
 
     def _retry_wait(self, registration: WritebackNetworkRegistration, attempt: int) -> None:
         policy = registration.retry_policy

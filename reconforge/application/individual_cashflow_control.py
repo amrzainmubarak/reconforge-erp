@@ -50,7 +50,11 @@ def _transactions(records: Iterable[Mapping[str, Any]], *, currency: str) -> tup
                 transaction_date=_required(record, "transaction_date"),
                 flow_type=_required(record, "flow_type"),
                 category=_required(record, "category"),
-                amount=Money.from_exact(_required(record, "amount"), record.get("currency", currency)),
+                amount=Money.from_exact(
+                    _required(record, "amount"),
+                    record.get("currency", currency),
+                    strict_precision=True,
+                ),
                 reference=_required(record, "reference"),
                 source_reference=_required(record, "source_reference"),
             )
@@ -68,7 +72,11 @@ def _budgets(records: Iterable[Mapping[str, Any]], *, currency: str) -> tuple[Ca
                 period=_required(record, "period"),
                 flow_type=_required(record, "flow_type"),
                 category=_required(record, "category"),
-                limit=Money.from_exact(_required(record, "limit"), record.get("currency", currency)),
+                limit=Money.from_exact(
+                    _required(record, "limit"),
+                    record.get("currency", currency),
+                    strict_precision=True,
+                ),
                 source_reference=_required(record, "source_reference"),
             )
             for record in records

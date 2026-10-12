@@ -7,9 +7,23 @@ import { NoticesPanel, ProfilePanel, QuickPanel, Topbar, type OpenPanel } from "
 import { loadStudioOverview } from "./data";
 import { translate, type MessageKey } from "./i18n";
 import { usePreferences } from "./preferences";
-import type { StudioOverview, StudioPage, ThemePreference } from "./types";
+import type { StudioOverviewWithProvenance, StudioPage, ThemePreference } from "./types";
+import { BrowserSessionProvider, useBrowserSession } from "./browserSession";
+import { isLiveOperationalPage } from "./studio-pages";
 
 const themes: ThemePreference[] = ["system", "light", "dark"];
+const SalesRevenueWorkspace = lazy(() => import("./components/SalesRevenueWorkspace").then((module) => ({ default: module.SalesRevenueWorkspace })));
+const ProcurementWorkspace = lazy(() => import("./components/ProcurementWorkspace").then((module) => ({ default: module.ProcurementWorkspace })));
+const EnterpriseFinanceWorkspace = lazy(() => import("./components/EnterpriseFinanceWorkspace"));
+const StockSalesPage = lazy(() => import("./components/StockSalesPage").then((module) => ({ default: module.StockSalesPage })));
+const ProcurementPartialPage = lazy(() => import("./components/ProcurementPartialPage").then((module) => ({ default: module.ProcurementPartialPage })));
+const FinancialReportingPage = lazy(() => import("./components/FinancialReportingPage"));
+const FixedAssetsPage = lazy(() => import("./components/FixedAssetsPage"));
+const CustomerReturnsPage = lazy(() => import("./components/CustomerReturnsPage"));
+const OperationalFxTaxPage = lazy(() => import("./components/OperationalFxTaxPage"));
+const ManufacturingExecutionPage = lazy(() => import("./components/ManufacturingExecutionPage").then((module) => ({ default: module.ManufacturingExecutionPage })));
+const IntercompanyOperationsPage = lazy(() => import("./components/IntercompanyOperationsPage"));
+const ProcurementSourcingPage = lazy(() => import("./components/ProcurementSourcingPage").then((module) => ({ default: module.ProcurementSourcingPage })));
 const Dashboard = lazy(() => import("./components/Dashboard").then((module) => ({ default: module.Dashboard })));
 const ExceptionQueue = lazy(() => import("./components/ExceptionQueue").then((module) => ({ default: module.ExceptionQueue })));
 const EvidenceBinder = lazy(() => import("./components/EvidenceBinder").then((module) => ({ default: module.EvidenceBinder })));
@@ -23,6 +37,11 @@ const MappingStudio = lazy(() => import("./components/MappingStudio").then((modu
 const RuleStudio = lazy(() => import("./components/RuleStudio").then((module) => ({ default: module.RuleStudio })));
 const LiveStudio = lazy(() => import("./components/LiveStudio").then((module) => ({ default: module.LiveStudio })));
 const AdminAudit = lazy(() => import("./components/AdminAudit").then((module) => ({ default: module.AdminAudit })));
+const NotificationInbox = lazy(() => import("./components/NotificationInbox").then((module) => ({ default: module.NotificationInbox })));
+const ReceivablesWorkspace = lazy(() => import("./components/ReceivablesWorkspace").then((module) => ({ default: module.ReceivablesWorkspace })));
+const BudgetControlWorkspace = lazy(() => import("./components/BudgetControlWorkspace").then((module) => ({ default: module.BudgetControlWorkspace })));
+const InventoryReceiptPosting = lazy(() => import("./components/InventoryReceiptPosting").then((module) => ({ default: module.InventoryReceiptPosting })));
+const JobOperationsWorkspace = lazy(() => import("./components/JobOperationsWorkspace").then((module) => ({ default: module.JobOperationsWorkspace })));
 
 function pageFromPath(pathname: string): StudioPage {
   const normalized = pathname.replace(/\/+$/, "");
@@ -38,6 +57,23 @@ function pageFromPath(pathname: string): StudioPage {
   if (normalized.endsWith("/rules")) return "rules";
   if (normalized.endsWith("/live")) return "live";
   if (normalized.endsWith("/admin-audit")) return "adminAudit";
+  if (normalized.endsWith("/notifications")) return "notifications";
+  if (normalized.endsWith("/receivables")) return "receivables";
+  if (normalized.endsWith("/budget-control")) return "budgetControl";
+  if (normalized.endsWith("/inventory-receipts")) return "inventoryReceipt";
+  if (normalized.endsWith("/jobs")) return "durableJobs";
+  if (normalized.endsWith("/sales-revenue")) return "salesRevenue";
+  if (normalized.endsWith("/stock-sales")) return "stockSales";
+  if (normalized.endsWith("/procurement-partial")) return "procurementPartial";
+  if (normalized.endsWith("/financial-reporting")) return "financialReporting";
+  if (normalized.endsWith("/fixed-assets")) return "fixedAssets";
+  if (normalized.endsWith("/customer-returns")) return "customerReturns";
+  if (normalized.endsWith("/operational-fx-tax")) return "operationalFxTax";
+  if (normalized.endsWith("/manufacturing-execution")) return "manufacturingExecution";
+  if (normalized.endsWith("/intercompany-operations")) return "intercompanyOperations";
+  if (normalized.endsWith("/procurement-sourcing")) return "procurementSourcing";
+  if (normalized.endsWith("/procurement-operations")) return "procurementOperations";
+  if (normalized.endsWith("/enterprise-finance") || normalized.endsWith("/erp")) return "enterpriseFinance";
   return "dashboard";
 }
 
@@ -50,14 +86,34 @@ function pathForPage(page: StudioPage): string {
     professionalInvoicePayment: "professional-invoice-payment",
     individualCashflow: "individual-cashflow",
     adminAudit: "admin-audit",
+    budgetControl: "budget-control",
+    inventoryReceipt: "inventory-receipts",
+    durableJobs: "jobs",
+    salesRevenue: "sales-revenue",
+    stockSales: "stock-sales",
+    procurementPartial: "procurement-partial",
+    financialReporting: "financial-reporting",
+    fixedAssets: "fixed-assets",
+    customerReturns: "customer-returns",
+    operationalFxTax: "operational-fx-tax",
+    manufacturingExecution: "manufacturing-execution",
+    intercompanyOperations: "intercompany-operations",
+    procurementSourcing: "procurement-sourcing",
+    procurementOperations: "procurement-operations",
+    enterpriseFinance: "enterprise-finance",
   };
   return page === "dashboard" ? `${base}/` || "/" : `${base}/${routeNames[page] ?? page}`;
 }
 
 export default function App() {
+  return <BrowserSessionProvider><StudioApp /></BrowserSessionProvider>;
+}
+
+function StudioApp() {
+  const auth = useBrowserSession();
   const preferences = usePreferences();
   const t = useCallback((key: MessageKey) => translate(preferences.locale, key), [preferences.locale]);
-  const [data, setData] = useState<StudioOverview | null>(null);
+  const [data, setData] = useState<StudioOverviewWithProvenance | null>(null);
   const [error, setError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -66,11 +122,13 @@ export default function App() {
   const commandReturnFocus = useRef<HTMLElement | null>(null);
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [activePage, setActivePage] = useState<StudioPage>(() => pageFromPath(window.location.pathname));
+  const liveOperationalPage = isLiveOperationalPage(activePage);
 
   useEffect(() => {
     const controller = new AbortController();
     setData(null);
     setError("");
+    if (liveOperationalPage) return () => controller.abort();
     loadStudioOverview(controller.signal)
       .then(setData)
       .catch((reason: unknown) => {
@@ -78,7 +136,7 @@ export default function App() {
         setError(reason instanceof Error ? reason.message : "The local Studio artifact could not be loaded.");
       });
     return () => controller.abort();
-  }, [loadAttempt]);
+  }, [loadAttempt, liveOperationalPage]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -129,7 +187,7 @@ export default function App() {
 
   return (
     <div className={`app-shell ${sidebarCollapsed ? "app-shell--collapsed" : ""}`}>
-      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <a className="skip-link" href="#main-content">{t("skipToMain")}</a>
       <Sidebar
         translate={t}
         collapsed={sidebarCollapsed}
@@ -154,6 +212,7 @@ export default function App() {
           onMobileMenu={() => setMobileMenuOpen(true)}
           noticeCount={data?.notices.length ?? 0}
           activePage={activePage}
+          liveIdentity={liveOperationalPage ? auth.username || t("arSignedOut") : undefined}
         />
 
         {openPanel === "accessibility" ? (
@@ -167,10 +226,19 @@ export default function App() {
             onTheme={preferences.setTheme}
           />
         ) : null}
-        {openPanel === "notifications" && data ? <NoticesPanel notices={data.notices} translate={t} locale={preferences.locale} /> : null}
-        {openPanel === "quick" ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
-        {openPanel === "profile" ? <ProfilePanel translate={t} /> : null}
+        {openPanel === "notifications" && data && !liveOperationalPage ? <NoticesPanel notices={data.notices} translate={t} locale={preferences.locale} /> : null}
+        {openPanel === "quick" && !liveOperationalPage ? <QuickPanel translate={t} onNavigate={navigate} /> : null}
+        {openPanel === "profile" && !liveOperationalPage ? <ProfilePanel translate={t} /> : null}
 
+        {activePage === "stockSales" ? <Suspense fallback={<LoadingView translate={t} />}><StockSalesPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "procurementPartial" ? <Suspense fallback={<LoadingView translate={t} />}><ProcurementPartialPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "financialReporting" ? <Suspense fallback={<LoadingView translate={t} />}><FinancialReportingPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "fixedAssets" ? <Suspense fallback={<LoadingView translate={t} />}><FixedAssetsPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "customerReturns" ? <Suspense fallback={<LoadingView translate={t} />}><CustomerReturnsPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "operationalFxTax" ? <Suspense fallback={<LoadingView translate={t} />}><OperationalFxTaxPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "manufacturingExecution" ? <Suspense fallback={<LoadingView translate={t} />}><ManufacturingExecutionPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "intercompanyOperations" ? <Suspense fallback={<LoadingView translate={t} />}><IntercompanyOperationsPage locale={preferences.locale} /></Suspense> : null}
+        {activePage === "procurementSourcing" ? <Suspense fallback={<LoadingView translate={t} />}><ProcurementSourcingPage locale={preferences.locale} /></Suspense> : null}
         {activePage === "dashboard" && error ? <ErrorView translate={t} message={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} /> : null}
         {activePage === "dashboard" && !error && !data ? <LoadingView translate={t} /> : null}
         {activePage === "dashboard" && data ? (
@@ -209,10 +277,35 @@ export default function App() {
           <Suspense fallback={<LoadingView translate={t} />}><RuleStudio locale={preferences.locale} translate={t} /></Suspense>
         ) : null}
         {activePage === "live" ? (
-          <Suspense fallback={<LoadingView translate={t} />}><LiveStudio locale={preferences.locale} translate={t} /></Suspense>
+          <Suspense fallback={<LoadingView translate={t} />}><LiveStudio locale={preferences.locale} translate={t} onSignIn={() => navigate("adminAudit")} /></Suspense>
         ) : null}
         {activePage === "adminAudit" ? (
           <Suspense fallback={<LoadingView translate={t} />}><AdminAudit locale={preferences.locale} translate={t} /></Suspense>
+        ) : null}
+        {activePage === "notifications" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><NotificationInbox locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "receivables" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><ReceivablesWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "budgetControl" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><BudgetControlWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "inventoryReceipt" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><InventoryReceiptPosting locale={preferences.locale} /></Suspense>
+        ) : null}
+
+        {activePage === "salesRevenue" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><SalesRevenueWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "procurementOperations" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><ProcurementWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "enterpriseFinance" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><EnterpriseFinanceWorkspace locale={preferences.locale} /></Suspense>
+        ) : null}
+        {activePage === "durableJobs" ? (
+          <Suspense fallback={<LoadingView translate={t} />}><JobOperationsWorkspace locale={preferences.locale} /></Suspense>
         ) : null}
       </div>
 

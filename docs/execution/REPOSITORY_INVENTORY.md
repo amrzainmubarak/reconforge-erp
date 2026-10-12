@@ -1,5 +1,33 @@
 # Repository Inventory
 
+## Source-bound successor refresh (2026-10-10)
+
+The [Wave3 acceptance packet and limits](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md)
+record the actual clean4bb/70d sources, native owner and lock-regression gates,
+real HTTPS/populated restore, matched806/70d measurements and retained failures.
+Additive0124/0125 bring the central registry to125. Ruff/Mypy/Bandit pass at70d;
+360 Studio tests pass at4bb with identical web source at70d. Python dependency
+audit at6eb has no known finding with the local package explicitly excluded;
+dependency locks/MIT are unchanged. The local general900-second timeout is not
+acceptance; full final-head hosted gates are authoritative separately.
+Coverage source/transport corrections, archived proof closure and the
+[dependency-first roadmap](GLOBAL_NEXT_PHASE_2026-10-10.md) supersede current
+summary wording only for these named scopes; older measured snapshots remain.
+
+## Source-bound refresh (2026-10-08)
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+The clean October 8 source has 610 runtime Python files, 558 Python test modules, 106 PostgreSQL revisions, SQLite head 55, 121 JSON schemas, 829 ADRs, eight CI workflows and 24 control packs. PostgreSQL head is `0106_pg_ap_link_reversal`; unmerged worktree revision 0107 is outside this checkout.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
+
+Current tracked inventory: 540 runtime Python files, 474 Python test files, 92 PostgreSQL revisions, 46 SQLite migrations, 121 JSON schemas, 781 ADRs, seven CI workflows and 24 control packs. Historical counts below retain their original dates.
+
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 Measured on 2026-07-26 against the dirty worktree documented in `STATE.md`.
 
 ## Quantitative inventory
@@ -207,12 +235,18 @@ ADRs to 81; schemas remain 53 and workflows remain six.
 - `docs/security/slsa-provenance-plan.v1.yaml`: Approved-SLSA-1.2-pinned plan for five artifact identities, seven trust boundaries, attestation/verification/failure/rollback contracts, and 12 gates; both tracks remain UNEVALUATED.
 - `.github/workflows/`: CI, CodeQL, Docker, security, release candidate with integrated exact-subject SBOMs, and OpenSSF Scorecard workflows; action references observed in the workflows are pinned by full commit SHA.
 - `Dockerfile` + `.dockerignore`: two stages use the reviewed official-digest-
-  pinned Python 3.11 Alpine base; checksum/version-pinned uv musl creates the locked
+  pinned Python 3.12 Alpine base; checksum/version-pinned uv musl creates the locked
   non-editable environment only in the builder. The runtime omits build
   tooling/source/manifests/documentation, runs as fixed UID/GID 10001, and the policy
   validator closes the deny-by-default build-context allowlist. E-822 verifies
   the bounded image locally without widening the deployment-readiness claim.
-- `docker-compose.yml`: local report/dashboard services; image tag is mutable.
+- `compose.yaml` is shipped as a bounded Community/local profile: one
+  non-root SQLite API service, loopback-only publication, internal network,
+  named data volume, and hardened read-only runtime. It is not a
+  Team/Enterprise/Regulated, HA/DR, hosted, or production deployment contract.
+  No `docker-compose.yml` is shipped; historical strategy notes mentioning
+  local report/dashboard Compose services remain historical and are not
+  current runtime evidence.
 - `pyproject.toml` + `uv.lock`: lower-bounded consumer metadata plus a universal hash-bearing repository resolution for 128 non-root runtime/server/observability/backup/federation/MFA/build/tool packages, enforced with exact uv/cutoff policy; server includes boto3, observability pins OpenTelemetry API/SDK 1.44.0, backup/connectors pin cryptography 50.0.0, WebAuthn resolves with pyOpenSSL 26.4.0, and federation pins joserfc 1.7.4 plus python3-saml 1.16.0.
 - `apps/web/package-lock.json`: exact npm dependency versions for the web app;
   all 211 non-root registry entries carry HTTPS resolution and SRI. Package

@@ -9,8 +9,13 @@ from typing import Any
 
 from reconforge.application.inventory_valuation_reversal import InventoryValuationReversalSummary
 from reconforge.auth.rbac import same_actor
-from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+from reconforge.infrastructure.postgres import validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
+from reconforge.infrastructure.postgres_repository_scope import (
+    PostgresRepositoryScopeError,
+    ensure_repository_tenant_scope,
+)
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
 from reconforge.platform.common import PlatformError, platform_id
 from reconforge.platform.inventory_values import (
@@ -184,8 +189,10 @@ class PostgresInventoryValuationReversalRepository:
     def _transaction(self) -> Iterator[None]:
         try:
             with self.connection.transaction():
-                set_local_tenant_scope(self.connection, self.tenant_id)
+                ensure_repository_tenant_scope(self.connection, self.tenant_id)
                 yield
+        except PostgresRepositoryScopeError as exc:
+            raise PlatformError(str(exc)) from exc
         except (PlatformError, PostgresInventoryValuationReversalError):
             raise
         except Exception as exc:
@@ -200,9 +207,11 @@ class PostgresInventoryValuationReversalRepository:
         return dict(row)
 
     def _workspace_id(self, workspace: str) -> str:
+        cleaned = clean_text(workspace, "Workspace name")
         row = self.connection.execute(
-            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND name=%s",
-            (self.tenant_id, clean_text(workspace, "Workspace name")),
+            "SELECT id FROM reconforge.domain_workspaces WHERE tenant_id=%s AND (id=%s OR name=%s) "
+            "ORDER BY CASE WHEN id=%s THEN 0 ELSE 1 END LIMIT 1",
+            (self.tenant_id, cleaned, cleaned, cleaned),
         ).fetchone()
         if row is None:
             raise PlatformError("Inventory valuation reversal workspace was not found.")
@@ -338,12 +347,9 @@ class PostgresInventoryValuationReversalRepository:
 
     def _public_reversal(self, reversal: Mapping[str, object], *, details: bool) -> dict[str, Any]:
         result = public_record(reversal)
-        currency = self._one(
-            "SELECT minor_units FROM reconforge.currencies WHERE tenant_id=%s AND code=%s",
-            (self.tenant_id, reversal["currency_code"]),
-            "Valuation reversal currency is unavailable.",
-        )
-        minor_units = int(currency["minor_units"])
+        original = self._original(str(reversal["original_valuation_document_id"]))
+        monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(original)
+        minor_units = monetary_policy.precision
         result["total_value"] = minor_to_text(int(result.pop("total_value_minor")), minor_units)
         result["original_total_value"] = minor_to_text(int(result.pop("original_total_value_minor")), minor_units)
         if details:
@@ -382,8 +388,11 @@ class PostgresInventoryValuationReversalRepository:
         number = document_number(reversal_number, "Valuation reversal number")
         with self._transaction():
             original = self._original(original_valuation_document_id)
+            if str(original["id"]).upper().startswith("IRP1-"):
+                raise PlatformError("Reviewed inventory receipts require their complete source inverse command.")
             if original["status"] != "Approved" or not original["finance_entry_id"]:
                 raise PlatformError("Only an Approved valuation with Finance evidence can be reversed.")
+            FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(original)
             movement = self._movement(reversal_movement_id)
             self._validate_scope_and_mirror(original, movement)
             conflict = self.connection.execute(
@@ -712,6 +721,9 @@ class PostgresInventoryValuationReversalRepository:
             (self.tenant_id, original["finance_entry_id"]),
             "Original Finance Core entry was not found.",
         )
+        monetary_policy, _ = FinancePolicyStore(self.connection, tenant_id=self.tenant_id).entry(original_entry)
+        if monetary_policy.currency_code != reversal["currency_code"]:
+            raise PlatformError("finance_currency_policy_mismatch: reversal currency differs from source entry.")
         lines = self.connection.execute(
             "SELECT * FROM reconforge.finance_entry_lines WHERE tenant_id=%s AND entry_id=%s ORDER BY line_number,id",
             (self.tenant_id, original_entry["id"]),
@@ -734,8 +746,8 @@ class PostgresInventoryValuationReversalRepository:
             """INSERT INTO reconforge.finance_entries(
             tenant_id,id,workspace_id,journal_id,organization_code,entity_code,period_id,entry_number,
             posting_date,description,external_reference,source_type,status,currency_code,total_debit_minor,
-            total_credit_minor,created_by,created_at,updated_at) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
-            'Generated','Draft',%s,%s,%s,%s,%s,%s)""",
+            total_credit_minor,created_by,created_at,updated_at,currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+            'Generated','Draft',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (
                 self.tenant_id,
                 entry_id,
@@ -754,6 +766,7 @@ class PostgresInventoryValuationReversalRepository:
                 reversal["created_by"],
                 utc_now_text(),
                 utc_now_text(),
+                *monetary_policy.values(),
             ),
         )
         for line in lines:

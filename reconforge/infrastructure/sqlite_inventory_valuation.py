@@ -6,13 +6,16 @@ import sqlite3
 import uuid
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from decimal import ROUND_HALF_EVEN, Decimal
 from hashlib import sha256
 from typing import Any
 
 from reconforge.application.inventory_valuation import InventoryValuationSummary
 from reconforge.auth.rbac import same_actor
+from reconforge.domain.finance_policy import POLICY_COLUMNS, FinanceCurrencyPolicy, FinancePolicyError
+from reconforge.domain.inventory_costing import allocate_fifo_value
 from reconforge.domain.models import utc_now_text
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+from reconforge.infrastructure.sqlite_inventory_unit_of_work import SQLiteInventoryUnitOfWork, inventory_operation
 from reconforge.infrastructure.sqlite_inventory_valuation_repository import (
     InventoryValuationRepository,
     SQLiteInventoryValuationRepository,
@@ -58,11 +61,22 @@ class SQLiteInventoryValuationRepositoryAdapter:
         connection: sqlite3.Connection,
         *,
         repository: InventoryValuationRepository | None = None,
+        unit_of_work: SQLiteInventoryUnitOfWork | None = None,
     ) -> None:
-        ensure_platform_schema(connection)
         self.connection = connection
-        self.repository = repository or SQLiteInventoryValuationRepository(connection)
-        self._ensure_schema()
+        self.unit_of_work = unit_of_work
+        if unit_of_work is not None:
+            unit_of_work.require_active(connection)
+            with unit_of_work.operation(connection):
+                if repository is not None:
+                    raise PlatformError("Use the owner's bound valuation persistence; custom repository composition is not supported.")
+                ensure_platform_schema(connection)
+                self.repository: InventoryValuationRepository = SQLiteInventoryValuationRepository(connection, unit_of_work)
+                self._ensure_schema()
+        else:
+            ensure_platform_schema(connection)
+            self.repository = repository or SQLiteInventoryValuationRepository(connection)
+            self._ensure_schema()
 
     def _ensure_schema(self) -> None:
         expected = {
@@ -83,6 +97,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
         if not expected <= existing:
             raise PlatformError("Inventory valuation schema is unavailable. Run 'reconforge db migrate' first.")
 
+    @inventory_operation(write=True)
     def upsert_policy(
         self,
         *,
@@ -172,6 +187,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
                 self.repository.upsert_policy(record)
                 _finalize_valuation_event(
                     self.connection,
+                    autocommit=False,
                     event_type="inventory.valuation.policy_upserted",
                     aggregate_type="inventory_valuation_policy",
                     aggregate_id=policy_id,
@@ -185,6 +201,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
             raise PlatformError("Unable to save the local FIFO valuation policy.") from exc
         return self.get_policy(policy_id, actor_label=actor_label)
 
+    @inventory_operation(write=True)
     def create_document(
         self,
         *,
@@ -204,6 +221,8 @@ class SQLiteInventoryValuationRepositoryAdapter:
             self.repository.movement(clean_text(movement_id, "Movement ID")),
             "Inventory movement not found.",
         )
+        if str(movement["id"]).upper().startswith("IRP1-"):
+            raise PlatformError("Reviewed Inventory movements require their complete source valuation.")
         if str(movement["status"]) != "Posted":
             raise PlatformError("Only Posted inventory movements can be prepared for valuation.")
         if str(movement["movement_type"]) == "Transfer":
@@ -283,6 +302,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
                 self.repository.insert_input_costs(cost_records)
                 _finalize_valuation_event(
                     self.connection,
+                    autocommit=False,
                     event_type="inventory.valuation.draft_created",
                     aggregate_type="inventory_valuation_document",
                     aggregate_id=document_id,
@@ -306,6 +326,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
             raise PlatformError("Unable to save the local valuation Draft.") from exc
         return self.get_document(document_id, actor_label=actor_label)
 
+    @inventory_operation(write=True)
     def approve_document(
         self,
         document_id: str,
@@ -384,6 +405,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
                         allocations = self._fifo_allocations(
                             legal_entity_id=str(document["legal_entity_id"]),
                             line=line,
+                            monetary_policy=FinancePolicyStore(self.connection).entry(document)[0],
                         )
                         value_minor = sum(self._as_int(item["value_minor"]) for item in allocations)
                     if value_minor <= 0:
@@ -485,6 +507,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
                     raise PlatformError("Inventory valuation changed concurrently; reload and retry.")
                 _finalize_valuation_event(
                     self.connection,
+                    autocommit=False,
                     event_type="inventory.valuation.approved",
                     aggregate_type="inventory_valuation_document",
                     aggregate_id=document_id,
@@ -512,6 +535,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
             raise PlatformError("Unable to approve the local inventory valuation.") from exc
         return self.get_document(document_id, actor_label=actor_label)
 
+    @inventory_operation(write=True)
     def cancel_document(
         self,
         document_id: str,
@@ -542,6 +566,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
                     raise PlatformError("Inventory valuation changed concurrently; reload and retry.")
                 _finalize_valuation_event(
                     self.connection,
+                    autocommit=False,
                     event_type="inventory.valuation.cancelled",
                     aggregate_type="inventory_valuation_document",
                     aggregate_id=document_id,
@@ -555,6 +580,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
             raise PlatformError("Unable to cancel the local inventory valuation.") from exc
         return self.get_document(document_id, actor_label=actor_label)
 
+    @inventory_operation()
     def get_policy(self, policy_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
         require_permission(self.connection, actor_label=actor_label, permission=INVENTORY_READ_PERMISSION)
         policy = self._required(
@@ -563,6 +589,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
         )
         return self._public_policy(policy)
 
+    @inventory_operation()
     def list_policies(
         self,
         *,
@@ -582,6 +609,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
             raise PlatformError("Unable to list local valuation policies.") from exc
         return [self._public_policy(record) for record in records]
 
+    @inventory_operation()
     def get_document(self, document_id: str, *, actor_label: str = "local-cli") -> dict[str, Any]:
         require_permission(self.connection, actor_label=actor_label, permission=INVENTORY_READ_PERMISSION)
         try:
@@ -593,6 +621,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to read the local inventory valuation.") from exc
 
+    @inventory_operation()
     def list_documents(
         self,
         *,
@@ -616,6 +645,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
         except sqlite3.DatabaseError as exc:
             raise PlatformError("Unable to list local inventory valuations.") from exc
 
+    @inventory_operation()
     def list_cost_layers(
         self,
         *,
@@ -638,6 +668,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
             raise PlatformError("Unable to list local FIFO cost layers.") from exc
         return [self._public_layer(row) for row in rows]
 
+    @inventory_operation()
     def summary(self, *, workspace: str = "default", actor_label: str = "local-cli") -> InventoryValuationSummary:
         require_permission(self.connection, actor_label=actor_label, permission=INVENTORY_READ_PERMISSION)
         workspace_name = clean_text(workspace, "Workspace name")
@@ -655,6 +686,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
             unvalued_posted_movements=counts.get("unvalued_posted_movements", 0),
         )
 
+    @inventory_operation()
     def snapshot(self, *, workspace: str = "default", actor_label: str = "local-cli") -> dict[str, Any]:
         """Return a bounded, path-free valuation control snapshot."""
 
@@ -769,7 +801,9 @@ class SQLiteInventoryValuationRepositoryAdapter:
             return str(policy["cogs_account_id"])
         return str(policy["adjustment_account_id"])
 
-    def _fifo_allocations(self, *, legal_entity_id: str, line: Mapping[str, object]) -> list[dict[str, int | str]]:
+    def _fifo_allocations(
+        self, *, legal_entity_id: str, line: Mapping[str, object], monetary_policy: FinanceCurrencyPolicy
+    ) -> list[dict[str, int | str]]:
         needed = self._as_int(line["quantity_scaled"])
         precision = self._as_int(line["quantity_precision"])
         allocations: list[dict[str, int | str]] = []
@@ -781,6 +815,11 @@ class SQLiteInventoryValuationRepositoryAdapter:
                 raise PlatformError("FIFO layer unit precision does not match the outbound movement line.")
             if needed <= 0:
                 break
+            source_policy, _ = FinancePolicyStore(self.connection).entry(layer)
+            try:
+                monetary_policy.require_compatible(source_policy)
+            except FinancePolicyError as exc:
+                raise PlatformError(str(exc)) from exc
             remaining_quantity = self._as_int(layer["remaining_quantity_scaled"])
             remaining_value = self._as_int(layer["remaining_value_minor"])
             take = min(needed, remaining_quantity)
@@ -810,16 +849,10 @@ class SQLiteInventoryValuationRepositoryAdapter:
 
     @staticmethod
     def _allocate_layer_value(*, remaining_value: int, remaining_quantity: int, consumed_quantity: int) -> int:
-        if consumed_quantity == remaining_quantity:
-            return remaining_value
-        exact = (Decimal(remaining_value) * Decimal(consumed_quantity)) / Decimal(remaining_quantity)
-        allocated = int(exact.to_integral_value(rounding=ROUND_HALF_EVEN))
-        if allocated <= 0 or allocated >= remaining_value:
-            raise PlatformError(
-                "A partial FIFO issue cannot be represented exactly enough in currency minor units; "
-                "consume the layer fully or use a more granular receipt quantity."
-            )
-        return allocated
+        try:
+            return allocate_fifo_value(remaining_value, remaining_quantity, consumed_quantity)
+        except ValueError as exc:
+            raise PlatformError(str(exc)) from exc
 
     def _insert_finance_draft(
         self,
@@ -830,6 +863,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
         postings: Sequence[tuple[str, int, int, str]],
         created_at: str,
     ) -> str:
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(document)
         grouped: dict[tuple[str, str], int] = defaultdict(int)
         for account_id, debit_minor, credit_minor, _description in postings:
             if debit_minor:
@@ -865,6 +899,7 @@ class SQLiteInventoryValuationRepositoryAdapter:
             "created_by": document["created_by"],
             "created_at": created_at,
             "updated_at": created_at,
+            **monetary_policy.metadata(),
         }
         ledger_lines: list[dict[str, object]] = []
         ordered = sorted(grouped.items(), key=lambda item: (item[0][1] != "debit", item[0][0]))
@@ -903,11 +938,10 @@ class SQLiteInventoryValuationRepositoryAdapter:
 
     def _public_document(self, document: Mapping[str, object], *, include_details: bool) -> dict[str, Any]:
         result: dict[str, Any] = dict(document)
-        currency = self._required(
-            self.repository.currency(str(document["currency_code"])),
-            "Valuation currency is unavailable.",
-        )
-        minor_units = int(currency["minor_units"])
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(document)
+        minor_units = monetary_policy.precision
+        for column in POLICY_COLUMNS:
+            result.pop(column, None)
         result["total_value"] = minor_to_text(self._as_int(result.pop("total_value_minor")), minor_units)
         if not include_details:
             return result
@@ -949,12 +983,11 @@ class SQLiteInventoryValuationRepositoryAdapter:
 
     def _public_layer(self, layer: Mapping[str, object]) -> dict[str, Any]:
         result: dict[str, Any] = dict(layer)
-        currency = self._required(
-            self.repository.currency(str(layer["currency_code"])),
-            "Valuation currency is unavailable.",
-        )
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(layer)
+        for column in POLICY_COLUMNS:
+            result.pop(column, None)
         precision = self._as_int(result["quantity_precision"])
-        minor_units = int(currency["minor_units"])
+        minor_units = monetary_policy.precision
         result["original_quantity"] = scaled_to_text(self._as_int(result.pop("original_quantity_scaled")), precision)
         result["remaining_quantity"] = scaled_to_text(self._as_int(result.pop("remaining_quantity_scaled")), precision)
         result["original_value"] = minor_to_text(self._as_int(result.pop("original_value_minor")), minor_units)
@@ -988,6 +1021,7 @@ def _finalize_valuation_event(
     object_type: str,
     action: str,
     metadata: dict[str, Any] | None = None,
+    autocommit: bool = True,
 ) -> None:
     """Commit valuation business writes only after outbox and audit evidence exist."""
 
@@ -1007,7 +1041,9 @@ def _finalize_valuation_event(
             object_id=aggregate_id,
             action=action,
             metadata=metadata,
+            autocommit=autocommit,
         )
     except (PlatformError, sqlite3.DatabaseError):
-        connection.rollback()
+        if autocommit:
+            connection.rollback()
         raise

@@ -28,6 +28,8 @@ class OutboxEvent:
     locked_at: str | None
     locked_by: str | None
     dead_lettered_at: str | None
+    lease_generation: int = 0
+    lease_generation_floor: int = 0
 
 
 class OutboxPublisher(Protocol):
@@ -56,12 +58,17 @@ class OutboxRepositoryProtocol(Protocol):
         """Claim ready events with an expiring lease."""
         ...
 
-    def mark_published(self, *, event_id: str, worker_id: str) -> None:
+    def assert_claim(self, *, event_id: str, worker_id: str, lease_generation: int) -> None:
+        """Verify a live exact claim at the last safe point before delivery."""
+        ...
+
+    def mark_published(self, *, event_id: str, worker_id: str, lease_generation: int | None = None) -> None:
         """Mark a leased event published."""
         ...
 
     def mark_failed(
-        self, *, event_id: str, worker_id: str, error: str, max_attempts: int = 5, retry_base_seconds: int = 5
+        self, *, event_id: str, worker_id: str, error: str, max_attempts: int = 5,
+        retry_base_seconds: int = 5, lease_generation: int | None = None
     ) -> bool:
         """Record a failure and return whether the event entered dead-letter state."""
         ...
@@ -86,12 +93,12 @@ class OutboxApplicationService:
         lease_seconds: int = 300,
         retry_base_seconds: int = 5,
     ) -> None:
-        if max_attempts < 1:
-            raise OutboxError("max_attempts must be at least 1.")
-        if lease_seconds < 1:
-            raise OutboxError("lease_seconds must be at least 1.")
-        if retry_base_seconds < 0:
-            raise OutboxError("retry_base_seconds cannot be negative.")
+        if type(max_attempts) is not int or not 1 <= max_attempts <= 100:
+            raise OutboxError("max_attempts must be between1 and100.")
+        if type(lease_seconds) is not int or not 1 <= lease_seconds <= 86400:
+            raise OutboxError("lease_seconds must be between1 and86400.")
+        if type(retry_base_seconds) is not int or not 0 <= retry_base_seconds <= 86400:
+            raise OutboxError("retry_base_seconds must be between0 and86400.")
         self.repository = repository
         self.max_attempts = max_attempts
         self.lease_seconds = lease_seconds
@@ -115,17 +122,23 @@ class OutboxApplicationService:
         failed = 0
         dead_lettered = 0
         for event in events:
+            self.repository.assert_claim(
+                event_id=event.id, worker_id=worker_id, lease_generation=event.lease_generation
+            )
             try:
                 if callable(publisher):
                     publisher(event)
                 else:
                     publisher.publish(event)
-                self.mark_published(event_id=event.id, worker_id=worker_id)
-                published += 1
             except Exception as exc:  # noqa: BLE001 - publisher failures become retry state.
                 failed += 1
-                if self.mark_failed(event_id=event.id, worker_id=worker_id, error=str(exc)):
+                if self.mark_failed(
+                    event_id=event.id, worker_id=worker_id, error=str(exc), lease_generation=event.lease_generation
+                ):
                     dead_lettered += 1
+            else:
+                self.mark_published(event_id=event.id, worker_id=worker_id, lease_generation=event.lease_generation)
+                published += 1
         return OutboxProcessResult(
             claimed=len(events),
             published=published,
@@ -133,11 +146,13 @@ class OutboxApplicationService:
             dead_lettered=dead_lettered,
         )
 
-    def mark_published(self, *, event_id: str, worker_id: str) -> None:
+    def mark_published(self, *, event_id: str, worker_id: str, lease_generation: int | None = None) -> None:
         """Mark a leased event published."""
-        self.repository.mark_published(event_id=event_id, worker_id=worker_id)
+        self.repository.mark_published(event_id=event_id, worker_id=worker_id, lease_generation=lease_generation)
 
-    def mark_failed(self, *, event_id: str, worker_id: str, error: str) -> bool:
+    def mark_failed(
+        self, *, event_id: str, worker_id: str, error: str, lease_generation: int | None = None
+    ) -> bool:
         """Record a bounded failure and return whether the event entered dead-letter state."""
         return self.repository.mark_failed(
             event_id=event_id,
@@ -145,6 +160,7 @@ class OutboxApplicationService:
             error=error,
             max_attempts=self.max_attempts,
             retry_base_seconds=self.retry_base_seconds,
+            lease_generation=lease_generation,
         )
 
     def requeue_dead_letter(self, *, event_id: str) -> None:

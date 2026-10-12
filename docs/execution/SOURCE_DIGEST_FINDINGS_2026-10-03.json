@@ -1,0 +1,79 @@
+{
+  "broad_exclusions_added": false,
+  "digest_verified_against_git_source": true,
+  "findings": [
+    {
+      "Commit": "83662639057c806ec718dc1f17bccd37356ba156",
+      "File": "docs/execution/MASTER_DATA_AUTHORITY_2026-10-03.json",
+      "Fingerprint": "83662639057c806ec718dc1f17bccd37356ba156:docs/execution/MASTER_DATA_AUTHORITY_2026-10-03.json:generic-api-key:807",
+      "RuleID": "generic-api-key",
+      "StartLine": 807,
+      "classification": "false-positive-source-file-sha256",
+      "source_file": "tests/test_api_server_identity.py",
+      "source_file_sha256": "2a443c06f03408824487873ef38484a5cbe6b4f42e50aa2fbd20a179e010e5ee"
+    },
+    {
+      "Commit": "dbfdefeb1431cf1b4c89fef8242543d545c88b12",
+      "File": "docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json",
+      "Fingerprint": "dbfdefeb1431cf1b4c89fef8242543d545c88b12:docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:688",
+      "RuleID": "generic-api-key",
+      "StartLine": 688,
+      "classification": "false-positive-source-file-sha256",
+      "source_file": "alembic/versions/0036_postgres_scim_auth.py",
+      "source_file_sha256": "7a7ca0f382132319e8dc04847ac6ffec6f370b06acfbe9139443c3d88a68f6d9"
+    },
+    {
+      "Commit": "dbfdefeb1431cf1b4c89fef8242543d545c88b12",
+      "File": "docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json",
+      "Fingerprint": "dbfdefeb1431cf1b4c89fef8242543d545c88b12:docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:691",
+      "RuleID": "generic-api-key",
+      "StartLine": 691,
+      "classification": "false-positive-source-file-sha256",
+      "source_file": "alembic/versions/0039_postgres_emergency_access.py",
+      "source_file_sha256": "9c73e56d333a815e26192c39eebc02f3bb63521d06e0aba866360cd0387fe7e9"
+    },
+    {
+      "Commit": "dbfdefeb1431cf1b4c89fef8242543d545c88b12",
+      "File": "docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json",
+      "Fingerprint": "dbfdefeb1431cf1b4c89fef8242543d545c88b12:docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:692",
+      "RuleID": "generic-api-key",
+      "StartLine": 692,
+      "classification": "false-positive-source-file-sha256",
+      "source_file": "alembic/versions/0040_postgres_webauthn_mfa.py",
+      "source_file_sha256": "c9dd108003fb4aff11f2794c299a996ab72e8ecf1787c71a86d77d7cb1a1cc94"
+    },
+    {
+      "Commit": "dbfdefeb1431cf1b4c89fef8242543d545c88b12",
+      "File": "docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json",
+      "Fingerprint": "dbfdefeb1431cf1b4c89fef8242543d545c88b12:docs/execution/POSTGRES_AMLSIM_WORKER_2026-10-03.json:generic-api-key:703",
+      "RuleID": "generic-api-key",
+      "StartLine": 703,
+      "classification": "false-positive-source-file-sha256",
+      "source_file": "alembic/versions/0051_access_policy_lifecycle.py",
+      "source_file_sha256": "04049fb9e69b8b2442876422b0129d3c8c24f4933bd2a23715832446f0c999d8"
+    },
+    {
+      "Commit": "b5075883e0c702f0a80df0d08ad6ed48655b2a3c",
+      "File": "docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json",
+      "Fingerprint": "b5075883e0c702f0a80df0d08ad6ed48655b2a3c:docs/execution/QUEUE_HTTP_DENIAL_2026-10-03.json:generic-api-key:65",
+      "RuleID": "generic-api-key",
+      "StartLine": 65,
+      "classification": "false-positive-source-file-sha256",
+      "source_file": "tests/test_api_operations.py",
+      "source_file_sha256": "ff066e504b96076ac39cbe78761ce70c42f6d96a14152f4a585f70f3412ec085"
+    },
+    {
+      "Commit": "ca82cbffd50734965f1c67ea1c94445df46885d5",
+      "File": "docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json",
+      "Fingerprint": "ca82cbffd50734965f1c67ea1c94445df46885d5:docs/execution/POSTGRES_FINANCE_SCOPE_2026-10-03.json:generic-api-key:135",
+      "RuleID": "generic-api-key",
+      "StartLine": 135,
+      "classification": "false-positive-source-file-sha256",
+      "source_file": "tests/test_api_server_identity.py",
+      "source_file_sha256": "dc0d6becc31beb25607d2d0a0ea3a2bb752bc2a4bf017894e7900f6bbd467a81"
+    }
+  ],
+  "report_digest": "7a7dd813d489cd218249501d68e03c5987e501a8f2d79d8347ec667f141f517d",
+  "schema_version": "reconforge-source-digest-false-positives-v1",
+  "status": "reviewed-exact-source-digests"
+}

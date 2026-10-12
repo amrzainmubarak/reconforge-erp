@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "slice": "PROD033",
+  "synthetic_only": true,
+  "status": "passed",
+  "sqlite_schema": 49,
+  "postgres_revision": "0099_pg_receivables_policy",
+  "tests": {
+    "tests": 216,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0
+  },
+  "pytest_seconds": 285.514,
+  "wrapper_seconds": 301.017,
+  "source_changed": [],
+  "test_source_changed": [],
+  "cleanup": true,
+  "native_restore": {
+    "target": "0099_pg_receivables_policy",
+    "dump_sha256": "06cff5d56cea1aa2dd8d0567e861b2a60adb7ce0afef7adca439b9d31984a09c",
+    "dump_bytes": 1180617,
+    "table_digests": {
+      "ar_customers": "c16977bd64cb3a49e33a24dbcbe798a84567943fa7b07983394dc451a977d5c4",
+      "ar_invoices": "9fa6115733697e34ec84e23cc0184189e55d1aae410a40ba8ccfd08ded6f79cd",
+      "ar_invoice_lines": "506f85352bd6f70d4fc5d17d175d785657509a4a2e4d90e339e1a932f8399b93",
+      "ar_receipts": "e7e4413aa87ee8863f3d78d26d675b99981e3535e781620244fe27f92423d401",
+      "ar_receipt_allocations": "4964b26b01b139c8b825f5dfeae201e5d6ec413cf796a63385556ed0eb7c9c83",
+      "ar_idempotency_keys": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "currency_registry_snapshots": "af65c43bf0afc09ec65f89549a7b1767d2ad82abb352eb3b04ae678c0cf3b2bd",
+      "currency_registry_bindings": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "domain_audit_events": "11ece855adb1301dc18b590580217ec39eb193104043d17647718250a789460c",
+      "domain_audit_ledger_state": "a9434185cb889bb1f8753fb0a5a858b230c9054c9c77c67f39f1cea1f70e62dc",
+      "outbox_events": "57beeaa3aff0c404aca4c7ba6b4e01499fd952d2c13b027e6d94cd44011bb6b2"
+    },
+    "cleanup": true,
+    "values_equal": true,
+    "source_data_unchanged": true,
+    "legacy_raw_denials": 15,
+    "forged_tuple_denials": 3
+  },
+  "owned_source_hashes": {
+    "runtime": {
+      "reconforge/domain/receivables_policy.py": "9b279d842be51422c67c13940cb81f7dc69db9deb3a00fd6a1f8a5dd254ae917",
+      "reconforge/infrastructure/receivables_policy_schema.py": "b0810b3f286b93e66f0d5bee829c855add54925c046e8c1b360dfa303cf6377e",
+      "reconforge/infrastructure/receivables_policy_storage.py": "519e704ae9b710ce87d010578b26b9ce5e9ffb09d4da31a806e0dc1790e4134a",
+      "reconforge/infrastructure/finance_policy_store.py": "78981cb1236c59c68229ba96cdca73cb541a5572a5473a85ce609396b2a9330f",
+      "reconforge/infrastructure/sqlite_receivables.py": "abb8655c7230b1819cee5b7f846623e456b18a0bd557bbc2f730d6e358e8bfdc",
+      "reconforge/infrastructure/postgres_receivables.py": "e6631b9c9bd3246b5ada98fc066c3c4f0fe0fbce03521b2ee45c2bb80cd58f74",
+      "reconforge/db/backup.py": "e80a7fb0fc520bf282a6e8e606e9bb10cf30dc89ad6a1ed7d65d1a2b4a3970f4",
+      "reconforge/db/migrations.py": "51039466345cbc0612ba748f7d81a9464423eec14d3a458a7cd0606d972ffc3d",
+      "alembic/versions/0099_postgres_receivables_policy.py": "4c98cc5365efc0483e8e704d5f8698ce669e42ee5b258a66bce8bc4446c9f9a6"
+    },
+    "tests": {
+      "tests/test_receivables_monetary_policy.py": "0a004be7054326fd6825f48205ecd0ed83ef0f2c5a609ca870b193632103f8f0",
+      "tests/test_receivables_policy_schema.py": "179725c811151ef74b79894b224cbabc1cb92b0aff61367a1c660270f59a1262",
+      "tests/test_receivables_policy_capture.py": "9fc54addd333b6531419271fb5a512fce79745d295dbe4fb953bd39bede11c59",
+      "tests/test_receivables_policy_raw_guards.py": "c322804ec9ee3a351276cb78a7dae7ac55da4c72eb9398c642e043733f4e33b5",
+      "tests/test_postgres_receivables_policy_restore.py": "7c89fbca68998a6d2b1f81dc42aa4cac28b20f2efa2c5999df2fcf13da270256",
+      "tests/test_postgres_receivables.py": "06765a4468bf2130e5ebee999d85e0a3f44366992ac742c50087fc642ef43e25",
+      "tests/test_api_server_receivables.py": "203db73f3a0057e59933d7945c583b37fa9f4720adb5c32bf38b943427e3e54d",
+      "tests/test_receivables_credit_integrity.py": "561fe626451497cdb710e7ca08186a61441ac69481e84eda07232ccfd2a5b468",
+      "tests/postgres_test_hygiene.py": "942dabbf652de16551dd17eefa24681608753da7174f687530ce9b3431c0ff80"
+    },
+    "root_owned_registry": [
+      "reconforge/infrastructure/postgres_operations.py",
+      "tests/test_postgres_operations.py"
+    ],
+    "api_dto_ui_changed": false,
+    "sqlite_schema": 49,
+    "postgres_revision": "0099_pg_receivables_policy"
+  },
+  "artifact_sha256": {
+    "PROD033-BACKEND-HANDOFF.md": "4334c3d5cf507444fcb8b74927a99eeffba31263364468a4a9d11ca32c8bb904",
+    "prod033-final-closure/report.json": "92989d862a8b02cb7445222f9738708b75f67b67fa3a2afae6ff0bd1ea4785f3",
+    "prod033-final-closure/results.xml": "83f1652b15809fdfc7c9fdfaa117db6ed60d7988b5a5b438d3fc21e7870de8cc",
+    "prod033-final-closure/pytest.log": "1a70fd215b5d8d48815c2508d24ef18ecfc06b441fde2245d0b6c42ec2109350",
+    "prod033-final-closure/migration.log": "f1e9c3162d208f678839abb37d57f34ca9fc6d045480dae3922a4dd937c0fb91",
+    "prod033-native-final-closure.json": "a05fd4a2e4116576c4b8f294c117f8c6fcf51182c404f1f6a3060f11b77a9908",
+    "prod033-final-source-checkpoint.json": "b24e4dca78a8bc0960de5f81700be05ad92aaa3c0a678bc44ad8106a0617336e",
+    "prod033-final-closure-ruff.log": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0",
+    "prod033-final-closure-mypy.log": "7aefcacc6d445354a115cf76fcdea696165be7ad8cf9b86a60ea98727c6e96f6",
+    "prod033-final-closure-bandit.log": "e5dd9bf84fd8d2e88ca8f8310f142113166f5b6794177ebbb5aaf23eeb7382ef",
+    "prod033-final-closure-diff-check.log": "c54aa95de71d636025304ef85bb48a881fd2e3943dadc2dad55c099a7c706e0e",
+    "PROD033-FINANCE-PEER-REPLAY-AFTER.json": "24e2b8952ebc1765f696e5165d8c47d4a6c2ff811fad0cf83c59539a8c527262",
+    "PROD033-FINANCE-PEER-STORAGE-AFTER.json": "35312c86ea88722fde9684f1a565ecdbaa8924e3cb32d49066f65bb82327acc6"
+  },
+  "runtime_hold_released": true,
+  "active_owned_processes": [],
+  "limitations": [
+    "Backend metadata only; HTTP DTO/UI unchanged.",
+    "Legacy all-NULL policy has no automatic interpretation/repair.",
+    "Preexisting inactive-customer receipt replay recovery remains separately disclosed.",
+    "No customer-scale or external-audit acceptance evidence."
+  ]
+}

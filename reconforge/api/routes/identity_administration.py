@@ -22,6 +22,12 @@ from reconforge.application.identity_administration import (
     IdentityAdministrationError,
 )
 from reconforge.application.pagination import CursorCodec, CursorError, CursorPosition, cursor_scope_digest
+from reconforge.auth.field_access import (
+    project_identity_session_page,
+    project_identity_session_revocation,
+    project_identity_user_page,
+    project_identity_user_status,
+)
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres_identity_administration import (
     PostgresIdentityAdministrationRepository,
@@ -217,6 +223,50 @@ def _encode_cursor(
     )
 
 
+def _project_user_page(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_identity_user_page(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="identity_user_projection_failed",
+            message="Identity administration returned an invalid user response contract.",
+        ) from exc
+
+
+def _project_session_page(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_identity_session_page(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="identity_session_projection_failed",
+            message="Identity administration returned an invalid session response contract.",
+        ) from exc
+
+
+def _project_user_status(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_identity_user_status(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="identity_user_projection_failed",
+            message="Identity administration returned an invalid user response contract.",
+        ) from exc
+
+
+def _project_session_revocation(value: dict[str, object]) -> dict[str, object]:
+    try:
+        return project_identity_session_revocation(value).visible
+    except (TypeError, ValueError) as exc:
+        raise APIError(
+            status_code=503,
+            code="identity_session_projection_failed",
+            message="Identity administration returned an invalid session response contract.",
+        ) from exc
+
+
 @router.get("/users", response_model=IdentityUserPageResponse)
 def list_identity_users(
     request: Request,
@@ -252,7 +302,9 @@ def list_identity_users(
         tie_breaker=page.next_user_id,
     )
     users = tuple(asdict(item) for item in page.items)
-    return {"users": users, "pagination": {"limit": limit, "returned": len(users), "next_cursor": next_cursor}}
+    return _project_user_page(
+        {"users": users, "pagination": {"limit": limit, "returned": len(users), "next_cursor": next_cursor}}
+    )
 
 
 @router.post("/users/{user_id}/status", response_model=UserStatusResponse)
@@ -273,7 +325,7 @@ def set_identity_user_status(
             expected_lifecycle_version=payload.expected_lifecycle_version,
         ),
     )
-    return asdict(result)
+    return _project_user_status(asdict(result))
 
 
 @router.get("/sessions", response_model=IdentitySessionPageResponse)
@@ -314,10 +366,9 @@ def list_identity_sessions(
         tie_breaker=page.next_session_id,
     )
     sessions = tuple(asdict(item) for item in page.items)
-    return {
-        "sessions": sessions,
-        "pagination": {"limit": limit, "returned": len(sessions), "next_cursor": next_cursor},
-    }
+    return _project_session_page(
+        {"sessions": sessions, "pagination": {"limit": limit, "returned": len(sessions), "next_cursor": next_cursor}}
+    )
 
 
 @router.post("/sessions/{session_id}/revoke", response_model=SessionRevocationResponse)
@@ -342,4 +393,4 @@ def revoke_identity_session(
             reason_code=payload.reason_code,
         ),
     )
-    return asdict(result)
+    return _project_session_revocation(asdict(result))

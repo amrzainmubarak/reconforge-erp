@@ -13,6 +13,12 @@ Implemented:
   explicit reviewed-upstream-TLS assertion. CSP, HSTS in secure mode, frame
   denial, MIME sniffing denial, referrer policy, and permissions policy apply
   to both surfaces. ADR 0200 and the same-origin runbook define the boundary.
+- PostgreSQL API and reconciliation/outbox/scheduler runtime factories validate
+  PostgreSQL 16+ role and session posture on every checkout. Administrative,
+  RLS-bypassing, unsafe owner or privilege-escalation-capable identities are rejected;
+  changed session roles and persistent tenant settings cause connection discard.
+  Keep migration/restore credentials separate. See ADR 0788 for exact checks and
+  boundaries; safe checkout alone does not establish complete tenant isolation.
 
 Partially implemented:
 

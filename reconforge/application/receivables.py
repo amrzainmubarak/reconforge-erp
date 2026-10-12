@@ -99,10 +99,12 @@ class ReceivablesRepositoryProtocol(Protocol):
     def get_customer(self, customer_id: str) -> dict[str, Any]: ...
     def get_invoice(self, invoice_id: str) -> dict[str, Any]: ...
     def get_receipt(self, receipt_id: str) -> dict[str, Any]: ...
+    def list_receipts(self, *, workspace: str = "default", customer_id: str = "", limit: int = 100, offset: int = 0, organization_id: str | None = None, legal_entity_id: str | None = None) -> dict[str, Any]: ...
     def list_customers(self, *, workspace: str = "", status: str = "") -> list[dict[str, Any]]: ...
     def list_invoices(self, *, workspace: str = "default", status: str = "") -> list[dict[str, Any]]: ...
     def credit_exposure(self, customer_code: str, *, workspace: str = "default") -> dict[str, Any]: ...
     def aging_report(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]: ...
+    def aging_report_by_currency(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]: ...
 
 
 class ReceivablesApplicationService:
@@ -248,6 +250,9 @@ class ReceivablesApplicationService:
     def get_receipt(self, receipt_id: str) -> dict[str, Any]:
         return self.repository.get_receipt(receipt_id)
 
+    def list_receipts(self, *, workspace: str = "default", customer_id: str = "", limit: int = 100, offset: int = 0, organization_id: str | None = None, legal_entity_id: str | None = None) -> dict[str, Any]:
+        return self.repository.list_receipts(workspace=workspace, customer_id=customer_id, limit=limit, offset=offset, organization_id=organization_id, legal_entity_id=legal_entity_id)
+
     def list_customers(self, *, workspace: str = "", status: str = "") -> list[dict[str, Any]]:
         return self.repository.list_customers(workspace=workspace, status=status)
 
@@ -259,3 +264,6 @@ class ReceivablesApplicationService:
 
     def aging_report(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
         return self.repository.aging_report(workspace=workspace, as_of_date=as_of_date)
+
+    def aging_report_by_currency(self, *, workspace: str = "default", as_of_date: str) -> dict[str, Any]:
+        return self.repository.aging_report_by_currency(workspace=workspace, as_of_date=as_of_date)

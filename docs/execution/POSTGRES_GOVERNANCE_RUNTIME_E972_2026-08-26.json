@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "report_id": "postgres-governance-runtime-e972-2026-08-26",
+  "executed_at": "2026-08-26",
+  "status": "passed",
+  "runtime": {
+    "postgres_image": "postgres:17.10-alpine",
+    "postgres_image_digest": "sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+    "postgres_version": "17.10",
+    "docker_engine_scope": "single_local_host",
+    "database_name": "reconforge_e972"
+  },
+  "application_role": {
+    "role_name": "reconforge_e972_app",
+    "superuser": false,
+    "bypass_rls": false
+  },
+  "migration_head": "0092_pg_close_lock_evidence",
+  "tests": {
+    "security_governance": {
+      "selector": "tests/test_postgres_security_governance.py::test_live_security_governance_is_atomic_runtime_enforced_and_tenant_isolated",
+      "passed": true,
+      "count": 1
+    },
+    "identity_administration": {
+      "selector": "tests/test_postgres_identity_administration.py::test_live_identity_admin_http_is_atomic_tenant_isolated_and_invalidates_sessions",
+      "passed": true,
+      "count": 1
+    }
+  },
+  "observed": [
+    "tenant_isolation",
+    "atomic_retention_policy_lifecycle",
+    "retention_floor_not_shortened",
+    "identity_session_invalidation",
+    "step_up_and_last_admin_guards",
+    "migration_head_verified"
+  ],
+  "limitations": [
+    "single_local_docker_host",
+    "synthetic_tenants_and_credentials",
+    "no_external_idp_interoperability",
+    "no_distributed_session_revocation",
+    "no_ha_dr_or_production_slo",
+    "no_compliance_or_independent_assurance"
+  ],
+  "report_digest": "9bb319f7c40b60df240935175fe3375f5044adba61ef631f69844722a95b6cab"
+}

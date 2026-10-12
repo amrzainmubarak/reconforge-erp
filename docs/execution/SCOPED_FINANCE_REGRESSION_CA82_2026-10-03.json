@@ -1,0 +1,126 @@
+{
+  "commands": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-ra",
+        "--tb=short",
+        "-o",
+        "addopts=",
+        "--junitxml",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\scoped-ca82-pytest.xml"
+      ],
+      "duration_seconds": 791.495,
+      "exit_code": 1,
+      "log": "scoped-ca82-pytest.log",
+      "log_sha256": "179597cc56e15a158ae36dc146acaf843a39afc0c31594e563b83708e0ba60a0",
+      "source_commit": "ca82cbffd50734965f1c67ea1c94445df46885d5",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T05:33:23.930128+00:00"
+    }
+  ],
+  "failure": {
+    "actual": 6,
+    "cause": "Test hardcoded pending migration count at0089; installed0095 introduces sixth successor.",
+    "expected": 5,
+    "node": "tests/test_api_foundation.py::test_server_health_is_degraded_when_postgresql_migrations_are_pending",
+    "repair": "Assert exact registry suffix count and latest schema revision; retain failed snapshot and require fresh isolated run."
+  },
+  "pytest": {
+    "failed": 1,
+    "passed": 3647,
+    "seconds": 788.16,
+    "skipped": 259,
+    "warnings": 24
+  },
+  "quality_commands": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "duration_seconds": 0.242,
+      "exit_code": 0,
+      "log": "scoped-ca82-ruff.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "source_commit": "ca82cbffd50734965f1c67ea1c94445df46885d5",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T05:33:23.931135+00:00"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "duration_seconds": 1.484,
+      "exit_code": 0,
+      "log": "scoped-ca82-mypy.log",
+      "log_sha256": "0cb996c435b9ee42d29284196a4671d4e0a804fc7b5e52c7fa3fdf3cadf0628f",
+      "source_commit": "ca82cbffd50734965f1c67ea1c94445df46885d5",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T05:33:24.174449+00:00"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "duration_seconds": 17.708,
+      "exit_code": 0,
+      "log": "scoped-ca82-bandit.log",
+      "log_sha256": "33129eb5f5b89873ae23bc7f90189ba6a27fa9fd70992e1dea5648ee3c2b413c",
+      "source_commit": "ca82cbffd50734965f1c67ea1c94445df46885d5",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T05:33:25.659059+00:00"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation",
+        "--outdir",
+        "F:\\reconforge-erp\\output\\verification-2026-10-03\\scoped-ca82-dist"
+      ],
+      "duration_seconds": 19.268,
+      "exit_code": 0,
+      "log": "scoped-ca82-build.log",
+      "log_sha256": "ab22bc55d7d0b712c0ac4e109a6794a624be0a0e3f32ebed0d8ef172b4ab5ad2",
+      "source_commit": "ca82cbffd50734965f1c67ea1c94445df46885d5",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T05:33:43.356007+00:00"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "duration_seconds": 0.062,
+      "exit_code": 0,
+      "log": "scoped-ca82-diff-check.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": "ca82cbffd50734965f1c67ea1c94445df46885d5",
+      "source_import": "C:\\Users\\LOQ\\.codex\\worktrees\\financial-verification\\reconforge-erp\\reconforge\\__init__.py",
+      "started_at": "2026-10-03T05:34:02.637031+00:00"
+    }
+  ],
+  "report_digest": "a9f8075a103686dce72171f757adeca8f6f20060d0aeffca81027f3461c05a6c",
+  "schema_version": "reconforge-isolated-regression-v1",
+  "status": "failed",
+  "xml": {
+    "path": "output/verification-2026-10-03/scoped-ca82-pytest.xml",
+    "sha256": "f6f8ecebfacfd257c9ea5093166daff0ddd68ebd617378cd00686669c6d06dc5"
+  }
+}

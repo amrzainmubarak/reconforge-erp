@@ -217,7 +217,7 @@ def test_master_data_service_enforces_seeded_rbac(tmp_path: Path) -> None:
 
 
 def test_master_data_api_is_authenticated_rbac_protected_and_strict(tmp_path: Path) -> None:
-    client, _ = _api_setup(tmp_path)
+    client, path = _api_setup(tmp_path)
     controller_headers = {"Authorization": f"Bearer {_token(client, 'controller')}"}
     reviewer_headers = {"Authorization": f"Bearer {_token(client, 'reviewer')}"}
 
@@ -241,6 +241,14 @@ def test_master_data_api_is_authenticated_rbac_protected_and_strict(tmp_path: Pa
         headers=controller_headers,
         json={"name": "2026-07", "start_date": "2026-07-01", "end_date": "2026-07-31"},
     )
+    connection = connect(path, require_exists=True)
+    try:
+        for table in ("currencies", "organizations", "legal_entities", "branches", "periods"):
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN unknown_future_column TEXT")  # nosec B608
+            connection.execute(f"UPDATE {table} SET unknown_future_column = 'must-not-escape'")  # nosec B608
+        connection.commit()
+    finally:
+        connection.close()
     listed = client.get("/api/v1/master-data/organizations", headers=reviewer_headers)
     paged = client.get("/api/v1/master-data/organizations?limit=1&offset=0", headers=reviewer_headers)
     invalid_page = client.get("/api/v1/master-data/organizations?limit=1001", headers=reviewer_headers)
@@ -282,12 +290,14 @@ def test_master_data_api_is_authenticated_rbac_protected_and_strict(tmp_path: Pa
     assert created_period.status_code == 200
     assert listed.status_code == 200
     assert listed.json()["organizations"][0]["organization_code"] == "SYN"
+    assert "unknown_future_column" not in listed.text
     assert listed.json()["pagination"] == {"limit": 500, "offset": 0, "returned": 1}
     assert paged.json()["pagination"] == {"limit": 1, "offset": 0, "returned": 1}
     assert invalid_page.status_code == 422
     assert summary.json()["summary"]["legal_entities"] == 1
     assert snapshot.status_code == 200
     assert snapshot.json()["schema_version"] == 1
+    assert "unknown_future_column" not in snapshot.text
     assert currency_registry.status_code == 200
     assert currency_registry.json()["reconciliation"]["status"] == "consistent"
     assert currency_registry_bind.status_code == 200

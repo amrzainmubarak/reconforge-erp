@@ -31,8 +31,13 @@ const contract: IndividualCashflowStudioContract = {
   notices: [],
 };
 
+const loadedContract = {
+  ...contract,
+  provenance: { state: "synthetic_demo", source: "bundled_local_fixture", operational_evidence: false },
+} satisfies Awaited<ReturnType<typeof loadIndividualCashflowStudio>>;
+
 beforeEach(() => {
-  vi.mocked(loadIndividualCashflowStudio).mockResolvedValue(contract);
+  vi.mocked(loadIndividualCashflowStudio).mockResolvedValue(loadedContract);
 });
 
 describe("IndividualCashflowStudio", () => {

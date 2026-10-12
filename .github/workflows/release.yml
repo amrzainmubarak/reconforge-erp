@@ -253,10 +253,7 @@ jobs:
           set -euo pipefail
           local_image="${IMAGE_NAME}:candidate-${GITHUB_SHA}"
           docker build --pull --no-cache --platform linux/amd64 --tag "$local_image" .
-          image_config_digest="$(docker image inspect --format '{{.Id}}' "$local_image")"
-          [[ "$image_config_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           printf 'LOCAL_IMAGE=%s\n' "$local_image" >> "$GITHUB_ENV"
-          printf 'IMAGE_CONFIG_DIGEST=%s\n' "$image_config_digest" >> "$GITHUB_ENV"
 
       - name: Generate exact-image SBOM and vulnerability inputs
         shell: bash
@@ -268,6 +265,9 @@ jobs:
             --scope squashed \
             --output "syft-json=${RUNNER_TEMP}/image.syft.json" \
             --output "cyclonedx-json=${RUNNER_TEMP}/image-syft.raw.cdx.json"
+          image_config_digest="$(python .github/scripts/extract_syft_image_config_digest.py \
+            --syft-json "${RUNNER_TEMP}/image.syft.json")"
+          printf 'IMAGE_CONFIG_DIGEST=%s\n' "$image_config_digest" >> "$GITHUB_ENV"
           "$GRYPE_PATH" db update
           "$GRYPE_PATH" "sbom:${RUNNER_TEMP}/image.syft.json" \
             --vex docs/security/container-runtime.openvex.json \

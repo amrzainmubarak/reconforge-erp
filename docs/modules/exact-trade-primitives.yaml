@@ -1,0 +1,30 @@
+id: exact-trade-primitives
+name: Exact quantity conversion and FIFO allocation
+version: 1.0.0
+maturity: experimental
+owner: financial-integrity
+dependencies: [inventory.core, finance.core, platform.core]
+incompatible_versions: [ambient-decimal-quantity-arithmetic]
+data_classification: financial-sensitive
+retention_policy: retain-original-quantity-and-valuation-source-evidence
+permissions: [receivables.manage, inventory.valuation.manage, inventory.valuation.approve]
+default_roles: [admin]
+migrations: []
+domain_invariants:
+  - exact-coefficient-scale-and-integer-product-independent-of-ambient-context
+  - existing-ar-line-half-up-and-fifo-half-even-remain-separate-policies
+  - partial-fifo-leaves-positive-cost-for-positive-residual-quantity
+  - final-fifo-consumption-exhausts-all-residual-cost
+  - fixed-point-expansion-bounded-before-format-or-ratio-allocation
+domain_events: []
+api_routes: []
+cli_commands: []
+ui_routes: []
+import_schemas: [strict-financial-input-v2, bounded-stock-quantity-text]
+export_schemas: [exact-quantity-text, integer-minor-unit-allocation]
+synthetic_fixtures: [tests/test_exact_trade_primitives.py, tests/test_postgres_exact_trade_primitives.py]
+threat_model: [ambient-context-financial-corruption, exponent-expansion-resource-exhaustion, ambiguous-input-coercion]
+benchmarks: []
+rollback_plan: restore-prior-code-with-explicit-financial-result-review-no-schema-change
+test_matrix: [tests/test_exact_trade_primitives.py, tests/test_postgres_exact_trade_primitives.py, tests/test_postgres_inventory_valuation.py]
+limitations: [no-generated-operational-gl-posting, no-ar-retained-currency-policy, existing-public-transaction-ownership-unchanged]

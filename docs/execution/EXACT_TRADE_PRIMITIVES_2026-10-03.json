@@ -1,0 +1,191 @@
+{
+  "schema_version": "exact-trade-primitives-evidence-v1",
+  "status": "passed",
+  "synthetic_only": true,
+  "observed_at": "2026-10-03",
+  "adr": "0814",
+  "scope": "context-independent quantity conversion and FIFO allocation only",
+  "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+  "server_version": "16.14",
+  "migration_revision": "0098_pg_finance_posting",
+  "command": [
+    "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "tests/test_exact_trade_primitives.py",
+    "tests/test_postgres_exact_trade_primitives.py",
+    "tests/test_receivables.py",
+    "tests/test_inventory_core.py",
+    "tests/test_inventory_valuation.py",
+    "tests/test_postgres_receivables.py",
+    "tests/test_postgres_inventory_valuation.py",
+    "tests/test_receivables_credit_integrity.py",
+    "tests/test_receivables_aging_integrity.py",
+    "tests/test_inventory_planning.py",
+    "tests/test_postgres_inventory_planning.py",
+    "tests/test_application_inventory_planning.py",
+    "tests/test_financial_input_policy.py",
+    "-q",
+    "--tb=short",
+    "--junitxml=output\\verification-2026-10-03\\prod035-bounded-final-gate\\results.xml"
+  ],
+  "pytest": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "227",
+    "time": "174.654",
+    "timestamp": "2026-10-03T13:13:53.360214+03:00",
+    "hostname": "DESKTOP-FDO3RD5"
+  },
+  "harness_duration_seconds": 189.859,
+  "quality": [
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "reconforge/domain/quantities.py",
+        "reconforge/domain/inventory_costing.py",
+        "reconforge/platform/inventory_values.py",
+        "reconforge/infrastructure/sqlite_receivables.py",
+        "reconforge/infrastructure/postgres_receivables.py",
+        "reconforge/infrastructure/sqlite_inventory_valuation.py",
+        "reconforge/infrastructure/postgres_inventory_valuation.py",
+        "tests/test_exact_trade_primitives.py",
+        "tests/test_postgres_exact_trade_primitives.py",
+        "tests/test_postgres_inventory_valuation.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.312,
+      "log": "output\\verification-2026-10-03\\PROD035-final-ruff.log"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge/domain/quantities.py",
+        "reconforge/domain/inventory_costing.py",
+        "reconforge/platform/inventory_values.py",
+        "reconforge/infrastructure/sqlite_receivables.py",
+        "reconforge/infrastructure/postgres_receivables.py",
+        "reconforge/infrastructure/sqlite_inventory_valuation.py",
+        "reconforge/infrastructure/postgres_inventory_valuation.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.281,
+      "log": "output\\verification-2026-10-03\\PROD035-final-mypy.log"
+    },
+    {
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "reconforge/domain/quantities.py",
+        "reconforge/domain/inventory_costing.py",
+        "reconforge/platform/inventory_values.py",
+        "reconforge/infrastructure/sqlite_receivables.py",
+        "reconforge/infrastructure/postgres_receivables.py",
+        "reconforge/infrastructure/sqlite_inventory_valuation.py",
+        "reconforge/infrastructure/postgres_inventory_valuation.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.891,
+      "log": "output\\verification-2026-10-03\\PROD035-final-bandit.log"
+    }
+  ],
+  "source_unchanged": true,
+  "database_removed": true,
+  "runtime_and_test_sources": [
+    {
+      "path": "reconforge/domain/inventory_costing.py",
+      "sha256": "e42eccc77da0e7751c5cb837e0acfdbd4c17f307f6b86613dde9903c92587d61"
+    },
+    {
+      "path": "reconforge/domain/quantities.py",
+      "sha256": "b1ccf457fb07c581a520b261d36fd9355cd1ab3280a15e62b23666014ab50265"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_inventory_valuation.py",
+      "sha256": "6870373e9842bedb930d3dc281fcb4c60f4b8eda3ebb0adad22c14a88788b43e"
+    },
+    {
+      "path": "reconforge/infrastructure/postgres_receivables.py",
+      "sha256": "9ee47dca7558d26ecda11e5412c934eec615341ca9d4e79de7305a29e8f50e6f"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_inventory_valuation.py",
+      "sha256": "ae6950a9d711d61b6a9be59444e9caa2841fc7bfaab6795c840f0548aa15d3f6"
+    },
+    {
+      "path": "reconforge/infrastructure/sqlite_receivables.py",
+      "sha256": "74e10ab40172b3c46247751fd462567b87645c6b95ba55ac9daf5e81cb92a5be"
+    },
+    {
+      "path": "reconforge/platform/inventory_values.py",
+      "sha256": "82d5076d5d73a9168fdc8c5048947c90318b58151274098c48237e68808e23e4"
+    },
+    {
+      "path": "tests/test_exact_trade_primitives.py",
+      "sha256": "5b06595c4bf8484c270a1cd9cc8616926e84ca6d6944a64f96adf14fe6aa25f0"
+    },
+    {
+      "path": "tests/test_postgres_exact_trade_primitives.py",
+      "sha256": "d46fb8a2b857b598cb933dfd63eb2c016ef67a85d98ab6b593d17061c498fb8f"
+    },
+    {
+      "path": "tests/test_postgres_inventory_valuation.py",
+      "sha256": "1c0f92916904c254f4b2f59670ff9e0f1e2c17ce4ece4ecad896eaa635591414"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "output/verification-2026-10-03/PROD035-FROZEN.json",
+      "sha256": "62b867f4407e865a9bc9db49f939e35bcc427ad5e28c04d1a917567d8265f2fd"
+    },
+    {
+      "path": "output/verification-2026-10-03/PROD035-RED-BEFORE.json",
+      "sha256": "7c0911e32913f59f9ed9ad4ba1fd82d38840dfd55b7a6915fd3c61f1e5ba4c9f"
+    },
+    {
+      "path": "output/verification-2026-10-03/PROD035-red-tests.log",
+      "sha256": "7f874e2b0adc779fcdbb9ee57bb63ab06f78a579c77b80115b63cf7b74225b63"
+    },
+    {
+      "path": "output/verification-2026-10-03/PROD035-GRAMMAR-BEFORE.json",
+      "sha256": "1c76499f105cc1b61b2e7493f0f93b3e4a2c52c81ff0dbb8e12d40973a92a4c8"
+    },
+    {
+      "path": "output/verification-2026-10-03/PROD035-GRAMMAR-AFTER.json",
+      "sha256": "050bae550ce347bff739c0d413302a22d840e8c48a5db853733804c6ec1dddf7"
+    },
+    {
+      "path": "output/verification-2026-10-03/PROD035-EXPANSION-BOUNDS.json",
+      "sha256": "51081e8ec43886e424e5b77040df7a8b155ecb4f7c012cbe3d6b026b911dd810"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod035-bounded-final-gate/report.json",
+      "sha256": "c3e6fb22030fdf16055b0625d4660e2739a47b72f01ed596f01be617e7090bc8"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod035-bounded-final-gate/results.xml",
+      "sha256": "abd7939f20acb2c7b80ced5aafc2edeb59d0ca479963d652906f667fbf2537f1"
+    }
+  ],
+  "superseded_runs": [
+    "prod035-gate/report.json",
+    "prod035-final-gate/report.json",
+    "prod035-compat-final-gate/report.json"
+  ],
+  "limits": [
+    "1,000,000-character fixed expansion ceiling",
+    "unchanged public transaction ownership",
+    "no integrated trade or operational GL posting",
+    "AR retained currency policy is separate"
+  ],
+  "report_digest": "1827d97407bb56af57ba498736a94a6a4f5b350eb067a674e52f7e8c8627248d"
+}

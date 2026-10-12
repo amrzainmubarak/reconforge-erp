@@ -141,12 +141,13 @@ def create_studio_app(
             return False
         try:
             service = LocalAuthService(connection)
+            policy_context = PolicyEvaluationContext(
+                user_id=user.id,
+                username=user.username,
+                user_permissions=service.roles.user_permissions(user.username),
+            )
             decision = CentralPolicyEngine().evaluate(
-                PolicyEvaluationContext(
-                    user_id=user.id,
-                    username=user.username,
-                    user_permissions=service.roles.user_permissions(user.username),
-                ),
+                policy_context,
                 required_permission=permission,
             )
             audit_policy_decision(
@@ -154,6 +155,8 @@ def create_studio_app(
                 actor_id=user.id,
                 required_permissions=frozenset({permission}),
                 surface=f"studio:{permission}",
+                context=policy_context,
+                audit_connection=connection,
             )
             return decision.allowed
         except (DatabaseError, AuthRepositoryError, AuthServiceError):

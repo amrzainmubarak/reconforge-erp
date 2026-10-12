@@ -1,0 +1,32 @@
+{
+  "head_sha": "b6e9dcf608df2885b61a2846a4edc8df783db72d",
+  "base_sha": "e07bff2a2e8197b052d53454ea85c727f7c7518e",
+  "merge_sha": "3aa0419574fe886f2863d84b2eab0a353878ae71",
+  "merge_parents": [
+    "e07bff2a2e8197b052d53454ea85c727f7c7518e",
+    "b6e9dcf608df2885b61a2846a4edc8df783db72d"
+  ],
+  "identical_git_tree_sha": "6e5c642fb18e8e6f0e6c8abd47847d3a1bcd1db3",
+  "binding_kind": "Exact GitHub PR head + retained GitHub merge API + locally rehashed immutable Git commit object",
+  "published_pr_api": {
+    "file": "pr130-20261010T143307Z.json",
+    "bytes": 22041,
+    "sha256": "e7ade0fae6f6790ff7f2f097efda4bdd63d089f097ac937e66a432cae20b46d4"
+  },
+  "merge_commit_api": {
+    "file": "commit-3aa0419574fe886f2863d84b2eab0a353878ae71.json",
+    "bytes": 2712,
+    "sha256": "6c4a52418eafd21dd302587dac44687a740945baf80cb134c83cf9e1ef2dc1e8"
+  },
+  "head_git_object": {
+    "file": "commit-b6e9dcf608df2885b61a2846a4edc8df783db72d.git-object",
+    "bytes": 318,
+    "sha256": "34850f000ba460950af72cb9c6c34605dc56c2956daf547cd7b55b8f1b0b704f"
+  },
+  "checkout_log": {
+    "file": "job-114235782283.log",
+    "bytes": 66940,
+    "sha256": "22951675c363a25138d58964b44b8b0e31b79ba7cf271d856564a0bcff34b183"
+  },
+  "head_commit_api_retrieval": "Bounded TLS timeouts; not claimed as downloaded"
+}

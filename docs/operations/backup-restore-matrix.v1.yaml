@@ -1,5 +1,5 @@
 schema_version: 1
-generated_at: "2026-07-27"
+generated_at: "2026-10-04"
 overall_status: partial
 cells:
   - id: community-sqlite-v6-to-v24
@@ -29,15 +29,15 @@ cells:
   - id: team-postgresql-17-current
     edition: team
     backend: postgresql
-    source_version: "PostgreSQL 17 / Alembic 0033"
-    target_version: "PostgreSQL 17 / Alembic 0033"
+    source_version: "PostgreSQL / configured exact Alembic revision for a named recovery profile"
+    target_version: "PostgreSQL / configured exact Alembic revision for a named recovery profile"
     status: verified
     encryption: Streaming AES-256-GCM envelope with an operator-owned key; native dump plaintext exists only in a temporary directory.
     authorization: Application boundary requires operations.backup.create or operations.restore.execute before invoking the adapter.
-    integrity: Authenticated header, ciphertext tag, plaintext SHA-256 and size, pg_restore list validation, Alembic and ReconForge-schema post-restore check.
+    integrity: Authenticated header, ciphertext tag, plaintext SHA-256 and size, pg_restore list validation, and a named-profile exact Alembic/source-and-target check. Legacy unbound artifacts retain the prior relation-existence compatibility check.
     rollback: Restore creates a new named database only and drops it after restore or verification failure; the source database is never a restore target.
-    evidence: [tests/test_postgres_backup.py, E-104, E-162, E-163]
-    limitations: [Verified on a disposable single-node PostgreSQL 17.10 service at Alembic 0033 with synthetic data. Operator service-file permissions outside the test container, KMS, host loss, HA, scheduled retention, and measured RPO/RTO are not proven.]
+    evidence: [tests/test_postgres_backup.py, ADR0829, E-104, E-162, E-163]
+    limitations: [The named-profile command contract is verified with synthetic fake tools; this current slice did not run a live native-client source/maintenance service. Operator service-file permissions, KMS, host loss, HA, scheduled retention, and measured RPO/RTO are not proven.]
   - id: enterprise-postgresql-ha
     edition: enterprise
     backend: postgresql

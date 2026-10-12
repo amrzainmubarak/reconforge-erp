@@ -359,6 +359,19 @@ def test_result_payload_schema_and_replay_verifier_reject_rehashed_tampering() -
         verify_consolidation_result_payload(tampered)
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (("original_amount", "017.00"), ("translated_amount", "017.00")),
+)
+def test_result_replay_rejects_re_signed_noncanonical_money_text(field: str, value: str) -> None:
+    payload = translate_consolidation(_request()).to_dict()
+    payload["lines"][0][field]["amount"] = value  # type: ignore[index]
+    payload["result_digest"] = _payload_digest(payload)
+
+    with pytest.raises(ConsolidationError, match="payload is invalid"):
+        verify_consolidation_result_payload(payload)
+
+
 def test_object_store_repository_is_immutable_idempotent_and_scope_isolated(tmp_path: Path) -> None:
     store = LocalObjectStore(LocalObjectStorageSettings(root=(tmp_path / "objects").resolve()))
     repository = ObjectStoreConsolidationResultRepository(store)

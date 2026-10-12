@@ -3955,6 +3955,39 @@ ON evidence_registry(workspace_id, storage_backend, storage_tenant_id, storage_k
 """
 
 
+EVIDENCE_RETENTION_GOVERNANCE_MIGRATION_SQL = """
+ALTER TABLE evidence_registry
+    ADD COLUMN retention_version INTEGER NOT NULL DEFAULT 1 CHECK (retention_version >= 1);
+
+CREATE TRIGGER IF NOT EXISTS evidence_registry_retention_floor_guard
+BEFORE UPDATE OF retention_until, retention_version ON evidence_registry
+WHEN
+    (
+        NEW.retention_until <> OLD.retention_until
+        AND NEW.retention_version <> OLD.retention_version + 1
+    )
+    OR (
+        NEW.retention_until = OLD.retention_until
+        AND NEW.retention_version <> OLD.retention_version
+    )
+    OR (
+        NEW.retention_until <> ''
+        AND julianday(NEW.retention_until) IS NULL
+    )
+    OR (
+        OLD.retention_until <> ''
+        AND (
+            NEW.retention_until = ''
+            OR julianday(OLD.retention_until) IS NULL
+            OR julianday(NEW.retention_until) < julianday(OLD.retention_until)
+        )
+    )
+BEGIN
+    SELECT RAISE(ABORT, 'Evidence retention cannot be shortened or version transition is invalid.');
+END;
+"""
+
+
 CONSOLIDATION_OWNERSHIP_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS consolidation_ownership_interests (
     id TEXT PRIMARY KEY,
@@ -4467,4 +4500,50 @@ CREATE TABLE IF NOT EXISTS currency_registry_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_currency_registry_snapshots_version
 ON currency_registry_snapshots(registry_version, captured_at, registry_digest);
+"""
+
+CLOSE_PERIOD_SOD_MIGRATION_SQL = """
+ALTER TABLE close_periods ADD COLUMN locked_by TEXT NOT NULL DEFAULT '';
+ALTER TABLE close_periods ADD COLUMN reopened_by TEXT NOT NULL DEFAULT '';
+
+UPDATE close_periods
+SET locked_by = 'legacy-unknown'
+WHERE status IN ('Locked', 'Reopened') AND locked_by = '';
+
+UPDATE close_periods
+SET reopened_by = 'legacy-unknown'
+WHERE status = 'Reopened' AND reopened_by = '';
+
+CREATE TRIGGER IF NOT EXISTS close_periods_sod_guard
+BEFORE UPDATE ON close_periods
+WHEN OLD.status = 'Locked' AND NEW.status = 'Reopened'
+BEGIN
+    SELECT CASE
+        WHEN OLD.locked_by = '' THEN RAISE(ABORT, 'locked close period has no locker identity')
+        WHEN NEW.reopened_by = '' THEN RAISE(ABORT, 'reopening a close period requires an actor identity')
+        WHEN NEW.reopened_by = OLD.locked_by
+            THEN RAISE(ABORT, 'reopening a close period requires an independent actor')
+    END;
+END;
+
+CREATE TRIGGER IF NOT EXISTS close_periods_lock_sod_guard
+BEFORE UPDATE ON close_periods
+WHEN OLD.status IN ('Open', 'Reopened') AND NEW.status = 'Locked'
+BEGIN
+    SELECT CASE
+        WHEN NEW.locked_by = '' THEN RAISE(ABORT, 'locking a close period requires an actor identity')
+        WHEN NEW.locked_at IS NULL THEN RAISE(ABORT, 'locking a close period requires a timestamp')
+    END;
+END;
+
+"""
+
+CLOSE_PERIOD_LOCK_EVIDENCE_MIGRATION_SQL = """
+CREATE TRIGGER IF NOT EXISTS close_periods_lock_evidence_guard
+BEFORE UPDATE ON close_periods
+WHEN OLD.status = 'Locked' AND NEW.status = 'Locked'
+     AND (NEW.locked_by <> OLD.locked_by OR NEW.locked_at IS NOT OLD.locked_at)
+BEGIN
+    SELECT RAISE(ABORT, 'locked close-period evidence is immutable');
+END;
 """

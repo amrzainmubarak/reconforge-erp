@@ -1,0 +1,128 @@
+{
+  "status": "passed",
+  "verifier_sha256": "c8c543b0819bb916d365b3c015ab6be62a14dcc1ff2c1ecf880686fb32ff6e90",
+  "oracle": "stdlib Fraction; independent integer half-up rounding; five-stage synthetic EUR/USD fixture",
+  "command": [
+    "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+    "-O",
+    "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave4-exec\\reconforge-erp\\.github\\scripts\\verify_operational_fx_cycle_oracle.py",
+    "--proof-directory",
+    "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-fx-revaluation-browser-1e73267e\\playwright-artifacts",
+    "--cycle-report",
+    "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-fx-revaluation-browser-1e73267e\\report.json",
+    "--proof-manifest",
+    "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave4-exec\\reconforge-erp\\output\\wave4-fx-wire-independent-oracle-1e73267e.json",
+    "--proof-manifest-sha256",
+    "3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a",
+    "--report",
+    "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave4-exec\\reconforge-erp\\output\\wave4-fx-cycle-oracle-membership-optimized.json"
+  ],
+  "python_version": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+  "inputs": [
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-fx-revaluation-browser-1e73267e\\playwright-artifacts\\fx-proof-0.json",
+      "sha256": "e98f19ce390547c951ce419b12e088c3e5c0c8f271ccc9d710bdff0248af8101"
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-fx-revaluation-browser-1e73267e\\playwright-artifacts\\fx-proof-1.json",
+      "sha256": "46a1f22cc0a216eebe5282d766a9422b1ccf3766ddbf736a12e9cb0182507f7f"
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-fx-revaluation-browser-1e73267e\\playwright-artifacts\\fx-proof-2.json",
+      "sha256": "42b44512124ad614a844754838950891ad185b28f72732d6ee90133ed286fa27"
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-fx-revaluation-browser-1e73267e\\playwright-artifacts\\fx-proof-3.json",
+      "sha256": "814c10a2ba1253d5dfeb9690ca340f8f304b3bf84502433d6aa7006008db7493"
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-fx-revaluation-browser-1e73267e\\playwright-artifacts\\fx-proof-4.json",
+      "sha256": "94c26cbe298b796604661ac0068266f2a8398bf2c73181ccee8df6975b09565d"
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-fx-revaluation-browser-1e73267e\\report.json",
+      "sha256": "594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027"
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-finance-wave4-exec\\reconforge-erp\\output\\wave4-fx-wire-independent-oracle-1e73267e.json",
+      "sha256": "3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a"
+    },
+    {
+      "path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-integration-wave4\\reconforge-erp\\output\\wave4-fx-revaluation-browser-1e73267e\\playwright-artifacts\\fx-proof-ar-mobile.json",
+      "sha256": "94c26cbe298b796604661ac0068266f2a8398bf2c73181ccee8df6975b09565d"
+    }
+  ],
+  "proof_manifest_sha256": "3ac5b0bf960862abcd5b11183de059a6a4df61f3b6fac3a7feab59cf633cf58a",
+  "source_commit": "1e73267eaff0fb6bf92849bc6f5a877418adb786",
+  "source_sha256": "c304f8b67a585e8e26f7b1df60f25f1190bf06fbf93e5aa5585dbc14701fee3c",
+  "built_web_sha256": "c7bd03184c6452afef9f970ba30d35e653d6aa3efac7aab9f1c5c552ce833c5e",
+  "report_sha256": "594b41ada0420a647b1c0b99aa083c0d631635276e7a7aa133352706c65ae027",
+  "restored_table_count": 253,
+  "dump_sha256": "970c1df2e76410d7faf7248ea2349260eb9fed9db598e7a172ca340a1cd3feeb",
+  "native_effects": [
+    {
+      "kind": "recognize",
+      "plan_id": "FX1-42f2d1e79dae43a2bfcd36511b44ee6a",
+      "entry_id": "GLE-00265c6fe33d83b9",
+      "effect_id": "PST-b4fa4ac5bdb6492799e54a5247c30923",
+      "amount_minor": 14251
+    },
+    {
+      "kind": "settle",
+      "plan_id": "FX1-96bc9ce0efcd49e9a61716bfaa5ff84c",
+      "entry_id": "GLE-3cc9aa6c4164b5cc",
+      "effect_id": "PST-2836280ff4aa409abe572124a1d5e7f9",
+      "amount_minor": 5200
+    },
+    {
+      "kind": "revalue",
+      "plan_id": "FX1-575b76771a2b43fa8189c1feeeade57a",
+      "entry_id": "GLE-0f23cfffc36cc49e",
+      "effect_id": "PST-2e6141eff38f43d0bf7b74060e44430b",
+      "amount_minor": 740
+    },
+    {
+      "kind": "reverse_revaluation",
+      "plan_id": "FX1-bf65caea4c0647deb9c5dad8df31d4bf",
+      "entry_id": "GLE-da81560d991a753f",
+      "effect_id": "PST-5a0150cc6df84546bc3db529f4285f75",
+      "amount_minor": 740
+    },
+    {
+      "kind": "settle",
+      "plan_id": "FX1-61107d753f0547dda1570d69fd82b7a8",
+      "entry_id": "GLE-2cb672aef145141d",
+      "effect_id": "PST-49d2edcaa38f40e6a63a12a8b01e27e6",
+      "amount_minor": 9251
+    }
+  ],
+  "unique_audit_events": 20,
+  "unique_outbox_events": 20,
+  "account_balances_minor": {
+    "AR": 0,
+    "REVENUE": -12501,
+    "TAX": -1750,
+    "CASH": 14081,
+    "GAIN": -200,
+    "UGAIN": 0,
+    "LOSS": 370
+  },
+  "source_id": "FX-cca6656375434e608ec8eb73d7635892",
+  "invoice_id": "ARINV-d1b861c4a946b19c",
+  "foreign_gross_minor": 11401,
+  "functional_gross_minor": 14251,
+  "foreign_receipts_minor": [
+    4000,
+    7401
+  ],
+  "historical_releases_minor": [
+    5000,
+    9251
+  ],
+  "realized_fx_minor": [
+    200,
+    -370
+  ],
+  "closing_value_minor": 9991,
+  "unrealized_difference_minor": 740
+}

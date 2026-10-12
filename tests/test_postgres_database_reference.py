@@ -16,6 +16,7 @@ from reconforge.connectors.postgres_database_reference import (
     POSTGRES_DATABASE_MANIFEST,
     PostgresDatabaseConnector,
     PostgresNamedQueryTransport,
+    _row_from_values,
     postgres_database_registration,
 )
 from reconforge.infrastructure.postgres import PostgresConnectionFactory, PostgresSettings
@@ -102,6 +103,15 @@ def test_postgres_registration_pins_endpoint_and_rejects_free_form_credentials()
             maximum_rows=10,
             maximum_cell_characters=1_000,
         )
+
+
+@pytest.mark.parametrize(
+    ("raw_amount", "message"),
+    [(100.0, "type_invalid"), ("1e2", "invalid"), (True, "invalid"), (Decimal("NaN"), "nonfinite")],
+)
+def test_postgres_row_hydration_uses_strict_amount_parser(raw_amount: object, message: str) -> None:
+    with pytest.raises(ConnectorNetworkError, match=f"postgres_amount_{message}"):
+        _row_from_values(("tenant-a", "r-1", raw_amount, "USD", date(2026, 8, 2), "ref-1"))
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires a live PostgreSQL service")

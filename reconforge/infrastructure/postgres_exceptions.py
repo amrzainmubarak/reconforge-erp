@@ -2,11 +2,24 @@
 
 from __future__ import annotations
 
+from builtins import list as builtin_list
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import date
 from typing import Any
 
+from reconforge.domain.exception_review import (
+    ExceptionReviewAssignment,
+    ExceptionReviewConflictError,
+    ExceptionReviewError,
+    ExceptionReviewHistoryPage,
+    ExceptionReviewListPage,
+    ExceptionReviewNotFoundError,
+    ExceptionReviewQuery,
+    ExceptionReviewReviewerError,
+    ExceptionReviewScope,
+    ExceptionReviewTransition,
+)
 from reconforge.infrastructure.postgres import set_local_tenant_scope, validate_tenant_id
 from reconforge.infrastructure.postgres_domain import PostgresAuditEventRepository
 from reconforge.io.persisted import PersistedJsonError, encode_postgres_outbox_payload
@@ -133,6 +146,32 @@ class PostgresExceptionQueueRepository:
         except Exception as exc:
             raise PostgresExceptionQueueError("PostgreSQL exception-queue operation failed.") from exc
 
+    @contextmanager
+    def _review_transaction(self, scope: ExceptionReviewScope) -> Iterator[None]:
+        """Open a scoped savepoint without erasing the request hierarchy.
+
+        The compatibility queue pre-dates hierarchy RLS and deliberately uses
+        tenant-only transactions.  Server review must retain the authenticated
+        workspace, organization, and legal-entity settings for every query.
+        """
+
+        if scope.tenant_id != self.tenant_id:
+            raise ExceptionReviewError("Exception review tenant scope is invalid.")
+        try:
+            with self.connection.transaction():
+                set_local_tenant_scope(
+                    self.connection,
+                    self.tenant_id,
+                    scope.organization_id,
+                    workspace_id=scope.workspace_id,
+                    legal_entity_id=scope.legal_entity_id,
+                )
+                yield
+        except (ExceptionReviewError, PostgresExceptionQueueError):
+            raise
+        except Exception as exc:
+            raise PostgresExceptionQueueError("PostgreSQL exception-review operation failed.") from exc
+
     def _workspace_id(self, workspace: str) -> str:
         workspace_name = _bounded(workspace, "Workspace", 160, required=True)
         row = self.connection.execute(
@@ -159,14 +198,16 @@ class PostgresExceptionQueueRepository:
         self,
         *,
         actor_label: str,
+        actor_user_id: str | None = None,
         object_id: str,
         action: str,
         version: object,
         metadata: Mapping[str, object],
-    ) -> None:
+    ) -> tuple[str, str]:
         actor = normalize_text(actor_label, default="local-cli")
         audit = PostgresAuditEventRepository(self.connection, self.tenant_id).append(
             actor_label=actor,
+            actor_user_id=actor_user_id,
             object_type="exception",
             object_id=object_id,
             action=action,
@@ -183,12 +224,14 @@ class PostgresExceptionQueueRepository:
             encoded = encode_postgres_outbox_payload(payload).text
         except PersistedJsonError as exc:
             raise PlatformError("Unable to encode exception-queue event.") from exc
+        outbox_event_id = platform_id("OBX", action, object_id, version)
         self.connection.execute(
             """INSERT INTO reconforge.outbox_events(tenant_id,event_id,event_type,aggregate_type,aggregate_id,payload)
             VALUES(%s,%s,%s,'exception',%s,CAST(%s AS jsonb))
             ON CONFLICT(tenant_id,event_id) DO NOTHING""",
-            (self.tenant_id, platform_id("OBX", action, object_id, version), action, object_id, encoded),
+            (self.tenant_id, outbox_event_id, action, object_id, encoded),
         )
+        return audit.id, outbox_event_id
 
     def _history(
         self,
@@ -478,3 +521,440 @@ class PostgresExceptionQueueRepository:
             ).fetchall()
             result["history"] = [dict(row) for row in history]
             return result
+
+    def _review_record(
+        self,
+        scope: ExceptionReviewScope,
+        exception_id: str,
+        *,
+        lock: bool = False,
+    ) -> dict[str, Any]:
+        query = "SELECT * FROM reconforge.exception_queue_records WHERE tenant_id=%s AND id=%s"
+        if lock:
+            query += " FOR UPDATE"
+        row = self.connection.execute(
+            query,
+            (self.tenant_id, _bounded(exception_id, "Exception id", 200, required=True)),
+        ).fetchone()
+        if row is None:
+            raise ExceptionReviewNotFoundError("Exception review record was not found in the authorized scope.")
+        result = dict(row)
+        if str(result.get("workspace_id") or "") != scope.workspace_id:
+            raise ExceptionReviewNotFoundError("Exception review record was not found in the authorized scope.")
+        if scope.organization_id is not None and str(result.get("organization_id") or "") != scope.organization_id:
+            raise ExceptionReviewNotFoundError("Exception review record was not found in the authorized scope.")
+        if scope.legal_entity_id is not None and str(result.get("legal_entity_id") or "") != scope.legal_entity_id:
+            raise ExceptionReviewNotFoundError("Exception review record was not found in the authorized scope.")
+        return result
+
+    def _require_review_reviewer(self, scope: ExceptionReviewScope, owner: str) -> str:
+        """Require an active, permissioned user with every selected scope grant.
+
+        The assignment command stores an immutable user identifier in the
+        existing ``owner`` column.  The request caller has already passed
+        central policy evaluation; this additional transaction-local check
+        prevents assigning an arbitrary label or an eligible user from a
+        sibling hierarchy.
+        """
+
+        reviewer_id = _bounded(owner, "Exception owner", 160, required=True)
+        row = self.connection.execute(
+            """SELECT 1 FROM reconforge.identity_users reviewer
+            WHERE reviewer.tenant_id=%s AND reviewer.id=%s AND NOT reviewer.disabled
+            AND EXISTS (
+                SELECT 1 FROM reconforge.identity_user_roles assignments
+                JOIN reconforge.identity_roles role
+                  ON role.tenant_id=assignments.tenant_id AND role.id=assignments.role_id
+                JOIN reconforge.identity_role_permissions role_permission
+                  ON role_permission.tenant_id=assignments.tenant_id
+                 AND role_permission.role_id=assignments.role_id
+                WHERE assignments.tenant_id=reviewer.tenant_id AND assignments.user_id=reviewer.id
+                  AND assignments.active AND role.active AND role_permission.active
+                  AND role_permission.permission_name='exceptions.manage'
+            )
+            AND EXISTS (
+                SELECT 1 FROM reconforge.principal_scope_grants workspace_grant
+                WHERE workspace_grant.tenant_id=reviewer.tenant_id
+                  AND workspace_grant.principal_type='user' AND workspace_grant.principal_id=reviewer.id
+                  AND workspace_grant.scope_type='workspace' AND workspace_grant.scope_id=%s
+                  AND workspace_grant.revoked_at IS NULL
+            )
+            AND (%s='' OR EXISTS (
+                SELECT 1 FROM reconforge.principal_scope_grants organization_grant
+                WHERE organization_grant.tenant_id=reviewer.tenant_id
+                  AND organization_grant.principal_type='user' AND organization_grant.principal_id=reviewer.id
+                  AND organization_grant.scope_type='organization' AND organization_grant.scope_id=%s
+                  AND organization_grant.revoked_at IS NULL
+            ))
+            AND (%s='' OR EXISTS (
+                SELECT 1 FROM reconforge.principal_scope_grants entity_grant
+                WHERE entity_grant.tenant_id=reviewer.tenant_id
+                  AND entity_grant.principal_type='user' AND entity_grant.principal_id=reviewer.id
+                  AND entity_grant.scope_type='legal_entity' AND entity_grant.scope_id=%s
+                  AND entity_grant.revoked_at IS NULL
+            ))
+            FOR KEY SHARE""",
+            (
+                self.tenant_id,
+                reviewer_id,
+                scope.workspace_id,
+                scope.organization_id or "",
+                scope.organization_id or "",
+                scope.legal_entity_id or "",
+                scope.legal_entity_id or "",
+            ),
+        ).fetchone()
+        if row is None:
+            raise ExceptionReviewReviewerError("The selected reviewer is not eligible for this governed scope.")
+        return reviewer_id
+
+    def _review_history(
+        self,
+        *,
+        before: Mapping[str, Any],
+        after: Mapping[str, Any],
+        action: str,
+        actor_id: str,
+        actor_label: str,
+        reason: str,
+    ) -> str:
+        history_id = platform_id("EXH", after["id"], action, after["row_version"])
+        self.connection.execute(
+            """INSERT INTO reconforge.exception_queue_history(
+            tenant_id,id,exception_id,action,from_status,to_status,from_owner,to_owner,actor_label,actor_id,reason)
+            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (
+                self.tenant_id,
+                history_id,
+                after["id"],
+                action,
+                before["status"],
+                after["status"],
+                before["owner"],
+                after["owner"],
+                actor_label,
+                actor_id,
+                reason,
+            ),
+        )
+        return history_id
+
+    def _review_update(
+        self,
+        *,
+        before: Mapping[str, Any],
+        expected_version: int,
+        actor_label: str,
+        status: str | None = None,
+        owner: str | None = None,
+    ) -> dict[str, Any]:
+        selected_status = str(before["status"]) if status is None else status
+        selected_owner = str(before["owner"]) if owner is None else owner
+        row = self.connection.execute(
+            """UPDATE reconforge.exception_queue_records SET status=%s,owner=%s,last_actor=%s,
+            updated_at=now(),row_version=row_version+1
+            WHERE tenant_id=%s AND id=%s AND row_version=%s RETURNING *""",
+            (selected_status, selected_owner, actor_label, self.tenant_id, before["id"], expected_version),
+        ).fetchone()
+        if row is None:
+            raise ExceptionReviewConflictError("Exception review was changed by another request.")
+        return dict(row)
+
+    def _review_event(
+        self,
+        *,
+        scope: ExceptionReviewScope,
+        before: Mapping[str, Any],
+        after: Mapping[str, Any],
+        history_id: str,
+        action: str,
+        actor_id: str,
+        actor_label: str,
+        reason: str,
+    ) -> tuple[str, str]:
+        return self._event(
+            actor_label=actor_label,
+            actor_user_id=actor_id,
+            object_id=str(after["id"]),
+            action=action,
+            version=after["row_version"],
+            metadata={
+                "actor_id": actor_id,
+                "actor_user_id": actor_id,
+                "expected_version": before["row_version"],
+                "from_owner": before["owner"],
+                "from_status": before["status"],
+                "legal_entity_id": scope.legal_entity_id or "",
+                "organization_id": scope.organization_id or "",
+                "reason": reason,
+                "review_history_id": history_id,
+                "to_owner": after["owner"],
+                "to_status": after["status"],
+                "workspace_id": scope.workspace_id,
+            },
+        )
+
+    def _review_evidence(
+        self,
+        *,
+        exception_id: str,
+        history_id: str,
+        audit_event_id: str,
+        outbox_event_id: str,
+    ) -> None:
+        """Append the immutable relation between review history and effect evidence."""
+
+        self.connection.execute(
+            """INSERT INTO reconforge.exception_review_evidence(
+            tenant_id,history_id,exception_id,audit_event_id,outbox_event_id)
+            VALUES(%s,%s,%s,%s,%s)""",
+            (self.tenant_id, history_id, exception_id, audit_event_id, outbox_event_id),
+        )
+
+    def _review_with_history(
+        self,
+        record: dict[str, Any],
+        history_page: ExceptionReviewHistoryPage | None = None,
+    ) -> dict[str, Any]:
+        """Attach one explicit page of immutable history and evidence links."""
+
+        page = history_page or ExceptionReviewHistoryPage()
+        cursor_occurrence: object | None = None
+        if page.cursor is not None:
+            cursor_row = self.connection.execute(
+                """SELECT occurred_at,id FROM reconforge.exception_queue_history
+                WHERE tenant_id=%s AND exception_id=%s AND id=%s""",
+                (self.tenant_id, record["id"], page.cursor),
+            ).fetchone()
+            if cursor_row is None:
+                raise ExceptionReviewError("History cursor was not found for this exception.")
+            cursor_occurrence = cursor_row[0] if not isinstance(cursor_row, Mapping) else cursor_row["occurred_at"]
+        rows = self.connection.execute(
+            """SELECT history.*,evidence.audit_event_id,evidence.outbox_event_id
+            FROM reconforge.exception_queue_history history
+            LEFT JOIN reconforge.exception_review_evidence evidence
+              ON evidence.tenant_id=history.tenant_id AND evidence.history_id=history.id
+            WHERE history.tenant_id=%s AND history.exception_id=%s
+              AND (%s::timestamptz IS NULL OR (history.occurred_at,history.id)>(%s::timestamptz,%s))
+            ORDER BY history.occurred_at,history.id LIMIT %s""",
+            (
+                self.tenant_id,
+                record["id"],
+                cursor_occurrence,
+                cursor_occurrence,
+                page.cursor or "",
+                page.limit + 1,
+            ),
+        ).fetchall()
+        has_more = len(rows) > page.limit
+        visible_rows = rows[: page.limit]
+        record["history"] = [dict(row) for row in visible_rows]
+        record["history_page"] = {
+            "limit": page.limit,
+            "has_more": has_more,
+            "next_cursor": str(visible_rows[-1]["id"] if isinstance(visible_rows[-1], Mapping) else visible_rows[-1][1])
+            if has_more and visible_rows
+            else None,
+        }
+        return record
+
+    def list_for_review(
+        self,
+        scope: ExceptionReviewScope,
+        query: ExceptionReviewQuery,
+    ) -> builtin_list[dict[str, Any]]:
+        result = self.list_page_for_review(scope, query, ExceptionReviewListPage(limit=250))
+        records = result["records"]
+        return [dict(record) for record in records] if isinstance(records, list) else []
+
+    def list_page_for_review(
+        self,
+        scope: ExceptionReviewScope,
+        query: ExceptionReviewQuery,
+        page: ExceptionReviewListPage,
+    ) -> dict[str, Any]:
+        """Return a deterministic, explicitly bounded review-list page."""
+
+        selected_risk = "" if not query.risk_rating else _choice(query.risk_rating, "Risk rating", RISK_RATINGS)
+        selected_status = "" if not query.status else _choice(query.status, "Exception status", EXCEPTION_STATUSES)
+        filter_parameters: tuple[object, ...] = (
+            self.tenant_id,
+            scope.workspace_id,
+            scope.organization_id or "",
+            scope.organization_id or "",
+            scope.legal_entity_id or "",
+            scope.legal_entity_id or "",
+            query.period_name,
+            query.period_name,
+            query.entity_code,
+            query.entity_code,
+            query.account_code,
+            query.account_code,
+            query.control_code,
+            query.control_code,
+            selected_risk,
+            selected_risk,
+            query.owner,
+            query.owner,
+            selected_status,
+            selected_status,
+        )
+        with self._review_transaction(scope):
+            cursor_rank: int | None = None
+            cursor_created: object | None = None
+            if page.cursor is not None:
+                cursor_row = self.connection.execute(
+                    """SELECT risk_rating,created_at FROM reconforge.exception_queue_records
+                    WHERE tenant_id=%s AND workspace_id=%s
+                    AND (%s='' OR organization_id=%s)
+                    AND (%s='' OR legal_entity_id=%s)
+                    AND (%s='' OR period_name=%s) AND (%s='' OR entity_code=%s)
+                    AND (%s='' OR account_code=%s) AND (%s='' OR control_code=%s)
+                    AND (%s='' OR risk_rating=%s) AND (%s='' OR owner=%s) AND (%s='' OR status=%s)
+                    AND id=%s""",
+                    (*filter_parameters, page.cursor),
+                ).fetchone()
+                if cursor_row is None:
+                    raise ExceptionReviewError("List cursor was not found for this authorized query.")
+                cursor_risk = (
+                    cursor_row["risk_rating"] if isinstance(cursor_row, Mapping) else cursor_row[0]
+                )
+                cursor_created = cursor_row["created_at"] if isinstance(cursor_row, Mapping) else cursor_row[1]
+                cursor_rank = {"low": 1, "medium": 2, "high": 3, "critical": 4}.get(str(cursor_risk))
+                if cursor_rank is None:
+                    raise ExceptionReviewError("List cursor has an invalid retained risk rating.")
+            rows = self.connection.execute(
+                """SELECT * FROM reconforge.exception_queue_records
+                WHERE tenant_id=%s AND workspace_id=%s
+                AND (%s='' OR organization_id=%s)
+                AND (%s='' OR legal_entity_id=%s)
+                AND (%s='' OR period_name=%s) AND (%s='' OR entity_code=%s)
+                AND (%s='' OR account_code=%s) AND (%s='' OR control_code=%s)
+                AND (%s='' OR risk_rating=%s) AND (%s='' OR owner=%s) AND (%s='' OR status=%s)
+                AND (
+                    %s::integer IS NULL
+                    OR CASE risk_rating WHEN 'critical' THEN 4 WHEN 'high' THEN 3
+                       WHEN 'medium' THEN 2 ELSE 1 END < %s
+                    OR (CASE risk_rating WHEN 'critical' THEN 4 WHEN 'high' THEN 3
+                        WHEN 'medium' THEN 2 ELSE 1 END=%s AND created_at<%s)
+                    OR (CASE risk_rating WHEN 'critical' THEN 4 WHEN 'high' THEN 3
+                        WHEN 'medium' THEN 2 ELSE 1 END=%s AND created_at=%s AND id>%s)
+                )
+                ORDER BY CASE risk_rating WHEN 'critical' THEN 4 WHEN 'high' THEN 3
+                WHEN 'medium' THEN 2 ELSE 1 END DESC,created_at DESC,id ASC LIMIT %s""",
+                (
+                    *filter_parameters,
+                    cursor_rank,
+                    cursor_rank,
+                    cursor_rank,
+                    cursor_created,
+                    cursor_rank,
+                    cursor_created,
+                    page.cursor or "",
+                    page.limit + 1,
+                ),
+            ).fetchall()
+            has_more = len(rows) > page.limit
+            visible_rows = rows[: page.limit]
+            records = [dict(row) for row in visible_rows]
+            return {
+                "records": records,
+                "pagination": {
+                    "limit": page.limit,
+                    "returned": len(records),
+                    "has_more": has_more,
+                    "next_cursor": str(records[-1]["id"]) if has_more and records else None,
+                },
+            }
+
+    def get_for_review(
+        self,
+        scope: ExceptionReviewScope,
+        exception_id: str,
+        history_page: ExceptionReviewHistoryPage,
+    ) -> dict[str, Any]:
+        with self._review_transaction(scope):
+            return self._review_with_history(self._review_record(scope, exception_id), history_page)
+
+    def assign_for_review(
+        self,
+        scope: ExceptionReviewScope,
+        command: ExceptionReviewAssignment,
+    ) -> dict[str, Any]:
+        with self._review_transaction(scope):
+            before = self._review_record(scope, command.exception_id, lock=True)
+            command.validate_record(before)
+            reviewer_id = self._require_review_reviewer(scope, command.owner)
+            result = self._review_update(
+                before=before,
+                expected_version=command.expected_version,
+                actor_label=command.actor_label,
+                owner=reviewer_id,
+            )
+            history_id = self._review_history(
+                before=before,
+                after=result,
+                action="exception_review_assigned",
+                actor_id=command.actor_id,
+                actor_label=command.actor_label,
+                reason="",
+            )
+            audit_event_id, outbox_event_id = self._review_event(
+                scope=scope,
+                before=before,
+                after=result,
+                history_id=history_id,
+                action="exception_review_assigned",
+                actor_id=command.actor_id,
+                actor_label=command.actor_label,
+                reason="",
+            )
+            self._review_evidence(
+                exception_id=str(result["id"]),
+                history_id=history_id,
+                audit_event_id=audit_event_id,
+                outbox_event_id=outbox_event_id,
+            )
+            return self._review_with_history(result)
+
+    def transition_for_review(
+        self,
+        scope: ExceptionReviewScope,
+        command: ExceptionReviewTransition,
+    ) -> dict[str, Any]:
+        with self._review_transaction(scope):
+            before = self._review_record(scope, command.exception_id, lock=True)
+            command.validate_record(before)
+            if command.status in {"Resolved", "Accepted Risk", "Closed"}:
+                self._require_review_reviewer(scope, command.actor_id)
+            result = self._review_update(
+                before=before,
+                expected_version=command.expected_version,
+                actor_label=command.actor_label,
+                status=command.status,
+            )
+            history_id = self._review_history(
+                before=before,
+                after=result,
+                action="exception_review_transition",
+                actor_id=command.actor_id,
+                actor_label=command.actor_label,
+                reason=command.reason,
+            )
+            audit_event_id, outbox_event_id = self._review_event(
+                scope=scope,
+                before=before,
+                after=result,
+                history_id=history_id,
+                action="exception_review_transition",
+                actor_id=command.actor_id,
+                actor_label=command.actor_label,
+                reason=command.reason,
+            )
+            self._review_evidence(
+                exception_id=str(result["id"]),
+                history_id=history_id,
+                audit_event_id=audit_event_id,
+                outbox_event_id=outbox_event_id,
+            )
+            return self._review_with_history(result)

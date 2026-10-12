@@ -1,0 +1,2631 @@
+{
+  "schema_version": 1,
+  "classification": "public-source-file-sha256",
+  "scanner_version": "8.30.1",
+  "scanner_windows_archive_sha256": "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e",
+  "original_ci_failure_log_sha256": "3401967f149ee21e3fd939bf83aa45a31d74e3110dc54128fa7cda582d8765b5",
+  "redacted_history_findings_sha256": "9ac065c76c7d1112d02d29b032fdbab94913e80d74405c4d4a273ec812c89af7",
+  "public_source_commit": "0b5987927391f2e46a91813f8ccee71763b4140a",
+  "introduced_commit": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d",
+  "original_ci_scanned_commits": 1496,
+  "isolated_ancestor_scanned_commits": 1472,
+  "finding_count": 260,
+  "distinct_public_sources": 111,
+  "history_fingerprint_count": 260,
+  "current_fingerprint_count": 260,
+  "independent_review": "All matched literals independently equal SHA256 of their retained public Git source blobs; no credential patterns or scanner rules are excluded. Current-tree ignores require exact retained report bytes, line bytes, member names and digest-literal hashes in the closed policy validator. History entries bind immutable introduced commit, path, rule and line.",
+  "reports": [
+    {
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "sha256": "eb7e2822453cdee3a7e8a4aafe02d32a595639939d87a5a4794a71c71e2d586e",
+      "finding_count": 130
+    },
+    {
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "sha256": "6f9b5ceb393a3bece537481fc9a9c8172838d1c92dc38d2bb4fded62d4340238",
+      "finding_count": 130
+    }
+  ],
+  "records": [
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:93",
+      "expected_value_sha256": "73fa7be6f8966ddc7618971beb1c51fcb93217a06ca60ee2189a630a22e52692",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:93",
+      "line": 93,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0036_postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "88eb2ed8e628a185f77ed22b86995358ed75a97613c475f01f3bc996e3cd9738"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:96",
+      "expected_value_sha256": "43fa29552c7e312206d3126bb495c7deef42dd82eea57e3934df09f069d6ccd7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:96",
+      "line": 96,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0039_postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ebbaaa5ee56593d66d32c33facf162b7bfac77a5fbf94936049a34342bf31cc5"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:97",
+      "expected_value_sha256": "22112ce6cf797a32667ab4349359dbdd2c03e12b87845d8e0079c8be4274e6a8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:97",
+      "line": 97,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0040_postgres_webauthn_mfa.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cae8a5253d7c039483321d43d382516014b138f2caf04f18f7009ce5888e924e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:108",
+      "expected_value_sha256": "1b5e7b0172773767ddb055d19547f84d631225e77e24ad3904ee7b3f5ceb5c10",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:108",
+      "line": 108,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0051_access_policy_lifecycle.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "4270def6082e087dbd15f706ec9ca24b027de2666316ebfb4821c5c665520e1a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:161",
+      "expected_value_sha256": "fd31265ef90adbc6cc7b568a5690a5345b95cd86a94c28dd8beddb52b9189eb1",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:161",
+      "line": 161,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0104_postgres_exception_review_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "fd163409f279bbbf86deea591181503d17e29cc43704dc8f2790c5a1fe2bf85a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:252",
+      "expected_value_sha256": "df7d8a02d4c08d75dfb35d5e986d8e7ceff3f7890a5fc2707e1ad1f6cde7728f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:252",
+      "line": 252,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "apps/web/src/components/AdminAccessMutations.tsx",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2e71d2246562723ef8c6429c354f5d9bc9d274f56db45ae3c9da3617f980edb3"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:519",
+      "expected_value_sha256": "c2580fa6035623dc5c5dec1657bb386d6e3e09e8cf8d653a399002592a06c2a3",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:519",
+      "line": 519,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0258-writeback-intent-api-is-proposal-only.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bb8dec22ad2d4e136a402287404fd95e789cec3938c2aa930c4e63537facee0d"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:520",
+      "expected_value_sha256": "7e6a88d9dab4bcc70988c2d00abefcf51fc2ba9925b0008783b6203a23de26a1",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:520",
+      "line": 520,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0259-writeback-approval-api-is-maker-checker.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "fc668c390b5fb96643842f48cd441a439d20e9d66699dc00d7c98c0737f8093a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:521",
+      "expected_value_sha256": "11a001f1d16a4d942c20cd163cecdd05f8cdb13136f17dcf15fc3096df3cfee4",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:521",
+      "line": 521,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0260-writeback-acknowledgement-reconciliation-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "05a070ace87da9d6e7a9bb35b3fa0d5c6ed7778d454452fae88706deb0e5edb4"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:522",
+      "expected_value_sha256": "46eed47a1cbfdc5b714cf4887d79559ea816060309fa3f7fec2ecb426ac003c0",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:522",
+      "line": 522,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0261-local-consolidation-close-drilldown-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "df66c92b42b11a96c3eda79bd4d2dfc8c892a31e429a5cf0d68548140593969c"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:527",
+      "expected_value_sha256": "cbb64e6578b435a44009035cf23efc5ee617ec913be6dcf3dfb54a0b5be8d4dd",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:527",
+      "line": 527,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0266-consolidation-run-certification-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ea4f74171cb26e5e228c7cc7088e30c7467994c71893b3dce20462553bc68fec"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:541",
+      "expected_value_sha256": "25faa7dadd59f51f93799bf99ce6a52db698244d2ed76a111f3af08a168abd63",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:541",
+      "line": 541,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0285-live-postgres-ppa-api-runtime-gate.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e33b54c82ea2713bb13364fcac06b8cac4b602206c181c3718c4165189048b3f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:545",
+      "expected_value_sha256": "8450f52cdadae2959fa78e7cc63042d5f20bf61eca8cd47054e80822b0f2f666",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:545",
+      "line": 545,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0295-postgres-writeback-api-server-boundary.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "dd7caa6a1f455e85805f50d743c51091a1fb3efb6efa77cf052ecc2697012e7c"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:558",
+      "expected_value_sha256": "da4ba14fd68fe0c2c5659762324bde4c19b92ced369d5b87c19d2794fa366a71",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:558",
+      "line": 558,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "238d4e61ff2662fafe5cb98e18fecda1bfd4ae37979fbff8c9a6290ed0c27e97"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:559",
+      "expected_value_sha256": "0e559cc90e81aba90f4b040adfe445e104839d88f29717721b2f5947e2ab9367",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:559",
+      "line": 559,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0315-consolidation-ownership-api-is-scope-bound.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "6fbe521de2664eaf0086cb247a7f57bbc6ebe37ca12865d16819fe6613bfe8dc"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:560",
+      "expected_value_sha256": "d34b129742484c4f7c82656d8a1da78f52aa46e1b4fd0d0bcb6bd1b41a5be502",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:560",
+      "line": 560,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0316-live-consolidation-ownership-api-gate.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e3ccea053b6c828c629c48eb0465cabebc479198fc018cd9e0b4ec45ec595934"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:561",
+      "expected_value_sha256": "5f62befeec44927e833bb3b1f12ad463d983414ea6642a95cfd907a12aabfa11",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:561",
+      "line": 561,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0317-live-consolidation-close-api-gate.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1239812b8ca16e4167c93d2d83795128abc146c324b5ae7b0bb05644e84c08a1"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:563",
+      "expected_value_sha256": "29c1104ce534a9631025aa7223804e64991505c7f4a277d2836cc3bc4aa98f4e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:563",
+      "line": 563,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0319-consolidation-close-period-api-write-boundary.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "11a255a9c2d54d9c6fccd7971ca120183108431fefe30321039516c213188c19"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:573",
+      "expected_value_sha256": "9f25baacab2a8b1b9dd536877e5538724f1db665b7beff8437766c8faea5e10a",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:573",
+      "line": 573,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0329-governed-writeback-compensation-request-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "616b629c3ae6ab77c0e64db4fd28c250796624b40d9a925d76ecd6f16ff548bc"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:574",
+      "expected_value_sha256": "00c9bd9610f551c4a8048edbe0a8a81be85f50fe05a846dd85a2f7572ba8fd54",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:574",
+      "line": 574,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0330-governed-writeback-compensation-dispatch-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2c4e931baab4f427ee2c536c1e8d17a01e64b2d546670bd8f153c90896a5d9f0"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:579",
+      "expected_value_sha256": "241c77ff57fdb697052a69113c6f20bf32cc0df58b4c9abe2be87900da7f5d1b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:579",
+      "line": 579,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0335-server-finance-core-api-adapter.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "9fae76fb2bc333ed0f461f9db005dbebfc9d679d8a7c1745b621e53747eaf295"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:606",
+      "expected_value_sha256": "9bc15a9783e3a7e334546403d55593f2c400a357ad792eecc1962d1a05dcd7ca",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:606",
+      "line": 606,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0362-ci-synthetic-credential-hygiene.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "f894144faf21d9acd20f3f796502074a7dd3f52d8792af57af58bea266fc85fa"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:620",
+      "expected_value_sha256": "ff0d6412fe7667038b8e979bcaf41846b7a390644acc42056edac220dd1159cd",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:620",
+      "line": 620,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0377-current-regression-after-api-auth-fix.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b1ece410d15d971d74784f00dd94367447db932888fcd08f389fad67df80e63d"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:638",
+      "expected_value_sha256": "b5d781416ef3edc54c81ea01046741d1292e8c4b471ddcfe23c4cdc0f62e956d",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:638",
+      "line": 638,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0395-consolidation-impairment-server-api-boundary.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "109691bcf2aa838d184e57f7788a94d8ea8f001e9bca2a354b9563fe0aeb56da"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:690",
+      "expected_value_sha256": "a4da12aafdc2ea6b8ca9c741f261a6a7092775b996f702c3d25f8b1d98898432",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:690",
+      "line": 690,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0449-retail-settlement-local-api-boundary.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b0a27790c334fcabf1f3a4e4487de1b30ad92fcd4837355f76a845cdf7dec386"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:711",
+      "expected_value_sha256": "0026f02699b6c1daf8a821d5841d5b3eabf572db709a070a4a70f35391b29d20",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:711",
+      "line": 711,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0475-durable-job-queue-health-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ee58f736e86f828db351707ddfc73baffe9da552b0796e43663701427f657f05"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:712",
+      "expected_value_sha256": "ab6f9ce622a0fe347240ed67ff2a296895a796f7b6ad82a1b098c4aa3f36551e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:712",
+      "line": 712,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0476-live-durable-job-queue-health-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "be55e93f0d4df980bb28f503a5804822068616a7e99499c4cf410647eada68a7"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:713",
+      "expected_value_sha256": "f056504261329130b2c25a2a21dd72da1f8474afe7df826646af1f1a00ca9315",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:713",
+      "line": 713,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0477-live-postgres-metrics-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "3f85a9b788db06fa5aea92b96c65f401b28310c82e281455ab3f158cc810a566"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:734",
+      "expected_value_sha256": "5136ed38f9037517b841f0e1c610a3803fdfe9e7c0e7d3cc9e53f858b0689076",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:734",
+      "line": 734,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0512-erpnext-payment-entry-api-replay-fence.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5ee0bc9c61d534ce7fe4ea0261707e79df1348dd824ce5cb24b41964515a4979"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:748",
+      "expected_value_sha256": "bd230bf08fa56bf6551ed46f553e0de466b39b624a03b4489b464130c0fed9e0",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:748",
+      "line": 748,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0526-local-postgres-industry-api-runtime-gate.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "60f8f48f59f776b28cc8d63fa1b7d583defba0ae485b5d6a1a729192438385fe"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:779",
+      "expected_value_sha256": "daf604c5985caff9c735dcd567b9c9d73b1ed4f25efa43f2d204c964f0dbb996",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:779",
+      "line": 779,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0566-provider-neutral-managed-key-custody-evidence.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "d7b831b65e6d5b1da51ea73ea20cd81b2ef2cabc4afe0c325a86ff3666d71f96"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:809",
+      "expected_value_sha256": "ca578ca5e13d3f39373f23e9ad4aa60df63ce442eefe8e44ad0a8ee4228f11d7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:809",
+      "line": 809,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0596-hosted-gitleaks-synthetic-key-closure.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1f210efa5a3eed9dc867023998b286c768da52c38a326f46b1c5aea7be04c1f9"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:941",
+      "expected_value_sha256": "36f94bd08966fbab6c656eec3a310943941ed25632f800a316d0822f5fda78cf",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:941",
+      "line": 941,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/adr/0789-hosted-spa-api-routing.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "97e6fbb79455e1ad17fb889087deb0586ebd0026812ab1dc423b217224648f9f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1259",
+      "expected_value_sha256": "9375e024172c2369eee87c882b434f09efa020447dd0f4818dcbc576426dcd24",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1259",
+      "line": 1259,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/operations/access-administration.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "4103e859e964259e7e08f155c0decb94d4cb853df46e89a49bc8b845d306e5e6"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1384",
+      "expected_value_sha256": "58fde96c9097aa7b1135351ca092e5a36a808aba055938b355a14d3a7f6a0c5d",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1384",
+      "line": 1384,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "docs/security/field-level-access.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cdc95ffc7fa8f7e18f859d469f8e87bc8bdd56514594f80991feae6eb8b74599"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1450",
+      "expected_value_sha256": "b7a144e2ec516794d067a548fffc20a497b9bfae437e78408a304c5cbfa567f4",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1450",
+      "line": 1450,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/api/routes/access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5a00ede6c6d85870e9ab09eada0e30e454eba3c7d4972900c201984deb6fcab4"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1454",
+      "expected_value_sha256": "62ada134363c22eacee8bdff0a5863b9b7299161d3fdd81d38adcc9ef0d38d4b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1454",
+      "line": 1454,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/api/routes/auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c76d0cd61cb5b2c36bfe0dd44de91df97c6ae629d942fbf634bc5ed35c5ff771"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1469",
+      "expected_value_sha256": "e0e8b9b7fb6a199ef9b3f6a37149edef48760afc1d0397626ba5bb45018a2ac5",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1469",
+      "line": 1469,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/api/routes/emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cc81c6799d5b0b7e8e57c87e9e9016c0f5b19d34956aef824ca70d1949122ba2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1511",
+      "expected_value_sha256": "91581f68359ddc126389f86bd894ebad562ea1410dc7289b923d302235699475",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1511",
+      "line": 1511,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/api/routes/webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ea1acdf96a466af08dfb6e6e1a022502073ff54a6582009e6462e317e9a55def"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1547",
+      "expected_value_sha256": "102b807cee88f88e7f0c90fc60b22fe603fe52a524bd6fb56e1f6b69ccc51bca",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1547",
+      "line": 1547,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/application/access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "7b2e776aa20ca9c29c8b74fe46a63a960e3d95a2ac802ed691ae6bcb362ff314"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1624",
+      "expected_value_sha256": "5eee293ea9a46a78b09a8b2d424360c3d5feb3ba2cd6cb7b03a596f4d71ac7ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1624",
+      "line": 1624,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/auth/field_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1ecf43991fbcdd170453b170e07a6406d20612299f866f6c42f917c9842aac27"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1626",
+      "expected_value_sha256": "d9defc697432b28ed0655252cfa3f4a44ed8c20b69943457b307ff42888e9401",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1626",
+      "line": 1626,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/auth/passwords.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "92727f763915c731f65b82a1c2601164ec015c7ca4de56bb246a8f9388044686"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1634",
+      "expected_value_sha256": "9d9d4ea9edafac6f7affb9e36984a3818b4e225208ba59793ba50bb899e69f41",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1634",
+      "line": 1634,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/auth/webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "dc0f9921a4803e8aed195d4b43efded5437d220fdc322116a9f4e50656576d9e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1635",
+      "expected_value_sha256": "7745beefd0d58e0621ccb88aa8946fa42d0f99a55e90c27f5d770b40feac08b7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1635",
+      "line": 1635,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/auth/webauthn_config.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c69558a24a927c95eef824d4bd017f5c401e53f992f4edf35e4c471d38cf9262"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1731",
+      "expected_value_sha256": "f76bca0cbca66f93dd375ce58cad2c3ec871d57f8c4f1cac01a55ab4a1266204",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1731",
+      "line": 1731,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/deployment/key_custody.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5adaba2a0349edacd25d9ac4c7ef7c67995dd29b071ce524105252b4069d6b43"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1836",
+      "expected_value_sha256": "ad80c7386e10f857b8c40f24509c81081beec4bbe8686c5aa657dd25269056ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1836",
+      "line": 1836,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/infrastructure/postgres_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "d9c23fff06b77967e029d9354db8003c0a82736174087c292bf8b74196ec47ab"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1864",
+      "expected_value_sha256": "2eda0eb56074baf503d6ea626a908c67b663f1d8cbe20d6524e3d0a2fefec7b7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1864",
+      "line": 1864,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/infrastructure/postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "05b22bb45717fd896546734c87cd65cad2125ac1d5e1a7886c58e397754f30e2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1948",
+      "expected_value_sha256": "c7673cbd13cc050a37a95ec9e1c1533311198d5aa4e9d1c771005643d1f3de36",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1948",
+      "line": 1948,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/infrastructure/postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "20e823ff5909a58bb2f680c4c38a22e470abf27f3dfaf363623f9eac4330d66f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1961",
+      "expected_value_sha256": "f88903b56adaff810b23eb97d6522f4d59164dcf4b2898a6b8996a85d69bbf46",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:1961",
+      "line": 1961,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/infrastructure/postgres_webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bf7612e271cf14a1b016f5ed432a3a7ebe32bd14f033c5f8e8cd55a7d8399d6e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2183",
+      "expected_value_sha256": "eb9f60632510283d805725a27d60bb595c61817e406de201ee476d56e190ddd2",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2183",
+      "line": 2183,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2a1cdbeb5950b56861df8a26c5440a1665d7b0edda98674bb7e39b64a48e0281"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2192",
+      "expected_value_sha256": "959dfe4051c567793a38ec6aeb8e436260b75b7404f3f2c13f912c9718daed28",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2192",
+      "line": 2192,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "71e46052cdbdb6d42cf102ee5b98c045f298176a3eadbf742d7c91b9fe264e58"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2193",
+      "expected_value_sha256": "8273dadb9f818ca7e39fa33fee517b68eccc66baf8e8686101680df5f3091cb2",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2193",
+      "line": 2193,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_accounts.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "07bdf50827796934632cdba36dc7ad792db14b4982103a8db12812fe181bd895"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2195",
+      "expected_value_sha256": "5068f034f7e8730a9a19153c0061454ca578b9adaf03de7edad729f08ab86d3b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2195",
+      "line": 2195,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_audit_projection.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "90f0413b8db5e700467c789752ab884ee76c78a3db51f3bfa100a9473143bcbd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2196",
+      "expected_value_sha256": "468aafd20f0b1bc0d466f9ba30ededa7c855130172bf3e258910fbe235ff637b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2196",
+      "line": 2196,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_audit_workflow.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2d6133225141a1f304646d9577b429a3b5a731a63e4a51d61c042df98c214096"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2197",
+      "expected_value_sha256": "041fd5119258e6f59f512c01276612bfe4822671b7d5e7af551fc04573afe596",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2197",
+      "line": 2197,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b6534657555b5b8f10c037863ea2e96eb1a6bd82be1ecb580b52cc570077db51"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2199",
+      "expected_value_sha256": "41ca833be23e32fbdb47c71342396072e0d356ce26100e08c31841bf4913ac6f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2199",
+      "line": 2199,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_bank_statement.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "6704a08880431de8f8a1400afbf4a80e8975f5c6ec36060f59d3edbb6d0243c2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2200",
+      "expected_value_sha256": "d948374244a0475db8c938718750d65881e441fbe32aabf91c7c53bf77ed0794",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2200",
+      "line": 2200,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_browser_sessions.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "f7b4881c2f2d95a1b4e84ac82736eeac7d5d53abeec269e143211369af4095fa"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2201",
+      "expected_value_sha256": "c082210ec148c1a6866e261d0f9e7bc654fc0748d7d0cd4fc99ec1121c8bc342",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2201",
+      "line": 2201,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_budget_control.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "755af244cef18982faa2a3abd4184e9adceae2df8001347f7c12e937e6bd1d88"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2203",
+      "expected_value_sha256": "c809a6bf2107f158fe10a2326555791fd0daf8bca96464f4ed15c99918850b4e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2203",
+      "line": 2203,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_connectors.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5cc3427402dccfdfb89bad3d42accac5e7fa8e3318652dc1126b8c05ba0955c0"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2214",
+      "expected_value_sha256": "a23e235f8822b1bbfe6a4711767f2970096e211265acdea92c35ce2b2524006a",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2214",
+      "line": 2214,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_dependencies.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "919917d4fe3a6d8c420a0f5902cfb0b841093122058f81d0e4926aa0dd4c97a9"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2215",
+      "expected_value_sha256": "0bd27de777ddbf5c4b41c7128dab4e758ca881b43567e051d2c3a995aec77156",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2215",
+      "line": 2215,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "955c03ac7d2248d843252b094d40b231869b7925faa48893b56c7a05a337c491"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2216",
+      "expected_value_sha256": "723966aa0333dd963dfad9accc1886c40a667c124627932246c2da475202f818",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2216",
+      "line": 2216,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_execution_scope.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1a826e56f86bff2210299f715590ae6fb555836892ddc89368961162068e70cf"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2217",
+      "expected_value_sha256": "aeac0d218656bc557bb876930c02d024d3acf07ec71781c22373eaed62201b94",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2217",
+      "line": 2217,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_federation.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c3ac2759bd6a92818bdec39293a31c62c85fea05492426f875c9474f72582220"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2218",
+      "expected_value_sha256": "d797e4c7e94a51f4767d2728fbfb6b9f61867b53d95c1baeb21d1d6ccbed4cff",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2218",
+      "line": 2218,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_foundation.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b4f6df896a9c8b6b96ceb6dec93c6770d5533f53448e7b959c5f55f19524cb49"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2219",
+      "expected_value_sha256": "60c0f34ef7d09deba20b04735c53837c27ac81e6a80c3f6f732f46eb47756aec",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2219",
+      "line": 2219,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_https_hosting.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "288155dfd0b9e1764a5c200e71c8d050e27954824f9528986195ac6ef8446b86"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2222",
+      "expected_value_sha256": "7fd64c5c1db41cef059ab4b60f21cc7912c6478922575896bffa8b7b1c75561c",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2222",
+      "line": 2222,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_inventory_core.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "8d9fe085e28077948d8e1a4c768ce5f8b042aee3c9473196823866b4dd9181db"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2225",
+      "expected_value_sha256": "a639aed8b2040ffd6bdc469bdf5e25feed3f01f84acc5c5efe92e2f6827d5806",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2225",
+      "line": 2225,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_metrics.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5bcc95f7b20a3dc4e76231eb7f95bff3ee0e2b138419e2c14985756c92a6aab7"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2227",
+      "expected_value_sha256": "db30223dc2c9a88a7cdc5adba8735dbf18d7958a8283460be75a5be71a02a98c",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2227",
+      "line": 2227,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_operations.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ff35b025dd031cda7960cecac06a4cf9cecbb7a7be578471525345d3f7b95bed"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2228",
+      "expected_value_sha256": "8eeb5471e13471eb178c21a56a6d6d2253ddb5e2383fe097e00079ce387a0b12",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2228",
+      "line": 2228,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_platform_routes.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2c9c43f8d4debf6484fcd081bca60984440a9af856b6e72c0b244480f18e0320"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2232",
+      "expected_value_sha256": "79b092ac848e69f38ad64b34ef63b8416d3f5d04965a71a1af46f0426bf43b14",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2232",
+      "line": 2232,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_scim.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2d94e4cdf8ab737e28b1280255c651de83b1f05fb937959ab182c915a56c244d"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2233",
+      "expected_value_sha256": "351321dd3177e54b3c4cf56afd350129a46783249e3935fd8ed17027251e7ade",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2233",
+      "line": 2233,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_scope_grants.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ac2c0d41d75d4b39ed9266fdddbd050261a9488f74390014b7075edc94b7bcc6"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2234",
+      "expected_value_sha256": "ea434542e8d24885bec82a11ba49b49734252fdf85a323e8f24abd72f816ec28",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2234",
+      "line": 2234,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_security_center.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "6322fdc5ffb87b065d5acf2e4e810c866754c5e20705c8d1f6a7f3f279852bbf"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2236",
+      "expected_value_sha256": "5379f19ae2dfdbf1e19ba82122f9e09f17d65e04f9cc8da10a8856e7bccbae2b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2236",
+      "line": 2236,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_server_accounts.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "9dd3e698d34e3befbf17d6243892c35dbc2dc6f1e3982faea2c10fbfd5841bc5"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2241",
+      "expected_value_sha256": "b7bc973e016d074c05cd7ba1076d5cff8207f285c447f592fc3afe87b91153d4",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2241",
+      "line": 2241,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_server_evidence.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ebc8d43ff59679f36fbbacd2ce2cd116b1cec7ac79f1895831907d6daa54869e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2245",
+      "expected_value_sha256": "0a5f18109c153d7454266b5a516e840a61d8511ac0d9f8492f9dff0c2d3f9e9a",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2245",
+      "line": 2245,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_server_identity.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "32632ca4edaa3f23e31315100bcad7e7b051deebeb6ea1a7ff351a0ab8db6ffd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2253",
+      "expected_value_sha256": "69d87b61e64db9acf7f77761503946e9c5ba5964c8d3e2e36e98a3751a8c874e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2253",
+      "line": 2253,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_server_payables.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "9261cafb9c343ff45c595cfcf70f8d0a60d3cc3d3dcb764fd9813d07d0b33538"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2261",
+      "expected_value_sha256": "96da8a7c25f3e16c1524617a10d4008be201ea96e5d96183c575d60a447c78d8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2261",
+      "line": 2261,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_service_accounts.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e02ad748b1ecef468b51602a006878b59cbafc0e6e87e8c97e2c367b3fa4df9c"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2263",
+      "expected_value_sha256": "4799eefaa56e55d9da1ecb4b9696fe28f1de7775409babdee0481603cb3a40c5",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2263",
+      "line": 2263,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_users_roles.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e8459a464cc541718d51dc6e216667b65a4c7fc482f0a46d86addbaeef636cfd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2264",
+      "expected_value_sha256": "db0c35af04ddb0bc0d7699b622c5070cb47ce97c05c38735bb8008d93a8b9f15",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2264",
+      "line": 2264,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_api_webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e323cd4dfc53a2f9bbab8ddc3af151dad97e0cf809ad0520d31408f762652c87"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2291",
+      "expected_value_sha256": "ae7ee684ba2fe02dd59d60d0f333c7cad57740ee13446a8c2c15b8ce3fe94ce3",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2291",
+      "line": 2291,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_auth_passwords.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "0f449f1712a09023214916782b9ccf2d81298ce1e5d2a2e28538753c6135e539"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2292",
+      "expected_value_sha256": "268d8371569c695cef666b6332d68c5426f7cb390d27c9715f4917f79b9c6eee",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2292",
+      "line": 2292,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_auth_rbac.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "97d7cd86950431da090bb2f9e32f6611064a2c2de83bb16c00dc2659392862c1"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2358",
+      "expected_value_sha256": "474702676fe4f7d560ba32474afd958df03c0ea4f0d26c393643af5162cf648f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2358",
+      "line": 2358,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_customer_returns_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "f13a392f74bfc018c60d52b4efedc64f366d382d48c7a3297fd5d90c99e37f40"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2368",
+      "expected_value_sha256": "880171583cdfffe31ee3ea77c448f4e98e5390c232d4d8a8a9310f0e51921508",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2368",
+      "line": 2368,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_deployment_key_custody.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "717a1853c02fdd2ce723658f832e61461b2d784c6ca4c910ef2dc186ff08b25d"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2406",
+      "expected_value_sha256": "a74f527b0ccf41384b5ab790448ba9accdf467a38d99af345bd04319a2d480ba",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2406",
+      "line": 2406,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_field_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "33143861af292de15ab301180f21b6e6a34d143e58c8ce7c931e8fbace3d4cbb"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2412",
+      "expected_value_sha256": "bed0f1db33492d959fd4e97f289c13999fac1530a458fa928ecbeb116cf14f47",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2412",
+      "line": 2412,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_finance_posting_api_contract.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5f842cbdfe23ad0f18a877e0b9a3f1aa82a1fa958e5a3de828aa5984197686cd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2451",
+      "expected_value_sha256": "d0354c0995b0e32fb2de14c63574156b979226326eee1aac6664e380c2454f77",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2451",
+      "line": 2451,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_inventory_receipt_api_contract.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2dda638eee849d43b6bde1b42353bbc1682cf6f1540b2cbdb6b9e4d5382a87c6"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2514",
+      "expected_value_sha256": "e58f1d43a2b8ed800274dd3c24e01a9978b5f052c28cdb3b852f0994e373bf0b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2514",
+      "line": 2514,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_payables_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "850ecef6d266974f4f3d1b439fbc4d462fa13c89127fd43b3f4802707aedfc44"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2536",
+      "expected_value_sha256": "15d6ff19d75078308f48b9b06609a6e22dc5fd8f0b515a780f03f36cd1dc22ed",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2536",
+      "line": 2536,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "74c4a69a46a3d51c897b6e2b71da4e15d540ac21ae92bdfd91b7e2f5766385fd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2569",
+      "expected_value_sha256": "35ff006e6253ebb99810e5fa8afa811af62bde979e16eaeb9d25d09f0d50d54c",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2569",
+      "line": 2569,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "7ca7a6cad1076f6c65834dda562c80144937ee581be28a95856338aa2e1d8f7b"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2581",
+      "expected_value_sha256": "d9d52164d8a824ce49fd00d24c6edf37102fce2706126f55a1b800542672d4ce",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2581",
+      "line": 2581,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_finance_posting_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c3081ff21994873fc1cc49000eebca42cae3a3e1a2ed00005e92713e244b880f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2590",
+      "expected_value_sha256": "a15ce763f594e1e108ada2d288a74dc768962eb990c2ca666be7933f1585b92c",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2590",
+      "line": 2590,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_financial_reporting_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "108d7032f7ab80873fe40c335b47c18c80d29710bb00f8ee44ef2d6f349c42db"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2609",
+      "expected_value_sha256": "c8217af4fac1a111e35d4cbc0e1e3e48a2c15a356ee358b0c2c8069bff856592",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2609",
+      "line": 2609,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_inventory_receipt_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "25dc6c43940c378c4218c5e3317bc9476b9faed939e48447ab93abbdb57fd9f0"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2619",
+      "expected_value_sha256": "3d357366ea3fd07926dca7b4c277a5fe72aef84482cf46680739837bad234b3a",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2619",
+      "line": 2619,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_landed_cost_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "817ecc5569913dc220dcf86fa352e6c89e7c6a269ce7ae3ee728ef4c193bb604"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2634",
+      "expected_value_sha256": "b489dca6519385eea179b5b9177ab3f360c6d968b42562f67111cfbce29208f1",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2634",
+      "line": 2634,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_operational_finance_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "d3608edaf40b33e2c3f84fe76851bdf5f0745a89eaf33823fd1b96ea6715f7a1"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2638",
+      "expected_value_sha256": "f377648315fc507e20a78517a621ec2d4df3526a0ec5870e034c23360dc4b04b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2638",
+      "line": 2638,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_operational_fx_tax_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "08fec96d9890833c35d4ca523b2397e20140e76ea201ad4283109fcc20b5fc61"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2659",
+      "expected_value_sha256": "b2ba66c6da5f5134fc4ac1835c52fc662fa8e0fbf485a700f654c714ed702cdf",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2659",
+      "line": 2659,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_procurement_commitments_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "389633d15fec8c1b86662a44d2bae55bffed0a51b0712840434cad428144f0b2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2661",
+      "expected_value_sha256": "8164de22532a3b295c9258cd81271be25c0536b5b68ee825b47b1d3493f523ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2661",
+      "line": 2661,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_procurement_multiline_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "597fdabcc6388a75f763e0fc5edc9619e8acc583ca7804aee9adcdf4b37a5838"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2665",
+      "expected_value_sha256": "4dcb097456c16566959853f61f6452a4c7d2939dae3772ba6232e388c814e04f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2665",
+      "line": 2665,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_procurement_partial_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1c09ad96f4753e9d9dc1d7853837e8d9afcf0f346f52a862ab1964c7af997e83"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2684",
+      "expected_value_sha256": "a66daac56b7166848fe72a64578d5791688f81a14fc3df012a100a6b243dbe31",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2684",
+      "line": 2684,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "4104c89bafaee887754f93b9b7665bec516f42213810f1fd431a2057c750e2b4"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2691",
+      "expected_value_sha256": "92695b6f1e644bf4353d697c0b4613eec97b6ec3355290cb0dea625f07002574",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2691",
+      "line": 2691,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_stock_commerce_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "8c7d6b4ad260de2d648a83d0165fe1552008d4135c7cf8249033d2acaee04fc7"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2694",
+      "expected_value_sha256": "aa102830be0d73ad1f0a6beb716c37f2b5c74c18c2234048b4a465a8337b1fbe",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2694",
+      "line": 2694,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_stock_sales_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b47dac20ef3a23210fe3084afd0653ee217fbe1a73e19b9280c8d90014036715"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2697",
+      "expected_value_sha256": "4523bdbf0c29056093d2c07b1ecbc3f103daad6e69f31e46a8462330dd556a9d",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2697",
+      "line": 2697,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_supplier_returns_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2bca5697310b3c7fbfa93cb59b8aecf455693ae9b9ca32649ee36f99e0c07113"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2698",
+      "expected_value_sha256": "ef4b494d882c53467e6e24219652b321309183be4840160a5e5524d2203672b6",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2698",
+      "line": 2698,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_postgres_webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "261666450d7c86c835e8bd4b5198a76a25508544014edc1dc9c79a3c022fda24"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2718",
+      "expected_value_sha256": "3edeeab3b712b00c5628d25fab9649600dee75aacdcacb2f4607affe09346c5b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2718",
+      "line": 2718,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_receivables_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bc058b53e29911fde05a1a2b376fb5460d3520fc84f83e98f12de7d12ff59383"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2725",
+      "expected_value_sha256": "40224393fbb1ada7a0c0f16ebb6039455873c9702034b90c5faf84cec0924877",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2725",
+      "line": 2725,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_receivables_invoice_replay_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bb28b3ab14958e9cfde154d046ec3156da443cf2e3d44f69d76ef5620bca9016"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2728",
+      "expected_value_sha256": "aec1d599dbe9a74c8051d19b5fec96b4384a0adedc4b5584f2db3d65958a01d8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2728",
+      "line": 2728,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_receivables_money_api_contract.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "f0acb68a69345e240bb3144536540644dff90e139f868c5ebee8a775422c386a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2729",
+      "expected_value_sha256": "5c68b4d6e851e636f4164cc4e42fb7f73bc9008ea863ce6a51e732eed1065a5e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2729",
+      "line": 2729,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_receivables_policy_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "edfd142924570a012fdc8256a27ad174d3c4efd46a92ff8648ca3dfb5e790a00"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2796",
+      "expected_value_sha256": "02bbe078abacb149bcf7632f72d3afb1c66abe34fe6aa6789d4c87646c9f35c8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2796",
+      "line": 2796,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_studio_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "9d0dfc9129806c7bd4d9aa61a49cf0a608038142c41945d6d4cc202a3bf73a64"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2812",
+      "expected_value_sha256": "cbd3d67862b694f788f40ba28be651cf7ac0b79fb1c7b650f7c986fa9e63bd1f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2812",
+      "line": 2812,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_webauthn_config.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "8f39df6f992e68892309d6795d9097b29e99fa95d70f7c905611b866f5b1d48a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2813",
+      "expected_value_sha256": "8448d71a0c9f99fcbece5bcc997ddfe2a4a5a8e90ad31aa07632c0d61f7b17ac",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2813",
+      "line": 2813,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/test_webauthn_service.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "821ee3c4e80c0680af4a16ec6ef95b8dc9ddc31402f06429eb4511d16561276e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2822",
+      "expected_value_sha256": "47070c57569cdc7dfdd1d150e514e4ed04cd46d1aa757b8800e643544b944770",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:2822",
+      "line": 2822,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "tests/webauthn_synthetic.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5f14e5353b93105bf866408c474d8ee90079b85431673f747f8dc2a7f288ecf8"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5464",
+      "expected_value_sha256": "b7a144e2ec516794d067a548fffc20a497b9bfae437e78408a304c5cbfa567f4",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5464",
+      "line": 5464,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/api/routes/access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5a00ede6c6d85870e9ab09eada0e30e454eba3c7d4972900c201984deb6fcab4"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5468",
+      "expected_value_sha256": "62ada134363c22eacee8bdff0a5863b9b7299161d3fdd81d38adcc9ef0d38d4b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5468",
+      "line": 5468,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/api/routes/auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c76d0cd61cb5b2c36bfe0dd44de91df97c6ae629d942fbf634bc5ed35c5ff771"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5483",
+      "expected_value_sha256": "e0e8b9b7fb6a199ef9b3f6a37149edef48760afc1d0397626ba5bb45018a2ac5",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5483",
+      "line": 5483,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/api/routes/emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cc81c6799d5b0b7e8e57c87e9e9016c0f5b19d34956aef824ca70d1949122ba2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5525",
+      "expected_value_sha256": "91581f68359ddc126389f86bd894ebad562ea1410dc7289b923d302235699475",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5525",
+      "line": 5525,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/api/routes/webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ea1acdf96a466af08dfb6e6e1a022502073ff54a6582009e6462e317e9a55def"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5561",
+      "expected_value_sha256": "102b807cee88f88e7f0c90fc60b22fe603fe52a524bd6fb56e1f6b69ccc51bca",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5561",
+      "line": 5561,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/application/access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "7b2e776aa20ca9c29c8b74fe46a63a960e3d95a2ac802ed691ae6bcb362ff314"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5638",
+      "expected_value_sha256": "5eee293ea9a46a78b09a8b2d424360c3d5feb3ba2cd6cb7b03a596f4d71ac7ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5638",
+      "line": 5638,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/auth/field_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1ecf43991fbcdd170453b170e07a6406d20612299f866f6c42f917c9842aac27"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5640",
+      "expected_value_sha256": "d9defc697432b28ed0655252cfa3f4a44ed8c20b69943457b307ff42888e9401",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5640",
+      "line": 5640,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/auth/passwords.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "92727f763915c731f65b82a1c2601164ec015c7ca4de56bb246a8f9388044686"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5648",
+      "expected_value_sha256": "9d9d4ea9edafac6f7affb9e36984a3818b4e225208ba59793ba50bb899e69f41",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5648",
+      "line": 5648,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/auth/webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "dc0f9921a4803e8aed195d4b43efded5437d220fdc322116a9f4e50656576d9e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5649",
+      "expected_value_sha256": "7745beefd0d58e0621ccb88aa8946fa42d0f99a55e90c27f5d770b40feac08b7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5649",
+      "line": 5649,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/auth/webauthn_config.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c69558a24a927c95eef824d4bd017f5c401e53f992f4edf35e4c471d38cf9262"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5744",
+      "expected_value_sha256": "f76bca0cbca66f93dd375ce58cad2c3ec871d57f8c4f1cac01a55ab4a1266204",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5744",
+      "line": 5744,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/deployment/key_custody.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5adaba2a0349edacd25d9ac4c7ef7c67995dd29b071ce524105252b4069d6b43"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5849",
+      "expected_value_sha256": "ad80c7386e10f857b8c40f24509c81081beec4bbe8686c5aa657dd25269056ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5849",
+      "line": 5849,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/infrastructure/postgres_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "d9c23fff06b77967e029d9354db8003c0a82736174087c292bf8b74196ec47ab"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5877",
+      "expected_value_sha256": "2eda0eb56074baf503d6ea626a908c67b663f1d8cbe20d6524e3d0a2fefec7b7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5877",
+      "line": 5877,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/infrastructure/postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "05b22bb45717fd896546734c87cd65cad2125ac1d5e1a7886c58e397754f30e2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5961",
+      "expected_value_sha256": "c7673cbd13cc050a37a95ec9e1c1533311198d5aa4e9d1c771005643d1f3de36",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5961",
+      "line": 5961,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/infrastructure/postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "20e823ff5909a58bb2f680c4c38a22e470abf27f3dfaf363623f9eac4330d66f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5974",
+      "expected_value_sha256": "f88903b56adaff810b23eb97d6522f4d59164dcf4b2898a6b8996a85d69bbf46",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:5974",
+      "line": 5974,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "reconforge/infrastructure/postgres_webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bf7612e271cf14a1b016f5ed432a3a7ebe32bd14f033c5f8e8cd55a7d8399d6e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6192",
+      "expected_value_sha256": "73fa7be6f8966ddc7618971beb1c51fcb93217a06ca60ee2189a630a22e52692",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6192",
+      "line": 6192,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0036_postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "88eb2ed8e628a185f77ed22b86995358ed75a97613c475f01f3bc996e3cd9738"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6195",
+      "expected_value_sha256": "43fa29552c7e312206d3126bb495c7deef42dd82eea57e3934df09f069d6ccd7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6195",
+      "line": 6195,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0039_postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ebbaaa5ee56593d66d32c33facf162b7bfac77a5fbf94936049a34342bf31cc5"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6196",
+      "expected_value_sha256": "22112ce6cf797a32667ab4349359dbdd2c03e12b87845d8e0079c8be4274e6a8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6196",
+      "line": 6196,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0040_postgres_webauthn_mfa.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cae8a5253d7c039483321d43d382516014b138f2caf04f18f7009ce5888e924e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6207",
+      "expected_value_sha256": "1b5e7b0172773767ddb055d19547f84d631225e77e24ad3904ee7b3f5ceb5c10",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6207",
+      "line": 6207,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0051_access_policy_lifecycle.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "4270def6082e087dbd15f706ec9ca24b027de2666316ebfb4821c5c665520e1a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6260",
+      "expected_value_sha256": "fd31265ef90adbc6cc7b568a5690a5345b95cd86a94c28dd8beddb52b9189eb1",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json:generic-api-key:6260",
+      "line": 6260,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+      "public_source_path": "alembic/versions/0104_postgres_exception_review_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "fd163409f279bbbf86deea591181503d17e29cc43704dc8f2790c5a1fe2bf85a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:93",
+      "expected_value_sha256": "73fa7be6f8966ddc7618971beb1c51fcb93217a06ca60ee2189a630a22e52692",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:93",
+      "line": 93,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0036_postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "88eb2ed8e628a185f77ed22b86995358ed75a97613c475f01f3bc996e3cd9738"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:96",
+      "expected_value_sha256": "43fa29552c7e312206d3126bb495c7deef42dd82eea57e3934df09f069d6ccd7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:96",
+      "line": 96,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0039_postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ebbaaa5ee56593d66d32c33facf162b7bfac77a5fbf94936049a34342bf31cc5"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:97",
+      "expected_value_sha256": "22112ce6cf797a32667ab4349359dbdd2c03e12b87845d8e0079c8be4274e6a8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:97",
+      "line": 97,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0040_postgres_webauthn_mfa.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cae8a5253d7c039483321d43d382516014b138f2caf04f18f7009ce5888e924e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:108",
+      "expected_value_sha256": "1b5e7b0172773767ddb055d19547f84d631225e77e24ad3904ee7b3f5ceb5c10",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:108",
+      "line": 108,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0051_access_policy_lifecycle.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "4270def6082e087dbd15f706ec9ca24b027de2666316ebfb4821c5c665520e1a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:161",
+      "expected_value_sha256": "fd31265ef90adbc6cc7b568a5690a5345b95cd86a94c28dd8beddb52b9189eb1",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:161",
+      "line": 161,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0104_postgres_exception_review_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "fd163409f279bbbf86deea591181503d17e29cc43704dc8f2790c5a1fe2bf85a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:252",
+      "expected_value_sha256": "df7d8a02d4c08d75dfb35d5e986d8e7ceff3f7890a5fc2707e1ad1f6cde7728f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:252",
+      "line": 252,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "apps/web/src/components/AdminAccessMutations.tsx",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2e71d2246562723ef8c6429c354f5d9bc9d274f56db45ae3c9da3617f980edb3"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:519",
+      "expected_value_sha256": "c2580fa6035623dc5c5dec1657bb386d6e3e09e8cf8d653a399002592a06c2a3",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:519",
+      "line": 519,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0258-writeback-intent-api-is-proposal-only.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bb8dec22ad2d4e136a402287404fd95e789cec3938c2aa930c4e63537facee0d"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:520",
+      "expected_value_sha256": "7e6a88d9dab4bcc70988c2d00abefcf51fc2ba9925b0008783b6203a23de26a1",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:520",
+      "line": 520,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0259-writeback-approval-api-is-maker-checker.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "fc668c390b5fb96643842f48cd441a439d20e9d66699dc00d7c98c0737f8093a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:521",
+      "expected_value_sha256": "11a001f1d16a4d942c20cd163cecdd05f8cdb13136f17dcf15fc3096df3cfee4",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:521",
+      "line": 521,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0260-writeback-acknowledgement-reconciliation-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "05a070ace87da9d6e7a9bb35b3fa0d5c6ed7778d454452fae88706deb0e5edb4"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:522",
+      "expected_value_sha256": "46eed47a1cbfdc5b714cf4887d79559ea816060309fa3f7fec2ecb426ac003c0",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:522",
+      "line": 522,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0261-local-consolidation-close-drilldown-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "df66c92b42b11a96c3eda79bd4d2dfc8c892a31e429a5cf0d68548140593969c"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:527",
+      "expected_value_sha256": "cbb64e6578b435a44009035cf23efc5ee617ec913be6dcf3dfb54a0b5be8d4dd",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:527",
+      "line": 527,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0266-consolidation-run-certification-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ea4f74171cb26e5e228c7cc7088e30c7467994c71893b3dce20462553bc68fec"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:541",
+      "expected_value_sha256": "25faa7dadd59f51f93799bf99ce6a52db698244d2ed76a111f3af08a168abd63",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:541",
+      "line": 541,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0285-live-postgres-ppa-api-runtime-gate.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e33b54c82ea2713bb13364fcac06b8cac4b602206c181c3718c4165189048b3f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:545",
+      "expected_value_sha256": "8450f52cdadae2959fa78e7cc63042d5f20bf61eca8cd47054e80822b0f2f666",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:545",
+      "line": 545,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0295-postgres-writeback-api-server-boundary.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "dd7caa6a1f455e85805f50d743c51091a1fb3efb6efa77cf052ecc2697012e7c"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:558",
+      "expected_value_sha256": "da4ba14fd68fe0c2c5659762324bde4c19b92ced369d5b87c19d2794fa366a71",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:558",
+      "line": 558,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0314-postgres-consolidation-close-api-is-scope-bound.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "238d4e61ff2662fafe5cb98e18fecda1bfd4ae37979fbff8c9a6290ed0c27e97"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:559",
+      "expected_value_sha256": "0e559cc90e81aba90f4b040adfe445e104839d88f29717721b2f5947e2ab9367",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:559",
+      "line": 559,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0315-consolidation-ownership-api-is-scope-bound.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "6fbe521de2664eaf0086cb247a7f57bbc6ebe37ca12865d16819fe6613bfe8dc"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:560",
+      "expected_value_sha256": "d34b129742484c4f7c82656d8a1da78f52aa46e1b4fd0d0bcb6bd1b41a5be502",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:560",
+      "line": 560,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0316-live-consolidation-ownership-api-gate.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e3ccea053b6c828c629c48eb0465cabebc479198fc018cd9e0b4ec45ec595934"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:561",
+      "expected_value_sha256": "5f62befeec44927e833bb3b1f12ad463d983414ea6642a95cfd907a12aabfa11",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:561",
+      "line": 561,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0317-live-consolidation-close-api-gate.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1239812b8ca16e4167c93d2d83795128abc146c324b5ae7b0bb05644e84c08a1"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:563",
+      "expected_value_sha256": "29c1104ce534a9631025aa7223804e64991505c7f4a277d2836cc3bc4aa98f4e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:563",
+      "line": 563,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0319-consolidation-close-period-api-write-boundary.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "11a255a9c2d54d9c6fccd7971ca120183108431fefe30321039516c213188c19"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:573",
+      "expected_value_sha256": "9f25baacab2a8b1b9dd536877e5538724f1db665b7beff8437766c8faea5e10a",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:573",
+      "line": 573,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0329-governed-writeback-compensation-request-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "616b629c3ae6ab77c0e64db4fd28c250796624b40d9a925d76ecd6f16ff548bc"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:574",
+      "expected_value_sha256": "00c9bd9610f551c4a8048edbe0a8a81be85f50fe05a846dd85a2f7572ba8fd54",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:574",
+      "line": 574,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0330-governed-writeback-compensation-dispatch-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2c4e931baab4f427ee2c536c1e8d17a01e64b2d546670bd8f153c90896a5d9f0"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:579",
+      "expected_value_sha256": "241c77ff57fdb697052a69113c6f20bf32cc0df58b4c9abe2be87900da7f5d1b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:579",
+      "line": 579,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0335-server-finance-core-api-adapter.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "9fae76fb2bc333ed0f461f9db005dbebfc9d679d8a7c1745b621e53747eaf295"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:606",
+      "expected_value_sha256": "9bc15a9783e3a7e334546403d55593f2c400a357ad792eecc1962d1a05dcd7ca",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:606",
+      "line": 606,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0362-ci-synthetic-credential-hygiene.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "f894144faf21d9acd20f3f796502074a7dd3f52d8792af57af58bea266fc85fa"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:620",
+      "expected_value_sha256": "ff0d6412fe7667038b8e979bcaf41846b7a390644acc42056edac220dd1159cd",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:620",
+      "line": 620,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0377-current-regression-after-api-auth-fix.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b1ece410d15d971d74784f00dd94367447db932888fcd08f389fad67df80e63d"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:638",
+      "expected_value_sha256": "b5d781416ef3edc54c81ea01046741d1292e8c4b471ddcfe23c4cdc0f62e956d",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:638",
+      "line": 638,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0395-consolidation-impairment-server-api-boundary.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "109691bcf2aa838d184e57f7788a94d8ea8f001e9bca2a354b9563fe0aeb56da"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:690",
+      "expected_value_sha256": "a4da12aafdc2ea6b8ca9c741f261a6a7092775b996f702c3d25f8b1d98898432",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:690",
+      "line": 690,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0449-retail-settlement-local-api-boundary.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b0a27790c334fcabf1f3a4e4487de1b30ad92fcd4837355f76a845cdf7dec386"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:711",
+      "expected_value_sha256": "0026f02699b6c1daf8a821d5841d5b3eabf572db709a070a4a70f35391b29d20",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:711",
+      "line": 711,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0475-durable-job-queue-health-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ee58f736e86f828db351707ddfc73baffe9da552b0796e43663701427f657f05"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:712",
+      "expected_value_sha256": "ab6f9ce622a0fe347240ed67ff2a296895a796f7b6ad82a1b098c4aa3f36551e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:712",
+      "line": 712,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0476-live-durable-job-queue-health-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "be55e93f0d4df980bb28f503a5804822068616a7e99499c4cf410647eada68a7"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:713",
+      "expected_value_sha256": "f056504261329130b2c25a2a21dd72da1f8474afe7df826646af1f1a00ca9315",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:713",
+      "line": 713,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0477-live-postgres-metrics-api.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "3f85a9b788db06fa5aea92b96c65f401b28310c82e281455ab3f158cc810a566"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:734",
+      "expected_value_sha256": "5136ed38f9037517b841f0e1c610a3803fdfe9e7c0e7d3cc9e53f858b0689076",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:734",
+      "line": 734,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0512-erpnext-payment-entry-api-replay-fence.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5ee0bc9c61d534ce7fe4ea0261707e79df1348dd824ce5cb24b41964515a4979"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:748",
+      "expected_value_sha256": "bd230bf08fa56bf6551ed46f553e0de466b39b624a03b4489b464130c0fed9e0",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:748",
+      "line": 748,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0526-local-postgres-industry-api-runtime-gate.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "60f8f48f59f776b28cc8d63fa1b7d583defba0ae485b5d6a1a729192438385fe"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:779",
+      "expected_value_sha256": "daf604c5985caff9c735dcd567b9c9d73b1ed4f25efa43f2d204c964f0dbb996",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:779",
+      "line": 779,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0566-provider-neutral-managed-key-custody-evidence.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "d7b831b65e6d5b1da51ea73ea20cd81b2ef2cabc4afe0c325a86ff3666d71f96"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:809",
+      "expected_value_sha256": "ca578ca5e13d3f39373f23e9ad4aa60df63ce442eefe8e44ad0a8ee4228f11d7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:809",
+      "line": 809,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0596-hosted-gitleaks-synthetic-key-closure.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1f210efa5a3eed9dc867023998b286c768da52c38a326f46b1c5aea7be04c1f9"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:941",
+      "expected_value_sha256": "36f94bd08966fbab6c656eec3a310943941ed25632f800a316d0822f5fda78cf",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:941",
+      "line": 941,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/adr/0789-hosted-spa-api-routing.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "97e6fbb79455e1ad17fb889087deb0586ebd0026812ab1dc423b217224648f9f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1259",
+      "expected_value_sha256": "9375e024172c2369eee87c882b434f09efa020447dd0f4818dcbc576426dcd24",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1259",
+      "line": 1259,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/operations/access-administration.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "4103e859e964259e7e08f155c0decb94d4cb853df46e89a49bc8b845d306e5e6"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1384",
+      "expected_value_sha256": "58fde96c9097aa7b1135351ca092e5a36a808aba055938b355a14d3a7f6a0c5d",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1384",
+      "line": 1384,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "docs/security/field-level-access.md",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cdc95ffc7fa8f7e18f859d469f8e87bc8bdd56514594f80991feae6eb8b74599"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1450",
+      "expected_value_sha256": "b7a144e2ec516794d067a548fffc20a497b9bfae437e78408a304c5cbfa567f4",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1450",
+      "line": 1450,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/api/routes/access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5a00ede6c6d85870e9ab09eada0e30e454eba3c7d4972900c201984deb6fcab4"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1454",
+      "expected_value_sha256": "62ada134363c22eacee8bdff0a5863b9b7299161d3fdd81d38adcc9ef0d38d4b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1454",
+      "line": 1454,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/api/routes/auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c76d0cd61cb5b2c36bfe0dd44de91df97c6ae629d942fbf634bc5ed35c5ff771"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1469",
+      "expected_value_sha256": "e0e8b9b7fb6a199ef9b3f6a37149edef48760afc1d0397626ba5bb45018a2ac5",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1469",
+      "line": 1469,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/api/routes/emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cc81c6799d5b0b7e8e57c87e9e9016c0f5b19d34956aef824ca70d1949122ba2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1511",
+      "expected_value_sha256": "91581f68359ddc126389f86bd894ebad562ea1410dc7289b923d302235699475",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1511",
+      "line": 1511,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/api/routes/webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ea1acdf96a466af08dfb6e6e1a022502073ff54a6582009e6462e317e9a55def"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1547",
+      "expected_value_sha256": "102b807cee88f88e7f0c90fc60b22fe603fe52a524bd6fb56e1f6b69ccc51bca",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1547",
+      "line": 1547,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/application/access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "7b2e776aa20ca9c29c8b74fe46a63a960e3d95a2ac802ed691ae6bcb362ff314"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1624",
+      "expected_value_sha256": "5eee293ea9a46a78b09a8b2d424360c3d5feb3ba2cd6cb7b03a596f4d71ac7ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1624",
+      "line": 1624,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/auth/field_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1ecf43991fbcdd170453b170e07a6406d20612299f866f6c42f917c9842aac27"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1626",
+      "expected_value_sha256": "d9defc697432b28ed0655252cfa3f4a44ed8c20b69943457b307ff42888e9401",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1626",
+      "line": 1626,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/auth/passwords.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "92727f763915c731f65b82a1c2601164ec015c7ca4de56bb246a8f9388044686"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1634",
+      "expected_value_sha256": "9d9d4ea9edafac6f7affb9e36984a3818b4e225208ba59793ba50bb899e69f41",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1634",
+      "line": 1634,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/auth/webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "dc0f9921a4803e8aed195d4b43efded5437d220fdc322116a9f4e50656576d9e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1635",
+      "expected_value_sha256": "7745beefd0d58e0621ccb88aa8946fa42d0f99a55e90c27f5d770b40feac08b7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1635",
+      "line": 1635,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/auth/webauthn_config.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c69558a24a927c95eef824d4bd017f5c401e53f992f4edf35e4c471d38cf9262"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1731",
+      "expected_value_sha256": "f76bca0cbca66f93dd375ce58cad2c3ec871d57f8c4f1cac01a55ab4a1266204",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1731",
+      "line": 1731,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/deployment/key_custody.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5adaba2a0349edacd25d9ac4c7ef7c67995dd29b071ce524105252b4069d6b43"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1836",
+      "expected_value_sha256": "ad80c7386e10f857b8c40f24509c81081beec4bbe8686c5aa657dd25269056ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1836",
+      "line": 1836,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/infrastructure/postgres_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "d9c23fff06b77967e029d9354db8003c0a82736174087c292bf8b74196ec47ab"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1864",
+      "expected_value_sha256": "2eda0eb56074baf503d6ea626a908c67b663f1d8cbe20d6524e3d0a2fefec7b7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1864",
+      "line": 1864,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/infrastructure/postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "05b22bb45717fd896546734c87cd65cad2125ac1d5e1a7886c58e397754f30e2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1948",
+      "expected_value_sha256": "c7673cbd13cc050a37a95ec9e1c1533311198d5aa4e9d1c771005643d1f3de36",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1948",
+      "line": 1948,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/infrastructure/postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "20e823ff5909a58bb2f680c4c38a22e470abf27f3dfaf363623f9eac4330d66f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1961",
+      "expected_value_sha256": "f88903b56adaff810b23eb97d6522f4d59164dcf4b2898a6b8996a85d69bbf46",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:1961",
+      "line": 1961,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/infrastructure/postgres_webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bf7612e271cf14a1b016f5ed432a3a7ebe32bd14f033c5f8e8cd55a7d8399d6e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2183",
+      "expected_value_sha256": "eb9f60632510283d805725a27d60bb595c61817e406de201ee476d56e190ddd2",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2183",
+      "line": 2183,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2a1cdbeb5950b56861df8a26c5440a1665d7b0edda98674bb7e39b64a48e0281"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2192",
+      "expected_value_sha256": "959dfe4051c567793a38ec6aeb8e436260b75b7404f3f2c13f912c9718daed28",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2192",
+      "line": 2192,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "71e46052cdbdb6d42cf102ee5b98c045f298176a3eadbf742d7c91b9fe264e58"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2193",
+      "expected_value_sha256": "8273dadb9f818ca7e39fa33fee517b68eccc66baf8e8686101680df5f3091cb2",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2193",
+      "line": 2193,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_accounts.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "07bdf50827796934632cdba36dc7ad792db14b4982103a8db12812fe181bd895"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2195",
+      "expected_value_sha256": "5068f034f7e8730a9a19153c0061454ca578b9adaf03de7edad729f08ab86d3b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2195",
+      "line": 2195,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_audit_projection.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "90f0413b8db5e700467c789752ab884ee76c78a3db51f3bfa100a9473143bcbd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2196",
+      "expected_value_sha256": "468aafd20f0b1bc0d466f9ba30ededa7c855130172bf3e258910fbe235ff637b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2196",
+      "line": 2196,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_audit_workflow.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2d6133225141a1f304646d9577b429a3b5a731a63e4a51d61c042df98c214096"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2197",
+      "expected_value_sha256": "041fd5119258e6f59f512c01276612bfe4822671b7d5e7af551fc04573afe596",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2197",
+      "line": 2197,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b6534657555b5b8f10c037863ea2e96eb1a6bd82be1ecb580b52cc570077db51"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2199",
+      "expected_value_sha256": "41ca833be23e32fbdb47c71342396072e0d356ce26100e08c31841bf4913ac6f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2199",
+      "line": 2199,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_bank_statement.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "6704a08880431de8f8a1400afbf4a80e8975f5c6ec36060f59d3edbb6d0243c2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2200",
+      "expected_value_sha256": "d948374244a0475db8c938718750d65881e441fbe32aabf91c7c53bf77ed0794",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2200",
+      "line": 2200,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_browser_sessions.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "f7b4881c2f2d95a1b4e84ac82736eeac7d5d53abeec269e143211369af4095fa"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2201",
+      "expected_value_sha256": "c082210ec148c1a6866e261d0f9e7bc654fc0748d7d0cd4fc99ec1121c8bc342",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2201",
+      "line": 2201,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_budget_control.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "755af244cef18982faa2a3abd4184e9adceae2df8001347f7c12e937e6bd1d88"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2203",
+      "expected_value_sha256": "c809a6bf2107f158fe10a2326555791fd0daf8bca96464f4ed15c99918850b4e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2203",
+      "line": 2203,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_connectors.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5cc3427402dccfdfb89bad3d42accac5e7fa8e3318652dc1126b8c05ba0955c0"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2214",
+      "expected_value_sha256": "a23e235f8822b1bbfe6a4711767f2970096e211265acdea92c35ce2b2524006a",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2214",
+      "line": 2214,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_dependencies.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "919917d4fe3a6d8c420a0f5902cfb0b841093122058f81d0e4926aa0dd4c97a9"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2215",
+      "expected_value_sha256": "0bd27de777ddbf5c4b41c7128dab4e758ca881b43567e051d2c3a995aec77156",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2215",
+      "line": 2215,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "955c03ac7d2248d843252b094d40b231869b7925faa48893b56c7a05a337c491"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2216",
+      "expected_value_sha256": "723966aa0333dd963dfad9accc1886c40a667c124627932246c2da475202f818",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2216",
+      "line": 2216,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_execution_scope.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1a826e56f86bff2210299f715590ae6fb555836892ddc89368961162068e70cf"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2217",
+      "expected_value_sha256": "aeac0d218656bc557bb876930c02d024d3acf07ec71781c22373eaed62201b94",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2217",
+      "line": 2217,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_federation.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c3ac2759bd6a92818bdec39293a31c62c85fea05492426f875c9474f72582220"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2218",
+      "expected_value_sha256": "d797e4c7e94a51f4767d2728fbfb6b9f61867b53d95c1baeb21d1d6ccbed4cff",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2218",
+      "line": 2218,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_foundation.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b4f6df896a9c8b6b96ceb6dec93c6770d5533f53448e7b959c5f55f19524cb49"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2219",
+      "expected_value_sha256": "60c0f34ef7d09deba20b04735c53837c27ac81e6a80c3f6f732f46eb47756aec",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2219",
+      "line": 2219,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_https_hosting.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "288155dfd0b9e1764a5c200e71c8d050e27954824f9528986195ac6ef8446b86"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2222",
+      "expected_value_sha256": "7fd64c5c1db41cef059ab4b60f21cc7912c6478922575896bffa8b7b1c75561c",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2222",
+      "line": 2222,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_inventory_core.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "8d9fe085e28077948d8e1a4c768ce5f8b042aee3c9473196823866b4dd9181db"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2225",
+      "expected_value_sha256": "a639aed8b2040ffd6bdc469bdf5e25feed3f01f84acc5c5efe92e2f6827d5806",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2225",
+      "line": 2225,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_metrics.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5bcc95f7b20a3dc4e76231eb7f95bff3ee0e2b138419e2c14985756c92a6aab7"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2227",
+      "expected_value_sha256": "db30223dc2c9a88a7cdc5adba8735dbf18d7958a8283460be75a5be71a02a98c",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2227",
+      "line": 2227,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_operations.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ff35b025dd031cda7960cecac06a4cf9cecbb7a7be578471525345d3f7b95bed"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2228",
+      "expected_value_sha256": "8eeb5471e13471eb178c21a56a6d6d2253ddb5e2383fe097e00079ce387a0b12",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2228",
+      "line": 2228,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_platform_routes.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2c9c43f8d4debf6484fcd081bca60984440a9af856b6e72c0b244480f18e0320"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2232",
+      "expected_value_sha256": "79b092ac848e69f38ad64b34ef63b8416d3f5d04965a71a1af46f0426bf43b14",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2232",
+      "line": 2232,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_scim.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2d94e4cdf8ab737e28b1280255c651de83b1f05fb937959ab182c915a56c244d"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2233",
+      "expected_value_sha256": "351321dd3177e54b3c4cf56afd350129a46783249e3935fd8ed17027251e7ade",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2233",
+      "line": 2233,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_scope_grants.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ac2c0d41d75d4b39ed9266fdddbd050261a9488f74390014b7075edc94b7bcc6"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2234",
+      "expected_value_sha256": "ea434542e8d24885bec82a11ba49b49734252fdf85a323e8f24abd72f816ec28",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2234",
+      "line": 2234,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_security_center.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "6322fdc5ffb87b065d5acf2e4e810c866754c5e20705c8d1f6a7f3f279852bbf"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2236",
+      "expected_value_sha256": "5379f19ae2dfdbf1e19ba82122f9e09f17d65e04f9cc8da10a8856e7bccbae2b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2236",
+      "line": 2236,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_server_accounts.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "9dd3e698d34e3befbf17d6243892c35dbc2dc6f1e3982faea2c10fbfd5841bc5"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2241",
+      "expected_value_sha256": "b7bc973e016d074c05cd7ba1076d5cff8207f285c447f592fc3afe87b91153d4",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2241",
+      "line": 2241,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_server_evidence.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ebc8d43ff59679f36fbbacd2ce2cd116b1cec7ac79f1895831907d6daa54869e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2245",
+      "expected_value_sha256": "0a5f18109c153d7454266b5a516e840a61d8511ac0d9f8492f9dff0c2d3f9e9a",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2245",
+      "line": 2245,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_server_identity.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "32632ca4edaa3f23e31315100bcad7e7b051deebeb6ea1a7ff351a0ab8db6ffd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2253",
+      "expected_value_sha256": "69d87b61e64db9acf7f77761503946e9c5ba5964c8d3e2e36e98a3751a8c874e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2253",
+      "line": 2253,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_server_payables.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "9261cafb9c343ff45c595cfcf70f8d0a60d3cc3d3dcb764fd9813d07d0b33538"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2261",
+      "expected_value_sha256": "96da8a7c25f3e16c1524617a10d4008be201ea96e5d96183c575d60a447c78d8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2261",
+      "line": 2261,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_service_accounts.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e02ad748b1ecef468b51602a006878b59cbafc0e6e87e8c97e2c367b3fa4df9c"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2263",
+      "expected_value_sha256": "4799eefaa56e55d9da1ecb4b9696fe28f1de7775409babdee0481603cb3a40c5",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2263",
+      "line": 2263,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_users_roles.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e8459a464cc541718d51dc6e216667b65a4c7fc482f0a46d86addbaeef636cfd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2264",
+      "expected_value_sha256": "db0c35af04ddb0bc0d7699b622c5070cb47ce97c05c38735bb8008d93a8b9f15",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2264",
+      "line": 2264,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_api_webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "e323cd4dfc53a2f9bbab8ddc3af151dad97e0cf809ad0520d31408f762652c87"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2291",
+      "expected_value_sha256": "ae7ee684ba2fe02dd59d60d0f333c7cad57740ee13446a8c2c15b8ce3fe94ce3",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2291",
+      "line": 2291,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_auth_passwords.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "0f449f1712a09023214916782b9ccf2d81298ce1e5d2a2e28538753c6135e539"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2292",
+      "expected_value_sha256": "268d8371569c695cef666b6332d68c5426f7cb390d27c9715f4917f79b9c6eee",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2292",
+      "line": 2292,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_auth_rbac.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "97d7cd86950431da090bb2f9e32f6611064a2c2de83bb16c00dc2659392862c1"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2358",
+      "expected_value_sha256": "474702676fe4f7d560ba32474afd958df03c0ea4f0d26c393643af5162cf648f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2358",
+      "line": 2358,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_customer_returns_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "f13a392f74bfc018c60d52b4efedc64f366d382d48c7a3297fd5d90c99e37f40"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2368",
+      "expected_value_sha256": "880171583cdfffe31ee3ea77c448f4e98e5390c232d4d8a8a9310f0e51921508",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2368",
+      "line": 2368,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_deployment_key_custody.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "717a1853c02fdd2ce723658f832e61461b2d784c6ca4c910ef2dc186ff08b25d"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2406",
+      "expected_value_sha256": "a74f527b0ccf41384b5ab790448ba9accdf467a38d99af345bd04319a2d480ba",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2406",
+      "line": 2406,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_field_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "33143861af292de15ab301180f21b6e6a34d143e58c8ce7c931e8fbace3d4cbb"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2412",
+      "expected_value_sha256": "bed0f1db33492d959fd4e97f289c13999fac1530a458fa928ecbeb116cf14f47",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2412",
+      "line": 2412,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_finance_posting_api_contract.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5f842cbdfe23ad0f18a877e0b9a3f1aa82a1fa958e5a3de828aa5984197686cd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2451",
+      "expected_value_sha256": "d0354c0995b0e32fb2de14c63574156b979226326eee1aac6664e380c2454f77",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2451",
+      "line": 2451,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_inventory_receipt_api_contract.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2dda638eee849d43b6bde1b42353bbc1682cf6f1540b2cbdb6b9e4d5382a87c6"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2514",
+      "expected_value_sha256": "e58f1d43a2b8ed800274dd3c24e01a9978b5f052c28cdb3b852f0994e373bf0b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2514",
+      "line": 2514,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_payables_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "850ecef6d266974f4f3d1b439fbc4d462fa13c89127fd43b3f4802707aedfc44"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2536",
+      "expected_value_sha256": "15d6ff19d75078308f48b9b06609a6e22dc5fd8f0b515a780f03f36cd1dc22ed",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2536",
+      "line": 2536,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "74c4a69a46a3d51c897b6e2b71da4e15d540ac21ae92bdfd91b7e2f5766385fd"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2569",
+      "expected_value_sha256": "35ff006e6253ebb99810e5fa8afa811af62bde979e16eaeb9d25d09f0d50d54c",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2569",
+      "line": 2569,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "7ca7a6cad1076f6c65834dda562c80144937ee581be28a95856338aa2e1d8f7b"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2581",
+      "expected_value_sha256": "d9d52164d8a824ce49fd00d24c6edf37102fce2706126f55a1b800542672d4ce",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2581",
+      "line": 2581,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_finance_posting_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c3081ff21994873fc1cc49000eebca42cae3a3e1a2ed00005e92713e244b880f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2590",
+      "expected_value_sha256": "a15ce763f594e1e108ada2d288a74dc768962eb990c2ca666be7933f1585b92c",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2590",
+      "line": 2590,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_financial_reporting_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "108d7032f7ab80873fe40c335b47c18c80d29710bb00f8ee44ef2d6f349c42db"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2609",
+      "expected_value_sha256": "c8217af4fac1a111e35d4cbc0e1e3e48a2c15a356ee358b0c2c8069bff856592",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2609",
+      "line": 2609,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_inventory_receipt_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "25dc6c43940c378c4218c5e3317bc9476b9faed939e48447ab93abbdb57fd9f0"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2619",
+      "expected_value_sha256": "3d357366ea3fd07926dca7b4c277a5fe72aef84482cf46680739837bad234b3a",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2619",
+      "line": 2619,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_landed_cost_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "817ecc5569913dc220dcf86fa352e6c89e7c6a269ce7ae3ee728ef4c193bb604"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2634",
+      "expected_value_sha256": "b489dca6519385eea179b5b9177ab3f360c6d968b42562f67111cfbce29208f1",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2634",
+      "line": 2634,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_operational_finance_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "d3608edaf40b33e2c3f84fe76851bdf5f0745a89eaf33823fd1b96ea6715f7a1"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2638",
+      "expected_value_sha256": "f377648315fc507e20a78517a621ec2d4df3526a0ec5870e034c23360dc4b04b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2638",
+      "line": 2638,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_operational_fx_tax_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "08fec96d9890833c35d4ca523b2397e20140e76ea201ad4283109fcc20b5fc61"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2659",
+      "expected_value_sha256": "b2ba66c6da5f5134fc4ac1835c52fc662fa8e0fbf485a700f654c714ed702cdf",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2659",
+      "line": 2659,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_procurement_commitments_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "389633d15fec8c1b86662a44d2bae55bffed0a51b0712840434cad428144f0b2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2661",
+      "expected_value_sha256": "8164de22532a3b295c9258cd81271be25c0536b5b68ee825b47b1d3493f523ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2661",
+      "line": 2661,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_procurement_multiline_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "597fdabcc6388a75f763e0fc5edc9619e8acc583ca7804aee9adcdf4b37a5838"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2665",
+      "expected_value_sha256": "4dcb097456c16566959853f61f6452a4c7d2939dae3772ba6232e388c814e04f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2665",
+      "line": 2665,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_procurement_partial_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1c09ad96f4753e9d9dc1d7853837e8d9afcf0f346f52a862ab1964c7af997e83"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2684",
+      "expected_value_sha256": "a66daac56b7166848fe72a64578d5791688f81a14fc3df012a100a6b243dbe31",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2684",
+      "line": 2684,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "4104c89bafaee887754f93b9b7665bec516f42213810f1fd431a2057c750e2b4"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2691",
+      "expected_value_sha256": "92695b6f1e644bf4353d697c0b4613eec97b6ec3355290cb0dea625f07002574",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2691",
+      "line": 2691,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_stock_commerce_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "8c7d6b4ad260de2d648a83d0165fe1552008d4135c7cf8249033d2acaee04fc7"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2694",
+      "expected_value_sha256": "aa102830be0d73ad1f0a6beb716c37f2b5c74c18c2234048b4a465a8337b1fbe",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2694",
+      "line": 2694,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_stock_sales_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "b47dac20ef3a23210fe3084afd0653ee217fbe1a73e19b9280c8d90014036715"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2697",
+      "expected_value_sha256": "4523bdbf0c29056093d2c07b1ecbc3f103daad6e69f31e46a8462330dd556a9d",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2697",
+      "line": 2697,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_supplier_returns_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "2bca5697310b3c7fbfa93cb59b8aecf455693ae9b9ca32649ee36f99e0c07113"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2698",
+      "expected_value_sha256": "ef4b494d882c53467e6e24219652b321309183be4840160a5e5524d2203672b6",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2698",
+      "line": 2698,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_postgres_webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "261666450d7c86c835e8bd4b5198a76a25508544014edc1dc9c79a3c022fda24"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2718",
+      "expected_value_sha256": "3edeeab3b712b00c5628d25fab9649600dee75aacdcacb2f4607affe09346c5b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2718",
+      "line": 2718,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_receivables_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bc058b53e29911fde05a1a2b376fb5460d3520fc84f83e98f12de7d12ff59383"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2725",
+      "expected_value_sha256": "40224393fbb1ada7a0c0f16ebb6039455873c9702034b90c5faf84cec0924877",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2725",
+      "line": 2725,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_receivables_invoice_replay_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bb28b3ab14958e9cfde154d046ec3156da443cf2e3d44f69d76ef5620bca9016"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2728",
+      "expected_value_sha256": "aec1d599dbe9a74c8051d19b5fec96b4384a0adedc4b5584f2db3d65958a01d8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2728",
+      "line": 2728,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_receivables_money_api_contract.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "f0acb68a69345e240bb3144536540644dff90e139f868c5ebee8a775422c386a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2729",
+      "expected_value_sha256": "5c68b4d6e851e636f4164cc4e42fb7f73bc9008ea863ce6a51e732eed1065a5e",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2729",
+      "line": 2729,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_receivables_policy_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "edfd142924570a012fdc8256a27ad174d3c4efd46a92ff8648ca3dfb5e790a00"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2796",
+      "expected_value_sha256": "02bbe078abacb149bcf7632f72d3afb1c66abe34fe6aa6789d4c87646c9f35c8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2796",
+      "line": 2796,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_studio_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "9d0dfc9129806c7bd4d9aa61a49cf0a608038142c41945d6d4cc202a3bf73a64"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2812",
+      "expected_value_sha256": "cbd3d67862b694f788f40ba28be651cf7ac0b79fb1c7b650f7c986fa9e63bd1f",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2812",
+      "line": 2812,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_webauthn_config.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "8f39df6f992e68892309d6795d9097b29e99fa95d70f7c905611b866f5b1d48a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2813",
+      "expected_value_sha256": "8448d71a0c9f99fcbece5bcc997ddfe2a4a5a8e90ad31aa07632c0d61f7b17ac",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2813",
+      "line": 2813,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/test_webauthn_service.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "821ee3c4e80c0680af4a16ec6ef95b8dc9ddc31402f06429eb4511d16561276e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2822",
+      "expected_value_sha256": "47070c57569cdc7dfdd1d150e514e4ed04cd46d1aa757b8800e643544b944770",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:2822",
+      "line": 2822,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "tests/webauthn_synthetic.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5f14e5353b93105bf866408c474d8ee90079b85431673f747f8dc2a7f288ecf8"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5464",
+      "expected_value_sha256": "b7a144e2ec516794d067a548fffc20a497b9bfae437e78408a304c5cbfa567f4",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5464",
+      "line": 5464,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/api/routes/access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5a00ede6c6d85870e9ab09eada0e30e454eba3c7d4972900c201984deb6fcab4"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5468",
+      "expected_value_sha256": "62ada134363c22eacee8bdff0a5863b9b7299161d3fdd81d38adcc9ef0d38d4b",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5468",
+      "line": 5468,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/api/routes/auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c76d0cd61cb5b2c36bfe0dd44de91df97c6ae629d942fbf634bc5ed35c5ff771"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5483",
+      "expected_value_sha256": "e0e8b9b7fb6a199ef9b3f6a37149edef48760afc1d0397626ba5bb45018a2ac5",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5483",
+      "line": 5483,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/api/routes/emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cc81c6799d5b0b7e8e57c87e9e9016c0f5b19d34956aef824ca70d1949122ba2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5525",
+      "expected_value_sha256": "91581f68359ddc126389f86bd894ebad562ea1410dc7289b923d302235699475",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5525",
+      "line": 5525,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/api/routes/webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ea1acdf96a466af08dfb6e6e1a022502073ff54a6582009e6462e317e9a55def"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5561",
+      "expected_value_sha256": "102b807cee88f88e7f0c90fc60b22fe603fe52a524bd6fb56e1f6b69ccc51bca",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5561",
+      "line": 5561,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/application/access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "7b2e776aa20ca9c29c8b74fe46a63a960e3d95a2ac802ed691ae6bcb362ff314"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5638",
+      "expected_value_sha256": "5eee293ea9a46a78b09a8b2d424360c3d5feb3ba2cd6cb7b03a596f4d71ac7ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5638",
+      "line": 5638,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/auth/field_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "1ecf43991fbcdd170453b170e07a6406d20612299f866f6c42f917c9842aac27"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5640",
+      "expected_value_sha256": "d9defc697432b28ed0655252cfa3f4a44ed8c20b69943457b307ff42888e9401",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5640",
+      "line": 5640,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/auth/passwords.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "92727f763915c731f65b82a1c2601164ec015c7ca4de56bb246a8f9388044686"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5648",
+      "expected_value_sha256": "9d9d4ea9edafac6f7affb9e36984a3818b4e225208ba59793ba50bb899e69f41",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5648",
+      "line": 5648,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/auth/webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "dc0f9921a4803e8aed195d4b43efded5437d220fdc322116a9f4e50656576d9e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5649",
+      "expected_value_sha256": "7745beefd0d58e0621ccb88aa8946fa42d0f99a55e90c27f5d770b40feac08b7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5649",
+      "line": 5649,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/auth/webauthn_config.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "c69558a24a927c95eef824d4bd017f5c401e53f992f4edf35e4c471d38cf9262"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5744",
+      "expected_value_sha256": "f76bca0cbca66f93dd375ce58cad2c3ec871d57f8c4f1cac01a55ab4a1266204",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5744",
+      "line": 5744,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/deployment/key_custody.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "5adaba2a0349edacd25d9ac4c7ef7c67995dd29b071ce524105252b4069d6b43"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5849",
+      "expected_value_sha256": "ad80c7386e10f857b8c40f24509c81081beec4bbe8686c5aa657dd25269056ad",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5849",
+      "line": 5849,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/infrastructure/postgres_access_administration.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "d9c23fff06b77967e029d9354db8003c0a82736174087c292bf8b74196ec47ab"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5877",
+      "expected_value_sha256": "2eda0eb56074baf503d6ea626a908c67b663f1d8cbe20d6524e3d0a2fefec7b7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5877",
+      "line": 5877,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/infrastructure/postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "05b22bb45717fd896546734c87cd65cad2125ac1d5e1a7886c58e397754f30e2"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5961",
+      "expected_value_sha256": "c7673cbd13cc050a37a95ec9e1c1533311198d5aa4e9d1c771005643d1f3de36",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5961",
+      "line": 5961,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/infrastructure/postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "20e823ff5909a58bb2f680c4c38a22e470abf27f3dfaf363623f9eac4330d66f"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5974",
+      "expected_value_sha256": "f88903b56adaff810b23eb97d6522f4d59164dcf4b2898a6b8996a85d69bbf46",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:5974",
+      "line": 5974,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "reconforge/infrastructure/postgres_webauthn.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "bf7612e271cf14a1b016f5ed432a3a7ebe32bd14f033c5f8e8cd55a7d8399d6e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6192",
+      "expected_value_sha256": "73fa7be6f8966ddc7618971beb1c51fcb93217a06ca60ee2189a630a22e52692",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6192",
+      "line": 6192,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0036_postgres_scim_auth.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "88eb2ed8e628a185f77ed22b86995358ed75a97613c475f01f3bc996e3cd9738"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6195",
+      "expected_value_sha256": "43fa29552c7e312206d3126bb495c7deef42dd82eea57e3934df09f069d6ccd7",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6195",
+      "line": 6195,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0039_postgres_emergency_access.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "ebbaaa5ee56593d66d32c33facf162b7bfac77a5fbf94936049a34342bf31cc5"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6196",
+      "expected_value_sha256": "22112ce6cf797a32667ab4349359dbdd2c03e12b87845d8e0079c8be4274e6a8",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6196",
+      "line": 6196,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0040_postgres_webauthn_mfa.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "cae8a5253d7c039483321d43d382516014b138f2caf04f18f7009ce5888e924e"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6207",
+      "expected_value_sha256": "1b5e7b0172773767ddb055d19547f84d631225e77e24ad3904ee7b3f5ceb5c10",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6207",
+      "line": 6207,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0051_access_policy_lifecycle.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "4270def6082e087dbd15f706ec9ca24b027de2666316ebfb4821c5c665520e1a"
+    },
+    {
+      "current_fingerprint": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6260",
+      "expected_value_sha256": "fd31265ef90adbc6cc7b568a5690a5345b95cd86a94c28dd8beddb52b9189eb1",
+      "history_fingerprint": "c2a0257cb5b6f760fb9eadeac3d88a2994cfbc9d:docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json:generic-api-key:6260",
+      "line": 6260,
+      "path": "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
+      "public_source_path": "alembic/versions/0104_postgres_exception_review_api.py",
+      "rule_id": "generic-api-key",
+      "source_line_sha256": "fd163409f279bbbf86deea591181503d17e29cc43704dc8f2790c5a1fe2bf85a"
+    }
+  ]
+}

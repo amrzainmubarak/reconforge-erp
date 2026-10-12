@@ -36,8 +36,17 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None:
     assert POSTGRES_OPERATIONS_SCHEMA_SQL.count("FORCE ROW LEVEL SECURITY") == 2
     assert "FOREIGN KEY (tenant_id, workspace_id)" in POSTGRES_OPERATIONS_SCHEMA_SQL
-    assert POSTGRES_MIGRATION_REVISIONS[-1] == "0090_pg_writeback_observations"
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 90
+    assert POSTGRES_MIGRATION_REVISIONS[124] == "0125_pg_landed_cost_cancellation"
+    assert POSTGRES_MIGRATION_REVISIONS[125:] == (
+        "0126_pg_customer_returns", "0127_pg_procurement_commitments",
+        "0128_pg_operational_fx_tax", "0129_pg_financial_read_plans",
+        "0130_pg_supplier_returns", "0131_pg_fx_revaluation",
+        "0132_pg_stock_inverse_dispatch",
+        "0133_pg_manufacturing_execution", "0134_pg_intercompany_operations",
+        "0135_pg_procurement_sourcing",
+        "0136_pg_inventory_scope",
+    )
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 136
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:

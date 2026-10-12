@@ -1,0 +1,132 @@
+{
+  "schema_version": "invoice-recovery-ci-contract-v1",
+  "status": "local_contract_and_shell_dispatch_passed_hosted_pending",
+  "before_commit": "7f8b9173",
+  "workflow_sha256": "b2d17fcd249658b0ad3a13727d5d0c3dfcbda9da8ecc4ff4bc8d1476b5830055",
+  "contract_sha256": "1edc78dc07d01bec87d3ed64ce6057cd9fc6c7749d913ce95a91cd09f29e6d1f",
+  "pytest": {
+    "tests": 39,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 39
+  },
+  "junit_seconds": 10.518,
+  "command_delta": {
+    "old_verification_command_count": 40,
+    "new_verification_command_count": 41,
+    "removed_commands": [],
+    "added_commands": [
+      [
+        "Run live server-boundary tests",
+        "uv run --no-sync pytest tests/test_receivables_invoice_replay_domain.py tests/test_receivables_invoice_replay.py tests/test_receivables_invoice_recovery.py tests/test_receivables_invoice_replay_api.py tests/test_postgres_invoice_recovery_restore.py -q"
+      ]
+    ],
+    "original_commands_preserved_exactly_once": true
+  },
+  "dispatch": [
+    {
+      "shard": "writeback",
+      "exit_code": 0,
+      "command_count": 0
+    },
+    {
+      "shard": "native",
+      "exit_code": 0,
+      "command_count": 5
+    },
+    {
+      "shard": "parity",
+      "exit_code": 0,
+      "command_count": 1
+    },
+    {
+      "shard": "durable-scale",
+      "exit_code": 0,
+      "command_count": 1
+    },
+    {
+      "shard": "matching-runtime",
+      "exit_code": 0,
+      "command_count": 3
+    },
+    {
+      "shard": "industry-close",
+      "exit_code": 0,
+      "command_count": 15
+    },
+    {
+      "shard": "receivables",
+      "exit_code": 0,
+      "command_count": 4
+    },
+    {
+      "shard": "finance-posting",
+      "exit_code": 0,
+      "command_count": 1
+    },
+    {
+      "shard": "inventory-payables",
+      "exit_code": 0,
+      "command_count": 5
+    },
+    {
+      "shard": "unknown-shard",
+      "exit_code": 2,
+      "command_count": 0
+    }
+  ],
+  "aggregate_results": [
+    {
+      "matrix_result": "success",
+      "exit_code": 0
+    },
+    {
+      "matrix_result": "failure",
+      "exit_code": 1
+    },
+    {
+      "matrix_result": "cancelled",
+      "exit_code": 1
+    },
+    {
+      "matrix_result": "skipped",
+      "exit_code": 1
+    },
+    {
+      "matrix_result": "",
+      "exit_code": 1
+    }
+  ],
+  "services_unchanged": true,
+  "live_environment_preserved": true,
+  "native_report": {
+    "producer": "receivables",
+    "environment": "RECONFORGE_AR_INVOICE_REPLAY_NATIVE_REPORT",
+    "always_retained": true,
+    "upload_action": "same repository-pinned v7 action as all existing shard uploads"
+  },
+  "prior_probe_error": "Initial ignored routing-oracle adaptation used the wrong Python token slice and omitted the first domain test from its expected delta. It failed before shell dispatch. Original generated script is retained; corrected slice verifies all five additions.",
+  "evidence_files": [
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod039-ci-dispatch\\inventory-and-dispatch.json",
+      "sha256": "cc1affe8be371a34bb2144f7f1c79fc4a0fcf7c47fe6a9488f209dbb082e9dd7"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod039-ci-supply-contracts.xml",
+      "sha256": "c2aeb101462aecbf9a3ef4ed1c51c940148e383d157542a0e70400eaecd31038"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod039-ci-supply-contracts.log",
+      "sha256": "e4eb7d012bed80914e717542638eef59056bdfed334766873e845262c0da25c7"
+    },
+    {
+      "path": "F:\\reconforge-erp\\output\\verification-2026-10-03\\prod039-ci-dispatch\\verify_partition-initial-slice-error.py",
+      "sha256": "010be5af3ae5cb5a895c4c7d6a8060f5a8ef5d0e20535640096437fe7ac9afc4"
+    }
+  ],
+  "limits": [
+    "Local shell dispatch captures commands; it is not a hosted execution or duration result.",
+    "Live recovery and native restore results are independently retained in RECEIVABLES_INVOICE_RECOVERY_2026-10-03.json; overlapping counts are not summed."
+  ]
+}

@@ -9,6 +9,7 @@ from jsonschema import Draft202012Validator
 
 from reconforge.db.connection import connect
 from reconforge.db.migrations import run_migrations
+from reconforge.infrastructure.sqlite_matching import SQLiteMatchingRepository
 from reconforge.io import persisted as persisted_module
 from reconforge.io.persisted import (
     SQLITE_MATCHING_RULE_JSON_POLICY,
@@ -22,7 +23,12 @@ from reconforge.io.structured import StructuredDocumentPolicy
 from reconforge.platform.common import PlatformError
 from reconforge.platform.matching import MatchingService
 from reconforge.reconciliation.matching import RECORD_IDENTITY_POLICY
-from reconforge.utils.money import LEGACY_FINANCIAL_INPUT_POLICY, STRICT_FINANCIAL_INPUT_POLICY
+from reconforge.utils.money import (
+    HISTORICAL_FINANCIAL_REPLAY,
+    LEGACY_FINANCIAL_INPUT_POLICY,
+    STRICT_FINANCIAL_INPUT_POLICY,
+    InvalidAmountError,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -239,12 +245,46 @@ def test_missing_policy_historical_rule_retains_legacy_replay_defaults(tmp_path:
             right_path=right,
             idempotency_key="legacy-rule-1",
             financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+            historical_replay=True,
         )
     finally:
         connection.close()
 
     assert repeated.job_id == first.job_id
     assert repeated.financial_input_policy == LEGACY_FINANCIAL_INPUT_POLICY
+    assert repeated.financial_input_policy_observation.use == HISTORICAL_FINANCIAL_REPLAY
+    assert repeated.financial_input_policy_observation.legacy_compatibility is True
+
+
+def test_direct_sqlite_adapter_rejects_new_legacy_policy_before_creating_workspace_or_job(tmp_path: Path) -> None:
+    database = tmp_path / "raw-legacy-policy.db"
+    left, right = _sources(tmp_path)
+    run_migrations(database)
+    connection = connect(database, require_exists=True)
+    try:
+        repository = SQLiteMatchingRepository(connection)
+        before = {
+            **_counts(connection),
+            "workspaces": int(connection.execute("SELECT COUNT(*) AS count FROM workspaces").fetchone()["count"]),
+        }
+
+        with pytest.raises(InvalidAmountError, match="new financial writes require strict-financial-input-v2"):
+            repository.run(
+                left_path=left,
+                right_path=right,
+                workspace="uncreated-legacy-workspace",
+                idempotency_key="raw-legacy-policy",
+                financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+            )
+
+        after = {
+            **_counts(connection),
+            "workspaces": int(connection.execute("SELECT COUNT(*) AS count FROM workspaces").fetchone()["count"]),
+        }
+    finally:
+        connection.close()
+
+    assert after == before
 
 
 def test_matching_rule_call_sites_are_governed_without_direct_decoder() -> None:

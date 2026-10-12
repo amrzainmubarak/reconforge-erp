@@ -138,10 +138,14 @@ def test_live_emergency_access_maker_checker_session_use_end_review_and_rls() ->
                 identity.create_role(tenant_id=tenant_a, role_name=role)
             for permission in (
                 "finance_core.validate",
+                "security.emergency.request",
                 "security.emergency.approve",
                 "security.emergency.review",
             ):
                 identity.create_permission(tenant_id=tenant_a, permission_name=permission)
+            identity.grant_permission(
+                tenant_id=tenant_a, role_name="requester", permission_name="security.emergency.request"
+            )
             identity.grant_permission(
                 tenant_id=tenant_a, role_name="approver", permission_name="security.emergency.approve"
             )

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
@@ -13,6 +14,7 @@ from reconforge.application.bank_statement_control import (
 )
 from reconforge.auth.service import LocalAuthService
 from reconforge.db import connect, run_migrations
+from reconforge.infrastructure.sqlite_bank_statement_control import SQLiteBankStatementRepository
 
 STATEMENT = Path("examples/bank_statement_control/statement.xml")
 LEDGER = Path("examples/bank_statement_control/ledger.json")
@@ -81,6 +83,58 @@ def test_bank_statement_local_api_rejects_tampered_report_and_unknown_digest(tmp
         headers=headers,
     )
     assert missing.status_code == 404
+
+
+def test_bank_statement_api_drops_future_adapter_fields_recursively(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = _client(tmp_path)
+    report = _report(tmp_path)
+    login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Secret-123"})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    baseline = client.post(
+        "/api/v1/bank/statement-controls",
+        json={"report": report, "workspace": "firm-a"},
+        headers=headers,
+    )
+    assert baseline.status_code == 200, baseline.text
+    future = json.loads(json.dumps(baseline.json()["bank_statement"]))
+    future["unknown_adapter_field"] = "must-not-escape"
+    future["report"]["unknown_report_field"] = "must-not-escape"
+    future["report"]["amount_tolerance"]["unknown_money_field"] = "must-not-escape"
+    future["report"]["decisions"][0]["unknown_decision_field"] = "must-not-escape"
+    future["report"]["decisions"][0]["amount_variance"]["unknown_money_field"] = "must-not-escape"
+
+    def fake_put(
+        self: SQLiteBankStatementRepository, payload: dict[str, object], **kwargs: object
+    ) -> dict[str, object]:
+        return future
+
+    def fake_list(self: SQLiteBankStatementRepository, **kwargs: object) -> tuple[dict[str, object], ...]:
+        return (future,)
+
+    def fake_get(self: SQLiteBankStatementRepository, **kwargs: object) -> dict[str, object]:
+        return future
+
+    monkeypatch.setattr(SQLiteBankStatementRepository, "put_payload", fake_put)
+    monkeypatch.setattr(SQLiteBankStatementRepository, "list", fake_list)
+    monkeypatch.setattr(SQLiteBankStatementRepository, "get", fake_get)
+
+    created = client.post(
+        "/api/v1/bank/statement-controls",
+        json={"report": report, "workspace": "firm-a"},
+        headers=headers,
+    )
+    listed = client.get("/api/v1/bank/statement-controls", params={"workspace": "firm-a"}, headers=headers)
+    fetched = client.get(
+        f"/api/v1/bank/statement-controls/{report['decision_digest']}",
+        params={"workspace": "firm-a"},
+        headers=headers,
+    )
+
+    assert created.status_code == listed.status_code == fetched.status_code == 200
+    assert all("unknown_" not in response.text for response in (created, listed, fetched))
+    assert listed.json()["bank_statements"][0]["decision_digest"] == report["decision_digest"]
 
 
 def test_bank_statement_api_boundary_is_packaged() -> None:

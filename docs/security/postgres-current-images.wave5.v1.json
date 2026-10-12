@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "policy_id": "reconforge-current-postgres-wave5",
+  "reviewed_at": "2026-10-11",
+  "current_images": {
+    "server_boundaries": "postgres:16.15-alpine@sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551",
+    "native_acceptance": "postgres:17.11-alpine@sha256:aa90e97ee862e558111d34cfb8b2c4bec768c2b039fb791341686928560263b3"
+  },
+  "retained_policy_source_sha256": "8629e9c6d2f57eaf74da0dc20d54293241a97ce8c7fc6b5d10e2926048cf4992",
+  "scope": "Current server-boundary CI and Wave5 native acceptance, HTTPS and paired benchmark defaults. Historical compatibility runners and source-bound reports retain their reviewed original images; those runs are not current security acceptance.",
+  "official_references": [
+    "https://www.postgresql.org/support/versioning/",
+    "https://www.postgresql.org/docs/17/release-17-11.html",
+    "https://www.postgresql.org/support/security/17/"
+  ]
+}

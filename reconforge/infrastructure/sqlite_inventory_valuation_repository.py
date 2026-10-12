@@ -8,6 +8,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from reconforge.infrastructure.finance_policy_store import FinancePolicyStore
+from reconforge.infrastructure.sqlite_inventory_unit_of_work import SQLiteInventoryUnitOfWork
+
 
 class InventoryValuationRepository(Protocol):
     """Persistence contract used by the valuation application service."""
@@ -110,9 +113,14 @@ class SQLiteInventoryValuationRepository:
     """SQLite implementation with transaction ownership at the aggregate boundary."""
 
     connection: sqlite3.Connection
+    unit_of_work: SQLiteInventoryUnitOfWork | None = None
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
+        if self.unit_of_work is not None:
+            with self.unit_of_work.operation(self.connection):
+                yield
+            return
         self.connection.execute("BEGIN IMMEDIATE")
         try:
             yield
@@ -437,13 +445,21 @@ class SQLiteInventoryValuationRepository:
         )
 
     def insert_document(self, record: Mapping[str, object]) -> None:
+        currency = self.currency(str(record["currency_code"]))
+        if currency is None:
+            raise ValueError("Valuation currency is unavailable.")
+        monetary_policy, _ = FinancePolicyStore(self.connection).capture(
+            workspace_id=str(record["workspace_id"]), currency_code=str(record["currency_code"]),
+            minor_units=int(currency["minor_units"]), actor_label=str(record["created_by"]),
+        )
         self.connection.execute(
             """
             INSERT INTO inventory_valuation_documents (
                 id, workspace_id, organization_id, legal_entity_id, period_id,
                 movement_id, policy_id, valuation_number, valuation_date,
-                currency_code, status, created_by, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?)
+                currency_code, status, created_by, created_at, updated_at,
+                currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?, ?, ?, ?)
             """,
             tuple(
                 record[key]
@@ -462,7 +478,7 @@ class SQLiteInventoryValuationRepository:
                     "created_at",
                     "updated_at",
                 )
-            ),
+            ) + monetary_policy.values(),
         )
 
     def insert_input_costs(self, records: Sequence[Mapping[str, object]]) -> None:
@@ -557,7 +573,8 @@ class SQLiteInventoryValuationRepository:
     ) -> list[dict[str, Any]]:
         return self._many(
             """
-            SELECT layers.*
+            SELECT layers.*, source_documents.currency_precision, source_documents.currency_rounding_policy,
+                   source_documents.currency_registry_version, source_documents.currency_registry_digest
             FROM inventory_cost_layers layers
             JOIN inventory_valuation_lines source_lines ON source_lines.id = layers.source_valuation_line_id
             JOIN inventory_valuation_documents source_documents
@@ -597,13 +614,15 @@ class SQLiteInventoryValuationRepository:
         return cursor.rowcount
 
     def insert_finance_draft(self, entry: Mapping[str, object], lines: Sequence[Mapping[str, object]]) -> None:
+        monetary_policy, _ = FinancePolicyStore(self.connection).entry(entry)
         self.connection.execute(
             """
             INSERT INTO ledger_entries (
                 id, workspace_id, organization_id, chart_id, legal_entity_id, period_id,
                 finance_journal_id, entry_number, posting_date, currency_code, description,
-                external_reference, source_type, status, created_by, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Generated', 'Draft', ?, ?, ?)
+                external_reference, source_type, status, created_by, created_at, updated_at,
+                currency_precision,currency_rounding_policy,currency_registry_version,currency_registry_digest
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Generated', 'Draft', ?, ?, ?, ?, ?, ?, ?)
             """,
             tuple(
                 entry[key]
@@ -624,7 +643,7 @@ class SQLiteInventoryValuationRepository:
                     "created_at",
                     "updated_at",
                 )
-            ),
+            ) + monetary_policy.values(),
         )
         self.connection.executemany(
             """
@@ -781,7 +800,9 @@ class SQLiteInventoryValuationRepository:
     def list_cost_layers(self, workspace_id: str, *, open_only: bool, limit: int, offset: int) -> list[dict[str, Any]]:
         query = """
             SELECT layers.*, items.item_code, units.uom_code, lots.lot_serial_code,
-                   entities.entity_code, source_documents.valuation_number
+                   entities.entity_code, source_documents.valuation_number,
+                   source_documents.currency_precision, source_documents.currency_rounding_policy,
+                   source_documents.currency_registry_version, source_documents.currency_registry_digest
             FROM inventory_cost_layers layers
             JOIN legal_entities entities ON entities.id = layers.legal_entity_id
             JOIN organizations ON organizations.id = entities.organization_id

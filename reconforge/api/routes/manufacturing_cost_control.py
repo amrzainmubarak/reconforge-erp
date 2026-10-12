@@ -22,6 +22,7 @@ from reconforge.api.server_manufacturing_cost_control import (
     execute_postgres_manufacturing_cost_control,
     server_manufacturing_cost_control_enabled,
 )
+from reconforge.auth.field_access import project_manufacturing_cost_control
 from reconforge.auth.models import LocalUser
 from reconforge.infrastructure.postgres import PostgresConfigurationError, validate_workspace_id
 from reconforge.infrastructure.sqlite_manufacturing_cost_control import (
@@ -123,7 +124,7 @@ def persist_manufacturing_cost_control(
 
         stored = execute_postgres_manufacturing_cost_control(request, persist)
         return {
-            "manufacturing_cost_control": stored,
+            "manufacturing_cost_control": project_manufacturing_cost_control(stored).visible,
             "source": {"kind": "postgresql-manufacturing-cost-control", "server_mode": True},
             "network_dispatch": "disabled",
             "workspace": scope.workspace_id,
@@ -137,7 +138,7 @@ def persist_manufacturing_cost_control(
     except ManufacturingCostControlPersistenceError as exc:
         raise _persistence_error(exc) from exc
     return {
-        "manufacturing_cost_control": stored,
+        "manufacturing_cost_control": project_manufacturing_cost_control(stored).visible,
         "source": {"kind": "sqlite-manufacturing-cost-control", "server_mode": False},
         "network_dispatch": "disabled",
     }
@@ -177,7 +178,7 @@ def list_manufacturing_cost_controls(
 
         records = execute_postgres_manufacturing_cost_control(request, read)
         return {
-            "manufacturing_cost_controls": records,
+            "manufacturing_cost_controls": [project_manufacturing_cost_control(record).visible for record in records],
             "workspace": scope.workspace_id,
             "limit": limit,
             "offset": offset,
@@ -193,7 +194,7 @@ def list_manufacturing_cost_controls(
     except ManufacturingCostControlPersistenceError as exc:
         raise _persistence_error(exc) from exc
     return {
-        "manufacturing_cost_controls": records,
+        "manufacturing_cost_controls": [project_manufacturing_cost_control(record).visible for record in records],
         "workspace": resolved_workspace,
         "limit": limit,
         "offset": offset,
@@ -239,7 +240,7 @@ def get_manufacturing_cost_control(
                 message="Manufacturing cost-control evidence was not found.",
             )
         return {
-            "manufacturing_cost_control": record,
+            "manufacturing_cost_control": project_manufacturing_cost_control(record).visible,
             "source": {"kind": "postgresql-manufacturing-cost-control", "server_mode": True},
         }
     try:
@@ -256,7 +257,7 @@ def get_manufacturing_cost_control(
             message="Manufacturing cost-control evidence was not found.",
         )
     return {
-        "manufacturing_cost_control": record,
+        "manufacturing_cost_control": project_manufacturing_cost_control(record).visible,
         "source": {"kind": "sqlite-manufacturing-cost-control", "server_mode": False},
     }
 

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "classification": "empty-table-canonical-json-sha256-not-an-api-key",
+  "evidence_commit": "662aad3ff0c0f48cb0fcda33f3a178cdec7322d0",
+  "file": "docs/execution/RECEIVABLES_POLICY_2026-10-03.json",
+  "line": 29,
+  "algorithm": "SHA256 of UTF-8 canonical empty array",
+  "canonical_payload": "[]",
+  "literal_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "historical_literal_verified": true,
+  "current_literal_verified": true,
+  "history_fingerprint": "662aad3ff0c0f48cb0fcda33f3a178cdec7322d0:docs/execution/RECEIVABLES_POLICY_2026-10-03.json:generic-api-key:29",
+  "tree_fingerprint": "docs/execution/RECEIVABLES_POLICY_2026-10-03.json:generic-api-key:29",
+  "config_changed": false,
+  "broad_path_or_rule_allowlist_added": false
+}

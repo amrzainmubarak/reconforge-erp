@@ -1,0 +1,54 @@
+{
+  "schema_version": "wave4-native-posting-pair-manifest-v1",
+  "status": "passed",
+  "pairs": 3,
+  "count": 1000,
+  "commits": {
+    "baseline": "b7df92711d52bde1adb735e3d1ab538eb2f4e5cc",
+    "candidate": "07452da8742406d2223ce522c87aee0fcd223a90"
+  },
+  "runs": [
+    {
+      "repetition": 1,
+      "variant": "baseline",
+      "report_sha256": "f27db82db8bee474fe5ad5f8574167d2804939dc2ea3104e2d1f4e238fffee63",
+      "child_exit_code": 0,
+      "report": "1-baseline.json"
+    },
+    {
+      "repetition": 1,
+      "variant": "candidate",
+      "report_sha256": "1efbede4d8bd102257eb183af287c3a5ada4abb4e9358dc98adbd16683fc24bd",
+      "child_exit_code": 0,
+      "report": "1-candidate.json"
+    },
+    {
+      "repetition": 2,
+      "variant": "candidate",
+      "report_sha256": "d8fa6e71a58a3d65eb151b99c9bf425eeaf6de9bb20206ba7f09d5d627440840",
+      "child_exit_code": 0,
+      "report": "2-candidate.json"
+    },
+    {
+      "repetition": 2,
+      "variant": "baseline",
+      "report_sha256": "57df0ecd223e8d59db37e656cdb5e3a5281f7340075fd3d18b7e0c4fdf9e9cad",
+      "child_exit_code": 0,
+      "report": "2-baseline.json"
+    },
+    {
+      "repetition": 3,
+      "variant": "baseline",
+      "report_sha256": "c64610433f9710cfe36f6bd49827c3a0818755fb6356da5adab311c17431e42b",
+      "child_exit_code": 0,
+      "report": "3-baseline.json"
+    },
+    {
+      "repetition": 3,
+      "variant": "candidate",
+      "report_sha256": "e4ab9f853f5df7b334806d676a03ff3b9714279d3eb08edd872ad5c73d3720a9",
+      "child_exit_code": 0,
+      "report": "3-candidate.json"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import replace
 from decimal import Decimal
@@ -111,6 +112,19 @@ def test_impairment_tamper_detection_rechecks_derived_fields() -> None:
     payload["units"][0]["impairment_loss"]["amount"] = "99.00"  # type: ignore[index]
 
     with pytest.raises(ConsolidationError, match="arithmetic"):
+        verify_consolidation_impairment_bridge_payload(payload)
+
+
+def test_impairment_replay_rejects_re_signed_noncanonical_money_text() -> None:
+    result = prepare_consolidation_impairment_bridge(_request())
+    payload = result.to_dict()
+    payload["units"][0]["carrying_amount"]["amount"] = "0100.00"  # type: ignore[index]
+    unsigned = dict(payload)
+    unsigned.pop("result_digest")
+    encoded = json.dumps(unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    payload["result_digest"] = hashlib.sha256(encoded.encode("ascii")).hexdigest()
+
+    with pytest.raises(ConsolidationError, match="money is invalid"):
         verify_consolidation_impairment_bridge_payload(payload)
 
 

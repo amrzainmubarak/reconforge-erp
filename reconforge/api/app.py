@@ -42,7 +42,9 @@ from reconforge.api.routes import (
     audit_administration,
     auth,
     bank_statement,
+    budget_control,
     close,
+    commercial_collections,
     connectors,
     consolidation_close,
     consolidation_deferred_tax,
@@ -51,32 +53,52 @@ from reconforge.api.routes import (
     consolidation_ownership,
     consolidation_ownership_change,
     consolidation_ppa,
+    customer_returns,
+    durable_job_operations,
     emergency_access,
     evidence,
     exceptions,
     finance_core,
+    finance_posting,
+    financial_installments,
+    financial_reporting,
+    fixed_assets,
     health,
     identity_administration,
     individual_cashflow,
+    intercompany_operations,
     inventory_core,
     inventory_planning,
+    inventory_receipt_posting,
     inventory_valuation,
     inventory_valuation_reversal,
+    landed_cost,
     manufacturing_cost_control,
+    manufacturing_execution,
     master_data,
     metrics,
+    notification_inbox,
+    operational_finance,
+    operational_fx_tax,
     operations,
     payables,
+    procurement_commitments,
+    procurement_operations,
+    procurement_partial,
+    procurement_sourcing,
     professional_invoice_payment,
     receivables,
     reconciliation,
     retail_settlement,
     roles,
+    sales_revenue,
     scim,
     scope_grants,
     scoped_exports,
     security_center,
     security_governance,
+    stock_sales,
+    supplier_returns,
     users,
     webauthn,
     workflow,
@@ -94,7 +116,7 @@ from reconforge.auth.webauthn_config import WebAuthnRuntime
 from reconforge.db import resolve_db_path
 from reconforge.db.tenancy import TenantDatabaseRouter
 from reconforge.infrastructure.postgres import (
-    PostgresPooledConnectionFactory,
+    PostgresRuntimePooledConnectionFactory,
     PostgresSettings,
 )
 from reconforge.infrastructure.redis import (
@@ -130,11 +152,14 @@ class SPAStaticFiles(StaticFiles):
     """Serve one built SPA without turning missing asset paths into HTML."""
 
     async def get_response(self, path: str, scope: Scope) -> Response:
+        resource_path = path.replace("\\", "/").lstrip("/")
+        if resource_path.split("/", 1)[0] in {"api", "scim"}:
+            raise StarletteHTTPException(status_code=404)
         try:
             return await super().get_response(path, scope)
         except StarletteHTTPException as exc:
             method = str(scope.get("method", "")).upper()
-            leaf = path.rsplit("/", 1)[-1]
+            leaf = resource_path.rsplit("/", 1)[-1]
             if exc.status_code != 404 or method not in {"GET", "HEAD"} or "." in leaf:
                 raise
             return await super().get_response("index.html", scope)
@@ -185,7 +210,7 @@ def create_api_app(
     app.state.tenant_db_router = TenantDatabaseRouter.from_root(tenant_db_root) if tenant_db_root is not None else None
     app.state.postgres_identity_factory = None
     if postgres_dsn is not None:
-        app.state.postgres_identity_factory = PostgresPooledConnectionFactory(
+        app.state.postgres_identity_factory = PostgresRuntimePooledConnectionFactory(
             PostgresSettings(dsn=postgres_dsn, require_tls=postgres_require_tls),
             max_size=postgres_pool_size,
             acquire_timeout_seconds=postgres_pool_acquire_timeout_seconds,
@@ -207,11 +232,19 @@ def create_api_app(
     app.state.postgres_evidence_factory = app.state.postgres_identity_factory
     app.state.postgres_scoped_exports_factory = app.state.postgres_identity_factory
     app.state.postgres_reconciliation_factory = app.state.postgres_identity_factory
+    app.state.postgres_accounts_factory = app.state.postgres_identity_factory
+    app.state.postgres_inventory_core_factory = app.state.postgres_identity_factory
+    app.state.postgres_receivables_factory = app.state.postgres_identity_factory
+    app.state.postgres_payables_factory = app.state.postgres_identity_factory
+    app.state.postgres_inventory_planning_factory = app.state.postgres_identity_factory
+    app.state.postgres_inventory_valuation_factory = app.state.postgres_identity_factory
     app.state.postgres_bank_statement_factory = app.state.postgres_identity_factory
     app.state.postgres_writeback_factory = app.state.postgres_identity_factory
     app.state.postgres_retail_settlement_factory = app.state.postgres_identity_factory
     app.state.postgres_professional_invoice_payment_factory = app.state.postgres_identity_factory
     app.state.postgres_manufacturing_cost_control_factory = app.state.postgres_identity_factory
+    app.state.postgres_budget_control_factory = app.state.postgres_identity_factory
+    app.state.postgres_exception_review_factory = app.state.postgres_identity_factory
     app.state.federation_providers = dict(federation_providers or {})
     app.state.federation_verifiers = dict(federation_verifiers or {})
     app.state.federation_air_gap_mode = federation_air_gap_mode
@@ -295,7 +328,7 @@ def create_api_app(
         principal: ServerPrincipal | None = None
         if (
             server_identity_enabled(request)
-            and not request.url.path.startswith("/scim/v2")
+            and request.url.path.startswith("/api/")
             and request.url.path
             not in {
                 "/api/v1/health",
@@ -317,9 +350,17 @@ def create_api_app(
                 presented_credential = request.cookies[BROWSER_SESSION_COOKIE]
                 transport = "browser_cookie"
             if presented_credential:
-                authenticated = await run_in_threadpool(
-                    authenticate_server_request, request, presented_credential
-                )
+                try:
+                    authenticated = await run_in_threadpool(
+                        authenticate_server_request, request, presented_credential
+                    )
+                except APIError as exc:
+                    # Middleware runs outside the router's exception handlers.
+                    # Keep authentication denials actionable and sanitized while
+                    # allowing the outer security-header middleware to run.
+                    denial_response = await api_error_handler(request, exc)
+                    denial_response.headers["x-request-id"] = request.state.request_id
+                    return denial_response
                 if authenticated is not None:
                     principal = server_principal_from_authentication(authenticated)
                     request.state.server_principal = principal
@@ -364,8 +405,6 @@ def create_api_app(
     app.include_router(audit.router, prefix="/api/v1")
     app.include_router(audit_administration.router, prefix="/api/v1")
     app.include_router(workflow.router, prefix="/api/v1")
-    if resolved_web_root is not None:
-        app.mount("/", SPAStaticFiles(directory=resolved_web_root, html=True), name="studio-web")
     app.include_router(accounts.router, prefix="/api/v1")
     app.include_router(close.router, prefix="/api/v1")
     app.include_router(consolidation_close.router, prefix="/api/v1")
@@ -386,16 +425,41 @@ def create_api_app(
     app.include_router(individual_cashflow.router, prefix="/api/v1")
     app.include_router(exceptions.router, prefix="/api/v1")
     app.include_router(metrics.router, prefix="/api/v1")
+    app.include_router(notification_inbox.router, prefix="/api/v1")
+    app.include_router(budget_control.router, prefix="/api/v1")
     app.include_router(operations.router, prefix="/api/v1")
+    app.include_router(durable_job_operations.router, prefix="/api/v1")
     app.include_router(payables.router, prefix="/api/v1")
     app.include_router(receivables.router, prefix="/api/v1")
     app.include_router(master_data.router, prefix="/api/v1")
     app.include_router(finance_core.router, prefix="/api/v1")
+    app.include_router(finance_posting.router, prefix="/api/v1")
+    app.include_router(operational_finance.router, prefix="/api/v1")
+    app.include_router(sales_revenue.router, prefix="/api/v1")
+    app.include_router(procurement_operations.router, prefix="/api/v1")
+    app.include_router(financial_reporting.router, prefix="/api/v1")
+    app.include_router(stock_sales.router, prefix="/api/v1")
+    app.include_router(procurement_partial.router, prefix="/api/v1")
+    app.include_router(financial_installments.router, prefix="/api/v1")
+    app.include_router(commercial_collections.router, prefix="/api/v1")
+    app.include_router(customer_returns.router, prefix="/api/v1")
+    app.include_router(intercompany_operations.router, prefix="/api/v1")
+    app.include_router(manufacturing_execution.router, prefix="/api/v1")
+    app.include_router(procurement_sourcing.router, prefix="/api/v1")
+    app.include_router(procurement_commitments.router, prefix="/api/v1")
+    app.include_router(supplier_returns.router, prefix="/api/v1")
+    app.include_router(operational_fx_tax.router, prefix="/api/v1")
+    app.include_router(landed_cost.router, prefix="/api/v1")
+    app.include_router(fixed_assets.router, prefix="/api/v1")
     app.include_router(inventory_core.router, prefix="/api/v1")
     app.include_router(inventory_planning.router, prefix="/api/v1")
+    app.include_router(inventory_receipt_posting.router, prefix="/api/v1")
     app.include_router(inventory_valuation.router, prefix="/api/v1")
     app.include_router(inventory_valuation_reversal.router, prefix="/api/v1")
     app.include_router(scim.router)
+    if resolved_web_root is not None:
+        # The catch-all SPA must follow every API router in dispatch order.
+        app.mount("/", SPAStaticFiles(directory=resolved_web_root, html=True), name="studio-web")
     authorization_routers = (
         health.router,
         auth.router,
@@ -430,13 +494,35 @@ def create_api_app(
         individual_cashflow.router,
         exceptions.router,
         metrics.router,
+        notification_inbox.router,
+        budget_control.router,
         operations.router,
+        durable_job_operations.router,
         payables.router,
         receivables.router,
         master_data.router,
         finance_core.router,
+        finance_posting.router,
+        operational_finance.router,
+        sales_revenue.router,
+        procurement_operations.router,
+        financial_reporting.router,
+        stock_sales.router,
+        procurement_partial.router,
+        financial_installments.router,
+        commercial_collections.router,
+        customer_returns.router,
+        intercompany_operations.router,
+        manufacturing_execution.router,
+        procurement_sourcing.router,
+        procurement_commitments.router,
+        supplier_returns.router,
+        operational_fx_tax.router,
+        landed_cost.router,
+        fixed_assets.router,
         inventory_core.router,
         inventory_planning.router,
+        inventory_receipt_posting.router,
         inventory_valuation.router,
         inventory_valuation_reversal.router,
     )
@@ -457,7 +543,6 @@ def create_api_app(
             {
                 ("POST", "/api/v1/auth/logout"),
                 ("POST", "/api/v1/auth/step-up"),
-                ("POST", "/api/v1/auth/emergency-access/requests"),
                 ("GET", "/api/v1/auth/emergency-access/requests"),
                 ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/activate"),
                 ("POST", "/api/v1/auth/emergency-access/requests/{access_id}/end"),
@@ -473,6 +558,6 @@ def create_api_app(
         (scim.router,), prefix="", public_routes=frozenset(), identity_routes=frozenset()
     )
     app.state.authorization_contracts = tuple(sorted((*core_contracts, *scim_contracts)))
-    validate_authorization_surface(app.state.authorization_contracts)
+    validate_authorization_surface(app.state.authorization_contracts, require_critical_routes=True)
     app.state.authorization_contract_digest = authorization_inventory_digest(app.state.authorization_contracts)
     return app

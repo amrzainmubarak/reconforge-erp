@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-08",
+  "status": "bounded_http_fixture_cleanup_verified",
+  "runtime_unchanged_since_full_regression": "832ceeee075330931a494215c68c350867e93600",
+  "commands": [
+    {
+      "name": "native-http-cleanup-upgrade",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "alembic",
+        "upgrade",
+        "head"
+      ],
+      "started_at": "2026-10-08T01:16:21.346164+00:00",
+      "duration_seconds": 4.364,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/native-http-cleanup-upgrade.log",
+      "log_sha256": "146679e8020d89c8909598aab396e1ae689e820095df7b72f102697d35af389d",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "32f573f4870da41d5b1c78bd12f7db233a0551d3b5d6783cccf35b1d9c6f997b",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    },
+    {
+      "name": "native-http-cleanup-regressions",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261008\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_postgres_close_scope_bootstrap.py",
+        "tests/test_api_operations.py",
+        "tests/test_api_metrics.py",
+        "tests/test_api_server_bank_statement.py",
+        "tests/test_postgres_consolidation_close.py::test_live_postgres_consolidation_close_is_tenant_isolated_and_replayable",
+        "tests/test_api_server_consolidation_close.py",
+        "tests/test_api_server_manufacturing_cost_control.py",
+        "tests/test_api_server_professional_invoice_payment.py",
+        "tests/test_api_server_retail_settlement.py",
+        "tests/test_api_server_reconciliation_live.py",
+        "tests/test_api_server_scoped_exports.py",
+        "tests/test_api_consolidation_tax_impairment_live.py",
+        "tests/test_api_consolidation_ownership_change.py",
+        "tests/test_postgres_policy_provenance.py",
+        "-ra",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-08T01:16:25.825332+00:00",
+      "duration_seconds": 37.852,
+      "exit_code": 0,
+      "status": "passed",
+      "error": null,
+      "log": "output/baseline-2026-10-08/native-http-cleanup-regressions.log",
+      "log_sha256": "26e4c1d073658ea6c115682ebe147e279354a19dc7b45acd761d3bad7ef69716",
+      "source_commit": "832ceeee075330931a494215c68c350867e93600",
+      "worktree_diff_sha256": "32f573f4870da41d5b1c78bd12f7db233a0551d3b5d6783cccf35b1d9c6f997b",
+      "python_lock_sha256": "b8fa6321cd67280e66edfbd17239bcd25f8f9055337bfbb0df41778630c15a78",
+      "web_lock_sha256": "314a2bd325d7171759e5ce1b687baae7be7c8f3ffac0cf3e1f1be588c56ad09e"
+    }
+  ],
+  "live_regressions": {
+    "passed": 34,
+    "skipped": 0,
+    "failures": 0
+  },
+  "native": {
+    "container": "reconforge-native-20261008-868a1de3",
+    "container_id": "229d1879aeda2fd14ab3e43b45c307db5980c347a7a3fc5c97920c101765e680",
+    "image": "postgres@sha256:dc17045ccfd343b49600570ea734b9c4991cf1c3f3302e67df51e3b402dd55c4",
+    "cleanup": true,
+    "application_role": {
+      "superuser": false,
+      "bypassrls": false
+    },
+    "server_version": "17.10",
+    "migration_head": "0106_pg_ap_link_reversal",
+    "restored_revision": "0106_pg_ap_link_reversal",
+    "restored_public_definer_execute": 0,
+    "native_backup_restore_passed": true,
+    "wrong_source_revision_refused": true,
+    "restored_database_removed": true,
+    "artifact_sha256": "273999ff9c48cbc163a808070134b9ffe6d189ae09dcc2bfb74bbcb481771bce",
+    "artifact_bytes": 1482066
+  },
+  "changed_fixture_files": {
+    "tests/postgres_audit_fixture.py": "fd857694e63d6a9a9f98343740f95a9794a18c01a133e714167539507846ae98",
+    "tests/test_api_server_scoped_exports.py": "f0028195eeee5448d109406378c22f014f0e1499d426905cd07a77c72e9ce1d7",
+    "tests/test_api_consolidation_tax_impairment_live.py": "b41b71269266357fc966a66aa12e1a8d82a8898812b1b1ae04f3276b52b70508",
+    "tests/test_api_consolidation_ownership_change.py": "775c7bb2c8f36f96c5e42dd2e2c04bab433fffd04d1768ee713dfc781facb1a3",
+    "tests/test_postgres_policy_provenance.py": "6c5a776bb253291a07cd0780358bd2d0a1ceb81538270654b2919c21d5e7d928"
+  },
+  "original_failure_logs": [
+    {
+      "path": "output/baseline-2026-10-08/hosted-native-current-failure.log",
+      "sha256": "8a0b1f6e009a8f14212eadadd2a98fd1d4c9a65794d16b4230de17bae8d09830"
+    },
+    {
+      "path": "output/baseline-2026-10-08/hosted-industry-close-current-failure.log",
+      "sha256": "0aebd072b61422848d7d218ac6ffd3e32557c89547686a9bcffedeb8cf4dc23a"
+    }
+  ],
+  "harness_prerequisite_note": "First fresh-role selection omitted CI close bootstrap/operations/close-role grants; its two prerequisite failures remain archived. The accepted rerun retains CI predecessor tests.",
+  "hosted_native_component_note": "The current0106 encrypted native test passes on Linux PostgreSQL16.14 in job113096760942 before the independent scoped-export cleanup failure. Whole native shard remains red at832ceeee.",
+  "limits": [
+    "test fixture cleanup only; no runtime, grants or database guard relaxation",
+    "prior whole-suite source832ceeee retained separately",
+    "full hosted CI remains unaccepted; fresh final-head CI required"
+  ]
+}

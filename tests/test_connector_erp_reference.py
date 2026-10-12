@@ -53,6 +53,7 @@ def test_reference_erp_connector_is_read_only_entity_scoped_and_canonical() -> N
     result = connector.read_page(idempotency_key="erp-run-1", cursor="erp-start")
     assert result.page.next_cursor == "erp-next"
     assert [line.line_id for line in result.page.lines] == ["L-2", "L-1"]
+    assert [line.amount for line in result.page.lines] == ["20", "10"]
     assert result.response_digest
     assert transport.calls[0][0] == ERP_REFERENCE_MANIFEST.egress_destinations[0]
     scoped = connector.read_page(idempotency_key="erp-run-2", expected_entity_code="EGY")
@@ -73,6 +74,7 @@ def test_reference_erp_rejects_expected_entity_scope_mismatch() -> None:
     "body",
     [
         b'{"lines":[{"id":"L-1","entity_code":"EGY","account_code":"4000","amount":"NaN","currency":"USD","date":"2026-01-01"}]}',
+        b'{"lines":[{"id":"L-1","entity_code":"EGY","account_code":"4000","amount":"1e2","currency":"USD","date":"2026-01-01"}]}',
         b'{"lines":[{"id":"L-1","entity_code":"EGY","account_code":"4000","amount":"10","currency":"USD","date":"2026-01-01"},{"id":"L-2","entity_code":"USA","account_code":"4000","amount":"10","currency":"USD","date":"2026-01-01"}]}',
     ],
 )

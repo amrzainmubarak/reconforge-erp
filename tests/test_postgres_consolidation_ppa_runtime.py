@@ -158,6 +158,7 @@ def test_live_postgres_ppa_persistence_is_replayable_immutable_and_tenant_isolat
                 "DELETE FROM reconforge.domain_audit_events WHERE tenant_id IN (%s,%s)",
                 (tenant_a, tenant_b),
             )
+            admin.execute("SET CONSTRAINTS ALL IMMEDIATE")
             admin.execute(
                 "ALTER TABLE reconforge.domain_audit_events ENABLE TRIGGER domain_audit_events_immutable"
             )

@@ -187,6 +187,120 @@
       "profile_id": "postgres-durable-job-load/backpressure-tier-v1 + postgres-durable-job-soak/repeated-small-tier-v1",
       "status": "verified",
       "workload_family": "durable_jobs"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-1000-2026-10-09.json",
+      "artifact_sha256": "4c417d6a3a587d469959b12f7b8eabb3ac50765e432c184bf68106814ad296bc",
+      "claim_boundary": "One local single-entity USD profile with 1000 real three-human postings and four workers; warmed alternating same-history native read comparison, not HTTP TPS, all-ERP capacity, million-effect reporting, SLO, or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/1000-three-human-v1",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-pr127-34b9-2026-10-10.json",
+      "artifact_sha256": "336424ddee3853dc17fe06bb1f3a1326f1964eb794fd75494aa8596702fa6374",
+      "claim_boundary": "One local single-entity USD profile: 1000 native three-human cash/equity postings, four workers, and warmed alternating reads of the same effects. Repository latency includes synthetic authentication. Not HTTP TPS, mixed ERP capacity, production sizing, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/1000-three-human-v1@pr127-34b9e7a5",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-current-6272889d-2026-10-10.json",
+      "artifact_sha256": "d4fe00ed682780db48f7fb7d269b0a1d3a8488a8996a482a1198d513fb84943c",
+      "claim_boundary": "One local single-entity USD profile: 1000 native three-human cash/equity postings, four workers, and warmed alternating reads of the same effects. Repository latency includes synthetic authentication. Not HTTP TPS, mixed ERP capacity, production sizing, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/1000-three-human-v1@global-6272889d",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/commercial-collection-projection-two-runs-2026-10-10.json",
+      "artifact_sha256": "3671766fe0fb7a064add56ff319b46aa02c5a8dcf3e3045a0be91398394c1f32",
+      "claim_boundary": "Two local one-line/one-tranche invoice projection observations, each with one actual reviewed partial receipt and 25 alternating SQL executions per pathway; three allocation scans reduced to one with identical projection. Not 1000-line throughput, HTTP latency, financial posting throughput or competitor comparison.",
+      "digest_fields": [
+        "first_original_report_sha256",
+        "second_original_report_sha256",
+        "first_projection_sha256",
+        "second_projection_sha256"
+      ],
+      "engine": "postgresql17-native-commercial-projection",
+      "profile_id": "commercial-collection-projection/one-line-reviewed-partial-receipt-two-runs-v1",
+      "status": "verified",
+      "workload_family": "commercial_projection"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-post-repair-cfd30de7-2026-10-10.json",
+      "artifact_sha256": "4c9ab43acf5ab4f327010013611e4cea5a73f7d1863019edc8db4d4654ce6530",
+      "claim_boundary": "One local single-entity USD profile:1000 native three-human cash/equity postings, four workers, same seed and warmed verified reads. Latency includes authentication. Not HTTP TPS, mixed ERP capacity, production sizing, causal proof, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/1000-three-human-v1@post-repair-cfd30de7",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/native-dimensional-snapshot-1000-wave3-2026-10-10.json",
+      "artifact_sha256": "edd68a9bea8436836aefd06c79f03cf63989f135e1ddb1af3639ff528277c289",
+      "claim_boundary": "One warmed 1000-line journal on a scoped authenticated nonowner PostgreSQL17 connection; three alternating samples per reader with identical independent line totals and reviewed digest. No posting, HTTP, mixed ERP, production sizing or competitor throughput claim.",
+      "digest_fields": [
+        "source_sha256",
+        "validation_digest",
+        "original_report_sha256",
+        "failed_attempt_original_report_sha256"
+      ],
+      "engine": "postgresql17-native-dimensional-snapshot",
+      "profile_id": "native-dimensional-snapshot/1000-alternating-v1@13191719",
+      "status": "verified",
+      "workload_family": "native_snapshot"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json",
+      "artifact_sha256": "8da15c682f85f584f70601dfc2855348a9bdd7601b20a9be9a0e69611fff5917",
+      "claim_boundary": "One sequential observation per source on the same local host, pinned PostgreSQL17.10, 1000 native single-entity USD three-human cash/equity postings, four workers, and 100/1000-effect warmed reads. Not HTTP TPS, mixed ERP capacity, production sizing, causal or statistical superiority, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/quiet-wave3-1000-v1@806a05db",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
+    },
+    {
+      "artifact": "docs/execution/benchmarks/enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json",
+      "artifact_sha256": "7ba3ed14fc63f00e67b2162f1190abfcd1c6d82c293ffefb574387a6d13c02d6",
+      "claim_boundary": "One sequential observation per source on the same local host, pinned PostgreSQL17.10, 1000 native single-entity USD three-human cash/equity postings, four workers, and 100/1000-effect warmed reads. Not HTTP TPS, mixed ERP capacity, production sizing, causal or statistical superiority, SLO, failover or competitor comparison.",
+      "digest_fields": [
+        "source_sha256",
+        "financial_effects_digest",
+        "original_report_sha256"
+      ],
+      "engine": "postgresql17-native-reviewed-posting",
+      "profile_id": "native-enterprise-finance/quiet-wave3-1000-v1@70dffef7",
+      "status": "verified",
+      "workload_family": "enterprise_financial"
     }
   ],
   "index_id": "benchmark-evidence-index-v1",

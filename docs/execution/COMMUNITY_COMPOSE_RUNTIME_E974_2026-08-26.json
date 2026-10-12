@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "report_id": "community-compose-runtime-e974-2026-08-26",
+  "executed_at": "2026-08-26",
+  "status": "passed",
+  "runtime": {
+    "docker_engine": "29.7.2",
+    "compose_version": "v5.4.0",
+    "compose_project": "reconforge-e974",
+    "image_tag": "reconforge:community-local",
+    "image_digest": "sha256:07e200167e28c7ca317c1bd47248232691faaf4cb54e26b11e98cf2bd84b6fdd",
+    "container_name": "reconforge-e974-smoke",
+    "health_after_restart": "healthy",
+    "api_health_status": "ok",
+    "uid": "10001:10001",
+    "read_only_root": true,
+    "cap_drop": ["ALL"],
+    "no_new_privileges": true,
+    "internal_network": true
+  },
+  "database": {
+    "backend": "sqlite",
+    "schema_version": 46,
+    "latest_schema_version": 46,
+    "evidence_count": 1,
+    "retention_version": 1
+  },
+  "backup_restore": {
+    "backup_verification": "passed",
+    "backup_schema_version": 46,
+    "backup_sha256": "89cc18067098509ef0de3f08d720ffe52a3958ba54346aea94d4f556e98e9334",
+    "restore_status": "passed",
+    "restored_schema_version": 46,
+    "restored_tables": 113
+  },
+  "observed": [
+    "compose_image_built",
+    "health_after_restart",
+    "api_health_ok",
+    "sqlite_current_head_46",
+    "non_root_uid_10001",
+    "read_only_root_and_capability_drop",
+    "backup_manifest_verified",
+    "independent_restore_current_head"
+  ],
+  "limitations": [
+    "single_local_docker_host",
+    "synthetic_evidence_and_credentials",
+    "host_port_8765_reserved_by_environment",
+    "no_independent_failure_domain_or_ha_dr",
+    "no_external_identity_or_provider_interoperability",
+    "no_production_slo_or_compliance_assurance"
+  ],
+  "report_digest": "504f4f9c1cf39a362f6e12dfaaa226eb331873065152702df912043b659da617"
+}

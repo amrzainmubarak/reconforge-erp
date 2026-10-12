@@ -448,6 +448,15 @@ def test_closed_schema_and_replay_reject_rehashed_financial_tampering() -> None:
         verify_consolidation_worksheet_payload(tampered)
 
 
+def test_worksheet_replay_rejects_re_signed_noncanonical_elimination_money() -> None:
+    payload = prepare_consolidation_worksheet(_request()).to_dict()
+    payload["request"]["eliminations"][0]["lines"][0]["amount"]["amount"] = "0100.00"  # type: ignore[index]
+    payload["result_digest"] = _payload_digest(payload)
+
+    with pytest.raises(ConsolidationError, match="payload is invalid"):
+        verify_consolidation_worksheet_payload(payload)
+
+
 def test_schema_and_runtime_are_in_distribution_manifest() -> None:
     manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
     assert "docs/schemas/consolidation-worksheet-v1.schema.json" in manifest

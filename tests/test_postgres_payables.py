@@ -23,14 +23,20 @@ from reconforge.infrastructure.postgres import (
 )
 from reconforge.infrastructure.postgres_domain import install_postgres_domain_schema
 from reconforge.infrastructure.postgres_journals import POSTGRES_JOURNAL_SCHEMA_SQL
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import POSTGRES_MASTER_DATA_SCHEMA_SQL
 from reconforge.infrastructure.postgres_payables import (
     POSTGRES_PAYABLES_SCHEMA_SQL,
     PostgresPayablesError,
     PostgresPayablesRepository,
     _quantity,
+    _stored_quantity,
 )
 from reconforge.platform.common import PlatformError
+from tests.postgres_test_hygiene import (
+    PAYABLES_TENANT_CLEANUP_PLAN,
+    cleanup_postgres_test_tenants_as_admin,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -153,6 +159,8 @@ class _Connection:
 
     def execute(self, query: str, parameters: tuple[object, ...] = ()) -> _Result:
         self.queries.append((query, parameters))
+        if "current_setting('app.tenant_id'" in query:
+            return _Result(one=(None, None, None, None, None))
         if "FROM reconforge.domain_workspaces" in query:
             return _Result(one={"id": "workspace-a"} if self.workspace else None)
         if "FROM reconforge.ap_suppliers" in query and "supplier_code=%s" in query:
@@ -245,6 +253,20 @@ def test_purchase_order_quantity_preserves_exact_scale_without_typmod_rounding()
     assert canonical == "0.0000000000001"
 
 
+@pytest.mark.parametrize("quantity", [0.1, "1e2"])
+def test_postgres_payables_quantity_rejects_non_strict_numeric_inputs(quantity: object) -> None:
+    with pytest.raises(PlatformError, match="quantity"):
+        _quantity(quantity, "Quantity")
+
+
+@pytest.mark.parametrize("quantity", [0.1, "1e2", "NaN", "-1", None])
+def test_postgres_payables_stored_quantity_decoder_fails_closed(quantity: object) -> None:
+    with pytest.raises(PlatformError, match="stored quantity"):
+        _stored_quantity(quantity, "Stored quantity")
+
+    assert _stored_quantity("0", "Empty receipt total", allow_zero=True) == 0
+
+
 def test_all_payables_signatures_match_application_contract() -> None:
     methods = (
         "upsert_supplier",
@@ -297,7 +319,7 @@ def test_supplier_invoice_total_mismatch_fails_before_transaction() -> None:
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
 def test_live_postgres_payables_lifecycle_exactness_and_rls() -> None:
-    psycopg = pytest.importorskip("psycopg")
+    pytest.importorskip("psycopg")
     dsn = os.environ["RECONFORGE_TEST_POSTGRES_DSN"]
     admin_dsn = os.environ.get("RECONFORGE_TEST_POSTGRES_ADMIN_DSN", dsn)
     app_user = os.environ.get("RECONFORGE_TEST_POSTGRES_APP_USER", "")
@@ -315,6 +337,7 @@ def test_live_postgres_payables_lifecycle_exactness_and_rls() -> None:
             install_postgres_rls_schema(admin)
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
             admin.execute(POSTGRES_JOURNAL_SCHEMA_SQL)
             admin.execute(POSTGRES_PAYABLES_SCHEMA_SQL)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
@@ -328,6 +351,32 @@ def test_live_postgres_payables_lifecycle_exactness_and_rls() -> None:
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
             )
+            assert tuple(admin.execute(
+                "SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=%s", (app_user,)
+            ).fetchone()) == (False, False)
+            for dependency in (
+                "operational_finance_plans", "operational_finance_links", "procurement_cycles",
+                "procurement_partial_orders", "procurement_partial_receipts", "procurement_partial_invoices", "procurement_partial_commands", "financial_installment_plans", "financial_installment_reviews", "financial_installment_links", "financial_installment_commands"
+            ):
+                qualified = f"reconforge.{dependency}"
+                if admin.execute("SELECT to_regclass(%s)", (qualified,)).fetchone()[0] is None:
+                    continue
+                previous_dml = tuple(admin.execute(
+                    "SELECT has_table_privilege(%s,%s,'INSERT'),has_table_privilege(%s,%s,'UPDATE'),"
+                    "has_table_privilege(%s,%s,'DELETE')",
+                    (app_user, qualified, app_user, qualified, app_user, qualified),
+                ).fetchone())
+                admin.execute(f"GRANT SELECT ON {qualified} TO {app_user}")
+                assert tuple(admin.execute(
+                    "SELECT has_table_privilege(%s,%s,'SELECT'),has_table_privilege(%s,%s,'INSERT'),"
+                    "has_table_privilege(%s,%s,'UPDATE'),has_table_privilege(%s,%s,'DELETE')",
+                    (app_user, qualified, app_user, qualified, app_user, qualified, app_user, qualified),
+                ).fetchone()) == (True, *previous_dml)
+                assert tuple(admin.execute(
+                    "SELECT pg_get_userbyid(relowner)<>%s,relrowsecurity,relforcerowsecurity "
+                    "FROM pg_class WHERE oid=to_regclass(%s)",
+                    (app_user, qualified),
+                ).fetchone()) == (True, True, True)
             admin.execute(
                 "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
                 (tenant_a, tenant_a, tenant_b, tenant_b),
@@ -401,10 +450,11 @@ def test_live_postgres_payables_lifecycle_exactness_and_rls() -> None:
             assert repository.list_suppliers(workspace="Payables") == []
             assert repository.list_supplier_invoices(workspace="Payables") == []
     finally:
-        for tenant in (tenant_a, tenant_b):
-            try:
-                with PostgresTenantBoundary(factory).transaction(tenant) as connection:
-                    connection.execute("DELETE FROM reconforge.tenants WHERE id=%s", (tenant,))
-            except psycopg.Error:
-                pass
-        admin.close()
+        try:
+            cleanup_postgres_test_tenants_as_admin(
+                admin,
+                tenant_ids=(tenant_a, tenant_b),
+                plan=PAYABLES_TENANT_CLEANUP_PLAN,
+            )
+        finally:
+            admin.close()

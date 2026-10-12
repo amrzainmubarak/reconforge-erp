@@ -331,6 +331,8 @@ def test_writeback_dispatch_is_opt_in_server_scoped_and_idempotent(tmp_path: Pat
         {
             "registration_schema": "writeback-network-registration-v1",
             "connector_id": connector_id,
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
             "version": "1.0.0",
             "endpoint": "https://api.example.test/v1/writeback",
             "egress_destinations": ("https://api.example.test/v1/writeback",),
@@ -354,6 +356,29 @@ def test_writeback_dispatch_is_opt_in_server_scoped_and_idempotent(tmp_path: Pat
             scoped.close()
 
     monkeypatch.setattr(routes, "execute_postgres_writeback", execute)
+    bound_registration = registration
+    for invalid_registration, expected_status, expected_code in (
+        (
+            bound_registration.model_copy(update={"tenant_id": None, "workspace_id": None}),
+            503,
+            "writeback_connector_scope_not_configured",
+        ),
+        (
+            bound_registration.model_copy(update={"tenant_id": "tenant-b", "workspace_id": "workspace-a"}),
+            403,
+            "writeback_connector_scope_mismatch",
+        ),
+    ):
+        app.state.writeback_network_registrations = {connector_id: invalid_registration}
+        denied = client.post(
+            f"/api/v1/connectors/writeback/intents/{payload['intent_id']}/dispatch",
+            json={"tenant_id": "tenant-a", "workspace_id": "workspace-a", "expected_version": 2},
+            headers=controller_headers,
+        )
+        assert denied.status_code == expected_status, denied.text
+        assert denied.json()["error"]["code"] == expected_code
+        assert transport.calls == 0
+    app.state.writeback_network_registrations = {connector_id: bound_registration}
     original_permission_check = routes.enforce_server_scoped_permission
     permission_calls = 0
 
@@ -547,7 +572,9 @@ def test_erpnext_writeback_api_dispatches_balanced_payload_and_replays_without_p
         secret_resolver=Secrets(),
     )
     registration = erpnext_writeback_registration(
-        credential_reference="vault://tenant-a/erpnext"
+        credential_reference="vault://tenant-a/erpnext",
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
     ).model_copy(update={"feature_enabled": True})
     app.state.writeback_network_registrations = {connector_id: registration}
 
@@ -695,7 +722,9 @@ def test_erpnext_payment_writeback_api_dispatches_one_sided_payload_and_replays_
         secret_resolver=Secrets(),
     )
     registration = erpnext_payment_entry_writeback_registration(
-        credential_reference="vault://tenant-a/erpnext"
+        credential_reference="vault://tenant-a/erpnext",
+        tenant_id="tenant-a",
+        workspace_id="workspace-a",
     ).model_copy(update={"feature_enabled": True})
     app.state.writeback_network_registrations = {connector_id: registration}
 
@@ -741,8 +770,8 @@ def test_erpnext_payment_writeback_api_dispatches_one_sided_payload_and_replays_
     assert headers["Authorization"] == "token synthetic-erpnext-payment-api-token"
     assert headers["X-ReconForge-Operation"] == ERP_NEXT_PAYMENT_ENTRY_WRITEBACK_OPERATION
     assert headers["Idempotency-Key"] == intent_payload["idempotency_key"]
-    assert json.loads(body)["paid_amount"] == "42.00"
-    assert json.loads(body)["received_amount"] == "0.00"
+    assert json.loads(body)["paid_amount"] == "42"
+    assert json.loads(body)["received_amount"] == "0"
     assert json.loads(body)["docstatus"] == 0
     assert body == payload.payload
     assert b"synthetic-erpnext-payment-api-token" not in dispatched.content
@@ -859,6 +888,8 @@ def test_writeback_recovery_api_reads_provider_status_without_post(tmp_path: Pat
             {
                 "registration_schema": "writeback-network-registration-v1",
                 "connector_id": "reference-rest-readonly",
+                "tenant_id": "tenant-a",
+                "workspace_id": "workspace-a",
                 "version": "1.0.0",
                 "endpoint": "https://api.example.test/v1/writeback",
                 "egress_destinations": ("https://api.example.test/v1/writeback",),
@@ -1094,6 +1125,8 @@ def test_writeback_recovery_api_uses_real_pinned_https_status_lookup_without_pos
         {
             "registration_schema": "writeback-network-registration-v1",
             "connector_id": "reference-rest-readonly",
+            "tenant_id": "tenant-a",
+            "workspace_id": "workspace-a",
             "version": "1.0.0",
             "endpoint": endpoint,
             "recovery_endpoint": recovery_endpoint,

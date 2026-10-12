@@ -1,0 +1,467 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-03",
+  "source_commit": "1551e8ae69a2982961a315c40be1c4ac2b8c8bc5",
+  "environment": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.13",
+    "uv": "0.11.32",
+    "node": "26.3.0",
+    "npm": "11.16.0",
+    "docker_engine": "29.8.1"
+  },
+  "dependency_profile": "fresh uv sync --locked --all-extras --no-editable --python 3.12",
+  "inventory": {
+    "python_source": 540,
+    "test_files": 474,
+    "postgres_migrations": 92,
+    "json_schemas": 121,
+    "adrs": 781,
+    "tracked_ci_workflows": 7,
+    "control_packs": 24
+  },
+  "postgres": {
+    "image": "postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+    "migration_head": "0092_pg_close_lock_evidence",
+    "tables": 167,
+    "rls_enabled": 167,
+    "rls_forced": 167,
+    "application_role_superuser": false,
+    "application_role_bypassrls": false,
+    "focused_result": "70 passed, zero skipped"
+  },
+  "commands": [
+    {
+      "name": "ruff",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "started_at": "2026-10-03T01:03:42.868565+00:00",
+      "duration_seconds": 0.209,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/ruff.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "status": "passed"
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge"
+      ],
+      "started_at": "2026-10-03T01:03:43.238769+00:00",
+      "duration_seconds": 1.549,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/mypy.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "d25ac6b3135ceb84fb0a5a1f8ccf5a17f42285d44fa81dbd1864238652954dc4",
+      "status": "passed"
+    },
+    {
+      "name": "bandit",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "-r",
+        "reconforge"
+      ],
+      "started_at": "2026-10-03T01:03:44.788667+00:00",
+      "duration_seconds": 18.281,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/bandit.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "44bf91253aed587a37eeb57b48a7fc1dfc52665f279f268072900aa5a0d7df14",
+      "status": "passed"
+    },
+    {
+      "name": "build",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+        "-m",
+        "build",
+        "--no-isolation"
+      ],
+      "started_at": "2026-10-03T01:04:03.070887+00:00",
+      "duration_seconds": 33.973,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/build.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "1984f5411806766e08d10579aed996bbdda317c767ba68fb2a71410861857b95",
+      "status": "passed"
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "started_at": "2026-10-03T01:04:37.044424+00:00",
+      "duration_seconds": 0.038,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/diff-check.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "passed"
+    },
+    {
+      "name": "pytest",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "-ra",
+        "--tb=short"
+      ],
+      "started_at": "2026-10-03T01:03:42.868565+00:00",
+      "duration_seconds": 822.764,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/pytest.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "8f59962f13b6041daba74ca6ae7de26ffc4f29b03a499b71943bbdbe5c5fd8eb",
+      "status": "passed"
+    },
+    {
+      "name": "doctor",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\reconforge.exe",
+        "doctor"
+      ],
+      "started_at": "2026-10-03T01:03:42.868565+00:00",
+      "duration_seconds": 7.301,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/doctor.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "d9783d649de930d00d282cd2f5e55bae86b84a0a6c77065c961b096ba568b628",
+      "status": "passed"
+    },
+    {
+      "name": "validate",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\reconforge.exe",
+        "validate",
+        "examples/sample_data"
+      ],
+      "started_at": "2026-10-03T01:03:50.372379+00:00",
+      "duration_seconds": 3.536,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/validate.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "761baec488afa32f64865dc5f64015fa5674dc7f4a23d87c683595cf9ed38711",
+      "status": "passed"
+    },
+    {
+      "name": "demo",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\reconforge.exe",
+        "demo",
+        "run",
+        "--output",
+        "output/baseline-2026-10-03/demo"
+      ],
+      "started_at": "2026-10-03T01:03:53.908246+00:00",
+      "duration_seconds": 11.897,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/demo.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "1fc0877c70f2a49d15792e000c51feeeb2296211696c6b6ecbe50947a02a7f45",
+      "status": "passed"
+    },
+    {
+      "name": "docker-build",
+      "command": [
+        "docker",
+        "build",
+        "-t",
+        "reconforge:baseline-20261003",
+        "."
+      ],
+      "started_at": "2026-10-03T01:04:05.808441+00:00",
+      "duration_seconds": 11.327,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/docker-build.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "eeb881d75de0660ae4d33ae602060ca7d375d65d8bb3ae1c92602553f3267d35",
+      "status": "passed"
+    },
+    {
+      "name": "docker-doctor",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "reconforge:baseline-20261003",
+        "reconforge",
+        "doctor"
+      ],
+      "started_at": "2026-10-03T01:04:17.136995+00:00",
+      "duration_seconds": 13.749,
+      "exit_code": 0,
+      "log": "output/baseline-2026-10-03/docker-doctor.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "011c4651aee4407ec9aced841e5bb39ac2770c016405627628712a6720ab108f",
+      "status": "passed"
+    },
+    {
+      "name": "pip-audit",
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+        "-m",
+        "pip_audit"
+      ],
+      "started_at": "2026-10-03T01:03:42.868565+00:00",
+      "duration_seconds": 35.69,
+      "exit_code": 1,
+      "log": "output/baseline-2026-10-03/pip-audit.log",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "log_sha256": "18c6130c94aed91529918d0fc312b5952f22229f2fd4f1a60c5954cc06d9a450",
+      "status": "failed"
+    },
+    {
+      "command": "npm --prefix apps/web ci",
+      "exit_code": 0,
+      "duration_seconds": 11.5490681,
+      "log": "output/baseline-2026-10-03/web/npm-ci.log",
+      "log_sha256": "bf10cb47d50e6cb6dfc5e0ef64d0d7558f5c4121ebd7a7793636fe55bb3a05fd",
+      "status": "passed"
+    },
+    {
+      "command": "npm --prefix apps/web run typecheck",
+      "exit_code": 0,
+      "duration_seconds": 1.6373197,
+      "log": "output/baseline-2026-10-03/web/npm-typecheck.log",
+      "log_sha256": "2a4612d2f9dd3c39732fcad4397b673a7418c6c998fe0c79e69651480646d9cb",
+      "status": "passed"
+    },
+    {
+      "command": "npm --prefix apps/web run test:run",
+      "exit_code": 0,
+      "duration_seconds": 10.8503732,
+      "log": "output/baseline-2026-10-03/web/npm-test-run.log",
+      "log_sha256": "cb2430fff4fd72d5992755360ffeb7204f164ac82c920a794a013c8cbb69bfd9",
+      "status": "passed"
+    },
+    {
+      "command": "npm --prefix apps/web audit --json",
+      "exit_code": 1,
+      "duration_seconds": 3.7043965,
+      "log": "output/baseline-2026-10-03/web/npm-audit.json",
+      "log_sha256": "04be4ae6a5213b37ff7f51057336e3b3a09d780a86feb36e631cec2093308589",
+      "status": "failed"
+    },
+    {
+      "command": "npm --prefix apps/web run build",
+      "exit_code": 0,
+      "duration_seconds": 1.8207211,
+      "log": "output/baseline-2026-10-03/web/npm-build.log",
+      "log_sha256": "c93ec4d004115caf506f9393064fbcd4f565b41a315415c650a30c5179d3a92c",
+      "status": "passed"
+    },
+    {
+      "command": "npm --prefix apps/web run e2e",
+      "exit_code": 0,
+      "duration_seconds": 53.5571463,
+      "log": "output/baseline-2026-10-03/web/npm-e2e.log",
+      "log_sha256": "38328844ec0908d86dd50d0e52547d71ecebbbdbe8785b78c3e9b81d608c7a1b",
+      "status": "passed"
+    },
+    {
+      "command": "RECONFORGE_LIVE_HTTPS_HOSTING=1 npm --prefix apps/web run e2e -- e2e/https-hosting-live.spec.ts",
+      "exit_code": 0,
+      "duration_seconds": 8.9915679,
+      "log": "output/baseline-2026-10-03/web/npm-e2e-https.log",
+      "log_sha256": "eb4690c8ff8dfb2c8478ef7f03d682d6f3733f538a68b9edbfa5b55b98a85047",
+      "status": "passed"
+    },
+    {
+      "command": "npm --prefix apps/web audit --omit=dev --json",
+      "exit_code": 0,
+      "duration_seconds": 1.3307346,
+      "log": "output/baseline-2026-10-03/web/npm-audit-prod.json",
+      "log_sha256": "304df60a1823a810a9d18d85553424e34925b2561e02762d1420924e7c05bc22",
+      "status": "passed"
+    },
+    {
+      "command": "python -m alembic upgrade head",
+      "exit_code": 0,
+      "duration_seconds": 6.3015004,
+      "name": "postgres-migrate",
+      "log": "output/baseline-2026-10-03/postgres-migrate.log",
+      "log_sha256": "f37931cc1ba1cdbad2145e22e547e917045e144ac522a9168c05be413521ae6c",
+      "status": "passed"
+    },
+    {
+      "command": "python -m pytest [foundation,alembic,finance_core,payables,receivables,API-payables,API-receivables] -ra --tb=short",
+      "exit_code": 0,
+      "duration_seconds": 20.9805183,
+      "name": "postgres-focused",
+      "log": "output/baseline-2026-10-03/postgres-focused.log",
+      "log_sha256": "a0c80e73ad469cbaddedaf7786da422b08de8624c3c43504b56f289634d8878e",
+      "status": "passed"
+    },
+    {
+      "command": "python output/baseline-2026-10-03/web-live/provision.py",
+      "exit_code": 1,
+      "duration_seconds": 9.2985619,
+      "log": "output/baseline-2026-10-03/web-live/provision.log",
+      "log_sha256": "aa9755085dd8fef75f13a8c5f39774211ff74b8f5807e533280f2c89f9efae34",
+      "status": "failed"
+    },
+    {
+      "command": "npm --prefix apps/web run e2e -- e2e/browser-session-live.spec.ts (4 synthetic opt-ins)",
+      "exit_code": 0,
+      "duration_seconds": 18.5209944,
+      "log": "output/baseline-2026-10-03/web-live/npm-e2e-live.log",
+      "log_sha256": "babc1d7a0f914264d56f6278e5b8d02e05c823a07f05cb3287a317c7c96a6fcc",
+      "status": "passed"
+    },
+    {
+      "command": "node metrics-browser-baseline.cjs",
+      "exit_code": 1,
+      "duration_seconds": 31.6389546,
+      "log": "output/baseline-2026-10-03/web-live/provision.log",
+      "log_sha256": "aa9755085dd8fef75f13a8c5f39774211ff74b8f5807e533280f2c89f9efae34",
+      "status": "failed"
+    },
+    {
+      "command": "node metrics-browser-baseline.cjs (corrected button locator)",
+      "exit_code": 1,
+      "duration_seconds": 2.5177937,
+      "log": "output/baseline-2026-10-03/web-live/provision.log",
+      "log_sha256": "aa9755085dd8fef75f13a8c5f39774211ff74b8f5807e533280f2c89f9efae34",
+      "status": "failed"
+    }
+  ],
+  "limitations": [
+    "single Windows/Docker host",
+    "synthetic inputs only",
+    "baseline dependency security audits failed",
+    "standard browser suite skipped four provisioned live administration tests and HTTPS",
+    "HTTPS and four real PostgreSQL browser tests were separately opted in and passed",
+    "browser provisioning required manual metrics schema installation missing from Alembic head",
+    "no customer data, outcome or independent reviewer acceptance",
+    "raw local logs are ignored artifacts; hashes bind this summary to those logs"
+  ],
+  "ci_selection_evidence": {
+    "before": "4/384 tests collected; 380 deselected; one module",
+    "proposed_general": "370 tests collected in 50 modules",
+    "proposed_scale": "4/14 tests collected; 10 deselected",
+    "report": "output/baseline-2026-10-03/ci-selection/report.json",
+    "report_sha256": "d07c69551252ef0041ac99deb7e7ca03692a542c66fe4ac3b231eeda459807db",
+    "scope": "collection only, not test execution"
+  },
+  "browser_provisioning": {
+    "database": "reconforge_browser_baseline_20261003",
+    "revision": "0092_pg_close_lock_evidence",
+    "synthetic_only": true,
+    "metrics_schema_before_supplement": [
+      null,
+      null
+    ],
+    "workaround": "install_postgres_metrics_schema (not installed by Alembic head)",
+    "tenants": [
+      {
+        "id": "browser-baseline-a",
+        "period": "2026-10",
+        "metrics": 8
+      },
+      {
+        "id": "browser-baseline-b",
+        "period": "2026-09",
+        "metrics": 8
+      }
+    ]
+  },
+  "financial_reproductions": {
+    "results": {
+      "ar_customer_mutation": {
+        "currency_change_error": null,
+        "currency_invariant_violated": true,
+        "exposure": {
+          "available_credit_minor": 9900,
+          "credit_hold": false,
+          "credit_limit_minor": 10000,
+          "currency_code": "EGP",
+          "customer_code": "CUS",
+          "customer_id": "ARCUS-a7f137cfc2eae5be",
+          "exposure_minor": 100,
+          "status": "Active"
+        },
+        "invoice_currency": "USD",
+        "invoice_status_after_suspension": "Approved",
+        "status_change_error": null,
+        "status_invariant_violated": true
+      },
+      "cumulative_ap_approval": {
+        "approved_invoice_total_minor": 6000,
+        "attempts": [
+          {
+            "error": null,
+            "invoice": "INV-A",
+            "match": "Passed",
+            "status": "Approved"
+          },
+          {
+            "error": null,
+            "invoice": "INV-B",
+            "match": "Passed",
+            "status": "Approved"
+          }
+        ],
+        "invariant_violated": true,
+        "received_quantity": "3",
+        "received_value_minor": 3000
+      },
+      "evidence_scope": "Synthetic temporary SQLite databases and pure PostgreSQL quantity conversion only; no live customer or PostgreSQL service data",
+      "gl_currency_precision_mutation": {
+        "after": {
+          "balanced": true,
+          "credit": "10.000",
+          "credit_minor": 10000,
+          "debit": "10.000",
+          "debit_minor": 10000
+        },
+        "before": {
+          "balanced": true,
+          "credit": "100.00",
+          "credit_minor": 10000,
+          "debit": "100.00",
+          "debit_minor": 10000
+        },
+        "invariant_violated": true,
+        "mutation_error": null
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+      "quantity_precision": [
+        {
+          "decimal_context_precision": 28,
+          "input": "1.0000000000000000000000000001",
+          "invariant_violated": true,
+          "postgres_numeric": "1.0000000000000000000000000001",
+          "postgres_text": "1",
+          "sqlite_text": "1"
+        },
+        {
+          "decimal_context_precision": 6,
+          "input": "1.000001",
+          "invariant_violated": true,
+          "postgres_numeric": "1.000001",
+          "postgres_text": "1",
+          "sqlite_text": "1"
+        }
+      ]
+    },
+    "log": "output/baseline-2026-10-03/finance-audit/findings-before.json",
+    "sha256": "435d8e510434103e4089c2240fcac1a1b4515db352b3730f5d56f9e5baf369e8"
+  }
+}

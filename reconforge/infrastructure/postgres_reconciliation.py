@@ -807,6 +807,12 @@ class PostgresReconciliationRepository:
             raise PostgresReconciliationValidationError("progress must be between 0 and 100.")
         return int(value)
 
+    def _is_read_committed(self) -> bool:
+        """Never silently change a caller's transaction snapshot contract."""
+
+        row = self.connection.execute("SHOW transaction_isolation").fetchone()
+        return row is not None and self._row_value(row, "transaction_isolation", 0) == "read committed"
+
     def claim_run(
         self,
         *,
@@ -831,6 +837,10 @@ class PostgresReconciliationRepository:
         legal_entity = (
             None if legal_entity_id is None else self._text(legal_entity_id, "legal_entity_id", maximum=160)
         )
+        if not self._is_read_committed():
+            raise PostgresReconciliationValidationError(
+                "Reconciliation claim requires a READ COMMITTED transaction."
+            )
         before = self._run_row(tenant, run, lock=True)
         execution_status = str(before.get("execution_status") or "Queued")
         # A concurrent worker can commit the terminal execution state before
@@ -1112,39 +1122,51 @@ class PostgresReconciliationRepository:
         attributes_json = self._json_text(attributes, "attributes")
         if not 1 <= int(allowed_uses) <= 1_000:
             raise PostgresReconciliationValidationError("allowed_uses must be between 1 and 1000.")
-        self._run_row(tenant, run, lock=True)
-        cursor = self.connection.execute(
-            """
-            INSERT INTO reconforge.reconciliation_inputs
-                (tenant_id, run_id, side, source_id, record_hash, amount_decimal, amount_original,
-                 currency_code, date_original, date_value, reference_original, reference_normalized,
-                 attributes_json, valid, allowed_uses)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS jsonb), %s, %s)
-            ON CONFLICT (tenant_id, run_id, side, source_id) DO NOTHING
-            RETURNING tenant_id, run_id, side, source_id, record_hash, amount_decimal, amount_original,
-                      currency_code, date_original, date_value, reference_original, reference_normalized,
-                      attributes_json,
-                      valid, allowed_uses, created_at
-            """,
-            (
-                tenant,
-                run,
-                selected_side,
-                source,
-                fingerprint,
-                amount_decimal,
-                original_amount,
-                currency,
-                original_date,
-                parsed_date,
-                original_reference,
-                normalized_reference,
-                attributes_json,
-                bool(valid),
-                int(allowed_uses),
-            ),
+        before = self._run_row(tenant, run, lock=True)
+        # claim_run takes this same row lock. Once execution has started, even
+        # a failed/cancelled run requeued for retry retains its original inputs.
+        # Completed or leased runs may only replay an identical existing input;
+        # do not attempt INSERT in that read-only path.
+        editable = (
+            str(before["status"]) == "Running"
+            and str(before.get("execution_status") or "Queued") == "Queued"
+            and before.get("execution_attempt", 0) == 0
+            and not bool(before.get("cancel_requested", False))
         )
-        row = cursor.fetchone()
+        read_committed = self._is_read_committed() if editable else False
+        row = None
+        if editable and read_committed:
+            row = self.connection.execute(
+                """
+                INSERT INTO reconforge.reconciliation_inputs
+                    (tenant_id, run_id, side, source_id, record_hash, amount_decimal, amount_original,
+                     currency_code, date_original, date_value, reference_original, reference_normalized,
+                     attributes_json, valid, allowed_uses)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CAST(%s AS jsonb), %s, %s)
+                ON CONFLICT (tenant_id, run_id, side, source_id) DO NOTHING
+                RETURNING tenant_id, run_id, side, source_id, record_hash, amount_decimal, amount_original,
+                          currency_code, date_original, date_value, reference_original, reference_normalized,
+                          attributes_json,
+                          valid, allowed_uses, created_at
+                """,
+                (
+                    tenant,
+                    run,
+                    selected_side,
+                    source,
+                    fingerprint,
+                    amount_decimal,
+                    original_amount,
+                    currency,
+                    original_date,
+                    parsed_date,
+                    original_reference,
+                    normalized_reference,
+                    attributes_json,
+                    bool(valid),
+                    int(allowed_uses),
+                ),
+            ).fetchone()
         if row is None:
             row = self.connection.execute(
                 """
@@ -1157,9 +1179,44 @@ class PostgresReconciliationRepository:
                 """,
                 (tenant, run, selected_side, source),
             ).fetchone()
+            if row is None and not editable:
+                raise PostgresReconciliationIntegrityError(
+                    "Reconciliation inputs are sealed after execution starts or cancellation is requested."
+                )
+            if row is None and not read_committed:
+                raise PostgresReconciliationValidationError(
+                    "New reconciliation input registration requires a READ COMMITTED transaction."
+                )
             existing = self._record(row, self._INPUT_COLUMNS)
-            expected = {"record_hash": fingerprint, "amount_decimal": amount_decimal, "allowed_uses": int(allowed_uses)}
-            if any(str(existing[key]) != str(value) for key, value in expected.items()):
+            # PostgreSQL NUMERIC restores its declared scale, while validated
+            # requests use canonical decimal text. Compare finite values exactly
+            # and bind every source field; a caller-supplied hash alone cannot
+            # authenticate changed currency, date, original text, or attributes.
+            stored_amount = self._decimal(
+                existing["amount_decimal"], "amount", allow_negative=True, allow_blank=True
+            )
+            amount_equal = (
+                stored_amount is None and amount_decimal is None
+            ) or (
+                stored_amount is not None and amount_decimal is not None
+                and Decimal(stored_amount) == Decimal(amount_decimal)
+            )
+            expected = {
+                "record_hash": fingerprint,
+                "amount_original": original_amount,
+                "currency_code": currency,
+                "date_original": original_date,
+                "reference_original": original_reference,
+                "reference_normalized": normalized_reference,
+                "valid": bool(valid),
+                "allowed_uses": int(allowed_uses),
+            }
+            if (
+                not amount_equal
+                or self._date(existing["date_value"]) != parsed_date
+                or self._canonical_json_text(existing["attributes_json"], "attributes") != attributes_json
+                or any(existing[key] != value for key, value in expected.items())
+            ):
                 raise PostgresReconciliationIntegrityError(
                     "Input source identifier already refers to different content."
                 )
@@ -1663,13 +1720,16 @@ class PostgresReconciliationRepository:
         date_field: str = "date",
         reference_field: str = "reference",
         batch_size: int = 10_000,
+        max_partition_records: int = 10_000,
     ) -> Iterator[tuple[tuple[str | None, ...], tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]]:
         """Stream one hard-key input partition at a time from PostgreSQL.
 
         The query uses a server-side cursor when psycopg provides one and
         orders by validated JSONB-derived partition values. Only the current
-        partition is held in Python memory. The caller must keep this method
-        inside the tenant-scoped transaction that owns the cursor.
+        partition is held in Python memory. ``max_partition_records`` is
+        enforced while rows are being accumulated, before an oversized
+        partition can be handed to a matcher. The caller must keep this
+        method inside the tenant-scoped transaction that owns the cursor.
         """
 
         tenant = self._tenant(tenant_id)
@@ -1679,6 +1739,12 @@ class PostgresReconciliationRepository:
             raise PostgresReconciliationValidationError("partition_fields must contain between 1 and 8 unique names.")
         if isinstance(batch_size, bool) or not 1 <= int(batch_size) <= 100_000:
             raise PostgresReconciliationValidationError("batch_size must be between 1 and 100000.")
+        if isinstance(max_partition_records, bool) or not 1 <= int(max_partition_records) <= 100_000:
+            raise PostgresReconciliationValidationError(
+                "max_partition_records must be between 1 and 100000."
+            )
+        partition_limit = int(max_partition_records)
+        fetch_size = min(int(batch_size), partition_limit)
         amount_name = self._text(amount_field, "amount_field", maximum=128)
         date_name = self._text(date_field, "date_field", maximum=128)
         reference_name = self._text(reference_field, "reference_field", maximum=128)
@@ -1734,7 +1800,7 @@ class PostgresReconciliationRepository:
         right_records: list[dict[str, Any]] = []
         try:
             while True:
-                rows = cursor.fetchmany(int(batch_size))
+                rows = cursor.fetchmany(fetch_size)
                 if not rows:
                     break
                 for row in rows:
@@ -1761,6 +1827,11 @@ class PostgresReconciliationRepository:
                         left_records = []
                         right_records = []
                     current_values = values
+                    if len(left_records) + len(right_records) >= partition_limit:
+                        raise PostgresReconciliationIntegrityError(
+                            "PostgreSQL input partition exceeds max_partition_records="
+                            f"{partition_limit}; refine the hard partition fields."
+                        )
                     if str(input_row["side"]) == "Left":
                         left_records.append(input_row)
                     elif str(input_row["side"]) == "Right":
@@ -1869,6 +1940,16 @@ class PostgresReconciliationRepository:
             parameters.extend((page_limit, page_offset))
         cursor = self.connection.execute(query, tuple(parameters))
         return [self._record(row, self._EXCEPTION_COLUMNS) for row in cursor.fetchall()]
+
+
+def install_postgres_reconciliation_schema(connection: Any) -> None:
+    """Install current reconciliation DDL while preserving the historical base constant."""
+    from reconforge.infrastructure.postgres_reconciliation_input_seal import (
+        install_postgres_reconciliation_input_seal_schema,
+    )
+
+    connection.execute(POSTGRES_RECONCILIATION_SCHEMA_SQL)
+    install_postgres_reconciliation_input_seal_schema(connection)
 
 
 POSTGRES_RECONCILIATION_SCHEMA_SQL = """

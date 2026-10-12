@@ -16,7 +16,14 @@ from reconforge.application.matching import (
     MatchRunResult,
     ReferenceNormalizationRules,
 )
-from reconforge.utils.money import STRICT_FINANCIAL_INPUT_POLICY, FinancialInputPolicy, InvalidAmountError
+from reconforge.utils.money import (
+    HISTORICAL_FINANCIAL_REPLAY,
+    LEGACY_FINANCIAL_INPUT_POLICY,
+    NEW_FINANCIAL_WRITE,
+    STRICT_FINANCIAL_INPUT_POLICY,
+    FinancialInputPolicy,
+    InvalidAmountError,
+)
 
 
 class _RecordingMatchingRepository:
@@ -116,6 +123,52 @@ def test_matching_application_preserves_exact_tolerance_rules_and_identity_polic
     assert repository.arguments["reference_normalization_rules"] is rules
     assert repository.arguments["workspace"] == "regulated"
     assert repository.arguments["actor_label"] == "operator@example.test"
+    assert result.financial_input_policy_observation.audit_metadata() == {
+        "financial_input_policy": STRICT_FINANCIAL_INPUT_POLICY,
+        "financial_input_policy_use": NEW_FINANCIAL_WRITE,
+        "financial_input_policy_origin": "explicit-policy",
+        "legacy_financial_input_compatibility": False,
+    }
+
+
+def test_matching_application_rejects_legacy_policy_before_new_write_and_marks_legacy_results() -> None:
+    repository = _RecordingMatchingRepository()
+    service = _service(repository)
+
+    with pytest.raises(InvalidAmountError, match="new financial writes require strict-financial-input-v2"):
+        service.run(
+            left_path="left.csv",
+            right_path="right.csv",
+            financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+        )
+
+    assert repository.operation == ""
+    with pytest.raises(ValueError, match="historical financial replay requires an idempotency key"):
+        service.run(
+            left_path="left.csv",
+            right_path="right.csv",
+            financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+            historical_replay=True,
+        )
+    with pytest.raises(ValueError, match="historical financial replay flag must be boolean"):
+        service.run(
+            left_path="left.csv",
+            right_path="right.csv",
+            financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+            historical_replay="true",  # type: ignore[arg-type]
+        )
+
+    assert repository.operation == ""
+    historical = MatchRunResult(
+        "historic-job",
+        2,
+        1,
+        financial_input_policy=LEGACY_FINANCIAL_INPUT_POLICY,
+    )
+    observation = historical.financial_input_policy_observation
+    assert observation.use == HISTORICAL_FINANCIAL_REPLAY
+    assert observation.legacy_compatibility is True
+    assert observation.audit_metadata()["financial_input_policy"] == LEGACY_FINANCIAL_INPUT_POLICY
 
 
 def test_matching_result_types_reject_unsupported_financial_input_policy() -> None:

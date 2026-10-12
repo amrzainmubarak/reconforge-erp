@@ -1,0 +1,60 @@
+id: job-operations
+name: Scoped operational control of existing durable jobs
+version: 1.0.0
+maturity: experimental
+owner: platform-reliability
+dependencies: [platform.core, platform.identity, platform.scope-authority, durable-job-lifecycle]
+incompatible_versions: [unscoped-operator-mutations, unfenced-worker-writes]
+data_classification: operational-sensitive
+retention_policy: retain-existing-append-only-job-transitions-and-worker-evidence
+permissions: [ops.read, jobs.manage]
+default_roles: [admin]
+migrations: [sqlite56, postgresql0107]
+domain_invariants:
+  - exact-tenant-workspace-organization-entity-lane-admission
+  - persisted-job-hierarchy-binds-governed-cancellation-and-requeue
+  - reviewed-version-required-on-every-operator-api-mutation
+  - queued-cancellation-and-paused-or-failed-requeue-reuse-existing-lifecycle
+  - active-worker-leases-cannot-be-overridden-by-operator-commands
+  - lost-response-replay-requires-same-actor-and-immediately-following-retained-transition
+  - stale-command-after-further-job-progress-refuses-without-another-effect
+  - server-mutations-require-current-human-session-and-recent-step-up
+  - scoped-bounded-keyset-metadata-without-source-rows-keys-digests-or-output-paths
+  - job-state-and-original-immutable-transition-commit-atomically
+domain_events: [durable-job-transition]
+api_routes:
+  - GET /api/v1/ops/durable-jobs
+  - GET /api/v1/ops/durable-jobs/{job_id}
+  - POST /api/v1/ops/durable-jobs/{job_id}/cancel
+  - POST /api/v1/ops/durable-jobs/{job_id}/requeue
+cli_commands: []
+ui_routes: [/jobs]
+import_schemas: []
+export_schemas: [closed-operator-job-metadata-v1, bounded-transition-detail-v1]
+synthetic_fixtures: [tests/job_operations_runtime_fixture.py]
+threat_model:
+  - sibling-tenant-or-hierarchy-job-id-probing
+  - fabricated-policy-lane-authorizes-a-persisted-sibling-job
+  - read-permission-used-for-mutation
+  - stale-version-or-lost-response-produces-duplicate-transition
+  - cancellation-races-active-worker-or-recovery-lease
+  - session-revocation-or-scope-change-displays-late-response
+benchmarks: []
+rollback_plan: revert-api-and-studio-exposure-retain-job-evidence-downgrade-permission-index-migration-only-without-custom-grants
+test_matrix:
+  - tests/test_durable_job_operations.py
+  - tests/test_governed_jobs_policy.py
+  - tests/test_durable_job_application.py
+  - tests/test_sqlite_durable_jobs.py
+  - tests/test_postgres_durable_jobs.py
+  - apps/web/src/job-operations-data.test.ts
+  - apps/web/src/components/JobOperationsWorkspace.test.tsx
+  - apps/web/live/job-operations.acceptance.ts
+  - .github/scripts/verify_postgres_job_operations.py
+limitations:
+  - reuses-existing-job-engine-does-not-convert-every-business-operation-into-a-job
+  - running-job-cooperative-cancellation-remains-outside-this-module
+  - operator-history-is-bounded-to-latest-200-transitions-original-evidence-retained
+  - keyset-pagination-is-not-a-frozen-queue-snapshot
+  - browser-rejects-integers-outside-javascript-safe-integer-range
+  - no-broker-ha-dr-throughput-or-production-release-claim

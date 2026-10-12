@@ -153,9 +153,9 @@ def test_fifo_allocation_uses_half_even_and_preserves_full_layer_residual() -> N
 
 def test_fifo_approval_serializes_layers_and_creates_balanced_finance_draft() -> None:
     source = (ROOT / "reconforge/infrastructure/postgres_inventory_valuation.py").read_text(encoding="utf-8")
-    assert "ROUND_HALF_EVEN" in source
+    assert "allocate_fifo_value(remaining_value, remaining_quantity, consumed_quantity)" in source
     assert "pg_advisory_xact_lock" in source
-    assert "ORDER BY created_at,id FOR UPDATE" in source
+    assert "ORDER BY l.created_at,l.id FOR UPDATE OF l" in source
     assert "finance_entries" in source
     assert "finance_entry_lines" in source
     assert "Generated Inventory-to-Finance postings must balance" in source
@@ -203,8 +203,8 @@ def test_live_postgres_fifo_valuation_finance_draft_void_guard_and_rls() -> None
                     (tenant,),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active) VALUES (%s,%s,'ORG','Organization','USD',TRUE)",
-                    (tenant, organization_id),
+                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active,application_workspace_id) VALUES (%s,%s,'ORG','Organization','USD',TRUE,%s)",
+                    (tenant, organization_id, workspace_id),
                 )
                 connection.execute(
                     "INSERT INTO reconforge.master_data_workspace_organizations(tenant_id,workspace_id,organization_id) VALUES (%s,%s,%s)",
@@ -215,8 +215,8 @@ def test_live_postgres_fifo_valuation_finance_draft_void_guard_and_rls() -> None
                     (tenant, entity_id, organization_id),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number) VALUES (%s,%s,%s,'2026-07-01','2026-07-31',2026,7)",
-                    (tenant, f"period-{tenant}", f"2026-07-{tenant}"),
+                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) VALUES (%s,%s,%s,'2026-07-01','2026-07-31',2026,7,%s)",
+                    (tenant, f"period-{tenant}", f"2026-07-{tenant}", workspace_id),
                 )
                 connection.execute(
                     "INSERT INTO reconforge.master_data_workspace_periods(tenant_id,workspace_id,period_id) VALUES (%s,%s,%s)",

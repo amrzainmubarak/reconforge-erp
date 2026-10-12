@@ -1,5 +1,33 @@
 # ReconForge Baseline Audit
 
+## Source-bound successor refresh (2026-10-10)
+
+The [Wave3 acceptance packet and limits](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md)
+record the actual clean4bb/70d sources, native owner and lock-regression gates,
+real HTTPS/populated restore, matched806/70d measurements and retained failures.
+Additive0124/0125 bring the central registry to125. Ruff/Mypy/Bandit pass at70d;
+360 Studio tests pass at4bb with identical web source at70d. Python dependency
+audit at6eb has no known finding with the local package explicitly excluded;
+dependency locks/MIT are unchanged. The local general900-second timeout is not
+acceptance; full final-head hosted gates are authoritative separately.
+Coverage source/transport corrections, archived proof closure and the
+[dependency-first roadmap](GLOBAL_NEXT_PHASE_2026-10-10.md) supersede current
+summary wording only for these named scopes; older measured snapshots remain.
+
+## Source-bound refresh (2026-10-08)
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+The October 8 refresh records source `636786e8`: 4,394 Python passes, 490 capability skips and two CI-inventory failures before repair; 219 web unit passes, 18 initial browser passes/nine skips/one stale assertion, one npm High finding, and two live Finance fixture failures. Initial failures are retained; post-repair acceptance is recorded separately.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
+
+Fresh locked Python 3.12 baseline: 3366 passed, 124 skipped, 23 warnings in 817.57s (0:13:37). Static, build, CLI, Docker and web checks passed; Python/npm dependency audits failed. See the current audit for command durations and explicit skips.
+
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 > Historical command snapshot. Its external-gate closure failure was superseded
 > by the owner/team release policy in E-251/D236; recorded command outcomes
 > remain historical evidence rather than current release state.
@@ -7,6 +35,19 @@
 > Updated local refresh snapshot below reflects the latest local run in this
 > machine/session. "Passed/blocked" entries are environment-scoped and should not
 > be interpreted as cross-platform production evidence.
+
+## E-884 Python 3.12 container candidate (2026-08-28)
+
+- The Dockerfile now pins both stages to the official Python 3.12 Alpine index
+  digest `sha256:d09d15e60962ca365d1cd544a48773bac9d33f2fb1b00f2aa0deec78ade7dc31`.
+- A clean linux/amd64 no-cache build produced candidate digest
+  `sha256:a96d87d994852b9fc7b9f647977413e37f5959a95f0e7d36bc66584a8b529e52`.
+  Hardened Doctor, sample validation, demo generation, and Docker Scout passed;
+  Scout reported 82 packages and zero Critical/High/Medium/Low findings.
+- Full locked all-extra Python 3.11 and 3.12 regressions, package build,
+  air-gap/rollback, API/parity, and web gates passed. The prior Python 3.11.16
+  image passed Doctor as rollback smoke. Exact fresh Syft/Grype release
+  evidence and hosted publication remain open and are not inferred from Scout.
 
 ## E-831 local refresh (2026-08-22)
 
@@ -91,7 +132,7 @@
   zero findings at all severities. The result is time-bounded and is not the
   current release gate because the later pinned Grype database disagrees.
 
-#### E-823/E-824 exact-image security result (2026-08-22)
+#### E-823/E-824 exact-image security result (2026-08-28)
 
 - Syft 1.51.0 inventories 68 package artifacts with 94.11% usable license
   metadata. Grype 0.117.0 database v6.1.9 reports five High matches.
@@ -99,9 +140,11 @@
   CVE-2026-4224, and CVE-2026-7210 as fixed in Python 3.11.16. The closed
   fixed-only OpenVEX path records those decisions while retaining them in the
   total count.
-- CVE-2026-14456 remains unexcepted for libcrypto3 and libssl3 3.5.7-r0.
-  The gate exits 1 and blocks registry authentication. No supported current
-  Alpine candidate offered upstream-fixed OpenSSL 3.5.8 at review time.
+- E-959 refreshes libcrypto3/libssl3 in both pinned stages. A clean
+  linux/amd64 build and runtime inspection report 3.5.8-r0, with no OpenSSL
+  CLI added. The exact local Syft/Grype/license gate now passes against the
+  rebuilt subject; hosted clean-build, provenance, registry authentication,
+  and release publication remain blocked pending their separate evidence.
 
 #### E-825 write-back lifecycle identity refresh (2026-08-22)
 
@@ -291,3 +334,8 @@
 
 ### Boundary notes
 - This section reflects local, environment-scoped evidence and does not constitute hosted production assurance, capacity/SLO claims, or release-closure substitution for open gates.
+
+
+## Final October8 bounded acceptance
+
+Clean832ceeee full regression: 4429pass/490skip/0fail. [Final source-bound runtime/recovery/CI evidence and limits](ACCEPTANCE_FINAL_2026-10-08.md). This supersedes later-runtime whole-regression-pending notes only; full hosted CI and AMR-GFO-005 remain unaccepted.

@@ -1,0 +1,606 @@
+{
+  "api_contract_regression": {
+    "arguments": [
+      "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "tests/test_api_server_finance_core_live.py",
+      "tests/test_api_server_inventory_valuation.py",
+      "-ra",
+      "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod025-api-contract-final\\results.xml"
+    ],
+    "database_cleaned": true,
+    "failures": [],
+    "redis_cleaned": true,
+    "skips": [],
+    "suites": [
+      {
+        "errors": "0",
+        "failures": "0",
+        "hostname": "DESKTOP-FDO3RD5",
+        "name": "pytest",
+        "skipped": "0",
+        "tests": "2",
+        "time": "7.181",
+        "timestamp": "2026-10-03T08:25:26.838340+03:00"
+      }
+    ]
+  },
+  "general_regression": {
+    "arguments": [
+      "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "tests/test_postgres_consolidation_close.py",
+      "tests/test_postgres_consolidation_ownership.py",
+      "tests/test_postgres_consolidation_ppa_runtime.py",
+      "tests/test_postgres_consolidation_ownership_change.py",
+      "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+      "tests/test_postgres_consolidation_impairment_runtime.py",
+      "tests/test_postgres_intercompany_elimination_runtime.py",
+      "tests/test_postgres_backup.py",
+      "tests/test_postgres_idempotency.py",
+      "tests/test_postgres_workspace_period_uow.py",
+      "tests/test_postgres_operations.py",
+      "tests/test_postgres_writeback.py",
+      "tests/test_application_metrics.py",
+      "tests/test_postgres_outbox.py",
+      "tests/test_postgres_scheduler.py",
+      "tests/test_postgres_notifications.py",
+      "tests/test_postgres_security_center.py",
+      "tests/test_postgres_identity_administration.py",
+      "tests/test_postgres_access_administration.py",
+      "tests/test_postgres_policy_analysis_runtime.py",
+      "tests/test_postgres_security_governance.py",
+      "tests/test_audit_browsing.py",
+      "tests/test_postgres_controls.py",
+      "tests/test_postgres_intercompany.py",
+      "tests/test_postgres_journals.py",
+      "tests/test_postgres_accounts.py",
+      "tests/test_postgres_approvals.py",
+      "tests/test_postgres_close_application.py",
+      "tests/test_postgres_evidence_application.py",
+      "tests/test_postgres_exceptions.py",
+      "tests/test_postgres_finance_core.py",
+      "tests/test_postgres_master_data_application.py",
+      "tests/test_postgres_inventory_core.py",
+      "tests/test_postgres_payables.py",
+      "tests/test_postgres_receivables.py",
+      "tests/test_postgres_matching_application.py",
+      "tests/test_postgres_inventory_valuation.py",
+      "tests/test_postgres_inventory_valuation_reversal.py",
+      "tests/test_postgres_inventory_planning.py",
+      "tests/test_postgres_delegations_runtime.py",
+      "tests/test_postgres_policy_analysis_runtime.py",
+      "tests/test_alembic_postgres.py",
+      "tests/test_postgres_metrics_migration.py",
+      "tests/test_postgres_finance_currency_policy.py",
+      "tests/test_postgres_repository_scope.py",
+      "tests/test_postgres_finance_scope.py",
+      "tests/test_postgres_finance_scope_restore.py",
+      "tests/test_postgres_runtime_role.py",
+      "tests/test_postgres_foundation.py",
+      "tests/test_postgres_master_data.py",
+      "tests/test_postgres_ledger.py",
+      "tests/test_postgres_identity.py",
+      "tests/test_postgres_evidence.py",
+      "tests/test_postgres_reconciliation.py",
+      "tests/test_postgres_writeback.py",
+      "tests/test_postgres_database_reference.py",
+      "tests/test_api_server_identity.py",
+      "tests/test_redis_foundation.py",
+      "-q",
+      "-ra",
+      "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod025-ci-general-final\\results.xml"
+    ],
+    "database_cleaned": true,
+    "elapsed_seconds": 216.3777887000033,
+    "failures": [],
+    "redis_cleaned": true,
+    "skips": [
+      {
+        "class": "tests.test_postgres_backup",
+        "name": "test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup",
+        "reason": "requires PostgreSQL native client tools on PATH"
+      },
+      {
+        "class": "tests.test_postgres_finance_scope_restore",
+        "name": "test_live_populated_finance_native_restore",
+        "reason": "requires native PostgreSQL pg_dump and pg_restore client tools"
+      }
+    ],
+    "suites": [
+      {
+        "errors": "0",
+        "failures": "0",
+        "hostname": "DESKTOP-FDO3RD5",
+        "name": "pytest",
+        "skipped": "2",
+        "tests": "480",
+        "time": "206.233",
+        "timestamp": "2026-10-03T08:20:47.154442+03:00"
+      }
+    ],
+    "workflow_command": "uv run --no-sync pytest \"${parity_tests[@]}\" tests/test_postgres_delegations_runtime.py tests/test_postgres_policy_analysis_runtime.py tests/test_alembic_postgres.py tests/test_postgres_metrics_migration.py tests/test_postgres_finance_currency_policy.py tests/test_postgres_repository_scope.py tests/test_postgres_finance_scope.py tests/test_postgres_finance_scope_restore.py tests/test_postgres_runtime_role.py tests/test_postgres_foundation.py tests/test_postgres_master_data.py tests/test_postgres_ledger.py tests/test_postgres_identity.py tests/test_postgres_evidence.py tests/test_postgres_reconciliation.py tests/test_postgres_writeback.py tests/test_postgres_database_reference.py tests/test_api_server_identity.py tests/test_redis_foundation.py -q"
+  },
+  "implementation_manifest": {
+    "git_head_at_recording": "ce6068ef095ddeb0d09d8f9b0d6ab73d8069ed03",
+    "handoff": "output/verification-2026-10-03/PROD025-FROZEN.md",
+    "owned_files": {
+      "alembic/versions/0095_postgres_finance_scope.py": "e0a97dbf130d1e622a124d3a768339f7a593c985d36916101fa8b7a162b69f6f",
+      "reconforge/infrastructure/postgres_finance_core.py": "a84cfe2ac892ce847dcdcd67073f665a5b2cbe50e49b9cfabeec1fe3fd75085a",
+      "reconforge/infrastructure/postgres_finance_scope.py": "568c8bde2123c26dc127f355ba122b909f677591bb93cdc6a92431f74b6cd497",
+      "reconforge/infrastructure/postgres_operations.py": "a026149718af7abef1e1f5710ab1035a9070ebb4b7e3f9d26fb8be7385a79e4e",
+      "tests/test_api_server_finance_core_live.py": "06baec069933639b0a54fe9421bd24eaba2cef03306e42be4464e6320e2f3a0b",
+      "tests/test_api_server_identity.py": "dc0d6becc31beb25607d2d0a0ea3a2bb752bc2a4bf017894e7900f6bbd467a81",
+      "tests/test_api_server_inventory_valuation.py": "73d7e199fb76dd83873123bb43192b93f1c34f8c20c37dd4b4cb8f9723824e9c",
+      "tests/test_postgres_finance_core.py": "71feb2eb9cc565bcbf41ede3b001768e7974cc5ca2c05a126180a943b1f221c9",
+      "tests/test_postgres_finance_currency_policy.py": "eadda8ac4c6996100623a705d7e22cf657912e3a9249c83cba4870f648d381e1",
+      "tests/test_postgres_finance_scope.py": "357ff7dc242b2c1a734d17066101c61ca567f8ee80f66077a891376f8222626a",
+      "tests/test_postgres_inventory_valuation.py": "336c5ede407fef69f1ef2c6cb2ac9db88217c8d1c6be22bd70789d4017b44022",
+      "tests/test_postgres_inventory_valuation_reversal.py": "52d5f5ebc9d0e49c473a74e6b5da9ccff226fe91be2586910b9f6fa0e078584b",
+      "tests/test_postgres_operations.py": "69601e25e5603fead41f028b7100259d2ed3c63952f0c002627390574c2a795e",
+      "tests/test_postgres_repository_scope.py": "c97393d6429feeff5a5e3cab7d733e41a12fc6a9caba20acfae7818d5f08aef4"
+    },
+    "quality": [
+      {
+        "command": ".venv-verify-20261003/Scripts/python.exe -m ruff check alembic/versions/0095_postgres_finance_scope.py reconforge/infrastructure/postgres_finance_scope.py reconforge/infrastructure/postgres_finance_core.py reconforge/infrastructure/postgres_operations.py tests/test_postgres_finance_scope.py tests/test_postgres_repository_scope.py tests/test_postgres_finance_core.py tests/test_postgres_operations.py tests/test_postgres_finance_currency_policy.py tests/test_postgres_inventory_valuation.py tests/test_postgres_inventory_valuation_reversal.py tests/test_api_server_identity.py tests/test_api_server_finance_core_live.py tests/test_api_server_inventory_valuation.py",
+        "exit_code": 0,
+        "log": "prod025-ruff-final.log"
+      },
+      {
+        "command": ".venv-verify-20261003/Scripts/python.exe -m mypy reconforge/infrastructure/postgres_finance_scope.py reconforge/infrastructure/postgres_finance_core.py reconforge/infrastructure/postgres_operations.py",
+        "exit_code": 0,
+        "log": "prod025-mypy-final.log"
+      },
+      {
+        "command": ".venv-verify-20261003/Scripts/python.exe -m bandit -q -r reconforge/infrastructure/postgres_finance_scope.py reconforge/infrastructure/postgres_finance_core.py reconforge/infrastructure/postgres_operations.py",
+        "exit_code": 0,
+        "log": "prod025-bandit-final.log"
+      },
+      {
+        "command": "git diff --check",
+        "exit_code": 0
+      }
+    ],
+    "recorded_at": "2026-10-03T05:28:29.767110+00:00",
+    "root_owned_dependency_files": {
+      "tests/test_postgres_finance_scope_restore.py": "a4d1a008f56a4bb437eebf6e1e818b3a09391d027001da82d57f431981a67381"
+    },
+    "schema_version": 1,
+    "shared_files": {
+      ".github/workflows/ci.yml": "4501280237f8e58063f7d8d1c4d6fd81453c0cfeabdc61741af54a9bfcece481"
+    },
+    "source_state": "Owned changes remain uncommitted; hashes bind exact reviewed source. Root owns Git.",
+    "status": "frozen_implementation_verified_not_committed_by_owner",
+    "verification": {
+      "prod025-api-contract-final": {
+        "arguments": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "pytest",
+          "tests/test_api_server_finance_core_live.py",
+          "tests/test_api_server_inventory_valuation.py",
+          "-ra",
+          "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod025-api-contract-final\\results.xml"
+        ],
+        "elapsed_seconds": 15.089094800001476,
+        "path": "output\\verification-2026-10-03\\prod025-api-contract-final\\report.json",
+        "sha256": "23720cd97996136ff3fac2deaa50fd7b59e429ab166db687bafcd7ff981b4a18",
+        "skips": [],
+        "suites": [
+          {
+            "errors": "0",
+            "failures": "0",
+            "hostname": "DESKTOP-FDO3RD5",
+            "name": "pytest",
+            "skipped": "0",
+            "tests": "2",
+            "time": "7.181",
+            "timestamp": "2026-10-03T08:25:26.838340+03:00"
+          }
+        ]
+      },
+      "prod025-ci-general-final": {
+        "arguments": [
+          "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+          "-m",
+          "pytest",
+          "tests/test_postgres_consolidation_close.py",
+          "tests/test_postgres_consolidation_ownership.py",
+          "tests/test_postgres_consolidation_ppa_runtime.py",
+          "tests/test_postgres_consolidation_ownership_change.py",
+          "tests/test_postgres_consolidation_deferred_tax_runtime.py",
+          "tests/test_postgres_consolidation_impairment_runtime.py",
+          "tests/test_postgres_intercompany_elimination_runtime.py",
+          "tests/test_postgres_backup.py",
+          "tests/test_postgres_idempotency.py",
+          "tests/test_postgres_workspace_period_uow.py",
+          "tests/test_postgres_operations.py",
+          "tests/test_postgres_writeback.py",
+          "tests/test_application_metrics.py",
+          "tests/test_postgres_outbox.py",
+          "tests/test_postgres_scheduler.py",
+          "tests/test_postgres_notifications.py",
+          "tests/test_postgres_security_center.py",
+          "tests/test_postgres_identity_administration.py",
+          "tests/test_postgres_access_administration.py",
+          "tests/test_postgres_policy_analysis_runtime.py",
+          "tests/test_postgres_security_governance.py",
+          "tests/test_audit_browsing.py",
+          "tests/test_postgres_controls.py",
+          "tests/test_postgres_intercompany.py",
+          "tests/test_postgres_journals.py",
+          "tests/test_postgres_accounts.py",
+          "tests/test_postgres_approvals.py",
+          "tests/test_postgres_close_application.py",
+          "tests/test_postgres_evidence_application.py",
+          "tests/test_postgres_exceptions.py",
+          "tests/test_postgres_finance_core.py",
+          "tests/test_postgres_master_data_application.py",
+          "tests/test_postgres_inventory_core.py",
+          "tests/test_postgres_payables.py",
+          "tests/test_postgres_receivables.py",
+          "tests/test_postgres_matching_application.py",
+          "tests/test_postgres_inventory_valuation.py",
+          "tests/test_postgres_inventory_valuation_reversal.py",
+          "tests/test_postgres_inventory_planning.py",
+          "tests/test_postgres_delegations_runtime.py",
+          "tests/test_postgres_policy_analysis_runtime.py",
+          "tests/test_alembic_postgres.py",
+          "tests/test_postgres_metrics_migration.py",
+          "tests/test_postgres_finance_currency_policy.py",
+          "tests/test_postgres_repository_scope.py",
+          "tests/test_postgres_finance_scope.py",
+          "tests/test_postgres_finance_scope_restore.py",
+          "tests/test_postgres_runtime_role.py",
+          "tests/test_postgres_foundation.py",
+          "tests/test_postgres_master_data.py",
+          "tests/test_postgres_ledger.py",
+          "tests/test_postgres_identity.py",
+          "tests/test_postgres_evidence.py",
+          "tests/test_postgres_reconciliation.py",
+          "tests/test_postgres_writeback.py",
+          "tests/test_postgres_database_reference.py",
+          "tests/test_api_server_identity.py",
+          "tests/test_redis_foundation.py",
+          "-q",
+          "-ra",
+          "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod025-ci-general-final\\results.xml"
+        ],
+        "elapsed_seconds": 216.3777887000033,
+        "path": "output\\verification-2026-10-03\\prod025-ci-general-final\\report.json",
+        "sha256": "774bc68eb1ad8eee4119e5468b65c97749787b60ca475c2d8eeac9670ea6b7c1",
+        "skips": [
+          {
+            "class": "tests.test_postgres_backup",
+            "name": "test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_cleanup",
+            "reason": "requires PostgreSQL native client tools on PATH"
+          },
+          {
+            "class": "tests.test_postgres_finance_scope_restore",
+            "name": "test_live_populated_finance_native_restore",
+            "reason": "requires native PostgreSQL pg_dump and pg_restore client tools"
+          }
+        ],
+        "suites": [
+          {
+            "errors": "0",
+            "failures": "0",
+            "hostname": "DESKTOP-FDO3RD5",
+            "name": "pytest",
+            "skipped": "2",
+            "tests": "480",
+            "time": "206.233",
+            "timestamp": "2026-10-03T08:20:47.154442+03:00"
+          }
+        ]
+      }
+    }
+  },
+  "independent_review": {
+    "checks": [
+      {
+        "accepted": false,
+        "case": "validated_draft_relabel",
+        "error": "Posted finance scope cannot return to Draft.\nCONTEXT:  PL/pgSQL function reconforge.guard_finance_scope_identity() line 8 at RAISE",
+        "error_type": "CheckViolation"
+      },
+      {
+        "accepted": false,
+        "case": "draft_parent_affinity",
+        "error": "Draft scope replacement requires an empty entry in a fresh read committed transaction.\nCONTEXT:  PL/pgSQL function reconforge.guard_finance_scope_identity() line 16 at RAISE",
+        "error_type": "CheckViolation"
+      },
+      {
+        "accepted": false,
+        "case": "duplicate_workspace_name",
+        "error": "Finance Core workspace name is ambiguous; use its explicit ID.",
+        "error_type": "PostgresFinanceCoreError",
+        "matching_workspace_rows": 2
+      },
+      {
+        "accepted": true,
+        "case": "exact_workspace_id",
+        "matching_workspace_rows": 2,
+        "rolled_back": true,
+        "selected_workspace": "same-name-workspace"
+      },
+      {
+        "accepted": true,
+        "case": "draft_replace_success",
+        "entity_code": "B1",
+        "line_accounts": [
+          "B_CASH",
+          "B_CAPITAL"
+        ],
+        "rolled_back": true,
+        "same_entry_id": true
+      },
+      {
+        "accepted": true,
+        "case": "shared_other_workspace_org_only",
+        "leak_closed": true,
+        "rolled_back": true,
+        "selected_org_workspace": "shared",
+        "visible_other_workspace_charts": []
+      },
+      {
+        "accepted": false,
+        "case": "line_parent_dimension_affinity",
+        "error": "Finance scope identity is immutable.\nCONTEXT:  PL/pgSQL function reconforge.guard_finance_scope_identity() line 27 at RAISE",
+        "error_type": "CheckViolation"
+      },
+      {
+        "accepted": true,
+        "boundary": "Raw nonowner application SQL under selected entity scope; no authenticated HTTP bypass asserted.",
+        "case": "entity_scope_canonical_active_mutation",
+        "currency_active": false,
+        "currency_repository_active": false,
+        "currency_rows": 1,
+        "organization_active": false,
+        "organization_repository_accepted": true,
+        "organization_rows": 1,
+        "rolled_back": true,
+        "scope": [
+          "finance_scope",
+          "org_a",
+          "shared",
+          "entity_a1",
+          "entity_a1"
+        ],
+        "selected_entity_policy_allowed": true,
+        "selected_entity_policy_reason": "policy_allowed"
+      },
+      {
+        "case": "entry_reparent_child_race",
+        "child_count": 1,
+        "entity_code": "A1",
+        "first_rows": 1,
+        "parent_first": false,
+        "second_blocked_on_lock": true,
+        "second_result": {
+          "accepted": false,
+          "error": "Draft scope replacement requires an empty entry in a fresh read committed transaction.\nCONTEXT:  PL/pgSQL function reconforge.guard_finance_scope_identity() line 16 at RAISE",
+          "error_type": "CheckViolation"
+        }
+      },
+      {
+        "case": "entry_reparent_child_race",
+        "child_count": 0,
+        "entity_code": "A2",
+        "first_rows": 1,
+        "parent_first": true,
+        "second_blocked_on_lock": true,
+        "second_result": {
+          "accepted": false,
+          "error": "new row violates row-level security policy \"finance_hierarchy\" for table \"finance_entry_lines\"",
+          "error_type": "InsufficientPrivilege"
+        }
+      }
+    ],
+    "owned_database_removed": true,
+    "source_sha256": {
+      "alembic/versions/0095_postgres_finance_scope.py": "e0a97dbf130d1e622a124d3a768339f7a593c985d36916101fa8b7a162b69f6f",
+      "reconforge/infrastructure/postgres_finance_core.py": "a84cfe2ac892ce847dcdcd67073f665a5b2cbe50e49b9cfabeec1fe3fd75085a",
+      "reconforge/infrastructure/postgres_finance_scope.py": "568c8bde2123c26dc127f355ba122b909f677591bb93cdc6a92431f74b6cd497",
+      "reconforge/infrastructure/postgres_operations.py": "a026149718af7abef1e1f5710ab1035a9070ebb4b7e3f9d26fb8be7385a79e4e"
+    },
+    "synthetic_only": true
+  },
+  "limitations": [
+    "Synthetic PostgreSQL evidence; no customer outcomes or external auditor acceptance.",
+    "Eight Finance tables plus their canonical affinities; general master-data mutation authority remains a separate reproduced gap under PROD029.",
+    "Parent-account composite FK remains NOT VALID for historical rows; no inferred legacy workspace backfill.",
+    "Shared application credentials and trusted migration administration are not an arbitrary-SQL isolation boundary.",
+    "Validated/Voided remain existing control-ledger states, not a complete immutable GL posting claim.",
+    "Native populated Finance restore observed on PostgreSQL16.14; separate write-back chain drill/matrix on16.14/17.10.",
+    "Two absent-host-client skips in general regression are not passes; one populated-Finance native scenario was executed separately via real Docker tools.",
+    "Earlier independent review case accepted=true describes a successful query, not overall acceptance; leak_closed=true records an empty denied result."
+  ],
+  "migration_revision": "0095_pg_finance_scope",
+  "native_chain_drills": {
+    "drill": {
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_writeback_identity_migration.py",
+        "--output",
+        "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0095_2026-10-03.json"
+      ],
+      "duration_seconds": 16.368,
+      "exit_code": 0,
+      "kind": "drill",
+      "log": "restore-0095-drill.log",
+      "log_sha256": "84d115651d4e54c62103c052fe74fa2a6a4a79d5d5d68f1d3fafe072bd085db8",
+      "report": "docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_DRILL_0095_2026-10-03.json",
+      "report_exists": true,
+      "report_sha256": "046d521b56ff6aabaeeeee342b616047744f44f7db4a11bfd54c016e6d671cba",
+      "source_unchanged": true,
+      "started_at": "2026-10-03T05:20:31.236823+00:00"
+    },
+    "matrix": {
+      "command": [
+        "F:\\reconforge-erp\\.venv-baseline-20261003\\Scripts\\python.exe",
+        ".github/scripts/verify_postgres_writeback_identity_migration_matrix.py",
+        "--output",
+        "F:\\reconforge-erp\\docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0095_2026-10-03.json"
+      ],
+      "duration_seconds": 29.912,
+      "exit_code": 0,
+      "kind": "matrix",
+      "log": "restore-0095-matrix.log",
+      "log_sha256": "de4395114306c12b1bec89d4df5f82b1096c6e1f32c1dfc2a30b5499712f2cca",
+      "report": "docs\\execution\\POSTGRES_WRITEBACK_IDENTITY_MIGRATION_MATRIX_0095_2026-10-03.json",
+      "report_exists": true,
+      "report_sha256": "3bc77a607796bc828217c2161b741752bc8141e6f3e6b180b110e8feac004585",
+      "source_unchanged": true,
+      "started_at": "2026-10-03T05:20:31.242315+00:00"
+    }
+  },
+  "native_finance_restore": {
+    "commands": [
+      {
+        "argv": [
+          "docker",
+          "exec",
+          "reconforge-audit-20261003",
+          "pg_dump",
+          "--username",
+          "postgres",
+          "--format=custom",
+          "--dbname",
+          "reconforge_migration_349ad165c510416e89d7"
+        ],
+        "exit_code": 0,
+        "stderr": "",
+        "stdout_bytes": 1131975
+      },
+      {
+        "argv": [
+          "docker",
+          "exec",
+          "-i",
+          "reconforge-audit-20261003",
+          "pg_restore",
+          "--username",
+          "postgres",
+          "--exit-on-error",
+          "--no-owner",
+          "--dbname",
+          "reconforge_finance_restore_43ef841525a64b4bb39c"
+        ],
+        "exit_code": 0,
+        "stderr": "",
+        "stdout_bytes": 0
+      }
+    ],
+    "container": "reconforge-audit-20261003",
+    "dump_bytes": 1131975,
+    "dump_sha256": "2de0fff3ed19b729ec1c8256c723734ecd8c96c408bbc176a07de7aecd312d20",
+    "permitted_write_verified": true,
+    "policies_equal": true,
+    "postgresql_version": "16.14",
+    "report_digest": "d9f6def4dbfd5e05c66312c0178cd54e1ca2e5066256536424ec6de4de5ba1a7",
+    "restored_database_removed": true,
+    "revision": "0095_pg_finance_scope",
+    "scoped_denials_verified": true,
+    "source_database_removed": true,
+    "source_unchanged": true,
+    "started_at": "2026-10-03T05:20:00.773415+00:00",
+    "status": "passed",
+    "table_digests": {
+      "currencies": "2d3ca20d46f8253bf172b970cdacad03970d40cdedb9263725ee7aaee7e37bb3",
+      "domain_audit_events": "f9dfa8486ff24fbfa4a656996db228e4a3bbbce1b1b37faa46f3862b178857ab",
+      "domain_audit_ledger_state": "bdb8e2a97b0c1d7f970f56df2e7877d8da939c7f58c30499ae7bd21583eca405",
+      "finance_accounts": "483d6db885a2104162184cdf3fcb12c9a154ddde64cc6655bdecc8fc2040f3ee",
+      "finance_charts": "1267767dcdb1f9e22da7d57399fe6f918c6f077c2f8cf0cfe62582528decc64c",
+      "finance_dimension_values": "b46d8911574091d68c506aa0ae3026a667dd5ab6968dc560fda73917d6301d76",
+      "finance_dimensions": "5c1c702664bcb7b86de3fbfd2ca2508ccbcd09570ba8af8d6dd9b9e18be771d2",
+      "finance_entries": "0b11aa3d9d9df960a5d1d060236062250b949b0621aafdc3351466dab08dc752",
+      "finance_entry_line_dimensions": "e9fecc3829c28155da42cfcdd40017a4f33373c5a1bccf229a2dc63e8de558f0",
+      "finance_entry_lines": "4fe9675effa8460b15991f489e42f170c1268ddba565eedac6088ab0ae9b8559",
+      "finance_journals": "96cd55ed4e269c1a427f861ba23fbaaebc79587b79932bacffbe3b69f40e7140",
+      "fiscal_periods": "fb4f903ef18e5adb84cae37899ba540495f7f31009a63187a2ff68627a1cf1c7",
+      "legal_entities": "7f203cf3e455967e9e661d9b4d9253b37ab1966cf620248824672151a6d40fc1",
+      "organizations": "377d98a4fa5e3268cc5c061ff85beed31302e0325fc093299d52143cb1864ab6",
+      "outbox_events": "271ee6f5b36427eb98f134c8e675c98d2e02d688e79ca29540c75af9f8d87e5e"
+    },
+    "transport": "docker exec native PostgreSQL clients",
+    "values_equal": true,
+    "wall_seconds": 10.761351
+  },
+  "native_finance_source_tree_digest": "35033d7034ebddcc229a8af8d16197595d92e4bd7a3d35421878e83601209c9f",
+  "postgresql": "PostgreSQL 16.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "report_digest": "4eefc8064765c1ed4dc9cea095c0eda8c8b7dc8b3de2572b2430e14ffc80c26a",
+  "retained_at": "2026-10-03T05:30:45.589268+00:00",
+  "retained_observations": [
+    {
+      "path": "output/verification-2026-10-03/prod025-ci-general-final/report.json",
+      "sha256": "774bc68eb1ad8eee4119e5468b65c97749787b60ca475c2d8eeac9670ea6b7c1"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod025-ci-general-final/results.xml",
+      "sha256": "a75e2c72b56d5b8760ddc6b56a9706a3c28d92f38296b1f3991ed57444f18cdf"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod025-api-contract-final/report.json",
+      "sha256": "23720cd97996136ff3fac2deaa50fd7b59e429ab166db687bafcd7ff981b4a18"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod025-api-contract-final/results.xml",
+      "sha256": "1f6ae418ed06fffedbef55cb47d41f691ff74c9f5e67a16dfe4daf8f0b78d314"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod025-independent-frozen-final.log",
+      "sha256": "295921e30038f2c1c9bcfc38ca2fa0c811763c0804697e89526937375de385b2"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod025-independent-identity-review.json",
+      "sha256": "bd23bcfd21a30e3527835709617dc315eb71e954241bf47236c56e52d18cd71b"
+    },
+    {
+      "path": "output/verification-2026-10-03/finance-native-restore-report.json",
+      "sha256": "6ceb21fc8e1d0082a9d817e5de52d5edce52497b5a11299811a12ea7a2169145"
+    },
+    {
+      "path": "output/verification-2026-10-03/finance-native-restore.log",
+      "sha256": "40a6dcddb341e0936686da1029dd3b5c54a8b218bf85ad8f86745c5cf1384f3b"
+    },
+    {
+      "path": "output/verification-2026-10-03/run_finance_native_restore.py",
+      "sha256": "995583e8590e6529fc1eee8ca7793989db0e74af075aac2af67c212b1e96fdf0"
+    },
+    {
+      "path": "output/verification-2026-10-03/restore-0095-regressions.log",
+      "sha256": "9a5ed98493745cf14972212759c3650ce60d2554bbff20a50f9841fe8a7edb7b"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod025-ruff-final.log",
+      "sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod025-mypy-final.log",
+      "sha256": "281a094c39385b4d7b53e5db635f52158036861433c2a4975b9039e77a627a24"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod025-bandit-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "output/verification-2026-10-03/prod025-ci-general-first/report.json",
+      "sha256": "c56fe5c43dfb79b09894cf5658b383bf22850da450ff3dc40cf95edaacdf0707"
+    }
+  ],
+  "schema_version": "reconforge-finance-scope-evidence-v1",
+  "source_base_commit": "ce6068ef095ddeb0d09d8f9b0d6ab73d8069ed03",
+  "source_binding": "Working changes are identified by exact file hashes; this is not the earlier full-repository checkpoint.",
+  "source_sha256": {
+    "alembic/versions/0095_postgres_finance_scope.py": "e0a97dbf130d1e622a124d3a768339f7a593c985d36916101fa8b7a162b69f6f",
+    "reconforge/infrastructure/postgres_finance_core.py": "a84cfe2ac892ce847dcdcd67073f665a5b2cbe50e49b9cfabeec1fe3fd75085a",
+    "reconforge/infrastructure/postgres_finance_scope.py": "568c8bde2123c26dc127f355ba122b909f677591bb93cdc6a92431f74b6cd497",
+    "reconforge/infrastructure/postgres_operations.py": "a026149718af7abef1e1f5710ab1035a9070ebb4b7e3f9d26fb8be7385a79e4e",
+    "tests/test_postgres_finance_scope.py": "357ff7dc242b2c1a734d17066101c61ca567f8ee80f66077a891376f8222626a",
+    "tests/test_postgres_finance_scope_restore.py": "a4d1a008f56a4bb437eebf6e1e818b3a09391d027001da82d57f431981a67381"
+  },
+  "status": "passed-bounded-scope"
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import re
@@ -44,6 +45,7 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         ".github/dependabot.yml",
         ".github/scripts/run_locked_python_audit.py",
         ".github/scripts/validate_container_security.py",
+        ".github/scripts/extract_syft_image_config_digest.py",
         ".github/scripts/verify_airgap_install.py",
         ".github/scripts/verify_postgres_ha_dr.py",
         ".github/scripts/verify_postgres_writeback_identity_migration.py",
@@ -64,6 +66,12 @@ def _copy_policy_project(tmp_path: Path) -> Path:
         "docs/security/supply-chain-exceptions.v1.json",
         "docs/security/supply-chain-policy.v1.json",
         "docs/security/container-runtime.openvex.json",
+        "docs/security/gitleaks-public-source-digests-wave4.v1.json",
+        "docs/security/gitleaks-public-source-digests-wave5.v1.json",
+        "docs/execution/wave5-evidence/sourcing-oracle/accepted/report.json",
+        "docs/execution/wave5-evidence/sourcing-oracle/initial-failure/report.json",
+        "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.11.json",
+        "docs/execution/wave4-evidence/ci-0b598792/publication-source-closure-3.12.json",
         "pyproject.toml",
         "uv.lock",
     )
@@ -126,6 +134,141 @@ def test_repository_policy_closes_resolution_and_exception_inputs() -> None:
     assert npm_gap == 0
 
 
+def test_reviewed_public_digest_ignores_bind_exact_history_and_current_population() -> None:
+    registry = _json(ROOT / POLICY_MODULE._GITLEAKS_REVIEW_REGISTRY)
+    assert registry["finding_count"] == 260
+    assert registry["distinct_public_sources"] == 111
+    assert {report["finding_count"] for report in registry["reports"]} == {130}
+    records = registry["records"]
+    assert len({record["current_fingerprint"] for record in records}) == 260
+    assert len({record["history_fingerprint"] for record in records}) == 260
+    POLICY_MODULE._validate_gitleaks_config(ROOT)
+
+
+@pytest.mark.parametrize("mutation", ["same_line_digest", "same_line_member", "missing_report", "registry", "missing_ignore", "extra_ignore"])
+def test_reviewed_public_digest_ignores_reject_substitution_and_inventory_drift(
+    tmp_path: Path, mutation: str
+) -> None:
+    root = _copy_policy_project(tmp_path)
+    registry_path = root / POLICY_MODULE._GITLEAKS_REVIEW_REGISTRY
+    registry = _json(registry_path)
+    record = registry["records"][0]
+    report_path = root / record["path"]
+    if mutation in {"same_line_digest", "same_line_member"}:
+        raw = report_path.read_bytes()
+        lines = raw.decode("utf-8").splitlines(keepends=True)
+        index = record["line"] - 1
+        original = lines[index]
+        if mutation == "same_line_digest":
+            # A new high-entropy literal at the exact ignored path and line.
+            replacement = hashlib.sha256(b"unreviewed synthetic credential at same ignored line").hexdigest()
+            lines[index] = re.sub(r'"[a-f0-9]{64}"', '"' + replacement + '"', original)
+        else:
+            lines[index] = original.replace(record["public_source_path"], "reconforge/api/substituted_member.py")
+        assert lines[index] != original
+        report_path.write_bytes("".join(lines).encode("utf-8"))
+    elif mutation == "missing_report":
+        report_path.rename(report_path.with_suffix(".renamed"))
+    elif mutation == "registry":
+        registry["records"][0]["expected_value_sha256"] = "a" * 64
+        _write_json(registry_path, registry)
+    else:
+        ignore = root / ".gitleaksignore"
+        value = ignore.read_text(encoding="utf-8")
+        if mutation == "missing_ignore":
+            value = "\n".join(
+                line for line in value.splitlines() if line != record["current_fingerprint"]
+            ) + "\n"
+        else:
+            value += record["path"] + ":generic-api-key:99999\n"
+        ignore.write_text(value, encoding="utf-8")
+    with pytest.raises(SupplyChainPolicyError, match="reviewed|required policy"):
+        POLICY_MODULE._validate_gitleaks_config(root)
+
+
+def test_wave5_public_digest_ignores_close_exact_population_and_baseline_bytes() -> None:
+    registry = _json(ROOT / POLICY_MODULE._GITLEAKS_WAVE5_REGISTRY)
+    raw = (ROOT / ".gitleaksignore").read_bytes()
+    assert registry["finding_count"] == 166
+    assert registry["distinct_original_sources"] == 83
+    assert {report["finding_count"] for report in registry["reports"]} == {83}
+    assert len({record["current_fingerprint"] for record in registry["records"]}) == 166
+    assert len({record["history_fingerprint"] for record in registry["records"]}) == 166
+    assert hashlib.sha256(raw[:78266]).hexdigest() == registry["baseline_ignore"]["sha256"]
+    assert len(raw[78266:].splitlines()) == 332
+    assert hashlib.sha256(raw).hexdigest() == POLICY_MODULE._GITLEAKS_COMPLETE_IGNORE_SHA256
+    POLICY_MODULE._validate_gitleaks_config(ROOT)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "same_line_credential", "same_line_member", "unmatched_report_line", "source_head",
+        "registry", "unrelated_ignore", "missing_current", "missing_history", "duplicate_history",
+        "baseline_comment", "config_rule", "scanner_policy", "missing_report",
+    ],
+)
+def test_wave5_public_digest_ignores_reject_substitution_and_unreviewed_suppression(
+    tmp_path: Path, mutation: str
+) -> None:
+    root = _copy_policy_project(tmp_path)
+    registry_path = root / POLICY_MODULE._GITLEAKS_WAVE5_REGISTRY
+    registry = _json(registry_path)
+    record = registry["records"][0]
+    report_path = root / record["path"]
+    if mutation in {"same_line_credential", "same_line_member"}:
+        lines = report_path.read_bytes().decode().splitlines(keepends=True)
+        index = record["line"] - 1
+        original = lines[index]
+        if mutation == "same_line_credential":
+            replacement = hashlib.sha256(b"unreviewed synthetic credential at ignored line").hexdigest()
+            lines[index] = re.sub(r'"[a-f0-9]{64}"', '"' + replacement + '"', original)
+        else:
+            lines[index] = original.replace(record["public_source_path"], "tests/substituted_api.py")
+        assert lines[index] != original
+        report_path.write_bytes("".join(lines).encode())
+    elif mutation in {"unmatched_report_line", "source_head"}:
+        report = _json(report_path)
+        if mutation == "source_head":
+            report["source_head"] = "a" * 40
+        else:
+            report["container_name"] = "unreviewed-report-substitution"
+        _write_json(report_path, report)
+    elif mutation == "registry":
+        registry["records"][0]["public_source_path"] = "tests/substituted_api.py"
+        _write_json(registry_path, registry)
+    elif mutation in {"unrelated_ignore", "missing_current", "missing_history", "duplicate_history", "baseline_comment"}:
+        path = root / ".gitleaksignore"
+        raw = path.read_bytes()
+        if mutation == "unrelated_ignore":
+            raw += b"tests/unreviewed.py:generic-api-key:1\n"
+        elif mutation == "duplicate_history":
+            raw += (record["history_fingerprint"] + "\n").encode()
+        elif mutation == "baseline_comment":
+            raw = raw.replace(b"# False-positive", b"# Unreviewed", 1)
+        else:
+            key = "current_fingerprint" if mutation == "missing_current" else "history_fingerprint"
+            raw = raw.replace((record[key] + "\n").encode(), b"", 1)
+        path.write_bytes(raw)
+    elif mutation == "config_rule":
+        path = root / ".gitleaks.toml"
+        path.write_bytes(path.read_bytes() + b"\n[[rules]]\nid = 'generic-api-key'\nregex = 'never-match'\n")
+    elif mutation == "scanner_policy":
+        path = root / "docs/security/supply-chain-policy.v1.json"
+        policy = _json(path)
+        policy["secret_scanning"]["version"] = "8.30.2"
+        _write_json(path, policy)
+    else:
+        report_path.rename(report_path.with_suffix(".renamed"))
+    expected_guard = (
+        "Gitleaks ignore fingerprints must be non-empty and unique"
+        if mutation == "duplicate_history"
+        else "reviewed|required policy"
+    )
+    with pytest.raises(SupplyChainPolicyError, match=expected_guard):
+        POLICY_MODULE._validate_gitleaks_config(root)
+
+
 def _mutate_pyproject(root: Path) -> None:
     path = root / "pyproject.toml"
     path.write_text(path.read_text(encoding="utf-8").replace('required-version = "==0.11.32"', 'required-version = ">=0.11"'), encoding="utf-8")
@@ -181,6 +324,24 @@ def test_docker_runtime_is_multistage_and_non_root() -> None:
     assert dockerfile.index("USER 10001:10001") < dockerfile.index('CMD ["reconforge", "doctor"]')
 
 
+def test_docker_stages_refresh_checksum_bound_security_libraries_without_cli() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    stages = dockerfile.split("FROM ")[1:]
+
+    assert len(stages) == 2
+    assert all("apk add --no-cache --upgrade" in stage for stage in stages)
+    assert dockerfile.count("libcrypto3-3.5.9-r0.apk") == 2
+    assert dockerfile.count("libssl3-3.5.9-r0.apk") == 2
+    assert dockerfile.count("zlib-1.3.2-r1.apk") == 2
+    assert dockerfile.count("sha256:6632d758d8f5e9ea3b650fe966f23bbf9a202f8b8dceecac93da135dec5e3689") == 2
+    assert dockerfile.count("sha256:05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7ad01877") == 2
+    assert dockerfile.count("sha256:63aeea03c15a2f9018f81805cfc8aa926bdf5cd68921f22149c2fbb5d0ee9f47") == 2
+    assert dockerfile.count("/tmp/libcrypto3.apk") == 6
+    assert dockerfile.count("/tmp/libssl3.apk") == 6
+    assert dockerfile.count("/tmp/zlib.apk") == 6
+    assert "openssl " not in dockerfile
+
+
 def test_docker_context_is_deny_by_default() -> None:
     rules = [
         line.strip()
@@ -205,6 +366,39 @@ def test_docker_context_is_deny_by_default() -> None:
         "!reconforge/**",
     } <= set(rules)
     assert not any(rule.startswith("!.git") or "venv" in rule or "output" in rule for rule in rules)
+    assert rules[-3:] == ["**/__pycache__", "**/*.pyc", "**/*.pyo"]
+
+
+@pytest.mark.parametrize("removed_rule", ("**/__pycache__", "**/*.pyc", "**/*.pyo"))
+def test_docker_context_rejects_missing_python_cache_exclusions(tmp_path: Path, removed_rule: str) -> None:
+    root = _copy_policy_project(tmp_path)
+    path = root / ".dockerignore"
+    path.write_text(path.read_text(encoding="utf-8").replace(removed_rule + "\n", ""), encoding="utf-8")
+
+    with pytest.raises(SupplyChainPolicyError, match="Docker build context"):
+        POLICY_MODULE.validate_project(root, date(2026, 7, 26))
+
+
+@pytest.mark.parametrize("late_rule", ("!alembic/**", "!reconforge/**", "!**/*.pyc", "!**/__pycache__/**"))
+def test_docker_context_rejects_python_cache_reinclusion(tmp_path: Path, late_rule: str) -> None:
+    root = _copy_policy_project(tmp_path)
+    path = root / ".dockerignore"
+    path.write_text(path.read_text(encoding="utf-8") + late_rule + "\n", encoding="utf-8")
+
+    with pytest.raises(SupplyChainPolicyError, match="Docker build context"):
+        POLICY_MODULE.validate_project(root, date(2026, 7, 26))
+
+
+def test_docker_context_rejects_cache_exclusions_before_source_allowlist(tmp_path: Path) -> None:
+    root = _copy_policy_project(tmp_path)
+    path = root / ".dockerignore"
+    rules = path.read_text(encoding="utf-8")
+    exclusions = "**/__pycache__\n**/*.pyc\n**/*.pyo\n"
+    assert exclusions in rules
+    path.write_text(rules.replace(exclusions, "").replace("!.dockerignore\n", exclusions + "!.dockerignore\n"), encoding="utf-8")
+
+    with pytest.raises(SupplyChainPolicyError, match="Docker build context"):
+        POLICY_MODULE.validate_project(root, date(2026, 7, 26))
 
 
 def test_disposable_drill_images_execute_by_reviewed_digest() -> None:
@@ -341,6 +535,69 @@ def _mutate_release_post_push_binding(root: Path) -> None:
     )
 
 
+def _mutate_release_unpinned_action(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+            "actions/setup-node@v7",
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_clean_tree_check(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            'test -z "$(git status --porcelain=v1 --untracked-files=all)"',
+            '# test -z "$(git status --porcelain=v1 --untracked-files=all)"',
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_tag_package_alignment(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            'test "$GITHUB_REF_NAME" = "v${version}"',
+            'test "$GITHUB_REF_NAME" = "${version}"',
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_signed_tag_verification(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(".verification.verified", ".verification.unavailable"),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_sbom_attestation(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "sbom-path: release/reconforge-erp-${{ env.RELEASE_VERSION }}-source.cdx.json",
+            "# sbom path intentionally removed",
+        ),
+        encoding="utf-8",
+    )
+
+
+def _mutate_release_provenance_verification(root: Path) -> None:
+    path = root / ".github" / "workflows" / "release.yml"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "--bundle release/image-sbom.sigstore.json >/dev/null",
+            "--bundle release/image-sbom-disabled.sigstore.json >/dev/null",
+        ),
+        encoding="utf-8",
+    )
+
+
 @pytest.mark.parametrize(
     "mutator",
     [
@@ -370,6 +627,27 @@ def test_policy_validator_rejects_resolution_or_gate_drift(
     mutator(project)
 
     with pytest.raises(SupplyChainPolicyError):
+        POLICY_MODULE.validate_project(project, date(2026, 7, 26))
+
+
+@pytest.mark.parametrize(
+    ("mutator", "message"),
+    [
+        (_mutate_release_unpinned_action, "not pinned to a full SHA"),
+        (_mutate_release_clean_tree_check, "clean tree check"),
+        (_mutate_release_tag_package_alignment, "tag/package version alignment"),
+        (_mutate_release_signed_tag_verification, "signed annotated tag verification"),
+        (_mutate_release_sbom_attestation, "SBOM attestation"),
+        (_mutate_release_provenance_verification, "missing bundle"),
+    ],
+)
+def test_release_workflow_guard_rejects_essential_release_gate_drift(
+    tmp_path: Path, mutator: Callable[[Path], None], message: str
+) -> None:
+    project = _copy_policy_project(tmp_path)
+    mutator(project)
+
+    with pytest.raises(SupplyChainPolicyError, match=message):
         POLICY_MODULE.validate_project(project, date(2026, 7, 26))
 
 
@@ -489,6 +767,7 @@ def test_security_and_release_workflows_pin_tools_and_fail_before_registry_write
         assert f'SYFT_VERSION: "{policy["container_audits"]["sbom"]["version"]}"' in workflow
         assert f'GRYPE_VERSION: "{policy["container_audits"]["vulnerability"]["version"]}"' in workflow
         assert ".github/scripts/validate_container_security.py" in workflow
+        assert ".github/scripts/extract_syft_image_config_digest.py" in workflow
 
     assert '"--require-hashes"' in audit_runner
     assert '"--disable-pip"' in audit_runner

@@ -1,0 +1,37 @@
+{
+  "profiles": [
+    {
+      "name": "serial-baseline-bc294.json",
+      "sha256": "b3544881c5b2ec11075b5e50a41b1db9d3b16544975df39ce9150ec8d01bb742",
+      "source": "bc294c787e11622cbf199775cb64b7683ac4d0d1",
+      "status": "passed",
+      "classification": "diagnostic, profiled; not the quiet1K acceptance"
+    },
+    {
+      "name": "serial-candidate-bcac325c.json",
+      "sha256": "c0f48046e34b4e800848aaf3d9a3d2a848ba2b49f070a1f4fd0a56fbf48a8d6c",
+      "source": "bcac325cb73dc76d374ce34fa7a742e6df5a2c61",
+      "status": "passed",
+      "classification": "diagnostic, profiled; not the quiet1K acceptance"
+    },
+    {
+      "name": "parallel-baseline-b7df9271.json",
+      "sha256": "fbdfedb030e1c825b207faf06a23c0e8c0a298ab7e6ee00fa44e45d8ebc4be75",
+      "source": "b7df92711d52bde1adb735e3d1ab538eb2f4e5cc",
+      "status": "passed",
+      "classification": "diagnostic, profiled; not the quiet1K acceptance"
+    },
+    {
+      "name": "parallel-candidate-07452da8.json",
+      "sha256": "687ff50d49084b9d103280d863dd7b70ee738032e6ec7eb00e4cadf38c6da84b",
+      "source": "07452da8742406d2223ce522c87aee0fcd223a90",
+      "status": "passed",
+      "classification": "diagnostic, profiled; not the quiet1K acceptance"
+    }
+  ],
+  "limits": [
+    "Serial20 SQL profile candidate reached200rowcapture ceiling",
+    "Parallel100 phase sums filterindex0..99;20warmexcluded",
+    "KDF execution increase located; scheduler/frequency causation unproved"
+  ]
+}

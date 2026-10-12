@@ -13,6 +13,7 @@ from reconforge.cli import app
 from reconforge.domain.consolidation import ConsolidationError
 from reconforge.domain.intercompany_elimination import (
     IntercompanyEliminationInputLine,
+    intercompany_elimination_input_line_from_dict,
     prepare_intercompany_eliminations,
     verify_intercompany_elimination_payload,
 )
@@ -156,6 +157,14 @@ def test_currency_mismatch_is_rejected_instead_of_converted() -> None:
             prepared_by="close-preparer",
             prepared_at="2026-08-31T22:00:00Z",
         )
+
+
+def test_source_line_decoder_rejects_noncanonical_money_text() -> None:
+    payload = _line("TX-NONCANONICAL", "ENTITY-A", "ENTITY-B", "100.00").to_dict()
+    payload["amount"]["amount"] = "0100.00"  # type: ignore[index]
+
+    with pytest.raises(ConsolidationError, match="deterministic decoding"):
+        intercompany_elimination_input_line_from_dict(payload)
 
 
 def test_cli_emits_replayable_digest_bound_result(tmp_path: Path) -> None:

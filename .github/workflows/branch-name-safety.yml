@@ -1,0 +1,16 @@
+name: Branch name safety gate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  disallow-codex-prefix-branch-name:
+    name: Disallow codex/ branch names
+    if: ${{ startsWith(github.head_ref, 'codex/') || startsWith(github.ref_name, 'codex/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject disallowed branch name
+        run: |
+          echo "Branch names under 'codex/' are blocked by repository naming policy."
+          exit 1

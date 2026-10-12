@@ -4,6 +4,7 @@ import importlib.util
 import inspect
 import os
 import re
+from decimal import ROUND_DOWN, localcontext
 from pathlib import Path
 from types import ModuleType
 from uuid import uuid4
@@ -28,6 +29,7 @@ from reconforge.infrastructure.postgres_master_data import (
     POSTGRES_MASTER_DATA_SCHEMA_SQL,
 )
 from reconforge.platform.common import PlatformError
+from tests.postgres_test_hygiene import grant_native_owner_reads
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -131,8 +133,10 @@ class _ListConnection:
 
     def execute(self, query: str, parameters: tuple[object, ...] = ()) -> _Result:
         self.queries.append((query, parameters))
+        if "current_setting('app.tenant_id'" in query:
+            return _Result(one=(None, None, None, None, None))
         if "FROM reconforge.domain_workspaces" in query:
-            return _Result(one={"id": "workspace-a"})
+            return _Result(many=[{"id": "workspace-a"}])
         if "FROM reconforge.finance_charts" in query:
             return _Result(
                 many=[
@@ -274,15 +278,23 @@ def test_live_postgres_finance_core_lifecycle_exactness_and_rls() -> None:
             admin.execute(POSTGRES_FISCAL_PERIOD_SCHEMA_SQL)
             install_postgres_finance_core_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            # FOR SHARE in policy capture also requires UPDATE privilege.
+            admin.execute(f"GRANT SELECT,UPDATE ON reconforge.currency_registry_bindings TO {app_user}")
+            admin.execute(f"GRANT SELECT,INSERT ON reconforge.currency_registry_snapshots TO {app_user}")
             tables = (
                 "tenants,organizations,currencies,legal_entities,fiscal_periods,domain_workspaces,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,finance_charts,finance_accounts,"
                 "finance_dimensions,finance_dimension_values,finance_journals,finance_entries,"
-                "finance_entry_lines,finance_entry_line_dimensions"
+                "finance_entry_lines,finance_entry_line_dimensions,finance_posting_effects,finance_posting_commands"
             )
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
             )
+            grant_native_owner_reads(admin, app_user, (
+                "operational_finance_plans", "financial_opening_plans",
+                "stock_sales_orders", "stock_sales_issue_claims",
+                "stock_commerce_orders", "stock_commerce_tranches",
+            ))
             admin.execute(
                 "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
                 (tenant_a, tenant_a, tenant_b, tenant_b),
@@ -298,16 +310,16 @@ def test_live_postgres_finance_core_lifecycle_exactness_and_rls() -> None:
                     (tenant,),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active) VALUES (%s,%s,'ORG','Organization','KWD',TRUE)",
-                    (tenant, f"org-{tenant}"),
+                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,active,application_workspace_id) VALUES (%s,%s,'ORG','Organization','KWD',TRUE,%s)",
+                    (tenant, f"org-{tenant}", f"workspace-{tenant}"),
                 )
                 connection.execute(
                     "INSERT INTO reconforge.legal_entities(tenant_id,id,organization_id,entity_code,name,currency_code) VALUES (%s,%s,%s,'ENTITY','Entity','KWD')",
                     (tenant, f"entity-{tenant}", f"org-{tenant}"),
                 )
                 connection.execute(
-                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number) VALUES (%s,'period-1','2026-07','2026-07-01','2026-07-31',2026,7)",
-                    (tenant,),
+                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) VALUES (%s,'period-1','2026-07','2026-07-01','2026-07-31',2026,7,%s)",
+                    (tenant, f"workspace-{tenant}"),
                 )
         with PostgresTenantBoundary(factory).transaction(tenant_a) as connection:
             repository = PostgresFinanceCoreRepository(connection, tenant_a)
@@ -329,22 +341,26 @@ def test_live_postgres_finance_core_lifecycle_exactness_and_rls() -> None:
                 currency_code="KWD",
                 workspace="Finance",
             )
-            draft = repository.create_entry(
-                entry_number="JE/1",
-                organization_code="ORG",
-                entity_code="ENTITY",
-                period_id="period-1",
-                journal_code="GENERAL",
-                posting_date="2026-07-28",
-                description="Synthetic",
-                workspace="Finance",
-                actor_label="maker",
-                lines=(
-                    {"account_code": "CASH", "debit": "10.125", "credit": "0"},
-                    {"account_code": "CAPITAL", "debit": "0", "credit": "10.125"},
-                ),
-            )
+            with localcontext() as decimal_context:
+                decimal_context.prec = 3
+                decimal_context.rounding = ROUND_DOWN
+                draft = repository.create_entry(
+                    entry_number="JE/1",
+                    organization_code="ORG",
+                    entity_code="ENTITY",
+                    period_id="period-1",
+                    journal_code="GENERAL",
+                    posting_date="2026-07-28",
+                    description="Synthetic",
+                    workspace="Finance",
+                    actor_label="maker",
+                    lines=(
+                        {"account_code": "CASH", "debit": "10.125", "credit": "0"},
+                        {"account_code": "CAPITAL", "debit": "0", "credit": "10.125"},
+                    ),
+                )
             assert draft["total_debit_minor"] == 10125
+            assert draft["total_debit"] == "10.125"
             with pytest.raises(PlatformError, match="Segregation of duties"):
                 repository.validate_entry(str(draft["id"]), reason="Self approval", actor_label="maker")
             validated = repository.validate_entry(str(draft["id"]), reason="Independent review", actor_label="checker")

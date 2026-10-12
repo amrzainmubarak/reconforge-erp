@@ -1,5 +1,23 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1 AS builder
+FROM python:3.12.15-alpine3.24@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 AS builder
+
+# The pinned Python index is intentionally retained, but Alpine security
+# packages must be refreshed independently of the slower Python image cadence.
+# Keep the builder inside the same fixed-component boundary as the runtime and
+# fetch the reviewed APK artifacts by URL and checksum. The repository index
+# can lag a fixed security package; an unverified or unavailable artifact must
+# fail the build closed.
+ADD --checksum=sha256:6632d758d8f5e9ea3b650fe966f23bbf9a202f8b8dceecac93da135dec5e3689 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcrypto3-3.5.9-r0.apk /tmp/libcrypto3.apk
+ADD --checksum=sha256:05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7ad01877 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.9-r0.apk /tmp/libssl3.apk
+ADD --checksum=sha256:63aeea03c15a2f9018f81805cfc8aa926bdf5cd68921f22149c2fbb5d0ee9f47 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/zlib-1.3.2-r1.apk /tmp/zlib.apk
+RUN apk add --no-cache --upgrade \
+    /tmp/libcrypto3.apk \
+    /tmp/libssl3.apk \
+    /tmp/zlib.apk \
+    && rm -f /tmp/libcrypto3.apk /tmp/libssl3.apk /tmp/zlib.apk
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -22,10 +40,25 @@ COPY control-packs ./control-packs
 COPY alembic.ini .
 COPY alembic ./alembic
 
-RUN uv sync --locked --no-dev --no-editable --python 3.11 --link-mode copy \
+RUN uv sync --locked --no-dev --no-editable --python 3.12 --link-mode copy \
     && rm -rf /root/.cache/uv
 
-FROM python:3.11-alpine@sha256:6857d2dae63e052057f2db389a7061188ac9a92a3fa8d402bde68f36df6fada1 AS runtime
+FROM python:3.12.15-alpine3.24@sha256:1b668429b3511ab407d8e00648891631b0b1a4d7e15e3ca70f38ab5b91ad4ab4 AS runtime
+
+# The official index can lag an Alpine security fix. Install only the
+# checksum-bound, reviewed OpenSSL and zlib runtime APKs so the final image
+# contains the fixed packages without adding the OpenSSL CLI to the runtime.
+ADD --checksum=sha256:6632d758d8f5e9ea3b650fe966f23bbf9a202f8b8dceecac93da135dec5e3689 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libcrypto3-3.5.9-r0.apk /tmp/libcrypto3.apk
+ADD --checksum=sha256:05e3393fb95aa5751ca2f9d242f659f6cff82c1cc7767cc2df4a086f7ad01877 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/libssl3-3.5.9-r0.apk /tmp/libssl3.apk
+ADD --checksum=sha256:63aeea03c15a2f9018f81805cfc8aa926bdf5cd68921f22149c2fbb5d0ee9f47 \
+    https://dl-cdn.alpinelinux.org/alpine/v3.24/main/x86_64/zlib-1.3.2-r1.apk /tmp/zlib.apk
+RUN apk add --no-cache --upgrade \
+    /tmp/libcrypto3.apk \
+    /tmp/libssl3.apk \
+    /tmp/zlib.apk \
+    && rm -f /tmp/libcrypto3.apk /tmp/libssl3.apk /tmp/zlib.apk
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -33,12 +66,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN rm -rf /usr/local/lib/python3.11/site-packages/* \
-    /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.11 \
+RUN rm -rf /usr/local/lib/python3.12/site-packages/* \
+    /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.12 \
     && addgroup -g 10001 -S reconforge \
     && adduser -u 10001 -S -D -H -G reconforge -s /sbin/nologin reconforge \
-    && mkdir -p /app/output \
-    && chown 10001:10001 /app/output
+    && mkdir -p /app/output /data \
+    && chown 10001:10001 /app/output /data
 
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/config /app/config

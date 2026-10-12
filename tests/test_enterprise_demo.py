@@ -2,13 +2,39 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from decimal import Decimal
 from pathlib import Path
 
 from typer.testing import CliRunner
 
 from reconforge.cli import app
+from reconforge.enterprise_demo import DEMO_PERIOD, _build_synthetic_records
 
 runner = CliRunner()
+
+
+def test_enterprise_demo_trial_balance_uses_exact_currency_bound_amounts() -> None:
+    rows = _build_synthetic_records()["trial_balance"]
+
+    assert rows
+    assert all(isinstance(row["balance"], Decimal) for row in rows)
+    assert next(
+        row["balance"]
+        for row in rows
+        if row["period"] == DEMO_PERIOD and row["entity_code"] == "SYN-US01" and row["account_code"] == "1000"
+    ) == Decimal("428500.00")
+    assert next(
+        row["balance"]
+        for row in rows
+        if row["period"] == DEMO_PERIOD and row["entity_code"] == "SYN-UK01" and row["account_code"] == "1000"
+    ) == Decimal("265670.00")
+
+
+def test_enterprise_demo_matching_inputs_declare_currency_for_canonical_runs() -> None:
+    data = _build_synthetic_records()
+
+    assert all(row["currency"] == "USD" for row in data["matching_left"])
+    assert all(row["currency"] == "USD" for row in data["matching_right"])
 
 
 def test_enterprise_demo_command_creates_expected_local_package(tmp_path: Path) -> None:

@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "slice": "PROD036",
+  "synthetic_only": true,
+  "status": "accepted-bounded-sqlite-library-composition",
+  "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+  "sqlite_version": "3.53.1",
+  "commands": [
+    {
+      "name": "pytest",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "tests/test_sqlite_inventory_composition.py",
+        "tests/test_inventory_core.py",
+        "tests/test_inventory_valuation.py",
+        "tests/test_inventory_planning.py",
+        "tests/test_inventory_valuation_reversal.py",
+        "tests/test_application_inventory_core.py",
+        "tests/test_application_inventory_valuation.py",
+        "tests/test_application_inventory_planning.py",
+        "tests/test_application_inventory_valuation_reversal.py",
+        "tests/test_api_inventory_core.py",
+        "tests/test_api_server_inventory_core.py",
+        "tests/test_api_server_inventory_valuation.py",
+        "tests/test_api_server_inventory_planning.py",
+        "tests/test_repository_boundary_inventory.py",
+        "tests/test_approval_surface_inventory.py",
+        "tests/test_platform_common.py",
+        "tests/test_atomic_legacy_services.py",
+        "tests/test_outbox_worker.py",
+        "tests/test_outbox_delivery.py",
+        "tests/test_audit_events.py",
+        "-q",
+        "--tb=short",
+        "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod036-constructor-acceptance\\results.xml"
+      ],
+      "exit_code": 0,
+      "seconds": 130.534
+    },
+    {
+      "name": "ruff",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "ruff",
+        "check",
+        "reconforge/infrastructure/sqlite_inventory_unit_of_work.py",
+        "reconforge/infrastructure/sqlite_inventory_core.py",
+        "reconforge/infrastructure/sqlite_inventory_valuation.py",
+        "reconforge/infrastructure/sqlite_inventory_valuation_repository.py",
+        "reconforge/platform/common.py",
+        "tests/test_sqlite_inventory_composition.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.283
+    },
+    {
+      "name": "mypy",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "mypy",
+        "reconforge/infrastructure/sqlite_inventory_unit_of_work.py",
+        "reconforge/infrastructure/sqlite_inventory_core.py",
+        "reconforge/infrastructure/sqlite_inventory_valuation.py",
+        "reconforge/infrastructure/sqlite_inventory_valuation_repository.py",
+        "reconforge/platform/common.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.207
+    },
+    {
+      "name": "bandit",
+      "command": [
+        "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+        "-m",
+        "bandit",
+        "-q",
+        "reconforge/infrastructure/sqlite_inventory_unit_of_work.py",
+        "reconforge/infrastructure/sqlite_inventory_core.py",
+        "reconforge/infrastructure/sqlite_inventory_valuation.py",
+        "reconforge/infrastructure/sqlite_inventory_valuation_repository.py",
+        "reconforge/platform/common.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.763
+    }
+  ],
+  "counts": {
+    "passed": 120,
+    "skipped": 3,
+    "failed": 0,
+    "errors": 0
+  },
+  "owned_source_hashes": {
+    "reconforge/infrastructure/sqlite_inventory_unit_of_work.py": "3fdcaa3975a6719db6d46cc6a812333dccce053de25cedee22791835ef2370d3",
+    "reconforge/infrastructure/sqlite_inventory_core.py": "85af1ead8a152f166b5bd917582ec3948b2e92b854b7d7e3daca1ae67399f5cd",
+    "reconforge/infrastructure/sqlite_inventory_valuation.py": "f602ad49ee6a94bfc980c643bca75ae7ea568ea974534309241ceca17a695420",
+    "reconforge/infrastructure/sqlite_inventory_valuation_repository.py": "ea893957a5fd576902035a03ca48bc8c661264c870627a53aa096c52cd69e692",
+    "reconforge/platform/common.py": "67b3a1918538e80bf441a85f1c25fea4e353f0cac23d3841db52845a4417953e",
+    "tests/test_sqlite_inventory_composition.py": "ee6f73caa107dab6b834531568efef2f37c8a457961e0783731d4560529e405f"
+  },
+  "source_changed": [],
+  "independent_review": {
+    "python": "3.12.13 (main, Jul 18 2026, 17:08:38) [MSC v.1944 64 bit (AMD64)]",
+    "case": {
+      "error": "Use the owner's bound valuation persistence; custom repository composition is not supported.",
+      "rollback_only_after_rejection": true,
+      "transaction_still_active": true,
+      "observer_cannot_see_pending_child_or_evidence": true,
+      "owner_exit_error": "A failed bound operation requires rollback of the entire inventory unit of work.",
+      "prior_child_and_all_evidence_rolled_back": true
+    },
+    "owned_databases_removed": true,
+    "command": [
+      "F:\\reconforge-erp\\.venv-verify-20261003\\Scripts\\python.exe",
+      "-m",
+      "pytest",
+      "tests/test_sqlite_inventory_composition.py",
+      "-q",
+      "--tb=short",
+      "--junitxml=F:\\reconforge-erp\\output\\verification-2026-10-03\\prod036-independent-owner-after-tests.xml"
+    ],
+    "exit_code": 0,
+    "counts": {
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "duration_seconds": 28.055,
+    "source_before": {
+      "reconforge/infrastructure/sqlite_inventory_unit_of_work.py": "3fdcaa3975a6719db6d46cc6a812333dccce053de25cedee22791835ef2370d3",
+      "reconforge/infrastructure/sqlite_inventory_core.py": "85af1ead8a152f166b5bd917582ec3948b2e92b854b7d7e3daca1ae67399f5cd",
+      "reconforge/infrastructure/sqlite_inventory_valuation.py": "f602ad49ee6a94bfc980c643bca75ae7ea568ea974534309241ceca17a695420",
+      "reconforge/infrastructure/sqlite_inventory_valuation_repository.py": "ea893957a5fd576902035a03ca48bc8c661264c870627a53aa096c52cd69e692",
+      "reconforge/platform/common.py": "67b3a1918538e80bf441a85f1c25fea4e353f0cac23d3841db52845a4417953e",
+      "tests/test_sqlite_inventory_composition.py": "ee6f73caa107dab6b834531568efef2f37c8a457961e0783731d4560529e405f"
+    },
+    "source_after": {
+      "reconforge/infrastructure/sqlite_inventory_unit_of_work.py": "3fdcaa3975a6719db6d46cc6a812333dccce053de25cedee22791835ef2370d3",
+      "reconforge/infrastructure/sqlite_inventory_core.py": "85af1ead8a152f166b5bd917582ec3948b2e92b854b7d7e3daca1ae67399f5cd",
+      "reconforge/infrastructure/sqlite_inventory_valuation.py": "f602ad49ee6a94bfc980c643bca75ae7ea568ea974534309241ceca17a695420",
+      "reconforge/infrastructure/sqlite_inventory_valuation_repository.py": "ea893957a5fd576902035a03ca48bc8c661264c870627a53aa096c52cd69e692",
+      "reconforge/platform/common.py": "67b3a1918538e80bf441a85f1c25fea4e353f0cac23d3841db52845a4417953e",
+      "tests/test_sqlite_inventory_composition.py": "ee6f73caa107dab6b834531568efef2f37c8a457961e0783731d4560529e405f"
+    },
+    "sources_unchanged": true,
+    "before_counterexample": "prod036-independent-owner-review.json",
+    "scope": "Caught bound construction now poisons owner and rolls back prior child/evidence; inventory transaction composition only."
+  },
+  "limitations": [
+    "three PostgreSQL prerequisite skips are not passed tests",
+    "overlapping independent tests are not summed",
+    "Finance result remains Draft",
+    "no generated operational GL or new PostgreSQL bundle"
+  ],
+  "retained_failure_artifacts": [
+    "PROD036-RED-BEFORE.json",
+    "prod036-cold-import-red.log",
+    "prod036-independent-owner-review.json"
+  ],
+  "artifacts": {
+    "PROD036-CONSTRUCTOR-FROZEN.json": "8864ad7e031618171c5c6ab66460963dea03558d8d08549146657a45b17f95ee",
+    "prod036-independent-owner-after-review.json": "ddee1d2822dd393b1bc9d4cbda2215db4ba199d910391104f8314db882013603",
+    "prod036-constructor-acceptance/results.xml": "4975f775acce0eb09741530d17a818177d3ef364ad425491bff6526285bbadd0"
+  },
+  "publication_normalization": {
+    "file": "tests\\test_sqlite_inventory_composition.py",
+    "before_sha256": "ee6f73caa107dab6b834531568efef2f37c8a457961e0783731d4560529e405f",
+    "after_sha256": "a4f115a4a13116a74467f802de9a923493284def611611d20eed6ee61100f6ec",
+    "ast_equal": true,
+    "change": "remove trailing blank line rejected by cached diff check"
+  }
+}

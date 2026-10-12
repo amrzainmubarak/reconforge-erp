@@ -1,5 +1,33 @@
 # Performance Baseline
 
+## Source-bound successor refresh (2026-10-10)
+
+The [Wave3 acceptance packet and limits](GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10.md)
+record the actual clean4bb/70d sources, native owner and lock-regression gates,
+real HTTPS/populated restore, matched806/70d measurements and retained failures.
+Additive0124/0125 bring the central registry to125. Ruff/Mypy/Bandit pass at70d;
+360 Studio tests pass at4bb with identical web source at70d. Python dependency
+audit at6eb has no known finding with the local package explicitly excluded;
+dependency locks/MIT are unchanged. The local general900-second timeout is not
+acceptance; full final-head hosted gates are authoritative separately.
+Coverage source/transport corrections, archived proof closure and the
+[dependency-first roadmap](GLOBAL_NEXT_PHASE_2026-10-10.md) supersede current
+summary wording only for these named scopes; older measured snapshots remain.
+
+## Source-bound refresh (2026-10-08)
+
+Latest bounded repair acceptance on clean `b8f5a772`: **4,422 Python passes, 490 explicit skips, zero failures**; **22 live PostgreSQL passes**, **219 web component passes**, **19 browser passes/nine prerequisites**, and zero-known-finding Python/npm audits. Static/build/CLI/Docker gates pass. [Acceptance and limits](ACCEPTANCE_2026-10-08.md) · [Command/source/hash evidence](ACCEPTANCE_2026-10-08.json).
+
+No new capacity benchmark was performed. The 1,575.27s Python baseline and all command durations were measured while other audit work ran concurrently. They are reproducibility observations on this Windows host, not throughput, CPU/memory profiles, capacity, RPO/RTO or production SLO results.
+
+[October 8 source-bound audit](BASELINE_REFRESH_2026-10-08.md) · [Raw command identities](BASELINE_2026-10-08.json)
+
+## Historical PROD-001 audit (2026-10-03)
+
+No new capacity result is claimed. Current baseline timings ran alongside other audit work. Historical 1M-record matching and 1M-job-effect reports remain synthetic workload evidence; neither proves 5M customer transactions or 30 production reconciliations. The roadmap defines the required measured workload.
+
+[Historical audit](PRODUCTION_AUDIT_2026-10-03.md) · [Measured command snapshot](BASELINE_2026-10-03.json) · [Production roadmap](PRODUCTION_ROADMAP_2026-10-03.md)
+
 ## E-831 write-back recovery matrix timing (2026-08-22)
 
 The exact two-version matrix, including migrations, two spawned crash/recovery

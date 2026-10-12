@@ -357,6 +357,7 @@ def _risk_columns(
             # only the risk model's neutral magnitude, never a persisted amount.
             amount=amount_value if amount_value is not None else Decimal("0"),
             amount_difference=abs(difference_value) if difference_value is not None else Decimal("0"),
+            financial_input_policy=input_policy,
         )
         scores.append(assessment.score)
         levels.append(assessment.level)

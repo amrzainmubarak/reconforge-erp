@@ -118,6 +118,25 @@ def test_database_row_rejects_nonfinite_amount() -> None:
         )
 
 
+@pytest.mark.parametrize("amount", ("1e2",))
+def test_database_row_rejects_noncanonical_or_nonfinite_amount(amount: str) -> None:
+    with pytest.raises(ValidationError, match="exact Decimal text"):
+        DatabaseRecordRow.model_validate(
+            {
+                "tenant_id": "tenant-a",
+                "record_id": "r-1",
+                "amount": amount,
+                "currency": "USD",
+                "business_date": "2026-08-02",
+            }
+        )
+
+
+def test_database_row_canonicalizes_exact_amount_text() -> None:
+    row = _row("r-1", amount="1,000.00")
+    assert row.amount == "1000"
+
+
 def test_database_rejects_free_form_profile_endpoint_and_invalid_cursor() -> None:
     registration = database_reference_registration(credential_reference="secret/database", tenant_id="tenant-a")
     with pytest.raises(ValidationError, match="exactly match"):

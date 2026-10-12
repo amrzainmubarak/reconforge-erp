@@ -1,0 +1,30 @@
+id: sqlite-inventory-composition
+name: Explicit SQLite inventory transaction ownership
+version: 1.0.0
+maturity: experimental
+owner: financial-integrity
+dependencies: [inventory.core, finance.core, platform.core]
+incompatible_versions: [implicit-inventory-composition-with-pending-caller-writes]
+data_classification: financial-sensitive
+retention_policy: retain-existing-movement-layer-draft-and-audit-history
+permissions: [inventory.manage, inventory.post, inventory.valuation.manage, inventory.valuation.approve]
+default_roles: [admin]
+migrations: []
+domain_invariants:
+  - exact-active-owner-and-connection-before-participating-helpers
+  - only-the-owner-finalizes-the-shared-transaction
+  - failed-bound-operations-poison-the-owner-until-full-rollback
+  - pending-caller-writes-refused-without-loss-or-commit
+  - business-writes-audit-and-outbox-share-final-commit
+domain_events: [inventory_movement_posted, inventory_valuation_approved]
+api_routes: []
+cli_commands: []
+ui_routes: []
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/test_sqlite_inventory_composition.py]
+threat_model: [premature-child-commit, caller-data-loss, partial-evidence-effects, swallowed-operation-failure]
+benchmarks: []
+rollback_plan: finish-or-rollback-active-owner-preserve-db-redeploy-compatible-reader
+test_matrix: [tests/test_sqlite_inventory_composition.py, tests/test_inventory_core.py, tests/test_inventory_valuation.py, tests/test_atomic_legacy_services.py]
+limitations: [sqlite-library-composition-only, finance-result-remains-draft, no-generated-operational-gl, no-new-postgresql-bundle]

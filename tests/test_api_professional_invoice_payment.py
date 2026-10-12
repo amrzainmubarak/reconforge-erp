@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from reconforge.api import create_api_app
@@ -13,6 +14,7 @@ from reconforge.application.professional_invoice_payment_control import (
 )
 from reconforge.auth.service import LocalAuthService
 from reconforge.db import connect, run_migrations
+from reconforge.infrastructure.sqlite_professional_invoice_payment import SQLiteProfessionalInvoicePaymentRepository
 
 INVOICES = Path("examples/professional_invoice_payment/invoices.json")
 PAYMENTS = Path("examples/professional_invoice_payment/payments.json")
@@ -81,6 +83,57 @@ def test_professional_local_api_rejects_tampered_report_and_unknown_digest(tmp_p
         headers=headers,
     )
     assert missing.status_code == 404
+
+
+def test_professional_api_drops_future_adapter_fields_recursively(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = _client(tmp_path)
+    report = _report(tmp_path)
+    login = client.post("/api/v1/auth/login", json={"username": "admin", "password": "Secret-123"})
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    baseline = client.post(
+        "/api/v1/professional/invoice-payments",
+        json={"report": report, "workspace": "firm-a"},
+        headers=headers,
+    )
+    assert baseline.status_code == 200, baseline.text
+    future = json.loads(json.dumps(baseline.json()["invoice_payment"]))
+    future["unknown_adapter_field"] = "must-not-escape"
+    future["report"]["unknown_report_field"] = "must-not-escape"
+    future["report"]["amount_tolerance"]["unknown_money_field"] = "must-not-escape"
+    future["report"]["decisions"][0]["unknown_decision_field"] = "must-not-escape"
+    if future["report"]["decisions"][0]["amount_variance"] is not None:
+        future["report"]["decisions"][0]["amount_variance"]["unknown_variance_field"] = "must-not-escape"
+
+    def fake_put(self: SQLiteProfessionalInvoicePaymentRepository, payload: dict[str, object], **kwargs: object) -> dict[str, object]:
+        return future
+
+    def fake_list(self: SQLiteProfessionalInvoicePaymentRepository, **kwargs: object) -> tuple[dict[str, object], ...]:
+        return (future,)
+
+    def fake_get(self: SQLiteProfessionalInvoicePaymentRepository, **kwargs: object) -> dict[str, object]:
+        return future
+
+    monkeypatch.setattr(SQLiteProfessionalInvoicePaymentRepository, "put_payload", fake_put)
+    monkeypatch.setattr(SQLiteProfessionalInvoicePaymentRepository, "list", fake_list)
+    monkeypatch.setattr(SQLiteProfessionalInvoicePaymentRepository, "get", fake_get)
+
+    created = client.post(
+        "/api/v1/professional/invoice-payments",
+        json={"report": report, "workspace": "firm-a"},
+        headers=headers,
+    )
+    listed = client.get("/api/v1/professional/invoice-payments", params={"workspace": "firm-a"}, headers=headers)
+    fetched = client.get(
+        f"/api/v1/professional/invoice-payments/{report['decision_digest']}",
+        params={"workspace": "firm-a"},
+        headers=headers,
+    )
+
+    assert created.status_code == listed.status_code == fetched.status_code == 200
+    assert all("unknown_" not in response.text for response in (created, listed, fetched))
+    assert listed.json()["invoice_payments"][0]["decision_digest"] == report["decision_digest"]
 
 
 def test_professional_api_boundary_is_packaged() -> None:

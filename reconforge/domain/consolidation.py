@@ -817,8 +817,8 @@ def verify_consolidation_result_payload(payload: Mapping[str, object]) -> Consol
         for raw_line in raw_lines:
             line = _exact_mapping(raw_line, _LINE_KEYS, "Consolidation result line")
             original_payload = cast(Mapping[str, object], line["original_amount"])
-            original = Money.from_canonical_dict(original_payload)
-            Money.from_canonical_dict(cast(Mapping[str, object], line["translated_amount"]))
+            original = Money.from_strict_canonical_dict(original_payload)
+            Money.from_strict_canonical_dict(cast(Mapping[str, object], line["translated_amount"]))
             balance = ConsolidationBalance(
                 source_line_id=cast(str, line["source_line_id"]),
                 source_trial_balance_digest=cast(str, line["source_trial_balance_digest"]),

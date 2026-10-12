@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "accepted_base_commit": "34b9e7a5b2a7c4d8ae49b641a36de030a878d507",
+  "integrated_code_commit": "6272889d6ded2e20d4a52a79df234dd832ca6504",
+  "status": "milestones_passed_final_integrated_acceptance_pending",
+  "claim_boundary": "Source-bound independent worktree milestones are retained with their actual commits; they are not reattributed as final integrated acceptance. All amounts are exact integer minor units. No competitor capacity or production claim.",
+  "browser_restore_milestones": [
+    {
+      "domain": "commercial",
+      "report_path": "output/global-operating-platform-20261009/commercial/wire-third/report.json",
+      "report_sha256": "71b880c8143cc54a0247b9d5d27e7361190ce10c5d274d1924b9311a67f027ca",
+      "source_commit": "06adfa47688941e081dbdf2d19a6264baf62c426",
+      "source_sha256": "ac04ebcf821f52af5cbba42427a79696a50f0918e51efea5fec6cba26e0f5f80",
+      "built_web_sha256": "0ddc20e82e8e0a4810946552d7826bc52eef4efad176e99697b18af68527300b",
+      "status": "passed",
+      "scenario": "collections",
+      "postgres_version": "17.10",
+      "revision": "0122_pg_fixed_assets",
+      "role_privileges": [
+        false,
+        false
+      ],
+      "browser_counts": {
+        "startTime": "2026-10-09T21:42:44.658Z",
+        "duration": 254898.117,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "commercial_order_id": "COMSALE-4043db063b80ca6a",
+        "parent_version": 38,
+        "lines": 2,
+        "warehouses": 2,
+        "delivery_invoice_collection_tranches": 4,
+        "cancelled_undelivered_tranches": 1,
+        "posting_effects": 22,
+        "invoice_installments": 12,
+        "receipts": 12,
+        "revenue_minor": "69000",
+        "cash_minor": "69000",
+        "cogs_minor": "28000",
+        "fifo_residual_quantity": "0",
+        "fifo_residual_minor": "0",
+        "gl_turnover_minor": "194000"
+      },
+      "source_unchanged": true,
+      "built_web_unchanged": true,
+      "owned_container_removed": true,
+      "wall_seconds": 310.843,
+      "restore_status": "passed",
+      "dump_sha256": "f0335cdb11680eecec0aa93050eba3c3c9c53cc5f32696777099e0a606d573ff",
+      "restore_table_count": 237,
+      "restore_verification_keys": [
+        "status",
+        "dump_sha256",
+        "snapshot",
+        "probe_checkpoint",
+        "verified_effects",
+        "tamper_refusals"
+      ]
+    },
+    {
+      "domain": "supply",
+      "report_path": "output/global-operating-platform-20261009/supply/browser-final2/report.json",
+      "report_sha256": "7e09a85e8b2af4abfab4950aa395bf34d435c35b1b09ede549f1ee04c2bb2143",
+      "source_commit": "cf5c6ae9a8e16c96d9bec10a5f79a895702d67b7",
+      "source_sha256": "222e1d4227a8a97ed70fe92c0fb218c63fde598d8733d73064aa354af8c4721b",
+      "built_web_sha256": "43cfcf549a6d9425ca903c1b938fe686710237c7063889424a1a4c1a4ef206b8",
+      "status": "passed",
+      "scenario": "landed-cost",
+      "postgres_version": "17.10",
+      "revision": "0122_pg_fixed_assets",
+      "role_privileges": [
+        false,
+        false
+      ],
+      "browser_counts": {
+        "startTime": "2026-10-09T22:42:31.671Z",
+        "duration": 118985.46800000001,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "order_id": "PPORDER-2888568880209c55",
+        "native_order_id": "APPO-2888568880209c55",
+        "line_count": 2,
+        "warehouses": [
+          "MAIN/STOCK",
+          "NORTH/STOCK"
+        ],
+        "units": [
+          "EA",
+          "KG"
+        ],
+        "stock_receipts": 2,
+        "supplier_invoices": 2,
+        "payment_installments": 4,
+        "posting_effects": 9,
+        "expected_turnover_minor": "53002",
+        "capitalized_cost_minor": "18001",
+        "paid_charge_minor": "1001",
+        "paid_minor": "17000",
+        "outstanding_minor": "0"
+      },
+      "source_unchanged": true,
+      "built_web_unchanged": true,
+      "owned_container_removed": true,
+      "wall_seconds": 174.922,
+      "restore_status": "passed",
+      "dump_sha256": "973ea14039bf15b2f707544597b5fe71a7dd2b653dd6b6a83b643018fbcc8e7a",
+      "restore_table_count": 237,
+      "restore_verification_keys": [
+        "status",
+        "dump_sha256",
+        "snapshot",
+        "probe_checkpoint",
+        "verified_effects",
+        "tamper_refusals"
+      ]
+    },
+    {
+      "domain": "finance",
+      "report_path": "output/global-operating-platform-20261009/finance/wire-third/report.json",
+      "report_sha256": "c455ca558aed5f8b3ef6616596ad4cd97bcca2d3777d4d227e95674232a17006",
+      "source_commit": "c5bbdb1936334b180b8ec3802835f143e28b6662",
+      "source_sha256": "78ad2f7a325b62562cd0dcf91289546f3b5eae8971fef5d99bb536f612791614",
+      "built_web_sha256": "e20d2744068b02a13c05ecdc12ed0de832aad2eb64c91bd57fec6ee70050516c",
+      "status": "passed",
+      "scenario": "fixed-assets",
+      "postgres_version": "17.10",
+      "revision": "0122_pg_fixed_assets",
+      "role_privileges": [
+        false,
+        false
+      ],
+      "browser_counts": {
+        "startTime": "2026-10-09T21:40:26.555Z",
+        "duration": 59062.899000000005,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "persisted_effects": {
+        "asset_id": "FA-4b6a745b15ed4ff1bfd2d8ffbb470537",
+        "asset_status": "Disposed",
+        "source_plans": 4,
+        "native_posting_effects": 4,
+        "cost_minor": "10101",
+        "depreciation_tranches_minor": [
+          "3033",
+          "6067"
+        ],
+        "accumulated_minor": "9100",
+        "disposal_carrying_minor": "1001",
+        "proceeds_minor": "1500",
+        "gain_minor": "499",
+        "final_carrying_minor": "0",
+        "account_balances_minor": {
+          "FIXED": "0",
+          "ACCUM": "0",
+          "DEPRECIATION": "9100",
+          "CASH": "-8601",
+          "GAIN": "-499"
+        }
+      },
+      "source_unchanged": true,
+      "built_web_unchanged": true,
+      "owned_container_removed": true,
+      "wall_seconds": 107.141,
+      "restore_status": "passed",
+      "dump_sha256": "e8489805f9ba6f28948ceb6cba1c20c4d2fe9d623ab914f3e5c1782082bba745",
+      "restore_table_count": 237,
+      "restore_verification_keys": [
+        "status",
+        "dump_sha256",
+        "snapshot",
+        "probe_checkpoint",
+        "verified_effects",
+        "tamper_refusals"
+      ]
+    }
+  ],
+  "funded_combined_native_cycle": {
+    "xml_path": "output/global-operating-platform-20261009/finance/combined-funded.xml",
+    "xml_sha256": "f81c7317fd9c2e7a9581474f9b3943dbf5b06e3c93519a81e25482d815b680a1",
+    "environment": {
+      "image": "postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193",
+      "source_commit": "77701266c7f1df4533db86aeedd8f67062d98043",
+      "dataset": "funded-native-operating-v1",
+      "source_sha256": "e4c9bc925b9ff72e0ad70cfcddf24503382df2e39f633ceff65ca4518d6ecb4e",
+      "tracked_clean_before": true,
+      "postgres_version": "17.10",
+      "role_privileges": [
+        false,
+        false
+      ],
+      "exit_code": 0,
+      "source_unchanged": true,
+      "tracked_clean_after": true,
+      "owned_container_removed": true,
+      "wall_seconds": 148.515
+    },
+    "expected": {
+      "native_effects": 18,
+      "debit_minor": "184156",
+      "credit_minor": "184156",
+      "cash_minor": "45898",
+      "inventory_minor": "11648",
+      "capital_minor": "50000",
+      "unclosed_profit_minor": "7546",
+      "balance_sheet_assets_minor": "57546"
+    }
+  }
+}

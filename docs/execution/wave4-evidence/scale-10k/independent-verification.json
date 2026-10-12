@@ -1,0 +1,85 @@
+{
+  "schema_version": "wave4-independent-native-scale-v1",
+  "status": "passed",
+  "financial_verification": "passed",
+  "report_sha256": "c09be0d222823c915f93efdbd0824e33715024b2106064805d85dc4e8f405313",
+  "source_commit": "07452da8742406d2223ce522c87aee0fcd223a90",
+  "measured": {
+    "count": 10000,
+    "oracle_total_minor": "5028151631",
+    "posting_seconds": 4376.855285800004,
+    "throughput": 2.284745404410188,
+    "p50": 1.6781261000069208,
+    "p95": 2.082625299997744,
+    "p99": 2.5824996999945142,
+    "client_cpu_seconds": 5378.296875,
+    "container_cpu_seconds": 9874.770547,
+    "total_cpu_seconds_per_success": 1.5253067422,
+    "container_lifetime_peak_memory_bytes": 427376640,
+    "client_lifetime_peak_memory_bytes": 126705664,
+    "resource_sample_window": {
+      "sample_count": 464,
+      "interval_seconds": 10,
+      "first_elapsed_seconds": 0.35899999999674037,
+      "last_elapsed_seconds": 4633.608999999997,
+      "client_cpu_seconds_sample_window_delta": 5458.046875,
+      "sampled_client_rss_peak_bytes": 126656512,
+      "client_lifetime_peak_rss_bytes_at_last_sample": 126705664,
+      "sampled_docker_cpu_peak_percent": 259.36,
+      "sampled_docker_ram_peak_bytes": 194091418,
+      "sampled_lock_waiting_sessions_peak": 2,
+      "deadlock_counter_first": 0,
+      "deadlock_counter_last": 0,
+      "database_counter_sample_window_deltas": {
+        "xact_commit": 123513,
+        "xact_rollback": 0,
+        "blks_read": 82,
+        "blks_hit": 237194828,
+        "tup_returned": 168086107,
+        "tup_fetched": 166996016,
+        "tup_inserted": 111862,
+        "tup_updated": 85217,
+        "tup_deleted": 1409,
+        "conflicts": 0,
+        "temp_files": 0,
+        "temp_bytes": 0,
+        "deadlocks": 0,
+        "blk_read_time_ms": 0.0,
+        "blk_write_time_ms": 0.0
+      },
+      "wal_bytes_sample_window_delta": 245916253,
+      "docker_raw_counters_first": {
+        "CPUPerc": "57.55%",
+        "MemUsage": "64.48MiB / 9.561GiB",
+        "MemPerc": "0.66%",
+        "NetIO": "1.95MB / 789kB",
+        "BlockIO": "0B / 73.9MB",
+        "PIDs": "7"
+      },
+      "docker_raw_counters_last": {
+        "CPUPerc": "26.20%",
+        "MemUsage": "158.3MiB / 9.561GiB",
+        "MemPerc": "1.62%",
+        "NetIO": "1.05GB / 2.72GB",
+        "BlockIO": "0B / 1.23GB",
+        "PIDs": "7"
+      }
+    },
+    "bounded_batch_read_seconds": 4.905056900002819,
+    "cost_per_success_currency": null,
+    "limits": [
+      "CPU counter boundaries include cgroup exec/observer overhead",
+      "memory peaks include startup and warmup",
+      "single entity USD cash/equity native repositories including current identity checks; no HTTP/mixed ERP equivalence",
+      "no supplied monetary resource cost model; no cross-vendor ranking"
+    ]
+  },
+  "comparison": "single candidate capacity observation only; host power changed during run; no matched 10K baseline or causal performance improvement",
+  "performance_comparison_accepted": false,
+  "input_counts": [
+    100,
+    10000
+  ],
+  "genuine_warmup_count": 20,
+  "owned_container_removed": true
+}

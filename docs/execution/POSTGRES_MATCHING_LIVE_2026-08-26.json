@@ -1,0 +1,30 @@
+{
+  "evidence_id": "E-923",
+  "schema_version": 1,
+  "profile_id": "postgres-matching-live-cross-engine-replay-v1",
+  "status": "partial",
+  "observed_at": "2026-08-26",
+  "environment": {
+    "postgres_image": "postgres@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777",
+    "postgres_version": "16",
+    "platform": "linux/amd64",
+    "execution": "disposable local Docker PostgreSQL service",
+    "input_data": "synthetic only"
+  },
+  "test": {
+    "command": "python -m pytest -q tests/test_postgres_grouped_matching_runtime.py::test_live_postgres_grouped_matching_worker_persists_group_lineage_and_is_tenant_scoped",
+    "exit_code": 0,
+    "grouped_runs_completed": 4,
+    "sequential_runs_completed": 4,
+    "direct_strategy_digest_assertions": true,
+    "tenant_isolation_asserted": true,
+    "failed_runs": 0,
+    "duplicate_effects": 0
+  },
+  "claim_boundary": [
+    "one disposable host and one run",
+    "synthetic grouped/sequential fixtures",
+    "no provider or customer data",
+    "not a throughput, capacity, soak, SLO, HA/DR, posting, write-back, hosted, or production claim"
+  ]
+}

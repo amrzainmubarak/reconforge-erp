@@ -11,6 +11,7 @@ from reconforge.api.dependencies import enforce_server_scoped_permissions, get_l
 from reconforge.api.errors import APIError
 from reconforge.api.server_metrics import execute_postgres_metrics, server_metrics_enabled
 from reconforge.application.metrics import MetricsApplicationService
+from reconforge.auth.field_access import project_metric_dashboard, project_metric_lineage
 from reconforge.auth.models import LocalUser
 from reconforge.db import DatabaseError
 from reconforge.infrastructure.sqlite_metrics import SQLiteMetricsRepository
@@ -56,7 +57,7 @@ def dashboard(
             metrics = MetricsApplicationService(SQLiteMetricsRepository(connection)).dashboard(period_name=period)
     except (DatabaseError, PlatformError, RuntimeError) as exc:
         raise APIError(status_code=400, code="metrics_dashboard_failed", message=str(exc)) from exc
-    return {"metrics": metrics}
+    return {"metrics": [project_metric_dashboard(metric).visible for metric in metrics]}
 
 
 @router.get("/lineage")
@@ -80,4 +81,4 @@ def lineage(
             definitions = MetricsApplicationService(SQLiteMetricsRepository(connection)).lineage()
     except (DatabaseError, PlatformError, RuntimeError) as exc:
         raise APIError(status_code=400, code="metrics_lineage_failed", message=str(exc)) from exc
-    return {"lineage": definitions}
+    return {"lineage": [project_metric_lineage(definition).visible for definition in definitions]}

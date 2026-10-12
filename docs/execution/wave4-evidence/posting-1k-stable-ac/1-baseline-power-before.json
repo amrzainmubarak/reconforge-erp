@@ -1,0 +1,29 @@
+{
+  "status": "available",
+  "started_at": "2026-10-10T17:02:47.809763+00:00",
+  "command": [
+    "powercfg",
+    "/getactivescheme"
+  ],
+  "exit_code": 0,
+  "stdout_base64": "UG93ZXIgU2NoZW1lIEdVSUQ6IDM4MWI0MjIyLWY2OTQtNDFmMC05Njg1LWZmNWJiMjYwZGYyZSAgKEJhbGFuY2VkKQ==",
+  "stderr_base64": "",
+  "stdout_sha256": "5a08cd9ba3d16f45368fe914668e515e356be506f31cab7d841a5db21577526a",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "scheme_guid": "381b4222-f694-41f0-9685-ff5bb260df2e",
+  "power": {
+    "status": "available",
+    "raw": {
+      "ACLineStatus": 1,
+      "BatteryFlag": 1,
+      "BatteryLifePercent": 100,
+      "SystemStatusFlag": 0,
+      "BatteryLifeTime": 4294967295,
+      "BatteryFullLifeTime": 4294967295
+    },
+    "ac_online": true,
+    "battery_saver_on": false
+  },
+  "finished_at": "2026-10-10T17:02:47.827029+00:00",
+  "seconds": 0.01599999999598367
+}

@@ -21,11 +21,14 @@ from reconforge.infrastructure.postgres import (
 )
 from reconforge.infrastructure.postgres_domain import install_postgres_domain_schema
 from reconforge.infrastructure.postgres_finance_core import install_postgres_finance_core_schema
+from reconforge.infrastructure.postgres_ledger import POSTGRES_LEDGER_SCHEMA_SQL
 from reconforge.infrastructure.postgres_master_data import (
     POSTGRES_FISCAL_PERIOD_SCHEMA_SQL,
     POSTGRES_MASTER_DATA_SCHEMA_SQL,
     PostgresMasterDataRepository,
 )
+from reconforge.infrastructure.postgres_master_data_application import POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL
+from tests.postgres_test_hygiene import grant_native_owner_reads
 
 
 @pytest.mark.skipif(not os.environ.get("RECONFORGE_TEST_POSTGRES_DSN"), reason="requires live PostgreSQL")
@@ -53,10 +56,16 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             install_postgres_domain_schema(admin)
             admin.execute(POSTGRES_MASTER_DATA_SCHEMA_SQL)
             admin.execute(POSTGRES_FISCAL_PERIOD_SCHEMA_SQL)
+            admin.execute(POSTGRES_LEDGER_SCHEMA_SQL)
+            admin.execute(POSTGRES_MASTER_DATA_APPLICATION_SCHEMA_SQL)
             install_postgres_finance_core_schema(admin)
             admin.execute(f"GRANT USAGE ON SCHEMA reconforge TO {app_user}")
+            # FOR SHARE in policy capture also requires UPDATE privilege.
+            admin.execute(f"GRANT SELECT,UPDATE ON reconforge.currency_registry_bindings TO {app_user}")
+            admin.execute(f"GRANT SELECT,INSERT ON reconforge.currency_registry_snapshots TO {app_user}")
             tables = (
                 "tenants,organizations,currencies,legal_entities,fiscal_periods,domain_workspaces,"
+                "master_data_workspace_organizations,"
                 "domain_audit_ledger_state,domain_audit_events,outbox_events,finance_charts,finance_accounts,"
                 "finance_dimensions,finance_dimension_values,finance_journals,finance_entries,"
                 "finance_entry_lines,finance_entry_line_dimensions"
@@ -64,6 +73,11 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             admin.execute(
                 f"GRANT SELECT,INSERT,UPDATE,DELETE ON reconforge.{tables.replace(',', ',reconforge.')} TO {app_user}"
             )
+            grant_native_owner_reads(admin, app_user, (
+                "finance_posting_effects", "operational_finance_plans", "financial_opening_plans",
+                "stock_sales_orders", "stock_sales_issue_claims",
+                "stock_commerce_orders", "stock_commerce_tranches",
+            ))
             admin.execute(
                 "INSERT INTO reconforge.tenants(id,name) VALUES (%s,%s),(%s,%s)",
                 (tenant_a, tenant_a, tenant_b, tenant_b),
@@ -76,12 +90,21 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
                 )
                 master = PostgresMasterDataRepository(connection)
                 master.upsert_currency(tenant_id=tenant, code="USD", name="US Dollar", minor_units=2)
+                connection.execute(
+                    "INSERT INTO reconforge.organizations(tenant_id,id,organization_code,name,base_currency,application_workspace_id) VALUES(%s,%s,'ORG-A','API Organization','USD',%s)",
+                    (tenant, f"org-{tenant}", workspace),
+                )
                 master.upsert_organization(
                     tenant_id=tenant,
                     organization_id=f"org-{tenant}",
                     organization_code="ORG-A",
                     name="API Organization",
                     base_currency="USD",
+                )
+                connection.execute(
+                    """INSERT INTO reconforge.master_data_workspace_organizations
+                       (tenant_id,workspace_id,organization_id) VALUES (%s,%s,%s)""",
+                    (tenant, workspace, f"org-{tenant}"),
                 )
                 master.upsert_legal_entity(
                     tenant_id=tenant,
@@ -90,6 +113,10 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
                     entity_code="ENTITY-A",
                     name="API Entity",
                     currency_code="USD",
+                )
+                connection.execute(
+                    "INSERT INTO reconforge.fiscal_periods(tenant_id,id,name,start_date,end_date,fiscal_year,period_number,application_workspace_id) VALUES(%s,'period-api','2026-07','2026-07-01','2026-07-31',2026,7,%s)",
+                    (tenant, workspace),
                 )
                 master.upsert_period(
                     tenant_id=tenant,
@@ -118,13 +145,28 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
         maker = LocalUser(id="maker", username="maker", display_name="Maker")
         checker = LocalUser(id="checker", username="checker", display_name="Checker")
 
+        with pytest.raises(APIError) as spoofed_organization:
+            routes.upsert_chart(
+                request,
+                routes.ChartRequest(chart_code="SPOOF", name="Spoofed", organization_code="ORG-SPOOF"),
+                maker,
+                None,
+            )
+        assert spoofed_organization.value.code == "organization_scope_denied"
+
+        with pytest.raises(APIError) as narrow_metadata:
+            routes.upsert_chart(request, routes.ChartRequest(chart_code="DENIED", name="Entity cannot edit organization metadata"), maker, None)
+        assert narrow_metadata.value.code == "finance_core_request_invalid"
+        scope = RequestExecutionScope(tenant_a, workspace_a, f"org-{tenant_a}")
+
         chart = routes.upsert_chart(
             request,
-            routes.ChartRequest(chart_code="DEFAULT", name="Default", organization_code="ORG-A"),
+            routes.ChartRequest(chart_code="DEFAULT", name="Default"),
             maker,
             None,
         )
         assert chart["chart"]["workspace_id"] == workspace_a
+        assert chart["chart"]["organization_code"] == "ORG-A"
         for code, name, account_type, normal_balance in (
             ("1000", "Cash", "Asset", "Debit"),
             ("3000", "Capital", "Equity", "Credit"),
@@ -152,6 +194,27 @@ def test_live_server_finance_core_api_routes_are_workspace_scoped_and_lifecycle_
             maker,
             None,
         )
+        scope = RequestExecutionScope(tenant_a, workspace_a, f"org-{tenant_a}", f"entity-{tenant_a}")
+        with pytest.raises(APIError) as spoofed_entity:
+            routes.create_entry(
+                request,
+                routes.LedgerEntryRequest(
+                    entry_number="JE/API/SPOOF",
+                    organization_code="ORG-A",
+                    entity_code="ENTITY-SPOOF",
+                    period_id="period-api",
+                    journal_code="GENERAL",
+                    posting_date="2026-07-23",
+                    description="Spoofed Finance Core API entry",
+                    lines=[
+                        routes.LedgerLineRequest(account_code="1000", debit="1.00", credit="0"),
+                        routes.LedgerLineRequest(account_code="3000", debit="0", credit="1.00"),
+                    ],
+                ),
+                maker,
+                None,
+            )
+        assert spoofed_entity.value.code == "entity_scope_denied"
         created = routes.create_entry(
             request,
             routes.LedgerEntryRequest(

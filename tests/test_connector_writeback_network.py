@@ -59,6 +59,8 @@ def _registration(**updates: object) -> WritebackNetworkRegistration:
     values: dict[str, object] = {
         "registration_schema": "writeback-network-registration-v1",
         "connector_id": CONNECTOR_ID,
+        "tenant_id": "tenant-a",
+        "workspace_id": "workspace-a",
         "version": "1.0.0",
         "endpoint": "https://api.example.test/v1/writeback",
         "egress_destinations": ("https://api.example.test/v1/writeback",),
@@ -93,6 +95,36 @@ def _dispatched_intent(payload: bytes = PAYLOAD) -> WritebackIntent:
 
 def _compensation_requested_intent() -> WritebackIntent:
     return request_compensation(_dispatched_intent(), reason="provider accepted the original mutation but downstream state diverged")
+
+
+def test_executor_rejects_unbound_and_cross_scope_registrations_before_provider_io() -> None:
+    intent = _dispatched_intent()
+
+    class Payloads:
+        def resolve(self, _intent: object) -> bytes:
+            raise AssertionError("scope rejection must happen before payload resolution")
+
+    class Secrets:
+        def resolve(self, _reference: str) -> bytes:
+            raise AssertionError("scope rejection must happen before secret resolution")
+
+    executor = WritebackNetworkExecutor(
+        transport=object(),  # type: ignore[arg-type]
+        payload_resolver=Payloads(),
+        secret_resolver=Secrets(),
+    )
+    for registration, error in (
+        (_registration(tenant_id=None, workspace_id=None), "scope_not_configured"),
+        (_registration(tenant_id="tenant-b", workspace_id="workspace-a"), "scope_mismatch"),
+    ):
+        with pytest.raises(WritebackNetworkError, match=error):
+            executor.dispatch(intent, registration=registration, policy=POLICY)
+
+
+def test_registration_scope_is_paired_and_digest_bound() -> None:
+    with pytest.raises(ValidationError, match="provided together"):
+        _registration(tenant_id="tenant-a", workspace_id=None)
+    assert _registration().digest != _registration(tenant_id="tenant-b", workspace_id="workspace-a").digest
 
 
 def _provider_body(
@@ -658,6 +690,62 @@ def test_network_dispatch_retries_transient_http_and_transport_failures_with_sam
     assert all(call[1]["Idempotency-Key"] == intent.idempotency_key for call in transport.calls)
     assert all(call[2] == PAYLOAD for call in transport.calls)
     assert 1.0 in waits and 2.0 in waits
+
+
+def test_rate_limit_reservations_are_atomic_under_concurrent_workers() -> None:
+    executor = WritebackNetworkExecutor(
+        _Transport([]),
+        payload_resolver=_Payloads(),
+        clock=lambda: 0.0,
+    )
+    start = threading.Barrier(3)
+    waits: list[float] = []
+    waits_lock = threading.Lock()
+
+    def record_wait(seconds: float) -> None:
+        with waits_lock:
+            waits.append(seconds)
+
+    executor.sleeper = record_wait
+
+    def reserve() -> None:
+        start.wait(timeout=5)
+        executor._apply_rate_limit(_registration(rate_limit_per_minute=60))
+
+    threads = [threading.Thread(target=reserve) for _ in range(3)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+
+    # The first reservation is immediate; the two following reservations must
+    # observe distinct future slots without waiting in real time here.
+    assert sorted(waits) == [1.0, 2.0]
+    assert sorted(executor._next_allowed_at.values()) == [3.0]
+
+
+def test_rate_limit_lanes_are_isolated_by_registration_scope_digest() -> None:
+    waits: list[float] = []
+    executor = WritebackNetworkExecutor(
+        _Transport([]),
+        payload_resolver=_Payloads(),
+        sleeper=waits.append,
+        clock=lambda: 0.0,
+    )
+
+    executor._apply_rate_limit(_registration(rate_limit_per_minute=60))
+    executor._apply_rate_limit(
+        _registration(
+            tenant_id="tenant-b",
+            workspace_id="workspace-b",
+            credential_reference="vault://tenant-b/writeback-token",
+            rate_limit_per_minute=60,
+        )
+    )
+
+    assert waits == []
+    assert len(executor._next_allowed_at) == 2
 
 
 def test_network_dispatch_rejects_negative_provider_outcome_without_acknowledging() -> None:

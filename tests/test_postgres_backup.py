@@ -23,9 +23,16 @@ from reconforge.infrastructure.postgres_backup import (
     PostgresBackupSettings,
     PostgresNativeBackupAdapter,
     PostgresNativeTools,
+    _create_isolated_target_sql,
+    _encrypt_dump,
+    _fence_isolated_target_access_sql,
 )
+from reconforge.infrastructure.postgres_operations import POSTGRES_MIGRATION_REVISIONS
 
 KEY = bytes(range(32))
+COMPATIBILITY_RECOVERY_PROFILE = "team-synthetic"
+COMPATIBILITY_ALEMBIC_REVISION = "0103_pg_outbox_fencing"
+CURRENT_HEAD_RECOVERY_PROFILE = "team-current-head"
 
 
 class _Runner:
@@ -34,13 +41,22 @@ class _Runner:
         *,
         fail_restore: bool = False,
         fail_verification: bool = False,
+        fail_security_definer_hardening: bool = False,
+        fail_target_access_fencing: bool = False,
+        fail_source_profile: bool = False,
+        fail_restore_profile: bool = False,
         fail_rollback: bool = False,
         omit_dump_attempts: int = 0,
         fail_dump_attempts: int = 0,
     ) -> None:
         self.calls: list[tuple[str, ...]] = []
+        self.profile_queries: list[str] = []
         self.fail_restore = fail_restore
         self.fail_verification = fail_verification
+        self.fail_security_definer_hardening = fail_security_definer_hardening
+        self.fail_target_access_fencing = fail_target_access_fencing
+        self.fail_source_profile = fail_source_profile
+        self.fail_restore_profile = fail_restore_profile
         self.fail_rollback = fail_rollback
         self.omit_dump_attempts = omit_dump_attempts
         self.fail_dump_attempts = fail_dump_attempts
@@ -70,8 +86,20 @@ class _Runner:
                 output.write_bytes(b"PGDMP\x01\x0f confidential-database-content")
         if executable == "pg_restore" and "--list" not in call and self.fail_restore:
             return 1
-        if executable == "psql" and self.fail_verification:
-            return 1
+        if executable == "psql":
+            database = call[call.index("--dbname") + 1]
+            query = Path(call[-1]).read_text(encoding="ascii") if "--file" in call else call[-1]
+            self.profile_queries.append(query)
+            if self.fail_target_access_fencing and "REVOKE CONNECT ON DATABASE" in query:
+                return 1
+            if self.fail_security_definer_hardening and "REVOKE ALL ON %s" in query:
+                return 1
+            if self.fail_verification and "SELECT 1 /" in query:
+                return 1
+            if database == "service=reconforge_source" and self.fail_source_profile:
+                return 1
+            if database.startswith("service=reconforge_admin ") and self.fail_restore_profile:
+                return 1
         if executable == "dropdb" and self.fail_rollback:
             return 1
         return 0
@@ -97,12 +125,20 @@ def _tools(tmp_path: Path) -> PostgresNativeTools:
     return PostgresNativeTools(**paths)
 
 
-def _adapter(tmp_path: Path, runner: _Runner) -> PostgresNativeBackupAdapter:
+def _adapter(
+    tmp_path: Path,
+    runner: _Runner,
+    *,
+    recovery_profile: str = COMPATIBILITY_RECOVERY_PROFILE,
+    expected_alembic_revision: str = COMPATIBILITY_ALEMBIC_REVISION,
+) -> PostgresNativeBackupAdapter:
     return PostgresNativeBackupAdapter(
         PostgresBackupSettings(
             source_service="reconforge_source",
             maintenance_service="reconforge_admin",
             restore_database="reconforge_restore_drill",
+            recovery_profile=recovery_profile,
+            expected_alembic_revision=expected_alembic_revision,
             tools=_tools(tmp_path),
             timeout_seconds=30,
         ),
@@ -129,16 +165,238 @@ def test_postgres_native_backup_is_encrypted_and_uses_service_not_secret(tmp_pat
     assert result.backend == "postgresql"
     assert result.bytes_written == len(raw)
     assert b"confidential-database-content" not in raw
-    assert runner.calls[0][1:] == (
+    assert f'"recovery_profile":"{COMPATIBILITY_RECOVERY_PROFILE}"'.encode("ascii") in raw
+    assert f'"alembic_revision":"{COMPATIBILITY_ALEMBIC_REVISION}"'.encode("ascii") in raw
+    assert Path(runner.calls[0][0]).stem == "psql"
+    assert "service=reconforge_source" in runner.calls[0]
+    assert f"reconforge_expected_revision={COMPATIBILITY_ALEMBIC_REVISION}" in runner.calls[0]
+    assert "--file" in runner.calls[0]
+    assert ":'reconforge_expected_revision'" in runner.profile_queries[0]
+    assert not Path(runner.calls[0][-1]).exists()
+    dump_call = next(call for call in runner.calls if Path(call[0]).stem == "pg_dump")
+    assert dump_call[1:] == (
         "--format=custom",
         "--no-owner",
         "--no-privileges",
         "--file",
-        runner.calls[0][5],
+        dump_call[5],
         "--dbname",
         "service=reconforge_source",
     )
-    assert all("password" not in value.casefold() for value in runner.calls[0])
+    assert all("password" not in value.casefold() for call in runner.calls for value in call)
+
+
+def test_backup_refuses_a_source_outside_the_configured_recovery_profile(tmp_path: Path) -> None:
+    runner = _Runner(fail_source_profile=True)
+    output = tmp_path / "unverified-source.rfpgbackup"
+
+    with pytest.raises(PostgresBackupError, match="source profile verification failed"):
+        _adapter(tmp_path, runner).create_backup(output, key=KEY)
+
+    assert not output.exists()
+    assert [Path(call[0]).stem for call in runner.calls] == ["psql"]
+
+
+@pytest.fixture
+def current_head_recovery_profile() -> tuple[str, str]:
+    """Derive the mock recovery contract from the PostgreSQL migration head."""
+
+    return CURRENT_HEAD_RECOVERY_PROFILE, POSTGRES_MIGRATION_REVISIONS[-1]
+
+
+def test_current_head_profile_binds_and_rejects_0103_before_restore_actions(
+    tmp_path: Path,
+    current_head_recovery_profile: tuple[str, str],
+) -> None:
+    recovery_profile, expected_alembic_revision = current_head_recovery_profile
+    artifact = tmp_path / "current-head.rfpgbackup"
+    create_runner = _Runner()
+
+    _adapter(
+        tmp_path / "create-tools",
+        create_runner,
+        recovery_profile=recovery_profile,
+        expected_alembic_revision=expected_alembic_revision,
+    ).create_backup(artifact, key=KEY)
+
+    raw = artifact.read_bytes()
+    assert f'"recovery_profile":"{recovery_profile}"'.encode("ascii") in raw
+    assert f'"alembic_revision":"{expected_alembic_revision}"'.encode("ascii") in raw
+    assert f"reconforge_expected_revision={expected_alembic_revision}" in create_runner.calls[0]
+
+    restore_runner = _Runner()
+    with pytest.raises(PostgresBackupError, match="does not match the configured recovery profile"):
+        _adapter(
+            tmp_path / "restore-tools",
+            restore_runner,
+            recovery_profile=recovery_profile,
+            expected_alembic_revision=COMPATIBILITY_ALEMBIC_REVISION,
+        ).restore_backup(artifact, key=KEY)
+
+    assert restore_runner.calls == []
+
+
+@pytest.mark.parametrize(
+    ("recovery_profile", "expected_alembic_revision"),
+    [
+        ("other-profile", COMPATIBILITY_ALEMBIC_REVISION),
+        (COMPATIBILITY_RECOVERY_PROFILE, "0102_pg_budget_control"),
+    ],
+)
+def test_restore_rejects_a_bound_artifact_for_another_recovery_profile_before_target_mutation(
+    tmp_path: Path,
+    recovery_profile: str,
+    expected_alembic_revision: str,
+) -> None:
+    artifact = tmp_path / "bound.rfpgbackup"
+    _adapter(tmp_path / "create-tools", _Runner()).create_backup(artifact, key=KEY)
+    restore_runner = _Runner()
+
+    with pytest.raises(PostgresBackupError, match="does not match the configured recovery profile"):
+        _adapter(
+            tmp_path / "restore-tools",
+            restore_runner,
+            recovery_profile=recovery_profile,
+            expected_alembic_revision=expected_alembic_revision,
+        ).restore_backup(artifact, key=KEY)
+
+    assert restore_runner.calls == []
+
+
+def test_legacy_unbound_artifact_remains_readable_but_must_pass_target_revision_gate(tmp_path: Path) -> None:
+    dump = tmp_path / "legacy.dump"
+    dump.write_bytes(b"PGDMP\x01\x0f legacy-database-content")
+    artifact = tmp_path / "legacy.rfpgbackup"
+    _encrypt_dump(dump, artifact, KEY)
+    runner = _Runner()
+
+    outcome = _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
+
+    assert outcome.target == "reconforge_restore_drill"
+    assert [Path(call[0]).stem for call in runner.calls] == [
+        "pg_restore",
+        "psql",
+        "psql",
+        "pg_restore",
+        "psql",
+        "psql",
+    ]
+    assert f"reconforge_expected_revision={COMPATIBILITY_ALEMBIC_REVISION}" in runner.calls[-1]
+
+
+def test_restore_rehardens_security_definer_routines_before_profile_verification(tmp_path: Path) -> None:
+    artifact = tmp_path / "security-definer.rfpgbackup"
+    _adapter(tmp_path / "create-tools", _Runner()).create_backup(artifact, key=KEY)
+    runner = _Runner()
+
+    _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
+
+    psql_calls = [call for call in runner.calls if Path(call[0]).stem == "psql"]
+    assert len(psql_calls) == 4
+    creation_query, access_fence_query, hardening_query, verification_query = runner.profile_queries
+    assert creation_query == 'CREATE DATABASE "reconforge_restore_drill" WITH ALLOW_CONNECTIONS false;'
+    assert access_fence_query == (
+        "BEGIN;\n"
+        'ALTER DATABASE "reconforge_restore_drill" ALLOW_CONNECTIONS true;\n'
+        'REVOKE CONNECT ON DATABASE "reconforge_restore_drill" FROM PUBLIC;\n'
+        "COMMIT;"
+    )
+    assert "pg_catalog.pg_proc" in hardening_query
+    assert "procedure.prosecdef" in hardening_query
+    assert "procedure.prokind IN ('f', 'p')" in hardening_query
+    assert "REVOKE ALL ON %s %I.%I(%s) FROM PUBLIC" in hardening_query
+    assert "FUNCTION" in hardening_query
+    assert "PROCEDURE" in hardening_query
+    assert "SELECT 1 /" in verification_query
+
+
+def test_failed_security_definer_hardening_rolls_back_isolated_target(tmp_path: Path) -> None:
+    artifact = tmp_path / "security-definer-failure.rfpgbackup"
+    _adapter(tmp_path / "create-tools", _Runner()).create_backup(artifact, key=KEY)
+    runner = _Runner(fail_security_definer_hardening=True)
+
+    with pytest.raises(PostgresBackupError, match="security-definer hardening failed"):
+        _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
+
+    assert [Path(call[0]).stem for call in runner.calls] == [
+        "pg_restore",
+        "psql",
+        "psql",
+        "pg_restore",
+        "psql",
+        "dropdb",
+    ]
+
+
+def test_failed_target_access_fencing_rolls_back_non_connectable_target(tmp_path: Path) -> None:
+    artifact = tmp_path / "target-access-fence.rfpgbackup"
+    _adapter(tmp_path / "create-tools", _Runner()).create_backup(artifact, key=KEY)
+    runner = _Runner(fail_target_access_fencing=True)
+
+    with pytest.raises(PostgresBackupError, match="target access fencing failed"):
+        _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
+
+    assert [Path(call[0]).stem for call in runner.calls] == [
+        "pg_restore",
+        "psql",
+        "psql",
+        "dropdb",
+    ]
+    assert runner.calls[1][-1] == 'CREATE DATABASE "reconforge_restore_drill" WITH ALLOW_CONNECTIONS false;'
+    assert "REVOKE CONNECT ON DATABASE \"reconforge_restore_drill\" FROM PUBLIC" in runner.calls[2][-1]
+
+
+def test_legacy_settings_remain_compatible_for_unbound_artifacts(tmp_path: Path) -> None:
+    runner = _Runner()
+    adapter = PostgresNativeBackupAdapter(
+        PostgresBackupSettings(
+            source_service="reconforge_source",
+            maintenance_service="reconforge_admin",
+            restore_database="reconforge_restore_drill",
+            tools=_tools(tmp_path / "tools"),
+            timeout_seconds=30,
+        ),
+        runner=runner,
+    )
+    artifact = tmp_path / "legacy-settings.rfpgbackup"
+
+    adapter.create_backup(artifact, key=KEY)
+    outcome = adapter.restore_backup(artifact, key=KEY)
+
+    assert outcome.target == "reconforge_restore_drill"
+    assert b'"recovery_profile"' not in artifact.read_bytes()
+
+
+def test_legacy_settings_refuse_a_bound_artifact_before_target_mutation(tmp_path: Path) -> None:
+    artifact = tmp_path / "bound-for-legacy.rfpgbackup"
+    _adapter(tmp_path / "create-tools", _Runner()).create_backup(artifact, key=KEY)
+    runner = _Runner()
+    adapter = PostgresNativeBackupAdapter(
+        PostgresBackupSettings(
+            source_service="reconforge_source",
+            maintenance_service="reconforge_admin",
+            restore_database="reconforge_restore_drill",
+            tools=_tools(tmp_path / "legacy-tools"),
+            timeout_seconds=30,
+        ),
+        runner=runner,
+    )
+
+    with pytest.raises(PostgresBackupError, match="requires a configured recovery profile"):
+        adapter.restore_backup(artifact, key=KEY)
+
+    assert runner.calls == []
+
+
+def test_recovery_profile_and_expected_revision_are_an_atomic_settings_pair(tmp_path: Path) -> None:
+    with pytest.raises(PostgresBackupError, match="configured together"):
+        PostgresBackupSettings(
+            source_service="reconforge_source",
+            maintenance_service="reconforge_admin",
+            restore_database="reconforge_restore_drill",
+            tools=_tools(tmp_path),
+            recovery_profile="team-synthetic",
+        )
 
 
 def test_backup_retries_portable_file_argument_when_success_has_no_dump(tmp_path: Path) -> None:
@@ -233,7 +491,7 @@ def test_backup_uses_native_stdout_fallback_after_file_forms_produce_no_dump(tmp
     )
 
 
-def test_restore_creates_new_database_and_rollback_removes_partial_target(tmp_path: Path) -> None:
+def test_restore_fences_target_access_before_restore_and_rolls_back_partial_target(tmp_path: Path) -> None:
     create_runner = _Runner()
     output = tmp_path / "postgres.rfpgbackup"
     _adapter(tmp_path / "create-tools", create_runner).create_backup(output, key=KEY)
@@ -244,8 +502,17 @@ def test_restore_creates_new_database_and_rollback_removes_partial_target(tmp_pa
         adapter.restore_backup(output, key=KEY)
 
     commands = [Path(call[0]).stem for call in restore_runner.calls]
-    assert commands == ["pg_restore", "createdb", "pg_restore", "dropdb"]
-    assert restore_runner.calls[1][1] == "--maintenance-db=service=reconforge_admin"
+    assert commands == ["pg_restore", "psql", "psql", "pg_restore", "dropdb"]
+    assert restore_runner.calls[1][1:] == (
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=1",
+        "--dbname",
+        "service=reconforge_admin",
+        "--command",
+        'CREATE DATABASE "reconforge_restore_drill" WITH ALLOW_CONNECTIONS false;',
+    )
+    assert "REVOKE CONNECT ON DATABASE \"reconforge_restore_drill\" FROM PUBLIC" in restore_runner.calls[2][-1]
     assert restore_runner.calls[-1][-1] == "reconforge_restore_drill"
 
 
@@ -268,8 +535,10 @@ def test_failed_post_restore_verification_rolls_back_new_database(tmp_path: Path
         _adapter(tmp_path / "restore-tools", runner).restore_backup(output, key=KEY)
     assert [Path(call[0]).stem for call in runner.calls] == [
         "pg_restore",
-        "createdb",
+        "psql",
+        "psql",
         "pg_restore",
+        "psql",
         "psql",
         "dropdb",
     ]
@@ -305,6 +574,23 @@ def test_wrong_key_and_tamper_fail_before_native_restore_calls(tmp_path: Path) -
     assert runner.calls == []
 
 
+def test_profile_binding_is_authenticated_before_any_restore_command(tmp_path: Path) -> None:
+    artifact = tmp_path / "bound-profile.rfpgbackup"
+    _adapter(tmp_path / "create-tools", _Runner()).create_backup(artifact, key=KEY)
+    raw = bytearray(artifact.read_bytes())
+    profile = b"team-synthetic"
+    profile_offset = raw.find(profile)
+    assert profile_offset >= 0
+    raw[profile_offset : profile_offset + len(profile)] = b"evil-profile-1"
+    artifact.write_bytes(raw)
+    runner = _Runner()
+
+    with pytest.raises(PostgresBackupError, match="authentication"):
+        _adapter(tmp_path / "restore-tools", runner).restore_backup(artifact, key=KEY)
+
+    assert runner.calls == []
+
+
 def test_application_service_denies_before_adapter_and_allows_exact_permissions(tmp_path: Path) -> None:
     runner = _Runner()
     service = BackupRestoreApplicationService(_adapter(tmp_path, runner))
@@ -327,6 +613,8 @@ def test_tool_paths_and_database_names_fail_closed(tmp_path: Path) -> None:
                 source_service="source",
                 maintenance_service="admin",
                 restore_database="restore_db",
+                recovery_profile=COMPATIBILITY_RECOVERY_PROFILE,
+                expected_alembic_revision=COMPATIBILITY_ALEMBIC_REVISION,
                 tools=PostgresNativeTools(
                     *(Path(name) for name in ("pg_dump", "pg_restore", "createdb", "dropdb", "psql"))
                 ),
@@ -337,6 +625,26 @@ def test_tool_paths_and_database_names_fail_closed(tmp_path: Path) -> None:
             source_service="source",
             maintenance_service="admin",
             restore_database="postgres;drop",
+            recovery_profile=COMPATIBILITY_RECOVERY_PROFILE,
+            expected_alembic_revision=COMPATIBILITY_ALEMBIC_REVISION,
+            tools=_tools(tmp_path),
+        )
+    with pytest.raises(PostgresBackupError, match="Recovery profile"):
+        PostgresBackupSettings(
+            source_service="source",
+            maintenance_service="admin",
+            restore_database="restore_db",
+            recovery_profile="profile with spaces",
+            expected_alembic_revision=COMPATIBILITY_ALEMBIC_REVISION,
+            tools=_tools(tmp_path),
+        )
+    with pytest.raises(PostgresBackupError, match="Alembic revision"):
+        PostgresBackupSettings(
+            source_service="source",
+            maintenance_service="admin",
+            restore_database="restore_db",
+            recovery_profile=COMPATIBILITY_RECOVERY_PROFILE,
+            expected_alembic_revision="0103;drop",
             tools=_tools(tmp_path),
         )
 
@@ -345,6 +653,7 @@ _LIVE_BACKUP_ENV = (
     "RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE",
     "RECONFORGE_TEST_POSTGRES_MAINTENANCE_SERVICE",
 )
+_LIVE_ACCESS_FENCE_ENV = "RECONFORGE_TEST_POSTGRES_ADMIN_DSN"
 
 
 def _live_native_tools() -> PostgresNativeTools | None:
@@ -371,6 +680,81 @@ def _live_native_tools() -> PostgresNativeTools | None:
             return None
         candidates = {name: Path(path) for name, path in resolved.items() if path is not None}
     return PostgresNativeTools(**{name: path.resolve(strict=True) for name, path in candidates.items()})
+
+
+@pytest.mark.skipif(
+    not os.environ.get(_LIVE_ACCESS_FENCE_ENV),
+    reason="requires an owned PostgreSQL administrator DSN",
+)
+def test_live_postgres_restore_target_access_fence_blocks_runtime_role() -> None:
+    """The target is never PUBLIC-connectable before restore ownership takes effect."""
+
+    psycopg = pytest.importorskip("psycopg")
+    from psycopg import sql
+
+    admin_parameters = psycopg.conninfo.conninfo_to_dict(os.environ[_LIVE_ACCESS_FENCE_ENV])
+    if not admin_parameters.get("user") or not admin_parameters.get("host"):
+        pytest.skip("requires a complete owned PostgreSQL administrator DSN")
+    suffix = uuid4().hex[:12]
+    database_name = "reconforge_restore_fence_" + suffix
+    runtime_role = "rf_restore_runtime_" + suffix
+    runtime_password = uuid4().hex + uuid4().hex
+    control_dsn = psycopg.conninfo.make_conninfo(
+        **{**admin_parameters, "dbname": "postgres", "connect_timeout": "5"}
+    )
+    runtime_dsn = psycopg.conninfo.make_conninfo(
+        **{
+            **admin_parameters,
+            "dbname": database_name,
+            "user": runtime_role,
+            "password": runtime_password,
+            "connect_timeout": "5",
+        }
+    )
+    owner_dsn = psycopg.conninfo.make_conninfo(
+        **{**admin_parameters, "dbname": database_name, "connect_timeout": "5"}
+    )
+    created_role = False
+    created_database = False
+    try:
+        with psycopg.connect(control_dsn, autocommit=True) as administrator:
+            capabilities = administrator.execute(
+                """
+                SELECT rolsuper OR (rolcreaterole AND rolcreatedb)
+                FROM pg_catalog.pg_roles
+                WHERE rolname=current_user
+                """
+            ).fetchone()
+            if capabilities != (True,):
+                pytest.skip("requires an owned PostgreSQL administrator with CREATEROLE and CREATEDB")
+            administrator.execute(
+                sql.SQL(
+                    "CREATE ROLE {} LOGIN PASSWORD {} NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS"
+                ).format(sql.Identifier(runtime_role), sql.Literal(runtime_password))
+            )
+            created_role = True
+            administrator.execute(_create_isolated_target_sql(database_name))
+            created_database = True
+
+            with pytest.raises(psycopg.OperationalError):
+                psycopg.connect(runtime_dsn).close()
+            with pytest.raises(psycopg.OperationalError):
+                psycopg.connect(owner_dsn).close()
+
+            administrator.execute(_fence_isolated_target_access_sql(database_name))
+
+        with psycopg.connect(owner_dsn) as owner:
+            assert owner.execute("SELECT current_database()").fetchone() == (database_name,)
+        with pytest.raises(psycopg.OperationalError):
+            psycopg.connect(runtime_dsn).close()
+    finally:
+        with psycopg.connect(control_dsn, autocommit=True) as administrator:
+            if created_database:
+                administrator.execute(
+                    sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(database_name))
+                )
+            if created_role:
+                administrator.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(runtime_role)))
 
 
 def test_live_native_tools_preserve_command_identity_via_pg_config(
@@ -411,6 +795,8 @@ def test_live_postgres_native_adapter_encrypted_backup_isolated_restore_and_clea
         source_service=os.environ["RECONFORGE_TEST_POSTGRES_SOURCE_SERVICE"],
         maintenance_service=maintenance,
         restore_database=restore_database,
+        recovery_profile="live-postgres-current-head-drill",
+        expected_alembic_revision=POSTGRES_MIGRATION_REVISIONS[-1],
         tools=tools,
         timeout_seconds=1800,
     )

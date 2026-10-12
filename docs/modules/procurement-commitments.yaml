@@ -1,0 +1,60 @@
+id: procurement-commitments
+name: Approved native purchase appropriations and atomic AP consumption
+version: 0.1.0
+maturity: experimental
+owner: supply-operations
+dependencies: [budget-control, procurement-partial, inventory-receipt-posting, finance-core, postgres-identity]
+incompatible_versions: []
+data_classification: confidential-financial
+retention_policy: Immutable original obligation, budget events, commands, responses, audit and outbox
+permissions: [budget_control.read, budget_control.manage, payables.read, payables.manage, payables.approve, inventory.read, finance_core.read, finance_core.post]
+default_roles: []
+migrations: [0127_pg_procurement_commitments]
+domain_invariants:
+  - Native BPC1 purchase original merchandise quantity and cost match a complete approved native appropriation Reserve
+  - Existing native envelope policy and source scope, currency and fiscal period match exactly
+  - Retained approved precision binds current amount authorization; native reads, retries and SQL closure reject live precision drift
+  - Each native AP accrual effect commits atomically with its equal native Consume event
+  - Independent terminal Release equals the original unreceived and unconsumed remainder
+  - Original obligation equals native consumed plus released plus remaining exact minor units
+  - All received per-line quantities are accrued before release and pending source drafts prohibit release
+  - Native historical command acknowledgements remain immutable and current authority is required on retries
+  - Native SQL closure rejects orphan BPC1 purchases and detached budget or AP effects
+  - Ordinary procurement routes inspect the native number before reading protected new tables
+domain_events: [procurement_commitment_create, procurement_commitment_consume, procurement_commitment_release]
+api_routes:
+  - /api/v1/procurement-commitments/orders
+  - /api/v1/procurement-commitments/orders/{order_id}
+  - /api/v1/procurement-commitments/orders/{order_id}/consume
+  - /api/v1/procurement-commitments/orders/{order_id}/release
+cli_commands: []
+ui_routes: [/procurement-partial, /budget-control]
+import_schemas: []
+export_schemas: []
+synthetic_fixtures: [tests/test_postgres_procurement_commitments.py, tests/erp_procurement_commitments_browser.py]
+threat_model:
+  - Two forced-RLS retained tables bind canonical tenant, workspace, organization and legal entity
+  - Current persisted humans and independently retained AP maker, reviewer and poster identities are required
+  - Envelope-before-parent locking serializes appropriation limit and terminal release
+  - Existing native budget events and cached balances remain the sole appropriation ledger
+  - Typed native AP participant plus deferred SQL closure deny detached publication
+benchmarks: []
+rollback_plan: Empty rollback only; populated obligations require forward correction or verified pre-upgrade restore; restore existing app table ACL after recreation
+test_matrix:
+  domain: tests/test_procurement_commitments.py
+  postgres: tests/test_postgres_procurement_commitments.py
+  api: tests/test_postgres_procurement_commitments_api.py
+  web: apps/web/src/procurement-commitment-data.test.ts
+  web_lifecycle: apps/web/src/components/ProcurementCommitmentPanel.test.tsx
+  browser: apps/web/live/erp-procurement-commitments.spec.ts
+adapter_matrix:
+  postgres: Composes approved native budget, existing procurement/AP/FIFO/GL and supplier installment engines
+  sqlite: No operational fallback; existing standalone SQLite budget control remains available
+runtime_acceptance: Developmental source evidence exists; final clean native, HTTPS and populated restore reports must be bound to the integration commit
+limitations:
+  - New multiline purchase only, one approved native envelope and original fiscal period
+  - Merchandise only; paid freight and duties are refused until appropriation-safe charge admission is completed
+  - Zero-tax original procurement contract; no tax or FX engine duplication
+  - 128 lines, existing 1024 receipt/invoice source ceilings and 1000 commitment events per envelope
+  - Release requires no incomplete source drafts; it preserves source numbers and original native command history
+  - No supplier return, budget reinstatement, PR, RFQ, quotation, annual carry-forward or manufacturing claim

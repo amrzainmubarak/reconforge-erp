@@ -108,6 +108,27 @@ def test_camt053_rejects_invalid_financial_or_identity_inputs(mutator, error: st
         parse_camt053_bytes(mutator(_fixture()))
 
 
+def test_camt053_rejects_scientific_notation_in_amounts() -> None:
+    scientific = _fixture().replace(b'<Amt Ccy="EUR">20.00</Amt>', b'<Amt Ccy="EUR">2e1</Amt>')
+    with pytest.raises(Camt053Error, match="amount_invalid"):
+        parse_camt053_bytes(scientific)
+
+
+@pytest.mark.parametrize("amount", (b"1,00.00", b"(20.00)"))
+def test_camt053_rejects_locale_or_accounting_amount_text(amount: bytes) -> None:
+    invalid = _fixture().replace(b"100.00", amount, 1)
+    with pytest.raises(Camt053Error, match="amount_invalid"):
+        parse_camt053_bytes(invalid)
+
+
+def test_camt053_canonicalizes_equivalent_amount_text_before_digest() -> None:
+    canonical = parse_camt053_bytes(_fixture())
+    equivalent = _fixture().replace(b"100.00", b"100.0").replace(b"20.00", b"20.0")
+    replay = parse_camt053_bytes(equivalent)
+    assert replay.source_digest == canonical.source_digest
+    assert [line.amount for line in replay.lines] == ["100", "20"]
+
+
 def test_camt053_rejects_entity_expansion_and_multiple_statements() -> None:
     hostile = b'<!DOCTYPE foo [<!ENTITY xxe "secret">]><Document>&xxe;</Document>'
     with pytest.raises(Camt053Error, match="xml_invalid"):

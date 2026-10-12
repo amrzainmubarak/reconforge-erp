@@ -11,10 +11,10 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, InvalidOperation
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from reconforge.connectors.amounts import canonical_connector_amount
 from reconforge.connectors.manifest import (
     AuthenticationMethod,
     ConnectorCapability,
@@ -71,13 +71,7 @@ class ReferenceErpLedgerLine(BaseModel):
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, value: str) -> str:
-        try:
-            parsed = Decimal(value)
-        except InvalidOperation as exc:
-            raise ValueError("amount must be exact Decimal text") from exc
-        if not parsed.is_finite():
-            raise ValueError("amount must be finite")
-        return value
+        return canonical_connector_amount(value)
 
 
 class ReferenceErpLedgerPage(BaseModel):

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "classification": "verified-source-and-evidence-sha256-not-credentials",
+  "subject_commit": "b915340043fdd6775d088813e27d8a27aba717d1",
+  "finding_file": "docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json",
+  "finding_file_git_blob_sha256": "f17d36977b96811ee1ef56c015c03538e8e60b9d09a07929bd1ee64aabd8b5b0",
+  "reviewed_count": 5,
+  "entries": [
+    {
+      "line": 113,
+      "reference": "reconforge/auth/field_access.py",
+      "sha256": "4d6d5e9856786d69ac32d5aa508e49b7f1d5490d511c59465a4fd5d20af5a363",
+      "verified_against": "exact-source-git-blob",
+      "history_fingerprint": "b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:113",
+      "tree_fingerprint": "docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:113"
+    },
+    {
+      "line": 114,
+      "reference": "tests/test_receivables_policy_api.py",
+      "sha256": "5ff1fdb5f22e2bea63eb0d506a92472e3906b54d0bbce05b22c4aa8e434fc326",
+      "verified_against": "exact-source-git-blob",
+      "history_fingerprint": "b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:114",
+      "tree_fingerprint": "docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:114"
+    },
+    {
+      "line": 115,
+      "reference": "tests/test_receivables_money_api_contract.py",
+      "sha256": "17a8e76597ecb9a36c0181281ae1836760d4a1dc2e02c3a1373d4ef04a2974b7",
+      "verified_against": "exact-source-git-blob",
+      "history_fingerprint": "b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:115",
+      "tree_fingerprint": "docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:115"
+    },
+    {
+      "line": 116,
+      "reference": "tests/test_field_access.py",
+      "sha256": "78925227774c97c23aadf4b0652dd5f7f4219331310088d8348cd576d7cadb8e",
+      "verified_against": "exact-source-git-blob",
+      "history_fingerprint": "b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:116",
+      "tree_fingerprint": "docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:116"
+    },
+    {
+      "line": 122,
+      "reference": "output/verification-2026-10-03/prod033-api-contract-fixed.xml",
+      "sha256": "cb5d5abbe93dc4f9abb65d6951b81f4d4cc5f6ec16d7f1e2a2e852fa02a77b9d",
+      "verified_against": "retained-local-evidence-artifact",
+      "history_fingerprint": "b915340043fdd6775d088813e27d8a27aba717d1:docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:122",
+      "tree_fingerprint": "docs/execution/RECEIVABLES_POLICY_API_2026-10-03.json:generic-api-key:122"
+    }
+  ],
+  "scanner_config_changed": false,
+  "broad_exclusion_added": false,
+  "prior_failed_artifacts": [
+    {
+      "artifact": "prod033-publication-history-secrets.json",
+      "sha256": "6b3d8d9e01eaa8d093c6eac9f9a6e1e42c24bab09429db2fa4e047cc300dfc12"
+    },
+    {
+      "artifact": "prod033-publication-tree-secrets.json",
+      "sha256": "e76e32530392818562f2584cdbd7bb2e19a905fabba1644513796e2489f067f4"
+    }
+  ]
+}

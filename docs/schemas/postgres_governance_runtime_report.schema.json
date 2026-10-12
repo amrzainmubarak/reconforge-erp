@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reconforge.local/schemas/postgres_governance_runtime_report.schema.json",
+  "title": "ReconForge PostgreSQL governance runtime report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "executed_at",
+    "status",
+    "runtime",
+    "application_role",
+    "migration_head",
+    "tests",
+    "observed",
+    "limitations",
+    "report_digest"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "report_id": {"const": "postgres-governance-runtime-e972-2026-08-26"},
+    "executed_at": {"const": "2026-08-26"},
+    "status": {"const": "passed"},
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["postgres_image", "postgres_image_digest", "postgres_version", "docker_engine_scope", "database_name"],
+      "properties": {
+        "postgres_image": {"const": "postgres:17.10-alpine"},
+        "postgres_image_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+        "postgres_version": {"const": "17.10"},
+        "docker_engine_scope": {"const": "single_local_host"},
+        "database_name": {"const": "reconforge_e972"}
+      }
+    },
+    "application_role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role_name", "superuser", "bypass_rls"],
+      "properties": {
+        "role_name": {"const": "reconforge_e972_app"},
+        "superuser": {"const": false},
+        "bypass_rls": {"const": false}
+      }
+    },
+    "migration_head": {"const": "0092_pg_close_lock_evidence"},
+    "tests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["security_governance", "identity_administration"],
+      "properties": {
+        "security_governance": {"$ref": "#/$defs/test_result"},
+        "identity_administration": {"$ref": "#/$defs/test_result"}
+      }
+    },
+    "observed": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "tenant_isolation",
+          "atomic_retention_policy_lifecycle",
+          "retention_floor_not_shortened",
+          "identity_session_invalidation",
+          "step_up_and_last_admin_guards",
+          "migration_head_verified"
+        ]
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}
+    },
+    "report_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+  },
+  "$defs": {
+    "test_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selector", "passed", "count"],
+      "properties": {
+        "selector": {"type": "string", "minLength": 1},
+        "passed": {"const": true},
+        "count": {"const": 1}
+      }
+    }
+  }
+}

@@ -1,5 +1,17 @@
 # Changelog
 
+- Preserved exact Money/minor-unit conversion and Finance amount readback under
+  low caller Decimal precision and rounding traps. Boolean minor-unit inputs
+  now fail consistently with MinorMoney. Existing valid API/CLI/schema and
+  retained currency-policy contracts remain unchanged; no migration is needed.
+- Repaired AP allocation/reversal PostgreSQL parity collection, retained-policy
+  fixture grants and the authenticated exception-review screenshot journey.
+  Updated only source-map-js to 1.2.2 in the web lock and retained the original
+  October 8 audit failures separately from repair acceptance.
+- Corrected the disposable Docker PostgreSQL tool runner's service-only source
+  profile command and reviewed exact Gitleaks fingerprints for synthetic auth
+  fixtures; full history/tree scanning and the financial runtime remain in scope.
+
 - Hardened the local Docker CLI image with a closed deny-by-default build
   context, two digest-pinned stages, a runtime-only locked environment, and
   fixed non-root UID/GID 10001. A no-network/read-only-root demo gate exposed

@@ -104,7 +104,7 @@ def test_workspace_scope_is_used_for_identity_overlap_and_reads() -> None:
     assert "application_workspace_id=%s" in adapter
     assert "idx_organizations_workspace_code" in adapter
     assert "links.workspace_id=%s" in adapter
-    assert "set_local_tenant_scope" in adapter
+    assert "ensure_repository_tenant_scope" in adapter
     assert "Organization reference was not found in the selected workspace" in adapter
 
 

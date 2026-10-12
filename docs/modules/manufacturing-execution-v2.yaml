@@ -47,7 +47,7 @@ api_routes:
 cli_commands: []
 ui_routes: []
 import_schemas: [manufacturing-workcenter-v2, manufacturing-routing-v2, manufacturing-order-v2, manufacturing-held-production-v2, manufacturing-inspection-v2]
-export_schemas: [original-source-and-native-financial-proof]
+export_schemas: [manufacturing-execution-proof-v2]
 synthetic_fixtures:
   - Material2900 plus Labor600 plus Overhead300 equals FG3420 plus abnormal loss380 plus residual WIP0.
 threat_model:
@@ -64,8 +64,8 @@ test_matrix:
   postgresql: tests/test_postgres_manufacturing_execution_v2.py
   api: tests/test_manufacturing_execution_v2_api_contract.py; actual-root-registration-and-native-http-pending
   studio: pending-owned-studio-integration
-  independent_oracle: pending-original-native-export-and-standalone-integer-verifier
+  independent_oracle: tests/test_manufacturing_v2_cycle_oracle.py; standalone-original-native-checkpoints-passed-developmentally
 backend_support:
   postgres: native-owner-development
   sqlite: unavailable-native-ME1-dependency
-claim_boundary: Core real PostgreSQL golden is developmental; API, Studio, adversarial and restored-source acceptance remain pending.
+claim_boundary: Actual original cost/QC golden and independently pinned held/intermediate/final native proofs pass developmentally; integrated HTTP/Studio/restore/full-source acceptance remains pending.

@@ -111,7 +111,7 @@ BEGIN
  RETURN whole+CASE WHEN residual*2>60 OR(residual*2=60 AND mod(whole,2)=1) THEN 1 ELSE 0 END;
 END $me$;
 CREATE FUNCTION reconforge.me2_protect() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
-DECLARE a TEXT:=current_setting('app.manufacturing_execution_v2_actor_id',true);d JSONB;op TEXT;p TEXT;allowed TEXT[];g RECORD;period TEXT;day TEXT;
+DECLARE a TEXT:=current_setting('app.manufacturing_execution_v2_actor_id',true);d JSONB;op TEXT;p TEXT;allowed TEXT[];g RECORD;period TEXT;day TEXT;field TEXT;
 BEGIN
  IF TG_OP='DELETE' THEN PERFORM reconforge.me2_assert(FALSE,'Manufacturing v2 source and evidence history is immutable');END IF;
  IF TG_TABLE_NAME IN('manufacturing_execution_v2_events','manufacturing_execution_v2_commands') THEN d:=reconforge.me2_object(NEW.tenant_id,NEW.object_id);op:=NEW.operation;
@@ -138,6 +138,13 @@ BEGIN
    'Every new manufacturing command requires its current scoped open period and valid business date');
  END IF;
  IF TG_OP='INSERT' THEN
+  IF TG_TABLE_NAME IN('manufacturing_execution_v2_definitions','manufacturing_execution_v2_orders',
+   'manufacturing_execution_v2_productions','manufacturing_execution_v2_inspections') THEN
+   FOREACH field IN ARRAY ARRAY['id','workspace_id','organization_id','legal_entity_id','material_order_id','routing_id','order_id','production_id'] LOOP
+    IF to_jsonb(NEW)?field THEN PERFORM reconforge.me2_assert(NEW.payload?field AND NEW.payload->field=to_jsonb(NEW)->field,
+     'Original ME2 payload identity must exactly match its native source hierarchy and parents');END IF;
+   END LOOP;
+  END IF;
   IF TG_TABLE_NAME IN('manufacturing_execution_v2_events','manufacturing_execution_v2_commands') THEN PERFORM reconforge.me2_assert(NEW.actor_id=a,'Evidence retains actual current human');
   ELSIF TG_TABLE_NAME='manufacturing_execution_v2_cost_releases' THEN PERFORM reconforge.me2_assert(NEW.actor_id=a,'Release retains current cancellation actor');
   ELSIF TG_TABLE_NAME<>'manufacturing_execution_v2_cost_claims' THEN PERFORM reconforge.me2_assert(NEW.phase=0,'ME2 sources are born unposted');END IF;RETURN NEW;

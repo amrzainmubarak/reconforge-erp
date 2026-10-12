@@ -116,6 +116,24 @@ def half_even(value: Fraction) -> int:
     return whole + int(residual * 2 > value.denominator or residual * 2 == value.denominator and whole % 2)
 
 
+def export_native_proof(result: Any, stage: str) -> None:
+    """Optional file-only export over the same real synthetic native cycle."""
+    import json
+    import os
+    from pathlib import Path
+
+    from tests.manufacturing_execution_v2_browser import manufacturing_execution_v2_proof
+
+    destination = os.environ.get("RECONFORGE_ME2_NATIVE_PROOF_DIR")
+    if destination:
+        directory = Path(destination)
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / (stage + ".json")
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(manufacturing_execution_v2_proof(result, actor_name="poster"), handle, sort_keys=True, indent=2)
+            handle.write("\n")
+
+
 def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_fg_and_abnormal_loss(manufacturing_v2_database: tuple[str, str]) -> None:
     from reconforge.infrastructure.postgres_scope_authority import PostgresScopeAuthorityRepository
 
@@ -144,6 +162,7 @@ def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_
                 operations=[{"sequence": 1, "minutes": 24 if index == 1 else 36, "evidence_reference": "SYN-RUN-" + str(index)}],
                 period_id="period", posting_date=f"2026-10-0{4 + index}", command_id=f"produce-{index}", reason="Actual partial production awaiting inspection", actor=actor)
         held = owner_phase(result, owner_phase(result, held, "review", "production"), "post", "production", name="restricted-poster")
+        export_native_proof(result, "held-" + str(index))
         with result.actor("poster") as (connection, _, actor):
             view = PostgresManufacturingExecutionV2Repository(connection, result.tenant).get_order(source["id"], actor=actor)
             assert view["held_quantity_scaled"] == int(produced)
@@ -163,6 +182,7 @@ def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_
         assert final["material"]["execution_version"] == 2 and final["material"]["wip_minor"] == 0
     balances = financial_oracle(result)
     assert (balances["FG"], balances["SCRAP"], balances["WIP"], balances["LABOR"], balances["OVERHEAD"]) == (3420, 380, 0, 1400, 700)
+    export_native_proof(result, "final")
 
 
 def business_snapshot(result: Any) -> str:
@@ -436,3 +456,33 @@ def test_reserved_order_and_held_names_cannot_become_standalone_fg_receipts_or_e
     with result.actor("poster") as (connection, _, actor):
         parent = PostgresManufacturingExecutionV2Repository(connection, result.tenant).get_order(source["id"], actor=actor)
         assert parent["wip_minor"] == 3800 and parent["held_quantity_scaled"] == 4
+
+
+def test_direct_sql_forged_production_birth_cannot_mask_original_payload_identity(manufacturing_v2_database: tuple[str, str]) -> None:
+    from uuid import uuid4
+
+    import psycopg
+
+    result = system(manufacturing_v2_database)
+    source = order(result)
+    owner_phase(result, owner_phase(result, owner_phase(result, source, "prepare"), "review"), "post")
+    with result.actor("maker") as (connection, _, actor):
+        held = PostgresManufacturingExecutionV2Repository(connection, result.tenant).produce(source["id"], output_quantity="4",
+            operations=[{"sequence": 1, "minutes": 24, "evidence_reference": "SYN-BIRTH-IDENTITY"}], period_id="period", posting_date="2026-10-05",
+            command_id="identity-produce", reason="Exact production source identity", actor=actor)
+        payload = connection.execute("SELECT payload FROM reconforge.manufacturing_execution_v2_productions WHERE tenant_id=%s AND id=%s",
+            (result.tenant, held["id"])).fetchone()["payload"]
+    before = business_snapshot(result)
+    for field in ("id", "order_id", "workspace_id", "organization_id", "legal_entity_id"):
+        with result.actor("maker") as (connection, _, actor):
+            identifier = "ME2P-" + uuid4().hex.upper()
+            forged = {**payload, "id": identifier, field: "FOREIGN-SOURCE"}
+            connection.execute("SELECT set_config('app.manufacturing_execution_v2_actor_id',%s,true)", (actor.user_id,))
+            with pytest.raises(psycopg.errors.CheckViolation, match="payload identity"), connection.transaction():
+                # Assert the INSERT itself fails, before history could merely
+                # reject an orphan at transaction commit or uniqueness can mask it.
+                connection.execute("""INSERT INTO reconforge.manufacturing_execution_v2_productions
+                    (tenant_id,id,order_id,workspace_id,organization_id,legal_entity_id,payload,source_digest)
+                    VALUES(%s,%s,%s,'work','org','entity',%s::jsonb,%s)""",
+                    (result.tenant, identifier, source["id"], canonical_json(forged), digest_payload(forged)))
+        assert business_snapshot(result) == before

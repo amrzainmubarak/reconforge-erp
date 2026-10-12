@@ -40,13 +40,14 @@ def test_percentiles_use_original_vectors_and_refuse_missing_or_nonfinite() -> N
             common.summary(values)
 
 
-@pytest.mark.parametrize("mutation", ["missing_cycle", "same_population", "misassigned_requests", "failed_request", "resource_error", "source_changed", "cleanup_failed"])
+@pytest.mark.parametrize("mutation", ["missing_cycle", "same_tenant", "misassigned_requests", "failed_request", "resource_error", "source_changed", "cleanup_failed"])
 def test_incomplete_or_substituted_acceptance_is_refused(mutation: str) -> None:
     report = accepted()
     driver.require_completion(report)
     if mutation == "missing_cycle":
         report["cycles"].pop()
-    elif mutation == "same_population":
+    elif mutation == "same_tenant":
+        report["cycles"][1]["tenant_id"] = report["cycles"][0]["tenant_id"]
         report["cycles"][1]["native_effects"] = report["cycles"][0]["native_effects"]
     elif mutation == "misassigned_requests":
         report["requests"][0]["cycle"] = 1
@@ -60,6 +61,19 @@ def test_incomplete_or_substituted_acceptance_is_refused(mutation: str) -> None:
         report["owned_container_removed"] = False
     with pytest.raises(ValueError):
         driver.require_completion(report)
+
+
+def test_local_native_ids_are_distinct_only_with_their_original_tenant() -> None:
+    report = accepted()
+    for row in report["cycles"]:
+        row["native_effects"] = [{"effect_id": f"retained-local-{index}"} for index in range(5)]
+    assert len({effect["effect_id"] for row in report["cycles"] for effect in row["native_effects"]}) == 5
+    assert len({(row["tenant_id"], effect["effect_id"]) for row in report["cycles"] for effect in row["native_effects"]}) == 10
+    driver.require_financial_completion(report)
+    driver.require_completion(report)
+    report["cycles"][1]["native_effects"][0] = copy.deepcopy(report["cycles"][1]["native_effects"][1])
+    with pytest.raises(ValueError, match="five original native effects"):
+        driver.require_financial_completion(report)
 
 
 def test_missing_server_observation_and_nonmonotonic_cpu_are_not_zero(monkeypatch: pytest.MonkeyPatch) -> None:

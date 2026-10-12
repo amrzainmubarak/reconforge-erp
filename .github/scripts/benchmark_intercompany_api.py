@@ -69,7 +69,9 @@ def require_financial_completion(report: dict[str, Any]) -> None:
     if type(count) is not int or len(cycles) != count or any(type(row["index"]) is not int for row in cycles) or {row["index"] for row in cycles} != set(range(count)) or any(row["financial_verification"] != "passed" for row in cycles):
         raise ValueError("Every requested original cycle and independent financial proof required")
     ids = [row["effect_id"] for cycle in cycles for row in cycle["native_effects"]]
-    if len(ids) != count * 5 or any(len(row["native_effects"]) != 5 for row in cycles) or any(not isinstance(identifier, str) or not identifier for identifier in ids) or len(ids) != len(set(ids)) or len({row["tenant_id"] for row in cycles}) != count or len({row["source_id"] for row in cycles}) != count:
+    # Local effect IDs may repeat across fresh tenants; native ownership is the pair.
+    scoped_ids = [(cycle["tenant_id"], row["effect_id"]) for cycle in cycles for row in cycle["native_effects"]]
+    if len(ids) != count * 5 or any(len(row["native_effects"]) != 5 for row in cycles) or any(not isinstance(identifier, str) or not identifier for identifier in ids) or len(scoped_ids) != len(set(scoped_ids)) or len({row["tenant_id"] for row in cycles}) != count or len({row["source_id"] for row in cycles}) != count:
         raise ValueError("Fresh unique tenants and five original native effects per cycle required")
 
 

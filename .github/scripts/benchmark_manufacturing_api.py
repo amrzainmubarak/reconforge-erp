@@ -119,7 +119,7 @@ def require_financial_completion(report: dict[str, Any]) -> None:
     rows, count = report["cycles"], report["configuration"]["cycles"]
     if type(count) is not int or not 1 <= count <= 50 or len(rows) != count or any(type(row["index"]) is not int for row in rows) or {row["index"] for row in rows} != set(range(count)):
         raise ValueError("Every bounded original manufacturing cycle required")
-    all_ids = []
+    all_ids: list[tuple[str, str]] = []
     for row in rows:
         if row["financial_verification"] != "passed" or (row["issued_material_minor"], row["finished_cost_minor"], row["abnormal_scrap_minor"], row["remaining_wip_minor"], row["balanced_turnover_minor"]) != ("2900", "2610", "290", "0", "21133"):
             raise ValueError("Independent actual original manufacturing cost conservation required")
@@ -128,7 +128,8 @@ def require_financial_completion(report: dict[str, Any]) -> None:
             raise ValueError("Two preseeded original input effects and four timed manufacturing effects must be disjoint and complete")
         if any(type(value) is not str or not value for value in verified) or row["posting_effects"] != 6:
             raise ValueError("Six exact original native effect identities required")
-        all_ids.extend(verified)
+        # Native posting effects use PRIMARY KEY(tenant_id,id), including input receipts.
+        all_ids.extend((row["tenant_id"], effect_id) for effect_id in verified)
         for key in ("seconds", "client_cpu_seconds", "proof_export_seconds", "independent_oracle_seconds"):
             if type(row[key]) not in (int, float) or not math.isfinite(row[key]) or row[key] < 0:
                 raise ValueError("Complete finite original timing observations required")

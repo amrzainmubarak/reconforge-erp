@@ -141,3 +141,41 @@ def test_adapter_declares_original_oracle_tuple_and_runtime_secrets() -> None:
     scenario = driver.ManufacturingScenario()
     assert scenario.oracle_paths == (scenario.oracle_path,) and scenario.expected_requests_per_cycle == 22
     assert scenario.redaction_secrets(SimpleNamespace(password="private")) == ["private"]
+
+
+def shared_receipt_population(tmp_path: Path) -> dict[str, Any]:
+    result, _ = cycle(tmp_path)
+    rows = []
+    for index in range(3):
+        row = copy.deepcopy(result)
+        row.update(index=index, tenant_id=f"original-tenant-{index}", source_id=f"original-source-{index}")
+        timed = {effect_id: f"timed-{index}-{effect_id}" for effect_id in row["timed_manufacturing_effect_ids"]}
+        row["timed_manufacturing_effect_ids"] = [timed[effect_id] for effect_id in row["timed_manufacturing_effect_ids"]]
+        row["original_effect_ids"] = [timed.get(effect_id, effect_id) for effect_id in row["original_effect_ids"]]
+        rows.append(row)
+    return {"configuration": {"cycles": 3}, "cycles": rows}
+
+
+def test_real_owner_accepts_repeated_input_receipt_ids_in_three_distinct_tenants(tmp_path: Path) -> None:
+    report = shared_receipt_population(tmp_path)
+    rows = report["cycles"]
+    assert len({effect_id for row in rows for effect_id in row["original_effect_ids"]}) == 14
+    assert len({(row["tenant_id"], effect_id) for row in rows for effect_id in row["original_effect_ids"]}) == 18
+    assert len({(row["tenant_id"], effect_id) for row in rows for effect_id in row["timed_manufacturing_effect_ids"]}) == 12
+    assert all(row["preseeded_input_effect_ids"] == rows[0]["preseeded_input_effect_ids"] for row in rows)
+    driver.ManufacturingScenario().require_financial_completion(report)
+
+
+@pytest.mark.parametrize("mutation", ["duplicate_original", "duplicate_timed", "same_tenant", "same_source"])
+def test_real_owner_refuses_scoped_duplicates_and_reused_admissions(tmp_path: Path, mutation: str) -> None:
+    report = shared_receipt_population(tmp_path)
+    driver.require_financial_completion(report)
+    row = report["cycles"][1]
+    if mutation in {"duplicate_original", "duplicate_timed"}:
+        key = "original_effect_ids" if mutation == "duplicate_original" else "timed_manufacturing_effect_ids"
+        row[key][0] = row[key][1]
+    else:
+        key = "tenant_id" if mutation == "same_tenant" else "source_id"
+        row[key] = report["cycles"][0][key]
+    with pytest.raises(ValueError):
+        driver.require_financial_completion(report)

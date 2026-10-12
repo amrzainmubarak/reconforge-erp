@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -34,6 +35,8 @@ OWNER = "reconforge.owner=enterprise-finance-benchmark"
 BUSINESS_SECONDS, CHILD_SECONDS, TOTAL_SECONDS, RESERVE = 1200, 1500, 3300, 120
 MODES = {"four-worker": (4, ["--profile-stages", "--profile-database"]),
          "serial-cpu": (1, ["--profile-stages", "--profile-cpu"])}
+LARGE_MODE = "large-snapshot"
+PROFILE_CONFIG = {**MODES, LARGE_MODE: (4, ["--profile-stages"])}
 REVISIONS = {"baseline": "0132_pg_stock_inverse_dispatch", "current": "0136_pg_inventory_scope",
              "projection": "0137_pg_intercompany_projection"}
 REQUIRED_MODULES = {"reconforge.infrastructure.postgres_finance_core", "reconforge.infrastructure.postgres_finance_posting",
@@ -135,6 +138,40 @@ def percentile(raw: list[Any], retained: dict[str, Any]) -> None:
                 for name, fraction in (("p50", .5), ("p95", .95), ("p99", .99))), "Retained percentile differs from original raw vector")
 
 
+def verify_snapshot(packet: dict[str, Any]) -> dict[str, Any]:
+    """Independent integer/dimensional admission over the original reviewed reads."""
+    snapshot = packet["snapshot_reads"]
+    exact_ints(snapshot, ("line_count", "concurrency"))
+    require(snapshot["status"] == "passed" and snapshot["fixture_stage"] == "complete" and snapshot["line_count"] == 1000
+            and snapshot["expected_total_minor"] == "500" and snapshot["concurrency"] == 1
+            and snapshot["outside_primary_posting_measurement"] is True
+            and snapshot["seed"] == "alternating-cash-equity-one-minor-v1"
+            and snapshot["runtime_role_flags"] == [False, False] and all(type(v) is bool for v in snapshot["runtime_role_flags"])
+            and type(snapshot["expected_validation_digest"]) is str
+            and re.fullmatch(r"[a-f0-9]{64}", snapshot["expected_validation_digest"]), "Incomplete reviewed1000-line journal")
+    require(set(snapshot["stage_measurements"]) == {"prepare", "review", "post"}
+            and all(numeric(row[key]) for row in snapshot["stage_measurements"].values()
+                    for key in ("seconds", "client_process_cpu_seconds")), "Missing whole authenticated journal stage observations")
+    require(set(snapshot["samples"]) == {"per_line_baseline", "joined_snapshot"}, "Missing alternating original snapshot readers")
+    dimensions = sum(2 for index in range(1000) if index % 3 == 0)
+    require(sum(1 for index in range(1000) if index % 2 == 0) == 500 and dimensions == 668, "Independent large journal oracle differs")
+    for samples in snapshot["samples"].values():
+        require([row["repetition"] for row in samples] == [0, 1, 2], "Incomplete large journal read repetitions")
+        for row in samples:
+            exact_ints(row, ("repetition", "lines", "dimension_links", "client_execute_calls", "peak_python_allocated_bytes"))
+            require(row["status"] == "complete" and row["lines"] == 1000 and row["dimension_links"] == dimensions
+                    and row["debit_minor"] == row["credit_minor"] == "500" and row["validation_digest"] == snapshot["expected_validation_digest"]
+                    and row["client_execute_calls"] > 0 and row["peak_python_allocated_bytes"] >= 0
+                    and numeric(row["seconds"]) and numeric(row["client_process_cpu_seconds"]), "Independent large journal read/digest failed")
+    before = statistics.median(row["seconds"] for row in snapshot["samples"]["per_line_baseline"])
+    after = statistics.median(row["seconds"] for row in snapshot["samples"]["joined_snapshot"])
+    require(after > 0 and snapshot["median_seconds_baseline"] == before and snapshot["median_seconds_optimized"] == after
+            and snapshot["measured_speedup"] == before / after, "Retained original snapshot medians differ")
+    return {"status": "passed", "lines": 1000, "debit_minor": "500", "credit_minor": "500", "dimension_links": dimensions,
+            "snapshot_read_requests": 6, "expected_validation_digest": snapshot["expected_validation_digest"],
+            "stage_measurements": snapshot["stage_measurements"], "scope": "Whole authenticated journal stages and six reviewed snapshot reads; no per-stage WAL/I/O counter windows"}
+
+
 def verify_financial(packet: dict[str, Any], expected_source: dict[str, Any], mode: str, command: list[str], harness: Path) -> dict[str, Any]:
     require(expected_source["variant"] in REVISIONS and expected_source["revision"] == REVISIONS[expected_source["variant"]],
             "Unknown expected diagnostic migration contract")
@@ -148,8 +185,8 @@ def verify_financial(packet: dict[str, Any], expected_source: dict[str, Any], mo
             and Path(packet["launch_cwd"]).resolve() == Path(expected_source["root"]), "Common harness/command differs")
     exact_ints(packet, ("workers", "repetitions", "posting_warmup_cycles", "max_seconds", "snapshot_lines"))
     require(packet["counts"] == [100] and all(type(v) is int for v in packet["counts"])
-            and packet["workers"] == MODES[mode][0] and packet["repetitions"] == 3 and packet["posting_warmup_cycles"] == 20
-            and packet["max_seconds"] == BUSINESS_SECONDS and packet["snapshot_lines"] == 0 and packet["image"] == IMAGE
+            and packet["workers"] == PROFILE_CONFIG[mode][0] and packet["repetitions"] == 3 and packet["posting_warmup_cycles"] == 20
+            and packet["max_seconds"] == BUSINESS_SECONDS and packet["snapshot_lines"] == (1000 if mode == LARGE_MODE else 0) and packet["image"] == IMAGE
             and packet["profile"] == "native-three-human-cash-equity-v1" and packet["seed"] == "enterprise-native-v1"
             and packet["cost_per_transaction"] is None and packet["runtime_role_flags"] == [False, False]
             and all(type(v) is bool for v in packet["runtime_role_flags"]), "Profile configuration/current restricted role differs")
@@ -203,7 +240,7 @@ def verify_financial(packet: dict[str, Any], expected_source: dict[str, Any], mo
     if mode == "four-worker":
         require(packet["posting_database_profile"]["status"] == "complete" and packet["postgres_configuration"]["track_io_timing"] == "on",
                 "Native PostgreSQL query discovery missing")
-    else:
+    elif mode == "serial-cpu":
         exact_ints(retained["function_profile"], ("cycle_ceiling",))
         require(retained["function_profile"]["cycle_ceiling"] == 32 and retained["function_profile"]["functions"], "Serial function profile missing")
     sampling = packet["resource_sampling"]
@@ -225,8 +262,12 @@ def verify_financial(packet: dict[str, Any], expected_source: dict[str, Any], mo
                       "thread_cpu_seconds_sum": sum(row["thread_cpu_seconds"] for row in group),
                       "wall_seconds_median": statistics.median(row["seconds"] for row in group)}
               for phase in sorted({row["phase"] for row in measured}) if (group := [row for row in measured if row["phase"] == phase])}
-    return {"financial_verification": "passed", "oracle_minor": total, "cycles": 100, "warmups": 20, "read_requests": 303,
-            "phase_observations": 1080, "measured_phases": phases, "performance_comparison_accepted": False}
+    result = {"financial_verification": "passed", "oracle_minor": total, "cycles": 100, "warmups": 20, "read_requests": 303,
+              "phase_observations": 1080, "measured_phases": phases, "performance_comparison_accepted": False}
+    if mode == LARGE_MODE:
+        result["large_journal"] = verify_snapshot(packet)
+        require("posting_database_profile" not in packet, "Large journal run unexpectedly includes SQL profiling")
+    return result
 
 
 def docker_words(words: list[str], mode: str) -> dict[str, Any]:
@@ -270,7 +311,7 @@ def verify_container(value: dict[str, Any], intent: dict[str, Any], cid: str) ->
             "actual_ports": ports, "publish_all_ports": host["PublishAllPorts"], "privileged": host["Privileged"]}
 
 
-def install_observer(directory: Path, mode: str, process: dict[str, Any]) -> None:
+def install_observer(directory: Path, mode: str, process: dict[str, Any], ledger_helper: Any = None) -> None:
     original = subprocess.run
     pending: list[str] | None = None
 
@@ -296,6 +337,27 @@ def install_observer(directory: Path, mode: str, process: dict[str, Any]) -> Non
         if type(words) in (list, tuple) and list(words[:3]) == ["docker", "rm", "--force"]:
             seal = read(directory / "creation-response.json")
             require(list(words) == ["docker", "rm", "--force", seal["container_id"]], "Public harness cleanup ID differs from acknowledged ownership")
+            if mode == LARGE_MODE:
+                try:
+                    created, intent = read(directory / "created-container.json"), read(directory / "creation-intent.json")
+                    require(created["container_id"] == seal["container_id"] and created["name"] == "/" + intent["name"]
+                            and created["image"] == intent["image"] == IMAGE and created["cmd"] == intent["cmd"]
+                            and created["entrypoint"] == intent["entrypoint"] and created["owner_label"] == intent["label"]
+                            and seal["process"] == intent["process"] == process
+                            and seal["intent_sha256"] == digest(directory / "creation-intent.json")
+                            and seal["audit_sha256"] == digest(directory / "creation-audit.json"),
+                            "Live oracle lacks complete original immutable creation custody")
+                    require(created["auto_remove"] is True and created["restart_policy"]["Name"] == "no"
+                            and created["publish_all_ports"] is False and created["privileged"] is False
+                            and created["port_bindings"]["5432/tcp"][0]["HostIp"] == created["actual_ports"]["5432/tcp"][0]["HostIp"] == "127.0.0.1",
+                            "Live oracle configuration seal differs")
+                    require(ledger_helper is not None, "Live independent journal oracle is required")
+                    ledger_helper.capture(container_id=seal["container_id"], run=original, output=directory, source_process=process)
+                except Exception as exc:
+                    # Retain the oracle failure but allow the exact original CID
+                    # removal. The worker then fails even if the harness succeeds.
+                    save(directory / "ledger-capture-failure.json", {"failure_type": type(exc).__name__,
+                         "reason": "Live independent oracle failed; original cleanup proceeds"})
         try:
             result = original(*args, **kwargs)
         finally:
@@ -329,7 +391,8 @@ def child(spec_path: Path) -> int:
     admission_line = sys.stdin.readline()
     require(admission_line.strip() == "ADMIT", "Retained parent admission absent")
     require(read(directory / "admission.json")["process"] == process, "Retained pidfd admission differs")
-    install_observer(directory, spec["mode"], process)
+    helper = load_ledger_helper(spec["ledger_helper"]) if spec["mode"] == LARGE_MODE else None
+    install_observer(directory, spec["mode"], process, helper)
     sys.argv = [str(harness), *spec["business_args"]]
     code = 1
     try:
@@ -339,6 +402,8 @@ def child(spec_path: Path) -> int:
     except BaseException as exc:
         save(directory / "worker-failure.json", {"failure_type": type(exc).__name__})
     finally:
+        if (directory / "ledger-capture-failure.json").is_file():
+            code = 1
         tracked = set(subprocess.check_output(["git", "ls-files", "-z"], cwd=root, timeout=30).decode().split("\0"))
         origins, foreign = [], []
         for name, module in sorted(sys.modules.items()):
@@ -406,17 +471,78 @@ def stop(process: subprocess.Popen[Any], pidfd: int, retained: dict[str, Any], *
 
 
 def arguments(root: Path, mode: str, output: Path) -> list[str]:
-    return ["--counts", "100", "--workers", str(MODES[mode][0]), "--repetitions", "3", "--posting-warmup", "20",
+    return ["--counts", "100", "--workers", str(PROFILE_CONFIG[mode][0]), "--repetitions", "3", "--posting-warmup", "20",
             "--max-seconds", str(BUSINESS_SECONDS), "--runtime-root", str(root), "--postgres-image", IMAGE,
-            "--snapshot-lines", "0", *MODES[mode][1], "--output", str(output)]
+            "--snapshot-lines", "1000" if mode == LARGE_MODE else "0", *PROFILE_CONFIG[mode][1], "--output", str(output)]
 
 
-def one(root: Path, expected: dict[str, Any], harness: Path, mode: str, directory: Path, *, deadline: float) -> dict[str, Any]:
+def load_ledger_helper(spec: dict[str, Any]) -> Any:
+    path = Path(spec["path"]).resolve()
+    require(digest(path) == spec["sha256"], "Independent ledger helper bytes differ")
+    loader = importlib.util.spec_from_file_location("_wave5_independent_large_ledger", path)
+    require(loader is not None and loader.loader is not None, "Independent ledger helper loader missing")
+    module = importlib.util.module_from_spec(loader)
+    sys.modules[loader.name] = module
+    loader.loader.exec_module(module)
+    return module
+
+
+def schedule(include_serial: bool, large_repetitions: int | None) -> list[tuple[str, str, str]]:
+    require(type(include_serial) is bool, "Explicit serial selection required")
+    if large_repetitions is not None:
+        require(type(large_repetitions) is int and large_repetitions == 3 and include_serial is False,
+                "Large journal probe requires exactly three repetitions and no SQL/cProfile mode")
+        return [(LARGE_MODE, variant, f"{LARGE_MODE}-r{index + 1}-{variant}")
+                for index, order in enumerate((("baseline", "current", "projection"), ("current", "projection", "baseline"),
+                                               ("projection", "baseline", "current"))) for variant in order]
+    return [(mode, variant, f"{mode}-{variant}") for mode in (list(MODES) if include_serial else ["four-worker"])
+            for variant in ("baseline", "current", "projection")]
+
+
+def verify_large_population(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    selected = schedule(False, 3)
+    require(len(rows) == 9 and [row["variant"] for row in rows] == [row[1] for row in selected], "Incomplete balanced large-journal population")
+    tenants, entries, effects, containers, bare_entries, bare_effects = set(), set(), set(), set(), set(), set()
+    for row in rows:
+        ledger = row["ledger"]
+        exact_ints(ledger, ("line_count", "dimension_links", "debit_minor", "credit_minor"))
+        require(ledger["external_report_anchor"] is True and ledger["line_count"] == 1000 and ledger["dimension_links"] == 668
+                and ledger["debit_minor"] == ledger["credit_minor"] == 500, "Incomplete independent large journal oracle")
+        tenant, entry = ledger["tenant_id"], ledger["entry_id"]
+        require(type(tenant) is str and tenant and tenant not in tenants and type(entry) is str and entry,
+                "Large journal reused tenant or malformed native source identity")
+        tenants.add(tenant)
+        require((tenant, entry) not in entries, "Large journal repeated a tenant-qualified native source")
+        entries.add((tenant, entry))
+        bare_entries.add(entry)
+        cid = row["container_id"]
+        require(type(cid) is str and re.fullmatch(r"[a-f0-9]{64}", cid) and cid not in containers, "Large journal reused server")
+        containers.add(cid)
+        ids = [*row["primary_effect_ids"], *row["warm_effect_ids"], ledger["effect_id"]]
+        qualified = {(tenant, value) for value in ids}
+        require(len(row["primary_effect_ids"]) == 100 and len(row["warm_effect_ids"]) == 20 and len(ids) == len(set(ids)) == 121
+                and all(type(value) is str and value for value in ids) and not qualified & effects, "Large journal tenant-qualified effect populations overlap")
+        effects.update(qualified)
+        bare_effects.update(ids)
+    return {"status": "passed", "complete_runs": 9, "fresh_tenants": len(tenants), "fresh_servers": len(containers),
+            "large_journals": len(entries), "large_lines": 9000, "large_dimension_links": 6012,
+            "large_journal_debit_minor": 4500, "large_journal_credit_minor": 4500,
+            "native_effects_including_primary_warm_and_large": len(effects), "native_identity_scope": "tenant_id plus native ID",
+            "observed_distinct_bare_entry_ids": len(bare_entries), "observed_distinct_bare_effect_ids": len(bare_effects), "snapshot_read_requests": 54,
+            "performance_comparison_accepted": False}
+
+
+def one(root: Path, expected: dict[str, Any], harness: Path, mode: str, directory: Path, *, deadline: float,
+        ledger_helper: dict[str, Any] | None = None) -> dict[str, Any]:
     require(deadline - time.monotonic() > RESERVE + 30, "No new child admitted near overall deadline")
+    if mode == LARGE_MODE:
+        require(ledger_helper is not None, "Pinned independent live ledger helper is required before child admission")
     require(not directory.exists(), "Fresh child evidence directory required")
     directory.mkdir()
     spec = {"root": str(root), "directory": str(directory), "harness": str(harness), "mode": mode,
             "launcher_sha256": digest(Path(__file__)), "business_args": arguments(root, mode, directory / "native")}
+    if mode == LARGE_MODE:
+        spec["ledger_helper"] = ledger_helper
     save(directory / "spec.json", spec)
     result: dict[str, Any] = {"status": "failed", "mode": mode, "source_before": expected, "performance_comparison_accepted": False}
     process, pidfd, retained = None, None, None
@@ -461,6 +587,21 @@ def one(root: Path, expected: dict[str, Any], harness: Path, mode: str, director
         raw = directory / "native" / "result.json"
         result["original_result_sha256"] = digest(raw)
         result["verification"] = verify_financial(read(raw), expected, mode, [sys.executable, str(harness), *spec["business_args"]], harness)
+        if mode == LARGE_MODE:
+            helper = load_ledger_helper(spec["ledger_helper"])
+            ledger = directory / "large-journal-ledger.raw.json"
+            captured = read(directory / "large-journal-ledger-capture.json")
+            require(captured["status"] == "passed" and type(captured["returncode"]) is int and captured["returncode"] == 0
+                    and captured["credentials_or_environment_captured"] is False and type(captured["raw_bytes"]) is int
+                    and captured["raw_bytes"] == ledger.stat().st_size
+                    and captured["container_id"] == read(directory / "creation-response.json")["container_id"]
+                    and captured["source_process"] == retained and captured["raw_sha256"] == digest(ledger),
+                    "Independent live native export is detached from original admitted process/container")
+            result["live_ledger_verification"] = helper.verify_export(helper.load(ledger),
+                expected_validation_digest=read(raw)["snapshot_reads"]["expected_validation_digest"],
+                expected_revision=read(raw)["revision"])
+            require(result["live_ledger_verification"]["external_report_anchor"] is True, "Independent live native export lacks original report anchor")
+            result["live_ledger_raw_sha256"] = digest(ledger)
         require(time.monotonic() < end, "Work deadline exhausted during financial/origin verification; cleanup reserve retained")
         result["status"] = "passed"
     except (Exception, KeyboardInterrupt) as exc:
@@ -506,6 +647,8 @@ def main() -> int:
     parser.add_argument("--projection-root", type=Path)
     parser.add_argument("--projection-commit", default=os.environ.get("GITHUB_SHA"))
     parser.add_argument("--include-serial", action="store_true", help="After three four-worker runs, require all three serial CPU discoveries")
+    parser.add_argument("--large-snapshot-repetitions", type=int, choices=(3,),
+                        help="Require nine fresh1000-line whole journals in BCP/CPB/PBC order; no SQL/cProfile instrumentation")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     require(sys.platform == "linux" and hasattr(os, "pidfd_open") and hasattr(signal, "pidfd_send_signal"), "Linux retained pidfd support required")
@@ -513,7 +656,7 @@ def main() -> int:
         return child(args.worker.resolve())
     require(args.baseline_root is not None and args.current_root is not None and args.projection_root is not None and args.output is not None,
             "Three explicit runtime roots and fresh output required")
-    modes = list(MODES) if args.include_serial else ["four-worker"]
+    selected = schedule(args.include_serial, args.large_snapshot_repetitions)
     roots = {"baseline": args.baseline_root.resolve(), "current": args.current_root.resolve(), "projection": args.projection_root.resolve()}
     require(len(set(roots.values())) == 3, "Three separate source checkouts required")
     commits = {"baseline": BASELINE, "current": CURRENT, "projection": args.projection_commit}
@@ -523,6 +666,11 @@ def main() -> int:
     trees = projection_tree(roots["projection"], commits["projection"], deadline=deadline)
     harness = roots["current"] / ".github" / "scripts" / "benchmark_enterprise_finance.py"
     require(digest(harness) == HARNESS_SHA, "Unchanged final22 common harness required")
+    ledger_helper = None
+    if args.large_snapshot_repetitions is not None:
+        helper = roots["projection"] / ".github/scripts/verify_wave5_large_journal.py"
+        require(helper.is_file(), "Independent live ledger oracle is required")
+        ledger_helper = {"path": str(helper), "sha256": digest(helper)}
     output = args.output.resolve()
     require(not output.exists() and all(not output.is_relative_to(root) or output.is_relative_to(root / "output") for root in roots.values()),
             "Fresh ignored/outside-source output required")
@@ -541,14 +689,26 @@ def main() -> int:
                                  "Restricted-role nested pg_stat_statements times overlap; do not sum into wall time or infer backend CPU.",
                                  "Container and client CPU observation windows differ; no aggregate whole-host/process-tree CPU or monetary cost.",
                                  "Resource peaks are sampled and can miss spikes; startup/migration/masters are outside posting CPU windows."]}
+    if args.large_snapshot_repetitions is not None:
+        report.update(schema_version="wave5-linux-large-journal-diagnostics-v1", large_snapshot_repetitions=3,
+                      large_snapshot_lines=1000, selected_run_order=[row[1] for row in selected], ledger_helper=ledger_helper)
+        report["limits"].append("Snapshot stages retain wall/client CPU; original primary posting and sampled/final WAL/I/O windows do not supply dedicated per-snapshot-stage WAL/I/O attribution.")
     try:
-        for mode in modes:
-            for label, root in roots.items():
-                value = one(root, sources[label], harness, mode, output / f"{mode}-{label}", deadline=deadline)
-                report["runs"].append({"variant": label, "mode": mode, "status": value["status"],
-                                       "diagnostic_sha256": digest(output / f"{mode}-{label}" / "diagnostic.json")})
-                require(value["status"] == "passed", "Stopped after original failed/incomplete diagnostic; no next child admitted")
-        require(len(report["runs"]) == 3 * len(modes), "Incomplete selected diagnostic population")
+        large_rows = []
+        for mode, label, name in selected:
+            value = one(roots[label], sources[label], harness, mode, output / name, deadline=deadline, ledger_helper=ledger_helper)
+            report["runs"].append({"variant": label, "mode": mode, "status": value["status"],
+                                   "diagnostic_sha256": digest(output / name / "diagnostic.json"), "directory": name})
+            require(value["status"] == "passed", "Stopped after original failed/incomplete diagnostic; no next child admitted")
+            if mode == LARGE_MODE:
+                original = read(output / name / "native/result.json")
+                large_rows.append({"variant": label, "ledger": value["live_ledger_verification"],
+                                   "container_id": value["container_cleanup"]["container_id"],
+                                   "primary_effect_ids": original["posting"]["ordered_effect_ids"],
+                                   "warm_effect_ids": original["posting_warmup"]["effect_ids"]})
+        require(len(report["runs"]) == len(selected), "Incomplete selected diagnostic population")
+        if args.large_snapshot_repetitions is not None:
+            report["large_population_verification"] = verify_large_population(large_rows)
         report["status"] = "passed"
     except (Exception, KeyboardInterrupt) as exc:
         report["failure_type"] = type(exc).__name__

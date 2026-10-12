@@ -321,9 +321,12 @@ def main() -> int:
         if args.snapshot_lines:
             if time.monotonic() >= deadline:
                 raise TimeoutError("Explicit snapshot benchmark resource budget exhausted")
+            stage_measurements: dict[str, object] = {}
             snapshot_profile: dict[str, object] = {"seed": "alternating-cash-equity-one-minor-v1", "concurrency": 1,
                 "runtime_role_flags": flags, "outside_primary_posting_measurement": True, "status": "preparing",
                 "fixture_stage": "canonical_dimensions",
+                "stage_measurements": stage_measurements,
+                "stage_measurement_scope": "complete authenticated native prepare, independent review and post; wall and client process CPU; no server CPU attribution",
                 "limits": ["one fixed journal on one scoped nonowner connection", "warmed cache", "no end-to-end posting speedup inference"]}
             report["snapshot_reads"] = snapshot_profile
             # Canonical organization masters require organization scope without
@@ -335,6 +338,7 @@ def main() -> int:
                     core.upsert_dimension(dimension_code=dimension, name=dimension, organization_code="ORG", workspace="work")
                     core.upsert_dimension_value(dimension_code=dimension, value_code="SYNTHETIC", name="Synthetic", workspace="work")
             snapshot_profile["fixture_stage"] = "prepare"
+            stage_started, stage_cpu_started = time.perf_counter(), time.process_time()
             with runtime.actor("browser-maker") as (connection, _, actor):
                 core = PostgresFinanceCoreRepository(connection, runtime.tenant)
                 entry = core.create_entry(entry_number="BENCH-SNAPSHOT-DIMENSIONS", organization_code="ORG", entity_code="ENTITY",
@@ -344,14 +348,22 @@ def main() -> int:
                          "debit" if index % 2 == 0 else "credit": "0.01",
                          "dimensions": {"BENCH_B": "SYNTHETIC", "BENCH_A": "SYNTHETIC"} if index % 3 == 0 else {}}
                         for index in range(args.snapshot_lines)])
+            stage_measurements["prepare"] = {"seconds": time.perf_counter() - stage_started,
+                                             "client_process_cpu_seconds": time.process_time() - stage_cpu_started}
             snapshot_profile["fixture_stage"] = "review"
+            stage_started, stage_cpu_started = time.perf_counter(), time.process_time()
             with runtime.actor("browser-checker") as (connection, _, actor):
                 PostgresFinanceCoreRepository(connection, runtime.tenant).validate_entry(entry["id"], reason="Independent dimensional benchmark review", actor_label=actor.username)
                 reviewed = PostgresFinancePostingRepository(connection, runtime.tenant).preview(entry["id"], actor=actor)
+            stage_measurements["review"] = {"seconds": time.perf_counter() - stage_started,
+                                            "client_process_cpu_seconds": time.process_time() - stage_cpu_started}
             snapshot_profile["fixture_stage"] = "post"
+            stage_started, stage_cpu_started = time.perf_counter(), time.process_time()
             with runtime.actor("browser-poster") as (connection, _, actor):
                 PostgresFinancePostingRepository(connection, runtime.tenant).post(entry["id"], command_id="benchmark-snapshot-post",
                     expected_validation_digest=reviewed["validation_digest"], reason="Independent dimensional benchmark posting", actor=actor)
+            stage_measurements["post"] = {"seconds": time.perf_counter() - stage_started,
+                                           "client_process_cpu_seconds": time.process_time() - stage_cpu_started}
             snapshot_profile["fixture_stage"] = "complete"
             with runtime.actor("browser-checker") as (connection, _, _actor):
                 measure_snapshot_reads(connection, runtime.tenant, posting_entry(connection, runtime.tenant, entry["id"]),

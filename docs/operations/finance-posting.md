@@ -129,3 +129,25 @@ nonowner application role, and matching native dump/restore tools. Run the
 posting, concurrency, API and restore modules recorded in ADR0811. The retained
 FINANCE_POSTING_2026-10-03.json reports exact scopes, source hashes and failures.
 This contract does not automatically post stock, AR, AP or cash into GL.
+
+
+## Revision138 scoped source coordination prerequisite
+
+An existing ordinary Finance runtime migrating to the M1 chain needs SELECT,
+INSERT and UPDATE on `reconforge.financial_effect_claim_gates` and SELECT on
+`reconforge.financial_effect_ownership_guards` and
+`reconforge.financial_effect_ownership_releases`. An operator must grant these
+rights to the explicitly chosen runtime role; migrations create no broad role
+membership or automatic grants. These are Core source-coordination metadata,
+protected by FORCE RLS and immutable/version-only guards, not personnel data.
+A normal original-effect reversal advances the same gate used by operating
+cost claims before deciding whether reversal is allowed. Missing these rights
+must fail closed; no SECURITY DEFINER or bypass role is supplied.
+
+Ordinary Finance does not require SELECT on manufacturing cost claims,
+intercompany sources, or private employee/rate/payrun tables. Operational
+owners need their explicitly declared additional object rights. Empty
+rollback/re-upgrade recreates the three Core tables and their object ACLs must
+be reprovisioned. Populated-history rollback uses the declared restore
+workflow. Current integration native tests exercise the ordinary Finance-only
+and recreated-table cases independently.

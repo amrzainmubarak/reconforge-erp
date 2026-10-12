@@ -411,7 +411,8 @@ BEGIN
  ELSE SELECT entry_id INTO entry FROM reconforge.finance_entry_lines WHERE tenant_id=OLD.tenant_id AND id=OLD.entry_line_id;END IF;
  IF number IS NULL THEN SELECT entry_number INTO number FROM reconforge.finance_entries WHERE tenant_id=OLD.tenant_id AND id=entry;END IF;
  IF left(COALESCE(number,''),4)='ME2-' OR left(COALESCE(number,''),5)='ME2C-' THEN
-  PERFORM reconforge.me2_assert(FALSE,'Source-owned prepared manufacturing cost and loss lines remain immutable');END IF;RETURN OLD;
+  PERFORM reconforge.me2_assert(FALSE,'Source-owned prepared manufacturing cost and loss lines remain immutable');END IF;
+ IF TG_OP='DELETE' THEN RETURN OLD;END IF;RETURN NEW;
 END $me$;
 CREATE FUNCTION reconforge.me2_deferred() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $me$
 DECLARE i TEXT;number TEXT;entry TEXT;d RECORD;reference TEXT;

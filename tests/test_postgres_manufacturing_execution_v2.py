@@ -62,11 +62,11 @@ def system(database: tuple[str, str]) -> Any:
     return result
 
 
-def original_expense(result: Any, account: str, number: str, amount: str) -> tuple[str, str]:
+def original_expense(result: Any, account: str, number: str, amount: str, *, source_type: str = "Manual") -> tuple[str, str]:
     with result.actor("maker") as (_, receipts, actor):
         draft = receipts.finance.finance.create_entry(entry_number=number, organization_code="ORG", entity_code="ENTITY",
             period_id="period", journal_code="STOCK", posting_date="2026-10-03", workspace="work", description="Original actual expense",
-            actor_label=actor.username, lines=[{"account_code": account, "debit": amount}, {"account_code": "ACCRUAL", "credit": amount}])
+            actor_label=actor.username, source_type=source_type, lines=[{"account_code": account, "debit": amount}, {"account_code": "ACCRUAL", "credit": amount}])
     with result.actor("checker") as (_, receipts, actor):
         receipts.finance.finance.validate_entry(draft["id"], reason="Independent original expense", actor_label=actor.username)
         reviewed = receipts.finance.preview(draft["id"], actor=actor)
@@ -174,7 +174,36 @@ def test_original_expense_backed_material_wip_quality_hold_then_actual_saleable_
             inspection = PostgresManufacturingExecutionV2Repository(connection, result.tenant).inspect(held["id"], accepted_quantity=accepted,
                 rejected_quantity=rejected, inspection_reference=f"SYN-QC-{index}", period_id="period", posting_date=f"2026-10-0{4 + index}",
                 command_id=f"inspect-{index}", reason="Complete independent held tranche acceptance and rejection", actor=actor)
-        inspection = owner_phase(result, owner_phase(result, inspection, "review", "inspection"), "post", "inspection", name="restricted-poster")
+        inspection = owner_phase(result, inspection, "review", "inspection")
+        if index == 1:
+            cancelled = owner_phase(result, inspection, "cancel", "inspection")
+            assert cancelled["phase"] == 3 and cancelled["receipt_effect"] is None and cancelled["loss_effect_id"] is None
+            assert financial_oracle(result)["WIP"] == 3800
+            import psycopg
+
+            before_cancelled_attacks = business_snapshot(result)
+            with result.actor("poster") as (connection, _, _):
+                artifacts = cancelled["receipt_plan"]["artifacts"]
+                for table, identifier in (("finance_entries", artifacts["finance_entry_id"]),
+                        ("finance_posting_effects", artifacts["posting_effect_id"]), ("inventory_cost_layers", artifacts["cost_layer_id"]),
+                        ("inventory_movements", artifacts["movement_id"])):
+                    from psycopg import sql
+                    assert connection.execute(sql.SQL("SELECT count(*) n FROM reconforge.{} WHERE tenant_id=%s AND id=%s").format(sql.Identifier(table)),
+                        (result.tenant, identifier)).fetchone()["n"] == 0
+            with pytest.raises(InventoryReceiptPostingError), result.actor("poster") as (_, receipts, actor):
+                receipts.commit(cancelled["receipt_plan"]["plan_id"], command_id="detached-cancelled-commit",
+                    expected_review_digest="0" * 64, reason="Cancelled inspection cannot post through public native IRP", actor=actor)
+            with pytest.raises(psycopg.errors.CheckViolation), result.actor("poster") as (connection, _, actor):
+                connection.execute("SELECT set_config('app.manufacturing_execution_v2_actor_id',%s,true)", (actor.user_id,))
+                connection.execute("UPDATE reconforge.manufacturing_execution_v2_inspections SET phase=2 WHERE tenant_id=%s AND id=%s",
+                    (result.tenant, cancelled["id"]))
+            assert business_snapshot(result) == before_cancelled_attacks
+            with result.actor("maker") as (connection, _, actor):
+                inspection = PostgresManufacturingExecutionV2Repository(connection, result.tenant).inspect(held["id"], accepted_quantity=accepted,
+                    rejected_quantity=rejected, inspection_reference="SYN-QC-REPLACEMENT", period_id="period", posting_date="2026-10-05",
+                    command_id="inspect-replacement", reason="Original complete quality hold after reviewed cancellation", actor=actor)
+            inspection = owner_phase(result, inspection, "review", "inspection")
+        inspection = owner_phase(result, inspection, "post", "inspection", name="restricted-poster")
         assert inspection["phase"] == 2
     with result.actor("poster") as (connection, _, actor):
         final = PostgresManufacturingExecutionV2Repository(connection, result.tenant).get_order(source["id"], actor=actor)
@@ -486,3 +515,21 @@ def test_direct_sql_forged_production_birth_cannot_mask_original_payload_identit
                     VALUES(%s,%s,%s,'work','org','entity',%s::jsonb,%s)""",
                     (result.tenant, identifier, source["id"], canonical_json(forged), digest_payload(forged)))
         assert business_snapshot(result) == before
+
+
+def test_cost_claim_rejects_generated_expense_and_allocation_before_original_expense_date(manufacturing_v2_database: tuple[str, str]) -> None:
+    from dataclasses import replace
+
+    result = system(manufacturing_v2_database)
+    source = order(result)
+    with pytest.raises(FinancePostingError, match="Only Manual entries"):
+        # The existing native public poster itself refuses this unowned
+        # Generated source; there is no posted expense eligible for ME2.
+        original_expense(result, "LABOR", "UNOWNED-GENERATED-EXPENSE", "20.00", source_type="Generated")
+    before = business_snapshot(result)
+    backdated = clone_request(source, "EXPENSE-BACKDATED-REFUSED")
+    with pytest.raises(FinancePostingError, match="original posted native Manual"), result.actor("maker") as (connection, _, actor):
+        PostgresManufacturingExecutionV2Repository(connection, result.tenant).create_order(
+            ManufacturingOrderPreparation(replace(backdated.material, posting_date="2026-10-02"), backdated.routing_id, backdated.claims),
+            command_id="backdated-claim", actor=actor)
+    assert business_snapshot(result) == before

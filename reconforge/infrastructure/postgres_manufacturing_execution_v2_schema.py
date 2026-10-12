@@ -275,6 +275,8 @@ BEGIN
   SELECT * INTO a FROM reconforge.finance_entry_lines WHERE tenant_id=t AND id=z->>'line_id';
   PERFORM pg_advisory_xact_lock(hashtextextended(jsonb_build_array(t,'me2-expense-line',z->>'effect_id',z->>'line_id')::text,0));
   PERFORM reconforge.me2_assert(f.id IS NOT NULL AND a.id IS NOT NULL AND f.entry_id=a.entry_id AND f.source_kind='Manual' AND f.reverses_effect_id IS NULL
+   AND f.snapshot_json->'entry'->>'source_type'='Manual'
+   AND(f.snapshot_json->'entry'->>'posting_date')::date<=(c.payload->>'posting_date')::date
    AND(f.workspace_id,f.organization_id,f.legal_entity_id)=(c.workspace_id,c.organization_id,c.legal_entity_id)
    AND(f.currency_code,f.currency_precision,f.currency_rounding_policy,f.currency_registry_version,f.currency_registry_digest)
     =(c.payload->>'currency_code',(c.payload->'monetary_policy'->>'precision')::integer,c.payload->'monetary_policy'->>'rounding_policy',c.payload->'monetary_policy'->>'registry_version',c.payload->'monetary_policy'->>'registry_digest')

@@ -350,6 +350,7 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
         original_line = next(line for line in original_effect["snapshot_json"]["lines"] if line["line_number"] == native_line["line_number"])
         require(original_line == value["original_line"] and original_header["source_type"] == original_effect["source_kind"] == "Manual"
                 and original_effect["reverses_effect_id"] is None and original_header["reverses_posting_id"] is None
+                and original_header["posting_date"] <= body["posting_date"]
                 and original_effect["entry_id"] == value["effect_entry_id"] == native_line["entry_id"]
                 and original_effect["validation_digest"] == value["effect_validation_digest"]
                 and accounts[original_line["account_id"]]["account_type"] == "Expense"
@@ -469,6 +470,11 @@ def verify_proof(proof: dict[str, Any]) -> dict[str, Any]:
                 expected_receipts.add(choice["receipt_plan"]["plan_id"])
             if decision["phase"] != 2:
                 require(decision["receipt_effect"] is None and decision["loss_effect_id"] is None, "Unposted inspection leaked effect")
+                if choice["receipt_plan"]:
+                    native_plan = choice["receipt_plan"]
+                    require(native_plan["plan_id"] not in links and native_plan["artifacts"]["posting_effect_id"] not in effects
+                            and native_plan["artifacts"]["finance_entry_id"] not in entries,
+                            "Unposted FG retains its plan/review without materializing a native GL header or saleable stock")
                 if choice["loss_entry"]:
                     cancelled_entries.add(choice["loss_entry"]["entry_id"])
                     require(entries[choice["loss_entry"]["entry_id"]]["status"] == ("Voided" if decision["phase"] == 3 else "Draft" if decision["phase"] == 0 else "Validated"), "Unposted loss draft status differs")

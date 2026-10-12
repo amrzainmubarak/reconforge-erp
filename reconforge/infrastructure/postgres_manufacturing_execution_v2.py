@@ -230,8 +230,9 @@ class PostgresManufacturingExecutionV2Repository:
         self.connection.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s,0))",
             (canonical_json([self.tenant_id, "me2-expense-line", claim["effect_id"], claim["line_id"]]),))
         effect = self.owner.posting._get_effect(claim["effect_id"])
-        posting_entry(self.connection, self.tenant_id, effect["entry_id"])
+        original_header = posting_entry(self.connection, self.tenant_id, effect["entry_id"])
         if (effect["source_kind"] != "Manual" or effect["reverses_effect_id"] is not None
+                or original_header["source_type"] != "Manual" or original_header["posting_date"] > source["posting_date"]
                 or any(effect[key] != source[key] for key in ("workspace_id", "organization_id", "legal_entity_id", "currency_code"))
                 or any(effect["currency_" + key] != source["monetary_policy"][key] for key in ("precision", "rounding_policy", "registry_version", "registry_digest"))):
             fail("Cost allocation requires an original posted native Manual expense in the exact original currency policy and hierarchy.")
@@ -541,8 +542,9 @@ class PostgresManufacturingExecutionV2Repository:
             if operation == "cancel":
                 if inspection["loss_entry"]:
                     self.owner.finance.void_entry(inspection["loss_entry"]["entry_id"], reason=reason, actor_label=actor.username)
-                if inspection["receipt_plan"]:
-                    self.owner.finance.void_entry(inspection["receipt_plan"]["artifacts"]["finance_entry_id"], reason=reason, actor_label=actor.username)
+                # IRP prepare/review retain immutable plans and review evidence.
+                # Native movement/valuation/GL are born only at commit; the ME2
+                # cancellation source guard seals the plan against later commit.
                 self.connection.execute("UPDATE reconforge.manufacturing_execution_v2_inspections SET phase=3 WHERE tenant_id=%s AND id=%s", (self.tenant_id, identifier))
             elif operation == "review":
                 if inspection["receipt_plan"]:

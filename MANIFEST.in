@@ -1460,3 +1460,4 @@ include .github/scripts/benchmark_native_api_runtime.py
 include .github/scripts/benchmark_intercompany_api.py
 include .github/scripts/benchmark_manufacturing_api.py
 include .github/scripts/benchmark_mixed_native_api.py
+include docs/operator/manufacturing-execution.md

@@ -18,7 +18,7 @@ from tests.test_postgres_inventory_receipt_posting import receipt_database as wa
 
 _ = wave5_database
 ROOT = Path(__file__).parents[1]
-HEAD = "0135_pg_procurement_sourcing"
+HEAD = "0136_pg_inventory_scope"
 PREFIXES = ("manufacturing_execution.", "intercompany_operations.", "procurement_sourcing.")
 TABLES = (
     "manufacturing_execution_boms", "manufacturing_execution_orders", "manufacturing_execution_requirements",

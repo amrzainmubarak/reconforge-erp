@@ -1,10 +1,10 @@
 schema_version: 1
-updated_at: "2026-10-10"
+updated_at: "2026-10-11"
 claim_boundary: >-
   This inventory measures contract implementation and live-test availability.
   adapter_present is not live parity. Boundary statuses describe repeatable test
   availability; the current_live_gate below records the separate unskipped run.
-current_source_migration_head: "0125_pg_landed_cost_cancellation"
+current_source_migration_head: "0136_pg_inventory_scope"
 native_source_extensions:
   claim_boundary: Separate native owner kernels compose existing services; these entries do not retroactively increase historical application-service parity counts.
   ci_shard: erp-expansion
@@ -304,6 +304,8 @@ goal_boundary_gate:
   limitations: [single_node, synthetic_data, no_replication, no_ha, no_rpo_rto_claim, no_host_loss, no_live_provider_or_writeback]
 allowed_statuses: [live_verified_current, live_test_available, contract_only, absent, not_applicable]
 boundaries:
+  - {file: manufacturing_execution.py, service: ManufacturingExecutionService, status: live_test_available, adapter: reconforge.infrastructure.postgres_manufacturing_execution.PostgresManufacturingExecutionRepository, test: tests/test_postgres_manufacturing_execution.py, ci_shard: manufacturing-execution, risk: bounded_original_fifo_material_wip_partial_good_abnormal_scrap_no_labor_overhead_rework_or_full_mrp}
+  - {file: intercompany_operations.py, service: IntercompanyOperationsService, status: live_test_available, adapter: reconforge.infrastructure.postgres_intercompany_operations.PostgresIntercompanyOperationsRepository, test: tests/test_postgres_intercompany_operations.py, additional_tests: [tests/test_postgres_intercompany_operations_api.py], ci_shard: intercompany-operations, risk: three_explicit_same_currency_book_scopes_no_reporting_translation_noncontrolling_interests_or_statutory_consolidation}
   - {file: job_operations.py, service: JobOperationsService, status: live_test_available, adapter: reconforge.infrastructure.postgres_jobs.PostgresDurableJobRepository, test: tests/test_durable_job_operations.py, risk: scoped_human_operations_no_running_cancellation}
   - {file: consolidation_close.py, service: ConsolidationCloseApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_close.PostgresConsolidationCloseRepository, test: tests/test_postgres_consolidation_close.py, api_test: tests/test_api_server_consolidation_close.py, api_result: passed, current_migration_head: "0086_pg_close_reopened", risk: single_node_synthetic_control_journal_and_evidence_lifecycle_only_no_statutory_consolidation_or_legal_book_posting_no_erp_writeback_or_restore_ha_evidence}
   - {file: consolidation_ownership.py, service: ConsolidationOwnershipApplicationService, status: live_verified_current, adapter: reconforge.infrastructure.postgres_consolidation_ownership.PostgresConsolidationOwnershipRepository, test: tests/test_postgres_consolidation_ownership.py, risk: single_node_runtime_only_no_restore_or_ha_evidence}
@@ -366,9 +368,9 @@ boundaries:
   - {file: stock_commerce.py, service: StockCommerceApplicationService, status: live_test_available, adapter: reconforge.infrastructure.postgres_stock_commerce.PostgresStockCommerceRepository, test: tests/test_postgres_stock_commerce.py, additional_tests: [tests/test_postgres_stock_commerce_api.py, tests/test_postgres_stock_commerce_migrations.py], ci_shard: erp-expansion, risk: functional_currency_untracked_products_full_payment_per_tranche_no_customer_return}
   - {file: supplier_returns.py, service: SupplierReturnsService, status: live_test_available, adapter: reconforge.infrastructure.postgres_supplier_returns.PostgresSupplierReturnsRepository, test: tests/test_postgres_supplier_returns.py, additional_tests: [tests/test_postgres_supplier_returns_api.py], ci_shard: supplier-returns, risk: whole_original_unissued_receipt_unpaid_single_line_ap_debit_with_exact_original_fifo_and_optional_landed_charge_expense_no_partial_quantity_or_paid_invoice}
 summary:
-  total: 61
+  total: 63
   live_verified_current: 20
-  live_test_available: 37
+  live_test_available: 39
   absent: 0
   contract_only: 1
   not_applicable: 3

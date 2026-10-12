@@ -66,6 +66,7 @@ jobs:
         run: >-
           uv run --no-sync pytest
           --ignore=tests/test_postgres_manufacturing_execution.py
+          --ignore=tests/test_postgres_inventory_scope.py
           --ignore=tests/test_postgres_intercompany_operations.py
           --ignore=tests/test_postgres_intercompany_operations_api.py
           --ignore=tests/test_postgres_wave5_migrations.py
@@ -679,7 +680,7 @@ jobs:
               uv run --no-sync pytest tests/test_postgres_operational_fx_tax.py tests/test_postgres_operational_fx_tax_api.py tests/test_postgres_operational_fx_tax_migration.py tests/test_postgres_financial_read_plans.py -q
               ;;
             manufacturing-execution)
-              uv run --no-sync pytest tests/test_postgres_manufacturing_execution.py tests/test_postgres_wave5_migrations.py -q
+              uv run --no-sync pytest tests/test_postgres_inventory_scope.py tests/test_postgres_manufacturing_execution.py tests/test_postgres_wave5_migrations.py -q
               ;;
             intercompany-operations)
               uv run --no-sync pytest tests/test_postgres_intercompany_operations.py tests/test_postgres_intercompany_operations_api.py -q

@@ -44,8 +44,9 @@ def test_postgres_operations_schema_and_revision_registry_are_explicit() -> None
         "0132_pg_stock_inverse_dispatch",
         "0133_pg_manufacturing_execution", "0134_pg_intercompany_operations",
         "0135_pg_procurement_sourcing",
+        "0136_pg_inventory_scope",
     )
-    assert len(POSTGRES_MIGRATION_REVISIONS) == 135
+    assert len(POSTGRES_MIGRATION_REVISIONS) == 136
 
 
 def test_postgres_operations_revision_registry_matches_the_linear_alembic_chain() -> None:

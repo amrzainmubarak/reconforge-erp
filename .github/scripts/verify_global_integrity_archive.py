@@ -413,6 +413,8 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
         ".github/scripts/validate_current_postgres_images.py", "tests/test_current_postgres_images.py",
         "docs/security/postgres-current-images.wave5.v1.json",
         "tests/test_wave5_permission_contract.py", "tests/test_postgres_wave5_migrations.py",
+        "alembic/versions/0136_postgres_inventory_scope.py", "reconforge/infrastructure/postgres_inventory_scope.py",
+        "tests/test_postgres_inventory_scope.py",
         "tests/test_manufacturing_execution.py", "tests/test_postgres_manufacturing_execution.py",
         "tests/manufacturing_execution_browser.py", "tests/intercompany_operations_browser_seed.py",
         "tests/procurement_sourcing_browser.py", "tests/test_intercompany_cycle_oracle.py",
@@ -561,8 +563,8 @@ def main() -> int:
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--index-count", type=int, default=22)
-    parser.add_argument("--migration-count", type=int, default=135)
-    parser.add_argument("--migration-head", default="0135_pg_procurement_sourcing")
+    parser.add_argument("--migration-count", type=int, default=136)
+    parser.add_argument("--migration-head", default="0136_pg_inventory_scope")
     parser.add_argument("--acceptance-stem", default="GLOBAL_INTEGRITY_ACCEPTANCE_2026-10-10")
     parser.add_argument("--baseline-wrapper", default="enterprise-native-finance-wave3-baseline-806a05db-2026-10-10.json")
     parser.add_argument("--candidate-wrapper", default="enterprise-native-finance-wave3-candidate-70dffef7-2026-10-10.json")

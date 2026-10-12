@@ -86,6 +86,7 @@ def main() -> int:
     configuration = "apps/web/live/erp-expansion.playwright.config.ts"
     extension_tables = EXPANSION_TABLES
     tamper_actor: Callable[..., Any] | None = None
+    workspace_probe_tables: tuple[str, ...] | None = None
     tamper_statements = (
         "UPDATE reconforge.stock_sales_orders SET total_minor=total_minor+1,row_version=row_version+1 WHERE tenant_id=%s",
         "UPDATE reconforge.financial_installment_links SET posted_actor_id='maker' WHERE tenant_id=%s",
@@ -133,6 +134,7 @@ def main() -> int:
         from tests.manufacturing_execution_browser import (
             MANUFACTURING_EXECUTION_TABLES,
             MANUFACTURING_EXECUTION_TAMPER,
+            MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES,
             seed_manufacturing_execution_browser,
             verify_manufacturing_execution_browser,
         )
@@ -140,6 +142,7 @@ def main() -> int:
         configuration = "apps/web/live/manufacturing-execution.playwright.config.ts"
         extension_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_TABLES))
         tamper_statements = MANUFACTURING_EXECUTION_TAMPER
+        workspace_probe_tables = tuple(dict.fromkeys(EXPANSION_TABLES + MANUFACTURING_EXECUTION_WORKSPACE_PROBE_TABLES))
     elif args.scenario == "intercompany-operations":
         from tests.intercompany_operations_browser_seed import (
             INTERCOMPANY_BROWSER_TABLES,
@@ -413,7 +416,7 @@ def main() -> int:
             if args.verify_native_restore:
                 report["native_restore"] = verify_expansion_native_restore(runtime, container,
                     verify_cycles=verify_cycles, extension_tables=extension_tables, tamper_statements=tamper_statements,
-                    tamper_actor=tamper_actor)
+                    tamper_actor=tamper_actor, workspace_probe_tables=workspace_probe_tables)
         report["built_web_unchanged"] = built_web_digest(args.web_root.resolve()) == report["built_web_sha256"]
         report["source_unchanged"] = source_digest(runtime_root) == report["source_sha256"]
         report["source_commit_after"] = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=runtime_root, text=True).strip()

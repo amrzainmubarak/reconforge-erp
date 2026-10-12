@@ -2,6 +2,24 @@
 
 ## Wave5 active implementation (2026-10-11)
 
+2026-10-12 correction checkpoint: root5da0c4c1 passed66 actual native cases
+without failures/errors/skips, including both original finance-scope races and
+the two IC namespace mutation regressions. Root23778af1 passed actual IC1 and
+SRC5 HTTPS/RTL/Axe/full populated native restoration; Studio449 tests,
+TypeScript, Ruff and production mypy727 pass at the later correction checkpoint.
+Manufacturing's actual financial proof independently passes isolated stdlib
+and optimized-Python verification, but its sibling-workspace restoration probe
+exposed original tenant-only native FIFO policies. Additive0136 now restricts
+nine native inventory tables to their original hierarchy without rewriting rows;
+its native execution and final-source restoration remain pending. The tenant-wide
+audit chain is explicitly disclosed and retained in full-row/catalog/FORCE-RLS
+and unbound-tenant checks. New mixed HTTPS discovery passed42 requests and11
+original financial effects; it is one descriptive sample, not scale acceptance.
+Exact-object GitHub API transfer preserved236 original Git objects through23778
+after ordinary push transport failures; no branch reference was changed by that
+transfer. Final quiet comparisons, higher tiers, archive and hosted acceptance
+remain pending. No prior throughput percentage is rebound to this source.
+
 Actual accepted base is DraftPR130 `6362724f2337a79c3d7569574f7bf9591a018524`.
 The primary checkout, main and original uncommitted edits are preserved. Four new
 managed worktrees separate root integration from manufacturing, intercompany

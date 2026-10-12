@@ -1,5 +1,19 @@
 # ReconForge Execution Evidence Log
 
+## Actual22 hosted acceptance, raw1K comparison and isolated cloud experiment (2026-10-12)
+
+[Final22 closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md) links
+actual44-job CI38208811408, CodeQL/Docker/manual Security and exact package/current
+recovery evidence. Its481-record source-bound index/lossless478-original ZIP keeps
+all failures,6120 scoped native1K effects and unaccepted adverse resource results.
+Original indexdf4ac5c6/archivee0d82a65 bytes are copied unchanged; source executions
+are not relabelled as this publication commit. Separately completed clouda6
+61native/132pure/six diagnostic populations do not accept experimental137 into the
+application. Actual0756 nine-run/18 independently reproduced raw-SHA-pinned ledger CLIs passed
+9000 big-journal lines/6012 dimension links/1089 tenant-qualified effects; original
+ZIP0f482cf7.../129 members retained. Reject137 integration after mixed/negligible
+increment; LOCAL quiet retest and fair performance acceptance remain pending.
+
 ## Wave5 source-bound business, restore and failed-gate publication (2026-10-12)
 
 [Checkpoint](WAVE5_ACCEPTANCE_CHECKPOINT_2026-10-12.md) records the actual8513

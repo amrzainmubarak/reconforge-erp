@@ -1,5 +1,20 @@
 # ReconForge Execution Decisions Log
 
+## Preserve actual subjects and reject unproven performance changes (2026-10-12)
+
+Accept the bounded ME1/IC1/SRC5 operational contracts after actual final22 hosted
+and restore gates, with missing broader cycles explicit. Retain the negative1K
+comparison and100%CPU/98%RAM tail run in all medians; matching AC is insufficient
+for frequency/thermal/load equivalence. Use authorized independent cloud runners
+for diagnosis while additional LOCAL quiet admission is pending. Do not weaken
+KDF, permissions, RLS, original parent relevance checks or financial triggers.
+Reject experimental137 integration after the repeated0756 probe: whole-stage
+median−0.18% from22 and mixed block ratios1.02410/0.984494/0.998185 do not justify
+extra migration/rollback complexity; retain successful safety tests and all raw data. SQL rows use(query_id,toplevel,statement_sha256), native effects
+use(tenant_id,id); never collapse legitimate owners or distinct statistics rows.
+Publish exact original capsule bytes and explicit missing/external dependencies,
+without reassigning historical source headers to a later docs commit.
+
 ## Wave5 additive isolation, proof lifecycle and namespace contracts (2026-10-12)
 
 0136 adds nine restrictive original inventory/FIFO scope policies with pure invoker

@@ -1,5 +1,24 @@
 # Execution State
 
+## Wave5 actual22 acceptance and retained negative comparison (2026-10-12)
+
+Accepted application subject22ebfd78 now has actual44/44 successful CI jobs,
+current security/CodeQL/Docker/package checks and current16.15/17.11 synthetic
+recovery. ME1/IC1/SRC5 bounded Studio-to-GL cycles are completed; their limits
+remain in the backlog. Three baseline636 and three current22 real1K populations
+passed independent financial oracles, but medianTPS fell11.80% and DBcgroupCPU
+rose7.44% under unresolved host load/frequency variation. Performance acceptance
+remains false; the tail outlier and earlier controller failures are retained.
+Cloud experimental a6 passed61 native/132 pure cases and six diagnostic runs;
+additive137 is isolated/unintegrated. Actual0756 nine-run large-journal financial/custody proof passed9000 lines/6012
+dimension links/1089 tenant-qualified effects; observed current22 whole stages
+51.589313→48.156226sec and clientCPU1.240840→0.916604sec coexist with primary
+throughput−7.15%. Reject137 integration: mixed block ratios/no convincing gain.
+Additional LOCAL quiet-window/fair performance acceptance remain pending. See
+[actual source/measurement closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md).
+Original final22 raw closure is published unchanged; older checkpoints below
+retain their actual historical pending/failure statements.
+
 ## Wave5 integration and acceptance checkpoint (2026-10-12)
 
 Draft [PR131](https://github.com/amrzainmubarak/reconforge-erp/pull/131) remains

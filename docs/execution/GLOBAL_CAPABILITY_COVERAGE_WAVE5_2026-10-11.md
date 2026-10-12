@@ -1,5 +1,25 @@
 # Wave5 capability and engineering gap matrix
 
+## Additive actual22 acceptance update — 2026-10-12
+
+The final22 runtime gates have since passed44/44 CI jobs, CodeQL, Docker, all five
+manual Security jobs, package closure and current16.15/17.11 synthetic recovery.
+The bounded ME1/IC1/SRC5 matrix rows retain the same actual8513 financial/restore
+subjects and limits. Six current-source1K runs passed financial proofs but observed
+median throughput−11.80% and DBcgroupCPU+7.44% under unresolved host load/frequency;
+no fair improvement is accepted. Clouda6 diagnosis/native migration tests passed,
+but experimental137 is rejected for integration after0756 three repetitions per
+variant: negligible/mixed increment. The actual nine1000-line GL journals passed
+9000 lines/6012 dimensions/1089 total scoped effects. Current22 observed large-stage
+time−6.65%/clientCPU−26.13% coexist with primary throughput−7.15%; both and distinct
+resource windows remain descriptive, with fair performance acceptance false. See [actual closure](WAVE5_FINAL22_ACCEPTANCE_AND_MEASUREMENT_2026-10-12.md).
+The remaining matrix/checkpoints below retain their original historical status.
+Official manufacturing/consolidation pages were rechecked2026-10-12: Dynamics
+production lifecycle and Oracle/NetSuite remained accessible; SAP's dynamic page
+returned no extracted body, while its official indexed documentation still supports
+actual direct/indirect production-cost and WIP behavior. No unsupported uniqueness
+or vendor performance ratio is introduced.
+
 Official sources reviewed 2026-10-12. This matrix distinguishes bounded implemented
 cycles, source-bound executed evidence and outstanding acceptance. The actual
 ME1/IC1/SRC5 HTTPS and populated restore reports below belong to

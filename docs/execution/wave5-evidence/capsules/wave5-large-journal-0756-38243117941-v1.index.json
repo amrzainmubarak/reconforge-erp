@@ -1,0 +1,2211 @@
+{
+  "schema_version": "reconforge-byte-exact-evidence-capsule-v1",
+  "name": "wave5-large-journal-0756-38243117941-v1.zip",
+  "capture_for_root_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+  "acceptance_scope": "Per-entry original source headers govern evidence; capture does not rebind prior evidence to the current source.",
+  "coverage": {
+    "run_id": 38243117941,
+    "job_id": 114790340943,
+    "control_source": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+    "accepted_runtime_source": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+    "actual_hosted_pure_tests": {
+      "passed": 189,
+      "failure": 0,
+      "error": 0,
+      "skip": 0
+    },
+    "original_zip_members": 129,
+    "fresh_populations": 9,
+    "schedule": [
+      "B/C/P",
+      "C/P/B",
+      "P/B/C"
+    ],
+    "large_journal_native_export_only": {
+      "journals": 9,
+      "lines": 9000,
+      "dimension_links": 6012,
+      "debit_minor": 4500,
+      "credit_minor": 4500
+    },
+    "reported_scoped_effects_all_cycles": 1089,
+    "tenant_scoped_identity_required": true,
+    "independent_original_raw_oracle_cli": "18 executions of original reviewed stdlib helper under-I and-I-O, each separately trusted original ZIP member SHA; matched output bytes per population.",
+    "native_export_scope": "Read-only synthetic admin export proves original financial rows/source custody; not a new FORCE RLS isolation test or recomputed audit chain.",
+    "resource_limits": "Distinct clientCPU/stage walls; reader traced heap; process-lifetime RSS; overlapping PostgreSQL/cgroup/WAL/I/O windows; no per-large-stage backend attribution or stable power/frequency/neighbor control.",
+    "typed_projection_integration": "Rejected after negligible/mixed increment; primary posting regression retained.",
+    "performance_comparison_accepted": false,
+    "full_job_logs": "Original full log remains local; exact safe spans+remote hash/size/omissions public."
+  },
+  "construction": {
+    "compression": "ZIP_DEFLATED",
+    "level": 1,
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "unix_file_mode": "100644",
+    "entries": "lexically sorted",
+    "zlib_version": "1.3.2",
+    "json_index": "flat record list; no filename-to-hash dictionary"
+  },
+  "file_count": 239,
+  "raw_bytes": 18422571,
+  "records": [
+    {
+      "entry_name": "commercial/0756-safe-log/original-full-log-and-projection-provenance.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\commercial\\0756-safe-log\\original-full-log-and-projection-provenance.json",
+      "bytes": 10369,
+      "sha256": "15d1b62ae899d844602d2df12f2affdeb016b39e0248e9d09bbba86524e9c9bf",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original remote log hash and precise retained/omitted spans.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/0756-safe-log/original-safe-byte-spans.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\commercial\\0756-safe-log\\original-safe-byte-spans.log",
+      "bytes": 82569,
+      "sha256": "f74233fa59a21870531ed18d43ee1037dcc5113f3c4cf10d8165c7ee3e87109d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original exact safe spans only; full remote hash/omissions separate.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/0756-terminal-custody/artifacts-20261012T120000839760Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756dc49-20261012\\artifacts-20261012T120000839760Z.json",
+      "bytes": 820,
+      "sha256": "2bb91b70140bb699a39d189d76d9a5fea50ce237d9e4aa9e843b1bab45d898cd",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Actual terminal metadata/source/full129 native record closure; provisional file-checker assumption preserved separately, not a runtime failure.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/0756-terminal-custody/jobs-20261012T120000839760Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756dc49-20261012\\jobs-20261012T120000839760Z.json",
+      "bytes": 4123,
+      "sha256": "67d59253cf899c8e4e1b51f15768d1d005ffbe2d391654e16aa24180def47d5d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Actual terminal metadata/source/full129 native record closure; provisional file-checker assumption preserved separately, not a runtime failure.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/0756-terminal-custody/original-nine-run-custody-review-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756dc49-20261012\\original-nine-run-custody-review-v1.json",
+      "bytes": 26722,
+      "sha256": "e80223d5935a5d0e765f79a4adc47cec3842e3fe4cc02f08f413a7ff9fac7056",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Actual terminal metadata/source/full129 native record closure; provisional file-checker assumption preserved separately, not a runtime failure.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/0756-terminal-custody/recovery-log-20261012T120029961458Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756dc49-20261012\\recovery-log-20261012T120029961458Z.json",
+      "bytes": 601,
+      "sha256": "36d738ac98d01acd22617119898d6bb32daafcebaba2654ff3e2dc467e635366",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Actual terminal metadata/source/full129 native record closure; provisional file-checker assumption preserved separately, not a runtime failure.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/0756-terminal-custody/review-provisional-assumption-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756dc49-20261012\\review-provisional-assumption-v1.json",
+      "bytes": 418,
+      "sha256": "af3368b73f3ed53a13fe8ec535105adab13c53a3d223407ec7774b38e2486945",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Actual terminal metadata/source/full129 native record closure; provisional file-checker assumption preserved separately, not a runtime failure.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/0756-terminal-custody/run-20261012T120000839760Z.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756dc49-20261012\\run-20261012T120000839760Z.json",
+      "bytes": 13604,
+      "sha256": "67841c2551d9084b8b2db94ea509aecd52ad8e10e8b326b6c6299de6b1ffcb43",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Actual terminal metadata/source/full129 native record closure; provisional file-checker assumption preserved separately, not a runtime failure.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/0756-terminal-custody/source-freeze-reference-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756dc49-20261012\\source-freeze-reference-v1.json",
+      "bytes": 2682,
+      "sha256": "8b20030591576c68902f3db52293aa389d744396163bc10e113946186ecd78f0",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Actual terminal metadata/source/full129 native record closure; provisional file-checker assumption preserved separately, not a runtime failure.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "commercial/0756-terminal-custody/verify_original_custody.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756dc49-20261012\\verify_original_custody.py",
+      "bytes": 24924,
+      "sha256": "98470e4e4876fd742d748c7e0bce39d7cfe5fb791a313beb5c118a34ac1749f1",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Actual terminal metadata/source/full129 native record closure; provisional file-checker assumption preserved separately, not a runtime failure.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "existing-thirteen-capsules-flat-references.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\existing-thirteen-capsules-flat-references.json",
+      "bytes": 11544,
+      "sha256": "380d5328e55a0269a7eb916b623c5c5b2ebc88406ca07e1c9e07722ca3f2fecf",
+      "source_commit": null,
+      "source_attribution": "Reference only; all prior13 ZIP/index payloads left unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/0756dc49b7f7b3cbb4f5434e735fac64bf845b99/.github/scripts/benchmark_wave5_profile_diagnostics.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\0756dc49b7f7b3cbb4f5434e735fac64bf845b99\\.github\\scripts\\benchmark_wave5_profile_diagnostics.py",
+      "bytes": 52233,
+      "sha256": "a9f60d01589bc68cf03eb24007f6b1a5a8d6f2c2bf29f439215653da713f3d5f",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/0756dc49b7f7b3cbb4f5434e735fac64bf845b99/.github/scripts/verify_wave5_large_journal.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\0756dc49b7f7b3cbb4f5434e735fac64bf845b99\\.github\\scripts\\verify_wave5_large_journal.py",
+      "bytes": 25393,
+      "sha256": "24a2781b185123a3ea52b2108447936daa7a06b9fbb7c6f08fa1aa3fb2ca00d7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/0756dc49b7f7b3cbb4f5434e735fac64bf845b99/.github/workflows/wave5-large-journal-diagnostics.yml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\0756dc49b7f7b3cbb4f5434e735fac64bf845b99\\.github\\workflows\\wave5-large-journal-diagnostics.yml",
+      "bytes": 3457,
+      "sha256": "99933495f56b294e0e425cfc06ab37d8e45bb3f1d213ea165f118c1704df53f0",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/0756dc49b7f7b3cbb4f5434e735fac64bf845b99/original-commit.txt",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\0756dc49b7f7b3cbb4f5434e735fac64bf845b99\\original-commit.txt",
+      "bytes": 325,
+      "sha256": "9d0629fe3a936077faf5ea68c3fe22c82f53fe4cb8d7945b78f251a71d0bdcc5",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original immutable Git commit object; no publication head rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/0756dc49b7f7b3cbb4f5434e735fac64bf845b99/tests/test_wave5_large_journal_oracle.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\0756dc49b7f7b3cbb4f5434e735fac64bf845b99\\tests\\test_wave5_large_journal_oracle.py",
+      "bytes": 19464,
+      "sha256": "4aef6edaf792719ab3d5106a86460b99aa9d4c2d47b8f5ea20963caf3088d418",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/0756dc49b7f7b3cbb4f5434e735fac64bf845b99/tests/test_wave5_profile_diagnostics.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\0756dc49b7f7b3cbb4f5434e735fac64bf845b99\\tests\\test_wave5_profile_diagnostics.py",
+      "bytes": 28723,
+      "sha256": "d42d12e961f78478aff733d0bb7e0194a4ea317c4a3ae9be2eca2a833af478cc",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/22ebfd78e293aafa13d81b3a0bbf287491951115/.github/scripts/benchmark_enterprise_finance.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\22ebfd78e293aafa13d81b3a0bbf287491951115\\.github\\scripts\\benchmark_enterprise_finance.py",
+      "bytes": 29481,
+      "sha256": "7bce2382df24d439d39386f0e02c07bf362c4f451649dbd8d7f225c8a920396b",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/22ebfd78e293aafa13d81b3a0bbf287491951115/.github/scripts/benchmark_native_api_runtime.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\22ebfd78e293aafa13d81b3a0bbf287491951115\\.github\\scripts\\benchmark_native_api_runtime.py",
+      "bytes": 35064,
+      "sha256": "3895f3afff0095bca2f769054ea264d81af5c3a3ebae88023b5ea873f241b07d",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/22ebfd78e293aafa13d81b3a0bbf287491951115/docs/security/postgres-current-images.wave5.v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\22ebfd78e293aafa13d81b3a0bbf287491951115\\docs\\security\\postgres-current-images.wave5.v1.json",
+      "bytes": 935,
+      "sha256": "e1add5c92bb875e04e68e601cc9651c469c50a327e1c58912113df4c0a774fc4",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/22ebfd78e293aafa13d81b3a0bbf287491951115/original-commit.txt",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\22ebfd78e293aafa13d81b3a0bbf287491951115\\original-commit.txt",
+      "bytes": 337,
+      "sha256": "c7ca0ec1b15d145d5435d51c2b0b842c28a57cf890dfff5caaa8bd18a1e6666a",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original immutable Git commit object; no publication head rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/22ebfd78e293aafa13d81b3a0bbf287491951115/tests/mandatory_native_gate.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\22ebfd78e293aafa13d81b3a0bbf287491951115\\tests\\mandatory_native_gate.py",
+      "bytes": 1322,
+      "sha256": "5d5684124c981351e868a2191ebd166a2fc8c5b7adde9b65194cdfec0f9aadc8",
+      "source_commit": "22ebfd78e293aafa13d81b3a0bbf287491951115",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/a4a5282aaf29ff89e182569888877fa606dde6a5/alembic/versions/0137_postgres_intercompany_guard_projection.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\a4a5282aaf29ff89e182569888877fa606dde6a5\\alembic\\versions\\0137_postgres_intercompany_guard_projection.py",
+      "bytes": 854,
+      "sha256": "0e6590e8ff296f0500da187f39902d9a6bec88c2f168f40702b3fee4e4e3efb8",
+      "source_commit": "a4a5282aaf29ff89e182569888877fa606dde6a5",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/a4a5282aaf29ff89e182569888877fa606dde6a5/original-commit.txt",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\a4a5282aaf29ff89e182569888877fa606dde6a5\\original-commit.txt",
+      "bytes": 318,
+      "sha256": "2179320d6317cba146d7e7f527847c25f8695cbaec0e2f06678480013a860a19",
+      "source_commit": "a4a5282aaf29ff89e182569888877fa606dde6a5",
+      "source_attribution": "Original immutable Git commit object; no publication head rebinding.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/a4a5282aaf29ff89e182569888877fa606dde6a5/reconforge/infrastructure/postgres_intercompany_guard_projection.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\a4a5282aaf29ff89e182569888877fa606dde6a5\\reconforge\\infrastructure\\postgres_intercompany_guard_projection.py",
+      "bytes": 5083,
+      "sha256": "146bd0ca38da55be2db8fbe2664f4397c6b81a759e213219a1b4d0f9c33b220c",
+      "source_commit": "a4a5282aaf29ff89e182569888877fa606dde6a5",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "git-source/a4a5282aaf29ff89e182569888877fa606dde6a5/tests/test_intercompany_guard_projection.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\git\\a4a5282aaf29ff89e182569888877fa606dde6a5\\tests\\test_intercompany_guard_projection.py",
+      "bytes": 11779,
+      "sha256": "ff2357fe8b5910af36f2bcc8821c6222d0e3b0beedda73a687c52b113dbab13f",
+      "source_commit": "a4a5282aaf29ff89e182569888877fa606dde6a5",
+      "source_attribution": "Original immutable Git blob bytes; source tools may contain public synthetic fixture/configuration literals.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-oracle-development/capture_wave5_large_journal_0756.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\capture_wave5_large_journal_0756.py",
+      "bytes": 4954,
+      "sha256": "039704d77b2cdddf8eb23c5e696b68872c4d29f59574ccd26ac7500031ab1318",
+      "source_commit": null,
+      "source_attribution": "Original oracle104 final/earlier100/102 checkpoints and read-only capture/audit scripts, attributed by original source bindings.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-oracle-development/review_wave5_large_journal_0756.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\review_wave5_large_journal_0756.py",
+      "bytes": 20963,
+      "sha256": "0668fbcbcee8dd900bb2d8ca19fea935be357f3b4d2345d5f66502f2606c5809",
+      "source_commit": null,
+      "source_attribution": "Original oracle104 final/earlier100/102 checkpoints and read-only capture/audit scripts, attributed by original source bindings.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-oracle-development/wave5-large-journal-oracle-final-ruff.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-oracle-final-ruff.log",
+      "bytes": 20,
+      "sha256": "a4443afdcfb6d7363adb285762515ccf7cf50473b1a05c20c1a50f6bed4d26b0",
+      "source_commit": null,
+      "source_attribution": "Original oracle104 final/earlier100/102 checkpoints and read-only capture/audit scripts, attributed by original source bindings.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-oracle-development/wave5-large-journal-oracle-final.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-oracle-final.log",
+      "bytes": 162,
+      "sha256": "89abe0022556087d0a57f944305831e8ad25cc7666fb2db649b66fdcf70345b4",
+      "source_commit": null,
+      "source_attribution": "Original oracle104 final/earlier100/102 checkpoints and read-only capture/audit scripts, attributed by original source bindings.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-oracle-development/wave5-large-journal-oracle-final.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-oracle-final.xml",
+      "bytes": 18025,
+      "sha256": "7c2a462c99b26acfd0fbc10a0221b2fc937031d07b7b70cec2c88447eb64a92d",
+      "source_commit": null,
+      "source_attribution": "Original oracle104 final/earlier100/102 checkpoints and read-only capture/audit scripts, attributed by original source bindings.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-oracle-development/wave5-large-journal-oracle-first.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-oracle-first.xml",
+      "bytes": 17291,
+      "sha256": "57efbb5257398c2f9c6b0099a5f00d17ee06844d0ab742fd89399c46615bc204",
+      "source_commit": null,
+      "source_attribution": "Original oracle104 final/earlier100/102 checkpoints and read-only capture/audit scripts, attributed by original source bindings.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-oracle-development/wave5-large-journal-oracle-source-anchor.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-oracle-source-anchor.xml",
+      "bytes": 17647,
+      "sha256": "d2c0851d84c40199debd6e0c9bffafcd3242c078f49936cad348b7d38b3bd342",
+      "source_commit": null,
+      "source_attribution": "Original oracle104 final/earlier100/102 checkpoints and read-only capture/audit scripts, attributed by original source bindings.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/artifact-11746610473-original-api.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\artifact-11746610473-original-api.json",
+      "bytes": 788,
+      "sha256": "3df0fbd74dfe6e079f9f4c0e1f1d4d8af7494d48efa834b897dac1fe1b021a99",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/artifact-11746610473-original.zip",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\artifact-11746610473-original.zip",
+      "bytes": 848014,
+      "sha256": "0f482cf7dff400ef5b4cfe1660e6412f245f07f88da5391a4064689461329bd7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/independent-nine-population-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\independent-nine-population-review.json",
+      "bytes": 43270,
+      "sha256": "97f65c7a76d66ba408212c7d2a7e592b959c8bca5e02aee07cabc25f38258dbb",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/original-reviewed-0756-oracle.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\original-reviewed-0756-oracle.py",
+      "bytes": 25393,
+      "sha256": "24a2781b185123a3ea52b2108447936daa7a06b9fbb7c6f08fa1aa3fb2ca00d7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/original-zip-flat-member-records.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\original-zip-flat-member-records.json",
+      "bytes": 25134,
+      "sha256": "2740b7e4b7de659675c03aefa99676ac588e1ecfb4f6bf95996c4ec07945ade0",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r1-baseline-oracle-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r1-baseline-oracle-I.json",
+      "bytes": 715,
+      "sha256": "00173ef3e6e1668efc13e9c9da321ea60b702ca955c0eb639b96720f9e38b573",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r1-baseline-oracle-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r1-baseline-oracle-IO.json",
+      "bytes": 715,
+      "sha256": "00173ef3e6e1668efc13e9c9da321ea60b702ca955c0eb639b96720f9e38b573",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r1-baseline-original-native-ledger.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r1-baseline-original-native-ledger.json",
+      "bytes": 712791,
+      "sha256": "dd4d85a1beaae9d7e9a4a26056540233b3afb52c773de2e3f88ee476393de8b6",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r1-current-oracle-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r1-current-oracle-I.json",
+      "bytes": 708,
+      "sha256": "a12f9ce922a7d2ddecab199c5c6f395856e21119df69a89348b60308a87950eb",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r1-current-oracle-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r1-current-oracle-IO.json",
+      "bytes": 708,
+      "sha256": "a12f9ce922a7d2ddecab199c5c6f395856e21119df69a89348b60308a87950eb",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r1-current-original-native-ledger.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r1-current-original-native-ledger.json",
+      "bytes": 712785,
+      "sha256": "8ae4e8a6ab0cce6d3d2eebc5feb208f16440ace2db1a4fc07bc443f606edd060",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r1-projection-oracle-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r1-projection-oracle-I.json",
+      "bytes": 716,
+      "sha256": "7e9edb325f2236d8e6b47dc1fcd28d1a645a7722720189fb8c0b700cd6c2544f",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r1-projection-oracle-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r1-projection-oracle-IO.json",
+      "bytes": 716,
+      "sha256": "7e9edb325f2236d8e6b47dc1fcd28d1a645a7722720189fb8c0b700cd6c2544f",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r1-projection-original-native-ledger.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r1-projection-original-native-ledger.json",
+      "bytes": 712793,
+      "sha256": "88df6dcf71265166a8552848bf95c3e6a821f1c86692dff51a075a21d15aaf6d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r2-baseline-oracle-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r2-baseline-oracle-I.json",
+      "bytes": 715,
+      "sha256": "39be3eb758de5333160377d22687752c9d2dabe2f54ac712d14ae3e5defcd900",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r2-baseline-oracle-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r2-baseline-oracle-IO.json",
+      "bytes": 715,
+      "sha256": "39be3eb758de5333160377d22687752c9d2dabe2f54ac712d14ae3e5defcd900",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r2-baseline-original-native-ledger.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r2-baseline-original-native-ledger.json",
+      "bytes": 712792,
+      "sha256": "2fc786bbf6217b46354ffbdf54f6dcb57a6b1cdd1a3e110abcb6f54d938f95c2",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r2-current-oracle-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r2-current-oracle-I.json",
+      "bytes": 708,
+      "sha256": "8dffe9e3fa881a7f00c5e3f4a2d555424945d1d613b2745b10553d4265864de5",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r2-current-oracle-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r2-current-oracle-IO.json",
+      "bytes": 708,
+      "sha256": "8dffe9e3fa881a7f00c5e3f4a2d555424945d1d613b2745b10553d4265864de5",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r2-current-original-native-ledger.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r2-current-original-native-ledger.json",
+      "bytes": 712783,
+      "sha256": "3d81fd04b235f3a5a69a95f74d570351eb6e953066ce8f1177f824af8d8999fd",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r2-projection-oracle-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r2-projection-oracle-I.json",
+      "bytes": 716,
+      "sha256": "4f14b287d4598f1a49e05499a412fdabda3cc0c85c5e99961dff0ed7fcfc83ac",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r2-projection-oracle-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r2-projection-oracle-IO.json",
+      "bytes": 716,
+      "sha256": "4f14b287d4598f1a49e05499a412fdabda3cc0c85c5e99961dff0ed7fcfc83ac",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r2-projection-original-native-ledger.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r2-projection-original-native-ledger.json",
+      "bytes": 712793,
+      "sha256": "a144b92333f661c1f4796f9a66dfab72a54e8eb809bb99df718d300e5291f38a",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r3-baseline-oracle-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r3-baseline-oracle-I.json",
+      "bytes": 715,
+      "sha256": "9a831b92a04c5e49ddc1f23209cfd09c1bf8a85e4e930061ce6a351be99a4267",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r3-baseline-oracle-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r3-baseline-oracle-IO.json",
+      "bytes": 715,
+      "sha256": "9a831b92a04c5e49ddc1f23209cfd09c1bf8a85e4e930061ce6a351be99a4267",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r3-baseline-original-native-ledger.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r3-baseline-original-native-ledger.json",
+      "bytes": 712785,
+      "sha256": "1bc80bc4f2bbc35912ec0f9fafb694d1833004db8a63d743b1def5ffdf966cda",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r3-current-oracle-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r3-current-oracle-I.json",
+      "bytes": 708,
+      "sha256": "256d2c781cb153d6efba2fd4c35132bb078d1f97870c5d8504b94cb87b38b5f4",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r3-current-oracle-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r3-current-oracle-IO.json",
+      "bytes": 708,
+      "sha256": "256d2c781cb153d6efba2fd4c35132bb078d1f97870c5d8504b94cb87b38b5f4",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r3-current-original-native-ledger.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r3-current-original-native-ledger.json",
+      "bytes": 712783,
+      "sha256": "cc664930ca9456b0f8465534e058d9f8d8ab608f3e0f3e684be5aed7534be391",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r3-projection-oracle-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r3-projection-oracle-I.json",
+      "bytes": 716,
+      "sha256": "8959ff62c2c860e494263357be45a626f3c00fb629df14f32f521e92099c5f6e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r3-projection-oracle-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r3-projection-oracle-IO.json",
+      "bytes": 716,
+      "sha256": "8959ff62c2c860e494263357be45a626f3c00fb629df14f32f521e92099c5f6e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/independent-review-v1/r3-projection-original-native-ledger.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\independent-review-v1\\r3-projection-original-native-ledger.json",
+      "bytes": 712793,
+      "sha256": "18001d940ac40e475c6506cd455db63891fed0ae56c4c6d5f0dc1cd2d4771a58",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-artifact-member-index-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-artifact-member-index-v1.json",
+      "bytes": 25669,
+      "sha256": "037ab76786037438dcdb8901a47f149638d8eff3ee5d66181d11475dc9f2f731",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/diagnostics.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\diagnostics.json",
+      "bytes": 6589,
+      "sha256": "58828f2c4843b06d44650f863f7e20fec71a1e78bd59f4c4910c5601eae6df4b",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\admission.json",
+      "bytes": 214,
+      "sha256": "fdfb12bdb282294ec4edb3393ac63f6e0d04999a61561ae5fff8c7a9e2e16571",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\created-container.json",
+      "bytes": 994,
+      "sha256": "6fe791a4fc52bcb119d065184ae7dfa06aaf57f11970254cfdb5cb0101f0de23",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\creation-audit.json",
+      "bytes": 299,
+      "sha256": "80c31ad789cb4d66c269b4d37077260fb2f0f40a4c0659820b6329734eba3422",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\creation-intent.json",
+      "bytes": 735,
+      "sha256": "a0e92c079c2876c86e059441b3439a00403e5ca3278b6a7686aa738a1471b70e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\creation-response.json",
+      "bytes": 555,
+      "sha256": "ba1288366589e714071331b126ba53d838701e015403903ccd52207e30e65ef8",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\diagnostic.json",
+      "bytes": 5250,
+      "sha256": "4e8ec3cf496e95cf9480535510ef2d0356a57098b3314e413ee126211a5d29c8",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/large-journal-ledger-capture.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\large-journal-ledger-capture.json",
+      "bytes": 1886,
+      "sha256": "41d7a48f0156e05761358b261ed35eb8c217b7e0c530cd781e0161932bca2a89",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/large-journal-ledger.raw.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\large-journal-ledger.raw.json",
+      "bytes": 712791,
+      "sha256": "dd4d85a1beaae9d7e9a4a26056540233b3afb52c773de2e3f88ee476393de8b6",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\native\\migration.log",
+      "bytes": 22742,
+      "sha256": "134038269a61ddb783441104a43cd421a4c4b9ad3db5dbf396d738872860d9b7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\native\\result.json",
+      "bytes": 301336,
+      "sha256": "1ffc25a08ca659a593b3338ea06a6b7638d7c4733e3fb63a2e0307823fce235d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\origins.json",
+      "bytes": 36346,
+      "sha256": "e5f819dd27d2690a05284d6edb19dc09882cc18f6e8e3419635764b49ccd604a",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\spec.json",
+      "bytes": 1194,
+      "sha256": "1ae7ca87e0788600c3c43615a40fb78de257a933fa1d8435aab6bb01f0078f64",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-baseline/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-baseline\\worker.log",
+      "bytes": 160,
+      "sha256": "3cc5ad2b5a3d2f2fcc75769a3bb112e6f308fa3d9a51f87a9be6b5a4025ec8d7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\admission.json",
+      "bytes": 215,
+      "sha256": "cd88e4a7c898a8e878c3a858fd2a596c552c566a60824c1c42fd1b824c3dc273",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\created-container.json",
+      "bytes": 994,
+      "sha256": "d8e99dc2f847b0d7da5995d296686cddc5f1c5660cd753e210cfd5eec0ce8a44",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\creation-audit.json",
+      "bytes": 300,
+      "sha256": "58355392a5f5cfb7fb3f3157702843da87797bb6075eb902c0fcfe057c413bcd",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\creation-intent.json",
+      "bytes": 736,
+      "sha256": "beb03b43bbdf392a0e774150f4bbe7e8feecbc62420be39dbbd04eb4c69a35ca",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\creation-response.json",
+      "bytes": 556,
+      "sha256": "83e7c5125a0e7269a5ceda1e0c898a52be303e4ea75035b7369b1ee621f815a6",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\diagnostic.json",
+      "bytes": 5218,
+      "sha256": "699733c925a33302a61146d5cf0e8072bfd955e587c0ddfb4eac19687870142b",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/large-journal-ledger-capture.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\large-journal-ledger-capture.json",
+      "bytes": 1880,
+      "sha256": "825da843a966881dab1ccde245092a5481acefde37a4651d349cb566e6c05a85",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/large-journal-ledger.raw.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\large-journal-ledger.raw.json",
+      "bytes": 712785,
+      "sha256": "8ae4e8a6ab0cce6d3d2eebc5feb208f16440ace2db1a4fc07bc443f606edd060",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\native\\migration.log",
+      "bytes": 23478,
+      "sha256": "06b32b0f9383542db87c70bc9076a671bc0859d322fa6472b8bc42ceee9cde51",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\native\\result.json",
+      "bytes": 301112,
+      "sha256": "731e0de271ea8a7eef277c8c78337b1acd7279cca968b8543eb1d87dd5e13184",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\origins.json",
+      "bytes": 36148,
+      "sha256": "f79580d05517afda458877578adaeaafc2ddb21bfd447dcbbbe216a782025a0c",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\spec.json",
+      "bytes": 1190,
+      "sha256": "1cfcfa52f3ed3f88e1d7be9d9020ae6fe1e761ab18b4b95c1ddd5733b982dbc5",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-current/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-current\\worker.log",
+      "bytes": 159,
+      "sha256": "98cb3002be0ce5622dfabd4cf4e30f8b52b4d58fb2ce6da894215bbdcc582724",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\admission.json",
+      "bytes": 215,
+      "sha256": "7b10414499d2fbcd2909e9804c5832e5f4221a77d6363ebc96d1aea4f0a9f105",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\created-container.json",
+      "bytes": 994,
+      "sha256": "2d50e5c9613634cf8711343c651f78817b38005e804e8bcf267749fe9aad8b71",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\creation-audit.json",
+      "bytes": 300,
+      "sha256": "8cd4f9325eb60174350c9d494d867198b78ad2d46abde457d70b9deb74079c79",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\creation-intent.json",
+      "bytes": 736,
+      "sha256": "e6a4cbcf6c062a82c4e4189aa00c48d961cbec978c3cd91216d4ec9a0da1bdbd",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\creation-response.json",
+      "bytes": 556,
+      "sha256": "cf9fc67d1a03fff3cf43a2391b793bb676d98d988a4e234d04302637421c8dad",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\diagnostic.json",
+      "bytes": 5233,
+      "sha256": "7e74a70f24d3fd835e8d8431d180874f9e1424bede14465985a2532659365d2d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/large-journal-ledger-capture.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\large-journal-ledger-capture.json",
+      "bytes": 1888,
+      "sha256": "9d0e1ed4dd9a9354005fe2319d1b6e940c7cf609ddd309d5a740f28054d6cd99",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/large-journal-ledger.raw.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\large-journal-ledger.raw.json",
+      "bytes": 712793,
+      "sha256": "88df6dcf71265166a8552848bf95c3e6a821f1c86692dff51a075a21d15aaf6d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\native\\migration.log",
+      "bytes": 23664,
+      "sha256": "d42e0966278aedbadbe516c7275d84b58c203218a7c70c7daf2efdae243f7a87",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\native\\result.json",
+      "bytes": 301257,
+      "sha256": "89e9b4a8c6867a6760909623ac04f7c453115f9a99c9f733c6fbc0a0c03380cc",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\origins.json",
+      "bytes": 36148,
+      "sha256": "b603c867ab72fc4764c2c37c7f4597d8480c5943773e6ae190169339bcea0868",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\spec.json",
+      "bytes": 1196,
+      "sha256": "11ce3398f2e1915bfb87e1cddaf3744c4f1288816db60b5f6b43e9ab02faf58f",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r1-projection/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r1-projection\\worker.log",
+      "bytes": 157,
+      "sha256": "70f4d64511fe694847e88b4de169fda2a423b057432222d5f4a35904b00b14f7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\admission.json",
+      "bytes": 218,
+      "sha256": "08c6cd6dc5df5dd592a1dbc55cfd7b61de9062ef12b1ecb45dfc4f2da630b9a7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\created-container.json",
+      "bytes": 993,
+      "sha256": "f29f46b5e7357f5edb76e511022241bcbb85121f06c27df7bae164d9c4102509",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\creation-audit.json",
+      "bytes": 303,
+      "sha256": "889f7c1939571565916684ba60a287af9141417a6dc4a4129135b144adf01a74",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\creation-intent.json",
+      "bytes": 739,
+      "sha256": "34d8e0b6a454bd3d011bfa6b279b01ac080307b2c9232c9b687d16bc7e382472",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\creation-response.json",
+      "bytes": 559,
+      "sha256": "e9f9330240a137aa7b91a56f2574718f6d024a08bd508174d76c8a6ab8d5a922",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\diagnostic.json",
+      "bytes": 5243,
+      "sha256": "42fb0d0cfa0007d2ff693e7bbfdc52489ff8f0bf5c1c41fced833b6367ee834d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/large-journal-ledger-capture.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\large-journal-ledger-capture.json",
+      "bytes": 1890,
+      "sha256": "bd76294cdbc97f0a0bb098bf5461d6c1731356cfc8cb6b3130789977b93afd67",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/large-journal-ledger.raw.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\large-journal-ledger.raw.json",
+      "bytes": 712792,
+      "sha256": "2fc786bbf6217b46354ffbdf54f6dcb57a6b1cdd1a3e110abcb6f54d938f95c2",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\native\\migration.log",
+      "bytes": 22742,
+      "sha256": "134038269a61ddb783441104a43cd421a4c4b9ad3db5dbf396d738872860d9b7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\native\\result.json",
+      "bytes": 301246,
+      "sha256": "9d7c867b327c9a4b146b2feb8f22f4f7248c1e0da3db3ec8d594cf841b8e1d42",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\origins.json",
+      "bytes": 36350,
+      "sha256": "8c523124b7cfb5a265df9294f5c8c8458fbffed19d960759aea0439faafb2060",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\spec.json",
+      "bytes": 1194,
+      "sha256": "be4f132c051eaaa2c2eb7a68d2dab55885334b4fb1a5a8b932acf788218288d4",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-baseline/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-baseline\\worker.log",
+      "bytes": 160,
+      "sha256": "e63d467f3139164455d2ed2006714df04700e40a73a4136c0a883793848c96ac",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\admission.json",
+      "bytes": 215,
+      "sha256": "043be00ac7dc66c55259cc04f453998e7b18f4fb0bfba128cd98f05d9f493aa9",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\created-container.json",
+      "bytes": 994,
+      "sha256": "32ac6991add8fe48e072e561af92707ae018ece9d10a636e48d7d4e68a74dc89",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\creation-audit.json",
+      "bytes": 300,
+      "sha256": "6d7170f7677d92f2f2852321e3c8e6c8c801deb3837ab7ad09ad5aaf66db8f37",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\creation-intent.json",
+      "bytes": 736,
+      "sha256": "98217905b2f5be55f73450a46ce1385c06f05d08a2ed938a400c1bd51571418d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\creation-response.json",
+      "bytes": 556,
+      "sha256": "a5aaa2a12e66f55d425c93ec5cab7240e39088c321af2f4df7d82d5162dbf6eb",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\diagnostic.json",
+      "bytes": 5219,
+      "sha256": "5dcb20d0b794c905f32949dcab3ddbcab965b7a94d6772de5e537a1e3be00f0d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/large-journal-ledger-capture.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\large-journal-ledger-capture.json",
+      "bytes": 1880,
+      "sha256": "f948d0a5c6e41cd4f92b8baafebfd379ffd4cee208bb19f83a062423343d7dc8",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/large-journal-ledger.raw.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\large-journal-ledger.raw.json",
+      "bytes": 712783,
+      "sha256": "3d81fd04b235f3a5a69a95f74d570351eb6e953066ce8f1177f824af8d8999fd",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\native\\migration.log",
+      "bytes": 23478,
+      "sha256": "06b32b0f9383542db87c70bc9076a671bc0859d322fa6472b8bc42ceee9cde51",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\native\\result.json",
+      "bytes": 301226,
+      "sha256": "88912f340bac1bf44f205b46fef5a8d53ea13ac433607c9cfdf8c87ed40a7084",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\origins.json",
+      "bytes": 36148,
+      "sha256": "69435bcadbe252e7a2097adc1223780d048d34eb315a384284412b9896c9183b",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\spec.json",
+      "bytes": 1190,
+      "sha256": "f6ade80f2beda816d929868bb99ee2f4dce45392acd5aa01bc13d0cd330ac114",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-current/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-current\\worker.log",
+      "bytes": 159,
+      "sha256": "602b2f63724e1fc01bd1863f9d268661662b2857275e634eae4a849718ad9419",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\admission.json",
+      "bytes": 215,
+      "sha256": "846896f7ab2afb609ecaa361572d4ddcd2fa258ebdf5323d54165d6d22712f17",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\created-container.json",
+      "bytes": 994,
+      "sha256": "ffbee16fd49786858d1222f8e064bab6e890b106c5cf67445d80e40c1b897c60",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\creation-audit.json",
+      "bytes": 300,
+      "sha256": "bdc65e0cd5f86a13cc4b78c766db82e9359abce070fdb9a8427f9aa1033f96af",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\creation-intent.json",
+      "bytes": 736,
+      "sha256": "05a3fcd5941063d4f83afba2c10232ab3aeb713a45c7cb4eef87e7432d0b7eb7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\creation-response.json",
+      "bytes": 556,
+      "sha256": "6658ede1f27c11b99ed985667512f3cdeb1cf4d8a168dd9ac713a0301ca34d89",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\diagnostic.json",
+      "bytes": 5246,
+      "sha256": "e365528552e45aaad6ff1bc07b2f07e77a2627844a8b82373e61c9185c4d9444",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/large-journal-ledger-capture.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\large-journal-ledger-capture.json",
+      "bytes": 1888,
+      "sha256": "ea4f891be55e838d1e98f8ed2a0eac0dfcd7dce882ea835ddd247cc691820964",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/large-journal-ledger.raw.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\large-journal-ledger.raw.json",
+      "bytes": 712793,
+      "sha256": "a144b92333f661c1f4796f9a66dfab72a54e8eb809bb99df718d300e5291f38a",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\native\\migration.log",
+      "bytes": 23664,
+      "sha256": "d42e0966278aedbadbe516c7275d84b58c203218a7c70c7daf2efdae243f7a87",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\native\\result.json",
+      "bytes": 301205,
+      "sha256": "f5adc0933521a6e6b310f8936e09a3d8e476c39ec8f3d82df528d2dfff16f976",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\origins.json",
+      "bytes": 36148,
+      "sha256": "358718cb51eb54aba543ae4241d820c300958c2fa286b30d8339406216f86972",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\spec.json",
+      "bytes": 1196,
+      "sha256": "6fe57e860f0a460ebf54e47ee6d3a271f86148613a3651f140eadfe4670783b5",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r2-projection/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r2-projection\\worker.log",
+      "bytes": 162,
+      "sha256": "922be0b700c4dc3de6ab112c2377734b18e65131522b3030bac8853709c921c9",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\admission.json",
+      "bytes": 219,
+      "sha256": "7cc6e80dfd4fc11267e10260bcf782e613f34a0fd9c13aad14cce7aecaa3c4c9",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\created-container.json",
+      "bytes": 994,
+      "sha256": "f1c11ff247f73ae09aa90da0cd640c00302307214d722911a23ffc047ad8af97",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\creation-audit.json",
+      "bytes": 304,
+      "sha256": "28faffe1cfbca9c80a90fb99a7fcde78634b20b5042cc7df83ef4d2a921c5d27",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\creation-intent.json",
+      "bytes": 740,
+      "sha256": "2c6b48a9801cdbc7cb44041f87960c38d887101840efee3b82e653ff0c2021b3",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\creation-response.json",
+      "bytes": 560,
+      "sha256": "2aaf629a77d1984740c0e636b3988d74610a209fbbf52fa457c3fcfb42ed456d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\diagnostic.json",
+      "bytes": 5244,
+      "sha256": "cacb8a9332d4a1938cc937ae8d9133676cc0f3cabd9e70b34157ee208a699b41",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/large-journal-ledger-capture.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\large-journal-ledger-capture.json",
+      "bytes": 1891,
+      "sha256": "0ac27a6f510ad09c7c3d67c783eccd3ec2a04badcbb806cedf8aa873f053b4e3",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/large-journal-ledger.raw.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\large-journal-ledger.raw.json",
+      "bytes": 712785,
+      "sha256": "1bc80bc4f2bbc35912ec0f9fafb694d1833004db8a63d743b1def5ffdf966cda",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\native\\migration.log",
+      "bytes": 22742,
+      "sha256": "134038269a61ddb783441104a43cd421a4c4b9ad3db5dbf396d738872860d9b7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\native\\result.json",
+      "bytes": 301190,
+      "sha256": "7e6be37ab4a455d9512dd2390851980cdd3e3bd29f3189f47876012cfa4c52cc",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\origins.json",
+      "bytes": 36351,
+      "sha256": "f7ec1484641ca92df3a30d39b9757f57829e530699648d22628836a23e9b12fe",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\spec.json",
+      "bytes": 1194,
+      "sha256": "f29544b6ed573c87aa56b99b38280f78fa14fa3514e61d0a0f0238b18759254e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-baseline/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-baseline\\worker.log",
+      "bytes": 160,
+      "sha256": "bc260498d82f6da064d5e1f809f4e416465a7d0fb0ff5d001b0915c8fd6f7278",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\admission.json",
+      "bytes": 219,
+      "sha256": "ad7158f1f3b20785543f6f0bd87f5dffbc638a3ac2757f6b7dd52c332196f061",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\created-container.json",
+      "bytes": 993,
+      "sha256": "db44f3edb82d8aaa58e16fd28de1f2a48916a296679f8a64d28923b289105e34",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\creation-audit.json",
+      "bytes": 304,
+      "sha256": "ac4519ce5aac206b76afa41cd514ea02cfc5ad59d428ebfb903bec732426ed70",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\creation-intent.json",
+      "bytes": 740,
+      "sha256": "ce1c42925b76ad8f1c6cf1b7c98ab490e70a0616928859c501c522a4175bddae",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\creation-response.json",
+      "bytes": 560,
+      "sha256": "158cd220eec9586c1b13bc9f88945dcd71a734d4d627b1ac7c7a9badb2fddc81",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\diagnostic.json",
+      "bytes": 5223,
+      "sha256": "04d29e66971664f31f356971b2789f60e48b326d3c676cac1cf01dc60b8a2c10",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/large-journal-ledger-capture.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\large-journal-ledger-capture.json",
+      "bytes": 1884,
+      "sha256": "69e44dcad7e2aa82ce95b618fe0a755405251ecbd2f72a387d317e1deee82207",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/large-journal-ledger.raw.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\large-journal-ledger.raw.json",
+      "bytes": 712783,
+      "sha256": "cc664930ca9456b0f8465534e058d9f8d8ab608f3e0f3e684be5aed7534be391",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\native\\migration.log",
+      "bytes": 23478,
+      "sha256": "06b32b0f9383542db87c70bc9076a671bc0859d322fa6472b8bc42ceee9cde51",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\native\\result.json",
+      "bytes": 301152,
+      "sha256": "64f63cf1391f4800be35ed7df78a02112aad68b2c37e2dce4dadb88af77ecfe7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\origins.json",
+      "bytes": 36152,
+      "sha256": "262f7e3bcfdccaef2e116a8629dbb2e3033f8237929b61c9e4d115b4387b44ca",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\spec.json",
+      "bytes": 1190,
+      "sha256": "05ac5f726ad3a2e78b47c4984c7864538f7562e169f7ea8bd6c208037adcaa8a",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-current/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-current\\worker.log",
+      "bytes": 159,
+      "sha256": "12a6399abc739b7b011626dc8a89efcf65a80771dee5bd3c58ba9da9faacdc45",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/admission.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\admission.json",
+      "bytes": 219,
+      "sha256": "42ec3d9f8d24bff460fe5b98191b4524948b92d35b741069d708e4d516bb5321",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/created-container.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\created-container.json",
+      "bytes": 994,
+      "sha256": "c46e65aa94b51a7b2fc5c180877f502051e7183b77ef33dabee084fa8a761681",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/creation-audit.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\creation-audit.json",
+      "bytes": 304,
+      "sha256": "6e9cbc5c688fef454fd8dba92b95444e68fd0fc86607c0f8cc9cd2f1141e9d78",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/creation-intent.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\creation-intent.json",
+      "bytes": 740,
+      "sha256": "9f1fa75a53f7bd5578d081cc2846fea5e4325271b10789e0d9a0132fc54f63fe",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/creation-response.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\creation-response.json",
+      "bytes": 560,
+      "sha256": "c14e02ab68bbc2142a543cc3b73dcbb1b957ceb4e8e9f07b3a69378d570c9df6",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/diagnostic.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\diagnostic.json",
+      "bytes": 5246,
+      "sha256": "0a3cb9f3dc3d40ea7b1caf621fe4255d9a52e2cd8cd4bab543cdeb4074fc39f3",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/large-journal-ledger-capture.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\large-journal-ledger-capture.json",
+      "bytes": 1892,
+      "sha256": "01239d9bf1936d14efe3f28907a9989fb760b71738761aab291021e8b777e8c9",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/large-journal-ledger.raw.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\large-journal-ledger.raw.json",
+      "bytes": 712793,
+      "sha256": "18001d940ac40e475c6506cd455db63891fed0ae56c4c6d5f0dc1cd2d4771a58",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/native/migration.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\native\\migration.log",
+      "bytes": 23664,
+      "sha256": "d42e0966278aedbadbe516c7275d84b58c203218a7c70c7daf2efdae243f7a87",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/native/result.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\native\\result.json",
+      "bytes": 301175,
+      "sha256": "38a15466e2398b55a16eff623328b7ffcf22c88be7dcd08d446b8dfda9586bee",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/origins.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\origins.json",
+      "bytes": 36152,
+      "sha256": "f1ecf36e102dbe0069983869fe78f1e11b95fbf6f07bb81ad44e109185dfb785",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/spec.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\spec.json",
+      "bytes": 1196,
+      "sha256": "46469115856cd6736031df6c7798d3f99c555ef413d4ba5e9b713737eb149a9c",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/worker-complete.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\worker-complete.json",
+      "bytes": 50,
+      "sha256": "8d2207818bd750b68af0d87b61677ad116dc45df3a6cf94cdf8ea59a27978f3e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/diagnostics/large-snapshot-r3-projection/worker.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\diagnostics\\large-snapshot-r3-projection\\worker.log",
+      "bytes": 162,
+      "sha256": "7d8f161bc093320e5799a39186d5ca01844a2a30fb8a0c3c10a11727359a08ed",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/pure-contracts.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\pure-contracts.xml",
+      "bytes": 31293,
+      "sha256": "fdeb4e7302e2756bb71a504ff513e9627a4c1cfac3c77c80c9438f6c05bd0185",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "operations/0756-original-and-independent-custody/original-members/workflow-source-commit.txt",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-38243117941\\original-members\\workflow-source-commit.txt",
+      "bytes": 41,
+      "sha256": "c2a3f02e9cd39bb979b7da46621410d3534b7659bdb1c7548c07481711c0d3c0",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original0756 complete129-member artifact/API/raw native exports and independent18 CLI outputs. Actual source attribution retained; no fair performance claim.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "original-cloud-git-source-binding.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-operations-wave5\\reconforge-erp\\output\\wave5-cloud-evidence-capsules-20261012-v1\\source-material\\original-cloud-git-source-binding.json",
+      "bytes": 9571,
+      "sha256": "c5b6cc7109a6e7def24145b9169478dc57dcaae83cb6504669c3c2f39f8e804c",
+      "source_commit": null,
+      "source_attribution": "Explicit source scope and rejected137 integration decision.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/independent-review.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\independent-review.json",
+      "bytes": 201741,
+      "sha256": "eff8fc934f753fd019786c2733b22fab7fd03ad0ff25dfb877cd3c4793d211e2",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r1-baseline-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r1-baseline-I.json",
+      "bytes": 715,
+      "sha256": "00173ef3e6e1668efc13e9c9da321ea60b702ca955c0eb639b96720f9e38b573",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r1-baseline-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r1-baseline-IO.json",
+      "bytes": 715,
+      "sha256": "00173ef3e6e1668efc13e9c9da321ea60b702ca955c0eb639b96720f9e38b573",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r1-current-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r1-current-I.json",
+      "bytes": 708,
+      "sha256": "a12f9ce922a7d2ddecab199c5c6f395856e21119df69a89348b60308a87950eb",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r1-current-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r1-current-IO.json",
+      "bytes": 708,
+      "sha256": "a12f9ce922a7d2ddecab199c5c6f395856e21119df69a89348b60308a87950eb",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r1-projection-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r1-projection-I.json",
+      "bytes": 716,
+      "sha256": "7e9edb325f2236d8e6b47dc1fcd28d1a645a7722720189fb8c0b700cd6c2544f",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r1-projection-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r1-projection-IO.json",
+      "bytes": 716,
+      "sha256": "7e9edb325f2236d8e6b47dc1fcd28d1a645a7722720189fb8c0b700cd6c2544f",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r2-baseline-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r2-baseline-I.json",
+      "bytes": 715,
+      "sha256": "39be3eb758de5333160377d22687752c9d2dabe2f54ac712d14ae3e5defcd900",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r2-baseline-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r2-baseline-IO.json",
+      "bytes": 715,
+      "sha256": "39be3eb758de5333160377d22687752c9d2dabe2f54ac712d14ae3e5defcd900",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r2-current-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r2-current-I.json",
+      "bytes": 708,
+      "sha256": "8dffe9e3fa881a7f00c5e3f4a2d555424945d1d613b2745b10553d4265864de5",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r2-current-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r2-current-IO.json",
+      "bytes": 708,
+      "sha256": "8dffe9e3fa881a7f00c5e3f4a2d555424945d1d613b2745b10553d4265864de5",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r2-projection-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r2-projection-I.json",
+      "bytes": 716,
+      "sha256": "4f14b287d4598f1a49e05499a412fdabda3cc0c85c5e99961dff0ed7fcfc83ac",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r2-projection-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r2-projection-IO.json",
+      "bytes": 716,
+      "sha256": "4f14b287d4598f1a49e05499a412fdabda3cc0c85c5e99961dff0ed7fcfc83ac",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r3-baseline-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r3-baseline-I.json",
+      "bytes": 715,
+      "sha256": "9a831b92a04c5e49ddc1f23209cfd09c1bf8a85e4e930061ce6a351be99a4267",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r3-baseline-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r3-baseline-IO.json",
+      "bytes": 715,
+      "sha256": "9a831b92a04c5e49ddc1f23209cfd09c1bf8a85e4e930061ce6a351be99a4267",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r3-current-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r3-current-I.json",
+      "bytes": 708,
+      "sha256": "256d2c781cb153d6efba2fd4c35132bb078d1f97870c5d8504b94cb87b38b5f4",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r3-current-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r3-current-IO.json",
+      "bytes": 708,
+      "sha256": "256d2c781cb153d6efba2fd4c35132bb078d1f97870c5d8504b94cb87b38b5f4",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r3-projection-I.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r3-projection-I.json",
+      "bytes": 716,
+      "sha256": "8959ff62c2c860e494263357be45a626f3c00fb629df14f32f521e92099c5f6e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-independent-nine-populations/large-snapshot-r3-projection-IO.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-independent-I\\large-snapshot-r3-projection-IO.json",
+      "bytes": 716,
+      "sha256": "8959ff62c2c860e494263357be45a626f3c00fb629df14f32f521e92099c5f6e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original independent9 population report and18 pinned-raw stdlib CLI -I/-I-O outputs; no app imports or workload.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/driver-independent-static-review-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\driver-independent-static-review-v1.json",
+      "bytes": 5818,
+      "sha256": "39fa7136f28d7523e07af2bb8aefddcc79f8df1a82d251c0b4d5a8fde3f729ab",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/driver-originals/0001/benchmark_wave5_profile_diagnostics.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\driver-originals\\0001\\benchmark_wave5_profile_diagnostics.py",
+      "bytes": 52233,
+      "sha256": "a9f60d01589bc68cf03eb24007f6b1a5a8d6f2c2bf29f439215653da713f3d5f",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/driver-originals/0002/test_wave5_profile_diagnostics.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\driver-originals\\0002\\test_wave5_profile_diagnostics.py",
+      "bytes": 28723,
+      "sha256": "d42d12e961f78478aff733d0bb7e0194a4ea317c4a3ae9be2eca2a833af478cc",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/driver-originals/0003/wave5-large-journal-diagnostics.yml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\driver-originals\\0003\\wave5-large-journal-diagnostics.yml",
+      "bytes": 3457,
+      "sha256": "99933495f56b294e0e425cfc06ab37d8e45bb3f1d213ea165f118c1704df53f0",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/driver-originals/0004/wave5-large-profile-driver-pure-qualified.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\driver-originals\\0004\\wave5-large-profile-driver-pure-qualified.xml",
+      "bytes": 13522,
+      "sha256": "ffc1626da2a7cb0af53b296750bebedd050f8c8029f7923c904d088c63dfe906",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/driver-originals/original-a6-launcher.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\driver-originals\\original-a6-launcher.py",
+      "bytes": 39074,
+      "sha256": "6e48eac82b895dcb5ca73dbb94d963ae526840a391e0848d2557e9d8e81b629f",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/oracle-independent-static-review-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\oracle-independent-static-review-v1.json",
+      "bytes": 4483,
+      "sha256": "399e48c223231f53859cd2f233debe73b3cbd8fa3b8aca7279a6088f4bca7afe",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/originals/0001/verify_wave5_large_journal.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\originals\\0001\\verify_wave5_large_journal.py",
+      "bytes": 25393,
+      "sha256": "24a2781b185123a3ea52b2108447936daa7a06b9fbb7c6f08fa1aa3fb2ca00d7",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/originals/0002/test_wave5_large_journal_oracle.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\originals\\0002\\test_wave5_large_journal_oracle.py",
+      "bytes": 19464,
+      "sha256": "4aef6edaf792719ab3d5106a86460b99aa9d4c2d47b8f5ea20963caf3088d418",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/originals/0003/wave5-large-journal-oracle-final.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\originals\\0003\\wave5-large-journal-oracle-final.xml",
+      "bytes": 18025,
+      "sha256": "7c2a462c99b26acfd0fbc10a0221b2fc937031d07b7b70cec2c88447eb64a92d",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/originals/0004/wave5-large-journal-oracle-final.log",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\originals\\0004\\wave5-large-journal-oracle-final.log",
+      "bytes": 162,
+      "sha256": "89abe0022556087d0a57f944305831e8ad25cc7666fb2db649b66fdcf70345b4",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/record_driver_review.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\record_driver_review.py",
+      "bytes": 6843,
+      "sha256": "dd54f36d88df971571ee6f494595a7af5e332f63d3da7c351cc36c1ae48686ab",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-prelaunch-reviewed-source/record_oracle_review.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-prelaunch-peer-review\\record_oracle_review.py",
+      "bytes": 5763,
+      "sha256": "a118052423633b95c1875b7536ab68467f7eff79b911b87e4a90f30ead7abe87",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original prelaunch source/static gates and reviewer helpers; original checkpoint headers unchanged.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/audit_wave5_large_journal_resources_0756.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\audit_wave5_large_journal_resources_0756.py",
+      "bytes": 8110,
+      "sha256": "10b52f0b0f11ad4402689ccf1edd08f5380267ccd4804b72dd71d033e3d2b42e",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/audit_wave5_large_journals_0756.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\audit_wave5_large_journals_0756.py",
+      "bytes": 25837,
+      "sha256": "b5783beed29411a830725ad65df625e64a3f21e311e03fb08bdf3a1eec9179c9",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/audit_wave5_linux_profiles.py",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\audit_wave5_linux_profiles.py",
+      "bytes": 18812,
+      "sha256": "1331a336b5030b07f1b40fa8c2fee8f4265fc0ccaa560025bf873dfaf2b56023",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/wave5-large-journal-0756-resource-supplement-v1.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-0756-resource-supplement-v1.json",
+      "bytes": 114211,
+      "sha256": "10829ffc8e6c79626f1c1f93dbc444fac273a191e9c546d521274ffd4f116c07",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/wave5-large-journal-development-gates.json",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-development-gates.json",
+      "bytes": 4283,
+      "sha256": "08168dc51ccbaca7afc9e527cd063e40620187362891001ae297f427652d1bf4",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/wave5-large-journal-integrated-pure.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-journal-integrated-pure.xml",
+      "bytes": 31295,
+      "sha256": "b403ea473e4f7ecc6e5ac5e593bbf2cdce00e52fb89ec6b63d9d6c96053b4228",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/wave5-large-profile-driver-pure-corrected.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-profile-driver-pure-corrected.xml",
+      "bytes": 11973,
+      "sha256": "f70c0ae9e80ddf11bad74caa21c7e7c6fc237c582f5c3c5022f71ca9197b0b93",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/wave5-large-profile-driver-pure-final.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-profile-driver-pure-final.xml",
+      "bytes": 13389,
+      "sha256": "ac6113b529904a1e63c1b535fd4f9965bd660dec3b2652b2555994d07c9c0616",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/wave5-large-profile-driver-pure-first.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-profile-driver-pure-first.xml",
+      "bytes": 50731,
+      "sha256": "aa55c16f026f84b3bbb1e272725716b40fe287d450fb52c9d0caa1a41eea1152",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/wave5-large-profile-driver-pure-population.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-profile-driver-pure-population.xml",
+      "bytes": 13389,
+      "sha256": "681f7420bfdea9f6c529fa912302199a9051b47d39834ad5b153c53c5bf61fec",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    },
+    {
+      "entry_name": "peer/0756-supplement-and-development/wave5-large-profile-driver-pure-qualified.xml",
+      "original_path": "C:\\Users\\LOQ\\.codex\\worktrees\\reconforge-manufacturing-wave5\\reconforge-erp\\output\\wave5-large-profile-driver-pure-qualified.xml",
+      "bytes": 13522,
+      "sha256": "ffc1626da2a7cb0af53b296750bebedd050f8c8029f7923c904d088c63dfe906",
+      "source_commit": "0756dc49b7f7b3cbb4f5434e735fac64bf845b99",
+      "source_attribution": "Original negative/provisional/final pure checkpoints and strict resource-window review; no original failure rewritten or unconditional benefit asserted.",
+      "raw_header_policy": "Original bytes and original source/acceptance headers retained unchanged."
+    }
+  ]
+}

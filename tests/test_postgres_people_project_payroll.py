@@ -267,7 +267,8 @@ def test_direct_sql_cannot_rewrite_original_source_or_claim(people: PeopleRuntim
     import psycopg
     budget, times = approved_budget(people), approved_time(people)
     plan = prepare(people, times, budget)
-    with pytest.raises(psycopg.errors.CheckViolation):  # noqa: SIM117 - commit-time refusal belongs to the outer assertion
+    expected = psycopg.errors.ForeignKeyViolation if kind == "dimension" else psycopg.errors.CheckViolation
+    with pytest.raises(expected) as refused:  # noqa: SIM117 - commit-time refusal belongs to the outer assertion
         with people.actor("maker") as (connection, _, _):
             queries = {"time": "UPDATE reconforge.hc_times SET source_digest=repeat('0',64) WHERE tenant_id=%s",
                 "rate": "UPDATE reconforge.hc_rates SET hourly_rate_minor=hourly_rate_minor+1 WHERE tenant_id=%s",
@@ -276,11 +277,14 @@ def test_direct_sql_cannot_rewrite_original_source_or_claim(people: PeopleRuntim
                 "dimension": "UPDATE reconforge.finance_dimensions SET dimension_type='Custom' WHERE tenant_id=%s"}
             if kind=="dimension":
                 # Existing reference update policy needs organization scope;
-                # the inverse source guard must still refuse the changed master.
+                # the structural original Project pin refuses the changed master.
                 connection.execute("SELECT set_config('app.entity_id','',true),set_config('app.legal_entity_id','',true)")
             cursor = connection.execute(queries[kind], (people.base.tenant,))
             assert cursor.rowcount>0
             connection.execute("SET CONSTRAINTS ALL IMMEDIATE")
+    assert refused.value.sqlstate == ("23503" if kind == "dimension" else "23514")
+    if kind == "dimension":
+        assert refused.value.diag.constraint_name == "hc_projects_tenant_id_dimension_id_workspace_id_dimension__fkey"
     with people.actor("maker") as (_, repository, actor):
         assert repository.evidence(plan["id"], actor=actor)["payrun"]["amount_minor"]==2501
 

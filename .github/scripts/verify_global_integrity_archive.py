@@ -470,7 +470,7 @@ def inspect(args: argparse.Namespace, report: dict[str, object]) -> None:
           for name in ("manufacturing_execution_v2", "intercompany_fx", "people_project_payroll")),
         *("reconforge/infrastructure/postgres_" + name + suffix + ".py" for suffix in ("", "_schema")
           for name in ("manufacturing_execution_v2", "intercompany_fx", "people_project_payroll")),
-        *("apps/web/src/components/" + name + ".tsx" for name in ("IntercompanyFxPage", "PeopleProjectPayrollPage")),
+        *("apps/web/src/components/" + name + ".tsx" for name in ("IntercompanyFxPage", "PeopleProjectPayrollPage", "ManufacturingExecutionV2Page")),
 
         "docs/execution/GLOBAL_ENTERPRISE_PROGRAM_CONTRACTS_2026-10-12.md",
         "LICENSE", "README.md", "MANIFEST.in", "pyproject.toml", "alembic.ini", "reconforge_migration_sql.py",
